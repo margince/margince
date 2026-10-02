@@ -162,8 +162,8 @@ embeddings:    {provider: gemini}
   model runs: `eu_hosted` (partner-operated EU inference), `sovereign` (zero
   egress by construction), `cloud_frontier` (a vendor's cloud, wherever it
   serves). It constrains, it never leaks: under `eu_hosted` a lane on the
-  OpenRouter broker must pin EU-region hosts (`routing: {only: [...]}`), as an
-  unpinned broker serves from any region, and a `gemini_vertex` lane must name
+  OpenRouter broker must pin EU-region hosts (`only` on the connection's
+  `upstream`), as an unpinned broker serves from any region, and a `gemini_vertex` lane must name
   an EU `location`, where Google processes the call — or the config is refused.
 - **No key ever lives in the binding.** A provider names only itself, and a stray
   `api_key:` is a *boot error* rather than a convenience. Where the key comes from
@@ -345,8 +345,8 @@ unless every check passes, in this order:
    ladder's `servableLadder` both read, unconditional today: #6396 reverted
    the ladder's narrowing pending #3351, and the lane follows suit.
 2. **The answer stands.** The state is secret-stripped and capped at 48,000
-   bytes, the call has 15 seconds, and the answer must clear the **site's
-   own** floor (the one its LLM path applies).
+   bytes, the call has the task's [decision timeout](ai-request-settings.md),
+   and the answer must clear the **site's own** floor (its LLM path's).
 
 No certification row is required — only the two checks above. [Certifying a
 site](../how-to/certify-a-decision-site.md) is advisory only, a measured

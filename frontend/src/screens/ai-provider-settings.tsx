@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Button, Field, TextInput } from "../design-system/atoms";
@@ -10,6 +10,12 @@ import { Callout } from "../design-system/callout";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import {
+  draftOf,
+  type OpenRouterDraft,
+  OpenRouterSettings,
+  upstreamOf,
+} from "./ai-openrouter-settings";
 import { isOpenRouter } from "./ai-provider-links";
 import { ROUTING_KEY } from "./ai-routing-query";
 import { problemMessageOf, throwProblem } from "./common";
@@ -202,14 +208,16 @@ export function useSetProviderSettings() {
 // OpenRouter's hosts, so they go when the provider moves off OpenRouter, which
 // the server would otherwise refuse with no control here to remove them.
 function settingsBody(
-  stored: ProviderSettings,
   host: string,
   location: string,
+  openRouter: OpenRouterDraft | null,
 ): ProviderSettings {
   const body: ProviderSettings = {};
   if (host.trim()) body.base_url = host.trim();
   if (location) body.location = location;
-  if (stored.upstream && isOpenRouter(host)) body.upstream = stored.upstream;
+  const upstream =
+    openRouter && isOpenRouter(host) ? upstreamOf(openRouter) : undefined;
+  if (upstream) body.upstream = upstream;
   return body;
 }
 
@@ -239,10 +247,13 @@ export function ProviderSettingsForm({
   provider,
   routing,
   canManage,
+  onHostChange,
 }: Readonly<{
   provider: string;
   routing: Routing;
   canManage: boolean;
+  /** The host the form would save, as it changes, for figures beside it. */
+  onHostChange?: (host: string) => void;
 }>) {
   const t = useT();
   const stored = routing.providers?.[provider] ?? {};
@@ -258,10 +269,18 @@ export function ProviderSettingsForm({
       : "",
   );
   const [location, setLocation] = useState(stored.location ?? "");
+  const [openRouter, setOpenRouter] = useState(() => draftOf(stored.upstream));
   const save = useSetProviderSettings();
   const disabled = !canManage || save.isPending;
   const known = catalog?.services.find((s) => s.id === service);
-  const host = known ? known.host : service === OTHER ? typed : "";
+  const host = hostOf(known, service, typed);
+  const brokered = provider === "openai_compatible" && isOpenRouter(host);
+  const unchosen = catalog !== undefined && service === UNCHOSEN;
+  const body = settingsBody(host, location, brokered ? openRouter : null);
+  const written = JSON.stringify(body);
+  // What is stored, as this form would write it: Save waits for a change.
+  const [saved, setSaved] = useState(written);
+  useEffect(() => onHostChange?.(host), [host, onHostChange]);
   return (
     <div className="ai-provider-settings">
       {catalog && (
@@ -286,30 +305,19 @@ export function ProviderSettingsForm({
       )}
       {known && <ServiceCaption service={known} />}
       {catalog && service === OTHER && (
-        <>
-          <Field
-            label={t("aiRouting.baseUrl.label")}
-            hint={t(catalog.other.help)}
-          >
-            {(control) => (
-              <TextInput
-                {...control}
-                value={typed}
-                disabled={disabled}
-                placeholder={t(catalog.other.placeholder)}
-                onChange={(e) => setTyped(e.target.value)}
-              />
-            )}
-          </Field>
-          <a
-            className="t-caption"
-            href={HOST_GUIDE}
-            target="_blank"
-            rel="noreferrer"
-          >
-            {t("aiProviderSettings.host.guide")}
-          </a>
-        </>
+        <OtherHostFields
+          other={catalog.other}
+          typed={typed}
+          disabled={disabled}
+          onChange={setTyped}
+        />
+      )}
+      {brokered && (
+        <OpenRouterSettings
+          draft={openRouter}
+          onChange={setOpenRouter}
+          disabled={disabled}
+        />
       )}
       {provider === VERTEX_PROVIDER && (
         <VertexLocationField
@@ -323,15 +331,13 @@ export function ProviderSettingsForm({
         <Button
           variant="primary"
           pending={save.isPending}
-          disabled={
-            !canManage || (catalog !== undefined && service === UNCHOSEN)
-          }
+          disabled={!canManage || unchosen || written === saved}
           reason={canManage ? undefined : t("aiProviderKeys.adminOnly")}
           onClick={() =>
-            save.mutate({
-              provider,
-              settings: settingsBody(stored, host, location),
-            })
+            save.mutate(
+              { provider, settings: body },
+              { onSuccess: () => setSaved(written) },
+            )
           }
         >
           {t("aiProviderSettings.save")}
@@ -347,5 +353,53 @@ export function ProviderSettingsForm({
         </Callout>
       ) : null}
     </div>
+  );
+}
+
+/** Where the chosen service sends requests: its own host, or the one typed. */
+function hostOf(
+  known: Service | undefined,
+  service: string,
+  typed: string,
+): string {
+  if (known) return known.host;
+  return service === OTHER ? typed : "";
+}
+
+/** The host an admin types when no listed service is theirs. */
+function OtherHostFields({
+  other,
+  typed,
+  disabled,
+  onChange,
+}: Readonly<{
+  other: OtherHost;
+  typed: string;
+  disabled: boolean;
+  onChange: (host: string) => void;
+}>) {
+  const t = useT();
+  return (
+    <>
+      <Field label={t("aiRouting.baseUrl.label")} hint={t(other.help)}>
+        {(control) => (
+          <TextInput
+            {...control}
+            value={typed}
+            disabled={disabled}
+            placeholder={t(other.placeholder)}
+            onChange={(e) => onChange(e.target.value)}
+          />
+        )}
+      </Field>
+      <a
+        className="t-caption"
+        href={HOST_GUIDE}
+        target="_blank"
+        rel="noreferrer"
+      >
+        {t("aiProviderSettings.host.guide")}
+      </a>
+    </>
   );
 }

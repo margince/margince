@@ -127,7 +127,7 @@ async function openVertex(user: ReturnType<typeof userEvent.setup>) {
   await user.click(
     within(
       await screen.findByTestId("ai-provider-row-gemini_vertex"),
-    ).getByRole("button", { name: /^Manage/ }),
+    ).getByRole("button", { name: /^Edit/ }),
   );
   return screen.findByRole("dialog");
 }

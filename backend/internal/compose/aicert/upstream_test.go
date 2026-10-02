@@ -124,8 +124,8 @@ func TestAnEUHostedBrokerCandidateMustPinAnEURegion(t *testing.T) {
 		refused   bool
 	}{
 		"unpinned under eu_hosted":      {broker(nil), ai.ProfileEUHosted, true},
-		"a non-EU pin under eu_hosted":  {broker(&ai.OpenRouterRouting{Only: []string{"mistral"}}), ai.ProfileEUHosted, true},
-		"pinned to the EU":              {broker(&ai.OpenRouterRouting{Only: []string{"mistral/eu"}}), ai.ProfileEUHosted, false},
+		"a non-EU pin under eu_hosted":  {broker(&ai.OpenRouterRouting{Provider: ai.OpenRouterProvider{Only: []string{"mistral"}}}), ai.ProfileEUHosted, true},
+		"pinned to the EU":              {broker(&ai.OpenRouterRouting{Provider: ai.OpenRouterProvider{Only: []string{"mistral/eu"}}}), ai.ProfileEUHosted, false},
 		"unpinned under cloud_frontier": {broker(nil), ai.ProfileCloudFrontier, false},
 	} {
 		t.Run(name, func(t *testing.T) {

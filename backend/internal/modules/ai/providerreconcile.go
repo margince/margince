@@ -6,6 +6,7 @@ package ai
 import (
 	"errors"
 	"fmt"
+	"reflect"
 	"slices"
 	"strings"
 
@@ -26,9 +27,11 @@ const (
 
 // reconcileLaneProviderFields settles what an old client writes on its lanes —
 // the host each tier and the decisions lane named, a tier's Vertex location,
-// and the pins inside a tier's routing — against the provider that owns them now. A value its
-// provider lacks is lifted onto it, an equal one is cleared, and a different
-// one is refused naming the lane.
+// and the connection keys inside a tier's routing — against the provider that
+// owns them now. A host or location its provider lacks is lifted onto it, an
+// equal value is cleared, and a different one is refused naming the lane.
+// Connection keys are never lifted on a write: they decide who may read every
+// tier's requests, so they are set on the connection or not at all.
 //
 // A nil next.Providers keeps the stored providers: a client that predates them
 // never sends the map. A map it does send, even empty, is the whole of it.
@@ -47,7 +50,7 @@ func (cfg RoutingConfig) reconcileLaneProviderFields(stored RoutingConfig) (Rout
 	}
 	tiers := make(map[Tier]ProviderConfig, len(cfg.Tiers))
 	for _, tier := range cfg.sortedTiers() {
-		lane, err := r.tier(tierLabel(tier), cfg.Tiers[tier])
+		lane, err := r.tier(tierLabel(tier), TierRoutingPath(tier), cfg.Tiers[tier])
 		if err != nil {
 			return RoutingConfig{}, err
 		}
@@ -73,13 +76,13 @@ func (cfg RoutingConfig) reconcileLaneProviderFields(stored RoutingConfig) (Rout
 
 type laneReconcile struct{ providers map[string]ProviderSettings }
 
-func (r laneReconcile) tier(label string, lane ProviderConfig) (ProviderConfig, error) {
+func (r laneReconcile) tier(label, path string, lane ProviderConfig) (ProviderConfig, error) {
 	if err := r.host(label, lane.Provider, lane.BaseURL); err != nil {
 		return ProviderConfig{}, err
 	}
 	if pins := lane.Routing.pins(); pins != nil {
-		if err := r.pins(label, lane.Provider, pins); err != nil {
-			return ProviderConfig{}, err
+		if held := r.providers[lane.Provider].Upstream.pins(); held == nil || !samePins(held, pins) {
+			return ProviderConfig{}, refuseConnectionKeysOnTier(path, pins)
 		}
 		lane.Routing = lane.Routing.withoutPins()
 	}
@@ -116,18 +119,28 @@ func (r laneReconcile) host(label, provider, host string) error {
 	return movedToProvider(label, "the host is set on the provider now; change it", provider)
 }
 
-func (r laneReconcile) pins(label, provider string, pins *OpenRouterRouting) error {
-	entry := r.providers[provider]
-	switch held := entry.Upstream.pins(); {
-	case held == nil:
-		entry.Upstream = entry.Upstream.withPins(pins)
-		r.providers[provider] = entry
-		return nil
-	case samePins(held, pins):
-		return nil
+// refuseConnectionKeysOnTier refuses the connection keys a tier wrote, one
+// fault per key. They are accepted only as an echo of the connection's own
+// value, which is what a client writing back a resolved binding sends.
+func refuseConnectionKeysOnTier(path string, pins *OpenRouterRouting) error {
+	// Read off the fields, not the JSON: omitempty drops a written-empty list,
+	// and `only: []` on a tier is a connection key all the same.
+	p := pins.Provider
+	written := map[string]bool{
+		keyOnly: p.Only != nil, keyIgnore: p.Ignore != nil, keyAllowFallbacks: p.AllowFallbacks != nil,
+		keyZDR: p.ZDR != nil, keyDataCollection: p.DataCollection != "", keyEnforceDistillable: p.EnforceDistillableText != nil,
 	}
-	return movedToProvider(label, "the upstream pins (only, ignore, allow_fallbacks) are set on the provider now; change them", provider)
+	var faults []error
+	for _, key := range connectionKeys {
+		if written[key] {
+			faults = append(faults, faultAt(path+".provider."+key, CodeMovedToProvider, connectionKeyOnTier))
+		}
+	}
+	return joinFaults(faults...)
 }
+
+// connectionKeyOnTier is the refusal for a host filter or privacy key on a tier.
+const connectionKeyOnTier = "is set on the connection, under OpenRouter settings, and applies to every tier. Remove it here."
 
 func movedToProvider(label, what, provider string) error {
 	return settings.InvalidValue{
@@ -136,19 +149,15 @@ func movedToProvider(label, what, provider string) error {
 	}
 }
 
-// samePins compares two pin sets: a list is a set of hosts, so its order says
-// nothing.
+// samePins compares two sets of connection keys: a host list is a set, so
+// its order says nothing.
 func samePins(a, b *OpenRouterRouting) bool {
-	sameSet := func(x, y []string) bool {
-		return slices.Equal(slices.Sorted(slices.Values(x)), slices.Sorted(slices.Values(y)))
+	normal := func(r *OpenRouterRouting) OpenRouterProvider {
+		p := r.pins().Provider
+		p.Only, p.Ignore = slices.Sorted(slices.Values(p.Only)), slices.Sorted(slices.Values(p.Ignore))
+		return p
 	}
-	fallbacks := func(r *OpenRouterRouting) string {
-		if r.AllowFallbacks == nil {
-			return ""
-		}
-		return fmt.Sprint(*r.AllowFallbacks)
-	}
-	return sameSet(a.Only, b.Only) && sameSet(a.Ignore, b.Ignore) && fallbacks(a) == fallbacks(b)
+	return reflect.DeepEqual(normal(a), normal(b))
 }
 
 // missingHostError is a lane refusal whose cause is a provider with nowhere to
@@ -174,12 +183,17 @@ func decisionHostMissing(provider, host string) bool {
 	return defaulted(host, d.defaultEndpoint) == ""
 }
 
-// routingRefusal turns a refused write into what the caller is told: no_host
-// when the cause is an unhosted provider, the generic code otherwise.
+// routingRefusal turns a refused write into what the caller is told: each bad
+// key by its path when the refusal names them, no_host when the cause is an
+// unhosted provider, the generic code otherwise.
 func (cfg RoutingConfig) routingRefusal(err error) error {
 	var invalid settings.InvalidValue
 	if errors.As(err, &invalid) {
 		return invalid
+	}
+	var faults routingFaults
+	if errors.As(err, &faults) {
+		return faults
 	}
 	var missing missingHostError
 	if errors.As(err, &missing) {

@@ -69,11 +69,14 @@ export function ProviderSheet({
   status,
   usage,
   connection,
+  figures,
   onClose,
 }: Readonly<{
   status: ProviderStatus;
   usage: ProviderUsage | undefined;
   connection: ReactNode;
+  // What this vendor's calls did, between how it is reached and what it costs.
+  figures?: ReactNode;
   onClose: () => void;
 }>) {
   const t = useT();
@@ -107,6 +110,7 @@ export function ProviderSheet({
           </Heading>
           {connection}
         </section>
+        {figures}
         <ProviderPrices
           provider={status.provider}
           pricedBy={status.priced_by}

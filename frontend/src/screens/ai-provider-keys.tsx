@@ -8,6 +8,7 @@ import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { serviceAccountProblem } from "../design-system/serviceaccountkeyfield";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { ProviderCallsLine, ProviderRecentCalls } from "./ai-call-figures";
 import {
   credentialKindOf,
   KeyEntry,
@@ -24,6 +25,7 @@ import {
   KeyTestOutcome,
   useTestProviderKey,
 } from "./ai-provider-key-test";
+import { isOpenRouter } from "./ai-provider-links";
 import { providerName } from "./ai-provider-names";
 import {
   hasProviderSettings,
@@ -73,6 +75,8 @@ export function AiProviderKeysCard() {
   // The provider whose sheet is open, by name so it follows the list as a key
   // is saved rather than holding a copy that goes stale.
   const [opened, setOpened] = useState<string | null>(null);
+  // The host the open sheet's form would save; null until it reports one.
+  const [draftHost, setDraftHost] = useState<string | null>(null);
 
   if (!canSee) {
     // Withheld, not absent. An absent key card would say this installation has
@@ -111,7 +115,10 @@ export function AiProviderKeysCard() {
                   key={p.provider}
                   status={p}
                   usage={usage?.get(p.provider)}
-                  onOpen={() => setOpened(p.provider)}
+                  onOpen={() => {
+                    setDraftHost(null);
+                    setOpened(p.provider);
+                  }}
                 />
               ))}
               {openStatus ? (
@@ -134,11 +141,30 @@ export function AiProviderKeysCard() {
                             provider={openStatus.provider}
                             routing={routing.data.routing}
                             canManage={canManage}
+                            onHostChange={setDraftHost}
                           />
                         )}
                     </>
                   }
-                  onClose={() => setOpened(null)}
+                  figures={
+                    <ProviderRecentCalls
+                      provider={openStatus.provider}
+                      broker={
+                        openStatus.provider === "openai_compatible" &&
+                        isOpenRouter(
+                          draftHost ??
+                            routing.data?.routing.providers?.[
+                              openStatus.provider
+                            ]?.base_url ??
+                            "",
+                        )
+                      }
+                    />
+                  }
+                  onClose={() => {
+                    setDraftHost(null);
+                    setOpened(null);
+                  }}
                 />
               ) : null}
             </>
@@ -170,6 +196,7 @@ function ProviderRow({
       >
         <span className="ai-provider-who">
           <span>{providerName(status.provider, t)}</span>
+          <ProviderCallsLine provider={status.provider} />
         </span>
         <span
           className="t-caption ai-provider-used"
@@ -181,7 +208,7 @@ function ProviderRow({
         </span>
         <Badge tone={STATE_TONE[state]}>{t(STATE_LABEL[state])}</Badge>
         <Button onClick={onOpen}>
-          {t("aiProviders.manage")}
+          {t("aiRouting.edit")}
           <span className="sr-only"> {providerName(status.provider, t)}</span>
         </Button>
       </div>

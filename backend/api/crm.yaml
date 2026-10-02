@@ -16188,6 +16188,93 @@ paths:
           description: The configuration changed; reload before saving.
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /ai/task-overrides:
+    get:
+      tags: [AI]
+      operationId: getAiTaskOverrides
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Read the per-task thinking level and timeouts (ai_routing read).
+      responses:
+        '200':
+          description: The stored overrides; the ETag is the If-Match a save is held to.
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AiTaskOverrides' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+    put:
+      tags: [AI]
+      operationId: replaceAiTaskOverrides
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Replace the per-task overrides installation-wide (ai_routing update). Every role applies them within a minute.
+      description: |
+        Optional If-Match carries the revision returned in the GET ETag header. A stale revision
+        returns 409 without changing settings. Omitting If-Match, or sending *, replaces whatever
+        is stored.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AiTaskOverrides' }
+      responses:
+        '200':
+          description: The overrides as stored.
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AiTaskOverrides' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '409':
+          description: Someone saved the overrides since they were read; reload before saving.
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /ai/task-overrides/preview:
+    post:
+      tags: [AI]
+      operationId: previewAiTaskOverrides
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Judge a draft of the overrides without saving it (ai_routing read and update).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AiTaskOverrides' }
+      responses:
+        '200':
+          description: Every field a save refuses, what each task would be sent with, and stale overrides.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AiTaskOverridesPreview' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+
+  /ai/routing/schema:
+    get:
+      tags: [AI]
+      operationId: getAiRoutingSchema
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: The JSON Schema of the routing document, with a description and documentation link per OpenRouter field (ai_routing read).
+      description: |
+        The routing $defs of the configuration schema the editor gate holds to the parser, so
+        the admin screen documents exactly what a save accepts. Each OpenRouter field carries
+        `x-doc-url` and `x-placement` (tier, or connection for the keys set on the provider).
+      responses:
+        '200':
+          description: The routing $defs.
+          content:
+            application/schema+json:
+              schema: { type: object, additionalProperties: true }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+
   /ai/routing/preview:
     post:
       tags: [AI]
@@ -16735,6 +16822,10 @@ paths:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
         - { name: task, in: query, schema: { type: string }, description: 'Filter to one task (capture_classify, enrich, …).' }
+        - { name: provider, in: query, schema: { type: string }, description: 'Filter to calls that ended on one provider (openai_compatible, gemini, …).' }
+        - { name: model, in: query, schema: { type: string }, description: 'Filter to calls that ended on one configured model id.' }
+        - { name: served_provider, in: query, schema: { type: string }, description: 'Filter to calls a broker served from one upstream host.' }
+        - { name: tier, in: query, schema: { type: string }, description: 'Filter to calls that ended on one tier.' }
       responses:
         '200':
           description: One page of terminal calls.
@@ -16743,6 +16834,56 @@ paths:
               schema: { $ref: '#/components/schemas/AiCallListResponse' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /ai/call-stats:
+    get:
+      tags: [AI]
+      operationId: getAiCallStats
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Call figures over a window, grouped — calls, failures, timeouts, latency, tokens and cost (ai_diagnostics read).
+      description: |
+        Counts every model-call attempt in the window, cache hits excluded. A failure is an
+        attempt with a sentinel that is not an answer, the same rule the health dot reads;
+        a timeout is an attempt its deadline stopped. Cost is priced from the rate sheet the
+        way /ai/usage prices it, and calls no rate prices are counted in `unpriced`.
+      parameters:
+        - { name: window, in: query, schema: { type: string, enum: ['24h', '7d', '30d'], default: '7d' } }
+        - { name: group, in: query, schema: { type: string, enum: [provider, model, served_provider, tier, task], default: provider } }
+        - { name: provider, in: query, schema: { type: string } }
+        - { name: model, in: query, schema: { type: string } }
+        - { name: tier, in: query, schema: { type: string } }
+        - { name: task, in: query, schema: { type: string } }
+      responses:
+        '200':
+          description: One row per group, most calls first; empty when the window holds none.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AiCallStats' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /ai/call-stats/flow:
+    get:
+      tags: [AI]
+      operationId: getAiTaskFlow
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Which step of one task's route answered its calls over a window (ai_diagnostics read).
+      parameters:
+        - { name: task, in: query, required: true, schema: { type: string } }
+        - { name: window, in: query, schema: { type: string, enum: ['24h', '7d', '30d'], default: '7d' } }
+      responses:
+        '200':
+          description: The task's logical calls, how many got no answer, and each step of its route.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AiTaskFlow' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /ai/calls/{id}:
@@ -28812,9 +28953,12 @@ components:
         residency pin lives here. Accepted on `openai_compatible` with an OpenRouter host only.
         How one model is served (sort, quantizations, …) stays on the tier's `routing`.
       properties:
-        only: { type: array, items: { type: string }, description: "Upstream slugs allowed; a hard filter." }
-        ignore: { type: array, items: { type: string }, description: "Upstream slugs excluded; a hard filter." }
+        only: { type: array, uniqueItems: true, items: { type: string }, description: "Upstream slugs allowed; a hard filter." }
+        ignore: { type: array, uniqueItems: true, items: { type: string }, description: "Upstream slugs excluded; a hard filter." }
         allow_fallbacks: { type: boolean, description: "Override the broker's host fallback. False is a real choice, distinct from absent." }
+        zdr: { type: boolean, description: "Zero data retention: only hosts that keep no copy of the prompt or the answer may serve a request." }
+        data_collection: { type: string, enum: [allow, deny], description: "deny keeps every request off hosts that may store or train on prompts." }
+        enforce_distillable_text: { type: boolean, description: "Only models whose licence allows their output to train other models." }
 
     AiTierBinding:
       type: object
@@ -28866,22 +29010,99 @@ components:
       type: object
       additionalProperties: false
       description: |
-        How an openai_compatible binding pointed at OpenRouter serves its model; refused on any
-        other binding, and on the embeddings lane every preference but only, ignore and
-        allow_fallbacks is refused. Absent means the product default (reliability over price);
-        an empty object means no preferences (the broker's own price-weighted routing). The two
-        are different choices and a client must not turn one into the other. `only`, `ignore`
-        and `allow_fallbacks` belong to the provider (`AiOpenRouterUpstream`): on a tier they
-        are accepted only when equal to the provider's, or lifted onto a provider that has none.
+        How an openai_compatible binding pointed at OpenRouter serves its model, in OpenRouter's
+        own request shape: `provider` (which hosts and how) and `reasoning` (how hard the model
+        thinks). Refused on any other binding; on the embeddings lane only the connection's keys
+        are accepted. Absent means the product
+        default (reliability over price); an empty object means no preferences (the broker's own
+        price-weighted routing). The two are different choices and a client must not turn one
+        into the other. The keys that say which hosts may read a request (only, ignore,
+        allow_fallbacks, zdr, data_collection, enforce_distillable_text) belong to the provider
+        (`AiOpenRouterUpstream`): on a tier they are accepted only when equal to the provider's,
+        and refused otherwise, each by its path. `GET /ai/routing/schema` describes every field.
+        The flat keys are the older spelling, still read; a response writes `provider` and
+        `reasoning`.
       properties:
-        only: { type: array, items: { type: string }, description: "Upstream slugs allowed; a hard filter." }
-        ignore: { type: array, items: { type: string }, description: "Upstream slugs excluded; a hard filter." }
-        quantizations: { type: array, items: { type: string }, description: 'Serving precisions allowed (bf16, fp16, fp8, fp4, int8 …); a hard filter.' }
-        sort: { type: string, description: 'price | throughput | latency. Reorders rather than filters, and disables load balancing.' }
-        require_parameters: { type: boolean, description: "Keep the request off hosts that lack any parameter it carries. False is a real choice, distinct from absent." }
-        allow_fallbacks: { type: boolean, description: "Override the broker's host fallback. False is a real choice, distinct from absent." }
-        preferred_max_latency_p90: { type: number, format: double, description: "Seconds; hosts above it are deprioritized, never removed. Omit to leave unset." }
-        reasoning_effort: { type: string, description: 'none | minimal | low | medium | high | xhigh | max. Unset leaves each host its own default.' }
+        provider: { $ref: '#/components/schemas/AiOpenRouterProvider' }
+        reasoning: { $ref: '#/components/schemas/AiOpenRouterReasoning' }
+        only: { type: array, items: { type: string }, deprecated: true, description: "Older spelling of provider.only." }
+        ignore: { type: array, items: { type: string }, deprecated: true, description: "Older spelling of provider.ignore." }
+        quantizations: { type: array, items: { type: string }, deprecated: true, description: 'Older spelling of provider.quantizations.' }
+        sort: { type: string, deprecated: true, description: 'Older spelling of provider.sort.' }
+        require_parameters: { type: boolean, deprecated: true, description: "Older spelling of provider.require_parameters." }
+        allow_fallbacks: { type: boolean, deprecated: true, description: "Older spelling of provider.allow_fallbacks." }
+        preferred_max_latency_p90: { type: number, format: double, deprecated: true, description: "Older spelling of provider.preferred_max_latency.p90, in seconds." }
+        reasoning_effort: { type: string, deprecated: true, description: 'Older spelling of reasoning.effort.' }
+
+    AiOpenRouterProvider:
+      type: object
+      additionalProperties: false
+      description: OpenRouter's `provider` request object, sent as written. Every key is optional; GET /ai/routing/schema documents each.
+      properties:
+        order: { type: array, minItems: 1, uniqueItems: true, items: { type: string }, description: 'Host slugs to try first, in this order.' }
+        only: { type: array, items: { type: string }, description: 'Upstream slugs allowed; a hard filter. Set on the provider.' }
+        ignore: { type: array, items: { type: string }, description: 'Upstream slugs excluded; a hard filter. Set on the provider.' }
+        allow_fallbacks: { type: boolean, description: "Whether the broker may switch hosts on failure. Set on the provider." }
+        require_parameters: { type: boolean, description: 'Keep the request off hosts that lack any parameter it carries.' }
+        data_collection: { type: string, enum: [allow, deny], description: 'Whether hosts that may store prompts are allowed. Set on the provider.' }
+        zdr: { type: boolean, description: 'Zero data retention only. Set on the provider.' }
+        enforce_distillable_text: { type: boolean, description: 'Only models whose output may train other models. Set on the provider.' }
+        quantizations: { type: array, minItems: 1, uniqueItems: true, items: { type: string }, description: 'Serving precisions allowed (bf16, fp16, fp8, fp4, int8 …); a hard filter.' }
+        sort:
+          description: 'price | throughput | latency, or {by, partition}. Reorders rather than filters, and disables load balancing.'
+          oneOf:
+            - { type: string, enum: [price, throughput, latency] }
+            - $ref: '#/components/schemas/AiOpenRouterSort'
+        max_price: { $ref: '#/components/schemas/AiOpenRouterPrice' }
+        preferred_min_throughput:
+          description: Tokens per second, one number or per percentile; a soft preference.
+          oneOf:
+            - { type: number, format: double, minimum: 0 }
+            - $ref: '#/components/schemas/AiOpenRouterPercentiles'
+        preferred_max_latency:
+          description: Seconds, one number or per percentile; a soft preference.
+          oneOf:
+            - { type: number, format: double, minimum: 0 }
+            - $ref: '#/components/schemas/AiOpenRouterPercentiles'
+
+    AiOpenRouterSort:
+      type: object
+      additionalProperties: false
+      required: [by]
+      properties:
+        by: { type: string, enum: [price, throughput, latency] }
+        partition: { type: string, enum: [model, none], description: 'none sorts across every model of a fallback list at once.' }
+
+    AiOpenRouterPrice:
+      type: object
+      additionalProperties: false
+      description: The most a request may cost, in USD per million prompt or completion tokens, or per request or image.
+      properties:
+        prompt: { type: number, format: double, minimum: 0 }
+        completion: { type: number, format: double, minimum: 0 }
+        request: { type: number, format: double, minimum: 0 }
+        image: { type: number, format: double, minimum: 0 }
+
+    AiOpenRouterPercentiles:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        p50: { type: number, format: double, minimum: 0 }
+        p75: { type: number, format: double, minimum: 0 }
+        p90: { type: number, format: double, minimum: 0 }
+        p99: { type: number, format: double, minimum: 0 }
+
+    AiOpenRouterReasoning:
+      type: object
+      additionalProperties: false
+      description: OpenRouter's `reasoning` request object. effort and max_tokens are two spellings of one budget; write one.
+      not: { required: [effort, max_tokens] }
+      properties:
+        effort: { type: string, enum: [max, xhigh, high, medium, low, minimal, none] }
+        max_tokens: { type: integer, minimum: 1 }
+        exclude: { type: boolean, description: 'Think, but leave the reasoning out of the answer.' }
+        enabled: { type: boolean }
 
     AiEmbeddingsBinding:
       allOf:
@@ -30547,6 +30768,78 @@ components:
           description: 'Why a feature that declares a decision form is not answered by the decision lane; absent when it is, and for a feature with no decision form.'
         decision_candidate:
           $ref: '#/components/schemas/AiRouteCandidate'
+        decides: { type: boolean, description: 'The task declares a decision form, so a decision model may answer it first and its decision timeout applies.' }
+        overrides: { $ref: '#/components/schemas/AiTaskOverride' }
+        defaults: { $ref: '#/components/schemas/AiTaskSettings' }
+    AiTaskOverride:
+      type: object
+      additionalProperties: false
+      description: An admin's settings for one task. An absent field keeps the product's own value.
+      properties:
+        thinking: { type: string, enum: [minimal, low, medium, high], description: 'The exact level every site of the task is sent at. Outranks the binding and the site floor; a model with no thinking control ignores it.' }
+        decision_timeout_ms: { type: integer, minimum: 5000, maximum: 60000, description: 'How long the decision model may take before the task falls back to its ladder. Decision tasks only.' }
+        attempt_timeout_ms: { type: integer, minimum: 10000, maximum: 300000, description: 'How long one model call on the ladder may take before the next tier is tried.' }
+    AiTaskOverrides:
+      type: object
+      description: Every task's override, keyed by task id.
+      additionalProperties: { $ref: '#/components/schemas/AiTaskOverride' }
+    AiTaskSettings:
+      type: object
+      required: [decision_timeout_ms, attempt_timeout_ms]
+      description: What a task's calls are sent with.
+      properties:
+        thinking: { type: string, description: 'Absent when no level is chosen: the binding and the site floor decide.' }
+        decision_timeout_ms: { type: integer }
+        attempt_timeout_ms: { type: integer }
+    AiTaskOverridesPreview:
+      type: object
+      required: [effective, stale]
+      properties:
+        errors: { type: array, items: { $ref: '#/components/schemas/AiFieldError' }, description: 'Every field the save would refuse, by its path (<task>.<field>).' }
+        effective: { type: object, additionalProperties: { $ref: '#/components/schemas/AiTaskSettings' }, description: 'What each task would be sent with.' }
+        stale: { type: array, items: { type: string }, description: 'Stored overrides for tasks this installation no longer runs; calls ignore them.' }
+    AiCallStats:
+      type: object
+      required: [window, group, rows]
+      properties:
+        window: { type: string }
+        group: { type: string }
+        rows: { type: array, items: { $ref: '#/components/schemas/AiCallStatsRow' } }
+    AiCallStatsRow:
+      type: object
+      required: [key, calls, failed, timeouts, p50_ms, p95_ms, tokens_in, tokens_out, cost_microusd, unpriced]
+      properties:
+        key: { type: string, description: 'The group value: a provider, model id, upstream host, tier or task. Empty when the attempts carried none (a host a direct vendor does not report).' }
+        calls: { type: integer, format: int64 }
+        failed: { type: integer, format: int64 }
+        timeouts: { type: integer, format: int64 }
+        p50_ms: { type: integer, format: int64 }
+        p95_ms: { type: integer, format: int64 }
+        tokens_in: { type: integer, format: int64 }
+        tokens_out: { type: integer, format: int64 }
+        cost_microusd: { type: integer, format: int64, description: 'USD micro-units, priced at each call''s day.' }
+        unpriced: { type: integer, format: int64, description: 'Calls that spent tokens no rate prices; their cost is not in cost_microusd.' }
+    AiTaskFlow:
+      type: object
+      required: [task, window, total, unanswered, steps]
+      properties:
+        task: { type: string }
+        window: { type: string }
+        total: { type: integer, format: int64, description: 'Logical calls in the window, cache hits excluded.' }
+        unanswered: { type: integer, format: int64, description: 'Logical calls whose last attempt failed.' }
+        steps: { type: array, items: { $ref: '#/components/schemas/AiFlowStep' }, description: 'The decision model first, then each tier in ladder order.' }
+    AiFlowStep:
+      type: object
+      required: [decision, tier, provider, model, attempts, answered, p50_ms, gave_up]
+      properties:
+        decision: { type: boolean }
+        tier: { type: string }
+        provider: { type: string }
+        model: { type: string }
+        attempts: { type: integer, format: int64 }
+        answered: { type: integer, format: int64, description: 'Logical calls this step answered.' }
+        p50_ms: { type: integer, format: int64 }
+        gave_up: { type: object, additionalProperties: { type: integer, format: int64 }, description: 'Why the walk moved past this step, by sentinel (timeout, provider_error) or the next attempt''s reason (decision_below_floor, …).' }
     AiDeferredWork:
       type: object
       required: [carrier, unit, available]
@@ -30582,6 +30875,30 @@ components:
         current_version: { type: string }
         features: { type: array, items: { $ref: '#/components/schemas/AiFeatureRoute' } }
         unused_tiers: { type: array, items: { type: string } }
+        errors:
+          type: array
+          description: |
+            Every key the save would refuse, by its path in the routing document
+            (tiers.cheap_cloud.routing.provider.sort.by). Absent when the draft is valid; when
+            present, features are judged with each refused tier routing left as stored.
+          items: { $ref: '#/components/schemas/AiFieldError' }
+        effective: { $ref: '#/components/schemas/AiRoutingEffective' }
+    AiRoutingEffective:
+      type: object
+      required: [tiers]
+      description: What each tier will send OpenRouter once saved, the connection's keys and the product default merged in. Only tiers whose binding sends a block.
+      properties:
+        tiers:
+          type: object
+          additionalProperties: { $ref: '#/components/schemas/AiOpenRouterRouting' }
+    AiFieldError:
+      type: object
+      required: [field, code, message]
+      description: One refused input, the shape a 422's details.errors carries.
+      properties:
+        field: { type: string, description: 'The path of the refused key.' }
+        code: { type: string }
+        message: { type: string, description: 'What is wrong and what to write instead.' }
     AiUsage:
       type: object
       description: 'AI usage + budget (AIRT-WIRE-1): the AIRT-PARAM-33 meter aggregated per day × task × tier, plus the budget band. Token-denominated; cost_est_minor is computed on read from the workspace''s ai_model_rate price sheet as of each call''s day (ADR-0067, price-on-read) — omitted, never a fabricated 0, when a task line''s window carries no priced call, and accompanied by unpriced_calls when it is a partial total.'
@@ -30689,6 +31006,11 @@ components:
             safety or recitation stop, a content filter, a blocked prompt. `request_rejected` — the provider's own error code named the request
             malformed, which is a defect on the calling side.
 
+            `timeout` — the attempt's deadline stopped it: the task's model call timeout on a
+            ladder attempt, its decision model timeout on a decision attempt. A failure like
+            `provider_error`, named apart so a slow host can be told from a broken one. A
+            caller's own cancellation is never a timeout.
+
             `provider_error` is the FALLBACK: a provider failure naming none of those. It
             covers a connection or TLS fault and a non-429 server error as well as a call the
             model answered badly, so it says the provider failed and nothing about how far the
@@ -30717,7 +31039,7 @@ components:
       properties:
         attempt: { type: integer }
         is_terminal: { type: boolean }
-        attempt_reason: { type: string, description: 'Why this attempt ran — one of provider_error, schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder. Or one of decision_below_floor, decision_error, decision_off_enum, decision_state_too_large, decision_uncertified, decision_local_only — the decision attempt before this walk did not stand, and why. Read an unrecognized reason as "some reason" rather than refusing it.' }
+        attempt_reason: { type: string, description: 'Why this attempt ran — one of provider_error, timeout (the attempt before stopped at its deadline), schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder. Or one of decision_below_floor, decision_error, decision_off_enum, decision_state_too_large, decision_uncertified, decision_local_only — the decision attempt before this walk did not stand, and why. Read an unrecognized reason as "some reason" rather than refusing it.' }
         kind: { type: string, enum: [completion, embedding, decision], x-go-type: string, description: 'What this attempt asked: a chat completion, an embedding, or a decision model.' }
         tier: { type: string, description: 'The tier this attempt ran on; decide for the decision lane.' }
         provider: { type: string }

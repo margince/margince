@@ -143,7 +143,7 @@ export const ServiceAccount: Story = {
       within(
         await body.findByTestId("ai-provider-row-gemini_vertex"),
       ).getByRole("button", {
-        name: /^Manage/,
+        name: /^Edit/,
       }),
     );
     await userEvent.click(
@@ -161,7 +161,7 @@ export const ServiceAccountDark: Story = {
       within(
         await body.findByTestId("ai-provider-row-gemini_vertex"),
       ).getByRole("button", {
-        name: /^Manage/,
+        name: /^Edit/,
       }),
     );
     await userEvent.click(
@@ -189,7 +189,7 @@ export const Tested: Story = {
       within(await body.findByTestId("ai-provider-row-gemini")).getByRole(
         "button",
         {
-          name: /^Manage/,
+          name: /^Edit/,
         },
       ),
     );

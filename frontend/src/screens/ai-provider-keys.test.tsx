@@ -91,7 +91,7 @@ async function openSheet(
   await user.click(
     within(await screen.findByTestId(`ai-provider-row-${provider}`)).getByRole(
       "button",
-      { name: /^Manage/ },
+      { name: /^Edit/ },
     ),
   );
   return screen.findByTestId(`ai-provider-key-${provider}`);
@@ -155,13 +155,13 @@ describe("AiProviderKeysCard", () => {
     expect(
       within(await screen.findByTestId("ai-provider-row-gemini")).getByRole(
         "button",
-        { name: /^Manage/ },
+        { name: /^Edit/ },
       ),
     ).toBeTruthy();
     expect(
       within(await screen.findByTestId("ai-provider-row-openai")).getByRole(
         "button",
-        { name: /^Manage/ },
+        { name: /^Edit/ },
       ),
     ).toBeTruthy();
     // And no paste field until a sheet is opened and asked for one. Six open
@@ -198,7 +198,7 @@ describe("AiProviderKeysCard", () => {
     render(<AiProviderKeysCard />);
     within(await screen.findByTestId("ai-provider-row-gemini")).getByRole(
       "button",
-      { name: /^Manage/ },
+      { name: /^Edit/ },
     );
 
     const user = userEvent.setup();
@@ -223,7 +223,7 @@ describe("AiProviderKeysCard", () => {
     render(<AiProviderKeysCard />);
     within(await screen.findByTestId("ai-provider-row-openai")).getByRole(
       "button",
-      { name: /^Manage/ },
+      { name: /^Edit/ },
     );
 
     const user = userEvent.setup();
@@ -246,7 +246,7 @@ describe("AiProviderKeysCard", () => {
     render(<AiProviderKeysCard />);
     within(await screen.findByTestId("ai-provider-row-openai")).getByRole(
       "button",
-      { name: /^Manage/ },
+      { name: /^Edit/ },
     );
 
     const user = userEvent.setup();
@@ -278,7 +278,7 @@ describe("AiProviderKeysCard", () => {
     const { client } = render(<AiProviderKeysCard />);
     within(await screen.findByTestId("ai-provider-row-openai")).getByRole(
       "button",
-      { name: /^Manage/ },
+      { name: /^Edit/ },
     );
 
     const user = userEvent.setup();
@@ -305,7 +305,7 @@ describe("AiProviderKeysCard", () => {
     render(<AiProviderKeysCard />);
     within(await screen.findByTestId("ai-provider-row-openai")).getByRole(
       "button",
-      { name: /^Manage/ },
+      { name: /^Edit/ },
     );
 
     const user = userEvent.setup();
@@ -326,7 +326,7 @@ describe("AiProviderKeysCard", () => {
     render(<AiProviderKeysCard />);
     within(await screen.findByTestId("ai-provider-row-gemini")).getByRole(
       "button",
-      { name: /^Manage/ },
+      { name: /^Edit/ },
     );
 
     // Removing is behind the row's own verb, with the paste field: it is a
@@ -360,7 +360,7 @@ describe("AiProviderKeysCard", () => {
     render(<AiProviderKeysCard />);
     within(await screen.findByTestId("ai-provider-row-gemini")).getByRole(
       "button",
-      { name: /^Manage/ },
+      { name: /^Edit/ },
     );
 
     await openKey(user, "gemini");
@@ -384,7 +384,7 @@ describe("AiProviderKeysCard", () => {
     render(<AiProviderKeysCard />);
     within(await screen.findByTestId("ai-provider-row-gemini")).getByRole(
       "button",
-      { name: /^Manage/ },
+      { name: /^Edit/ },
     );
 
     const user = userEvent.setup();
@@ -429,7 +429,7 @@ describe("AiProviderKeysCard", () => {
     render(<AiProviderKeysCard />);
     within(await screen.findByTestId("ai-provider-row-gemini")).getByRole(
       "button",
-      { name: /^Manage/ },
+      { name: /^Edit/ },
     );
 
     // Refused, not hidden: an operator who must ask somebody else to rotate a
@@ -460,7 +460,7 @@ describe("AiProviderKeysCard", () => {
     render(<AiProviderKeysCard />);
     within(await screen.findByTestId("ai-provider-row-openai")).getByRole(
       "button",
-      { name: /^Manage/ },
+      { name: /^Edit/ },
     );
 
     const row = await openKey(user, "openai");

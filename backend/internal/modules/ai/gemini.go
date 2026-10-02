@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -298,6 +299,11 @@ func (c *geminiClient) generate(ctx context.Context, req model.Request, stream b
 	opts, err := geminiReadOptions(req.ProviderOptions)
 	if err != nil {
 		return nil, err
+	}
+	// Precedence: the request's own option, an admin's level for the task,
+	// then the binding's; a model that predates the field takes none.
+	if opts.ThinkingLevel == "" && geminiTakesThinkingLevel(genModel) && slices.Contains(geminiThinkingLevels, req.ThinkingLevel) {
+		opts.ThinkingLevel = req.ThinkingLevel
 	}
 	if opts.ThinkingLevel == "" {
 		opts.ThinkingLevel = c.thinkingLevel

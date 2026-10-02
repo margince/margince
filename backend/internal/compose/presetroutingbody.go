@@ -18,5 +18,9 @@ func PresetRoutingBody(raw []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return json.Marshal(toContractAiRouting(cfg))
+	wire, err := toContractAiRouting(cfg)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(wire)
 }

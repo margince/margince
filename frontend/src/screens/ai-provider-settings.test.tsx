@@ -287,13 +287,16 @@ describe("a provider's settings on its sheet", () => {
     await within(sheet).findByRole("combobox", { name: "Service" });
     expect(within(sheet).queryByText("Only these hosts")).toBeNull();
     await user.click(
+      within(sheet).getByRole("checkbox", { name: /Zero data retention/ }),
+    );
+    await user.click(
       within(sheet).getByRole("button", { name: "Save connection" }),
     );
 
     await waitFor(() =>
       expect(puts[0]?.body).toEqual({
         base_url: "https://openrouter.ai/api",
-        upstream: { only: ["mistral/eu"] },
+        upstream: { zdr: true, only: ["mistral/eu"] },
       }),
     );
   });

@@ -2,8 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useId, useState } from "react";
-import { api } from "../api/client";
+import { useCallback, useId, useState } from "react";
 import type { components } from "../api/schema";
 import { useUnsavedGuard } from "../app/unsaved";
 import { Button } from "../design-system/atoms";
@@ -11,6 +10,8 @@ import { Callout } from "../design-system/callout";
 import { Heading } from "../design-system/heading";
 import { Modal } from "../design-system/modal";
 import { useT } from "../i18n";
+import { isConflict, readLatest, writeSlice } from "./ai-binding-write";
+import { TierRecentCalls } from "./ai-call-figures";
 import {
   type AvailableModels,
   type ModelCatalogue,
@@ -25,22 +26,16 @@ import {
 } from "./ai-routing-fields";
 import {
   boundProviders,
-  fetchRouting,
   ROUTING_KEY,
   type RoutingRead,
 } from "./ai-routing-query";
+import { type SliceValue, sameSlice, sliceOf } from "./ai-routing-slice";
 import {
-  type SliceValue,
-  sameSlice,
-  sliceOf,
-  withSlice,
-} from "./ai-routing-slice";
-import {
-  problemCode,
-  problemCodeOf,
-  problemMessageOf,
-  throwProblem,
-} from "./common";
+  laneBrokered,
+  ServingSection,
+  servingBlocked,
+} from "./ai-serving-editor";
+import { problemMessageOf } from "./common";
 import { savedVertexLocation, VERTEX_PROVIDER } from "./vertex-location";
 
 // One binding's editor: provider, model, and whatever else only that lane has.
@@ -54,9 +49,6 @@ import { savedVertexLocation, VERTEX_PROVIDER } from "./vertex-location";
 
 type KeyStatus = components["schemas"]["AiProviderKeyStatus"];
 type DecisionsBinding = components["schemas"]["AiDecisionsBinding"];
-
-// The slice moved under the editor between open and Save.
-class SliceMoved extends Error {}
 
 export function BindingEditor({
   opened,
@@ -83,6 +75,14 @@ export function BindingEditor({
   const [base, setBase] = useState(() => sliceOf(opened.routing, initial));
   const [draft, setDraft] = useState(initial);
   const [conflict, setConflict] = useState(false);
+  // A serving block the server has not yet cleared holds the save, so a value
+  // it would refuse never reaches the write.
+  // Unchecked until the serving preview answers: Save waits for the server.
+  const [servingValid, setServingValid] = useState(false);
+  const onServingValid = useCallback(
+    (valid: boolean) => setServingValid(valid),
+    [],
+  );
   // A move away mid-edit asks first, as the page's other editors do.
   useUnsavedGuard(!sameSlice(draft, initial));
   const save = useMutation({
@@ -124,7 +124,7 @@ export function BindingEditor({
   const keyMissing = binding ? missingKey(binding.provider, keys) : false;
   const busy = !canManage || save.isPending;
   return (
-    <Modal open onClose={onClose} labelledBy={headingId}>
+    <Modal open onClose={onClose} labelledBy={headingId} size="wide">
       <Heading size="large" id={headingId} className="t-h2 modal-title">
         {draft.kind === "decisions" && base.binding === undefined
           ? t("aiRouting.decisions.add")
@@ -145,6 +145,29 @@ export function BindingEditor({
             provider={binding.provider}
             model={binding.model}
             lane={laneName(draft)}
+          />
+          <TierRecentCalls
+            tier={callTier(draft)}
+            broker={laneBrokered(draft.binding, opened.routing)}
+          />
+          <ServingSection
+            key={`${binding.provider}|${binding.model}`}
+            value={draft}
+            routing={opened.routing}
+            disabled={busy}
+            onValid={onServingValid}
+            onChange={(next) => {
+              if (draft.kind === "tier")
+                setDraft({
+                  ...draft,
+                  binding: { ...draft.binding, routing: next },
+                });
+              if (draft.kind === "embeddings")
+                setDraft({
+                  ...draft,
+                  binding: { ...draft.binding, routing: next },
+                });
+            }}
           />
         </div>
       )}
@@ -195,7 +218,8 @@ export function BindingEditor({
               !canManage ||
               !binding ||
               binding.model.trim() === "" ||
-              keyMissing
+              keyMissing ||
+              (servingBlocked(draft, opened.routing) === null && !servingValid)
             }
             reason={canManage ? undefined : t("aiRouting.adminOnly")}
             onClick={() => submit(draft)}
@@ -448,48 +472,18 @@ function reboundDecision(
     : { provider: next.provider, model: "" };
 }
 
+/** The tier a lane's calls are recorded under in the call record. */
+function callTier(value: SliceValue): string {
+  switch (value.kind) {
+    case "tier":
+      return value.tier;
+    case "embeddings":
+      return "embed";
+    case "decisions":
+      return "decide";
+  }
+}
+
 function laneName(value: SliceValue): string {
   return value.kind === "tier" ? value.tier : value.kind;
-}
-
-function isConflict(error: unknown): boolean {
-  return error instanceof SliceMoved || problemCodeOf(error) === "version_skew";
-}
-
-function readLatest(
-  queryClient: ReturnType<typeof useQueryClient>,
-): Promise<RoutingRead> {
-  return queryClient.fetchQuery({
-    queryKey: ROUTING_KEY,
-    queryFn: fetchRouting,
-    staleTime: 0,
-  });
-}
-
-// Puts one slice onto the latest document. A 409 means some write landed
-// between the re-read and the PUT; it is retried once, because the re-read
-// then tells a colleague's edit to ANOTHER lane — which is no conflict — from
-// one to this lane, which throws SliceMoved as it would have at first.
-export async function writeSlice(
-  latestRead: () => Promise<RoutingRead>,
-  base: SliceValue,
-  edit: SliceValue,
-): Promise<RoutingRead> {
-  for (let attempt = 0; ; attempt++) {
-    const latest = await latestRead();
-    if (!sameSlice(sliceOf(latest.routing, base), base)) {
-      throw new SliceMoved();
-    }
-    const { data, error, response } = await api.PUT("/ai/routing", {
-      body: withSlice(latest.routing, edit),
-      // Always sent: an absent If-Match is an unconditional overwrite.
-      headers: { "If-Match": latest.version },
-    });
-    if (error) {
-      if (attempt === 0 && problemCode(error) === "version_skew") continue;
-      throwProblem(error);
-    }
-    if (!data) throw new Error("AI routing unavailable");
-    return { routing: data, version: response.headers.get("ETag") ?? "" };
-  }
 }

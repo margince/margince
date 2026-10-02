@@ -205,6 +205,11 @@ type Request struct {
 	// raises a model that thinks less by default and never lowers one that
 	// thinks more (docs/reference/ai-thinking.md has the per-provider table).
 	ThinkingFloor string
+	// ThinkingLevel is the exact level an admin chose for the request's task
+	// (minimal | low | medium | high); empty chooses none. It outranks the
+	// binding's own level and the floor; only the request's ProviderOptions
+	// outrank it. A model with no thinking control ignores it.
+	ThinkingLevel string
 	// ContextBytes and ContextTokensEstimate describe only the final delimited
 	// company-context block. They are trace metadata, never provider inputs.
 	ContextBytes          int

@@ -58,9 +58,7 @@ An `openai_compatible` tier on an OpenRouter provider host with no `routing:` in
 
 ```yaml
 routing:
-  sort: throughput
-  quantizations: [fp16, bf16]
-  require_parameters: true
+  provider: {sort: throughput, quantizations: [fp16, bf16], require_parameters: true}
 ```
 
 Reliability over price — deliberately the **inverse** of the broker's own
@@ -130,13 +128,13 @@ than falling back elsewhere. Read a model's endpoints at
 model with no EU endpoint cannot be pinned to the EU at all, and the list
 changes — `mistral-medium-3-5` had none until the broker added `mistral/eu`.
 
-**Where a request is served is the provider's; how a model is served is the
-tier's.** `only`, `ignore` and `allow_fallbacks` are set once, as
-`providers.openai_compatible.upstream` (the OpenRouter hosts fields on its
-provider sheet), and reach every lane on it; the embeddings lane may state its
-own. `sort`, `quantizations`, `require_parameters`, `preferred_max_latency_p90`
-and `reasoning_effort` stay on each tier's `routing:`, because two models behind
-one broker need different answers. OpenRouter's EU address, `https://eu.openrouter.ai/api`
+**Where a request is served is the connection's; how a model is served is the
+tier's.** `only`, `ignore`, `allow_fallbacks`, `zdr`, `data_collection` and
+`enforce_distillable_text` are set once, as `providers.openai_compatible.upstream`
+(the OpenRouter settings section of its provider sheet), and reach every lane on
+it; the embeddings lane may state its own. The serving keys stay on each tier's
+`routing:`, because two models behind one broker need different answers.
+[openrouter-routing-fields.md](openrouter-routing-fields.md) lists every field. OpenRouter's EU address, `https://eu.openrouter.ai/api`
 (Business or Enterprise plan), keeps every request in the EU, so `eu_hosted` needs no pin
 on it; on the global address a preset ending in `_eu.yaml` must pin every lane to an
 EU-region slug, which `TestAResidencyPresetPinsEveryLaneToAnEURegion` holds.

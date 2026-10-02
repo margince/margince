@@ -45,6 +45,28 @@ func (cfg RoutingConfig) sortedTiers() []Tier {
 	return slices.Sorted(maps.Keys(cfg.Tiers))
 }
 
+// connectionKeys are the `provider` keys that say WHICH hosts may read a
+// request. They live on the connection, so every tier on it is served under
+// the same privacy and no tier can loosen it.
+// The connection keys and the host lists as OpenRouter spells them, and two words the decoder
+// reads by: the provider block's name and JSON's null.
+const (
+	keyOnly               = "only"
+	keyIgnore             = "ignore"
+	keyAllowFallbacks     = "allow_fallbacks"
+	keyZDR                = "zdr"
+	keyDataCollection     = "data_collection"
+	keyEnforceDistillable = "enforce_distillable_text"
+	keyOrder              = "order"
+	keyQuantizations      = "quantizations"
+	keyRequireParameters  = "require_parameters"
+	keySort               = "sort"
+	blockProvider         = "provider"
+	jsonNull              = "null"
+)
+
+var connectionKeys = []string{keyOnly, keyIgnore, keyAllowFallbacks, keyZDR, keyDataCollection, keyEnforceDistillable}
+
 // clone copies the preferences so a lane never aliases its provider's block or a
 // sibling lane's.
 func (r *OpenRouterRouting) clone() *OpenRouterRouting {
@@ -52,40 +74,58 @@ func (r *OpenRouterRouting) clone() *OpenRouterRouting {
 		return nil
 	}
 	out := *r
-	out.Only, out.Ignore, out.Quantizations = slices.Clone(r.Only), slices.Clone(r.Ignore), slices.Clone(r.Quantizations)
-	if r.RequireParameters != nil {
-		v := *r.RequireParameters
-		out.RequireParameters = &v
-	}
-	if r.AllowFallbacks != nil {
-		v := *r.AllowFallbacks
-		out.AllowFallbacks = &v
-	}
+	p := &out.Provider
+	p.Order, p.Only, p.Ignore, p.Quantizations = slices.Clone(p.Order), slices.Clone(p.Only), slices.Clone(p.Ignore), slices.Clone(p.Quantizations)
+	p.AllowFallbacks, p.RequireParameters = clonePtr(p.AllowFallbacks), clonePtr(p.RequireParameters)
+	p.ZDR, p.EnforceDistillableText = clonePtr(p.ZDR), clonePtr(p.EnforceDistillableText)
+	p.Sort, p.MaxPrice = clonePtr(p.Sort), clonePtr(p.MaxPrice)
+	p.PreferredMinThroughput, p.PreferredMaxLatency = clonePtr(p.PreferredMinThroughput), clonePtr(p.PreferredMaxLatency)
+	out.Reasoning = clonePtr(r.Reasoning)
 	return &out
 }
 
-// pins is the part of r that says WHICH hosts may serve the request, or nil
-// when r writes none. Written-but-empty lists count as written, so the
-// validator still refuses an `only: []`.
-func (r *OpenRouterRouting) pins() *OpenRouterRouting {
-	if r == nil || (r.Only == nil && r.Ignore == nil && r.AllowFallbacks == nil) {
+// clonePtr copies the value behind a pointer. The structs it copies hold only
+// pointers to numbers, which a lane never writes through, so one level is deep
+// enough.
+func clonePtr[T any](v *T) *T {
+	if v == nil {
 		return nil
 	}
-	return (&OpenRouterRouting{Only: r.Only, Ignore: r.Ignore, AllowFallbacks: r.AllowFallbacks}).clone()
+	out := *v
+	return &out
 }
 
-// withoutPins is r with its pins cleared. A block that held only pins becomes
-// `{}`, not nil, so a lane that opted out of the product default stays opted out.
+// pins is the part of r that says WHICH hosts may serve the request — its
+// connection keys — or nil when r writes none. Written-but-empty lists count as
+// written, so the validator still refuses an `only: []`.
+func (r *OpenRouterRouting) pins() *OpenRouterRouting {
+	if r == nil {
+		return nil
+	}
+	p := r.Provider
+	conn := OpenRouterProvider{
+		Only: p.Only, Ignore: p.Ignore, AllowFallbacks: p.AllowFallbacks,
+		ZDR: p.ZDR, DataCollection: p.DataCollection, EnforceDistillableText: p.EnforceDistillableText,
+	}
+	if p.Only == nil && p.Ignore == nil && conn.isEmpty() {
+		return nil
+	}
+	return (&OpenRouterRouting{Provider: conn}).clone()
+}
+
+// withoutPins is r with its connection keys cleared. A block that held only
+// them becomes `{}`, not nil, so a lane that opted out of the product default
+// stays opted out.
 func (r *OpenRouterRouting) withoutPins() *OpenRouterRouting {
 	out := r.clone()
 	if out != nil {
-		out.Only, out.Ignore, out.AllowFallbacks = nil, nil, nil
+		out.Provider.setConnection(OpenRouterProvider{})
 	}
 	return out
 }
 
-// withPins is a fresh copy of r carrying pins. With no pins, r is copied as is,
-// so an absent block stays absent.
+// withPins is a fresh copy of r carrying pins' connection keys. With no pins,
+// r is copied as is, so an absent block stays absent.
 func (r *OpenRouterRouting) withPins(pins *OpenRouterRouting) *OpenRouterRouting {
 	out := r.clone()
 	if pins == nil {
@@ -94,9 +134,14 @@ func (r *OpenRouterRouting) withPins(pins *OpenRouterRouting) *OpenRouterRouting
 	if out == nil {
 		out = &OpenRouterRouting{}
 	}
-	pinned := pins.clone()
-	out.Only, out.Ignore, out.AllowFallbacks = pinned.Only, pinned.Ignore, pinned.AllowFallbacks
+	out.Provider.setConnection(pins.clone().Provider)
 	return out
+}
+
+// setConnection replaces p's connection keys with conn's.
+func (p *OpenRouterProvider) setConnection(conn OpenRouterProvider) {
+	p.Only, p.Ignore, p.AllowFallbacks = conn.Only, conn.Ignore, conn.AllowFallbacks
+	p.ZDR, p.DataCollection, p.EnforceDistillableText = conn.ZDR, conn.DataCollection, conn.EnforceDistillableText
 }
 
 // resolveProviders fills every lane's host and pins from its provider. A tier's
@@ -203,14 +248,12 @@ func validateProviderEntry(name string, settings ProviderSettings, bound bool) e
 	if settings.BaseURL != "" && !IsOpenRouterHost(settings.BaseURL) {
 		return fmt.Errorf("ai: routing config: providers: %s: `upstream` names OpenRouter's own upstream-selection fields and base_url is not an OpenRouter host; remove the block, or point the provider at the broker", name)
 	}
+	path := "providers." + name + ".upstream"
 	if !upstream.withoutPins().IsEmpty() {
-		return fmt.Errorf("ai: routing config: providers: %s: `upstream` takes only `only`, `ignore` and `allow_fallbacks` — where requests are served; "+
-			"sort, quantizations, require_parameters, preferred_max_latency_p90 and reasoning_effort are set per tier, under its `routing`", name)
+		return invalidAt(path, "takes only "+strings.Join(connectionKeys, ", ")+" — which hosts may read a request; "+
+			"how a model is served (sort, quantizations, max_price, reasoning …) is set per tier, under its `routing`")
 	}
-	if err := upstream.Validate(); err != nil {
-		return fmt.Errorf("%w (providers: %s)", err, name)
-	}
-	return nil
+	return upstream.Validate(path)
 }
 
 // validateUnboundHost holds the host of an entry no lane binds. The key test

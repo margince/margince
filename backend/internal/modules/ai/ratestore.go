@@ -110,21 +110,8 @@ func (s *RateStore) CostReport(ctx context.Context, from, to time.Time) ([]DayCo
 			  ac.occurred_at::date AS day,
 			  ac.task,
 			  ac.tier,
-			  COALESCE(SUM(
-			    CASE
-			      WHEN ac.cache_hit OR (ac.tokens_in = 0 AND ac.tokens_out = 0) THEN 0
-			      WHEN r.id IS NULL THEN 0
-			      ELSE (GREATEST(ac.tokens_in - ac.cached_tokens - ac.cache_write_tokens, 0) * r.input_per_mtok_microusd
-			           + ac.cached_tokens * COALESCE(NULLIF(r.cache_read_per_mtok_microusd, 0), r.input_per_mtok_microusd)
-			           + ac.cache_write_tokens * COALESCE(NULLIF(r.cache_write_per_mtok_microusd, 0), r.input_per_mtok_microusd)
-			           + ac.tokens_out * r.output_per_mtok_microusd) / 1000000
-			    END
-			  ), 0) AS cost_microusd,
-			  COUNT(*) FILTER (
-			    WHERE NOT ac.cache_hit
-			      AND NOT (ac.tokens_in = 0 AND ac.tokens_out = 0)
-			      AND r.id IS NULL
-			  ) AS unpriced_calls
+			  COALESCE(SUM(`+callCostMicroUSD("ac")+`), 0) AS cost_microusd,
+			  COUNT(*) FILTER (WHERE `+callUnpriced("ac")+`) AS unpriced_calls
 			FROM ai_call ac
 			LEFT JOIN LATERAL (`+rateMatch("ac.provider", "ac.model_id", "ac.occurred_at::date", 3, 4)+`) r ON true
 			WHERE ac.occurred_at >= $1 AND ac.occurred_at < $2
@@ -151,4 +138,24 @@ func (s *RateStore) CostReport(ctx context.Context, from, to time.Time) ([]DayCo
 		return nil, fmt.Errorf("ai: cost report: %w", err)
 	}
 	return report, nil
+}
+
+// callCostMicroUSD is what one ai_call row (aliased alias, joined to its rate
+// as r through rateMatch) cost, in micro-USD. Every reader that prices a call
+// in SQL takes it from here, so they price alike.
+func callCostMicroUSD(alias string) string {
+	return fmt.Sprintf(`CASE
+	      WHEN %[1]s.cache_hit OR (%[1]s.tokens_in = 0 AND %[1]s.tokens_out = 0) THEN 0
+	      WHEN r.id IS NULL THEN 0
+	      ELSE (GREATEST(%[1]s.tokens_in - %[1]s.cached_tokens - %[1]s.cache_write_tokens, 0) * r.input_per_mtok_microusd
+	           + %[1]s.cached_tokens * COALESCE(NULLIF(r.cache_read_per_mtok_microusd, 0), r.input_per_mtok_microusd)
+	           + %[1]s.cache_write_tokens * COALESCE(NULLIF(r.cache_write_per_mtok_microusd, 0), r.input_per_mtok_microusd)
+	           + %[1]s.tokens_out * r.output_per_mtok_microusd) / 1000000
+	    END`, alias)
+}
+
+// callUnpriced is whether a row spent something no rate prices. A cache hit and
+// a call that reached no provider are free by construction, never unpriced.
+func callUnpriced(alias string) string {
+	return fmt.Sprintf(`NOT %[1]s.cache_hit AND NOT (%[1]s.tokens_in = 0 AND %[1]s.tokens_out = 0) AND r.id IS NULL`, alias)
 }

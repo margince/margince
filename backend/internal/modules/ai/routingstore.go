@@ -196,6 +196,10 @@ func (s *RoutingStore) probeCandidate(ctx context.Context, stored, next RoutingC
 }
 
 func invalidRouting(err error) error {
+	var faults routingFaults
+	if errors.As(err, &faults) {
+		return faults
+	}
 	return settings.InvalidValue{Setting: RoutingKey, Code: settings.CodeInvalidValue, Reason: err.Error()}
 }
 

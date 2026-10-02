@@ -85,7 +85,7 @@ func TestProviderSettings_ABoundHostChangeIsAuditedAndRebindsServingRoles(t *tes
 	const moved = "https://eu.openrouter.ai/api"
 
 	stored, err := store.SetProviderSettings(ctx, "openai_compatible", ai.ProviderSettings{
-		BaseURL: moved, Upstream: &ai.OpenRouterRouting{Only: []string{"mistral/eu"}},
+		BaseURL: moved, Upstream: &ai.OpenRouterRouting{Provider: ai.OpenRouterProvider{Only: []string{"mistral/eu"}}},
 	})
 	if err != nil {
 		t.Fatalf("SetProviderSettings: %v", err)
@@ -149,11 +149,11 @@ func TestProviderSettings_TheStoredRowIsCanonical(t *testing.T) {
 	}
 
 	entry := got.Providers["openai_compatible"]
-	if entry.BaseURL != "https://openrouter.ai/api" || entry.Upstream == nil || !slices.Equal(entry.Upstream.Only, []string{"mistral/eu"}) {
+	if entry.BaseURL != "https://openrouter.ai/api" || entry.Upstream == nil || !slices.Equal(entry.Upstream.Provider.Only, []string{"mistral/eu"}) {
 		t.Errorf("provider entry = %+v, want the broker host and the EU pin", entry)
 	}
 	for tier, lane := range got.Tiers {
-		if lane.BaseURL != "" || (lane.Routing != nil && lane.Routing.Only != nil) {
+		if lane.BaseURL != "" || (lane.Routing != nil && lane.Routing.Provider.Only != nil) {
 			t.Errorf("%s stored with host %q routing %+v, want neither on the lane", tier, lane.BaseURL, lane.Routing)
 		}
 	}

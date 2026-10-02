@@ -10821,6 +10821,68 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ai/task-overrides": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read the per-task thinking level and timeouts (ai_routing read). */
+        get: operations["getAiTaskOverrides"];
+        /**
+         * Replace the per-task overrides installation-wide (ai_routing update). Every role applies them within a minute.
+         * @description Optional If-Match carries the revision returned in the GET ETag header. A stale revision
+         *     returns 409 without changing settings. Omitting If-Match, or sending *, replaces whatever
+         *     is stored.
+         */
+        put: operations["replaceAiTaskOverrides"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/task-overrides/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Judge a draft of the overrides without saving it (ai_routing read and update). */
+        post: operations["previewAiTaskOverrides"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/routing/schema": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The JSON Schema of the routing document, with a description and documentation link per OpenRouter field (ai_routing read).
+         * @description The routing $defs of the configuration schema the editor gate holds to the parser, so
+         *     the admin screen documents exactly what a save accepts. Each OpenRouter field carries
+         *     `x-doc-url` and `x-placement` (tier, or connection for the keys set on the provider).
+         */
+        get: operations["getAiRoutingSchema"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ai/routing/preview": {
         parameters: {
             query?: never;
@@ -11233,6 +11295,46 @@ export interface paths {
          *     "capture is off" from "this call has no payload".
          */
         get: operations["listAiCalls"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/call-stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Call figures over a window, grouped — calls, failures, timeouts, latency, tokens and cost (ai_diagnostics read).
+         * @description Counts every model-call attempt in the window, cache hits excluded. A failure is an
+         *     attempt with a sentinel that is not an answer, the same rule the health dot reads;
+         *     a timeout is an attempt its deadline stopped. Cost is priced from the rate sheet the
+         *     way /ai/usage prices it, and calls no rate prices are counted in `unpriced`.
+         */
+        get: operations["getAiCallStats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/call-stats/flow": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Which step of one task's route answered its calls over a window (ai_diagnostics read). */
+        get: operations["getAiTaskFlow"];
         put?: never;
         post?: never;
         delete?: never;
@@ -19403,6 +19505,15 @@ export interface components {
             ignore?: string[];
             /** @description Override the broker's host fallback. False is a real choice, distinct from absent. */
             allow_fallbacks?: boolean;
+            /** @description Zero data retention: only hosts that keep no copy of the prompt or the answer may serve a request. */
+            zdr?: boolean;
+            /**
+             * @description deny keeps every request off hosts that may store or train on prompts.
+             * @enum {string}
+             */
+            data_collection?: "allow" | "deny";
+            /** @description Only models whose licence allows their output to train other models. */
+            enforce_distillable_text?: boolean;
         };
         AiTierBinding: {
             /**
@@ -19446,34 +19557,133 @@ export interface components {
             thinking_level?: "default" | "minimal" | "low" | "medium" | "high";
         };
         /**
-         * @description How an openai_compatible binding pointed at OpenRouter serves its model; refused on any
-         *     other binding, and on the embeddings lane every preference but only, ignore and
-         *     allow_fallbacks is refused. Absent means the product default (reliability over price);
-         *     an empty object means no preferences (the broker's own price-weighted routing). The two
-         *     are different choices and a client must not turn one into the other. `only`, `ignore`
-         *     and `allow_fallbacks` belong to the provider (`AiOpenRouterUpstream`): on a tier they
-         *     are accepted only when equal to the provider's, or lifted onto a provider that has none.
+         * @description How an openai_compatible binding pointed at OpenRouter serves its model, in OpenRouter's
+         *     own request shape: `provider` (which hosts and how) and `reasoning` (how hard the model
+         *     thinks). Refused on any other binding; on the embeddings lane only the connection's keys
+         *     are accepted. Absent means the product
+         *     default (reliability over price); an empty object means no preferences (the broker's own
+         *     price-weighted routing). The two are different choices and a client must not turn one
+         *     into the other. The keys that say which hosts may read a request (only, ignore,
+         *     allow_fallbacks, zdr, data_collection, enforce_distillable_text) belong to the provider
+         *     (`AiOpenRouterUpstream`): on a tier they are accepted only when equal to the provider's,
+         *     and refused otherwise, each by its path. `GET /ai/routing/schema` describes every field.
+         *     The flat keys are the older spelling, still read; a response writes `provider` and
+         *     `reasoning`.
          */
         AiOpenRouterRouting: {
-            /** @description Upstream slugs allowed; a hard filter. */
+            provider?: components["schemas"]["AiOpenRouterProvider"];
+            reasoning?: components["schemas"]["AiOpenRouterReasoning"];
+            /**
+             * @deprecated
+             * @description Older spelling of provider.only.
+             */
             only?: string[];
-            /** @description Upstream slugs excluded; a hard filter. */
+            /**
+             * @deprecated
+             * @description Older spelling of provider.ignore.
+             */
             ignore?: string[];
-            /** @description Serving precisions allowed (bf16, fp16, fp8, fp4, int8 …); a hard filter. */
+            /**
+             * @deprecated
+             * @description Older spelling of provider.quantizations.
+             */
             quantizations?: string[];
-            /** @description price | throughput | latency. Reorders rather than filters, and disables load balancing. */
+            /**
+             * @deprecated
+             * @description Older spelling of provider.sort.
+             */
             sort?: string;
-            /** @description Keep the request off hosts that lack any parameter it carries. False is a real choice, distinct from absent. */
+            /**
+             * @deprecated
+             * @description Older spelling of provider.require_parameters.
+             */
             require_parameters?: boolean;
-            /** @description Override the broker's host fallback. False is a real choice, distinct from absent. */
+            /**
+             * @deprecated
+             * @description Older spelling of provider.allow_fallbacks.
+             */
             allow_fallbacks?: boolean;
             /**
              * Format: double
-             * @description Seconds; hosts above it are deprioritized, never removed. Omit to leave unset.
+             * @deprecated
+             * @description Older spelling of provider.preferred_max_latency.p90, in seconds.
              */
             preferred_max_latency_p90?: number;
-            /** @description none | minimal | low | medium | high | xhigh | max. Unset leaves each host its own default. */
+            /**
+             * @deprecated
+             * @description Older spelling of reasoning.effort.
+             */
             reasoning_effort?: string;
+        };
+        /** @description OpenRouter's `provider` request object, sent as written. Every key is optional; GET /ai/routing/schema documents each. */
+        AiOpenRouterProvider: {
+            /** @description Host slugs to try first, in this order. */
+            order?: string[];
+            /** @description Upstream slugs allowed; a hard filter. Set on the provider. */
+            only?: string[];
+            /** @description Upstream slugs excluded; a hard filter. Set on the provider. */
+            ignore?: string[];
+            /** @description Whether the broker may switch hosts on failure. Set on the provider. */
+            allow_fallbacks?: boolean;
+            /** @description Keep the request off hosts that lack any parameter it carries. */
+            require_parameters?: boolean;
+            /**
+             * @description Whether hosts that may store prompts are allowed. Set on the provider.
+             * @enum {string}
+             */
+            data_collection?: "allow" | "deny";
+            /** @description Zero data retention only. Set on the provider. */
+            zdr?: boolean;
+            /** @description Only models whose output may train other models. Set on the provider. */
+            enforce_distillable_text?: boolean;
+            /** @description Serving precisions allowed (bf16, fp16, fp8, fp4, int8 …); a hard filter. */
+            quantizations?: string[];
+            /** @description price | throughput | latency, or {by, partition}. Reorders rather than filters, and disables load balancing. */
+            sort?: ("price" | "throughput" | "latency") | components["schemas"]["AiOpenRouterSort"];
+            max_price?: components["schemas"]["AiOpenRouterPrice"];
+            /** @description Tokens per second, one number or per percentile; a soft preference. */
+            preferred_min_throughput?: number | components["schemas"]["AiOpenRouterPercentiles"];
+            /** @description Seconds, one number or per percentile; a soft preference. */
+            preferred_max_latency?: number | components["schemas"]["AiOpenRouterPercentiles"];
+        };
+        AiOpenRouterSort: {
+            /** @enum {string} */
+            by: "price" | "throughput" | "latency";
+            /**
+             * @description none sorts across every model of a fallback list at once.
+             * @enum {string}
+             */
+            partition?: "model" | "none";
+        };
+        /** @description The most a request may cost, in USD per million prompt or completion tokens, or per request or image. */
+        AiOpenRouterPrice: {
+            /** Format: double */
+            prompt?: number;
+            /** Format: double */
+            completion?: number;
+            /** Format: double */
+            request?: number;
+            /** Format: double */
+            image?: number;
+        };
+        AiOpenRouterPercentiles: {
+            /** Format: double */
+            p50?: number;
+            /** Format: double */
+            p75?: number;
+            /** Format: double */
+            p90?: number;
+            /** Format: double */
+            p99?: number;
+        };
+        /** @description OpenRouter's `reasoning` request object. effort and max_tokens are two spellings of one budget; write one. */
+        AiOpenRouterReasoning: {
+            /** @enum {string} */
+            effort?: "max" | "xhigh" | "high" | "medium" | "low" | "minimal" | "none";
+            max_tokens?: number;
+            /** @description Think, but leave the reasoning out of the answer. */
+            exclude?: boolean;
+            enabled?: boolean;
         };
         AiEmbeddingsBinding: components["schemas"]["AiTierBinding"] & {
             /**
@@ -21043,6 +21253,111 @@ export interface components {
              */
             decision_skip_reason?: "unbound" | "uncertified" | "local_only";
             decision_candidate?: components["schemas"]["AiRouteCandidate"];
+            /** @description The task declares a decision form, so a decision model may answer it first and its decision timeout applies. */
+            decides?: boolean;
+            overrides?: components["schemas"]["AiTaskOverride"];
+            defaults?: components["schemas"]["AiTaskSettings"];
+        };
+        /** @description An admin's settings for one task. An absent field keeps the product's own value. */
+        AiTaskOverride: {
+            /**
+             * @description The exact level every site of the task is sent at. Outranks the binding and the site floor; a model with no thinking control ignores it.
+             * @enum {string}
+             */
+            thinking?: "minimal" | "low" | "medium" | "high";
+            /** @description How long the decision model may take before the task falls back to its ladder. Decision tasks only. */
+            decision_timeout_ms?: number;
+            /** @description How long one model call on the ladder may take before the next tier is tried. */
+            attempt_timeout_ms?: number;
+        };
+        /** @description Every task's override, keyed by task id. */
+        AiTaskOverrides: {
+            [key: string]: components["schemas"]["AiTaskOverride"];
+        };
+        /** @description What a task's calls are sent with. */
+        AiTaskSettings: {
+            /** @description Absent when no level is chosen: the binding and the site floor decide. */
+            thinking?: string;
+            decision_timeout_ms: number;
+            attempt_timeout_ms: number;
+        };
+        AiTaskOverridesPreview: {
+            /** @description Every field the save would refuse, by its path (<task>.<field>). */
+            errors?: components["schemas"]["AiFieldError"][];
+            /** @description What each task would be sent with. */
+            effective: {
+                [key: string]: components["schemas"]["AiTaskSettings"];
+            };
+            /** @description Stored overrides for tasks this installation no longer runs; calls ignore them. */
+            stale: string[];
+        };
+        AiCallStats: {
+            window: string;
+            group: string;
+            rows: components["schemas"]["AiCallStatsRow"][];
+        };
+        AiCallStatsRow: {
+            /** @description The group value: a provider, model id, upstream host, tier or task. Empty when the attempts carried none (a host a direct vendor does not report). */
+            key: string;
+            /** Format: int64 */
+            calls: number;
+            /** Format: int64 */
+            failed: number;
+            /** Format: int64 */
+            timeouts: number;
+            /** Format: int64 */
+            p50_ms: number;
+            /** Format: int64 */
+            p95_ms: number;
+            /** Format: int64 */
+            tokens_in: number;
+            /** Format: int64 */
+            tokens_out: number;
+            /**
+             * Format: int64
+             * @description USD micro-units, priced at each call's day.
+             */
+            cost_microusd: number;
+            /**
+             * Format: int64
+             * @description Calls that spent tokens no rate prices; their cost is not in cost_microusd.
+             */
+            unpriced: number;
+        };
+        AiTaskFlow: {
+            task: string;
+            window: string;
+            /**
+             * Format: int64
+             * @description Logical calls in the window, cache hits excluded.
+             */
+            total: number;
+            /**
+             * Format: int64
+             * @description Logical calls whose last attempt failed.
+             */
+            unanswered: number;
+            /** @description The decision model first, then each tier in ladder order. */
+            steps: components["schemas"]["AiFlowStep"][];
+        };
+        AiFlowStep: {
+            decision: boolean;
+            tier: string;
+            provider: string;
+            model: string;
+            /** Format: int64 */
+            attempts: number;
+            /**
+             * Format: int64
+             * @description Logical calls this step answered.
+             */
+            answered: number;
+            /** Format: int64 */
+            p50_ms: number;
+            /** @description Why the walk moved past this step, by sentinel (timeout, provider_error) or the next attempt's reason (decision_below_floor, …). */
+            gave_up: {
+                [key: string]: number;
+            };
         };
         AiDeferredWork: {
             carrier: string;
@@ -21072,6 +21387,27 @@ export interface components {
             current_version: string;
             features: components["schemas"]["AiFeatureRoute"][];
             unused_tiers: string[];
+            /**
+             * @description Every key the save would refuse, by its path in the routing document
+             *     (tiers.cheap_cloud.routing.provider.sort.by). Absent when the draft is valid; when
+             *     present, features are judged with each refused tier routing left as stored.
+             */
+            errors?: components["schemas"]["AiFieldError"][];
+            effective?: components["schemas"]["AiRoutingEffective"];
+        };
+        /** @description What each tier will send OpenRouter once saved, the connection's keys and the product default merged in. Only tiers whose binding sends a block. */
+        AiRoutingEffective: {
+            tiers: {
+                [key: string]: components["schemas"]["AiOpenRouterRouting"];
+            };
+        };
+        /** @description One refused input, the shape a 422's details.errors carries. */
+        AiFieldError: {
+            /** @description The path of the refused key. */
+            field: string;
+            code: string;
+            /** @description What is wrong and what to write instead. */
+            message: string;
         };
         /** @description AI usage + budget (AIRT-WIRE-1): the AIRT-PARAM-33 meter aggregated per day × task × tier, plus the budget band. Token-denominated; cost_est_minor is computed on read from the workspace's ai_model_rate price sheet as of each call's day (ADR-0067, price-on-read) — omitted, never a fabricated 0, when a task line's window carries no priced call, and accompanied by unpriced_calls when it is a partial total. */
         AiUsage: {
@@ -21158,6 +21494,7 @@ export interface components {
              * @description Stable failure code; null on success. New codes are added as failure classes are told apart, so read an unrecognized one as "some failure" rather than refusing it.
              *     The three codes a 429 produces are worth naming, because they have different remedies and an operator reads this to choose one. `provider_quota` — the account is out of budget or over its quota, which a human tops up. `provider_throttled` — an ordinary burst limit, which clears by itself. `provider_refused` — the provider turned the call away and said nothing about why, so the model was never reached and no claim is made about the cause.
              *     Two codes are outcomes rather than failures: a model was reached and decided. `output_withheld` — the provider declined to deliver the answer: a refusal, a safety or recitation stop, a content filter, a blocked prompt. `request_rejected` — the provider's own error code named the request malformed, which is a defect on the calling side.
+             *     `timeout` — the attempt's deadline stopped it: the task's model call timeout on a ladder attempt, its decision model timeout on a decision attempt. A failure like `provider_error`, named apart so a slow host can be told from a broken one. A caller's own cancellation is never a timeout.
              *     `provider_error` is the FALLBACK: a provider failure naming none of those. It covers a connection or TLS fault and a non-429 server error as well as a call the model answered badly, so it says the provider failed and nothing about how far the request got.
              */
             error_sentinel?: string | null;
@@ -21186,7 +21523,7 @@ export interface components {
         AiCallAttempt: {
             attempt: number;
             is_terminal: boolean;
-            /** @description Why this attempt ran — one of provider_error, schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder. Or one of decision_below_floor, decision_error, decision_off_enum, decision_state_too_large, decision_uncertified, decision_local_only — the decision attempt before this walk did not stand, and why. Read an unrecognized reason as "some reason" rather than refusing it. */
+            /** @description Why this attempt ran — one of provider_error, timeout (the attempt before stopped at its deadline), schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder. Or one of decision_below_floor, decision_error, decision_off_enum, decision_state_too_large, decision_uncertified, decision_local_only — the decision attempt before this walk did not stand, and why. Read an unrecognized reason as "some reason" rather than refusing it. */
             attempt_reason: string;
             /**
              * @description What this attempt asked: a chat completion, an embedding, or a decision model.
@@ -58760,6 +59097,114 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    getAiTaskOverrides: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The stored overrides; the ETag is the If-Match a save is held to. */
+            200: {
+                headers: {
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiTaskOverrides"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+        };
+    };
+    replaceAiTaskOverrides: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AiTaskOverrides"];
+            };
+        };
+        responses: {
+            /** @description The overrides as stored. */
+            200: {
+                headers: {
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiTaskOverrides"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            /** @description Someone saved the overrides since they were read; reload before saving. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    previewAiTaskOverrides: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AiTaskOverrides"];
+            };
+        };
+        responses: {
+            /** @description Every field a save refuses, what each task would be sent with, and stale overrides. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiTaskOverridesPreview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+        };
+    };
+    getAiRoutingSchema: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The routing $defs. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/schema+json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+        };
+    };
     previewAiRouting: {
         parameters: {
             query?: never;
@@ -59145,6 +59590,14 @@ export interface operations {
                 limit?: components["parameters"]["Limit"];
                 /** @description Filter to one task (capture_classify, enrich, …). */
                 task?: string;
+                /** @description Filter to calls that ended on one provider (openai_compatible, gemini, …). */
+                provider?: string;
+                /** @description Filter to calls that ended on one configured model id. */
+                model?: string;
+                /** @description Filter to calls a broker served from one upstream host. */
+                served_provider?: string;
+                /** @description Filter to calls that ended on one tier. */
+                tier?: string;
             };
             header?: never;
             path?: never;
@@ -59163,6 +59616,63 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getAiCallStats: {
+        parameters: {
+            query?: {
+                window?: "24h" | "7d" | "30d";
+                group?: "provider" | "model" | "served_provider" | "tier" | "task";
+                provider?: string;
+                model?: string;
+                tier?: string;
+                task?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One row per group, most calls first; empty when the window holds none. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiCallStats"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getAiTaskFlow: {
+        parameters: {
+            query: {
+                task: string;
+                window?: "24h" | "7d" | "30d";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The task's logical calls, how many got no answer, and each step of its route. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiTaskFlow"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
         };
     };

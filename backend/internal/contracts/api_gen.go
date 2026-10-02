@@ -847,6 +847,135 @@ func (e AiModelRateSource) Valid() bool {
 	}
 }
 
+// Defines values for AiOpenRouterProviderDataCollection.
+const (
+	AiOpenRouterProviderDataCollectionAllow AiOpenRouterProviderDataCollection = "allow"
+	AiOpenRouterProviderDataCollectionDeny  AiOpenRouterProviderDataCollection = "deny"
+)
+
+// Valid indicates whether the value is a known member of the AiOpenRouterProviderDataCollection enum.
+func (e AiOpenRouterProviderDataCollection) Valid() bool {
+	switch e {
+	case AiOpenRouterProviderDataCollectionAllow:
+		return true
+	case AiOpenRouterProviderDataCollectionDeny:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AiOpenRouterProviderSort0.
+const (
+	AiOpenRouterProviderSort0Latency    AiOpenRouterProviderSort0 = "latency"
+	AiOpenRouterProviderSort0Price      AiOpenRouterProviderSort0 = "price"
+	AiOpenRouterProviderSort0Throughput AiOpenRouterProviderSort0 = "throughput"
+)
+
+// Valid indicates whether the value is a known member of the AiOpenRouterProviderSort0 enum.
+func (e AiOpenRouterProviderSort0) Valid() bool {
+	switch e {
+	case AiOpenRouterProviderSort0Latency:
+		return true
+	case AiOpenRouterProviderSort0Price:
+		return true
+	case AiOpenRouterProviderSort0Throughput:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AiOpenRouterReasoningEffort.
+const (
+	AiOpenRouterReasoningEffortHigh    AiOpenRouterReasoningEffort = "high"
+	AiOpenRouterReasoningEffortLow     AiOpenRouterReasoningEffort = "low"
+	AiOpenRouterReasoningEffortMax     AiOpenRouterReasoningEffort = "max"
+	AiOpenRouterReasoningEffortMedium  AiOpenRouterReasoningEffort = "medium"
+	AiOpenRouterReasoningEffortMinimal AiOpenRouterReasoningEffort = "minimal"
+	AiOpenRouterReasoningEffortNone    AiOpenRouterReasoningEffort = "none"
+	AiOpenRouterReasoningEffortXhigh   AiOpenRouterReasoningEffort = "xhigh"
+)
+
+// Valid indicates whether the value is a known member of the AiOpenRouterReasoningEffort enum.
+func (e AiOpenRouterReasoningEffort) Valid() bool {
+	switch e {
+	case AiOpenRouterReasoningEffortHigh:
+		return true
+	case AiOpenRouterReasoningEffortLow:
+		return true
+	case AiOpenRouterReasoningEffortMax:
+		return true
+	case AiOpenRouterReasoningEffortMedium:
+		return true
+	case AiOpenRouterReasoningEffortMinimal:
+		return true
+	case AiOpenRouterReasoningEffortNone:
+		return true
+	case AiOpenRouterReasoningEffortXhigh:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AiOpenRouterSortBy.
+const (
+	AiOpenRouterSortByLatency    AiOpenRouterSortBy = "latency"
+	AiOpenRouterSortByPrice      AiOpenRouterSortBy = "price"
+	AiOpenRouterSortByThroughput AiOpenRouterSortBy = "throughput"
+)
+
+// Valid indicates whether the value is a known member of the AiOpenRouterSortBy enum.
+func (e AiOpenRouterSortBy) Valid() bool {
+	switch e {
+	case AiOpenRouterSortByLatency:
+		return true
+	case AiOpenRouterSortByPrice:
+		return true
+	case AiOpenRouterSortByThroughput:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AiOpenRouterSortPartition.
+const (
+	AiOpenRouterSortPartitionModel AiOpenRouterSortPartition = "model"
+	AiOpenRouterSortPartitionNone  AiOpenRouterSortPartition = "none"
+)
+
+// Valid indicates whether the value is a known member of the AiOpenRouterSortPartition enum.
+func (e AiOpenRouterSortPartition) Valid() bool {
+	switch e {
+	case AiOpenRouterSortPartitionModel:
+		return true
+	case AiOpenRouterSortPartitionNone:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AiOpenRouterUpstreamDataCollection.
+const (
+	AiOpenRouterUpstreamDataCollectionAllow AiOpenRouterUpstreamDataCollection = "allow"
+	AiOpenRouterUpstreamDataCollectionDeny  AiOpenRouterUpstreamDataCollection = "deny"
+)
+
+// Valid indicates whether the value is a known member of the AiOpenRouterUpstreamDataCollection enum.
+func (e AiOpenRouterUpstreamDataCollection) Valid() bool {
+	switch e {
+	case AiOpenRouterUpstreamDataCollectionAllow:
+		return true
+	case AiOpenRouterUpstreamDataCollectionDeny:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AiPriceSyncRunTrigger.
 const (
 	AiPriceSyncRunTriggerManual    AiPriceSyncRunTrigger = "manual"
@@ -1060,6 +1189,30 @@ const (
 func (e AiRunSummaryCurrency) Valid() bool {
 	switch e {
 	case AiRunSummaryCurrencyUSD:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AiTaskOverrideThinking.
+const (
+	AiTaskOverrideThinkingHigh    AiTaskOverrideThinking = "high"
+	AiTaskOverrideThinkingLow     AiTaskOverrideThinking = "low"
+	AiTaskOverrideThinkingMedium  AiTaskOverrideThinking = "medium"
+	AiTaskOverrideThinkingMinimal AiTaskOverrideThinking = "minimal"
+)
+
+// Valid indicates whether the value is a known member of the AiTaskOverrideThinking enum.
+func (e AiTaskOverrideThinking) Valid() bool {
+	switch e {
+	case AiTaskOverrideThinkingHigh:
+		return true
+	case AiTaskOverrideThinkingLow:
+		return true
+	case AiTaskOverrideThinkingMedium:
+		return true
+	case AiTaskOverrideThinkingMinimal:
 		return true
 	default:
 		return false
@@ -18664,6 +18817,75 @@ func (e DeleteAiModelRateParamsLane) Valid() bool {
 	}
 }
 
+// Defines values for GetAiCallStatsParamsWindow.
+const (
+	GetAiCallStatsParamsWindowN24h GetAiCallStatsParamsWindow = "24h"
+	GetAiCallStatsParamsWindowN30d GetAiCallStatsParamsWindow = "30d"
+	GetAiCallStatsParamsWindowN7d  GetAiCallStatsParamsWindow = "7d"
+)
+
+// Valid indicates whether the value is a known member of the GetAiCallStatsParamsWindow enum.
+func (e GetAiCallStatsParamsWindow) Valid() bool {
+	switch e {
+	case GetAiCallStatsParamsWindowN24h:
+		return true
+	case GetAiCallStatsParamsWindowN30d:
+		return true
+	case GetAiCallStatsParamsWindowN7d:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetAiCallStatsParamsGroup.
+const (
+	GetAiCallStatsParamsGroupModel          GetAiCallStatsParamsGroup = "model"
+	GetAiCallStatsParamsGroupProvider       GetAiCallStatsParamsGroup = "provider"
+	GetAiCallStatsParamsGroupServedProvider GetAiCallStatsParamsGroup = "served_provider"
+	GetAiCallStatsParamsGroupTask           GetAiCallStatsParamsGroup = "task"
+	GetAiCallStatsParamsGroupTier           GetAiCallStatsParamsGroup = "tier"
+)
+
+// Valid indicates whether the value is a known member of the GetAiCallStatsParamsGroup enum.
+func (e GetAiCallStatsParamsGroup) Valid() bool {
+	switch e {
+	case GetAiCallStatsParamsGroupModel:
+		return true
+	case GetAiCallStatsParamsGroupProvider:
+		return true
+	case GetAiCallStatsParamsGroupServedProvider:
+		return true
+	case GetAiCallStatsParamsGroupTask:
+		return true
+	case GetAiCallStatsParamsGroupTier:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetAiTaskFlowParamsWindow.
+const (
+	GetAiTaskFlowParamsWindowN24h GetAiTaskFlowParamsWindow = "24h"
+	GetAiTaskFlowParamsWindowN30d GetAiTaskFlowParamsWindow = "30d"
+	GetAiTaskFlowParamsWindowN7d  GetAiTaskFlowParamsWindow = "7d"
+)
+
+// Valid indicates whether the value is a known member of the GetAiTaskFlowParamsWindow enum.
+func (e GetAiTaskFlowParamsWindow) Valid() bool {
+	switch e {
+	case GetAiTaskFlowParamsWindowN24h:
+		return true
+	case GetAiTaskFlowParamsWindowN30d:
+		return true
+	case GetAiTaskFlowParamsWindowN7d:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for EvaluateReportingParamsScopeKind.
 const (
 	EvaluateReportingParamsScopeKindOwner     EvaluateReportingParamsScopeKind = "owner"
@@ -21539,6 +21761,7 @@ type AiCall struct {
 	// ErrorSentinel Stable failure code; null on success. New codes are added as failure classes are told apart, so read an unrecognized one as "some failure" rather than refusing it.
 	// The three codes a 429 produces are worth naming, because they have different remedies and an operator reads this to choose one. `provider_quota` — the account is out of budget or over its quota, which a human tops up. `provider_throttled` — an ordinary burst limit, which clears by itself. `provider_refused` — the provider turned the call away and said nothing about why, so the model was never reached and no claim is made about the cause.
 	// Two codes are outcomes rather than failures: a model was reached and decided. `output_withheld` — the provider declined to deliver the answer: a refusal, a safety or recitation stop, a content filter, a blocked prompt. `request_rejected` — the provider's own error code named the request malformed, which is a defect on the calling side.
+	// `timeout` — the attempt's deadline stopped it: the task's model call timeout on a ladder attempt, its decision model timeout on a decision attempt. A failure like `provider_error`, named apart so a slow host can be told from a broken one. A caller's own cancellation is never a timeout.
 	// `provider_error` is the FALLBACK: a provider failure naming none of those. It covers a connection or TLS fault and a non-429 server error as well as a call the model answered badly, so it says the provider failed and nothing about how far the request got.
 	ErrorSentinel *string `json:"error_sentinel,omitempty"`
 
@@ -21586,7 +21809,7 @@ type AiCall struct {
 type AiCallAttempt struct {
 	Attempt int `json:"attempt"`
 
-	// AttemptReason Why this attempt ran — one of provider_error, schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder. Or one of decision_below_floor, decision_error, decision_off_enum, decision_state_too_large, decision_uncertified, decision_local_only — the decision attempt before this walk did not stand, and why. Read an unrecognized reason as "some reason" rather than refusing it.
+	// AttemptReason Why this attempt ran — one of provider_error, timeout (the attempt before stopped at its deadline), schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder. Or one of decision_below_floor, decision_error, decision_off_enum, decision_state_too_large, decision_uncertified, decision_local_only — the decision attempt before this walk did not stand, and why. Read an unrecognized reason as "some reason" rather than refusing it.
 	AttemptReason string `json:"attempt_reason"`
 
 	// DecisionChoice The label a decision attempt was answered with, whether or not it stood; absent on every other kind and on a decision attempt that got no answer.
@@ -21646,6 +21869,33 @@ type AiCallListResponse struct {
 	Tasks []string `json:"tasks"`
 }
 
+// AiCallStats defines model for AiCallStats.
+type AiCallStats struct {
+	Group  string           `json:"group"`
+	Rows   []AiCallStatsRow `json:"rows"`
+	Window string           `json:"window"`
+}
+
+// AiCallStatsRow defines model for AiCallStatsRow.
+type AiCallStatsRow struct {
+	Calls int64 `json:"calls"`
+
+	// CostMicrousd USD micro-units, priced at each call's day.
+	CostMicrousd int64 `json:"cost_microusd"`
+	Failed       int64 `json:"failed"`
+
+	// Key The group value: a provider, model id, upstream host, tier or task. Empty when the attempts carried none (a host a direct vendor does not report).
+	Key       string `json:"key"`
+	P50Ms     int64  `json:"p50_ms"`
+	P95Ms     int64  `json:"p95_ms"`
+	Timeouts  int64  `json:"timeouts"`
+	TokensIn  int64  `json:"tokens_in"`
+	TokensOut int64  `json:"tokens_out"`
+
+	// Unpriced Calls that spent tokens no rate prices; their cost is not in cost_microusd.
+	Unpriced int64 `json:"unpriced"`
+}
+
 // AiCallSummary One terminal model call from the ai_call trace (AIRT-SCHEMA-2).
 type AiCallSummary struct {
 	CacheHit     bool `json:"cache_hit"`
@@ -21661,6 +21911,7 @@ type AiCallSummary struct {
 	// ErrorSentinel Stable failure code; null on success. New codes are added as failure classes are told apart, so read an unrecognized one as "some failure" rather than refusing it.
 	// The three codes a 429 produces are worth naming, because they have different remedies and an operator reads this to choose one. `provider_quota` — the account is out of budget or over its quota, which a human tops up. `provider_throttled` — an ordinary burst limit, which clears by itself. `provider_refused` — the provider turned the call away and said nothing about why, so the model was never reached and no claim is made about the cause.
 	// Two codes are outcomes rather than failures: a model was reached and decided. `output_withheld` — the provider declined to deliver the answer: a refusal, a safety or recitation stop, a content filter, a blocked prompt. `request_rejected` — the provider's own error code named the request malformed, which is a defect on the calling side.
+	// `timeout` — the attempt's deadline stopped it: the task's model call timeout on a ladder attempt, its decision model timeout on a decision attempt. A failure like `provider_error`, named apart so a slow host can be told from a broken one. A caller's own cancellation is never a timeout.
 	// `provider_error` is the FALLBACK: a provider failure naming none of those. It covers a connection or TLS fault and a non-429 server error as well as a call the model answered badly, so it says the provider failed and nothing about how far the request got.
 	ErrorSentinel *string `json:"error_sentinel,omitempty"`
 
@@ -21756,13 +22007,18 @@ type AiEmbeddingsBinding struct {
 	// | openai | gemini | gemini_vertex. The credential is never part of this document.
 	Provider string `json:"provider"`
 
-	// Routing How an openai_compatible binding pointed at OpenRouter serves its model; refused on any
-	// other binding, and on the embeddings lane every preference but only, ignore and
-	// allow_fallbacks is refused. Absent means the product default (reliability over price);
-	// an empty object means no preferences (the broker's own price-weighted routing). The two
-	// are different choices and a client must not turn one into the other. `only`, `ignore`
-	// and `allow_fallbacks` belong to the provider (`AiOpenRouterUpstream`): on a tier they
-	// are accepted only when equal to the provider's, or lifted onto a provider that has none.
+	// Routing How an openai_compatible binding pointed at OpenRouter serves its model, in OpenRouter's
+	// own request shape: `provider` (which hosts and how) and `reasoning` (how hard the model
+	// thinks). Refused on any other binding; on the embeddings lane only the connection's keys
+	// are accepted. Absent means the product
+	// default (reliability over price); an empty object means no preferences (the broker's own
+	// price-weighted routing). The two are different choices and a client must not turn one
+	// into the other. The keys that say which hosts may read a request (only, ignore,
+	// allow_fallbacks, zdr, data_collection, enforce_distillable_text) belong to the provider
+	// (`AiOpenRouterUpstream`): on a tier they are accepted only when equal to the provider's,
+	// and refused otherwise, each by its path. `GET /ai/routing/schema` describes every field.
+	// The flat keys are the older spelling, still read; a response writes `provider` and
+	// `reasoning`.
 	Routing *AiOpenRouterRouting `json:"routing,omitempty"`
 
 	// ThinkingLevel How deeply a gemini tier thinks when the request names no level of its own.
@@ -21784,14 +22040,20 @@ type AiEmbeddingsBindingThinkingLevel string
 
 // AiFeatureRoute defines model for AiFeatureRoute.
 type AiFeatureRoute struct {
-	BudgetExempt      bool              `json:"budget_exempt"`
+	BudgetExempt bool `json:"budget_exempt"`
+
+	// Decides The task declares a decision form, so a decision model may answer it first and its decision timeout applies.
+	Decides           *bool             `json:"decides,omitempty"`
 	DecisionCandidate *AiRouteCandidate `json:"decision_candidate,omitempty"`
 
 	// DecisionFirst The decision lane answers this feature first: bound, certified for one of its sites, and — for a feature whose data must stay on this installation — a local provider.
 	DecisionFirst bool `json:"decision_first"`
 
 	// DecisionSkipReason Why a feature that declares a decision form is not answered by the decision lane; absent when it is, and for a feature with no decision form.
-	DecisionSkipReason  *string            `json:"decision_skip_reason,omitempty"`
+	DecisionSkipReason *string `json:"decision_skip_reason,omitempty"`
+
+	// Defaults What a task's calls are sent with.
+	Defaults            *AiTaskSettings    `json:"defaults,omitempty"`
 	DisplayName         string             `json:"display_name"`
 	EffectiveCandidates []AiRouteCandidate `json:"effective_candidates"`
 	ExecutionMode       string             `json:"execution_mode"`
@@ -21801,9 +22063,38 @@ type AiFeatureRoute struct {
 	LeadingTier      string             `json:"leading_tier"`
 	NormalCandidates []AiRouteCandidate `json:"normal_candidates"`
 
+	// Overrides An admin's settings for one task. An absent field keeps the product's own value.
+	Overrides *AiTaskOverride `json:"overrides,omitempty"`
+
 	// Summary What the task does, in plain words.
 	Summary *string `json:"summary,omitempty"`
 	Task    string  `json:"task"`
+}
+
+// AiFieldError One refused input, the shape a 422's details.errors carries.
+type AiFieldError struct {
+	Code string `json:"code"`
+
+	// Field The path of the refused key.
+	Field string `json:"field"`
+
+	// Message What is wrong and what to write instead.
+	Message string `json:"message"`
+}
+
+// AiFlowStep defines model for AiFlowStep.
+type AiFlowStep struct {
+	// Answered Logical calls this step answered.
+	Answered int64 `json:"answered"`
+	Attempts int64 `json:"attempts"`
+	Decision bool  `json:"decision"`
+
+	// GaveUp Why the walk moved past this step, by sentinel (timeout, provider_error) or the next attempt's reason (decision_below_floor, …).
+	GaveUp   map[string]int64 `json:"gave_up"`
+	Model    string           `json:"model"`
+	P50Ms    int64            `json:"p50_ms"`
+	Provider string           `json:"provider"`
+	Tier     string           `json:"tier"`
 }
 
 // AiHealth defines model for AiHealth.
@@ -21894,38 +22185,169 @@ type AiModelRateRefreshReport struct {
 	Providers []AiModelRateProviderRefresh `json:"providers"`
 }
 
-// AiOpenRouterRouting How an openai_compatible binding pointed at OpenRouter serves its model; refused on any
-// other binding, and on the embeddings lane every preference but only, ignore and
-// allow_fallbacks is refused. Absent means the product default (reliability over price);
-// an empty object means no preferences (the broker's own price-weighted routing). The two
-// are different choices and a client must not turn one into the other. `only`, `ignore`
-// and `allow_fallbacks` belong to the provider (`AiOpenRouterUpstream`): on a tier they
-// are accepted only when equal to the provider's, or lifted onto a provider that has none.
-type AiOpenRouterRouting struct {
-	// AllowFallbacks Override the broker's host fallback. False is a real choice, distinct from absent.
+// AiOpenRouterPercentiles defines model for AiOpenRouterPercentiles.
+type AiOpenRouterPercentiles struct {
+	P50 *float64 `json:"p50,omitempty"`
+	P75 *float64 `json:"p75,omitempty"`
+	P90 *float64 `json:"p90,omitempty"`
+	P99 *float64 `json:"p99,omitempty"`
+}
+
+// AiOpenRouterPrice The most a request may cost, in USD per million prompt or completion tokens, or per request or image.
+type AiOpenRouterPrice struct {
+	Completion *float64 `json:"completion,omitempty"`
+	Image      *float64 `json:"image,omitempty"`
+	Prompt     *float64 `json:"prompt,omitempty"`
+	Request    *float64 `json:"request,omitempty"`
+}
+
+// AiOpenRouterProvider OpenRouter's `provider` request object, sent as written. Every key is optional; GET /ai/routing/schema documents each.
+type AiOpenRouterProvider struct {
+	// AllowFallbacks Whether the broker may switch hosts on failure. Set on the provider.
 	AllowFallbacks *bool `json:"allow_fallbacks,omitempty"`
 
-	// Ignore Upstream slugs excluded; a hard filter.
+	// DataCollection Whether hosts that may store prompts are allowed. Set on the provider.
+	DataCollection *AiOpenRouterProviderDataCollection `json:"data_collection,omitempty"`
+
+	// EnforceDistillableText Only models whose output may train other models. Set on the provider.
+	EnforceDistillableText *bool `json:"enforce_distillable_text,omitempty"`
+
+	// Ignore Upstream slugs excluded; a hard filter. Set on the provider.
 	Ignore *[]string `json:"ignore,omitempty"`
 
-	// Only Upstream slugs allowed; a hard filter.
+	// MaxPrice The most a request may cost, in USD per million prompt or completion tokens, or per request or image.
+	MaxPrice *AiOpenRouterPrice `json:"max_price,omitempty"`
+
+	// Only Upstream slugs allowed; a hard filter. Set on the provider.
 	Only *[]string `json:"only,omitempty"`
 
-	// PreferredMaxLatencyP90 Seconds; hosts above it are deprioritized, never removed. Omit to leave unset.
-	PreferredMaxLatencyP90 *float64 `json:"preferred_max_latency_p90,omitempty"`
+	// Order Host slugs to try first, in this order.
+	Order *[]string `json:"order,omitempty"`
+
+	// PreferredMaxLatency Seconds, one number or per percentile; a soft preference.
+	PreferredMaxLatency *AiOpenRouterProvider_PreferredMaxLatency `json:"preferred_max_latency,omitempty"`
+
+	// PreferredMinThroughput Tokens per second, one number or per percentile; a soft preference.
+	PreferredMinThroughput *AiOpenRouterProvider_PreferredMinThroughput `json:"preferred_min_throughput,omitempty"`
 
 	// Quantizations Serving precisions allowed (bf16, fp16, fp8, fp4, int8 …); a hard filter.
 	Quantizations *[]string `json:"quantizations,omitempty"`
 
-	// ReasoningEffort none | minimal | low | medium | high | xhigh | max. Unset leaves each host its own default.
-	ReasoningEffort *string `json:"reasoning_effort,omitempty"`
-
-	// RequireParameters Keep the request off hosts that lack any parameter it carries. False is a real choice, distinct from absent.
+	// RequireParameters Keep the request off hosts that lack any parameter it carries.
 	RequireParameters *bool `json:"require_parameters,omitempty"`
 
-	// Sort price | throughput | latency. Reorders rather than filters, and disables load balancing.
+	// Sort price | throughput | latency, or {by, partition}. Reorders rather than filters, and disables load balancing.
+	Sort *AiOpenRouterProvider_Sort `json:"sort,omitempty"`
+
+	// Zdr Zero data retention only. Set on the provider.
+	Zdr *bool `json:"zdr,omitempty"`
+}
+
+// AiOpenRouterProviderDataCollection Whether hosts that may store prompts are allowed. Set on the provider.
+type AiOpenRouterProviderDataCollection string
+
+// AiOpenRouterProviderPreferredMaxLatency0 defines model for .
+type AiOpenRouterProviderPreferredMaxLatency0 = float64
+
+// AiOpenRouterProvider_PreferredMaxLatency Seconds, one number or per percentile; a soft preference.
+type AiOpenRouterProvider_PreferredMaxLatency struct {
+	union json.RawMessage
+}
+
+// AiOpenRouterProviderPreferredMinThroughput0 defines model for .
+type AiOpenRouterProviderPreferredMinThroughput0 = float64
+
+// AiOpenRouterProvider_PreferredMinThroughput Tokens per second, one number or per percentile; a soft preference.
+type AiOpenRouterProvider_PreferredMinThroughput struct {
+	union json.RawMessage
+}
+
+// AiOpenRouterProviderSort0 defines model for AiOpenRouterProvider.Sort.0.
+type AiOpenRouterProviderSort0 string
+
+// AiOpenRouterProvider_Sort price | throughput | latency, or {by, partition}. Reorders rather than filters, and disables load balancing.
+type AiOpenRouterProvider_Sort struct {
+	union json.RawMessage
+}
+
+// AiOpenRouterReasoning OpenRouter's `reasoning` request object. effort and max_tokens are two spellings of one budget; write one.
+type AiOpenRouterReasoning struct {
+	Effort  *AiOpenRouterReasoningEffort `json:"effort,omitempty"`
+	Enabled *bool                        `json:"enabled,omitempty"`
+
+	// Exclude Think, but leave the reasoning out of the answer.
+	Exclude   *bool `json:"exclude,omitempty"`
+	MaxTokens *int  `json:"max_tokens,omitempty"`
+}
+
+// AiOpenRouterReasoningEffort defines model for AiOpenRouterReasoning.Effort.
+type AiOpenRouterReasoningEffort string
+
+// AiOpenRouterRouting How an openai_compatible binding pointed at OpenRouter serves its model, in OpenRouter's
+// own request shape: `provider` (which hosts and how) and `reasoning` (how hard the model
+// thinks). Refused on any other binding; on the embeddings lane only the connection's keys
+// are accepted. Absent means the product
+// default (reliability over price); an empty object means no preferences (the broker's own
+// price-weighted routing). The two are different choices and a client must not turn one
+// into the other. The keys that say which hosts may read a request (only, ignore,
+// allow_fallbacks, zdr, data_collection, enforce_distillable_text) belong to the provider
+// (`AiOpenRouterUpstream`): on a tier they are accepted only when equal to the provider's,
+// and refused otherwise, each by its path. `GET /ai/routing/schema` describes every field.
+// The flat keys are the older spelling, still read; a response writes `provider` and
+// `reasoning`.
+type AiOpenRouterRouting struct {
+	// AllowFallbacks Older spelling of provider.allow_fallbacks.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	AllowFallbacks *bool `json:"allow_fallbacks,omitempty"`
+
+	// Ignore Older spelling of provider.ignore.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	Ignore *[]string `json:"ignore,omitempty"`
+
+	// Only Older spelling of provider.only.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	Only *[]string `json:"only,omitempty"`
+
+	// PreferredMaxLatencyP90 Older spelling of provider.preferred_max_latency.p90, in seconds.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	PreferredMaxLatencyP90 *float64 `json:"preferred_max_latency_p90,omitempty"`
+
+	// Provider OpenRouter's `provider` request object, sent as written. Every key is optional; GET /ai/routing/schema documents each.
+	Provider *AiOpenRouterProvider `json:"provider,omitempty"`
+
+	// Quantizations Older spelling of provider.quantizations.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	Quantizations *[]string `json:"quantizations,omitempty"`
+
+	// Reasoning OpenRouter's `reasoning` request object. effort and max_tokens are two spellings of one budget; write one.
+	Reasoning *AiOpenRouterReasoning `json:"reasoning,omitempty"`
+
+	// ReasoningEffort Older spelling of reasoning.effort.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	ReasoningEffort *string `json:"reasoning_effort,omitempty"`
+
+	// RequireParameters Older spelling of provider.require_parameters.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	RequireParameters *bool `json:"require_parameters,omitempty"`
+
+	// Sort Older spelling of provider.sort.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	Sort *string `json:"sort,omitempty"`
 }
+
+// AiOpenRouterSort defines model for AiOpenRouterSort.
+type AiOpenRouterSort struct {
+	By AiOpenRouterSortBy `json:"by"`
+
+	// Partition none sorts across every model of a fallback list at once.
+	Partition *AiOpenRouterSortPartition `json:"partition,omitempty"`
+}
+
+// AiOpenRouterSortBy defines model for AiOpenRouterSort.By.
+type AiOpenRouterSortBy string
+
+// AiOpenRouterSortPartition none sorts across every model of a fallback list at once.
+type AiOpenRouterSortPartition string
 
 // AiOpenRouterUpstream Which OpenRouter hosts may serve this provider's requests, for every lane on it: a
 // residency pin lives here. Accepted on `openai_compatible` with an OpenRouter host only.
@@ -21934,12 +22356,24 @@ type AiOpenRouterUpstream struct {
 	// AllowFallbacks Override the broker's host fallback. False is a real choice, distinct from absent.
 	AllowFallbacks *bool `json:"allow_fallbacks,omitempty"`
 
+	// DataCollection deny keeps every request off hosts that may store or train on prompts.
+	DataCollection *AiOpenRouterUpstreamDataCollection `json:"data_collection,omitempty"`
+
+	// EnforceDistillableText Only models whose licence allows their output to train other models.
+	EnforceDistillableText *bool `json:"enforce_distillable_text,omitempty"`
+
 	// Ignore Upstream slugs excluded; a hard filter.
 	Ignore *[]string `json:"ignore,omitempty"`
 
 	// Only Upstream slugs allowed; a hard filter.
 	Only *[]string `json:"only,omitempty"`
+
+	// Zdr Zero data retention: only hosts that keep no copy of the prompt or the answer may serve a request.
+	Zdr *bool `json:"zdr,omitempty"`
 }
+
+// AiOpenRouterUpstreamDataCollection deny keeps every request off hosts that may store or train on prompts.
+type AiOpenRouterUpstreamDataCollection string
 
 // AiPriceSync defines model for AiPriceSync.
 type AiPriceSync struct {
@@ -22117,11 +22551,24 @@ type AiRouting struct {
 // `gemini_vertex` lane must name an EU location.
 type AiRoutingProfile string
 
+// AiRoutingEffective What each tier will send OpenRouter once saved, the connection's keys and the product default merged in. Only tiers whose binding sends a block.
+type AiRoutingEffective struct {
+	Tiers map[string]AiOpenRouterRouting `json:"tiers"`
+}
+
 // AiRoutingPreview defines model for AiRoutingPreview.
 type AiRoutingPreview struct {
-	CurrentVersion string           `json:"current_version"`
-	Features       []AiFeatureRoute `json:"features"`
-	UnusedTiers    []string         `json:"unused_tiers"`
+	CurrentVersion string `json:"current_version"`
+
+	// Effective What each tier will send OpenRouter once saved, the connection's keys and the product default merged in. Only tiers whose binding sends a block.
+	Effective *AiRoutingEffective `json:"effective,omitempty"`
+
+	// Errors Every key the save would refuse, by its path in the routing document
+	// (tiers.cheap_cloud.routing.provider.sort.by). Absent when the draft is valid; when
+	// present, features are judged with each refused tier routing left as stored.
+	Errors      *[]AiFieldError  `json:"errors,omitempty"`
+	Features    []AiFeatureRoute `json:"features"`
+	UnusedTiers []string         `json:"unused_tiers"`
 }
 
 // AiRunModelUsage One task, route, and served-model slice within a correlated AI run.
@@ -22210,6 +22657,59 @@ type AiStatus struct {
 	UnusedTiers          *[]string        `json:"unused_tiers,omitempty"`
 }
 
+// AiTaskFlow defines model for AiTaskFlow.
+type AiTaskFlow struct {
+	// Steps The decision model first, then each tier in ladder order.
+	Steps []AiFlowStep `json:"steps"`
+	Task  string       `json:"task"`
+
+	// Total Logical calls in the window, cache hits excluded.
+	Total int64 `json:"total"`
+
+	// Unanswered Logical calls whose last attempt failed.
+	Unanswered int64  `json:"unanswered"`
+	Window     string `json:"window"`
+}
+
+// AiTaskOverride An admin's settings for one task. An absent field keeps the product's own value.
+type AiTaskOverride struct {
+	// AttemptTimeoutMs How long one model call on the ladder may take before the next tier is tried.
+	AttemptTimeoutMs *int `json:"attempt_timeout_ms,omitempty"`
+
+	// DecisionTimeoutMs How long the decision model may take before the task falls back to its ladder. Decision tasks only.
+	DecisionTimeoutMs *int `json:"decision_timeout_ms,omitempty"`
+
+	// Thinking The exact level every site of the task is sent at. Outranks the binding and the site floor; a model with no thinking control ignores it.
+	Thinking *AiTaskOverrideThinking `json:"thinking,omitempty"`
+}
+
+// AiTaskOverrideThinking The exact level every site of the task is sent at. Outranks the binding and the site floor; a model with no thinking control ignores it.
+type AiTaskOverrideThinking string
+
+// AiTaskOverrides Every task's override, keyed by task id.
+type AiTaskOverrides map[string]AiTaskOverride
+
+// AiTaskOverridesPreview defines model for AiTaskOverridesPreview.
+type AiTaskOverridesPreview struct {
+	// Effective What each task would be sent with.
+	Effective map[string]AiTaskSettings `json:"effective"`
+
+	// Errors Every field the save would refuse, by its path (<task>.<field>).
+	Errors *[]AiFieldError `json:"errors,omitempty"`
+
+	// Stale Stored overrides for tasks this installation no longer runs; calls ignore them.
+	Stale []string `json:"stale"`
+}
+
+// AiTaskSettings What a task's calls are sent with.
+type AiTaskSettings struct {
+	AttemptTimeoutMs  int `json:"attempt_timeout_ms"`
+	DecisionTimeoutMs int `json:"decision_timeout_ms"`
+
+	// Thinking Absent when no level is chosen: the binding and the site floor decide.
+	Thinking *string `json:"thinking,omitempty"`
+}
+
 // AiTierBinding defines model for AiTierBinding.
 type AiTierBinding struct {
 	// BaseUrl On a tier, the provider's host as resolved from `providers`; on write it is accepted
@@ -22237,13 +22737,18 @@ type AiTierBinding struct {
 	// | openai | gemini | gemini_vertex. The credential is never part of this document.
 	Provider string `json:"provider"`
 
-	// Routing How an openai_compatible binding pointed at OpenRouter serves its model; refused on any
-	// other binding, and on the embeddings lane every preference but only, ignore and
-	// allow_fallbacks is refused. Absent means the product default (reliability over price);
-	// an empty object means no preferences (the broker's own price-weighted routing). The two
-	// are different choices and a client must not turn one into the other. `only`, `ignore`
-	// and `allow_fallbacks` belong to the provider (`AiOpenRouterUpstream`): on a tier they
-	// are accepted only when equal to the provider's, or lifted onto a provider that has none.
+	// Routing How an openai_compatible binding pointed at OpenRouter serves its model, in OpenRouter's
+	// own request shape: `provider` (which hosts and how) and `reasoning` (how hard the model
+	// thinks). Refused on any other binding; on the embeddings lane only the connection's keys
+	// are accepted. Absent means the product
+	// default (reliability over price); an empty object means no preferences (the broker's own
+	// price-weighted routing). The two are different choices and a client must not turn one
+	// into the other. The keys that say which hosts may read a request (only, ignore,
+	// allow_fallbacks, zdr, data_collection, enforce_distillable_text) belong to the provider
+	// (`AiOpenRouterUpstream`): on a tier they are accepted only when equal to the provider's,
+	// and refused otherwise, each by its path. `GET /ai/routing/schema` describes every field.
+	// The flat keys are the older spelling, still read; a response writes `provider` and
+	// `reasoning`.
 	Routing *AiOpenRouterRouting `json:"routing,omitempty"`
 
 	// ThinkingLevel How deeply a gemini tier thinks when the request names no level of its own.
@@ -46821,6 +47326,31 @@ type ListAvailableModelsParams struct {
 	Model *string `form:"model,omitempty" json:"model,omitempty"`
 }
 
+// GetAiCallStatsParams defines parameters for GetAiCallStats.
+type GetAiCallStatsParams struct {
+	Window   *GetAiCallStatsParamsWindow `form:"window,omitempty" json:"window,omitempty"`
+	Group    *GetAiCallStatsParamsGroup  `form:"group,omitempty" json:"group,omitempty"`
+	Provider *string                     `form:"provider,omitempty" json:"provider,omitempty"`
+	Model    *string                     `form:"model,omitempty" json:"model,omitempty"`
+	Tier     *string                     `form:"tier,omitempty" json:"tier,omitempty"`
+	Task     *string                     `form:"task,omitempty" json:"task,omitempty"`
+}
+
+// GetAiCallStatsParamsWindow defines parameters for GetAiCallStats.
+type GetAiCallStatsParamsWindow string
+
+// GetAiCallStatsParamsGroup defines parameters for GetAiCallStats.
+type GetAiCallStatsParamsGroup string
+
+// GetAiTaskFlowParams defines parameters for GetAiTaskFlow.
+type GetAiTaskFlowParams struct {
+	Task   string                     `form:"task" json:"task"`
+	Window *GetAiTaskFlowParamsWindow `form:"window,omitempty" json:"window,omitempty"`
+}
+
+// GetAiTaskFlowParamsWindow defines parameters for GetAiTaskFlow.
+type GetAiTaskFlowParamsWindow string
+
 // ListAiCallsParams defines parameters for ListAiCalls.
 type ListAiCallsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
@@ -46838,6 +47368,18 @@ type ListAiCallsParams struct {
 
 	// Task Filter to one task (capture_classify, enrich, …).
 	Task *string `form:"task,omitempty" json:"task,omitempty"`
+
+	// Provider Filter to calls that ended on one provider (openai_compatible, gemini, …).
+	Provider *string `form:"provider,omitempty" json:"provider,omitempty"`
+
+	// Model Filter to calls that ended on one configured model id.
+	Model *string `form:"model,omitempty" json:"model,omitempty"`
+
+	// ServedProvider Filter to calls a broker served from one upstream host.
+	ServedProvider *string `form:"served_provider,omitempty" json:"served_provider,omitempty"`
+
+	// Tier Filter to calls that ended on one tier.
+	Tier *string `form:"tier,omitempty" json:"tier,omitempty"`
 }
 
 // GetAiUsageParams defines parameters for GetAiUsage.
@@ -52378,6 +52920,12 @@ type ReplaceAiRoutingJSONRequestBody = AiRouting
 
 // PreviewAiRoutingJSONRequestBody defines body for PreviewAiRouting for application/json ContentType.
 type PreviewAiRoutingJSONRequestBody = AiRouting
+
+// ReplaceAiTaskOverridesJSONRequestBody defines body for ReplaceAiTaskOverrides for application/json ContentType.
+type ReplaceAiTaskOverridesJSONRequestBody = AiTaskOverrides
+
+// PreviewAiTaskOverridesJSONRequestBody defines body for PreviewAiTaskOverrides for application/json ContentType.
+type PreviewAiTaskOverridesJSONRequestBody = AiTaskOverrides
 
 // ExplainAnalyticsCellJSONRequestBody defines body for ExplainAnalyticsCell for application/json ContentType.
 type ExplainAnalyticsCellJSONRequestBody = AnalyticsExplainRequest
@@ -63015,6 +63563,192 @@ func (a UpdateProjectRequest) MarshalJSON() ([]byte, error) {
 	return json.Marshal(object)
 }
 
+// AsAiOpenRouterProviderPreferredMaxLatency0 returns the union data inside the AiOpenRouterProvider_PreferredMaxLatency as a AiOpenRouterProviderPreferredMaxLatency0
+func (t AiOpenRouterProvider_PreferredMaxLatency) AsAiOpenRouterProviderPreferredMaxLatency0() (AiOpenRouterProviderPreferredMaxLatency0, error) {
+	var body AiOpenRouterProviderPreferredMaxLatency0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromAiOpenRouterProviderPreferredMaxLatency0 overwrites any union data inside the AiOpenRouterProvider_PreferredMaxLatency as the provided AiOpenRouterProviderPreferredMaxLatency0
+func (t *AiOpenRouterProvider_PreferredMaxLatency) FromAiOpenRouterProviderPreferredMaxLatency0(v AiOpenRouterProviderPreferredMaxLatency0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeAiOpenRouterProviderPreferredMaxLatency0 performs a merge with any union data inside the AiOpenRouterProvider_PreferredMaxLatency, using the provided AiOpenRouterProviderPreferredMaxLatency0
+func (t *AiOpenRouterProvider_PreferredMaxLatency) MergeAiOpenRouterProviderPreferredMaxLatency0(v AiOpenRouterProviderPreferredMaxLatency0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsAiOpenRouterPercentiles returns the union data inside the AiOpenRouterProvider_PreferredMaxLatency as a AiOpenRouterPercentiles
+func (t AiOpenRouterProvider_PreferredMaxLatency) AsAiOpenRouterPercentiles() (AiOpenRouterPercentiles, error) {
+	var body AiOpenRouterPercentiles
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromAiOpenRouterPercentiles overwrites any union data inside the AiOpenRouterProvider_PreferredMaxLatency as the provided AiOpenRouterPercentiles
+func (t *AiOpenRouterProvider_PreferredMaxLatency) FromAiOpenRouterPercentiles(v AiOpenRouterPercentiles) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeAiOpenRouterPercentiles performs a merge with any union data inside the AiOpenRouterProvider_PreferredMaxLatency, using the provided AiOpenRouterPercentiles
+func (t *AiOpenRouterProvider_PreferredMaxLatency) MergeAiOpenRouterPercentiles(v AiOpenRouterPercentiles) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t AiOpenRouterProvider_PreferredMaxLatency) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *AiOpenRouterProvider_PreferredMaxLatency) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsAiOpenRouterProviderPreferredMinThroughput0 returns the union data inside the AiOpenRouterProvider_PreferredMinThroughput as a AiOpenRouterProviderPreferredMinThroughput0
+func (t AiOpenRouterProvider_PreferredMinThroughput) AsAiOpenRouterProviderPreferredMinThroughput0() (AiOpenRouterProviderPreferredMinThroughput0, error) {
+	var body AiOpenRouterProviderPreferredMinThroughput0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromAiOpenRouterProviderPreferredMinThroughput0 overwrites any union data inside the AiOpenRouterProvider_PreferredMinThroughput as the provided AiOpenRouterProviderPreferredMinThroughput0
+func (t *AiOpenRouterProvider_PreferredMinThroughput) FromAiOpenRouterProviderPreferredMinThroughput0(v AiOpenRouterProviderPreferredMinThroughput0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeAiOpenRouterProviderPreferredMinThroughput0 performs a merge with any union data inside the AiOpenRouterProvider_PreferredMinThroughput, using the provided AiOpenRouterProviderPreferredMinThroughput0
+func (t *AiOpenRouterProvider_PreferredMinThroughput) MergeAiOpenRouterProviderPreferredMinThroughput0(v AiOpenRouterProviderPreferredMinThroughput0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsAiOpenRouterPercentiles returns the union data inside the AiOpenRouterProvider_PreferredMinThroughput as a AiOpenRouterPercentiles
+func (t AiOpenRouterProvider_PreferredMinThroughput) AsAiOpenRouterPercentiles() (AiOpenRouterPercentiles, error) {
+	var body AiOpenRouterPercentiles
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromAiOpenRouterPercentiles overwrites any union data inside the AiOpenRouterProvider_PreferredMinThroughput as the provided AiOpenRouterPercentiles
+func (t *AiOpenRouterProvider_PreferredMinThroughput) FromAiOpenRouterPercentiles(v AiOpenRouterPercentiles) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeAiOpenRouterPercentiles performs a merge with any union data inside the AiOpenRouterProvider_PreferredMinThroughput, using the provided AiOpenRouterPercentiles
+func (t *AiOpenRouterProvider_PreferredMinThroughput) MergeAiOpenRouterPercentiles(v AiOpenRouterPercentiles) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t AiOpenRouterProvider_PreferredMinThroughput) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *AiOpenRouterProvider_PreferredMinThroughput) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsAiOpenRouterProviderSort0 returns the union data inside the AiOpenRouterProvider_Sort as a AiOpenRouterProviderSort0
+func (t AiOpenRouterProvider_Sort) AsAiOpenRouterProviderSort0() (AiOpenRouterProviderSort0, error) {
+	var body AiOpenRouterProviderSort0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromAiOpenRouterProviderSort0 overwrites any union data inside the AiOpenRouterProvider_Sort as the provided AiOpenRouterProviderSort0
+func (t *AiOpenRouterProvider_Sort) FromAiOpenRouterProviderSort0(v AiOpenRouterProviderSort0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeAiOpenRouterProviderSort0 performs a merge with any union data inside the AiOpenRouterProvider_Sort, using the provided AiOpenRouterProviderSort0
+func (t *AiOpenRouterProvider_Sort) MergeAiOpenRouterProviderSort0(v AiOpenRouterProviderSort0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsAiOpenRouterSort returns the union data inside the AiOpenRouterProvider_Sort as a AiOpenRouterSort
+func (t AiOpenRouterProvider_Sort) AsAiOpenRouterSort() (AiOpenRouterSort, error) {
+	var body AiOpenRouterSort
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromAiOpenRouterSort overwrites any union data inside the AiOpenRouterProvider_Sort as the provided AiOpenRouterSort
+func (t *AiOpenRouterProvider_Sort) FromAiOpenRouterSort(v AiOpenRouterSort) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeAiOpenRouterSort performs a merge with any union data inside the AiOpenRouterProvider_Sort, using the provided AiOpenRouterSort
+func (t *AiOpenRouterProvider_Sort) MergeAiOpenRouterSort(v AiOpenRouterSort) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t AiOpenRouterProvider_Sort) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *AiOpenRouterProvider_Sort) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
 // AsColdStartRequest0 returns the union data inside the ColdStartRequest as a ColdStartRequest0
 func (t ColdStartRequest) AsColdStartRequest0() (ColdStartRequest0, error) {
 	var body ColdStartRequest0
@@ -63593,6 +64327,12 @@ type ServerInterface interface {
 	// Preview an allowance change (ai_budget read/update).
 	// (POST /ai/budget/preview)
 	PreviewAiBudget(w http.ResponseWriter, r *http.Request)
+	// Call figures over a window, grouped — calls, failures, timeouts, latency, tokens and cost (ai_diagnostics read).
+	// (GET /ai/call-stats)
+	GetAiCallStats(w http.ResponseWriter, r *http.Request, params GetAiCallStatsParams)
+	// Which step of one task's route answered its calls over a window (ai_diagnostics read).
+	// (GET /ai/call-stats/flow)
+	GetAiTaskFlow(w http.ResponseWriter, r *http.Request, params GetAiTaskFlowParams)
 	// The AI call trace — every terminal model call, newest first.
 	// (GET /ai/calls)
 	ListAiCalls(w http.ResponseWriter, r *http.Request, params ListAiCallsParams)
@@ -63641,9 +64381,21 @@ type ServerInterface interface {
 	// Preview affected features without calling a model (ai_routing read/update and ai_budget read).
 	// (POST /ai/routing/preview)
 	PreviewAiRouting(w http.ResponseWriter, r *http.Request)
+	// The JSON Schema of the routing document, with a description and documentation link per OpenRouter field (ai_routing read).
+	// (GET /ai/routing/schema)
+	GetAiRoutingSchema(w http.ResponseWriter, r *http.Request)
 	// Read AI administration status (ai_diagnostics and ai_budget read).
 	// (GET /ai/status)
 	GetAiStatus(w http.ResponseWriter, r *http.Request)
+	// Read the per-task thinking level and timeouts (ai_routing read).
+	// (GET /ai/task-overrides)
+	GetAiTaskOverrides(w http.ResponseWriter, r *http.Request)
+	// Replace the per-task overrides installation-wide (ai_routing update). Every role applies them within a minute.
+	// (PUT /ai/task-overrides)
+	ReplaceAiTaskOverrides(w http.ResponseWriter, r *http.Request)
+	// Judge a draft of the overrides without saving it (ai_routing read and update).
+	// (POST /ai/task-overrides/preview)
+	PreviewAiTaskOverrides(w http.ResponseWriter, r *http.Request)
 	// AI usage + budget — the spend is never invisible.
 	// (GET /ai/usage)
 	GetAiUsage(w http.ResponseWriter, r *http.Request, params GetAiUsageParams)
@@ -66035,6 +66787,18 @@ func (_ Unimplemented) PreviewAiBudget(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Call figures over a window, grouped — calls, failures, timeouts, latency, tokens and cost (ai_diagnostics read).
+// (GET /ai/call-stats)
+func (_ Unimplemented) GetAiCallStats(w http.ResponseWriter, r *http.Request, params GetAiCallStatsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Which step of one task's route answered its calls over a window (ai_diagnostics read).
+// (GET /ai/call-stats/flow)
+func (_ Unimplemented) GetAiTaskFlow(w http.ResponseWriter, r *http.Request, params GetAiTaskFlowParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // The AI call trace — every terminal model call, newest first.
 // (GET /ai/calls)
 func (_ Unimplemented) ListAiCalls(w http.ResponseWriter, r *http.Request, params ListAiCallsParams) {
@@ -66131,9 +66895,33 @@ func (_ Unimplemented) PreviewAiRouting(w http.ResponseWriter, r *http.Request) 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// The JSON Schema of the routing document, with a description and documentation link per OpenRouter field (ai_routing read).
+// (GET /ai/routing/schema)
+func (_ Unimplemented) GetAiRoutingSchema(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Read AI administration status (ai_diagnostics and ai_budget read).
 // (GET /ai/status)
 func (_ Unimplemented) GetAiStatus(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Read the per-task thinking level and timeouts (ai_routing read).
+// (GET /ai/task-overrides)
+func (_ Unimplemented) GetAiTaskOverrides(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Replace the per-task overrides installation-wide (ai_routing update). Every role applies them within a minute.
+// (PUT /ai/task-overrides)
+func (_ Unimplemented) ReplaceAiTaskOverrides(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Judge a draft of the overrides without saving it (ai_routing read and update).
+// (POST /ai/task-overrides/preview)
+func (_ Unimplemented) PreviewAiTaskOverrides(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -72302,6 +73090,162 @@ func (siw *ServerInterfaceWrapper) PreviewAiBudget(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
+// GetAiCallStats operation middleware
+func (siw *ServerInterfaceWrapper) GetAiCallStats(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetAiCallStatsParams
+
+	// ------------- Optional query parameter "window" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "window", r.URL.Query(), &params.Window, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "window"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "window", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "group" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "group", r.URL.Query(), &params.Group, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "group"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "group", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "provider" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "provider", r.URL.Query(), &params.Provider, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "provider"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "model" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "model", r.URL.Query(), &params.Model, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "model"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "model", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "tier" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "tier", r.URL.Query(), &params.Tier, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tier"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tier", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "task" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "task", r.URL.Query(), &params.Task, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "task"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "task", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAiCallStats(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAiTaskFlow operation middleware
+func (siw *ServerInterfaceWrapper) GetAiTaskFlow(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetAiTaskFlowParams
+
+	// ------------- Required query parameter "task" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "task", r.URL.Query(), &params.Task, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "task"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "task", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "window" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "window", r.URL.Query(), &params.Window, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "window"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "window", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAiTaskFlow(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListAiCalls operation middleware
 func (siw *ServerInterfaceWrapper) ListAiCalls(w http.ResponseWriter, r *http.Request) {
 
@@ -72352,6 +73296,58 @@ func (siw *ServerInterfaceWrapper) ListAiCalls(w http.ResponseWriter, r *http.Re
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "task"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "task", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "provider" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "provider", r.URL.Query(), &params.Provider, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "provider"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "model" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "model", r.URL.Query(), &params.Model, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "model"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "model", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "served_provider" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "served_provider", r.URL.Query(), &params.ServedProvider, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "served_provider"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "served_provider", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "tier" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "tier", r.URL.Query(), &params.Tier, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tier"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tier", Err: err})
 		}
 		return
 	}
@@ -72739,6 +73735,26 @@ func (siw *ServerInterfaceWrapper) PreviewAiRouting(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// GetAiRoutingSchema operation middleware
+func (siw *ServerInterfaceWrapper) GetAiRoutingSchema(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAiRoutingSchema(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetAiStatus operation middleware
 func (siw *ServerInterfaceWrapper) GetAiStatus(w http.ResponseWriter, r *http.Request) {
 
@@ -72750,6 +73766,66 @@ func (siw *ServerInterfaceWrapper) GetAiStatus(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetAiStatus(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAiTaskOverrides operation middleware
+func (siw *ServerInterfaceWrapper) GetAiTaskOverrides(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAiTaskOverrides(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ReplaceAiTaskOverrides operation middleware
+func (siw *ServerInterfaceWrapper) ReplaceAiTaskOverrides(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReplaceAiTaskOverrides(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PreviewAiTaskOverrides operation middleware
+func (siw *ServerInterfaceWrapper) PreviewAiTaskOverrides(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewAiTaskOverrides(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -103589,6 +104665,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/ai/budget/preview", wrapper.PreviewAiBudget)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/ai/call-stats", wrapper.GetAiCallStats)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/ai/call-stats/flow", wrapper.GetAiTaskFlow)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/calls", wrapper.ListAiCalls)
 	})
 	r.Group(func(r chi.Router) {
@@ -103637,7 +104719,19 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/ai/routing/preview", wrapper.PreviewAiRouting)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/ai/routing/schema", wrapper.GetAiRoutingSchema)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/status", wrapper.GetAiStatus)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/ai/task-overrides", wrapper.GetAiTaskOverrides)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/ai/task-overrides", wrapper.ReplaceAiTaskOverrides)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/ai/task-overrides/preview", wrapper.PreviewAiTaskOverrides)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/usage", wrapper.GetAiUsage)

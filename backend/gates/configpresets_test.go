@@ -109,8 +109,8 @@ func TestABrokerPresetInheritsTheDefaultAndCanOptOut(t *testing.T) {
 			optedOut++
 			continue
 		}
-		if binding.Routing.Sort == ai.SortThroughput && binding.Routing.RequireParameters != nil &&
-			*binding.Routing.RequireParameters {
+		if p := binding.Routing.Provider; p.Sort != nil && p.Sort.By == ai.SortThroughput && p.RequireParameters != nil &&
+			*p.RequireParameters {
 			inherited++
 		}
 	}

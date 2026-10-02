@@ -798,6 +798,36 @@ export const aiUsage = {
   },
 };
 
+// The call figures every provider row and tier popover reads. `rows` is
+// required by AiCallStats, so the catch-all's `{data,page}` throws mid-render
+// and takes the whole AI entry down with it. One row per provider and tier the
+// fixtures above bind, with failures and timeouts, so the widest form of each
+// line is what the 390px and axe sweeps see.
+const callStatsRow = (key: string) => ({
+  key,
+  calls: 1_284,
+  failed: 37,
+  timeouts: 12,
+  p50_ms: 940,
+  p95_ms: 4_200,
+  tokens_in: 1_284_000,
+  tokens_out: 212_000,
+  cost_microusd: 12_480_000,
+  unpriced: 3,
+});
+
+export function aiCallStats(group: string | null) {
+  const keys: Record<string, string[]> = {
+    provider: aiProviderKeys.providers.map((p) => p.provider),
+    tier: ["local_small", "cheap_cloud", "premium"],
+  };
+  return {
+    window: "7d",
+    group: group ?? "provider",
+    rows: (keys[group ?? "provider"] ?? []).map(callStatsRow),
+  };
+}
+
 // Two terminal calls, one clean and one that retried and degraded — the second
 // is what puts a badge column and an error sentinel into the widest row, which
 // is the row a narrow viewport has to survive.
@@ -2758,6 +2788,24 @@ export async function mockApi(
     }
     if (path === "/ai/calls" && method === "GET") {
       return json(aiCalls);
+    }
+    if (path === "/ai/call-stats") {
+      return json(aiCallStats(url.searchParams.get("group")));
+    }
+    if (path === "/ai/call-stats/flow") {
+      return json({
+        task: url.searchParams.get("task"),
+        window: "7d",
+        total: 0,
+        unanswered: 0,
+        steps: [],
+      });
+    }
+    if (path === "/ai/task-overrides" && method === "GET") {
+      return json({});
+    }
+    if (path === "/ai/routing/schema") {
+      return json({});
     }
     if (path === "/admin/job-health") {
       return json(jobHealth);

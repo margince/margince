@@ -203,9 +203,9 @@ func TestALocalRouterSendsTheBrokerDefaultsProductionWould(t *testing.T) {
 					t.Errorf("tier %s: the wire carries no require_parameters, so a host without response_format can serve it: %+v", tier, wire.Provider)
 					continue
 				}
-				if !slices.Equal(wire.Provider.Quantizations, DefaultOpenRouterRouting().Quantizations) {
+				if !slices.Equal(wire.Provider.Quantizations, DefaultOpenRouterRouting().Provider.Quantizations) {
 					t.Errorf("tier %s: quantizations = %v, want the production filter %v",
-						tier, wire.Provider.Quantizations, DefaultOpenRouterRouting().Quantizations)
+						tier, wire.Provider.Quantizations, DefaultOpenRouterRouting().Provider.Quantizations)
 				}
 			}
 		})

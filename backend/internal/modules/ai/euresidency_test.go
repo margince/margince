@@ -113,7 +113,7 @@ func TestAStoredEUHostedBrokerLaneWithNoPreferencesIsRefused(t *testing.T) {
 // refused on the way in.
 func TestAStoredEUHostedBrokerLaneLoadsButIsRefusedOnWrite(t *testing.T) {
 	t.Parallel()
-	pinned := &OpenRouterRouting{Only: []string{"mistral/eu"}}
+	pinned := &OpenRouterRouting{Provider: OpenRouterProvider{Only: []string{"mistral/eu"}}}
 	broker := ProviderConfig{Provider: providerOpenAICompatible, Model: "m", BaseURL: "https://openrouter.ai/api"}
 	embed := broker
 	embed.Routing = pinned
