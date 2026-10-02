@@ -481,6 +481,10 @@ jobs:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           MARGINCE_E2E_LLM: "1"
           E2E_LLM_SLUG: ci
+          # The subscription token above is the only credential this job holds,
+          # and only the claude CLI can spend it.
+          E2E_LLM_CANDIDATE: claude
+          E2E_LLM_VIA: cli
         run: |
           set -o pipefail
           if make e2e-llm 2>&1 | tee llm.log; then
