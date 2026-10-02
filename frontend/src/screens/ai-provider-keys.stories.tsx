@@ -140,7 +140,11 @@ export const ServiceAccount: Story = {
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
     await userEvent.click(
-      await body.findByRole("button", { name: "Manage gemini_vertex" }),
+      within(
+        await body.findByTestId("ai-provider-row-gemini_vertex"),
+      ).getByRole("button", {
+        name: /^Manage/,
+      }),
     );
     await userEvent.click(
       await body.findByRole("button", { name: /^replace$/i }),
@@ -154,7 +158,11 @@ export const ServiceAccountDark: Story = {
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
     await userEvent.click(
-      await body.findByRole("button", { name: "Manage gemini_vertex" }),
+      within(
+        await body.findByTestId("ai-provider-row-gemini_vertex"),
+      ).getByRole("button", {
+        name: /^Manage/,
+      }),
     );
     await userEvent.click(
       await body.findByRole("button", { name: /^replace$/i }),
@@ -178,7 +186,12 @@ export const Tested: Story = {
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
     await userEvent.click(
-      await body.findByRole("button", { name: "Manage gemini" }),
+      within(await body.findByTestId("ai-provider-row-gemini")).getByRole(
+        "button",
+        {
+          name: /^Manage/,
+        },
+      ),
     );
     await userEvent.click(await body.findByRole("button", { name: /^test$/i }));
   },

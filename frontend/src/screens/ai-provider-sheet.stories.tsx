@@ -122,7 +122,12 @@ const openSheet =
   async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
     await userEvent.click(
-      await body.findByRole("button", { name: `Manage ${name}` }),
+      within(await body.findByTestId(`ai-provider-row-${name}`)).getByRole(
+        "button",
+        {
+          name: /^Manage/,
+        },
+      ),
     );
   };
 
