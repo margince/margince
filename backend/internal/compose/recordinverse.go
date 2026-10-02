@@ -202,8 +202,8 @@ func (e Evaluator) inverseState(ctx context.Context, tx pgx.Tx, row AuditRow, ki
 
 // promotionStands refuses the undo of a promotion once the lead has moved on,
 // or once a colleague has worked on the contact the promotion created: the
-// demotion archives that contact. DemoteLead asks the same question inside its
-// own transaction, so the two cannot disagree about what counts as work.
+// demotion archives that contact. DemoteLead asks the same question again,
+// through the same contacts.ColleagueWorkedOnSince, inside its own transaction.
 func promotionStands(ctx context.Context, tx pgx.Tx, row AuditRow) (Undoability, bool, error) {
 	moved, err := fieldsThatMovedSince(ctx, tx, row)
 	if err != nil {
