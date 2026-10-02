@@ -1204,8 +1204,8 @@ route_cred_is "a route the table lacks" "no mistral/cli route" mistral cli
 # only the verdict can say which route produced it, with which effort, under
 # which system prompt, and whether the judge shares the candidate's family.
 verdict="$(E2E_LLM_DRIVER=gpt:api E2E_LLM_EFFORT='reasoning medium' E2E_LLM_SYSTEM_PROMPT=mcp-instructions \
-	E2E_LLM_SELF_JUDGED=false python3 "$check" --record "$root/e2e/llm/scenarios/case6-ask-the-company.yaml" 2 3)"
-for field in '"driver": "gpt:api"' '"effort": "reasoning medium"' '"system_prompt": "mcp-instructions"' '"self_judged": false'; do
+	E2E_LLM_SELF_JUDGED=false E2E_LLM_SEARCH=lexical python3 "$check" --record "$root/e2e/llm/scenarios/case6-ask-the-company.yaml" 2 3)"
+for field in '"driver": "gpt:api"' '"effort": "reasoning medium"' '"system_prompt": "mcp-instructions"' '"self_judged": false' '"search": "lexical"'; do
 	if [[ "$verdict" == *"$field"* ]]; then
 		echo "ok: verdict carries $field"
 	else

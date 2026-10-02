@@ -775,6 +775,11 @@ E2E_SHOT_DIR ?= /tmp/e2e-company
 ## the tools it offered, so its run is held against the lane's own tools/list;
 ## a codex release that renames a switched-off feature key fails every run with
 ## exit 2, a harness stop, until e2e/llm/drive.py's list follows it.
+## Before the world is snapshotted, search_context must rank by meaning
+## (e2e/llm/stackready.py), or the lane stops: every candidate would be measured
+## on a degraded tool. E2E_LLM_STACK_PRESET=config/presets/<name>.yaml binds the
+## stack to a committed preset first (its key in .env.local);
+## E2E_LLM_ALLOW_LEXICAL=1 runs anyway and files the verdict as lexical.
 ##
 ## HALF THE JUDGING IS A MODEL. A scenario's mechanical assertions are regexes —
 ## does the answer carry this name, this date, this count; its `judge:` criteria

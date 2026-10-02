@@ -100,6 +100,17 @@ if [[ "$WIRE" = codex-cli ]]; then
   command -v codex >/dev/null || { echo "the codex CLI is not on PATH" >&2; exit 1; }
 fi
 
+# E2E_LLM_STACK_PRESET binds the lane's own stack to a committed preset before
+# the world is snapshotted — a dev stack otherwise serves margince.dev.yaml's
+# Gemini binding, which this worktree's .env.local may hold no key for. The
+# preset's key must be in .env.local: the stack reads its environment there.
+STACK_PRESET="${E2E_LLM_STACK_PRESET:-}"
+if [[ -n "$STACK_PRESET" && ! -f "$ROOT/$STACK_PRESET" && ! -f "$STACK_PRESET" ]]; then
+  echo "E2E_LLM_STACK_PRESET=$STACK_PRESET is not a file" >&2
+  exit 1
+fi
+[[ -n "$STACK_PRESET" && -f "$ROOT/$STACK_PRESET" ]] && STACK_PRESET="$ROOT/$STACK_PRESET"
+
 # The credential, resolved in the CLI's own order and named out loud. Both paid
 # lanes ask this same question, so the answer lives in one file rather than
 # twice — scripts/lib-llm-credential.sh, whose comment carries why the order and
@@ -242,6 +253,42 @@ open(sys.argv[3], "w").write(json.dumps(cfg))' \
   }
 }
 mint_passport
+
+# --- the search the answers depend on ----------------------------------------
+#
+# search_context falls back to word overlap when no embedding model serves the
+# stack, and a sweep against that measures every candidate on a degraded tool:
+# a strong model recovers by browsing, a weaker one is scored for not doing so.
+# So the stack is bound (when a preset is named), restarted so every role
+# serves the binding, and asked before the world is snapshotted.
+if [[ -n "$STACK_PRESET" ]]; then
+  echo "==> binding the stack to $(basename "$STACK_PRESET")"
+  body="$WORK/routing.json"
+  (cd "$ROOT/backend" && go run ./internal/compose/aicert/presetbodycmd "$STACK_PRESET") > "$body"
+  status="$(curl -sS -b "$COOKIES" -X PUT -H 'Content-Type: application/json' --data @"$body" \
+    -o "$WORK/routing.out" -w '%{http_code}' "$APP_BASE/v1/ai/routing")"
+  if [[ "$status" != "200" ]]; then
+    echo "the stack refused $(basename "$STACK_PRESET") (HTTP $status):" >&2
+    head -c 600 "$WORK/routing.out" >&2
+    exit 1
+  fi
+  (cd "$ROOT" && make dev-stop DEV_SLUG="$SLUG" >/dev/null 2>&1) || true
+  (cd "$ROOT" && make dev DEV_SLUG="$SLUG" >/dev/null)
+fi
+SEARCH=semantic
+if ! why="$(MARGINCE_E2E_TOKEN="$PASSPORT" python3 "$ROOT/e2e/llm/stackready.py" \
+  --mcp-url "$APP_BASE/mcp" --token-env MARGINCE_E2E_TOKEN)"; then
+  if [[ "${E2E_LLM_ALLOW_LEXICAL:-0}" != "1" ]]; then
+    echo "HARNESS: $why." >&2
+    echo "  Every candidate would be measured on a degraded search. Put GEMINI_API_KEY in" >&2
+    echo "  .env.local, or OPENAI_COMPATIBLE_API_KEY with E2E_LLM_STACK_PRESET=config/presets/" >&2
+    echo "  openrouter_cloud_eu.yaml; E2E_LLM_ALLOW_LEXICAL=1 runs anyway and files it as lexical." >&2
+    exit 2
+  fi
+  echo "==> search is lexical only, by E2E_LLM_ALLOW_LEXICAL: $why"
+  SEARCH=lexical
+fi
+echo "==> search $SEARCH"
 
 # --- the snapshot every later run is restored from --------------------------
 #
@@ -568,7 +615,7 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
 
   # The verdict carries what the answer cost as well as whether it held.
   E2E_LLM_DRIVER="$DRIVER" E2E_LLM_EFFORT="$EFFORT" E2E_LLM_SYSTEM_PROMPT="$SYSTEM_PROMPT" \
-    E2E_LLM_SELF_JUDGED="$SELF_JUDGED" \
+    E2E_LLM_SELF_JUDGED="$SELF_JUDGED" E2E_LLM_SEARCH="$SEARCH" \
     python3 "$ROOT/e2e/llm/check.py" --record "$scenario" "$ok" "$runs" \
     ${transcripts[@]+"${transcripts[@]}"} > "$VERDICT_DIR/${name}.json"
 

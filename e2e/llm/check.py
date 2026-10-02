@@ -555,6 +555,7 @@ def main():
             ("driver", "E2E_LLM_DRIVER"),
             ("effort", "E2E_LLM_EFFORT"),
             ("system_prompt", "E2E_LLM_SYSTEM_PROMPT"),
+            ("search", "E2E_LLM_SEARCH"),
         ):
             if os.environ.get(variable):
                 record[field] = os.environ[variable]

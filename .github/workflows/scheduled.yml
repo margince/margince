@@ -485,6 +485,9 @@ jobs:
           # and only the claude CLI can spend it.
           E2E_LLM_CANDIDATE: claude
           E2E_LLM_VIA: cli
+          # No embedding key reaches this runner, so search_context ranks by
+          # word overlap; the verdicts it would write say `search: lexical`.
+          E2E_LLM_ALLOW_LEXICAL: "1"
         run: |
           set -o pipefail
           if make e2e-llm 2>&1 | tee llm.log; then
