@@ -101,17 +101,32 @@ func answerArms(inbound, until string) []answerArm {
 	       AND answer_told.role IN ('to', 'cc') OFFSET 0) answer_mail
 	  WHERE ` + asker + `
 	    AND ` + ourMail},
-		{at: "answer_touch.occurred_at", from: `FROM activity_participant answer_asker
-	  JOIN activity_link answer_link ON answer_link.contact_id = answer_asker.contact_id
-	  JOIN activity answer_touch ON answer_touch.id = answer_link.activity_id
-	  WHERE ` + asker + `
-	    AND ` + touch},
-		{at: "answer_touch.occurred_at", from: `FROM activity_participant answer_asker
-	  JOIN activity_participant answer_attendee ON answer_attendee.contact_id = answer_asker.contact_id
-	  JOIN activity answer_touch ON answer_touch.id = answer_attendee.activity_id
-	  WHERE ` + asker + `
-	    AND ` + touch},
+		touchAnswerArm(asker, touch, `SELECT answer_link.activity_id FROM activity_link answer_link
+	     WHERE answer_link.contact_id = answer_asker.contact_id`),
+		touchAnswerArm(asker, touch, `SELECT answer_attendee.activity_id FROM activity_participant answer_attendee
+	     WHERE answer_attendee.contact_id = answer_asker.contact_id`),
 	}
+}
+
+// touchAnswerArm is a logged call or held meeting among the activities walk
+// names for the sender's contact.
+//
+// Walked from the contact and in that order: walk reads the contact's own links
+// or attendances through idx_alink_contact or idx_aparticipant_contact, and
+// each activity it names is probed by id for the touch. The second lateral
+// takes the walked id as its parameter, so no plan can start from the
+// activity side; and OFFSET 0 keeps both from being flattened. Flattened, the
+// planner ranged idx_activity_answer_touch on occurred_at alone, so every
+// inbound read every later call and meeting of the workspace and joined each
+// back to the sender: a cost of messages times activity, where this one is
+// bounded by the contact's own history.
+func touchAnswerArm(asker, touch, walk string) answerArm {
+	return answerArm{at: "answer_touch.occurred_at", from: `FROM activity_participant answer_asker
+	  CROSS JOIN LATERAL (` + walk + ` OFFSET 0) answer_walk
+	  CROSS JOIN LATERAL (SELECT answer_touch.occurred_at FROM activity answer_touch
+	     WHERE answer_touch.id = answer_walk.activity_id
+	       AND ` + touch + ` OFFSET 0) answer_touch
+	  WHERE ` + asker}
 }
 
 // threadAnswerArm is our reply on the same thread. It reads the reply whoever

@@ -31,6 +31,7 @@ var planCopySuffix = regexp.MustCompile(`_\d+$`)
 //
 //nolint:tagliatelle // fixed by the server's plan format
 type planNode struct {
+	NodeType  string     `json:"Node Type"`
 	Alias     string     `json:"Alias"`
 	IndexName string     `json:"Index Name"`
 	IndexCond string     `json:"Index Cond"`
@@ -117,7 +118,7 @@ func TestTheHorizonMeasurementRunsEachAnswerCheckOnceAndFromTheAddressIndex(t *t
 	}
 
 	seen := map[string]int{}
-	var kindIndexUnderCounterpartyArm, addressIndexBoundsKind int
+	var kindIndexUnderCounterpartyArm, addressIndexBoundsKind, touchRangedOnTime int
 	plans[0].Plan.walk(func(n planNode) {
 		// A relation planned twice is aliased twice: answer_thread, answer_thread_1.
 		alias := planCopySuffix.ReplaceAllString(n.Alias, "")
@@ -128,6 +129,14 @@ func TestTheHorizonMeasurementRunsEachAnswerCheckOnceAndFromTheAddressIndex(t *t
 		if alias == "answer_mail" && n.IndexName == "idx_activity_answer_mail" && strings.Contains(n.IndexCond, "kind") {
 			addressIndexBoundsKind++
 		}
+		// A heap scan of activity under the touch alias, or an index read keyed
+		// on anything but the walked id, is the per-message walk of every
+		// later call and meeting. The lateral's own Subquery Scan carries the
+		// alias too and reads no relation, so it is not counted.
+		heapScan := n.NodeType == "Seq Scan" || n.NodeType == "Bitmap Heap Scan"
+		if alias == "answer_touch" && (heapScan || (n.IndexName != "" && !strings.Contains(n.IndexCond, "(id = "))) {
+			touchRangedOnTime++
+		}
 	})
 	// Flattened, the planner pastes the LEAST into the row filter and again
 	// into the percentile, so the thread arm is planned twice.
@@ -136,6 +145,10 @@ func TestTheHorizonMeasurementRunsEachAnswerCheckOnceAndFromTheAddressIndex(t *t
 	}
 	if addressIndexBoundsKind == 0 {
 		t.Errorf("no answer arm reads idx_activity_answer_mail with the kind in its key, so the time bound falls to a second index")
+	}
+	if touchRangedOnTime != 0 {
+		t.Errorf("a touch arm reads activity %d times by something other than the linked id: it walks every later call and meeting of the installation for each message, where the sender's contact bounds it",
+			touchRangedOnTime)
 	}
 	if kindIndexUnderCounterpartyArm != 0 {
 		t.Errorf("the same-subject arm reads idx_activity_kind %d times: it walks every later email of the installation for each message, where idx_activity_answer_mail bounds it",
