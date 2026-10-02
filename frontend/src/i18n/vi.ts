@@ -11402,6 +11402,7 @@ export const vi = {
   "aiRates.refresh.outcome.unreachable": "Không truy cập được",
   "aiRates.refresh.outcome.not_bound": "Không dùng",
   "aiRates.refresh.outcome.not_listed": "Không có trong danh sách",
+  "aiRates.refresh.outcome.not_configured": "Chưa có khóa",
   "aiRates.refresh.unlisted":
     "Không có trong danh sách của nhà môi giới: {ids}",
   "aiRates.refresh.updatedCount_one": "Đã ghi {count} giá",

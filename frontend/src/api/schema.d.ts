@@ -17932,13 +17932,13 @@ export interface paths {
         put?: never;
         /**
          * Re-price the models this installation calls from the providers' own catalogues.
-         * @description Admin/ops-only. Reads OpenRouter's public model list and writes today's price for each
-         *     OpenRouter-hosted model this installation binds (tiers, embeddings, decision model) and,
-         *     while something is bound at OpenRouter, each `openai_compatible` model already on the
-         *     sheet that the list still names. A self-hosted model priced by hand is never touched. A model
-         *     whose price already matches is left alone and leaves no audit row; a future-dated manual
-         *     price is not touched. Runs inline and answers with what happened per provider. A provider
-         *     that publishes no price list reports `not_available`: its prices are set by hand.
+         * @description Admin/ops-only. Runs the price sync now: vendor APIs whose key is usable are priced from
+         *     models.dev (each model already on the sheet, plus each chat or embedding model the key
+         *     lists that models.dev prices), and the OpenRouter-hosted models this installation binds
+         *     from OpenRouter's list. A price set by hand is never rewritten (`kept`), and a
+         *     future-dated price is not touched. A model at its catalogue price writes nothing and
+         *     leaves no audit row; the run itself is recorded as the last sync. Runs inline and
+         *     answers with what happened per provider.
          *     Human session only (x-agent-access: human-only).
          */
         post: operations["refreshAiModelRates"];
@@ -18344,14 +18344,19 @@ export interface components {
              *     publishes no price to read; `not_listed` means a bound model is absent from the
              *     catalogue altogether, so its id may be misspelt; `unreachable` means the catalogue
              *     could not be read;
-             *     `not_bound` means nothing this provider serves is bound or on the sheet.
+             *     `not_bound` means nothing this provider serves is bound or on the sheet;
+             *     `not_configured` means the provider holds no usable key, so the sync did not touch it.
              * @enum {string}
              */
-            outcome: "updated" | "unchanged" | "not_available" | "not_listed" | "unreachable" | "not_bound";
+            outcome: "updated" | "unchanged" | "not_available" | "not_listed" | "unreachable" | "not_bound" | "not_configured";
             /** @description Prices written today. */
             updated: number;
             /** @description Models already at the catalogue price. */
             unchanged: number;
+            /** @description Models priced for the first time today. */
+            added: number;
+            /** @description Models whose price was set by hand, which the sync never rewrites. */
+            kept: number;
             /** @description Model ids written this run. */
             models: string[];
             /** @description Bound model ids the catalogue does not name. */

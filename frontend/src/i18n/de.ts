@@ -11513,6 +11513,7 @@ export const de = {
   "aiRates.refresh.outcome.unreachable": "Nicht erreichbar",
   "aiRates.refresh.outcome.not_bound": "Nicht in Verwendung",
   "aiRates.refresh.outcome.not_listed": "Nicht in der Liste",
+  "aiRates.refresh.outcome.not_configured": "Kein Schlüssel",
   "aiRates.refresh.unlisted": "Nicht in der Liste des Anbieters: {ids}",
   "aiRates.refresh.updatedCount_one": "{count} Preis geschrieben",
   "aiRates.refresh.updatedCount_other": "{count} Preise geschrieben",

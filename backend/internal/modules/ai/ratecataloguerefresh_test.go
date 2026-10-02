@@ -252,9 +252,14 @@ func TestTheReportNamesEveryKnownProvider(t *testing.T) {
 	if got[providerJevCompatible] != RefreshNotBound {
 		t.Errorf("jev_compatible with nothing bound = %q, want not_bound", got[providerJevCompatible])
 	}
-	for _, vendor := range []string{providerGemini, providerAnthropic, providerOpenAI, providerOllama, providerVLLM, providerJev} {
-		if got[vendor] != RefreshNotAvailable {
-			t.Errorf("%s = %q, want not_available: it publishes no price list", vendor, got[vendor])
+	for _, vendor := range []string{providerGemini, providerAnthropic, providerOpenAI} {
+		if got[vendor] != RefreshNotBound {
+			t.Errorf("%s with no line = %q, want not_bound", vendor, got[vendor])
+		}
+	}
+	for _, local := range []string{providerOllama, providerVLLM, providerJev} {
+		if got[local] != RefreshNotAvailable {
+			t.Errorf("%s = %q, want not_available: it publishes no price list", local, got[local])
 		}
 	}
 }

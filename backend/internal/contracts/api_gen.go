@@ -21837,6 +21837,12 @@ type AiModelRateListResponse struct {
 
 // AiModelRateProviderRefresh defines model for AiModelRateProviderRefresh.
 type AiModelRateProviderRefresh struct {
+	// Added Models priced for the first time today.
+	Added int `json:"added"`
+
+	// Kept Models whose price was set by hand, which the sync never rewrites.
+	Kept int `json:"kept"`
+
 	// Models Model ids written this run.
 	Models []string `json:"models"`
 
@@ -21845,7 +21851,8 @@ type AiModelRateProviderRefresh struct {
 	// publishes no price to read; `not_listed` means a bound model is absent from the
 	// catalogue altogether, so its id may be misspelt; `unreachable` means the catalogue
 	// could not be read;
-	// `not_bound` means nothing this provider serves is bound or on the sheet.
+	// `not_bound` means nothing this provider serves is bound or on the sheet;
+	// `not_configured` means the provider holds no usable key, so the sync did not touch it.
 	Outcome string `json:"outcome"`
 
 	// Provider The provider as the routing document spells it.

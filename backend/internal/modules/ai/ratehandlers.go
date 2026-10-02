@@ -4,11 +4,13 @@
 package ai
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -179,7 +181,8 @@ func (h Handlers) RefreshAiModelRates(w http.ResponseWriter, r *http.Request) {
 		httperr.Write(w, r, err)
 		return
 	}
-	report, err := h.rates.RefreshFromCatalogue(r.Context(), cfg, h.refreshCatalogue.List(r.Context(), 0))
+	src := PriceSources{Routing: cfg, Broker: h.refreshCatalogue.List(r.Context(), 0)}
+	report, err := h.rates.SyncPrices(r.Context(), src, func(context.Context, pgx.Tx, RateRefreshReport) error { return nil })
 	if err != nil {
 		writeRateErr(w, r, err)
 		return
@@ -192,7 +195,8 @@ func toContractRefreshReport(report RateRefreshReport) crmcontracts.AiModelRateR
 	for _, p := range report.Providers {
 		out.Providers = append(out.Providers, crmcontracts.AiModelRateProviderRefresh{
 			Provider: p.Provider, Outcome: string(p.Outcome),
-			Updated: p.Updated, Unchanged: p.Unchanged, Models: p.Models, Unlisted: p.Unlisted,
+			Updated: p.Updated, Unchanged: p.Unchanged, Added: p.Added, Kept: p.Kept,
+			Models: p.Models, Unlisted: p.Unlisted,
 		})
 	}
 	return out

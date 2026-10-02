@@ -15,7 +15,7 @@ import "./rates.css";
 type ProviderRefresh = components["schemas"]["AiModelRateProviderRefresh"];
 type Outcome = ProviderRefresh["outcome"];
 
-// The outcome is a wire string the server closes over five members; the tone
+// The outcome is a wire string the server closes over seven members; the tone
 // says how the run went for THIS provider, not how good the news is. A vendor
 // that publishes no price list is `info`, a fact rather than a fault.
 const OUTCOME_TONE = {
@@ -25,6 +25,7 @@ const OUTCOME_TONE = {
   not_listed: "warning",
   unreachable: "danger",
   not_bound: "default",
+  not_configured: "default",
 } as const satisfies Record<
   Outcome,
   "success" | "default" | "info" | "warning" | "danger"

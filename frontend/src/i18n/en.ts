@@ -11664,6 +11664,7 @@ export const en = {
   "aiRates.refresh.outcome.unreachable": "Unreachable",
   "aiRates.refresh.outcome.not_bound": "Not in use",
   "aiRates.refresh.outcome.not_listed": "Not in the list",
+  "aiRates.refresh.outcome.not_configured": "No key",
   "aiRates.refresh.unlisted": "Not in the broker’s list: {ids}",
   "aiRates.refresh.updatedCount_one": "{count} price written",
   "aiRates.refresh.updatedCount_other": "{count} prices written",
