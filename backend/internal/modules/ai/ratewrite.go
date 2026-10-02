@@ -299,6 +299,9 @@ func (s *RateStore) writeModelRate(ctx context.Context, tx pgx.Tx, p preparedMod
 	if err != nil {
 		return ModelRateRow{}, err
 	}
+	if replacing && p.source == RateSourceCatalogue && before["source"] == string(RateSourceManual) {
+		return ModelRateRow{}, errHandSetSinceRead
+	}
 	// The specific half of the admission pair prepareModelRate opened: now that
 	// insert-vs-overwrite is known, demand the grant this write really needs.
 	action := auth.UpsertAction(replacing)

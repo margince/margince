@@ -60,3 +60,30 @@ func TestAnAdminCorrectingASyncedPriceMakesItTheirs(t *testing.T) {
 		}
 	}
 }
+
+// The sync plans from a snapshot; an admin may type a price between that read
+// and the sync's write. The write, under the model's lock, must still yield.
+func TestASyncWriteYieldsToAPriceTypedSinceItsRead(t *testing.T) {
+	e := setupRateStore(t)
+	ws, _ := e.seedWorkspace(context.Background(), t)
+	ctx := laneWriterCtx(ws)
+	store := e.storeFor(ws)
+	in := SetModelRateInput{Provider: "openai", ModelID: "gpt-5-nano", InputUsd: "0.07", OutputUsd: "0.4",
+		CacheReadUsd: "0", CacheWriteUsd: "0"}
+	if _, err := store.SetModelRate(ctx, in); err != nil {
+		t.Fatal(err)
+	}
+	in.InputUsd, in.Source = "0.05", RateSourceCatalogue
+	if _, err := store.SetModelRate(ctx, in); !errors.Is(err, errHandSetSinceRead) {
+		t.Fatalf("a catalogue write over today's hand-set price = %v, want errHandSetSinceRead", err)
+	}
+	rows, err := store.ListEffectiveModelRates(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, r := range rows {
+		if r.ModelID == "gpt-5-nano" && (r.InputUsd != "0.07" || r.Source != RateSourceManual) {
+			t.Errorf("hand-set price = %+v, want 0.07 kept as manual", r)
+		}
+	}
+}

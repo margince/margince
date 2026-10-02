@@ -177,3 +177,29 @@ func TestTheReportSaysWhatTheSyncDidForEachVendor(t *testing.T) {
 }
 
 func ptr(s string) *string { return &s }
+
+// A keyed vendor with nothing on its sheet and nothing listed has nothing to
+// price; "set by hand" (not_available) would be false for a vendor models.dev prices.
+func TestAKeyedVendorWithNothingToPriceIsNotBound(t *testing.T) {
+	plan := planPriceSync(vendorSources(t, providerGemini), nil)
+	report := reportProviders(plan.lines, false)
+	if got := outcomesOf(report)[providerGemini]; got != RefreshNotBound {
+		t.Errorf("gemini = %q, want not_bound", got)
+	}
+}
+
+// An installation with nothing at OpenRouter and no keyed vendor reads neither
+// public list: a sync with nothing to price sends nothing out.
+func TestASyncWithNothingToPriceReadsNoCatalogue(t *testing.T) {
+	broker, modelsDev := cataloguesToRead(RoutingConfig{}, map[string]bool{providerOllama: true})
+	if broker || modelsDev {
+		t.Errorf("read broker=%v models.dev=%v, want neither", broker, modelsDev)
+	}
+	atOpenRouter := RoutingConfig{Tiers: map[Tier]ProviderConfig{"premium": openRouterBinding("a/bound")}}
+	if broker, _ := cataloguesToRead(atOpenRouter, nil); !broker {
+		t.Error("a binding at OpenRouter did not read its list")
+	}
+	if _, modelsDev := cataloguesToRead(RoutingConfig{}, map[string]bool{providerGemini: true}); !modelsDev {
+		t.Error("a keyed vendor did not read models.dev")
+	}
+}

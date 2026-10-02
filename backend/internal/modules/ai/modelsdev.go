@@ -119,7 +119,12 @@ func usdPerMTok(n json.Number) (string, bool) {
 	if !ok || r.Sign() < 0 || r.Cmp(maxCatalogueUsdPerMTok) > 0 {
 		return "", false
 	}
-	return r.FloatString(6), true
+	// A non-zero figure below the sheet's sixth place would be stored as free.
+	spelled := r.FloatString(6)
+	if r.Sign() > 0 && spelled == "0.000000" {
+		return "", false
+	}
+	return spelled, true
 }
 
 // lane is what the sheet files this model as: an embedder by name, a chat model

@@ -90,12 +90,16 @@ func (p *PriceSync) sources(ctx context.Context) (PriceSources, error) {
 	if err != nil {
 		return PriceSources{}, err
 	}
-	src := PriceSources{
-		Routing: cfg, Broker: p.d.Broker.List(ctx, 0), ModelsDev: p.d.ModelsDev.Prices(ctx),
-		Usable: map[string]bool{}, Listed: map[string][]model.Info{},
-	}
+	src := PriceSources{Routing: cfg, Usable: map[string]bool{}, Listed: map[string][]model.Info{}}
 	for _, s := range statuses {
 		src.Usable[s.Provider] = s.Usable()
+	}
+	readBroker, readModelsDev := cataloguesToRead(cfg, src.Usable)
+	if readBroker {
+		src.Broker = p.d.Broker.List(ctx, 0)
+	}
+	if readModelsDev {
+		src.ModelsDev = p.d.ModelsDev.Prices(ctx)
 	}
 	for _, provider := range modelsDevProviders() {
 		if !src.Usable[provider] {
@@ -110,6 +114,16 @@ func (p *PriceSync) sources(ctx context.Context) (PriceSources, error) {
 		}
 	}
 	return src, nil
+}
+
+// cataloguesToRead is which public lists this run needs: OpenRouter's only while
+// something is bound there, models.dev only while a vendor it prices is keyed.
+func cataloguesToRead(cfg RoutingConfig, usable map[string]bool) (broker, modelsDev bool) {
+	broker = len(catalogueTargets(cfg, nil)) > 0
+	for _, provider := range modelsDevProviders() {
+		modelsDev = modelsDev || usable[provider]
+	}
+	return broker, modelsDev
 }
 
 func modelInfos(models []AvailableModel) []model.Info {

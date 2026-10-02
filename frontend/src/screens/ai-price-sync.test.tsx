@@ -137,6 +137,17 @@ describe("ModelPricesCard", () => {
     ).not.toBeInTheDocument();
   });
 
+  // A run that adds a model creates its row, so a seat that may only update
+  // would press the button into a refusal.
+  it("offers Refresh now only to a seat that may both add and update prices", async () => {
+    backend({ ai_model_rate: ["read", "update"] }, { auto_sync: true });
+    mount();
+    await screen.findByRole("switch", { name: "Auto-sync daily" });
+    expect(
+      screen.queryByRole("button", { name: "Refresh model prices" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("withholds the card from a seat without the price sheet", async () => {
     backend({}, { auto_sync: true });
     mount();

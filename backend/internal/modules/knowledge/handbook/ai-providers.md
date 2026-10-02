@@ -94,6 +94,17 @@ Gemini on Vertex AI serves Gemini's models, so a model its own **Prices** do not
 list is priced at Google Gemini's price, marked **From Google Gemini**. Edit one
 to give Vertex its own price for that model.
 
+### How do model prices stay current?
+Model prices update themselves once a day. The **Model prices** card under
+Settings → AI shows when they last synced and what changed for each provider.
+Every provider with a usable key is priced from models.dev, and models served
+through OpenRouter from OpenRouter's own list. A new chat or embedding model your
+key lists is added with its price. A price you set by hand is never changed by
+the sync; remove it to hand the model back. Turn **Auto-sync daily** off to
+stop the daily run, or choose **Refresh model prices** to run it now.
+Gemini on Vertex AI lists its models only for a location a model tier uses, so
+it adds new models once one of its models is bound.
+
 ### How do I add a decision model?
 To add a decision model, set up its provider first, then bind it under **Model
 tiers** with **Add decision model**.

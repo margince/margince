@@ -65,8 +65,11 @@ function useSetAutoSync() {
 export function ModelPricesCard() {
   const t = useT();
   const canRead = useCan("ai_model_rate", "read");
-  // Recording the run is an update of the sheet's setting, so Refresh now asks for it.
+  // The switch is an update of the sheet's setting; a run also creates the rows
+  // it adds, so Refresh now asks for both.
   const canManage = useCanWrite("ai_model_rate", "update");
+  const canCreate = useCanWrite("ai_model_rate", "create");
+  const canRefresh = canManage && canCreate;
   const query = usePriceSync(canRead);
   const refresh = useRefreshModelPrices();
   const setAutoSync = useSetAutoSync();
@@ -83,7 +86,7 @@ export function ModelPricesCard() {
     <Panel
       title={t("aiPriceSync.title")}
       titleAction={
-        canManage ? <RefreshModelPricesButton refresh={refresh} /> : undefined
+        canRefresh ? <RefreshModelPricesButton refresh={refresh} /> : undefined
       }
     >
       <QueryGate query={query} pendingLabel={t("aiPriceSync.title")}>

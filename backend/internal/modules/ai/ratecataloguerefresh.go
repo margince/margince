@@ -8,6 +8,7 @@ package ai
 
 import (
 	"context"
+	"errors"
 	"maps"
 	"slices"
 	"sort"
@@ -186,7 +187,7 @@ func (s *RateStore) SyncPrices(ctx context.Context, src PriceSources, record fun
 	report := reportProviders(plan.lines, src.Broker.Unavailable != "")
 	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		for _, w := range plan.writes {
-			if _, err := s.SetModelRateInTx(ctx, tx, w); err != nil {
+			if _, err := s.SetModelRateInTx(ctx, tx, w); err != nil && !errors.Is(err, errHandSetSinceRead) {
 				return err
 			}
 		}
@@ -233,6 +234,9 @@ func reportLine(name string, planned *ProviderRefresh, brokerDown bool) Provider
 		line.Outcome = RefreshUnchanged
 	case len(line.Unlisted) > 0:
 		line.Outcome = RefreshNotListed
+	case vendor:
+		// Keyed, but nothing on its sheet and nothing its key lists to price.
+		line.Outcome = RefreshNotBound
 	default:
 		line.Outcome = RefreshNotAvailable
 	}
