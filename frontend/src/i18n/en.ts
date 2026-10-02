@@ -11840,6 +11840,9 @@ export const en = {
   "stageAutomation.rules": "Transition rules",
   "stageAutomation.rulesIntro":
     "Turning a transition on does not start moving deals. Margince keeps asking until the record above meets the threshold, then applies moves automatically.",
+  "stageAutomation.offTitle": "Stage automation is switched off",
+  "stageAutomation.offBody":
+    "No deal moves by itself while this is off, whatever a transition below is set to. An admin turns it on for the whole installation in stage automation settings.",
   "stageAutomation.modeHint":
     "When on and the record qualifies, Margince moves the deal and notifies you afterward.",
   "stageAutomation.notEarnedYet": "Not qualified yet: {why}",

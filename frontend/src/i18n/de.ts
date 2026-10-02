@@ -11680,6 +11680,9 @@ export const de = {
   "stageAutomation.rules": "Regeln für Übergänge",
   "stageAutomation.rulesIntro":
     "Das Einschalten eines Übergangs verschiebt noch keine Deals. Margince fragt weiter nach, bis die Bilanz oben die Schwelle erreicht, und verschiebt dann automatisch.",
+  "stageAutomation.offTitle": "Phasen-Automatik ist ausgeschaltet",
+  "stageAutomation.offBody":
+    "Solange sie aus ist, bewegt sich kein Deal von selbst, unabhängig davon, was unten eingestellt ist. Admins schalten sie in den Einstellungen zur Phasen-Automatik für die gesamte Installation ein.",
   "stageAutomation.modeHint":
     "Wenn eingeschaltet und die Bilanz ausreicht, verschiebt Margince den Deal und benachrichtigt dich danach.",
   "stageAutomation.notEarnedYet": "Noch nicht qualifiziert: {why}",
