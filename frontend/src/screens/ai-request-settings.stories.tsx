@@ -104,9 +104,17 @@ function statsByGroup(next: typeof fetch): typeof fetch {
     );
     if (!url.pathname.endsWith("/ai/call-stats")) return next(input, init);
     const group = url.searchParams.get("group") ?? "provider";
-    return Promise.resolve(
-      jsonResponse({ window: "7d", group, rows: STATS[group] ?? [] }),
-    );
+    const window = url.searchParams.get("window") ?? "7d";
+    // A wider window holds more of the same calls; a narrower one, fewer.
+    const scale = window === "30d" ? 4 : window === "24h" ? 1 / 7 : 1;
+    const rows = (STATS[group] ?? []).map((row) => ({
+      ...row,
+      calls: Math.round(row.calls * scale),
+      failed: Math.round(row.failed * scale),
+      timeouts: Math.round(row.timeouts * scale),
+      cost_microusd: Math.round(row.cost_microusd * scale),
+    }));
+    return Promise.resolve(jsonResponse({ window, group, rows }));
   };
 }
 

@@ -11815,7 +11815,7 @@ export const vi = {
     "Mọi lượt gọi qua kết nối này. Đọc từ cùng bản ghi lượt gọi mà trạng thái và nhật ký dùng.",
   "aiFigures.intro.broker":
     "Mọi lượt gọi qua kết nối này, và máy chủ OpenRouter nào đã phục vụ. Đọc từ cùng bản ghi lượt gọi mà trạng thái và nhật ký dùng.",
-  "aiFigures.openRow": "Mở một dòng để xem các lệnh gọi đã kết thúc ở đó.",
+  "aiFigures.openRow": "Mở một dòng để xem các lượt gọi đã kết thúc ở đó.",
   "aiFigures.lastWeek": "7 ngày qua",
   "aiFigures.noHost": "Không máy chủ nào trả lời",
   "aiFigures.costAtLeast": "ít nhất {cost}",
@@ -12030,7 +12030,7 @@ export const vi = {
   "aiOutcome.limit": "│ {name} {seconds} giây",
   "aiOutcome.limitNear": "│ {name} {seconds} giây: p95 gần chạm ngưỡng",
   "aiOutcome.limitOver": "│ {name} {seconds} giây: p95 vượt ngưỡng",
-  "aiOutcome.limitFar": "{name} {seconds} s, cao hơn nhiều so với p95",
+  "aiOutcome.limitFar": "{name} {seconds} giây, cao hơn nhiều so với p95",
   "aiServing.notJson":
     "không phải JSON hợp lệ; hãy kiểm tra dấu phẩy và dấu ngoặc ở dòng này.",
   "aiServing.notObject": "phải là một đối tượng: phần văn bản giữa { và }.",

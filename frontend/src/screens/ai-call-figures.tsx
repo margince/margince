@@ -368,7 +368,11 @@ function FiguresTable({
               ? "—"
               : row.unpriced
                 ? t("aiFigures.costAtLeast", {
-                    cost: formatMicroUsd(row.cost_microusd, locale),
+                    // Floored to the cent: a rounded-up subtotal is no lower bound.
+                    cost: formatMicroUsd(
+                      Math.floor(row.cost_microusd / 10_000) * 10_000,
+                      locale,
+                    ),
                   })
                 : formatMicroUsd(row.cost_microusd, locale),
         },

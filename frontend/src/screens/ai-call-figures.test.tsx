@@ -7,6 +7,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
+import { useCan } from "../app/capability";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import {
   ProviderCallsLine,
@@ -52,16 +53,12 @@ function statsServer(
 ) {
   const asked: URL[] = [];
   const puts: unknown[] = [];
-  const me = { answered: 0 };
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const req =
         input instanceof Request ? input : new Request(String(input), init);
-      if (req.url.endsWith("/v1/me")) {
-        me.answered++;
-        return jsonResponse(meFixture({ allow }));
-      }
+      if (req.url.endsWith("/v1/me")) return jsonResponse(meFixture({ allow }));
       if (req.url.includes("/ai/call-stats")) {
         const url = new URL(req.url);
         asked.push(url);
@@ -78,7 +75,7 @@ function statsServer(
       throw new Error(`unexpected request: ${req.method} ${req.url}`);
     }),
   );
-  return { asked, puts, me };
+  return { asked, puts };
 }
 
 afterEach(() => {
@@ -108,14 +105,21 @@ describe("ProviderCallsLine", () => {
   });
 
   it("draws nothing for a reader who may not see the call record", async () => {
-    const { asked, me } = statsServer(() => [row("gemini")], {
+    const { asked } = statsServer(() => [row("gemini")], {
       ai_routing: ["read"],
     });
-    const { container } = render(<ProviderCallsLine provider="gemini" />);
-    // Judged once the grant is known: before /me answers nothing is asked anyway.
-    await waitFor(() => expect(me.answered).toBeGreaterThan(0));
-    await new Promise((settled) => setTimeout(settled, 0));
-    expect(container.textContent).toBe("");
+    // Reads the same /me as the line, so once it shows, the line has its grant.
+    function GrantKnown() {
+      return useCan("ai_routing", "read") ? <span>grant known</span> : null;
+    }
+    const { container } = render(
+      <>
+        <ProviderCallsLine provider="gemini" />
+        <GrantKnown />
+      </>,
+    );
+    await screen.findByText("grant known");
+    expect(container.textContent).toBe("grant known");
     expect(asked).toEqual([]);
   });
 });
@@ -192,6 +196,14 @@ describe("TierRecentCalls", () => {
       "#/settings/model-calls?model=gemini-3.1-flash-lite&tier=premium",
     );
     expect(asked[0].searchParams.get("group")).toBe("model");
+  });
+
+  it("floors a partly priced cost, so the figure stays a lower bound", async () => {
+    statsServer(() => [
+      row("Cerebras", { cost_microusd: 15_000, unpriced: 3 }),
+    ]);
+    render(<TierRecentCalls tier="cheap_cloud" broker />);
+    expect(await screen.findByText(/at least US\$0\.01/)).toBeTruthy();
   });
 
   it("names a hostless row by whether any call was answered", async () => {

@@ -8,6 +8,7 @@ package compose
 // the RBAC gate, the bounds and the audit-only write.
 
 import (
+	"encoding/json"
 	"net/http"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -46,7 +47,7 @@ func (h aiRoutingHandlers) ReplaceAiTaskOverrides(w http.ResponseWriter, r *http
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	next, err := ai.TaskOverridesFromWire(req)
+	next, err := ai.TaskOverridesFromWire(req, sentTask(r))
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -77,17 +78,19 @@ func (h aiRoutingHandlers) PreviewAiTaskOverrides(w http.ResponseWriter, r *http
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	next, err := ai.TaskOverridesFromWire(req)
-	if err != nil {
-		httperr.Write(w, r, err)
-		return
-	}
-	preview, err := h.store.PreviewTaskOverrides(r.Context(), next)
+	// A field the transport refuses is one more problem in the preview's list.
+	next, refused := ai.TaskOverridesFromWire(req, sentTask(r))
+	preview, err := h.store.PreviewTaskOverrides(r.Context(), next, refused)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, taskOverridesPreviewToWire(preview))
+}
+
+// sentTask is each task's value as the client wrote it, from the body Decode kept.
+func sentTask(r *http.Request) func(string) (json.RawMessage, bool) {
+	return func(task string) (json.RawMessage, bool) { return httperr.PresentField(r, task) }
 }
 
 func writeTaskOverrides(w http.ResponseWriter, stored ai.TaskOverrides) {

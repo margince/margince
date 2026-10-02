@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"testing"
 	"time"
 
@@ -391,21 +392,45 @@ func TestOneCallKeepsTheSettingsItStartedWith(t *testing.T) {
 	}
 }
 
-// A field written empty is not the same as one left out, and a null body is
-// not an empty one: both are refused rather than read as "clear".
+// A field written empty or null is not the same as one left out, and a null
+// body or task is not an empty one: each is refused rather than read as "clear".
 func TestAnOverrideWrittenEmptyIsRefusedNotCleared(t *testing.T) {
-	if _, err := TaskOverridesFromWire(nil); err == nil {
+	sent := func(raw map[string]string) func(string) (json.RawMessage, bool) {
+		return func(task string) (json.RawMessage, bool) {
+			v, ok := raw[task]
+			if v == "null" {
+				return nil, ok
+			}
+			return json.RawMessage(v), ok
+		}
+	}
+	if _, err := TaskOverridesFromWire(nil, sent(nil)); err == nil {
 		t.Error("a null body was read as clearing every override")
 	}
 	zero, empty := 0, crmcontracts.AiTaskOverrideThinking("")
 	_, err := TaskOverridesFromWire(crmcontracts.AiTaskOverrides{
-		"cold_start": {AttemptTimeoutMs: &zero, Thinking: &empty},
-	})
+		"cold_start":  {AttemptTimeoutMs: &zero, Thinking: &empty},
+		"site_triage": {},
+		"summarize":   {},
+	}, sent(map[string]string{
+		"cold_start":  `{"attempt_timeout_ms":0,"thinking":""}`,
+		"site_triage": "null",
+		"summarize":   `{"thinking":null}`,
+	}))
 	var faults routingFaults
-	if !errors.As(err, &faults) || len(faults) != 2 {
-		t.Fatalf("err = %v, want a fault on each field written empty", err)
+	if !errors.As(err, &faults) {
+		t.Fatalf("err = %v, want path faults", err)
 	}
-	if got, err := TaskOverridesFromWire(crmcontracts.AiTaskOverrides{"cold_start": {}}); err != nil || got[TaskColdStart] != (TaskOverride{}) {
+	var paths []string
+	for _, f := range faults {
+		paths = append(paths, f.Path)
+	}
+	want := []string{"cold_start.thinking", "cold_start.attempt_timeout_ms", "site_triage", "summarize.thinking"}
+	if !slices.Equal(paths, want) {
+		t.Errorf("paths %v, want %v in task order", paths, want)
+	}
+	got, err := TaskOverridesFromWire(crmcontracts.AiTaskOverrides{"cold_start": {}}, sent(map[string]string{"cold_start": "{}"}))
+	if err != nil || got[TaskColdStart] != (TaskOverride{}) {
 		t.Errorf("an override with nothing written = %+v, %v; want the task reset", got, err)
 	}
 }
@@ -443,5 +468,19 @@ func TestAnEmptyPriceCapIsUnsetAndATokenBudgetTakesNoFloor(t *testing.T) {
 	}
 	if openRouterTakesThinkingFloor(binding) {
 		t.Error("a binding that sends its own reasoning budget was reported as taking the site floor")
+	}
+}
+
+// A task with no thinking override leaves a level the request already names;
+// one with an override replaces it.
+func TestATaskWithoutAThinkingOverrideKeepsTheRequestsLevel(t *testing.T) {
+	r := twoRungRouter(t, stubClient{}, stubClient{}, &fakeCallStore{})
+	asked := model.Request{ThinkingLevel: "high"}
+	if got := r.withTaskThinking(&logicalCall{}, TaskColdStart, asked).ThinkingLevel; got != "high" {
+		t.Errorf("no override: level %q, want the request's high", got)
+	}
+	r.SetTaskOverrides(TaskOverrides{TaskColdStart: {Thinking: "low"}})
+	if got := r.withTaskThinking(&logicalCall{}, TaskColdStart, asked).ThinkingLevel; got != "low" {
+		t.Errorf("override low: level %q, want low", got)
 	}
 }

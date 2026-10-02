@@ -39,9 +39,9 @@ func (p OpenRouterProvider) validate(path string) error {
 		p.PreferredMinThroughput.validate(joinPath(path, "preferred_min_throughput")),
 		p.PreferredMaxLatency.validate(joinPath(path, "preferred_max_latency")),
 	}
-	// The generated schema declares these arrays minItems:1 and uniqueItems, so
-	// the parser refuses the same shapes: an editor and a runtime that authorize
-	// different configs is the drift the parity gate exists to catch.
+	// The config schema (routingdefs.go) declares these arrays minItems:1 and
+	// uniqueItems, so the parser refuses the same shapes: an editor and a runtime
+	// that authorize different configs is the drift the parity gate catches.
 	for _, list := range []struct {
 		key     string
 		entries []string

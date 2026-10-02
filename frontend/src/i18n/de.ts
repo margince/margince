@@ -12054,7 +12054,7 @@ export const de = {
   "aiServing.say.noFallbacks":
     "Lieber fehlschlagen als einen anderen Host verwenden.",
   "aiServing.say.maxPrice":
-    "Hosts überspringen, die mehr berechnen als: {prices}.",
+    "Hosts überspringen, deren Preise diese Grenzen überschreiten: {prices}.",
   "aiServing.say.maxLatency":
     "Hosts bevorzugen, die innerhalb von {latency} zu antworten beginnen. Ein langsamerer Host antwortet trotzdem, wenn kein schnellerer frei ist.",
   "aiServing.say.minThroughput":

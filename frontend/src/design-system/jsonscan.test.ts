@@ -44,6 +44,11 @@ describe("scanJson", () => {
     expect(scanJson(text).error === undefined).toBe(parses(text));
   });
 
+  it("reports a document nested past its depth instead of throwing", () => {
+    const deep = `${"[".repeat(100_000)}${"]".repeat(100_000)}`;
+    expect(scanJson(deep).error).toBe(256);
+  });
+
   it("puts the problem on the line it is written on, whatever the engine says", () => {
     expect(parseProblem('{\n  "provider": {\n    "sort": }\n}')).toEqual({
       line: 3,

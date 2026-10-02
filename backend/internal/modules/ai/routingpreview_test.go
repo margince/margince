@@ -21,6 +21,10 @@ func TestAPreviewRestoresARefusedConnectionUpstream(t *testing.T) {
 	bad := next.Providers["openai_compatible"]
 	bad.Upstream = &OpenRouterRouting{Provider: OpenRouterProvider{Sort: &OpenRouterSort{By: SortPrice}}}
 	next.Providers = map[string]ProviderSettings{"openai_compatible": bad}
+	// One more change elsewhere in the draft, which the preview must keep.
+	premium := next.Tiers[TierPremium]
+	premium.Model = "m-next"
+	next.Tiers = map[Tier]ProviderConfig{TierPremium: premium}
 
 	_, served, faults, err := previewDraft(stored, next, nil)
 	if err != nil {
@@ -29,8 +33,8 @@ func TestAPreviewRestoresARefusedConnectionUpstream(t *testing.T) {
 	if !faults.under("providers.openai_compatible.upstream") {
 		t.Fatalf("faults %+v, want the connection's sort refused", faults)
 	}
-	if len(served.Tiers) == 0 {
-		t.Fatal("the preview gave up on the draft instead of judging it with the stored connection")
+	if got := served.Tiers[TierPremium].Model; got != "m-next" {
+		t.Fatalf("premium serves %q, want the draft's m-next: the preview fell back to the stored document", got)
 	}
 	if got := served.Providers["openai_compatible"].Upstream; got == nil || got.Provider.ZDR == nil || !*got.Provider.ZDR {
 		t.Errorf("the connection served %+v, want the stored zdr back", got)

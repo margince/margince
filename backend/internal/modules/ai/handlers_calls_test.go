@@ -142,8 +142,8 @@ func TestAnUnknownStatsWindowIsRefused(t *testing.T) {
 		t.Errorf("no window = %q %s %v, want the 7d default", name, span, err)
 	}
 	month := "30d"
-	if name, _, err := statsWindow(&month); err != nil || name != month {
-		t.Errorf("30d = %q %v", name, err)
+	if name, span, err := statsWindow(&month); err != nil || name != month || span != 30*24*time.Hour {
+		t.Errorf("30d = %q %s %v", name, span, err)
 	}
 	typo := "1h"
 	var faults routingFaults

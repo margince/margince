@@ -293,3 +293,21 @@ func TestAnEmptyReasoningBlockKeepsTheFlatSpelling(t *testing.T) {
 		t.Errorf("an empty reasoning block stores %s, the same value without one %s", empty, bare)
 	}
 }
+
+// A written-empty data_collection or quantization entry is a refusal on its
+// path, not a value that decodes as unwritten.
+func TestAWrittenEmptyValueIsRefusedByItsPath(t *testing.T) {
+	for raw, path := range map[string]string{
+		`{"provider":{"data_collection":""}}`: "routing.provider.data_collection",
+		`{"provider":{"quantizations":[""]}}`: "routing.provider.quantizations[0]",
+	} {
+		r, err := DecodeRouting("routing", []byte(raw))
+		if err == nil {
+			err = r.Validate("routing")
+		}
+		var faults routingFaults
+		if !errors.As(err, &faults) || faults[0].Path != path {
+			t.Errorf("%s: err = %v, want a fault on %s", raw, err, path)
+		}
+	}
+}

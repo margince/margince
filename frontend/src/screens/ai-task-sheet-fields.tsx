@@ -31,9 +31,13 @@ export function ReadProblem({
   const t = useT();
   if (!error) return null;
   return (
-    <Callout tone="danger" kind="outcome" title={t("aiTaskSheet.readFailed")}>
-      {problemMessageOf(error, t)}{" "}
-      <Button onClick={onRetry}>{t("common.retry")}</Button>
+    <Callout
+      tone="danger"
+      kind="outcome"
+      title={t("aiTaskSheet.readFailed")}
+      actions={<Button onClick={onRetry}>{t("common.retry")}</Button>}
+    >
+      {problemMessageOf(error, t)}
     </Callout>
   );
 }

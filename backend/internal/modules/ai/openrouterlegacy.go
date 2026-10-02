@@ -209,12 +209,19 @@ func decodeProvider(path string, data []byte) (OpenRouterProvider, error) {
 	}
 	var p OpenRouterProvider
 	decoders := map[string]func(string, json.RawMessage) error{
-		keyOrder:              func(at string, raw json.RawMessage) error { return decodeValue(at, raw, &p.Order) },
-		keyOnly:               func(at string, raw json.RawMessage) error { return decodeValue(at, raw, &p.Only) },
-		keyIgnore:             func(at string, raw json.RawMessage) error { return decodeValue(at, raw, &p.Ignore) },
-		keyAllowFallbacks:     func(at string, raw json.RawMessage) error { return decodeValue(at, raw, &p.AllowFallbacks) },
-		keyRequireParameters:  func(at string, raw json.RawMessage) error { return decodeValue(at, raw, &p.RequireParameters) },
-		keyDataCollection:     func(at string, raw json.RawMessage) error { return decodeValue(at, raw, &p.DataCollection) },
+		keyOrder:             func(at string, raw json.RawMessage) error { return decodeValue(at, raw, &p.Order) },
+		keyOnly:              func(at string, raw json.RawMessage) error { return decodeValue(at, raw, &p.Only) },
+		keyIgnore:            func(at string, raw json.RawMessage) error { return decodeValue(at, raw, &p.Ignore) },
+		keyAllowFallbacks:    func(at string, raw json.RawMessage) error { return decodeValue(at, raw, &p.AllowFallbacks) },
+		keyRequireParameters: func(at string, raw json.RawMessage) error { return decodeValue(at, raw, &p.RequireParameters) },
+		keyDataCollection: func(at string, raw json.RawMessage) error {
+			// An empty string would decode as unwritten and slip past the
+			// connection-key check on a tier.
+			if string(raw) == `""` {
+				return invalidAt(at, "is written empty; write allow or deny, or remove it")
+			}
+			return decodeValue(at, raw, &p.DataCollection)
+		},
 		keyZDR:                func(at string, raw json.RawMessage) error { return decodeValue(at, raw, &p.ZDR) },
 		keyEnforceDistillable: func(at string, raw json.RawMessage) error { return decodeValue(at, raw, &p.EnforceDistillableText) },
 		keyQuantizations:      func(at string, raw json.RawMessage) error { return decodeValue(at, raw, &p.Quantizations) },

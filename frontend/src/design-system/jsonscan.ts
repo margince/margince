@@ -28,15 +28,27 @@ const HEX4 = /[0-9a-fA-F]{4}/y;
  * from one walk and do not depend on which browser is reading.
  */
 export function scanJson(text: string): JsonScan {
+  // One scan per text: the field asks for the parse problem and for the line
+  // of every refused path on the same keystroke.
+  if (last?.text === text) return last.scan;
   const scanner = new Scanner(text);
   const ok = scanner.document();
-  return ok
+  const scan = ok
     ? { keys: scanner.keys }
     : { error: scanner.at, keys: scanner.keys };
+  last = { text, scan };
+  return scan;
 }
+
+let last: Readonly<{ text: string; scan: JsonScan }> | undefined;
+
+// Deeper than any routing value, and far short of the call stack: a pasted
+// document nested past it is reported where it goes too deep, not thrown.
+const MAX_DEPTH = 256;
 
 class Scanner {
   at = 0;
+  private depth = 0;
   readonly keys = new Map<string, number>();
 
   constructor(private readonly text: string) {}
@@ -55,8 +67,7 @@ class Scanner {
   private value(path: string): boolean {
     this.space();
     const c = this.text[this.at];
-    if (c === "{") return this.object(path);
-    if (c === "[") return this.array(path);
+    if (c === "{" || c === "[") return this.nested(c, path);
     if (c === '"') return this.string() !== null;
     for (const word of ["true", "false", "null"]) {
       if (this.text.startsWith(word, this.at)) {
@@ -65,6 +76,14 @@ class Scanner {
       }
     }
     return this.sticky(NUMBER);
+  }
+
+  private nested(open: string, path: string): boolean {
+    if (this.depth >= MAX_DEPTH) return false;
+    this.depth++;
+    const ok = open === "{" ? this.object(path) : this.array(path);
+    this.depth--;
+    return ok;
   }
 
   private object(path: string): boolean {

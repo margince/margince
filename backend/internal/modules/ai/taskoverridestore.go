@@ -5,6 +5,8 @@ package ai
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"maps"
 	"slices"
@@ -35,8 +37,10 @@ func (s *RoutingStore) GetTaskOverrides(ctx context.Context) (TaskOverrides, err
 	return settings.Get(ctx, s.settings, TaskOverridesSetting)
 }
 
-// PreviewTaskOverrides judges next without writing it.
-func (s *RoutingStore) PreviewTaskOverrides(ctx context.Context, next TaskOverrides) (TaskOverridesPreview, error) {
+// PreviewTaskOverrides judges next without writing it. refused carries what
+// the transport could not read, listed beside the rest rather than instead of
+// them.
+func (s *RoutingStore) PreviewTaskOverrides(ctx context.Context, next TaskOverrides, refused error) (TaskOverridesPreview, error) {
 	if err := auth.Require(ctx, routingSettingsObject, principal.ActionRead); err != nil {
 		return TaskOverridesPreview{}, err
 	}
@@ -47,8 +51,12 @@ func (s *RoutingStore) PreviewTaskOverrides(ctx context.Context, next TaskOverri
 	if err != nil {
 		return TaskOverridesPreview{}, err
 	}
+	var transport routingFaults
+	if refused != nil && !errors.As(refused, &transport) {
+		return TaskOverridesPreview{}, refused
+	}
 	out := TaskOverridesPreview{Effective: map[Task]EffectiveTask{}, Stale: next.Stale()}
-	if faults := faultsOf(next.refusedAgainst(stored)); len(faults) > 0 {
+	if faults := faultsOf(transport, next.refusedAgainst(stored)); len(faults) > 0 {
 		out.Errors = faults.toContract()
 	}
 	for _, task := range AllTasks() {
@@ -132,9 +140,11 @@ func (o TaskOverride) Wire() crmcontracts.AiTaskOverride {
 }
 
 // TaskOverridesFromWire reads a request body. A missing field keeps the
-// product's value; a field written empty, or a body that is null, is refused
-// rather than read as that, since neither is a value the contract allows.
-func TaskOverridesFromWire(v crmcontracts.AiTaskOverrides) (TaskOverrides, error) {
+// product's value; a field written empty or null, a task written null, or a
+// body that is null is refused rather than read as that, since none is a
+// value the contract allows. written is each task's value as the client sent
+// it, which the decoded type cannot tell from an omission.
+func TaskOverridesFromWire(v crmcontracts.AiTaskOverrides, written func(task string) (json.RawMessage, bool)) (TaskOverrides, error) {
 	if v == nil {
 		return nil, settings.InvalidValue{
 			Setting: TaskOverridesKey, Code: settings.CodeInvalidValue,
@@ -143,7 +153,9 @@ func TaskOverridesFromWire(v crmcontracts.AiTaskOverrides) (TaskOverrides, error
 	}
 	out := TaskOverrides{}
 	var errs []error
-	for task, o := range v {
+	for _, task := range slices.Sorted(maps.Keys(v)) {
+		errs = append(errs, refuseNulls(task, written))
+		o := v[task]
 		var next TaskOverride
 		if o.Thinking != nil {
 			next.Thinking = string(*o.Thinking)
@@ -160,6 +172,28 @@ func TaskOverridesFromWire(v crmcontracts.AiTaskOverrides) (TaskOverrides, error
 		out[Task(task)] = next
 	}
 	return out, joinFaults(errs...)
+}
+
+// refuseNulls names a task written null, and each of its fields written null.
+func refuseNulls(task string, written func(string) (json.RawMessage, bool)) error {
+	raw, present := written(task)
+	if !present {
+		return nil
+	}
+	if raw == nil {
+		return invalidAt(task, "is null; send {} to reset the task to the product's values")
+	}
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &fields); err != nil {
+		return invalidAt(task, "must be an object")
+	}
+	var errs []error
+	for _, field := range slices.Sorted(maps.Keys(fields)) {
+		if string(fields[field]) == jsonNull {
+			errs = append(errs, invalidAt(task+"."+field, "is null; omit it to keep the product's value"))
+		}
+	}
+	return joinFaults(errs...)
 }
 
 func refuseWrittenEmpty(path string, empty bool) error {
