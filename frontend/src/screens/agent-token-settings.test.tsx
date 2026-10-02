@@ -28,10 +28,6 @@ const SETTINGS_EDITOR: GrantSpec = { installation_settings: ["update"] };
 
 function backendFor(allow: GrantSpec) {
   let state = {
-    name: "Brandt Automotive",
-    timezone: "Europe/Berlin",
-    base_currency: "EUR",
-    base_currency_locked: false,
     oauth_access_token_ttl_minutes: 43_200,
   };
   const patches: unknown[] = [];
