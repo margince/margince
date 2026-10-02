@@ -156,6 +156,7 @@ Before calling a red scenario a product regression, rule out the harness:
 | `search_context` returns `semantic_ranking_degraded_to_lexical` | No embedding model serves the stack | Section 2 |
 | `CERTIFICATE_VERIFY_FAILED` | A Python with no CA bundle | The bridge falls back to the system bundle; check it exists |
 | OpenRouter 404 "No endpoints found that can handle the requested parameters" | `require_parameters` routing and a parameter no endpoint declares | Remove the parameter from the bridge's request |
+| `codex refused to call …: MCP tool call requires approval` | Codex in exec mode refuses MCP writes it would ask about | The lane approves its own server (`default_tools_approval_mode`); this stop means a codex release changed that key |
 | Turn cap reached | The model makes one tool call per turn | A finding, not a fault: the cap is the same for every candidate |
 
 Always run a control — the same scenario on a model that passes it — before

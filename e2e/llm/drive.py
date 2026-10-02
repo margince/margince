@@ -137,6 +137,9 @@ def run_codex(route, mcp_url, token_env, prompt, out_path, timeout=CODEX_TIMEOUT
             "-C", empty, "--sandbox", "read-only", "-m", route.model,
             "-c", f'mcp_servers.{transcript.SERVER}.url="{mcp_url}"',
             "-c", f'mcp_servers.{transcript.SERVER}.bearer_token_env_var="{token_env}"',
+            # In exec mode codex refuses every MCP write it would otherwise ask
+            # about; the lane's own server is approved, and only it.
+            "-c", f'mcp_servers.{transcript.SERVER}.default_tools_approval_mode="approve"',
             "-c", 'web_search="disabled"',
         ]
         for feature in _CODEX_OFF:
