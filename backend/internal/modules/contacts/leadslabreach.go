@@ -72,18 +72,6 @@ func (s *Store) ScanLeadSLA(ctx context.Context, now time.Time) ([]SLABreach, er
 			       COALESCE(NULLIF(btrim(full_name), ''), email::text, '')
 			FROM lead
 			WHERE `+leadOwesAReplySQL+` AND sla_breached_at IS NULL
-			  -- Only a lead somebody ASKED US FOR. A name read off a public web
-			  -- page is a record that the contact exists: nobody wrote in, no
-			  -- first response is owed, and escalating one would stamp
-			  -- sla_breached_at against a promise that was never made.
-			  --
-			  -- Not narrowed by OWNERSHIP, which is a different question: an
-			  -- unowned inbound lead is precisely what the configured intake
-			  -- seat answers for, and dropping those rows retires that seat.
-			  --
-			  -- A NULL source system is scanned. A direct create sets none, and
-			  -- a lead somebody typed in by hand is the clearest case of work
-			  -- owed — the same way round as the kernel's payload test.
 			  AND (source_system IS NULL OR source_system <> ALL($3))
 			  AND COALESCE(routed_at, created_at) + $1 * interval '1 minute' < $2
 			ORDER BY created_at

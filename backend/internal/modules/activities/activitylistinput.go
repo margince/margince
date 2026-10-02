@@ -64,6 +64,8 @@ type ListActivitiesInput struct {
 	// personal queue it arrives as though already theirs, which is how one
 	// automation's follow-up came to sit on every colleague's page.
 	UnassignedQueue bool
+	// Worklist excludes automatic response escalations unsupported by an inquiry.
+	Worklist bool
 
 	// The three meeting narrowings the brief lanes ask with.
 	//

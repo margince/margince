@@ -22,7 +22,7 @@ func TestTheBucketsPartitionTheDay(t *testing.T) {
 	t.Parallel()
 	day := mixedDestinationsDay()
 	out := (&Service{}).worklistFrom(context.Background(), day, scopeAll, "", 50,
-		waitingRead{}, leadRead{}, worklistCursor{}, nil)
+		waitingRead{}, worklistCursor{}, nil)
 
 	buckets := out.Summary.Buckets
 	if buckets == nil {

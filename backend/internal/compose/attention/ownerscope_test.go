@@ -33,8 +33,7 @@ func TestANamedOwnerIsOneTheScopeFiltersCanRead(t *testing.T) {
 	holder := ids.NewV7()
 	rows := classifyDay(dayWhoseRowsNameAnOwner(holder), rankInstant, dayMoney{})
 	rows = append(rows,
-		classifyWaiting(WaitingCustomer{Since: rankInstant, OwnerID: holder}, rankInstant),
-		classifyLead(OwedLead{OwnerID: holder}, rankInstant))
+		classifyWaiting(WaitingCustomer{Since: rankInstant, OwnerID: holder}, rankInstant))
 	named := 0
 	for _, row := range rows {
 		if row.ownerRef.kind != ownerNamed {
@@ -57,7 +56,7 @@ func TestANamedOwnerIsOneTheScopeFiltersCanRead(t *testing.T) {
 	// Without this the census passes over a day whose producers all answered
 	// `unassigned` or `whoever is reading` — every arm above skipped, nothing
 	// compared, and PASS. The fixture must actually reach the paired answer.
-	if named < 3 {
+	if named < 2 {
 		t.Fatalf("only %d row named a contact, so this census compared almost nothing: "+
 			"give dayWhoseRowsNameAnOwner a row for each producer that calls ownedBy", named)
 	}
