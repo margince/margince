@@ -84,20 +84,14 @@ func FillOf(before, after, evidence json.RawMessage, occurredAt time.Time) (Fill
 	if !retractableFillSources[said.Source] || said.SourceRef == "" || len(now) == 0 || len(was) != len(now) {
 		return FillRetraction{}, false
 	}
-	fields := make([]string, 0, len(now))
-	for field := range now {
-		prior, stated := was[field]
-		if !stated || string(prior) != "null" || !profileFields[field] {
-			return FillRetraction{}, false
-		}
-		// A field the statement found already showing its value was confirmed,
-		// not filled, and undoing the statement leaves it.
-		if said.Confirmed != nil && slices.Contains(*said.Confirmed, field) {
-			continue
-		}
-		fields = append(fields, field)
+	var confirmed []string
+	if said.Confirmed != nil {
+		confirmed = *said.Confirmed
 	}
-	slices.Sort(fields)
+	fields, ok := filledFields(was, now, confirmed)
+	if !ok {
+		return FillRetraction{}, false
+	}
 	fill := FillRetraction{
 		Source: said.Source, SourceRef: said.SourceRef, Fields: fields, FilledAt: occurredAt,
 		Legacy: said.Source == enrichSource && said.Confirmed == nil,
@@ -107,6 +101,24 @@ func FillOf(before, after, evidence json.RawMessage, occurredAt time.Time) (Fill
 		fill.MirroredTitle = title
 	}
 	return fill, true
+}
+
+// filledFields lists the fields the images name as filled — every one empty
+// before and a profile field — leaving out those the statement only confirmed.
+// false when any named field is not a fill at all.
+func filledFields(was, now map[string]json.RawMessage, confirmed []string) ([]string, bool) {
+	fields := make([]string, 0, len(now))
+	for field := range now {
+		prior, stated := was[field]
+		if !stated || string(prior) != "null" || !profileFields[field] {
+			return nil, false
+		}
+		if !slices.Contains(confirmed, field) {
+			fields = append(fields, field)
+		}
+	}
+	slices.Sort(fields)
+	return fields, true
 }
 
 // FillRetractionRefusal says why a fill cannot be taken back. Moved names the
@@ -173,7 +185,10 @@ func fieldStands(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, fill F
 	if err != nil {
 		return false, false, fmt.Errorf("contacts: reading whether the filled title still stands: %w", err)
 	}
-	return stands, false, nil
+	if stands {
+		stands, err = slotsStand(ctx, tx, contactID, fill, fieldTitle)
+	}
+	return stands, false, err
 }
 
 // retractableFields is what undoing the fill clears. A legacy signature named

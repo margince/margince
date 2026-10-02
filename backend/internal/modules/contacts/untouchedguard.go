@@ -143,8 +143,8 @@ func refuseIfHumanTouched(
 
 // ColleagueWorkedOnSince reports whether a colleague has acted on the record
 // since the audit entry `after`, written at `since`: a human audit row on the
-// record itself or on a link it is an end of, or a tag or list membership a
-// human gave it — archiving the record retires all of them. Tags and lists are
+// record itself, on a record a human merged into it, or on a link it is an end
+// of, or a tag or list membership a human gave it — archiving the record retires all of them. Tags and lists are
 // asked without a time: every caller's entry made the record or brought it
 // back, and a human tag on it is work a colleague did on it either way. A human's undo of
 // some other change is not work on the record, so a reversal does not count,
@@ -162,6 +162,7 @@ func ColleagueWorkedOnSince(ctx context.Context, tx pgx.Tx, entityType string, i
 			 WHERE a.actor_type = 'human' AND (a.occurred_at > $3 OR a.id > $6) AND a.occurred_at <> now()
 			   AND NOT (coalesce(a.evidence, '{}'::jsonb) ? $4)
 			   AND ((a.entity_type = $1 AND a.entity_id = $2)
+			        OR (a.entity_type = $1 AND a.after ->> 'merged_into_id' = $2::text)
 			        OR (a.entity_type = $5 AND a.entity_id IN (
 			              SELECT r.id FROM relationship r
 			               WHERE $2 IN (r.contact_id, r.counterparty_contact_id, r.company_id,

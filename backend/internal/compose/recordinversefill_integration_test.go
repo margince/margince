@@ -408,3 +408,27 @@ func TestASignatureLinkedinAColleagueSavedSinceIsNotUndone(t *testing.T) {
 		t.Errorf("%d LinkedIn handles after the refused undo, want the colleague's one", linkedin)
 	}
 }
+
+// A title a colleague saved again after a site read filled it is theirs, even
+// though it reads the same and the read left no title evidence row.
+func TestASiteReadTitleAColleagueSavedAgainIsNotUndone(t *testing.T) {
+	e := integration.Setup(t)
+	contact := e.SeedContact(t, "Sara Site", nil)
+	company := e.SeedCompany(t, "Acme Site GmbH", nil)
+	seedEmploymentEdge(t, e, contact, company)
+	if matched, err := e.Contacts.ApplySiteContactFields(machineCtx(e), ids.From[ids.CompanyKind](company), contacts.SiteContactFields{
+		Name: "Sara Site", Role: "Head of Operations", EvidenceSnippet: "Sara Site, Head of Operations",
+		SourceURL: "https://acme.test/team",
+	}); err != nil || !matched {
+		t.Fatalf("the site read: matched=%v err=%v", matched, err)
+	}
+	fill := fillEntryOf(t, e, contact, "site_read")
+	same := "Head of Operations"
+	if _, err := e.Contacts.UpdateContact(e.Admin(), ids.From[ids.ContactKind](contact), contacts.UpdateContactInput{Title: &same}); err != nil {
+		t.Fatal(err)
+	}
+
+	if reason := refusedFor(t, undoEntry(t, e, "contact", contact, fill)); reason != ReasonSuperseded {
+		t.Errorf("the undo refused %q, want %q", reason, ReasonSuperseded)
+	}
+}

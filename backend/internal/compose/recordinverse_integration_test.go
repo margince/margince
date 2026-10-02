@@ -239,3 +239,24 @@ func TestACreateAColleagueTaggedIsNotUndone(t *testing.T) {
 		t.Error("the refused undo archived the contact anyway")
 	}
 }
+
+// A colleague who merged another contact into an imported one made the
+// imported one the survivor of their merge; archiving it would take the merged
+// contact's data with it.
+func TestACreateAColleagueMergedIntoIsNotUndone(t *testing.T) {
+	e := integration.Setup(t)
+	created, err := e.Contacts.CreateContact(machineCtx(e), contacts.CreateContactInput{FullName: "Imported Ida", Source: "import"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	survivor := ids.UUID(created.Id)
+	createID := latestAuditRowID(t, e, "contact", survivor, actionCreate)
+	duplicate := e.SeedContact(t, "Ida Imported", nil)
+	if _, err := e.Contacts.MergeContact(e.Admin(), ids.From[ids.ContactKind](duplicate), ids.From[ids.ContactKind](survivor)); err != nil {
+		t.Fatalf("a colleague merging the duplicate in: %v", err)
+	}
+
+	if reason := refusedFor(t, undoEntry(t, e, "contact", survivor, createID)); reason != ReasonSuperseded {
+		t.Errorf("the undo of a create a colleague merged into refused %q, want %q", reason, ReasonSuperseded)
+	}
+}
