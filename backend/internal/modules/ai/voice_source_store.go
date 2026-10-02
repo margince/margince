@@ -23,7 +23,7 @@ func (s *VoiceStore) IngestSource(ctx context.Context, profileID ids.UUID, in In
 	if err := auth.Require(ctx, "voice_profile", principal.ActionUpdate); err != nil {
 		return VoiceCorpusSource{}, CorpusSummary{}, CorpusIngestStats{}, err
 	}
-	prepared, err := prepareSource(in)
+	prepared, err := prepareSource(ctx, in, s.knownSpeakers)
 	if err != nil {
 		return VoiceCorpusSource{}, CorpusSummary{}, CorpusIngestStats{}, err
 	}

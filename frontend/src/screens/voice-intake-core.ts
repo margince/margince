@@ -151,13 +151,10 @@ export function sourceRef(
 //     own writing ("Frage:", "Vorschlag:" in an email), and the file is the
 //     prose it reads as. Refusing it would reject the owner's own sent mail.
 //
-// One shape sits on the wrong side of that line and is accepted knowingly: a
-// short quoted line attributed to someone else inside a long own-authored
-// document ("Sam: we ship Friday", then two paragraphs about it). It is
-// textually identical to a heading, so no rule over this data separates them,
-// and it is taken as prose. What that costs is a handful of quoted words in a
-// corpus of thousands; refusing it instead would reject ordinary sent mail,
-// which is the material the voice is built from.
+// A short quoted line inside the owner's own document ("Sam: we ship Friday",
+// then two paragraphs about it) reads exactly like a heading here, and is sent
+// as prose. The server tells them apart on ingest: a label naming a contact or
+// colleague the owner can see is somebody else speaking, and leaves the source.
 //
 // The share is computed from the server's own counts, never from the text.
 export function routePreview(

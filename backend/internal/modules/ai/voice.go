@@ -44,6 +44,9 @@ type VoiceStore struct {
 	// transaction; nil when no job runner is configured (the row then stays
 	// honestly queued). Wired by WithBuildEnqueue.
 	enqueueBuild VoiceBuildEnqueue
+	// knownSpeakers recognises a quoted speaker inside prose so their words leave
+	// the source; nil knows no one. Wired by WithKnownSpeakers.
+	knownSpeakers KnownSpeakers
 }
 
 // NewVoiceStore opens the voice store on a handle already bound to the
