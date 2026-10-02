@@ -153,7 +153,7 @@ function ThreadRow({
               onClick={() => {
                 const run = verbs.reply;
                 if (run) {
-                  act("reply", () => run(thread.id, reply.trim()));
+                  void act("reply", () => run(thread.id, reply.trim()));
                 }
               }}
             >
@@ -166,7 +166,7 @@ function ThreadRow({
                 onClick={() => {
                   const run = verbs.resolve;
                   if (run) {
-                    act("resolve", () => run(thread.id));
+                    void act("resolve", () => run(thread.id));
                   }
                 }}
               >
