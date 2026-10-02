@@ -62,9 +62,9 @@ func writtenToBeforeConnectedTx(ctx context.Context, tx pgx.Tx, email string) (b
 // held with them. A row with no provider time, or a seat with no connection,
 // compares against NULL and matches nothing, which keeps the duty owed.
 //
-// The settling migration
-// (1790871111_mail_a_mailbox_already_held_owes_no_notice) spells the same rule
-// in SQL.
+// The one-time data fix
+// (migrations/datafix/1790871111_mail_a_mailbox_already_held_owes_no_notice)
+// spells the same rule in SQL for mail captured before the column existed.
 func receivedBeforeConnectedTx(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
 	var held bool
 	if err := tx.QueryRow(ctx, `

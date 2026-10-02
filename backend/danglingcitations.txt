@@ -184,6 +184,7 @@ backend/internal/platform/testdb/reset_integration_test.go migration 0240
 backend/internal/shared/kernel/pipelinetrace/registry.go migration 0258
 backend/internal/shared/ports/datasource/datasource.go core 0171
 backend/internal/shared/ports/extraction/extraction.go core 0252
+backend/migrations/mailalreadyheldnotice_integration_test.go migration 1790871111
 backend/migrations/schema_fitness_integration_test.go core 1787047322
 backend/migrations/schema_integration_test.go migration 0213
 backend/tools/extmigrategate/role.go core 0213
