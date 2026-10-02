@@ -3,8 +3,14 @@
 
 import { describe, expect, it } from "vitest";
 import {
+  groupSearchHits,
+  SEARCH_GROUP_KEY,
+  SEARCH_GROUP_ORDER,
+  SEARCH_HIT_ORDER,
   searchEmailRoute,
+  searchGroupType,
   searchHitDestination,
+  searchHitHasCard,
   searchHitRoute,
 } from "./searchkinds";
 
@@ -78,5 +84,60 @@ describe("searchHitDestination", () => {
       screen: "contacts",
       id: "p1",
     });
+  });
+});
+
+describe("groupSearchHits", () => {
+  // The order is a LIST and the headings are a RECORD the compiler holds to the
+  // contract's enum. A group the list forgot is a group whose hits are dropped
+  // on the way to the screen — how project hits once went missing — so the
+  // list is checked against the record rather than against a third copy.
+  it("draws every group a heading exists for, once", () => {
+    expect([...SEARCH_GROUP_ORDER].sort()).toEqual(
+      Object.keys(SEARCH_GROUP_KEY).sort(),
+    );
+  });
+
+  it("offers a pill for every type and none for an email, which is an activity", () => {
+    expect(SEARCH_HIT_ORDER).not.toContain("email");
+    expect(SEARCH_HIT_ORDER).toEqual(
+      SEARCH_GROUP_ORDER.filter((group) => group !== "email"),
+    );
+  });
+
+  it("files a message apart from the calls and notes beside it", () => {
+    const groups = groupSearchHits([
+      { type: "activity", id: "call" },
+      { type: "activity", id: "mail", email_summary: { activity_id: "mail" } },
+    ]);
+    expect(groups.map(({ group }) => group)).toEqual(["email", "activity"]);
+    expect(searchGroupType("email")).toBe("activity");
+  });
+
+  // Groups follow the display order whatever the scores said; inside a group
+  // the server's ranking stands.
+  it("puts records before mail and keeps each group in the server's order", () => {
+    const groups = groupSearchHits([
+      { type: "activity", id: "m1", email_summary: { activity_id: "m1" } },
+      { type: "company", id: "o2" },
+      { type: "company", id: "o1" },
+    ]);
+    expect(
+      groups.map(({ group, hits }) => [group, hits.map((hit) => hit.id)]),
+    ).toEqual([
+      ["company", ["o2", "o1"]],
+      ["email", ["m1"]],
+    ]);
+  });
+});
+
+describe("searchHitHasCard", () => {
+  // The two records a chip stands for, and nothing else: a deal or a tag
+  // drawn with a monogram would read as a contact or a company.
+  it("draws a card for a contact and a company and for no other kind", () => {
+    expect(SEARCH_HIT_ORDER.filter(searchHitHasCard)).toEqual([
+      "contact",
+      "company",
+    ]);
   });
 });

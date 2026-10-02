@@ -137,6 +137,7 @@ func TestPerfBudgetsHoldOnSeededVolumeTier(t *testing.T) {
 	retriever := search.NewRetriever(store, nil)
 
 	actx := benchAdminCtx(ws)
+	searchCtx := benchSearchCtx(ws)
 
 	report := search.BenchReport{Tier: spec.tier}
 	if err := owner.QueryRow(ctx, `SELECT count(*) FROM relationship`).Scan(&report.RelationshipEdges); err != nil {
@@ -146,7 +147,7 @@ func TestPerfBudgetsHoldOnSeededVolumeTier(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ftsStats := benchFTSQuery(t, store, actx, spec)
+	ftsStats := benchFTSQuery(t, store, searchCtx, spec)
 	graphStats := benchGraphQuery(t, retriever, actx, anchor, spec)
 
 	report.Queries = []search.QueryStats{ftsStats, graphStats}
@@ -215,11 +216,21 @@ func writeTierBenchRecord(t *testing.T, owner *pgx.Conn, report search.BenchRepo
 }
 
 // benchFTSQuery measures canonical query 1 (PERF-3): ranked
-// cross-object full-text search.
+// cross-object full-text search, finding employees through a matched company
+// as GET /v1/search does when the SPA asks it to.
 func benchFTSQuery(t *testing.T, store *search.Store, actx context.Context, spec benchTierSpec) search.QueryStats {
 	t.Helper()
+	// Only the seeded companies carry "gmbh", so every contact this finds came
+	// through the arm: a bench whose reader lost the arm fails here, not quietly.
+	viaEmployer, err := store.Search(actx, search.Input{Query: "gmbh", Types: []string{"contact"}, WithEmployees: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(viaEmployer.Hits) == 0 || viaEmployer.Hits[0].WorksAt == nil {
+		t.Fatalf("the employer arm found no one for this reader — the fixture or the grant is wrong: %+v", viaEmployer.Hits)
+	}
 	stats, err := benchRuns("search_fts", search.Perf3Budget, spec, func() error {
-		page, err := store.Search(actx, search.Input{Query: "hamburg"})
+		page, err := store.Search(actx, search.Input{Query: "hamburg", WithEmployees: true})
 		if err != nil {
 			return err
 		}
@@ -281,8 +292,19 @@ func benchRuns(name string, budget time.Duration, spec benchTierSpec, run func()
 }
 
 func benchAdminCtx(ws ids.UUID) context.Context {
+	return benchReaderCtx(ws, "contact", "company", "deal", "lead", "activity")
+}
+
+// benchSearchCtx adds the employment edge to the bench reader, without which
+// search's employer arm is dropped and PERF-3 would time a statement the
+// product no longer runs. PERF-7 keeps benchAdminCtx so its walk is unchanged.
+func benchSearchCtx(ws ids.UUID) context.Context {
+	return benchReaderCtx(ws, "contact", "company", "deal", "lead", "activity", "relationship")
+}
+
+func benchReaderCtx(ws ids.UUID, objects ...string) context.Context {
 	grants := map[string]principal.ObjectGrant{}
-	for _, object := range []string{"contact", "company", "deal", "lead", "activity"} {
+	for _, object := range objects {
 		grants[object] = principal.ObjectGrant{Read: true}
 	}
 	ctx := principal.WithWorkspaceID(context.Background(), ws)

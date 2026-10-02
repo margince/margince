@@ -1559,6 +1559,17 @@ export async function mockApi(
     if (path === "/contacts/p-new") {
       return json({ ...anna, id: "p-new", full_name: "Peter Neu" });
     }
+    // The contact the search fixture finds through Brandt, so opening that hit
+    // lands on its own record.
+    if (path === "/contacts/p-jonas") {
+      return json({
+        ...anna,
+        id: "p-jonas",
+        full_name: "Jonas Weiß",
+        title: "Fleet manager",
+        emails: [],
+      });
+    }
     if (path === "/companies" && method === "POST") {
       const body = route.request().postDataJSON();
       return json(
@@ -2469,6 +2480,23 @@ export async function mockApi(
           title: "Brandt Automotive",
           score: 0.86,
         },
+        // A contact found only through the company the word named, and only
+        // for a caller that asked for employees, as the server answers.
+        ...(q.includes("brandt") &&
+        url.searchParams.get("with_employees") === "true"
+          ? [
+              {
+                type: "contact",
+                id: "p-jonas",
+                title: "Jonas Weiß",
+                score: 0.5,
+                works_at: {
+                  company_id: "o-brandt",
+                  company_name: "Brandt Automotive",
+                },
+              },
+            ]
+          : []),
         { type: "deal", id: "d-fleet", title: "Fleet renewal", score: 0.8 },
         {
           type: "product",

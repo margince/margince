@@ -45,12 +45,7 @@ func (s *Store) markPartners(ctx context.Context, tx pgx.Tx, hits []Hit) error {
 	if s.partnerMarks == nil {
 		return nil
 	}
-	var companyIDs []ids.CompanyID
-	for i := range hits {
-		if hits[i].Type == hitTypeCompany {
-			companyIDs = append(companyIDs, ids.From[ids.CompanyKind](hits[i].ID))
-		}
-	}
+	companyIDs := companyHitIDs(hits)
 	if len(companyIDs) == 0 {
 		return nil
 	}
@@ -69,4 +64,15 @@ func (s *Store) markPartners(ctx context.Context, tx pgx.Tx, hits []Hit) error {
 		hits[i].IsPartner = &isPartner
 	}
 	return nil
+}
+
+// companyHitIDs names the companies a page's company hits are, in page order.
+func companyHitIDs(hits []Hit) []ids.CompanyID {
+	var companyIDs []ids.CompanyID
+	for i := range hits {
+		if hits[i].Type == hitTypeCompany {
+			companyIDs = append(companyIDs, ids.From[ids.CompanyKind](hits[i].ID))
+		}
+	}
+	return companyIDs
 }

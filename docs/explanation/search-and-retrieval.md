@@ -89,7 +89,60 @@ only borrows from is [relationship-graph.md](relationship-graph.md).
 **lexical arm alone** (`Store.Search`) — ranked, cursor-paged, every result
 stamped `trust_tier: authoritative` (the provenance grade the contract puts on
 natively-held records; `external` is reserved for connector-sourced rows and is
-not emitted yet). The **fused** path (`Store.HybridSearch`) is
+not emitted yet).
+
+**`ts_rank_cd` does not compare across types.** A message that names an
+account in its subject and again through its body outranks the account, whose
+name is one `A`-weighted word, so a short list ranked across types can hold
+nothing but mail. `per_type=N` asks `GET /v1/search` for a **grouped** page
+instead (`groupedShape`): each admitted branch is capped at `N + 1` before the
+union, the extra row is dropped and reported in `types_with_more`, and the page
+takes no cursor or limit — narrowing to one type with `types` pages through the
+rest. The ⌘K palette (`per_type=3`) and the unnarrowed results screen
+(`per_type=5`) both ask for it, and draw an activity that carries an
+`email_summary` under **Emails**, apart from the calls and notes beside it.
+
+**`with_employees=true` finds contacts through their employer.** A contact's
+`search_tsv` holds its name and title, never the company, so "Acme" found Acme
+and none of the contacts who work there. The flag adds one more union element,
+the **employer arm** (`employerArmSQL`), built by the store rather than declared
+in `searchBranches` — that table means one row per searchable entity to the
+vector lane, the plan compiler and two AST gates, and this is a second way to
+reach the contact type. The arm:
+
+- **starts from the companies the company branch would return** — the same
+  match expression, `archived_at`, `NOT is_anchor` and company row scope — capped
+  to the best-matching `maxPerType` (20), so every company a grouped page can
+  show seeds its staff while a two-letter prefix or an industry word cannot fan
+  out to every employee in the workspace. The installation's own company seeds
+  no one: its staff are its employees;
+- **follows current employment only** — `kind = 'employment'`, unarchived, and
+  `employment.IsCurrentSQL`, the same reading as the company's own roster, so a
+  notice period still counts and a former job or a billing contact does not;
+- **takes three gates and refuses silently**: `contact` and `company` read,
+  the edge gate `auth.EdgeReadScope` (who works where is a fact about the pair),
+  and both row scopes. Any refusal drops the arm; the search still answers.
+  So does a query using the websearch operators, where `-acme` would match
+  nearly every company;
+- **never repeats a contact**: it excludes contacts the contact branch already
+  matches by their own text, and keeps one row per contact (`DISTINCT ON`) — the
+  best-matching employer, the primary job first. Each hit carries that company
+  as `works_at`;
+- **ranks below every own-text hit**: its score is `-1/(1+rank)`, in `[-1, 0)`,
+  under any `ts_rank_cd`, so both page shapes put a contact matched by name
+  first and the `(score, type, id)` cursor needs no second ordering. On a
+  grouped page the arm is capped like any branch and `page()` counts by type,
+  so `per_type` still bounds the contacts shown and `types_with_more` stays true.
+
+It is opt-in because `Store.Search` has other callers: the agent retriever, the
+plan executor's `similar_to` and `HybridSearch` all reuse the lexical lane, and
+`Classify` promises to agree with it. Only the HTTP handler sets
+`Input.WithEmployees`, so those keep matching by own text alone. A company hit
+also carries `logo_url`, read for the page's companies by the contacts module's
+own reader (`contacts.CompanyLogoURLsBatch`, injected by compose) so the URL is
+spelled where the company record spells it.
+
+The **fused** path (`Store.HybridSearch`) is
 reached through the `shared/ports/retrieval` seam (`search.Retriever`), which is
 what the AI layers ground on: `cmd/api` wires it with the resolved model path's
 embedder for the offer-draft surface, `cmd/worker` wires it as the Surface-B
@@ -361,7 +414,11 @@ mechanism with its own maintenance rules — see
 
 | | |
 |---|---|
-| Lexical query + keyset cursor | `internal/modules/search/store.go` (`Search`) |
+| Lexical query | `internal/modules/search/store.go` (`Search`) |
+| Ranked page + keyset cursor | `internal/modules/search/ranked.go` (`rankedShape`) |
+| Grouped page (`per_type`) | `internal/modules/search/grouped.go` (`groupedShape`) |
+| Contacts through their employer (`with_employees`) | `internal/modules/search/employerarm.go` (`employerArmSQL`) |
+| Company hit logo | `internal/modules/search/companylogo.go` ← `internal/modules/contacts/companylogobatch.go` |
 | What a searchable entity is, and who may see one | `internal/modules/search/branches.go` (`searchBranches`, `branchScope`, `SearchedTables`) |
 | Vector write + similarity read | `internal/modules/search/embedding.go` (`UpsertEmbedding`, `SimilarEntities`) |
 | RRF fusion | `internal/modules/search/fuse.go` (`HybridSearch`, `fuseRankedResults`, `rrfK`) |

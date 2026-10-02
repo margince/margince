@@ -2104,8 +2104,9 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
       .fill("brandt");
     // Wait on the hits, not on a duration: the live arm is what adds the rows
     // this sweep exists to judge.
+    // Exact: a contact found through the company carries its name too.
     await expect(
-      page.getByRole("button", { name: /Brandt Automotive/ }),
+      page.getByRole("button", { name: "Brandt Automotive", exact: true }),
     ).toBeVisible();
     await settleAnimations(page);
     await expectNoAaViolations(page, "brief — the command palette open");

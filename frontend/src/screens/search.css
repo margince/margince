@@ -1,16 +1,15 @@
 .search-bar {
   margin: var(--space-3) 0 var(--space-5);
 }
+/* The pills carry no margin of their own; the results under them need air
+   whichever answer arrives — groups, an empty state or the wait. */
+.search-filter {
+  margin-bottom: var(--space-4);
+}
 .search-groups {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-}
-.search-group {
-  padding: var(--space-3) var(--space-4);
-}
-.search-group h2 {
-  margin-bottom: var(--space-2);
 }
 .search-hits {
   list-style: none;
@@ -36,4 +35,13 @@
 .search-hit-email {
   padding: 0;
   gap: 0;
+}
+
+/* A record card's facts row: why the hit is here, then its tier and partner
+   marks, spaced from one another and wrapping rather than narrowing the name. */
+.search-hit-marks {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
 }

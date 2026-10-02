@@ -1,4 +1,4 @@
-import { CornerDownLeft, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Badge,
@@ -11,7 +11,6 @@ import { Callout } from "../design-system/callout";
 import { liveDialogs, useDialogFocus } from "../design-system/dialogfocus";
 import { usePresence } from "../design-system/presence";
 import { useLocale, useT } from "../i18n";
-import type { MessageKey } from "../i18n/en";
 import { SCHEDULED_SCREEN } from "../screens/scheduledsends";
 import type { SettingsPageId } from "../screens/settingscatalog";
 import { useVisibleSettingsPages } from "../screens/settingsnav";
@@ -23,6 +22,7 @@ import {
   resolveCustomLabel,
 } from "./custom";
 import { CREATE_ID, NAV } from "./nav";
+import { PaletteRow } from "./paletterow";
 import { SEARCH_PENDING_DELAY_MS, useSearchCommands } from "./palettesearch";
 import { navigate, type Route } from "./router";
 import { openAsk } from "./urlstate";
@@ -41,6 +41,17 @@ export type Command = {
   // older word must not be told the screen does not exist.
   keywords?: readonly string[];
   type: "screen" | "action" | "record";
+  // The heading the row is drawn under, already translated. A record hit names
+  // its kind here rather than in a badge, so a list holding a company and three
+  // emails reads as two groups and not as four rows saying "Record".
+  group?: string;
+  // A message, drawn as the product's one citation of an email (subject and
+  // date) in place of the label and second line. The date arrives formatted:
+  // the caller owns the reader's timezone.
+  cite?: Readonly<{ subject: string | null | undefined; occurredAt: string }>;
+  // A contact's or a company's mark, drawn in place of the row's glyph: the
+  // same chip the record wears everywhere else, keyed on its id.
+  mark?: Readonly<{ identity: string; name: string; logo?: string | null }>;
   // Where the row goes. Absent on a row that opens something OVER the page
   // instead of leaving it — asking does that, and a route it never follows
   // would be a claim about where the reader ends up that is simply untrue.
@@ -195,12 +206,6 @@ export function useBuiltinCommands(): Command[] {
     ];
   }, [t, visible, locale, isAdmin]);
 }
-
-const TYPE_KEY: Record<Command["type"], MessageKey> = {
-  screen: "palette.typeScreen",
-  action: "palette.typeAction",
-  record: "palette.typeRecord",
-};
 
 export function CommandPalette({
   open,
@@ -415,32 +420,13 @@ export function CommandPalette({
             <EmptyState>{t("palette.empty")}</EmptyState>
           )}
           {rows.map((command, index) => (
-            <button
+            <PaletteRow
               key={command.id}
-              type="button"
-              className={
-                index === selected
-                  ? "palette-row t-body selected"
-                  : "palette-row t-body"
-              }
-              onClick={() => run(command)}
-              ref={(element) => {
-                if (index === selected) {
-                  element?.scrollIntoView?.({ block: "nearest" });
-                }
-              }}
-            >
-              {command.id === "ask-ai" ? (
-                <Sparkles aria-hidden />
-              ) : (
-                <CornerDownLeft aria-hidden />
-              )}
-              <span className="label">{command.label}</span>
-              {command.subtitle && (
-                <span className="sub t-caption">{command.subtitle}</span>
-              )}
-              <Badge>{t(TYPE_KEY[command.type])}</Badge>
-            </button>
+              command={command}
+              previous={rows[index - 1]}
+              selected={index === selected}
+              onRun={run}
+            />
           ))}
         </div>
       </div>

@@ -29,9 +29,11 @@ type Handlers struct {
 // hit rendering the generic way. `partnerMarks` answers which companies carry a
 // live partner programme; compose supplies the contacts store's own reader, and
 // a nil one leaves every company hit unmarked rather than marked "no".
+// `companyLogos` answers a company hit's logo the same way, and a nil one
+// leaves every company hit without one.
 func NewHandlers(
 	db *database.DB, tagReach TagReachCounter,
-	emailRows EmailSummaryReader, partnerMarks PartnerMarker,
+	emailRows EmailSummaryReader, partnerMarks PartnerMarker, companyLogos CompanyLogoReader,
 ) Handlers {
 	// THE CEILING RIDES THE HANDLE THE CALLER PASSES, and compose passes a
 	// bounded one (server.go). It is not armed here, and that is deliberate:
@@ -44,7 +46,8 @@ func NewHandlers(
 	// this surface opens — the lexical ranking, and the vector one through the
 	// retriever. A ceiling armed at a single Query would leave the other lane as
 	// unbounded as it was before anybody thought about it.
-	store := NewStore(db).WithTagReach(tagReach).WithEmailSummaries(emailRows).WithPartnerMarks(partnerMarks)
+	store := NewStore(db).WithTagReach(tagReach).WithEmailSummaries(emailRows).
+		WithPartnerMarks(partnerMarks).WithCompanyLogos(companyLogos)
 	// Embedder is nil, and stays nil: the only thing this retriever serves is
 	// AssembleContext, which walks the context graph and never embeds. The
 	// request-path embed lane compose binds is for the RANKED half, and
@@ -66,6 +69,8 @@ func (h Handlers) Search(w http.ResponseWriter, r *http.Request, params crmcontr
 	if params.Limit != nil {
 		in.Limit = *params.Limit
 	}
+	in.PerType = params.PerType
+	in.WithEmployees = params.WithEmployees != nil && *params.WithEmployees
 
 	page, err := h.store.Search(r.Context(), in)
 	if err != nil {
@@ -73,11 +78,26 @@ func (h Handlers) Search(w http.ResponseWriter, r *http.Request, params crmcontr
 		return
 	}
 
+	httperr.WriteJSON(w, http.StatusOK, wirePage(page))
+}
+
+// wirePage renders a page as the contract's response. `types_with_more` is
+// present on a grouped page alone, empty when every type fit, so a client can
+// tell "nothing more of any type" from "this was a ranked page".
+func wirePage(page Page) crmcontracts.SearchResponse {
 	pageInfo := crmcontracts.PageInfo{HasMore: page.HasMore}
 	if page.NextCursor != "" {
 		pageInfo.NextCursor = &page.NextCursor
 	}
-	httperr.WriteJSON(w, http.StatusOK, crmcontracts.SearchResponse{Data: wireHits(page.Hits), Page: pageInfo})
+	response := crmcontracts.SearchResponse{Data: wireHits(page.Hits), Page: pageInfo}
+	if page.TypesWithMore != nil {
+		more := make([]crmcontracts.SearchResponseTypesWithMore, 0, len(page.TypesWithMore))
+		for _, entity := range page.TypesWithMore {
+			more = append(more, crmcontracts.SearchResponseTypesWithMore(entity))
+		}
+		response.TypesWithMore = &more
+	}
+	return response
 }
 
 // wireHits renders a page of hits as the contract's results.
@@ -116,6 +136,14 @@ func wireHits(hits []Hit) []crmcontracts.SearchResult {
 		}
 		if hit.IsPartner != nil {
 			result.IsPartner = ptr(*hit.IsPartner)
+		}
+		if hit.WorksAt != nil {
+			result.WorksAt = &crmcontracts.SearchHitEmployer{
+				CompanyId: openapi_types.UUID(hit.WorksAt.CompanyID), CompanyName: hit.WorksAt.CompanyName,
+			}
+		}
+		if hit.LogoURL != nil {
+			result.LogoUrl = ptr(*hit.LogoURL)
 		}
 		data = append(data, result)
 	}

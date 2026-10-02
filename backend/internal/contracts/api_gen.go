@@ -14101,6 +14101,45 @@ func (e SchedulingProfileProvider) Valid() bool {
 	}
 }
 
+// Defines values for SearchResponseTypesWithMore.
+const (
+	SearchResponseTypesWithMoreActivity      SearchResponseTypesWithMore = "activity"
+	SearchResponseTypesWithMoreCompany       SearchResponseTypesWithMore = "company"
+	SearchResponseTypesWithMoreContact       SearchResponseTypesWithMore = "contact"
+	SearchResponseTypesWithMoreDeal          SearchResponseTypesWithMore = "deal"
+	SearchResponseTypesWithMoreLead          SearchResponseTypesWithMore = "lead"
+	SearchResponseTypesWithMoreOfferTemplate SearchResponseTypesWithMore = "offer_template"
+	SearchResponseTypesWithMoreProduct       SearchResponseTypesWithMore = "product"
+	SearchResponseTypesWithMoreProject       SearchResponseTypesWithMore = "project"
+	SearchResponseTypesWithMoreTag           SearchResponseTypesWithMore = "tag"
+)
+
+// Valid indicates whether the value is a known member of the SearchResponseTypesWithMore enum.
+func (e SearchResponseTypesWithMore) Valid() bool {
+	switch e {
+	case SearchResponseTypesWithMoreActivity:
+		return true
+	case SearchResponseTypesWithMoreCompany:
+		return true
+	case SearchResponseTypesWithMoreContact:
+		return true
+	case SearchResponseTypesWithMoreDeal:
+		return true
+	case SearchResponseTypesWithMoreLead:
+		return true
+	case SearchResponseTypesWithMoreOfferTemplate:
+		return true
+	case SearchResponseTypesWithMoreProduct:
+		return true
+	case SearchResponseTypesWithMoreProject:
+		return true
+	case SearchResponseTypesWithMoreTag:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SearchResultTrustTier.
 const (
 	SearchResultTrustTierSearchResultTrustTierAuthoritative SearchResultTrustTier = "authoritative"
@@ -40689,11 +40728,23 @@ type SchedulingProfile struct {
 // SchedulingProfileProvider defines model for SchedulingProfile.Provider.
 type SchedulingProfileProvider string
 
+// SearchHitEmployer A company a contact currently works at, by any current employment — the same reading as the company's own roster, not only the contact's primary employer.
+type SearchHitEmployer struct {
+	CompanyId   openapi_types.UUID `json:"company_id"`
+	CompanyName string             `json:"company_name"`
+}
+
 // SearchResponse defines model for SearchResponse.
 type SearchResponse struct {
 	Data []SearchResult `json:"data"`
 	Page PageInfo       `json:"page"`
+
+	// TypesWithMore On a `per_type` answer only: the types that matched more hits than the page carries for them. Absent on a ranked answer, whose `page.has_more` says the same thing for the list as a whole.
+	TypesWithMore *[]SearchResponseTypesWithMore `json:"types_with_more,omitempty"`
 }
+
+// SearchResponseTypesWithMore defines model for SearchResponse.TypesWithMore.
+type SearchResponseTypesWithMore string
 
 // SearchResult defines model for SearchResult.
 type SearchResult struct {
@@ -40707,6 +40758,9 @@ type SearchResult struct {
 	// IsPartner For a `company` hit only: whether the account carries a LIVE partner programme. True when a partner record exists and has not been retired, false when it was checked and carries none. Null on every other hit type, and null when the marker was not taken — a caller who may not read partner programmes gets null rather than false, because null means UNKNOWN while false would tell them this account is not a partner. A client renders the partner marker, with a route to the company's partner record, on `true` alone.
 	IsPartner *bool `json:"is_partner,omitempty"`
 
+	// LogoUrl For a `company` hit only: the company's logo, the same URL its record carries as `Company.logo_url`. Absent when it has none, and on every other hit type.
+	LogoUrl *string `json:"logo_url,omitempty"`
+
 	// Score Relevance score.
 	Score   *float32 `json:"score,omitempty"`
 	Snippet *string  `json:"snippet,omitempty"`
@@ -40717,6 +40771,9 @@ type SearchResult struct {
 	// TrustTier Provenance tier of the underlying record. EVERY hit this server returns carries `authoritative`, with no exception: search reads the store the record lives in, so a hit is never a copy of somebody else's. `external` and `unverified` are declared for connector-sourced rows and nothing emits either yet, and `null` means UNKNOWN rather than authoritative — this field is never guessed. A client must accept all four and must not expect any but the first.
 	TrustTier *SearchResultTrustTier `json:"trust_tier,omitempty"`
 	Type      SearchResultType       `json:"type"`
+
+	// WorksAt On a `contact` hit found through `with_employees`: the company it currently works at that the query matched, which is why the hit is here — the contact's own text did not match. When the contact works at several matching companies, the best-matching one. Null on every other hit, a contact the query matched by its own text included.
+	WorksAt *SearchHitEmployer `json:"works_at,omitempty"`
 }
 
 // SearchResultTrustTier Provenance tier of the underlying record. EVERY hit this server returns carries `authoritative`, with no exception: search reads the store the record lives in, so a hit is never a copy of somebody else's. `external` and `unverified` are declared for connector-sourced rows and nothing emits either yet, and `null` means UNKNOWN rather than authoritative — this field is never guessed. A client must accept all four and must not expect any but the first.
@@ -51203,6 +51260,12 @@ type SearchParams struct {
 
 	// Types Restrict to these object types (default all).
 	Types *[]SearchParamsTypes `form:"types,omitempty" json:"types,omitempty"`
+
+	// PerType Answer GROUPED instead of as one ranked list: up to this many hits of EACH type, each type's best first. Relevance is not comparable across types — a message naming an account ten times outranks the account itself — so a short ranked list can hold nothing but messages, while a grouped answer carries every type that matched. `data` holds each type's hits together, best first. The page is the whole answer, so it takes no `cursor` and no `limit`; `types_with_more` names the types holding more than it carries, and asking again without `per_type`, with `types` set to one of them, pages through the rest.
+	PerType *int `form:"per_type,omitempty" json:"per_type,omitempty"`
+
+	// WithEmployees Also find the contacts who currently work at a company the query matches, each carrying that company as `works_at`. A contact the query matches by its own text is returned once, as itself; one found only through its employer ranks after every contact matched by its own text. Staff are read from the best-matching companies only, as many as a grouped page can show (20), so a word matching hundreds of accounts reaches the contacts at its strongest matches rather than at all of them. It needs the caller to read contacts, companies and the employment between them, and finds no one through the installation's own company or through a query using the websearch operators (`or`, `-word`, quotes), where `-acme` would reach every other company in the workspace. Honoured by both page shapes, so a contact a grouped page shows is also on the ranked list narrowed to `types=contact`.
+	WithEmployees *bool `form:"with_employees,omitempty" json:"with_employees,omitempty"`
 
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
@@ -98552,6 +98615,32 @@ func (siw *ServerInterfaceWrapper) Search(w http.ResponseWriter, r *http.Request
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "types"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "types", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "per_type" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "per_type", r.URL.Query(), &params.PerType, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "per_type"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "per_type", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "with_employees" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "with_employees", r.URL.Query(), &params.WithEmployees, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "with_employees"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "with_employees", Err: err})
 		}
 		return
 	}
