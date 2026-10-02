@@ -20,7 +20,6 @@ package gates
 
 import (
 	"os"
-	"regexp"
 	"sort"
 	"strings"
 	"testing"
@@ -202,22 +201,18 @@ func TestADateColumnOutsideTheInstallationZoneSaysWhy(t *testing.T) {
 	}
 }
 
-// issueReference is a GitHub issue number as a drift note cites one.
-var issueReference = regexp.MustCompile(`#[0-9]+\b`)
-
 func TestADriftNoteNamesTheIssueThatTracksIt(t *testing.T) {
 	t.Parallel()
 	for column, stated := range dateColumnCalendars {
-		if stated.drift != "" && !issueReference.MatchString(stated.drift) {
-			t.Errorf("%s notes reader drift without naming the issue that tracks it: %q",
-				column, stated.drift)
+		if stated.drift != "" && !strings.HasSuffix(stated.drift, readersDisagree) {
+			t.Errorf("%s notes reader drift without citing %s, the issue that tracks every "+
+				"drift note: %q", column, readersDisagree, stated.drift)
 		}
 	}
 }
 
-// The census reads the catalog through a regular expression, and a reader that
-// matches nothing would agree with an empty registry. Planting the one shape it
-// must see, and two it must not, keeps a regex edit from quietly narrowing it.
+// Planted lines keep an edit to the shared catalog reader from narrowing what it
+// sees: a column the reader misses is missing from the registry check too.
 func TestTheDateColumnReaderSeesADateAndNothingElse(t *testing.T) {
 	t.Parallel()
 	for line, want := range map[string]bool{
