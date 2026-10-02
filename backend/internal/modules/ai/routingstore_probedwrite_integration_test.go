@@ -18,6 +18,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -80,6 +81,49 @@ func TestALocationMoveIsProbedAgainstABindingWrittenWhileGoogleWasAsked(t *testi
 	var invalid settings.InvalidValue
 	if !errors.As(err, &invalid) || !strings.Contains(invalid.Reason, "gemini-2.5-pro") {
 		t.Errorf("err = %v, want a refusal naming gemini-2.5-pro, the model the new location does not serve", err)
+	}
+	stored, err := store.Get(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := stored.Providers[providerGeminiVertex].Location; got != "europe-west4" {
+		t.Errorf("stored location = %q, want europe-west4 kept", got)
+	}
+}
+
+// A document another write moves during every probe round is never stored
+// unprobed: the save gives up as stale and leaves the stored location alone.
+func TestALocationMoveOutpacedOnEveryRoundIsRefusedAsStale(t *testing.T) {
+	e := setupRateStore(t)
+	_, wsCtx := e.seedWorkspace(context.Background(), t)
+	ctx := routingWriter(wsCtx)
+	store := &RoutingStore{settings: settings.New(e.pool, settings.NewRegistry(Routing)), keys: allCloudKeys(t)}
+	if err := settings.Set(ctx, store.settings, Routing, vertexRouting("europe-west4").canonical()); err != nil {
+		t.Fatalf("seeding the binding: %v", err)
+	}
+	everything := servesEverything(t)
+	var rounds atomic.Int32
+	store.selectBrain, _ = googleAt(t, func(w http.ResponseWriter, r *http.Request) {
+		// Only the save's own asks, at the new location, move the document;
+		// the competing write's asks at the old one do not, or it would recurse.
+		if strings.Contains(r.URL.Path, "/locations/europe-west1/") {
+			current, err := store.Get(ctx)
+			if err == nil {
+				models := []string{"gemini-2.5-pro", "gemini-2.5-flash"}
+				current.Tiers[TierFrontier] = ProviderConfig{Provider: providerGeminiVertex, Model: models[rounds.Add(1)%2]}
+				_, err = store.Replace(ctx, current)
+			}
+			if err != nil {
+				t.Errorf("the competing write failed: %v", err)
+			}
+		}
+		everything(w, r)
+	})
+
+	_, err := store.SetProviderSettings(ctx, providerGeminiVertex, ProviderSettings{Location: "europe-west1"})
+
+	if !errors.Is(err, apperrors.ErrVersionSkew) {
+		t.Errorf("err = %v, want ErrVersionSkew after every round went stale", err)
 	}
 	stored, err := store.Get(ctx)
 	if err != nil {

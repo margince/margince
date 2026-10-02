@@ -170,11 +170,7 @@ func TestAnEUHostedSaveOutsideTheEUAsksGoogleNothing(t *testing.T) {
 	}
 }
 
-// A save that binds no gemini_vertex lane is left wholly to the write: it has
-// nothing to probe, so ReplaceIfVersion takes the plain write and nothing is
-// read, built or judged before the lock. The binding is an eu_hosted broker
-// lane with no pin of its own — which the write accepts when it carries the
-// stored lane's pin, so judging it earlier would break that carry.
+// A binding without gemini_vertex gives a save nothing to ask Google.
 func TestASaveWithoutVertexHasNothingToProbe(t *testing.T) {
 	t.Parallel()
 	cfg := RoutingConfig{

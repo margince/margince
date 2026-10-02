@@ -73,12 +73,15 @@ func (s *RoutingStore) servedOnly(ctx context.Context, client *geminiClient, loc
 		}
 	}
 	kept := make([]model.Info, 0, len(callable))
+	exact := answered
 	for _, m := range callable {
-		if keep, asked := served[m.ID]; !asked || keep {
+		keep, asked := served[m.ID]
+		exact = exact && asked
+		if !asked || keep {
 			kept = append(kept, m)
 		}
 	}
-	return kept, answered
+	return kept, exact
 }
 
 func isUncallable(id string) bool {

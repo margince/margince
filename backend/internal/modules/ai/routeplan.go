@@ -148,9 +148,6 @@ func FeatureRoutes(normalConfig, effectiveConfig RoutingConfig, band string) []c
 func compareFeatureRoutes(normalConfig, effectiveConfig RoutingConfig, normalBand, band string) []crmcontracts.AiFeatureRoute {
 	out := make([]crmcontracts.AiFeatureRoute, 0)
 	tasks := append(AllTasks(), TaskEmbeddings)
-	// The decision lane reads its host from its provider, as boundPlan's lanes do.
-	normalResolved := normalConfig.canonical().resolveProviders()
-	effectiveResolved := effectiveConfig.canonical().resolveProviders()
 	for _, task := range tasks {
 		if task != TaskEmbeddings && Status(task) != StatusShipped {
 			continue
@@ -169,8 +166,8 @@ func compareFeatureRoutes(normalConfig, effectiveConfig RoutingConfig, normalBan
 			NormalCandidates: wireCandidates(normal), EffectiveCandidates: wireCandidates(effective),
 			Impact: routeImpact(normal, effective, blocked), BudgetExempt: task == TaskEmbeddings,
 		}
-		decisionRoute(&row, effectiveResolved, task, blocked)
-		if decisionLeadChanged(normalResolved, effectiveResolved, task, normalBlocked, row) {
+		decisionRoute(&row, effectiveConfig, task, blocked)
+		if decisionLeadChanged(normalConfig, effectiveConfig, task, normalBlocked, row) {
 			row.Impact = withDecisionLeadChange(row.Impact)
 		}
 		out = append(out, row)

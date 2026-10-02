@@ -670,9 +670,9 @@ func TestFinalizingOneStoredRowTwiceWarnsOnce(t *testing.T) {
 	}
 }
 
-// A stored lane naming a provider this build does not know fails when that
-// lane is asked to serve, as it always has: its host is not lifted onto a
-// provider entry the parser would refuse, taking every other lane down too.
+// A stored lane naming a provider this build does not know keeps its host: it
+// is not lifted onto a provider entry the parser would refuse, taking every
+// other lane down too.
 func TestLift_AnUnknownProvidersLaneHostStaysOnTheLane(t *testing.T) {
 	cfg := RoutingConfig{
 		Profile: ProfileCloudFrontier,
@@ -693,5 +693,32 @@ func TestLift_AnUnknownProvidersLaneHostStaysOnTheLane(t *testing.T) {
 	}
 	if err := lifted.validateProviderEntries(); err != nil {
 		t.Errorf("the lifted document's provider entries were refused: %v", err)
+	}
+}
+
+// A provider whose only lane is an embeddings server of its own is not reached
+// at its host by that lane, but a key test and a model list still dial it, so
+// its host meets the dialable-endpoint rule like any unbound one.
+func TestValidateProviderEntries_AHostNoLaneReadsIsStillChecked(t *testing.T) {
+	cfg := RoutingConfig{
+		Profile:    ProfileCloudFrontier,
+		Embeddings: EmbeddingsConfig{ProviderConfig: ProviderConfig{Provider: providerOpenAI, Model: "e", BaseURL: "https://api.openai.com"}},
+		Providers:  map[string]ProviderSettings{providerOpenAI: {BaseURL: "http://collector.example"}},
+	}
+	if err := cfg.validateProviderEntries(); err == nil {
+		t.Error("a cleartext provider host only an embeddings override shadows was admitted")
+	}
+	cfg.Providers[providerOpenAI] = ProviderSettings{BaseURL: "https://team:secret@api.openai.com"}
+	if err := cfg.validateProviderEntries(); err == nil {
+		t.Error("a credential-bearing provider host only an embeddings override shadows was admitted")
+	}
+}
+
+func TestResolve_AnUnknownProvidersLaneKeepsItsHost(t *testing.T) {
+	cfg := RoutingConfig{Tiers: map[Tier]ProviderConfig{
+		TierPremium: {Provider: "made_up", Model: "m", BaseURL: "https://gateway.example"},
+	}}
+	if got := cfg.canonical().resolveProviders().Tiers[TierPremium].BaseURL; got != "https://gateway.example" {
+		t.Errorf("served premium host = %q, want the lane's own kept", got)
 	}
 }

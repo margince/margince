@@ -250,7 +250,7 @@ func (s *RoutingStore) SetProviderSettings(ctx context.Context, provider string,
 	if err := auth.Require(ctx, routingSettingsObject, principal.ActionUpdate); err != nil {
 		return RoutingConfig{}, err
 	}
-	if _, known := providerByName(provider); !known {
+	if !knownProvider(provider) {
 		return RoutingConfig{}, apperrors.ErrNotFound
 	}
 	settle := func(current RoutingConfig) (RoutingConfig, RoutingConfig, error) {

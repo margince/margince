@@ -107,7 +107,8 @@ func (r *OpenRouterRouting) withPins(pins *OpenRouterRouting) *OpenRouterRouting
 func (cfg RoutingConfig) resolveProviders() RoutingConfig {
 	tiers := make(map[Tier]ProviderConfig, len(cfg.Tiers))
 	for tier, lane := range cfg.Tiers {
-		if !liftable(lane.Provider) {
+		// An unknown provider's lane keeps its own host, as the lift left it.
+		if !knownProvider(lane.Provider) {
 			tiers[tier] = lane
 			continue
 		}
@@ -117,10 +118,10 @@ func (cfg RoutingConfig) resolveProviders() RoutingConfig {
 		tiers[tier] = lane
 	}
 	cfg.Tiers = tiers
-	if liftable(cfg.Embeddings.Provider) {
+	if knownProvider(cfg.Embeddings.Provider) {
 		cfg.Embeddings.ProviderConfig = cfg.Embeddings.resolved(cfg.Providers[cfg.Embeddings.Provider])
 	}
-	if cfg.Decisions != nil && liftable(cfg.Decisions.Provider) {
+	if cfg.Decisions != nil && knownProvider(cfg.Decisions.Provider) {
 		decisions := *cfg.Decisions
 		decisions.BaseURL = cfg.Providers[decisions.Provider].BaseURL
 		cfg.Decisions = &decisions
@@ -162,9 +163,15 @@ func (cfg RoutingConfig) canonical() RoutingConfig {
 // it; a bound host is left to the lane rules, which name the lane and the
 // endpoint rule it breaks once resolved.
 func (cfg RoutingConfig) validateProviderEntries() error {
-	bound := cfg.BoundProviders()
+	// A lane checks the host it dials; an embeddings server of its own dials
+	// its own, so the provider host it shadows is checked here, since a key
+	// test and a model list still dial it.
+	reads := cfg.BoundProviders()
+	if cfg.Embeddings.BaseURL != "" {
+		reads[cfg.Embeddings.Provider] = slices.DeleteFunc(reads[cfg.Embeddings.Provider], func(label string) bool { return label == embeddingsLaneLabel })
+	}
 	for _, name := range slices.Sorted(maps.Keys(cfg.Providers)) {
-		if err := validateProviderEntry(name, cfg.Providers[name], len(bound[name]) > 0); err != nil {
+		if err := validateProviderEntry(name, cfg.Providers[name], len(reads[name]) > 0); err != nil {
 			return err
 		}
 	}
@@ -172,7 +179,7 @@ func (cfg RoutingConfig) validateProviderEntries() error {
 }
 
 func validateProviderEntry(name string, settings ProviderSettings, bound bool) error {
-	if _, known := providerByName(name); !known {
+	if !knownProvider(name) {
 		return fmt.Errorf("ai: routing config: providers: %q is not a provider this build knows (have: %s)",
 			name, strings.Join(providerNames(), ", "))
 	}

@@ -70,7 +70,10 @@ func (cfg RoutingConfig) liftLaneProviderFields(log *slog.Logger) RoutingConfig 
 	tiers := make(map[Tier]ProviderConfig, len(cfg.Tiers))
 	for _, tier := range cfg.sortedTiers() {
 		lane := cfg.Tiers[tier]
-		if !liftable(lane.Provider) {
+		// A provider this build does not know cannot hold what its lane wrote;
+		// the lane keeps it and fails when asked to serve, rather than the whole
+		// document being refused with every other lane.
+		if !knownProvider(lane.Provider) {
 			tiers[tier] = lane
 			continue
 		}
@@ -78,14 +81,14 @@ func (cfg RoutingConfig) liftLaneProviderFields(log *slog.Logger) RoutingConfig 
 		tiers[tier] = lift.tier(tierLabel(tier), lane)
 	}
 	cfg.Tiers = tiers
-	if cfg.Decisions != nil && liftable(cfg.Decisions.Provider) {
+	if cfg.Decisions != nil && knownProvider(cfg.Decisions.Provider) {
 		decisions := *cfg.Decisions
 		lift.tierBound[decisions.Provider] = true
 		lift.host(decisionsLaneLabel, decisions.Provider, decisions.BaseURL)
 		decisions.BaseURL = ""
 		cfg.Decisions = &decisions
 	}
-	if liftable(cfg.Embeddings.Provider) {
+	if knownProvider(cfg.Embeddings.Provider) {
 		cfg.Embeddings.ProviderConfig = lift.embeddings(cfg.Embeddings.ProviderConfig)
 		cfg.Embeddings.Location = lift.embeddingsLocation(cfg.Embeddings.Provider, cfg.Embeddings.Location)
 	}
@@ -100,7 +103,7 @@ func (cfg RoutingConfig) liftLaneProviderFields(log *slog.Logger) RoutingConfig 
 // liftable reports whether a lane's provider can hold what the lane wrote. A
 // provider this build does not know keeps it on the lane, which fails when it is
 // asked to serve rather than refusing the whole document and every other lane.
-func liftable(provider string) bool {
+func knownProvider(provider string) bool {
 	_, known := providerByName(provider)
 	return known
 }

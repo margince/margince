@@ -16272,7 +16272,7 @@ paths:
               schema: { $ref: '#/components/schemas/AiRouting' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
-        '409': { description: The supplied configuration revision is stale. }
+        '409': { description: 'The supplied configuration revision is stale, or, with no revision supplied, the document kept changing while its Vertex AI bindings were being checked. Read it again and retry.' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /ai/provider-keys:
@@ -16603,6 +16603,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: 'The routing document kept changing while the Vertex AI bindings this location moves were being checked. Retry.' }
         '422': { $ref: '#/components/responses/ValidationError' }
   /ai/provider-keys/{provider}/test:
     parameters:

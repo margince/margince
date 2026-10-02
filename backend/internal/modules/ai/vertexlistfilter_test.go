@@ -160,3 +160,24 @@ func TestALocationsAnswerIsKeptPerProject(t *testing.T) {
 		t.Error("the same project's answer was not reused")
 	}
 }
+
+// A model the catalog gained since a location's answer was kept was never
+// asked about there: it stays on offer, and the list is not exact.
+func TestAReusedAnswerMissingAModelIsNotComplete(t *testing.T) {
+	t.Parallel()
+	catalog := []string{"gemini-3.5-flash", "gemini-3.6-flash"}
+	selector, _ := googleAt(t, googleWithCatalog(t, catalog, map[string]bool{"europe-west4/gemini-3.5-flash": true}))
+	now := time.Date(2026, 10, 1, 12, 0, 0, 0, time.UTC)
+	store := &RoutingStore{keys: allCloudKeys(t), selectBrain: selector, now: func() time.Time { return now }, served: &servedAtLocation{}}
+	store.served.remember("margince-eu-1/europe-west4", servedAnswer{at: now, served: map[string]bool{"gemini-3.5-flash": true}})
+
+	got := store.availableModels(context.Background(), RoutingConfig{},
+		AvailableModelsQuery{Provider: providerGeminiVertex, Tier: "premium", Location: "europe-west4"})
+
+	if !slices.Equal(listedIDs(got), catalog) {
+		t.Errorf("offered %v, want both: the new model was never asked about", listedIDs(got))
+	}
+	if got.Complete {
+		t.Error("a reused answer that never asked about a listed model is marked complete")
+	}
+}
