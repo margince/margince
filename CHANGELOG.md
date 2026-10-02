@@ -75,6 +75,16 @@ when it has content.
 
 ### Fixed
 
+- **A sweep's `_failed` gauges read the last run that ENDED, not the newest row.**
+  `margince_sweep_workspaces_failed` and `margince_sweep_units_failed` took their
+  outcome from the most recent child of a pass, and a periodic pass has a pending or
+  running next tick almost all of the time — so a tick that exhausted its attempts
+  read as healthy for as long as a successor existed, and
+  `margince_sweep_workspaces_failed{sweep="owed_verdict"}` sat at 0 while
+  `margince_job_discarded` rose once an hour. Coverage still counts a pending child
+  (the pass reached that tenant); only the outcome waits for a row in a terminal
+  state. A later `completed` run still supersedes an earlier failure.
+
 - Mobile record action bars and truncated contact deal-room lists keep their
   explanatory text inset from the surface edge. The unchecked Forecast story
   includes its first-run preview.

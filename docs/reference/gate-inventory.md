@@ -504,6 +504,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `livemember_test.go` | H1 | "Someone who still works here" is `status = 'active' AND archived\_at IS NULL` on app\_user, and TWO functions in two different packages each called themselves the ONE spelling of it while the tree held about twenty copies. |
 | `marketingquestion_test.go` | H2 | The question a grant is bound to is the question the screen asks. |
 | `meetingoverspelling_test.go` | H2 | "This meeting is over" is spelled twice, and the two must say the same thing. |
+| `mergelockordering_test.go` | H2 | A capture that may merge threads takes the merge lock before it touches an activity. |
 | `noisejudgedspelling_test.go` | H2 | "An already-settled answer disowns this contact" is spelled once. |
 | `onedraftwriter_test.go` | H1 | One writer produces every grounded draft, or the surfaces drift. |
 | `overridewarning_test.go` | H2 | The words behind a recorded acknowledgement cannot change without the version changing. |

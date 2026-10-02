@@ -40,14 +40,9 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 	// separately files one message under three different times, and the reply
 	// event then claims to describe an activity it disagrees with. fields is a
 	// value copy, so settling it here settles it for every one of them.
-	if fields.Kind == meetingKind && s.resolveInvitation != nil {
-		id, found, err := s.resolveInvitation(ctx, tx, rec.NaturalKey, rec.Raw)
-		if err != nil {
-			return datasource.EntityRef{}, false, counterpartyDecision{}, err
-		}
-		if found {
-			return datasource.EntityRef{Type: datasource.EntityActivity, ID: id.UUID}, false, counterpartyDecision{}, nil
-		}
+	invited, found, err := s.invitationAlreadyFiled(ctx, tx, rec, fields)
+	if err != nil || found {
+		return invited, false, counterpartyDecision{}, err
 	}
 	fields.OccurredAt = defaultOccurredAt(fields.OccurredAt)
 	// Whose credential carried this record, asked ONCE and carried to both the
