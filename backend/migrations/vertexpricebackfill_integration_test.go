@@ -13,7 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-const vertexBackfill = "core/1790867851_gemini_on_vertex_takes_a_copy_of_geminis_prices"
+const vertexBackfill = "core/1790878288_gemini_on_vertex_takes_a_copy_of_geminis_prices"
 
 func seedRate(ctx context.Context, t *testing.T, conn *pgx.Conn, provider, model, day string, input int64) {
 	t.Helper()
