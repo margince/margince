@@ -11,14 +11,18 @@ import (
 )
 
 func sheetRow(provider, id, input string, source RateSource) ModelRateRow {
-	return ModelRateRow{Provider: provider, ModelID: id, InputUsd: input, OutputUsd: "9",
-		CacheReadUsd: "0.15", CacheWriteUsd: "0", Lane: LaneChat, Source: source}
+	return ModelRateRow{
+		Provider: provider, ModelID: id, InputUsd: input, OutputUsd: "9",
+		CacheReadUsd: "0.15", CacheWriteUsd: "0", Lane: LaneChat, Source: source,
+	}
 }
 
 func vendorSources(t *testing.T, provider string, listed ...model.Info) PriceSources {
 	t.Helper()
-	src := PriceSources{ModelsDev: fixturePrices(t), Usable: map[string]bool{provider: true},
-		Listed: map[string][]model.Info{}}
+	src := PriceSources{
+		ModelsDev: fixturePrices(t), Usable: map[string]bool{provider: true},
+		Listed: map[string][]model.Info{},
+	}
 	if listed != nil {
 		src.Listed[provider] = listed
 	}
@@ -34,7 +38,8 @@ func writesOf(plan pricePlan) map[string]SetModelRateInput {
 }
 
 func TestASyncAddsOnlyListedModelsTheCataloguePricesInTheirLane(t *testing.T) {
-	src := vendorSources(t, providerGemini,
+	src := vendorSources(
+		t, providerGemini,
 		model.Info{ID: "gemini-3.5-flash", Lane: model.LaneChat},
 		model.Info{ID: "gemini-embedding-001", Lane: model.LaneEmbeddings},
 		model.Info{ID: "gemini-2.5-flash-image", Lane: model.LaneChat},

@@ -30,6 +30,7 @@ type PriceSync struct {
 	now func() time.Time
 }
 
+// NewPriceSync builds the engine over its stores and the two catalogues.
 func NewPriceSync(d PriceSyncDeps) *PriceSync { return &PriceSync{d: d, now: time.Now} }
 
 // PriceSyncState is what the Model prices card shows.
@@ -60,6 +61,7 @@ func (p *PriceSync) RunScheduled(ctx context.Context) error {
 	return err
 }
 
+// State is the switch and the last run, as the Model prices card shows them.
 func (p *PriceSync) State(ctx context.Context) (PriceSyncState, error) {
 	cfg, err := settings.Get(ctx, p.d.Settings, PriceSyncSettings)
 	if err != nil {
@@ -72,6 +74,7 @@ func (p *PriceSync) State(ctx context.Context) (PriceSyncState, error) {
 	return PriceSyncState{AutoSync: cfg.AutoSync, LastRun: last}, nil
 }
 
+// SetAutoSync turns the daily sweep on or off; Refresh now runs either way.
 func (p *PriceSync) SetAutoSync(ctx context.Context, on bool) (PriceSyncState, error) {
 	if err := settings.Set(ctx, p.d.Settings, PriceSyncSettings, PriceSyncConfig{AutoSync: on}); err != nil {
 		return PriceSyncState{}, err

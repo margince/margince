@@ -164,7 +164,7 @@ func (s *RateStore) prepareModelRate(ctx context.Context, in SetModelRateInput) 
 	}
 	source := cmp.Or(in.Source, RateSourceManual)
 	if !knownRateSource(source) {
-		return preparedModelRate{}, rateInvalid("source", "rate_source_unknown", "source must be manual, catalogue or seed")
+		return preparedModelRate{}, rateInvalid(rateSourceField, "rate_source_unknown", "source must be manual, catalogue or seed")
 	}
 	return preparedModelRate{
 		provider: provider, modelID: modelID,
@@ -264,7 +264,7 @@ func modelRateImage(r preparedModelRate, effDate time.Time) map[string]any {
 		"provider": r.provider, "model_id": r.modelID,
 		"input_microusd": r.input, "output_microusd": r.output,
 		"cache_read_microusd": r.cacheRead, "cache_write_microusd": r.cacheWrite,
-		"date": effDate, "lane": string(r.lane), "source": string(r.source),
+		"date": effDate, "lane": string(r.lane), rateSourceField: string(r.source),
 	}
 }
 
@@ -299,7 +299,7 @@ func (s *RateStore) writeModelRate(ctx context.Context, tx pgx.Tx, p preparedMod
 	if err != nil {
 		return ModelRateRow{}, err
 	}
-	if replacing && p.source == RateSourceCatalogue && before["source"] == string(RateSourceManual) {
+	if replacing && p.source == RateSourceCatalogue && before[rateSourceField] == string(RateSourceManual) {
 		return ModelRateRow{}, errHandSetSinceRead
 	}
 	// The specific half of the admission pair prepareModelRate opened: now that

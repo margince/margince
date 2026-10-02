@@ -9,6 +9,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/settings"
 )
 
+// The two settings the sync owns: its switch, and the record of its last run.
 const (
 	PriceSyncKey        = "ai.price_sync"
 	PriceSyncLastRunKey = "ai.price_sync_last_run"
@@ -26,6 +27,7 @@ var PriceSyncSettings = settings.Define(PriceSyncKey, "ai_model_rate", "update",
 // PriceSyncTrigger is who started a run.
 type PriceSyncTrigger string
 
+// A run is an admin's Refresh now or the daily sweep's.
 const (
 	PriceSyncManual    PriceSyncTrigger = "manual"
 	PriceSyncScheduled PriceSyncTrigger = "scheduled"
@@ -39,4 +41,5 @@ type LastPriceSync struct {
 	Report  RateRefreshReport `json:"report"`
 }
 
+// PriceSyncLastRun holds the last run; nil until the sync has run once.
 var PriceSyncLastRun = settings.Define[*LastPriceSync](PriceSyncLastRunKey, "ai_model_rate", "update", nil, nil)

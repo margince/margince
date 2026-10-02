@@ -9,10 +9,13 @@ import "errors"
 // The sync never rewrites a model whose price in force is RateSourceManual.
 type RateSource string
 
+// The three writers a price can have, and the column and audit key naming one.
 const (
 	RateSourceManual    RateSource = "manual"
 	RateSourceCatalogue RateSource = "catalogue"
 	RateSourceSeed      RateSource = "seed"
+
+	rateSourceField = "source"
 )
 
 // errHandSetSinceRead refuses a sync write over a price an admin typed after the

@@ -41,8 +41,10 @@ func TestAnAdminCorrectingASyncedPriceMakesItTheirs(t *testing.T) {
 	ws, _ := e.seedWorkspace(context.Background(), t)
 	ctx := laneWriterCtx(ws)
 	store := e.storeFor(ws)
-	in := SetModelRateInput{Provider: "openai", ModelID: "gpt-5-nano", InputUsd: "0.05", OutputUsd: "0.4",
-		CacheReadUsd: "0", CacheWriteUsd: "0", Source: RateSourceCatalogue}
+	in := SetModelRateInput{
+		Provider: "openai", ModelID: "gpt-5-nano", InputUsd: "0.05", OutputUsd: "0.4",
+		CacheReadUsd: "0", CacheWriteUsd: "0", Source: RateSourceCatalogue,
+	}
 	if _, err := store.SetModelRate(ctx, in); err != nil {
 		t.Fatal(err)
 	}
@@ -68,8 +70,10 @@ func TestASyncWriteYieldsToAPriceTypedSinceItsRead(t *testing.T) {
 	ws, _ := e.seedWorkspace(context.Background(), t)
 	ctx := laneWriterCtx(ws)
 	store := e.storeFor(ws)
-	in := SetModelRateInput{Provider: "openai", ModelID: "gpt-5-nano", InputUsd: "0.07", OutputUsd: "0.4",
-		CacheReadUsd: "0", CacheWriteUsd: "0"}
+	in := SetModelRateInput{
+		Provider: "openai", ModelID: "gpt-5-nano", InputUsd: "0.07", OutputUsd: "0.4",
+		CacheReadUsd: "0", CacheWriteUsd: "0",
+	}
 	if _, err := store.SetModelRate(ctx, in); err != nil {
 		t.Fatal(err)
 	}
