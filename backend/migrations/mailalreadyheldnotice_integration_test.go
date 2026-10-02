@@ -17,8 +17,8 @@ import (
 const (
 	arrivalUp    = "core/1790871110_an_import_row_records_when_the_provider_says_mail_arrived.up.sql"
 	arrivalDown  = "core/1790871110_an_import_row_records_when_the_provider_says_mail_arrived.down.sql"
-	heldMailUp   = "core/1790871111_mail_a_mailbox_already_held_owes_no_notice.up.sql"
-	heldMailDown = "core/1790871111_mail_a_mailbox_already_held_owes_no_notice.down.sql"
+	heldMailUp   = "datafix/1790871111_mail_a_mailbox_already_held_owes_no_notice.up.sql"
+	heldMailDown = "datafix/1790871111_mail_a_mailbox_already_held_owes_no_notice.down.sql"
 )
 
 // receivedMail describes one inbound message that named the contact on Cc.
