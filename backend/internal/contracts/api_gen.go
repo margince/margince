@@ -14383,6 +14383,21 @@ func (e SendMessageRequestCommunicationContext) Valid() bool {
 	}
 }
 
+// Defines values for ServiceStatusStatus.
+const (
+	ServiceStatusStatusOk ServiceStatusStatus = "ok"
+)
+
+// Valid indicates whether the value is a known member of the ServiceStatusStatus enum.
+func (e ServiceStatusStatus) Valid() bool {
+	switch e {
+	case ServiceStatusStatusOk:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SetActivityDispositionRequestDisposition.
 const (
 	SetActivityDispositionRequestDispositionNotMine  SetActivityDispositionRequestDisposition = "not_mine"
@@ -41319,6 +41334,14 @@ type SendMessageRequest struct {
 // objected, so naming one here is refused (422 `invalid`).
 type SendMessageRequestCommunicationContext string
 
+// ServiceStatus The fixed answer of `GET /status`.
+type ServiceStatus struct {
+	Status ServiceStatusStatus `json:"status"`
+}
+
+// ServiceStatusStatus defines model for ServiceStatus.Status.
+type ServiceStatusStatus string
+
 // SetActivityAudienceRequest defines model for SetActivityAudienceRequest.
 type SetActivityAudienceRequest struct {
 	// Audience Who may read an activity's content — see Activity.audience.
@@ -65362,6 +65385,9 @@ type ServerInterface interface {
 	// Edit a criterion's label, kind, requiredness, hint or position.
 	// (PATCH /stages/{id}/exit-criteria/{criterion_id})
 	UpdateStageExitCriterion(w http.ResponseWriter, r *http.Request, id Id, criterionId openapi_types.UUID, params UpdateStageExitCriterionParams)
+	// Anonymous reachability probe for external uptime monitors.
+	// (GET /status)
+	GetStatus(w http.ResponseWriter, r *http.Request)
 	// List tags.
 	// (GET /tags)
 	ListTags(w http.ResponseWriter, r *http.Request, params ListTagsParams)
@@ -69718,6 +69744,12 @@ func (_ Unimplemented) ArchiveStageExitCriterion(w http.ResponseWriter, r *http.
 // Edit a criterion's label, kind, requiredness, hint or position.
 // (PATCH /stages/{id}/exit-criteria/{criterion_id})
 func (_ Unimplemented) UpdateStageExitCriterion(w http.ResponseWriter, r *http.Request, id Id, criterionId openapi_types.UUID, params UpdateStageExitCriterionParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Anonymous reachability probe for external uptime monitors.
+// (GET /status)
+func (_ Unimplemented) GetStatus(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -99772,6 +99804,20 @@ func (siw *ServerInterfaceWrapper) UpdateStageExitCriterion(w http.ResponseWrite
 	handler.ServeHTTP(w, r)
 }
 
+// GetStatus operation middleware
+func (siw *ServerInterfaceWrapper) GetStatus(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetStatus(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListTags operation middleware
 func (siw *ServerInterfaceWrapper) ListTags(w http.ResponseWriter, r *http.Request) {
 
@@ -105275,6 +105321,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/stages/{id}/exit-criteria/{criterion_id}", wrapper.UpdateStageExitCriterion)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/status", wrapper.GetStatus)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/tags", wrapper.ListTags)

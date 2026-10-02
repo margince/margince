@@ -192,8 +192,9 @@ One host, not two, because three things cross the split:
 - `/healthz` — liveness: a dumb 200 (a DB outage must not restart-loop the api).
 - `/readyz` — readiness: 200 when every dependency (Postgres, Redis, and any
   configured object store / vault / AI) is up, else 503 naming the unready one.
+- `/v1/status` — reachability: anonymous, fixed `200 {"status":"ok"}`, no work.
 
-Point liveness at `/healthz` and readiness at `/readyz`.
+Point liveness at `/healthz`, readiness at `/readyz`, uptime monitors at `/v1/status`.
 
 `/readyz` also answers 503 while the **database is behind the binary** — the
 versions this build ships that the ledger does not record, for the core and

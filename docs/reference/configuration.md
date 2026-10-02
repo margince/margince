@@ -63,6 +63,11 @@ Operational endpoints (served next to `/v1`):
   configured; the secret vault when a keyvault is configured; the
   customfields schema pool when `--schema-dsn` is set) must pass within
   2s, else 503 naming the unready dependency.
+- `/v1/status` — reachability, for external uptime monitors: an anonymous
+  fixed `200 {"status":"ok"}` that does no dependency work and discloses
+  nothing. It lives under `/v1`, so it is routed wherever the api is (and
+  answers 503 before bootstrap); point an internet-facing check here, never
+  at `/healthz` or `/readyz`.
 - `/metrics` — Prometheus text format: the **HTTP section** below,
   `margince_outbox_unpublished`, `margince_relay_published_total`,
   the **connection-pool section** below, the AI router's counters, and the

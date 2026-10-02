@@ -73,6 +73,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Anonymous reachability probe for external uptime monitors.
+         * @description Answers a fixed body and does no work: it proves the public path (DNS, TLS,
+         *     any load balancer or ingress, and routing into the api) and nothing else.
+         *     Dependency health is `/readyz`'s job: an instance that cannot reach its
+         *     dependencies fails readiness and stops receiving traffic, so this probe then
+         *     fails at the edge. Discloses nothing: no version, dependency, or AI state.
+         *     Before the installation is bootstrapped it answers 503, like every `/v1` route.
+         */
+        get: operations["getStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/login": {
         parameters: {
             query?: never;
@@ -32220,6 +32245,11 @@ export interface components {
             provider: "anthropic" | "gemini" | "gemini_vertex" | "ollama" | "openai" | "openai_compatible" | "vllm";
             model: string;
         };
+        /** @description The fixed answer of `GET /status`. */
+        ServiceStatus: {
+            /** @enum {string} */
+            status: "ok";
+        };
         AuthCapabilities: {
             /** @description Email + password login is enabled. */
             password: boolean;
@@ -41825,6 +41855,36 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AuthCapabilities"];
+                };
+            };
+        };
+    };
+    getStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The api is reachable through the public path. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceStatus"];
+                };
+            };
+            /** @description The installation is not bootstrapped yet. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
