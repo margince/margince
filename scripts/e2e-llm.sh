@@ -30,40 +30,33 @@ SCENARIO_DIR="${E2E_LLM_SCENARIOS:-$ROOT/e2e/llm/scenarios}"
 RECORD_DIR="${E2E_LLM_RECORDS:-$ROOT/e2e/llm/records}"
 ONLY="${SCENARIO:-}"
 
-# THE MODEL IS PINNED, and that is not a performance tweak.
+# THE CANDIDATE AND ITS ROUTE ARE CHOSEN, and the model each names is pinned.
 #
-# Left unset, the CLI picks whatever it defaults to in the environment it finds
-# itself in. The recorded transcripts show that meant claude-fable-5 locally and
-# claude-opus-5[1m] on a GitHub runner — two different models, silently, with
-# nothing recording which produced which number.
+# e2e/llm/candidates.json names each candidate's model per route — the model its
+# consumer app defaults to — because a pass rate that moves when a CLI changes
+# its default cannot be read as the product moving.
 #
-# An unpinned model means a pass rate that MOVES CANNOT BE READ. The lane is
-# supposed to answer "did the product change", and an answer that also moves
-# when the CLI changes its default answers nothing: a case dropping from 3/3 to
-# 1/3 would be indistinguishable from a model swap. A weekly number is only
-# worth having if the thing being measured holds still.
+#   E2E_LLM_CANDIDATE  claude | gpt | mistral                    (default claude)
+#   E2E_LLM_VIA        api | openrouter — e2e/llm/drive.py, the neutral bridge:
+#                      every vendor offered the same tools under the server's own
+#                      instructions. The comparable route, filed under the model.
+#                      cli — `claude -p` or `codex exec`, each with its own system
+#                      prompt and tools, filed apart under <model>@<cli>.
+#                                                                (default api)
+#   E2E_LLM_MODEL      a different model, or
+#   E2E_LLM_EFFORT     a different effort ('reasoning low|medium|high'), measured
+#                      deliberately; either needs
+#   E2E_LLM_FOLDER     the folder its verdicts belong in.
+#   E2E_LLM_VERDICTS   write the verdicts to this directory INSTEAD of the
+#                      committed records tree — a run that sets it publishes
+#                      nothing (the scheduled job does, on purpose).
 #
-# Pinned to OPUS because it is the class of model the deck's hosts actually put
-# in front of this surface. The lane asks whether a real assistant can drive
-# Margince and say something true, and the honest version of that question uses
-# the model a real user gets.
-#
-# NOTE for anyone comparing numbers: every result recorded before 2026-08-27 —
-# the sweep that stood at five of six, and the case 6 finding written up with
-# it — was measured on claude-fable-5, because nothing pinned this then. Those
-# numbers describe a different model and are not a baseline for these. The first
-# Opus sweep sets the new one.
-#
-# Override to measure a different model deliberately — that is a different
-# question, honestly asked.
-E2E_LLM_MODEL="${E2E_LLM_MODEL:-claude-opus-5}"
-
-# The VERDICTS are committed and the transcripts are not, so they do not share a
-# directory. A verdict is filed the way the certification lane files one: under
-# the records tree, in a folder named for the model that produced it, because a
-# pass rate belongs to the model it was measured on and nothing else about a
-# result survives being read as another model's.
-VERDICT_DIR="${E2E_LLM_VERDICTS:-$ROOT/backend/internal/compose/aicert/records/mcp_e2e/$E2E_LLM_MODEL}"
+# The verdicts under claude-opus-5/ were measured over the claude CLI before
+# routes existed, and those before 2026-08-27 on claude-fable-5 because nothing
+# pinned the model then: neither is a baseline for a bridge number.
+CANDIDATE="${E2E_LLM_CANDIDATE:-claude}"
+VIA="${E2E_LLM_VIA:-api}"
+export E2E_LLM_JUDGE_VIA="${E2E_LLM_JUDGE_VIA:-cli}"
 KEEP="${E2E_LLM_KEEP:-0}"
 
 # THE SEMANTIC HALF OF THE JUDGING IS A MODEL, and this lane spends it live.
@@ -88,8 +81,41 @@ MSG
   exit 2
 fi
 
-command -v claude >/dev/null || { echo "the claude CLI is not on PATH" >&2; exit 1; }
 command -v python3 >/dev/null || { echo "python3 is required to read the scenarios" >&2; exit 1; }
+
+# MODEL FOLDER WIRE KEY_ENV EFFORT DRIVER, or the reason this candidate has no
+# such route — refused here, before anything boots.
+ROUTE="$(python3 "$ROOT/e2e/llm/check.py" --candidate "$CANDIDATE" "$VIA" "${E2E_LLM_MODEL:-}" \
+  "${E2E_LLM_FOLDER:-}" "${E2E_LLM_EFFORT:-}")"
+eval "$ROUTE"
+# The VERDICTS are committed and the transcripts are not, so they do not share a
+# directory. A verdict is filed the way the certification lane files one: under
+# the records tree, in a folder named for the model that produced it, because a
+# pass rate belongs to the model it was measured on and nothing else about a
+# result survives being read as another model's.
+VERDICT_DIR="${E2E_LLM_VERDICTS:-$ROOT/backend/internal/compose/aicert/records/mcp_e2e/$FOLDER}"
+SYSTEM_PROMPT=mcp-instructions
+[[ "$VIA" = cli ]] && SYSTEM_PROMPT=cli-default
+SELF_JUDGED=false
+[[ "$CANDIDATE" = claude ]] && SELF_JUDGED=true
+
+if [[ "$WIRE" = claude-cli || "$E2E_LLM_JUDGE_VIA" = cli ]]; then
+  command -v claude >/dev/null || { echo "the claude CLI is not on PATH" >&2; exit 1; }
+fi
+if [[ "$WIRE" = codex-cli ]]; then
+  command -v codex >/dev/null || { echo "the codex CLI is not on PATH" >&2; exit 1; }
+fi
+
+# E2E_LLM_STACK_PRESET binds the lane's own stack to a committed preset before
+# the world is snapshotted — a dev stack otherwise serves margince.dev.yaml's
+# Gemini binding, which this worktree's .env.local may hold no key for. The
+# preset's key must be in .env.local: the stack reads its environment there.
+STACK_PRESET="${E2E_LLM_STACK_PRESET:-}"
+if [[ -n "$STACK_PRESET" && ! -f "$ROOT/$STACK_PRESET" && ! -f "$STACK_PRESET" ]]; then
+  echo "E2E_LLM_STACK_PRESET=$STACK_PRESET is not a file" >&2
+  exit 1
+fi
+[[ -n "$STACK_PRESET" && -f "$ROOT/$STACK_PRESET" ]] && STACK_PRESET="$ROOT/$STACK_PRESET"
 
 # The credential, resolved in the CLI's own order and named out loud. Both paid
 # lanes ask this same question, so the answer lives in one file rather than
@@ -97,7 +123,7 @@ command -v python3 >/dev/null || { echo "python3 is required to read the scenari
 # the naming are load-bearing.
 # shellcheck source=scripts/lib-llm-credential.sh
 . "$ROOT/scripts/lib-llm-credential.sh"
-CREDENTIAL="$(llm_credential)"
+CREDENTIAL="$(llm_route_credential "$CANDIDATE" "$VIA")"
 
 WORK="$(mktemp -d)"
 cleanup() {
@@ -137,9 +163,9 @@ echo "==> booting the $SLUG stack (never :8080)"
 . "$ROOT/scripts/lib-devstate.sh"
 APP_BASE="$(DEV_SLUG="$SLUG" dev_app_base_url)"
 echo "==> app at $APP_BASE"
-echo "==> model $E2E_LLM_MODEL"
+echo "==> candidate $DRIVER $MODEL, filed under $FOLDER"
 echo "==> credential $CREDENTIAL"
-echo "==> judge $E2E_LLM_JUDGE"
+echo "==> judge $E2E_LLM_JUDGE via $E2E_LLM_JUDGE_VIA"
 
 # The seed's stdout is its TRAIL — one line per fixture, saying which it wrote
 # and which it found already there. Discarding it outright cost a diagnosis: a
@@ -201,6 +227,26 @@ MCP_SERVER=margince_e2e_llm
 #
 # It also runs AFTER seeding, because the seed lifts the admin's first-login
 # hold, and a passport cannot be minted by an account that is still held.
+# write_mcp_config points the claude CLI at the stack where it is NOW. Every
+# restart below re-asks for the stack's address and calls this again: a stop
+# releases the port claim, and the stack may come back on another one.
+write_mcp_config() {
+  python3 -c 'import json,sys
+cfg = {"mcpServers": {sys.argv[4]: {"type": "http", "url": sys.argv[1] + "/mcp",
+       "headers": {"Authorization": "Bearer " + sys.argv[2]}}}}
+open(sys.argv[3], "w").write(json.dumps(cfg))' \
+    "$APP_BASE" "$PASSPORT" "$MCP_CONFIG" "$MCP_SERVER"
+}
+
+# restart_stack stops and starts this slug's stack and re-reads its address.
+restart_stack() {
+  (cd "$ROOT" && make dev-stop DEV_SLUG="$SLUG" >/dev/null 2>&1) || true
+  "$@"
+  (cd "$ROOT" && make dev DEV_SLUG="$SLUG" >/dev/null)
+  APP_BASE="$(DEV_SLUG="$SLUG" dev_app_base_url)"
+  write_mcp_config
+}
+
 mint_passport() {
   curl -sS -c "$COOKIES" -X POST -H 'Content-Type: application/json' \
     -d '{"email":"admin@demo.test","password":"demo-password-123"}' \
@@ -213,11 +259,7 @@ try: print(json.load(sys.stdin).get("token",""))
 except Exception: print("")')"
   [[ -n "$PASSPORT" ]] || { echo "could not mint a passport" >&2; exit 1; }
 
-  python3 -c 'import json,sys
-cfg = {"mcpServers": {sys.argv[4]: {"type": "http", "url": sys.argv[1] + "/mcp",
-       "headers": {"Authorization": "Bearer " + sys.argv[2]}}}}
-open(sys.argv[3], "w").write(json.dumps(cfg))' \
-    "$APP_BASE" "$PASSPORT" "$MCP_CONFIG" "$MCP_SERVER"
+  write_mcp_config
 
   # A config the CLI cannot connect with produces an assistant with no tools,
   # which reads downstream as a model that chose not to call anything. Fail
@@ -233,6 +275,49 @@ open(sys.argv[3], "w").write(json.dumps(cfg))' \
   }
 }
 mint_passport
+
+# --- the search the answers depend on ----------------------------------------
+#
+# search_context falls back to word overlap when no embedding model serves the
+# stack, and a sweep against that measures every candidate on a degraded tool:
+# a strong model recovers by browsing, a weaker one is scored for not doing so.
+# So the stack is bound (when a preset is named), restarted so every role
+# serves the binding, and asked before the world is snapshotted.
+if [[ -n "$STACK_PRESET" ]]; then
+  echo "==> binding the stack to $(basename "$STACK_PRESET")"
+  body="$WORK/routing.json"
+  (cd "$ROOT/backend" && go run ./internal/compose/aicert/presetbodycmd "$STACK_PRESET") > "$body"
+  status="$(curl -sS -b "$COOKIES" -X PUT -H 'Content-Type: application/json' --data @"$body" \
+    -o "$WORK/routing.out" -w '%{http_code}' "$APP_BASE/v1/ai/routing")"
+  if [[ "$status" != "200" ]]; then
+    echo "the stack refused $(basename "$STACK_PRESET") (HTTP $status):" >&2
+    head -c 600 "$WORK/routing.out" >&2
+    exit 1
+  fi
+  restart_stack
+fi
+SEARCH=semantic
+ready=0
+why="$(MARGINCE_E2E_TOKEN="$PASSPORT" python3 "$ROOT/e2e/llm/stackready.py" \
+  --mcp-url "$APP_BASE/mcp" --token-env MARGINCE_E2E_TOKEN)" || ready=$?
+# Only 1 is a confirmed lexical search; anything else not 0 means search was
+# never measured, so no allowance for a lexical one applies to it.
+if [[ "$ready" -ne 0 && "$ready" -ne 1 ]]; then
+  echo "HARNESS: $why" >&2
+  exit 2
+fi
+if [[ "$ready" -eq 1 ]]; then
+  if [[ "${E2E_LLM_ALLOW_LEXICAL:-0}" != "1" ]]; then
+    echo "HARNESS: $why." >&2
+    echo "  Every candidate would be measured on a degraded search. Put GEMINI_API_KEY in" >&2
+    echo "  .env.local, or OPENAI_COMPATIBLE_API_KEY with E2E_LLM_STACK_PRESET=config/presets/" >&2
+    echo "  openrouter_cloud_eu.yaml; E2E_LLM_ALLOW_LEXICAL=1 runs anyway and files it as lexical." >&2
+    exit 2
+  fi
+  echo "==> search is lexical only, by E2E_LLM_ALLOW_LEXICAL: $why"
+  SEARCH=lexical
+fi
+echo "==> search $SEARCH"
 
 # --- the snapshot every later run is restored from --------------------------
 #
@@ -252,9 +337,10 @@ mint_passport
 # The stack comes down for the copy and straight back up, because Postgres will
 # not copy a database a session is connected to. That is the one time it stops.
 echo "==> snapshotting the seeded world"
-(cd "$ROOT" && make dev-stop DEV_SLUG="$SLUG" >/dev/null 2>&1) || true
-(cd "$ROOT" && make dev-snapshot DEV_SLUG="$SLUG" >/dev/null)
-(cd "$ROOT" && make dev DEV_SLUG="$SLUG" >/dev/null)
+snapshot_world() {
+  (cd "$ROOT" && make dev-snapshot DEV_SLUG="$SLUG" >/dev/null)
+}
+restart_stack snapshot_world
 
 # --- run one scenario once ---------------------------------------------------
 #
@@ -272,10 +358,10 @@ echo "==> snapshotting the seeded world"
 #   --permission-mode dontAsk    with the surface genuinely restricted, a global
 #                                bypass buys nothing.
 #   --max-turns                  hidden from --help on this version but present.
-run_once() {
+run_claude() {
   local prompt_file="$1" out="$2"
   claude -p "$(cat "$prompt_file")" \
-    --model "$E2E_LLM_MODEL" \
+    --model "$MODEL" \
     --mcp-config "$MCP_CONFIG" --strict-mcp-config \
     --allowedTools "mcp__${MCP_SERVER}__*" --tools "" \
     --permission-mode dontAsk \
@@ -324,6 +410,30 @@ else:
     echo "  product's. A 'disabled' here means this CLI has a server of that name turned off for" >&2
     echo "  this project (disabledMcpServers in ~/.claude.json), which --strict-mcp-config does" >&2
     echo "  not override; anything else points at the stack or the passport." >&2
+    return 1
+  fi
+}
+
+# run_once drives one run on the chosen route: 0 when it ran, 1 when it left no
+# usable transcript (scored as a failed run, as before), 3 when the bridge could
+# not run it at all — a harness stop, never a score. drive.py reads the
+# passport from the variable it is named, so it reaches no command line.
+run_once() {
+  local prompt_file="$1" out="$2" status=0
+  if [[ "$WIRE" = claude-cli ]]; then
+    run_claude "$prompt_file" "$out"
+    return
+  fi
+  MARGINCE_E2E_TOKEN="$PASSPORT" python3 "$ROOT/e2e/llm/drive.py" \
+    --candidate "$CANDIDATE" --via "$VIA" --model "$MODEL" --folder "${FOLDER%@*}" --effort "$EFFORT" \
+    --mcp-url "$APP_BASE/mcp" --token-env MARGINCE_E2E_TOKEN \
+    --prompt-file "$prompt_file" --out "$out" 2>"$out.err" || status=$?
+  if [[ "$status" -eq 3 ]]; then
+    return 3
+  fi
+  if [[ "$status" -ne 0 || ! -s "$out" ]]; then
+    echo "  the bridge produced no transcript (exit $status):" >&2
+    head -5 "$out.err" >&2
     return 1
   fi
 }
@@ -428,7 +538,17 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
     WORLD_DIRTY=1
 
     transcript="$WORK/$name.run$i.jsonl"
-    if ! run_once "$WORK/prompt.txt" "$transcript"; then
+    run_status=0
+    run_once "$WORK/prompt.txt" "$transcript" || run_status=$?
+    if [[ "$run_status" -eq 3 ]]; then
+      echo
+      echo "HARNESS: $name run $i could not be run:"
+      tail -5 "$transcript.err" | sed 's/^/  /'
+      echo "  This is not a use-case failure. Nothing was scored."
+      cp "$transcript" "$RECORD_DIR/" 2>/dev/null && echo "  the transcript is at $RECORD_DIR/$(basename "$transcript")"
+      exit 2
+    fi
+    if [[ "$run_status" -ne 0 ]]; then
       echo "  run $i: NO TRANSCRIPT"
       echo "run $i: error" >> "$results"
       continue
@@ -459,6 +579,16 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
       else
         echo "  the transcript is at $RECORD_DIR/$(basename "$transcript")"
       fi
+      exit 2
+    fi
+    # A REQUIRED TOOL THE MODEL WAS NEVER OFFERED fails must_call for a reason
+    # that is not the model's — a scope, a page not followed, a server that
+    # attached nothing — so the run stops instead of being scored.
+    if ! why="$(python3 "$ROOT/e2e/llm/check.py" --offered "$scenario" "$transcript")"; then
+      echo
+      echo "HARNESS: $name run $i was not offered what it needs: $why"
+      echo "  This is not a use-case failure. Nothing was scored."
+      cp "$transcript" "$RECORD_DIR/" 2>/dev/null && echo "  the transcript is at $RECORD_DIR/$(basename "$transcript")"
       exit 2
     fi
     # EXIT 2 IS NOT A FAILED RUN. `--check` answers 1 for a scenario the answer
@@ -514,7 +644,9 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
   shopt -u nullglob
 
   # The verdict carries what the answer cost as well as whether it held.
-  python3 "$ROOT/e2e/llm/check.py" --record "$scenario" "$ok" "$runs" \
+  E2E_LLM_DRIVER="$DRIVER" E2E_LLM_EFFORT="$EFFORT" E2E_LLM_SYSTEM_PROMPT="$SYSTEM_PROMPT" \
+    E2E_LLM_SELF_JUDGED="$SELF_JUDGED" E2E_LLM_SEARCH="$SEARCH" \
+    python3 "$ROOT/e2e/llm/check.py" --record "$scenario" "$ok" "$runs" \
     ${transcripts[@]+"${transcripts[@]}"} > "$VERDICT_DIR/${name}.json"
 
   # And the same total in prose while the reason for it is still on screen. The
