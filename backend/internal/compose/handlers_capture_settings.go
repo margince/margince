@@ -4,8 +4,8 @@
 package compose
 
 // The workspace capture-settings surface (CAP-WIRE-7, ADR-0072/A118): read the
-// captured-company auto-enrich posture (every role), toggle it (admin/ops,
-// human-only). Thin transport — the capture store owns the RBAC gate and the
+// capture posture and the website-reading limits (every role), change them
+// (admin/ops, human-only). Thin transport — the capture store owns the RBAC gate and the
 // audit-only write.
 
 import (
@@ -54,6 +54,10 @@ func (h captureSettingsHandlers) UpdateCaptureSettings(w http.ResponseWriter, r 
 		MailSharing:          req.MailSharing,
 		SharedPostureAllowed: req.SharedPostureAllowed,
 		SignatureEnrich:      req.SignatureEnrich,
+		AutoEnrichDailyCap:   req.AutoEnrichDailyCap,
+		SiteReadMaxPages:     req.SiteReadMaxPages,
+		SiteReadMaxMiB:       req.SiteReadMaxMib,
+		SiteReadWallSeconds:  req.SiteReadWallSeconds,
 	})
 	if err != nil {
 		httperr.Write(w, r, err)
@@ -69,5 +73,11 @@ func toContractCaptureSettings(s capture.Settings) crmcontracts.CaptureSettings 
 		MailSharing:          s.MailSharing,
 		SharedPostureAllowed: s.SharedPostureAllowed,
 		SignatureEnrich:      s.SignatureEnrich,
+		AutoEnrichDailyCap:   s.AutoEnrichDailyCap,
+		SiteRead: crmcontracts.SiteReadLimits{
+			MaxPages:    s.SiteRead.MaxPages,
+			MaxMib:      s.SiteRead.MaxMiB,
+			WallSeconds: s.SiteRead.WallSeconds,
+		},
 	}
 }

@@ -26,7 +26,7 @@ func (stubbornWorker) Timeout(*river.Job[fixtureArgs]) time.Duration       { ret
 
 func TestGovernSuppliesTheDeclaredTimeoutOverTheWorkersOwn(t *testing.T) {
 	spec := Spec{Kind: "govern_fixture", Timeout: TimeoutPolicy{Fixed: 10 * time.Minute}}
-	governed := Govern[fixtureArgs](stubbornWorker{}, spec, 0)
+	governed := Govern[fixtureArgs](stubbornWorker{}, spec)
 
 	if got := governed.Timeout(nil); got != 10*time.Minute {
 		t.Errorf("Timeout() = %v, want the declared 10m — the worker's own 99h must be unreachable", got)
@@ -35,19 +35,10 @@ func TestGovernSuppliesTheDeclaredTimeoutOverTheWorkersOwn(t *testing.T) {
 
 func TestGovernYieldsNegativeForADeliberateAbsence(t *testing.T) {
 	spec := Spec{Kind: "govern_fixture", Timeout: TimeoutPolicy{None: true}}
-	governed := Govern[fixtureArgs](stubbornWorker{}, spec, 0)
+	governed := Govern[fixtureArgs](stubbornWorker{}, spec)
 
 	if got := governed.Timeout(nil); got != -1 {
 		t.Errorf("Timeout() = %v, want -1 — a declared absence takes the job out of River's rescuer", got)
-	}
-}
-
-func TestGovernUsesTheSuppliedValueForAnOperatorPolicy(t *testing.T) {
-	spec := Spec{Kind: "govern_fixture", Timeout: TimeoutPolicy{OperatorField: "DeepReadCaps"}}
-	governed := Govern[fixtureArgs](stubbornWorker{}, spec, 12*time.Minute)
-
-	if got := governed.Timeout(nil); got != 12*time.Minute {
-		t.Errorf("Timeout() = %v, want the 12m supplied at registration", got)
 	}
 }
 
@@ -55,7 +46,7 @@ func TestGovernedWorkerStillSatisfiesRiversInterface(t *testing.T) {
 	// Registration is the only proof that matters: river.AddWorkerSafely is
 	// what the runner reaches, and it is River — not this package's signature
 	// — that decides whether a wrapped worker is a worker at all.
-	if err := river.AddWorkerSafely[fixtureArgs](river.NewWorkers(), Govern[fixtureArgs](stubbornWorker{}, Spec{}, 0)); err != nil {
+	if err := river.AddWorkerSafely[fixtureArgs](river.NewWorkers(), Govern[fixtureArgs](stubbornWorker{}, Spec{})); err != nil {
 		t.Fatalf("River refused the governed worker: %v", err)
 	}
 }
@@ -65,7 +56,7 @@ func TestGovernForwardsWork(t *testing.T) {
 	governed := Govern[fixtureArgs](workFunc[fixtureArgs](func(context.Context, *river.Job[fixtureArgs]) error {
 		called = true
 		return nil
-	}), Spec{}, 0)
+	}), Spec{})
 
 	if err := governed.Work(context.Background(), nil); err != nil {
 		t.Fatalf("Work: %v", err)

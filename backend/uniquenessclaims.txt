@@ -34,7 +34,6 @@
 ../desktop/launcher/console.go#func say
 ../desktop/launcher/main.go#type stack
 ../desktop/launcher/postgres.go#type cluster.connArgs
-cmd/api/configitems.go#const oauthAccessTokenTTLEnv
 cmd/api/resetruntime.go#func newResetLane
 cmd/worker/boot.go#func workerModelPathSpec
 gates/aiactivitycatalogparity_test.go#func producedKinds

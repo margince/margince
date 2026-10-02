@@ -141,6 +141,7 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 	// Same again: the entry's own validator holds the 1..168 bound and names
 	// this field when it refuses, so a second check here would say less.
 	patch.DeadWorkBannerHours = req.DeadWorkBannerHours
+	patch.OAuthAccessTokenTTLMinutes = req.OauthAccessTokenTtlMinutes
 	// Same reasoning as the month above: the entry validates against the shared
 	// kernel's set, so an unknown measure comes back naming this field and
 	// quoting the value. Converted to a plain string because the patch carries
@@ -190,9 +191,10 @@ func (h installationSettingsHandlers) toContract(s identity.InstallationSettings
 		DeadWorkBannerHours:  s.DeadWorkBannerHours,
 		ForecastForwardMeasure: crmcontracts.InstallationSettingsForecastForwardMeasure(
 			s.ForecastForwardMeasure),
-		BaseCurrencyLocked: s.BaseCurrencyLocked,
-		MaxUploadBytes:     h.maxUploadBytes,
-		SignInProviders:    h.signInProviders(s.EnabledOidcProviders),
+		OauthAccessTokenTtlMinutes: s.OAuthAccessTokenTTLMinutes,
+		BaseCurrencyLocked:         s.BaseCurrencyLocked,
+		MaxUploadBytes:             h.maxUploadBytes,
+		SignInProviders:            h.signInProviders(s.EnabledOidcProviders),
 	}
 	dateFormat := crmcontracts.InstallationSettingsDateFormat(s.DateFormat)
 	timeFormat := crmcontracts.InstallationSettingsTimeFormat(s.TimeFormat)

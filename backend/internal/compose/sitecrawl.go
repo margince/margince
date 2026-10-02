@@ -3,8 +3,8 @@
 
 package compose
 
-// The deep site read's crawler: a bounded, same-site walk under
-// operator-tunable caps (CrawlCaps; the defaults below). Discovery is
+// The deep site read's crawler: a bounded, same-site walk under the caps an
+// admin set (CrawlCaps, sitecrawlcaps.go). Discovery is
 // DETERMINISTIC GO ONLY — well-known paths, then sitemap.xml, then nav links,
 // in that order — never model-chosen, so page content can influence at most
 // WHICH same-site links exist, never talk the crawl into leaving the site or
@@ -24,9 +24,6 @@ import (
 )
 
 const (
-	defaultCrawlMaxPages = 60
-	defaultCrawlMaxBytes = 32 << 20
-	defaultCrawlWall     = 240 * time.Second
 	// crawlSkipReportCap bounds how many left-behind candidates a cap stop
 	// records: enough to show what was cut, without a 5000-URL sitemap
 	// ballooning the report.
@@ -113,28 +110,6 @@ type crawlPacer interface {
 	SlowTo(delay time.Duration)
 }
 
-// CrawlCaps bounds one deep read. The zero value means "the defaults":
-// operators only ever tighten or widen the caps deliberately, and a
-// caller that has no opinion inherits the ratified defaults.
-type CrawlCaps struct {
-	MaxPages int
-	MaxBytes int
-	Wall     time.Duration
-}
-
-func (c CrawlCaps) withDefaults() CrawlCaps {
-	if c.MaxPages <= 0 {
-		c.MaxPages = defaultCrawlMaxPages
-	}
-	if c.MaxBytes <= 0 {
-		c.MaxBytes = defaultCrawlMaxBytes
-	}
-	if c.Wall <= 0 {
-		c.Wall = defaultCrawlWall
-	}
-	return c
-}
-
 // The crawl fetches in bounded WAVES: each round takes the best few
 // admissible candidates and fetches them concurrently (the webread
 // pacer's in-flight budget does the throttling), and results COMMIT
@@ -159,19 +134,6 @@ type siteCrawler struct {
 	maxBytes  int
 	wall      time.Duration
 	fetchWave int
-}
-
-// withPageCeiling returns a crawler that reads at most pages, or the receiver
-// unchanged when the ceiling is not lower. Narrowing only: a per-run cap is a
-// request to read LESS, and honouring one that asked for more would let a job
-// payload raise a deployment's own limit.
-func (c *siteCrawler) withPageCeiling(pages int) *siteCrawler {
-	if pages <= 0 || pages >= c.maxPages {
-		return c
-	}
-	narrowed := *c
-	narrowed.maxPages = pages
-	return &narrowed
 }
 
 func newSiteCrawler(fetch siteFetcher, caps CrawlCaps) *siteCrawler {

@@ -34,7 +34,6 @@ type domainTriageTrigger struct {
 	contacts   *contacts.Store
 	settings   *capture.SettingsStore
 	autoEnrich *capture.AutoEnrichStore
-	dailyCap   int
 	log        *slog.Logger
 }
 
@@ -43,7 +42,6 @@ func newDomainTriageTrigger(pool *pgxpool.Pool, log *slog.Logger) *domainTriageT
 		contacts:   contacts.NewStore(InstallationDB(pool)),
 		settings:   capture.NewSettings(NewSettingsStore(pool)),
 		autoEnrich: capture.NewAutoEnrichStore(InstallationDB(pool)),
-		dailyCap:   autoEnrichDailyCap(log),
 		log:        log,
 	}
 }
@@ -93,7 +91,7 @@ func (t *domainTriageTrigger) queueTriage(ctx context.Context, domain string) er
 	// The same atomically-reserved daily cap the enrich sweep spends from — one
 	// budget, whichever path spends it, or triage would be a way around the
 	// ADR-0020 guardrail rather than another claimant on it.
-	slot, err := t.autoEnrich.ReserveBudget(triageCtx, t.dailyCap)
+	slot, err := t.autoEnrich.ReserveBudget(triageCtx, settings.AutoEnrichDailyCap)
 	if err != nil {
 		return err
 	}

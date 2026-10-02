@@ -76,7 +76,6 @@ func (c *JobCensus) Validate() error {
 		c.everyDeclaredKindIsWiredAndBack(),
 		c.everyKindIsWorkedByItsDeclaredArgsType(),
 		c.everyDerivedTimeoutStillEqualsItsConstant(),
-		c.exactlyTheOperatorKindsSupplyTheirTimeout(),
 		c.everyArgsFieldIsDeclaredAndBack(),
 		c.everyFanOutChildCarriesItsUnitKey(),
 		c.everyArgsOwnedKindCarriesItsOwnInsertOpts(),
@@ -188,6 +187,7 @@ func (c *JobCensus) everyKindIsWorkedByItsDeclaredArgsType() []string {
 func derivedTimeoutConstants() map[string]time.Duration {
 	return map[string]time.Duration{
 		"agentSchedulerPassTimeout":   agentSchedulerPassTimeout,
+		"deepReadTimeout":             deepReadTimeout,
 		"privacyRetentionPassTimeout": privacyRetentionPassTimeout,
 		"telegramPollJobTimeout":      telegramPollJobTimeout,
 		"voiceBuildTimeout":           voiceBuildTimeout,
@@ -196,7 +196,7 @@ func derivedTimeoutConstants() map[string]time.Duration {
 }
 
 // everyDerivedTimeoutStillEqualsItsConstant keeps a transcribed duration tied
-// to the arithmetic it was transcribed from. Three of the five are expressions
+// to the arithmetic it was transcribed from. Four of the six are expressions
 // over another module's own limit (privacy.MaxPassDuration and friends), which
 // moves when that module's batch bounds do; the other two are spent by code
 // that has to agree with the wall clock (a reclaim grace, a long-poll budget).
@@ -228,40 +228,6 @@ func (c *JobCensus) everyDerivedTimeoutStillEqualsItsConstant() []string {
 			findings = append(findings,
 				name+" is resolved by derivedTimeoutConstants but no declaration derives from it — a dead entry; delete it")
 		}
-	}
-	return findings
-}
-
-// exactlyTheOperatorKindsSupplyTheirTimeout checks the one input a policy test
-// cannot reach. An operator-supplied TimeoutPolicy returns whatever it is
-// handed, so registering such a kind through the plain addDeclaredWorker
-// compiles, reads as the ordinary case, and hands River a zero — the silent
-// one-minute default this contract exists to remove. The converse matters too:
-// a computed expression at a kind whose policy never reads it says a budget
-// governs something when it governs nothing.
-func (c *JobCensus) exactlyTheOperatorKindsSupplyTheirTimeout() []string {
-	var findings []string
-	operatorKinds := 0
-	for kind, spec := range jobs.Declared() {
-		entry, wired := c.wired[kind]
-		if !wired {
-			continue // already reported by the totality check.
-		}
-		switch {
-		case spec.Timeout.FromOperator():
-			operatorKinds++
-			if !entry.operatorSupplied {
-				findings = append(findings,
-					kind+" declares an operator-supplied timeout but registers through addDeclaredWorker, which supplies nothing — it would run at River's one-minute default; register through addDeclaredWorkerWithTimeout")
-			}
-		case entry.operatorSupplied:
-			findings = append(findings,
-				kind+" is registered with a supplied timeout its declared policy never reads — only a {operator: …} kind takes addDeclaredWorkerWithTimeout")
-		}
-	}
-	if operatorKinds == 0 {
-		findings = append(findings,
-			"no {operator: …} kind was checked — site_deep_read is the one kind this check exists for, and it matched nothing")
 	}
 	return findings
 }

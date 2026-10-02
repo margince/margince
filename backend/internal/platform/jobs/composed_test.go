@@ -50,7 +50,7 @@ func TestComposedKindsAnswerSpecForLikeCoreOnes(t *testing.T) {
 	if !ok {
 		t.Fatal("SpecFor does not answer for a registered composed kind")
 	}
-	if spec.Timeout.Duration(0) != time.Minute || spec.MaxAttempts != 3 {
+	if spec.Timeout.Duration() != time.Minute || spec.MaxAttempts != 3 {
 		t.Fatalf("composed spec came back as %+v", spec)
 	}
 	if err := MustBeTotal([]string{"ext_demo_refresh_ws"}); err != nil {

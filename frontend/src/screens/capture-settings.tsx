@@ -3,6 +3,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCanWrite } from "../app/capability";
 import { Callout } from "../design-system/callout";
+import { NumberSetting } from "../design-system/numbersetting";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
@@ -130,6 +131,120 @@ export function CaptureSettingsCard() {
                     }
                   />
                 }
+              />
+            </SettingList>
+          )}
+        </QueryGate>
+        {update.isError && (
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t("captureSettings.updateFailed")}
+          >
+            {problemMessageOf(update.error, t)}
+          </Callout>
+        )}
+      </PanelBody>
+    </Panel>
+  );
+}
+
+// The limits the API refuses past, mirrored so a value out of range is
+// refused in the box before the request. Keyed by the wire property, which is
+// how backend/gates/settingbounds_test.go holds each to the contract.
+const READ_LIMITS = {
+  auto_enrich_daily_cap: { min: 1, max: 20_000 },
+  site_read_max_pages: { min: 1, max: 200 },
+  site_read_max_mib: { min: 1, max: 128 },
+  site_read_wall_seconds: { min: 30, max: 600 },
+} as const;
+
+// How much the website reader may spend: the daily ceiling on reads nobody
+// asked for, and what any one read may fetch. Same gate and same save as the
+// switches above, because it is the same settings object.
+export function WebsiteReadingCard() {
+  const t = useT();
+  const canManage = useCanWrite("capture_settings", "update");
+  const query = useCaptureSettings();
+  const update = useUpdateCaptureSettings();
+  const locked = !canManage || update.isPending;
+  return (
+    <Panel title={t("captureReading.title")}>
+      <PanelBody className="form-stack">
+        <PanelIntro>{t("captureReading.sub")}</PanelIntro>
+        {!canManage && (
+          <PanelIntro>{t("captureSettings.adminOnly")}</PanelIntro>
+        )}
+        <QueryGate query={query} pendingLabel={t("captureReading.title")}>
+          {(settings) => (
+            <SettingList>
+              <SettingRow
+                label={t("captureReading.dailyCap.label")}
+                description={t("captureReading.dailyCap.help")}
+                control={(control) => (
+                  <NumberSetting
+                    control={control}
+                    testId="capture-daily-cap"
+                    value={settings.auto_enrich_daily_cap}
+                    {...READ_LIMITS.auto_enrich_daily_cap}
+                    refusal={t("captureReading.dailyCap.refusal")}
+                    disabled={locked}
+                    onCommit={(next) =>
+                      update.mutate({ auto_enrich_daily_cap: next })
+                    }
+                  />
+                )}
+              />
+              <SettingRow
+                label={t("captureReading.maxPages.label")}
+                description={t("captureReading.maxPages.help")}
+                control={(control) => (
+                  <NumberSetting
+                    control={control}
+                    testId="capture-read-max-pages"
+                    value={settings.site_read.max_pages}
+                    {...READ_LIMITS.site_read_max_pages}
+                    refusal={t("captureReading.maxPages.refusal")}
+                    disabled={locked}
+                    onCommit={(next) =>
+                      update.mutate({ site_read_max_pages: next })
+                    }
+                  />
+                )}
+              />
+              <SettingRow
+                label={t("captureReading.maxMiB.label")}
+                description={t("captureReading.maxMiB.help")}
+                control={(control) => (
+                  <NumberSetting
+                    control={control}
+                    testId="capture-read-max-mib"
+                    value={settings.site_read.max_mib}
+                    {...READ_LIMITS.site_read_max_mib}
+                    refusal={t("captureReading.maxMiB.refusal")}
+                    disabled={locked}
+                    onCommit={(next) =>
+                      update.mutate({ site_read_max_mib: next })
+                    }
+                  />
+                )}
+              />
+              <SettingRow
+                label={t("captureReading.wall.label")}
+                description={t("captureReading.wall.help")}
+                control={(control) => (
+                  <NumberSetting
+                    control={control}
+                    testId="capture-read-wall"
+                    value={settings.site_read.wall_seconds}
+                    {...READ_LIMITS.site_read_wall_seconds}
+                    refusal={t("captureReading.wall.refusal")}
+                    disabled={locked}
+                    onCommit={(next) =>
+                      update.mutate({ site_read_wall_seconds: next })
+                    }
+                  />
+                )}
               />
             </SettingList>
           )}

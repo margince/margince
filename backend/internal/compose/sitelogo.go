@@ -46,7 +46,7 @@ const (
 	// avatar size.
 	logoMaxAspect = 2.5
 	// logoMaxCandidates bounds how many assets one resolve will ask for. The
-	// chain is fetched serially and the deep-read queue is two workers wide, so
+	// chain is fetched serially and the deep-read queue is a small pool, so
 	// a page declaring a thousand icon links would otherwise let one site hold
 	// a worker until its deadline. A site that has not shown its mark in the
 	// first few declarations is not hiding it in the thousandth, and everything

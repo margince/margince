@@ -120,12 +120,6 @@ func fanOutUnitName(u jobs.FanOutUnit) string {
 // what the declaration exists for: a deliberate absence is -1, the value
 // TimeoutPolicy.Duration itself hands River.
 //
-// An {operator: …} policy is not stated by the file — api/jobs.yaml calls it
-// "not knowable here at all", and the value is computed at the worker's
-// registration from a dial the exposition process does not hold. It is
-// reported as unstated, so the label is absent rather than carrying a guess
-// an alert would then act on.
-//
 // A deadline shorter than the second this label counts in is floored at one
 // rather than truncated: truncation would spell a real deadline as the very
 // zero the arms above exist to keep off the wire.
@@ -133,12 +127,10 @@ func declaredTimeoutSeconds(p jobs.TimeoutPolicy) (int64, bool) {
 	switch {
 	case p.None:
 		return -1, true
-	case p.FromOperator():
-		return 0, false
 	case p.Fixed > 0:
 		return max(int64(p.Fixed/time.Second), 1), true
 	}
-	// A policy that is none of the three is a Spec nobody declared, whose
+	// A policy that is neither is a Spec nobody declared, whose
 	// zero timeout is River's silent minute under another name. Publishing
 	// nothing says that much honestly; publishing a number would not.
 	return 0, false

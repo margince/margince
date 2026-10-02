@@ -240,6 +240,7 @@ func Definitions() []settings.Definition {
 		Country,
 		FiscalYearStartMonth,
 		DeadWorkBannerHours,
+		OAuthAccessTokenTTLMinutes,
 		ForecastForwardMeasure,
 		EnabledOidcProviders,
 		RequireSSO,

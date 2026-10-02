@@ -9278,6 +9278,34 @@ export const vi = {
   "captureSettings.removeFailed": "Không thể xóa mục loại trừ này",
   "captureSettings.addFailed": "Không thể thêm mục loại trừ này",
   "captureSettings.updateFailed": "Chưa thay đổi cài đặt",
+  "captureReading.title": "Đọc website",
+  "captureReading.sub":
+    "Mức Margince đọc từ website của công ty. Thay đổi áp dụng cho lần đọc tiếp theo.",
+  "captureReading.dailyCap.label": "Lượt đọc tự động mỗi ngày",
+  "captureReading.dailyCap.help":
+    "Lượt đọc không ai yêu cầu, trên mọi công ty, từ 1 đến 20.000 mỗi ngày.",
+  "captureReading.dailyCap.refusal": "Nhập một số nguyên từ 1 đến 20.000.",
+  "captureReading.maxPages.label": "Số trang mỗi lượt",
+  "captureReading.maxPages.help":
+    "Số trang tối đa một lượt đọc tải về, từ 1 đến 200 (lượt tự động dừng ở 12).",
+  "captureReading.maxPages.refusal": "Nhập số trang nguyên từ 1 đến 200.",
+  "captureReading.maxMiB.label": "Dung lượng mỗi lượt (MiB)",
+  "captureReading.maxMiB.help":
+    "Lượng dữ liệu tối đa một lượt đọc giữ lại qua các trang, từ 1 đến 128 MiB.",
+  "captureReading.maxMiB.refusal": "Nhập số MiB nguyên từ 1 đến 128.",
+  "captureReading.wall.label": "Thời gian đọc (giây)",
+  "captureReading.wall.help":
+    "Thời gian dài nhất một lượt đọc chạy trước khi giữ lại những gì đã tìm được, từ 30 đến 600 giây.",
+  "captureReading.wall.refusal": "Nhập số giây nguyên từ 30 đến 600.",
+  "agentConnections.title": "Kết nối agent",
+  "agentConnections.sub":
+    "Thời gian một agent kết nối qua MCP giữ passport trước khi gia hạn. Thay đổi áp dụng cho passport được cấp tiếp theo.",
+  "agentConnections.adminOnly":
+    "Chỉ quản trị viên hoặc vận hành mới đổi được mục này.",
+  "agentConnections.ttl.label": "Thời hạn passport (phút)",
+  "agentConnections.ttl.help": "Số phút nguyên, từ 5 đến 129.600 (90 ngày).",
+  "agentConnections.ttl.refusal": "Nhập số phút nguyên từ 5 đến 129.600.",
+  "agentConnections.updateFailed": "Chưa thay đổi cài đặt",
   "captureSettings.adminOnly":
     "Chỉ quản trị viên hoặc vận hành mới đổi được mục này.",
 
