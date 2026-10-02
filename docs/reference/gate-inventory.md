@@ -465,6 +465,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `pipefailgrepq_test.go` | H2 | A shell gate does not decide its verdict through a pipe that can break. |
 | `promptexcerpt_test.go` | H2 | A prompt built from a crawled page is bounded by this product, not by the site. |
 | `promptfence_test.go` | H1 | Prompt-boundary fitness functions: no prompt may declare a data boundary the writer of that data can spell. |
+| `proposedchangenumbers_test.go` | H2 | A proposed change is decoded by diffhash, never by a plain Unmarshal. |
 | `publicreferences_test.go` | H1 | This repository is public. |
 | `purgeexecutor_test.go` | H2 | What a selected purge does to a message is written once. |
 | `refusalmemory_test.go` | H2 | A producer that can be re-triggered remembers what a human refused. |

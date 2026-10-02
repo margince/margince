@@ -4,12 +4,10 @@
 package approvals
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -17,6 +15,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -122,26 +121,15 @@ func canonicalIdentity(identity, proposedChange json.RawMessage) (json.RawMessag
 	return raw, nil
 }
 
-// decodeJSONObject unmarshals exactly one JSON object with lossless numbers
-// (UseNumber keeps a numeric value as its exact decimal text, not a float64).
-// A non-object (array, scalar, null) is an error, and so is any trailing data
-// after the object — Identity/ProposedChange is ONE object, not a stream, and
-// silently reading only the first of several values would validate against a
-// payload the rest of the input contradicts.
+// decodeJSONObject is diffhash's decode, named here because this file's two
+// callers read as a pair with the canonicalization below. The guarantees — object
+// only, no trailing data, numbers kept as exact decimal text — belong to the
+// package that owns the canonicalization, not to a second copy beside it: two
+// decoders of one payload are two answers to "what did the caller propose".
+//
+// Held by: TestNoProposedChangeIsDecodedThroughFloat64 (backend/gates/proposedchangenumbers_test.go)
 func decodeJSONObject(raw json.RawMessage) (map[string]any, error) {
-	dec := json.NewDecoder(bytes.NewReader(raw))
-	dec.UseNumber()
-	var m map[string]any
-	if err := dec.Decode(&m); err != nil {
-		return nil, err
-	}
-	if m == nil {
-		return nil, errors.New("not a JSON object")
-	}
-	if _, err := dec.Token(); !errors.Is(err, io.EOF) {
-		return nil, errors.New("unexpected trailing data after JSON object")
-	}
-	return m, nil
+	return diffhash.DecodeObject(raw)
 }
 
 func (s *Service) stageOrJoinPendingInTx(ctx context.Context, tx pgx.Tx, in StageInput) (ids.ApprovalID, error) {
