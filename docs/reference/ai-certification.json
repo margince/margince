@@ -4863,10 +4863,10 @@
             "state": "current"
           },
           "abandoned": 0,
-          "runs": 45,
-          "passed": 24,
-          "cases_failing_often": 4,
-          "cases_below_quality_bar": 5
+          "runs": 39,
+          "passed": 30,
+          "cases_failing_often": 2,
+          "cases_below_quality_bar": 3
         },
         {
           "task": "offer_draft",
@@ -6863,9 +6863,9 @@
           "sites_current": 42,
           "sites_partial": 0,
           "sites_stale": 0,
-          "runs": 573,
-          "passed": 451,
-          "reliability": 0.787085514834206,
+          "runs": 567,
+          "passed": 457,
+          "reliability": 0.8059964726631393,
           "slowest_p95_ms": 83052,
           "bands": {
             "certified": 12,
@@ -7249,7 +7249,7 @@
           "best": {
             "provider": "openai_compatible",
             "model": "mistralai/mistral-medium-3-5",
-            "env": "eu_hosted"
+            "env": "cloud_frontier"
           },
           "band": "certified",
           "state": "current",
@@ -9732,9 +9732,9 @@
       "sites_current": 42,
       "sites_partial": 0,
       "sites_stale": 0,
-      "runs": 573,
-      "passed": 451,
-      "reliability": 0.787085514834206,
+      "runs": 567,
+      "passed": 457,
+      "reliability": 0.8059964726631393,
       "slowest_p95_ms": 83052,
       "bands": {
         "certified": 12,
@@ -15565,8 +15565,8 @@
       "best_state": "current",
       "recommended": {
         "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.1-flash-lite",
+          "provider": "openai_compatible",
+          "model": "openai/gpt-oss-120b",
           "env": "cloud_frontier"
         },
         "band": "certified",
@@ -15655,8 +15655,8 @@
           "runs": 33,
           "passed": 33,
           "reliability": 1,
-          "latency_p50_ms": 1430,
-          "latency_p95_ms": 2028,
+          "latency_p50_ms": 1466,
+          "latency_p95_ms": 2002,
           "reported": {
             "accepted": 33,
             "wrong_answer": 0,
@@ -15679,8 +15679,8 @@
           "runs": 33,
           "passed": 33,
           "reliability": 1,
-          "latency_p50_ms": 2872,
-          "latency_p95_ms": 4046,
+          "latency_p50_ms": 2621,
+          "latency_p95_ms": 4359,
           "reported": {
             "accepted": 33,
             "wrong_answer": 0,
@@ -15699,14 +15699,14 @@
           "band": "not_supported",
           "scenarios_measured": 11,
           "scenarios_total": 11,
-          "runs": 45,
-          "passed": 24,
-          "reliability": 0.5333333333333333,
-          "latency_p50_ms": 2382,
-          "latency_p95_ms": 3510,
+          "runs": 39,
+          "passed": 30,
+          "reliability": 0.7692307692307693,
+          "latency_p50_ms": 2327,
+          "latency_p95_ms": 4395,
           "reported": {
-            "accepted": 24,
-            "wrong_answer": 21,
+            "accepted": 30,
+            "wrong_answer": 9,
             "invalid": 0,
             "abstained": 0
           },
@@ -15725,8 +15725,8 @@
           "runs": 33,
           "passed": 33,
           "reliability": 1,
-          "latency_p50_ms": 1636,
-          "latency_p95_ms": 2490,
+          "latency_p50_ms": 1328,
+          "latency_p95_ms": 1907,
           "reported": {
             "accepted": 33,
             "wrong_answer": 0,
@@ -15748,8 +15748,8 @@
           "runs": 33,
           "passed": 33,
           "reliability": 1,
-          "latency_p50_ms": 1532,
-          "latency_p95_ms": 2406,
+          "latency_p50_ms": 1428,
+          "latency_p95_ms": 1980,
           "reported": {
             "accepted": 33,
             "wrong_answer": 0,
@@ -15771,8 +15771,8 @@
           "runs": 33,
           "passed": 33,
           "reliability": 1,
-          "latency_p50_ms": 934,
-          "latency_p95_ms": 2566,
+          "latency_p50_ms": 1027,
+          "latency_p95_ms": 1534,
           "reported": {
             "accepted": 33,
             "wrong_answer": 0,
