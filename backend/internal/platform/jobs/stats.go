@@ -48,6 +48,13 @@ const runnableStates = `('available','retryable','scheduled')`
 // the reason, and the sweep pair answers "are tenants being missed".
 const terminalBadStates = `('discarded','cancelled')`
 
+// finishedFirst leads each DISTINCT ON key's ordering in the sweep reads, so
+// the row that answers for a key is its newest FINISHED one and an in-flight
+// row stands in only for a key with none. A tick still running or retrying
+// has no outcome yet; letting it lead would hide the discard of the tick
+// before it for as long as it ran.
+const finishedFirst = `(state::text IN ('completed','discarded','cancelled')) DESC`
+
 // StateRow is one (queue, kind, workspace, state) group of the job table as
 // it stands right now. WorkspaceID is the empty string for a dispatcher —
 // which is exact rather than a default, because a job that does tenant work
@@ -115,7 +122,7 @@ type SweepUnit struct {
 	Kind string
 	Unit FanOutUnit
 	// Units is how many distinct units of this kind have a surviving child,
-	// and Failed how many of those most recently ended dead. The pair reads
+	// and Failed how many of those most recently FINISHED dead. The pair reads
 	// exactly as SweepPass's does, one grain down.
 	Units  int64
 	Failed int64
@@ -284,7 +291,9 @@ func statsByState(ctx context.Context, pool *pgxpool.Pool) ([]StateRow, error) {
 // Per-workspace-latest also answers the question the pair exists for — are
 // tenants being missed — more directly than a batch count did: a workspace
 // whose most recent pass of a kind is dead is a tenant being missed,
-// whether that happened this pass or three passes ago. And because it
+// whether that happened this pass or three passes ago. Most recent means
+// most recently FINISHED (finishedFirst): the next tick in flight has not
+// answered yet, and must not stand in for the discard before it. And because it
 // counts DISTINCT workspaces, a dispatcher that fans out per connection
 // rather than per workspace still counts each workspace once, with no
 // special case.
@@ -325,7 +334,7 @@ func statsBySweep(ctx context.Context, pool *pgxpool.Pool) ([]SweepPass, error) 
 		     WHERE ` + sweepTagPredicate + `
 		       AND coalesce(args->>'workspace_id', '') <> ''
 		       AND NOT (kind = ANY(coalesce($1::text[], ARRAY[]::text[])))
-		     ORDER BY kind, args->>'workspace_id', created_at DESC, id DESC)
+		     ORDER BY kind, args->>'workspace_id', ` + finishedFirst + `, created_at DESC, id DESC)
 
 		    UNION ALL
 
@@ -334,7 +343,7 @@ func statsBySweep(ctx context.Context, pool *pgxpool.Pool) ([]SweepPass, error) 
 		     FROM river_job
 		     WHERE ` + sweepTagPredicate + `
 		       AND kind = ANY(coalesce($1::text[], ARRAY[]::text[]))
-		     ORDER BY kind, created_at DESC, id DESC)
+		     ORDER BY kind, ` + finishedFirst + `, created_at DESC, id DESC)
 		) latest
 		GROUP BY kind`
 
@@ -400,7 +409,7 @@ func statsBySweepUnit(ctx context.Context, pool *pgxpool.Pool) ([]SweepUnit, err
 		    WHERE '` + SweepTag + `' = ANY(j.tags)
 		      AND coalesce(j.args->>u.args_key, '') <> ''
 		      AND coalesce(j.args->>'workspace_id', '') <> ''
-		    ORDER BY j.kind, j.args->>u.args_key, j.created_at DESC, j.id DESC
+		    ORDER BY j.kind, j.args->>u.args_key, ` + finishedFirst + `, j.created_at DESC, j.id DESC
 		) latest
 		GROUP BY kind`
 
