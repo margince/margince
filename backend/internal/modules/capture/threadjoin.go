@@ -102,6 +102,14 @@ func (s *Sink) joinThread(
 	return s.mergeLinkedThreads(ctx, tx, seat, id, neighbours, created)
 }
 
+// mergeLockStatement is ONE workspace-wide lock for every thread merge, spelled
+// once because two callers take it: takeMergeLockFirst before a row is written,
+// and mergeLinkedThreads where the merge happens. Two spellings of one lock name
+// are two locks, and the ordering that stops the deadlock would be silently gone.
+//
+// Held by: TestTheMergeLockHasOneSpelling (backend/gates/mergelockordering_test.go)
+const mergeLockStatement = `SELECT pg_advisory_xact_lock(hashtextextended('thread_merge', 0))`
+
 // mergeLinkedThreads merges the thread keys a held email's reply links reach,
 // under the rules joinThread states.
 func (s *Sink) mergeLinkedThreads(
@@ -117,7 +125,11 @@ func (s *Sink) mergeLinkedThreads(
 	// One lock for every merge in the workspace, and the keys read again under
 	// it, so a concurrent merge cannot retire a key between the read and the
 	// rewrite.
-	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended('thread_merge', 0))`); err != nil {
+	// Usually already held: takeMergeLockFirst takes it before the row write, and
+	// an advisory xact lock is re-entrant within one transaction. Taken again here
+	// because THIS is the call correctness rests on — the probe only decides
+	// whether the cost is paid early.
+	if _, err := tx.Exec(ctx, mergeLockStatement); err != nil {
 		return fmt.Errorf("capture: locking the thread merge: %w", err)
 	}
 	if keys, err = s.keysToMerge(ctx, tx, seat, id, neighbours, created); err != nil || len(keys) < 2 {
