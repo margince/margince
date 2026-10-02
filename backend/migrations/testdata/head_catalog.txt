@@ -5156,13 +5156,12 @@ public.offer_template.is_default boolean NOT NULL gen=- def=false
 public.offer_template.layout jsonb NOT NULL gen=- def=-
 public.offer_template.locale text NOT NULL gen=- def='de-DE'::text
 public.offer_template.name text NOT NULL gen=- def=-
-public.offer_template.offer_template_name_unique UNIQUE (name)
 public.offer_template.offer_template_pkey PRIMARY KEY (id)
 public.offer_template.search_tsv tsvector gen=s def=(setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(name, ''::text))), 'A'::"char") || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(name, ''::text))), 'A'::"char"))
 public.offer_template.trg_offer_template_updated CREATE TRIGGER trg_offer_template_updated BEFORE UPDATE ON public.offer_template FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.offer_template.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.offer_template.version bigint NOT NULL gen=- def=1
-public.offer_template_name_unique CREATE UNIQUE INDEX offer_template_name_unique ON public.offer_template USING btree (name)
+public.offer_template_name_unique CREATE UNIQUE INDEX offer_template_name_unique ON public.offer_template USING btree (name) WHERE (archived_at IS NULL)
 public.offer_template_pkey CREATE UNIQUE INDEX offer_template_pkey ON public.offer_template USING btree (id)
 public.onboarding_wizard_state acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.onboarding_wizard_state.company_draft jsonb NOT NULL gen=- def='{}'::jsonb
@@ -5258,13 +5257,12 @@ public.pipeline.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.pipeline.id uuid NOT NULL gen=- def=uuidv7()
 public.pipeline.is_default boolean NOT NULL gen=- def=false
 public.pipeline.name text NOT NULL gen=- def=-
-public.pipeline.pipeline_name_unique UNIQUE (name)
 public.pipeline.pipeline_pkey PRIMARY KEY (id)
 public.pipeline.position integer NOT NULL gen=- def=0
 public.pipeline.trg_pipeline_updated CREATE TRIGGER trg_pipeline_updated BEFORE UPDATE ON public.pipeline FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.pipeline.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.pipeline.version bigint NOT NULL gen=- def=1
-public.pipeline_name_unique CREATE UNIQUE INDEX pipeline_name_unique ON public.pipeline USING btree (name)
+public.pipeline_name_unique CREATE UNIQUE INDEX pipeline_name_unique ON public.pipeline USING btree (name) WHERE (archived_at IS NULL)
 public.pipeline_pkey CREATE UNIQUE INDEX pipeline_pkey ON public.pipeline USING btree (id)
 public.preference_token acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.preference_token.contact_email_id uuid gen=- def=-
@@ -6486,7 +6484,6 @@ public.team.name text NOT NULL gen=- def=-
 public.team.parent_team_id uuid gen=- def=-
 public.team.report_authority_team_change CREATE TRIGGER report_authority_team_change BEFORE UPDATE OF archived_at ON public.team FOR EACH STATEMENT EXECUTE FUNCTION advance_report_projection_authority()
 public.team.report_authority_team_delete CREATE TRIGGER report_authority_team_delete BEFORE DELETE ON public.team FOR EACH STATEMENT EXECUTE FUNCTION advance_report_projection_authority()
-public.team.team_name_unique UNIQUE (name)
 public.team.team_parent_team_id_fkey FOREIGN KEY (parent_team_id) REFERENCES team(id) ON DELETE SET NULL (parent_team_id)
 public.team.team_pkey PRIMARY KEY (id)
 public.team.trg_team_updated CREATE TRIGGER trg_team_updated BEFORE UPDATE ON public.team FOR EACH ROW EXECUTE FUNCTION set_updated_at()
@@ -6505,7 +6502,7 @@ public.team_membership.updated_at timestamp with time zone NOT NULL gen=- def=no
 public.team_membership.user_id uuid NOT NULL gen=- def=-
 public.team_membership_pkey CREATE UNIQUE INDEX team_membership_pkey ON public.team_membership USING btree (id)
 public.team_membership_unique CREATE UNIQUE INDEX team_membership_unique ON public.team_membership USING btree (team_id, user_id)
-public.team_name_unique CREATE UNIQUE INDEX team_name_unique ON public.team USING btree (name)
+public.team_name_unique CREATE UNIQUE INDEX team_name_unique ON public.team USING btree (name) WHERE (archived_at IS NULL)
 public.team_pkey CREATE UNIQUE INDEX team_pkey ON public.team USING btree (id)
 public.team_weekly_review acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.team_weekly_review.as_of timestamp with time zone NOT NULL gen=- def=-

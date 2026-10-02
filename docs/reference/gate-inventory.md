@@ -121,6 +121,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `outboundfilesnapshot_test.go` | H2 | What a message carried is written by one module and read back by another, so the two spellings of the snapshot must stay one spelling. |
 | `outboundidentity_test.go` | H1 | A remote operator sees one name for this product and decides about it: blocks it, rate-limits it, allow-lists it, or writes a robots.txt group naming it. |
 | `overdueboundary_test.go` | H1 | "Is this late?" is one question about one record, and a reader can ask it of a list, a card, a brief or an agent tool. |
+| `partialindexinference_test.go` | H1 | An upsert onto a partial unique index repeats that index's predicate. |
 | `personalpurgewindow_test.go` | H3 | The page that names a deletion date and the sweep that carries it out must read ONE window, or the product promises a date it does not keep. |
 | `phonee164_test.go` | H2 | contact\_phone's E.164 rule is ONE rule, spelled on both sides of the wire. |
 | `planprosebounds_test.go` | H3 | A plan's prose columns are bounded twice, and the two numbers must agree. |
