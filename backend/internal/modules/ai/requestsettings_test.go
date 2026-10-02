@@ -214,8 +214,16 @@ func TestAnAdminThinkingLevelOutranksTheBindingAndTheFloor(t *testing.T) {
 	if _, err := newBrokerClient(t, stub, "openai/gpt-oss-120b", high).Complete(context.Background(), ask); err != nil {
 		t.Fatal(err)
 	}
-	if got := string(stub.chats[0]["reasoning"]); got != `{"effort":"minimal"}` {
+	// gpt-oss lists no minimal effort, so the lowest it lists above it is sent.
+	if got := string(stub.chats[0]["reasoning"]); got != `{"effort":"low"}` {
 		t.Errorf("broker reasoning = %s", got)
+	}
+	plain := &brokerStub{}
+	if _, err := newBrokerClient(t, plain, "mistralai/ministral-8b-2512", nil).Complete(context.Background(), ask); err != nil {
+		t.Fatal(err)
+	}
+	if got, sent := plain.chats[0]["reasoning"]; sent {
+		t.Errorf("a model the broker lists as not reasoning was sent %s", got)
 	}
 
 	var body []byte
@@ -320,6 +328,9 @@ func TestTwoTiersRecordTheirOwnWireBlocks(t *testing.T) {
 		}
 		if params.DeadlineMs != CallCeiling.Milliseconds() {
 			t.Errorf("deadline_ms = %d", params.DeadlineMs)
+		}
+		if bytes.Contains(snap.ProviderParams, []byte("embed_dimensions")) {
+			t.Errorf("a completion records the embedding lane's dimensions: %s", snap.ProviderParams)
 		}
 		sorts[params.Provider.Sort] = true
 	}

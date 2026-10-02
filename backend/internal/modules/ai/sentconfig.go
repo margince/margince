@@ -17,11 +17,10 @@ import (
 // is fixed per (binding, task, tier) — never a value of one call — so the
 // snapshot it hashes into is a small set of rows, not one per call.
 type sentParams struct {
-	EmbedDimensions int                  `json:"embed_dimensions"`
-	Provider        *OpenRouterProvider  `json:"provider,omitempty"`
-	Reasoning       *OpenRouterReasoning `json:"reasoning,omitempty"`
-	ThinkingLevel   string               `json:"thinking_level,omitempty"`
-	DeadlineMs      int64                `json:"deadline_ms"`
+	Provider      *OpenRouterProvider  `json:"provider,omitempty"`
+	Reasoning     *OpenRouterReasoning `json:"reasoning,omitempty"`
+	ThinkingLevel string               `json:"thinking_level,omitempty"`
+	DeadlineMs    int64                `json:"deadline_ms"`
 }
 
 // sentSnapshotKey names one memoized snapshot.
@@ -59,8 +58,11 @@ func (b *binding) snapshotFor(tier Tier, kind string, task EffectiveTask) Config
 	return snap
 }
 
+// buildSnapshot records the settings the call was configured with: the tier's
+// routing and the task's level as written, before an adapter maps a level to
+// what one model lists.
 func (b *binding) buildSnapshot(key sentSnapshotKey) ConfigSnapshot {
-	params := sentParams{EmbedDimensions: b.embedDims, DeadlineMs: key.deadline.Milliseconds(), ThinkingLevel: key.thinking}
+	params := sentParams{DeadlineMs: key.deadline.Milliseconds(), ThinkingLevel: key.thinking}
 	if routing, broker := b.tierRouting[key.tier]; broker && key.kind == callKindCompletion {
 		params.Provider, params.Reasoning = routing.providerWire(), routing.reasoningWire()
 		if key.thinking != "" {

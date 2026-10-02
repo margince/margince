@@ -86,7 +86,7 @@ func (s *RoutingStore) ReplaceTaskOverrides(ctx context.Context, next TaskOverri
 	return next.withoutEmpty(), nil
 }
 
-// refusedAgainst is every field of v a save refuses. An override for a task
+// refusedAgainst lists the fields of v a save refuses. An override for a task
 // this build does not run is refused only when it is new or changed: one that
 // was stored before its task was dropped rides along untouched.
 func (v TaskOverrides) refusedAgainst(stored TaskOverrides) error {
@@ -112,4 +112,21 @@ func (v TaskOverrides) withoutEmpty() TaskOverrides {
 		}
 	}
 	return out
+}
+
+// Wire leaves a zero field absent: zero is "keep the product's value", which
+// the contract spells as a missing key.
+func (o TaskOverride) Wire() crmcontracts.AiTaskOverride {
+	var wire crmcontracts.AiTaskOverride
+	if o.Thinking != "" {
+		level := crmcontracts.AiTaskOverrideThinking(o.Thinking)
+		wire.Thinking = &level
+	}
+	if o.DecisionTimeoutMs != 0 {
+		wire.DecisionTimeoutMs = &o.DecisionTimeoutMs
+	}
+	if o.AttemptTimeoutMs != 0 {
+		wire.AttemptTimeoutMs = &o.AttemptTimeoutMs
+	}
+	return wire
 }

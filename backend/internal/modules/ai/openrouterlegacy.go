@@ -29,7 +29,7 @@ var legacyRoutingKeys = []string{
 // (a misspelt key the broker would drop is the silence Validate exists to end),
 // and each refusal names its path relative to the routing value.
 func (r *OpenRouterRouting) UnmarshalJSON(data []byte) error {
-	parsed, err := decodeRouting("", data)
+	parsed, err := DecodeRouting("", data)
 	if err != nil {
 		return err
 	}
@@ -107,9 +107,10 @@ func (r *OpenRouterRouting) UnmarshalYAML(node *yaml.Node) error {
 	return r.UnmarshalJSON(raw)
 }
 
-// decodeRouting decodes one routing value addressed at path. It decodes only;
-// parseRoutingAt adds Validate.
-func decodeRouting(path string, data []byte) (*OpenRouterRouting, error) {
+// DecodeRouting reads one routing value written at path, in either spelling,
+// refusing unknown keys by their path. It decodes only: parseRoutingAt and the
+// routing store add Validate, so a write and a seed meet one bar.
+func DecodeRouting(path string, data []byte) (*OpenRouterRouting, error) {
 	fields, err := objectFields(path, data)
 	if err != nil {
 		return nil, err
@@ -146,13 +147,6 @@ func decodeRouting(path string, data []byte) (*OpenRouterRouting, error) {
 	return out, nil
 }
 
-// DecodeRouting reads one routing value written at path in a routing document,
-// in either spelling, refusing unknown keys by their path. It does not
-// validate: the routing store does, so a write and a seed meet one bar.
-func DecodeRouting(path string, data []byte) (*OpenRouterRouting, error) {
-	return decodeRouting(path, data)
-}
-
 // RequestJSON is the value in OpenRouter's own nested shape — what a client is
 // shown and edits — whatever spelling it is stored in.
 func (r *OpenRouterRouting) RequestJSON() ([]byte, error) {
@@ -163,7 +157,7 @@ func (r *OpenRouterRouting) RequestJSON() ([]byte, error) {
 // parseRoutingAt decodes and validates one routing value, every refusal
 // addressed under path.
 func parseRoutingAt(path string, data []byte) (*OpenRouterRouting, error) {
-	parsed, err := decodeRouting(path, data)
+	parsed, err := DecodeRouting(path, data)
 	if err != nil {
 		return nil, err
 	}

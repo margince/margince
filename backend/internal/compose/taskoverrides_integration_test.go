@@ -34,22 +34,6 @@ func overrideSeat(e *integration.Env, update bool) context.Context {
 	})
 }
 
-func putTaskOverrides(ctx context.Context, h aiRoutingHandlers, body, ifMatch string) *httptest.ResponseRecorder {
-	req := httptest.NewRequest(http.MethodPut, "/v1/ai/task-overrides", strings.NewReader(body)).WithContext(ctx)
-	if ifMatch != "" {
-		req.Header.Set("If-Match", ifMatch)
-	}
-	rec := httptest.NewRecorder()
-	h.ReplaceAiTaskOverrides(rec, req)
-	return rec
-}
-
-func getTaskOverrides(ctx context.Context, h aiRoutingHandlers) *httptest.ResponseRecorder {
-	rec := httptest.NewRecorder()
-	h.GetAiTaskOverrides(rec, httptest.NewRequest(http.MethodGet, "/v1/ai/task-overrides", nil).WithContext(ctx))
-	return rec
-}
-
 func countAudit(t *testing.T, e *integration.Env) int {
 	t.Helper()
 	var n int
@@ -125,24 +109,6 @@ func TestTheTaskOverridePreviewWritesNothingAndNamesStaleTasks(t *testing.T) {
 	}
 }
 
-func TestOnlyAHumanRoutingEditorMaySaveTaskOverrides(t *testing.T) {
-	e := integration.Setup(t)
-	h := taskOverrideHandlers(e)
-	if rec := putTaskOverrides(overrideSeat(e, false), h, `{}`, ""); rec.Code != http.StatusForbidden {
-		t.Fatalf("a read-only seat saved: %d %s", rec.Code, rec.Body)
-	}
-	agent := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS), principal.Principal{
-		Type: principal.PrincipalAgent, ID: "agent:task-overrides", SeatType: principal.SeatFull,
-		Permissions: principal.Permissions{Objects: map[string]principal.ObjectGrant{"ai_routing": {Read: true, Update: true}}, RowScope: principal.RowScopeAll},
-	})
-	if rec := putTaskOverrides(agent, h, `{}`, ""); rec.Code != http.StatusForbidden {
-		t.Fatalf("an agent saved: %d %s", rec.Code, rec.Body)
-	}
-	if rec := getTaskOverrides(agent, h); rec.Code != http.StatusForbidden {
-		t.Fatalf("an agent read: %d %s", rec.Code, rec.Body)
-	}
-}
-
 func TestTheStatusMarksATaskWithAnOverride(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := overrideSeat(e, true)
@@ -166,4 +132,24 @@ func TestTheStatusMarksATaskWithAnOverride(t *testing.T) {
 		return
 	}
 	t.Fatal("no cold_start row in the status")
+}
+
+// A save reaches a running Router on the watcher's next read, through the same
+// store the handler wrote with.
+func TestASavedTaskOverrideReachesARunningRouter(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := overrideSeat(e, true)
+	w, router := watcherServing(t, routingFixture(t, "serving"))
+	w.pool = e.Pool
+	before := router.TaskOverridesRevision()
+
+	if rec := putTaskOverrides(ctx, taskOverrideHandlers(e), `{"capture_classify":{"thinking":"low"}}`, ""); rec.Code != http.StatusOK {
+		t.Fatalf("PUT = %d %s", rec.Code, rec.Body)
+	}
+	w.Recheck(context.Background())
+
+	want := ai.TaskOverrides{ai.TaskCaptureClassify: {Thinking: "low"}}.Revision()
+	if got := router.TaskOverridesRevision(); got != want || got == before {
+		t.Errorf("the Router serves revision %q after the save, want %q", got, want)
+	}
 }

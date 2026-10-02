@@ -173,9 +173,16 @@ func (w *RoutingWatcher) refreshTaskOverrides(ctx context.Context) {
 		w.log.WarnContext(ctx, "re-reading the AI task overrides failed; keeping the ones this process is serving", "error", err)
 		return
 	}
+	w.adoptTaskOverrides(ctx, stored)
+}
+
+// adoptTaskOverrides publishes stored unless the Router already serves that
+// revision, and reports whether it did.
+func (w *RoutingWatcher) adoptTaskOverrides(ctx context.Context, stored ai.TaskOverrides) bool {
 	if stored.Revision() == w.target.TaskOverridesRevision() {
-		return
+		return false
 	}
 	w.target.SetTaskOverrides(stored)
 	w.log.InfoContext(ctx, "adopted changed AI task overrides without restarting", "tasks", len(stored))
+	return true
 }

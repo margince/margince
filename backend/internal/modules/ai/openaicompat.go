@@ -397,10 +397,8 @@ func (c *openAICompatClient) sendChat(ctx context.Context, req model.Request, st
 		return nil, err
 	}
 	wire := c.chatWire(req, stream)
-	// An admin's level replaces the binding's reasoning block; it is the
-	// broker's effort field, so a direct vendor on this wire is sent none.
-	if c.reasoning != nil && req.ThinkingLevel != "" {
-		wire.Reasoning = &OpenRouterReasoning{Effort: req.ThinkingLevel}
+	if level := c.adminReasoning(ctx, wire.Model, req.ThinkingLevel); level != nil {
+		wire.Reasoning = level
 	}
 	if wire.Reasoning == nil {
 		wire.Reasoning = c.reasoningFloor(ctx, wire.Model, req.ThinkingFloor, len(req.Tools))

@@ -208,8 +208,8 @@ export function LatencyAgainstTimeout({
           })}
         </span>
         <span
+          // ds:ignore a latency reading in the danger ink, not a message
           className={
-            // ds:ignore a latency reading in the danger ink, not a message
             over ? "ai-figures-bad" : near ? "ai-latency-near" : undefined
           }
         >

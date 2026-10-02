@@ -24,7 +24,9 @@ import (
 	"encoding/json"
 	"os"
 	"reflect"
+	"slices"
 	"testing"
+	"time"
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	"gopkg.in/yaml.v3"
@@ -421,5 +423,45 @@ func TestTheServedRoutingSchemaIsTheGatedSchema(t *testing.T) {
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatal("GET /ai/routing/schema serves a schema other than config/margince.schema.json's $defs; run make gen")
+	}
+}
+
+// An override the contract accepts is one the server saves, and the reverse:
+// the AiTaskOverride enum and bounds are a declared mirror of the Go owner.
+func TestTheTaskOverrideContractIsTheServersBounds(t *testing.T) {
+	t.Parallel()
+	var doc struct {
+		Components struct {
+			Schemas map[string]struct {
+				Properties map[string]struct {
+					Enum    []string `yaml:"enum"`
+					Minimum int64    `yaml:"minimum"`
+					Maximum int64    `yaml:"maximum"`
+				} `yaml:"properties"`
+			} `yaml:"schemas"`
+		} `yaml:"components"`
+	}
+	raw, err := os.ReadFile("api/crm.yaml")
+	if err != nil {
+		t.Fatalf("reading the contract: %v", err)
+	}
+	if err := yaml.Unmarshal(raw, &doc); err != nil {
+		t.Fatalf("parsing the contract: %v", err)
+	}
+	props := doc.Components.Schemas["AiTaskOverride"].Properties
+
+	wire, levels := slices.Sorted(slices.Values(props["thinking"].Enum)), slices.Sorted(slices.Values(ai.TaskThinkingLevels))
+	if len(wire) == 0 || !slices.Equal(wire, levels) {
+		t.Errorf("AiTaskOverride.thinking is %v in the contract but the server accepts %v", wire, levels)
+	}
+	for field, want := range map[string][2]time.Duration{
+		"decision_timeout_ms": {ai.MinDecisionTimeout, ai.MaxDecisionTimeout},
+		"attempt_timeout_ms":  {ai.MinAttemptTimeout, ai.MaxAttemptTimeout},
+	} {
+		got := props[field]
+		if got.Minimum != want[0].Milliseconds() || got.Maximum != want[1].Milliseconds() {
+			t.Errorf("AiTaskOverride.%s is %d–%d ms in the contract but the server accepts %d–%d",
+				field, got.Minimum, got.Maximum, want[0].Milliseconds(), want[1].Milliseconds())
+		}
 	}
 }

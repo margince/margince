@@ -76,7 +76,7 @@ type CallStatsRow struct {
 
 // failedAttemptSQL is whether the ai_call row aliased alias failed: it carries
 // a sentinel that is not an answer. The sentinel list is bound at answeredArg,
-// from answeredSentinels, so the Go slice is the one spelling of it.
+// from answeredSentinels, so the SQL never spells the list itself.
 func failedAttemptSQL(alias string, answeredArg int) string {
 	return fmt.Sprintf(`(%[1]s.error_sentinel IS NOT NULL AND %[1]s.error_sentinel <> '' AND NOT %[1]s.error_sentinel = ANY($%[2]d))`, alias, answeredArg)
 }
@@ -92,7 +92,10 @@ func (s *CallReadStore) CallStats(ctx context.Context, q CallStatsQuery) ([]Call
 		return nil, invalidAt("group", "must be one of provider, model, served_provider, tier, task")
 	}
 	from, to := rateFallbacks()
-	args := []any{s.now().Add(-q.Window), answeredSentinels, from, to}
+	args := []any{s.now().Add(-q.Window), answeredSentinels}
+	failed := failedAttemptSQL("ac", len(args))
+	args = append(args, from, to)
+	rate := rateMatch("ac.provider", "ac.model_id", "ac.occurred_at::date", len(args)-1, len(args))
 	where := "ac.occurred_at >= $1 AND NOT ac.cache_hit"
 	for _, f := range []struct{ column, value string }{
 		{"ac.provider", q.Filter.Provider}, {"ac.model_id", q.Filter.Model}, {"ac.tier", q.Filter.Tier}, {"ac.task", string(q.Filter.Task)},
@@ -117,8 +120,8 @@ func (s *CallReadStore) CallStats(ctx context.Context, q CallStatsQuery) ([]Call
 		 WHERE %[6]s
 		 GROUP BY 1
 		 ORDER BY 2 DESC, 1`,
-		column, failedAttemptSQL("ac", 2), callCostMicroUSD("ac"), callUnpriced("ac"),
-		rateMatch("ac.provider", "ac.model_id", "ac.occurred_at::date", 3, 4), where)
+		column, failed, callCostMicroUSD("ac"), callUnpriced("ac"),
+		rate, where)
 	rows := []CallStatsRow{}
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		found, err := tx.Query(ctx, sql, args...)
@@ -173,17 +176,18 @@ func (s *CallReadStore) TaskFlow(ctx context.Context, task Task, window time.Dur
 		return TaskFlow{}, err
 	}
 	flow := TaskFlow{Steps: []FlowStep{}}
-	since := s.now().Add(-window)
+	args := []any{string(task), s.now().Add(-window), answeredSentinels}
+	failed := failedAttemptSQL("ac", len(args))
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(ctx, `
 			SELECT count(DISTINCT ac.logical_call_id),
-			       count(DISTINCT ac.logical_call_id) FILTER (WHERE ac.is_terminal AND `+failedAttemptSQL("ac", 3)+`)
+			       count(DISTINCT ac.logical_call_id) FILTER (WHERE ac.is_terminal AND `+failed+`)
 			  FROM ai_call ac
 			 WHERE ac.task = $1 AND ac.occurred_at >= $2 AND NOT ac.cache_hit`,
-			string(task), since, answeredSentinels).Scan(&flow.Total, &flow.Unanswered); err != nil {
+			args...).Scan(&flow.Total, &flow.Unanswered); err != nil {
 			return err
 		}
-		steps, err := s.flowSteps(ctx, tx, task, since)
+		steps, err := s.flowSteps(ctx, tx, task, args, failed)
 		flow.Steps = steps
 		return err
 	})
@@ -193,11 +197,13 @@ func (s *CallReadStore) TaskFlow(ctx context.Context, task Task, window time.Dur
 	return flow, nil
 }
 
-func (s *CallReadStore) flowSteps(ctx context.Context, tx pgx.Tx, task Task, since time.Time) ([]FlowStep, error) {
+// flowSteps reads with TaskFlow's arguments: $1 task, $2 since, and the answered
+// sentinels that failed binds.
+func (s *CallReadStore) flowSteps(ctx context.Context, tx pgx.Tx, task Task, args []any, failed string) ([]FlowStep, error) {
 	found, err := tx.Query(ctx, `
 		WITH attempts AS (
 		  SELECT ac.kind = 'decision' AS decision, ac.tier, ac.provider, ac.model_id, ac.latency_ms, ac.is_terminal,
-		         `+failedAttemptSQL("ac", 3)+` AS failed,
+		         `+failed+` AS failed,
 		         coalesce(ac.error_sentinel, '') AS sentinel,
 		         lead(ac.attempt_reason) OVER (PARTITION BY ac.logical_call_id ORDER BY ac.attempt) AS next_reason
 		    FROM ai_call ac
@@ -210,7 +216,7 @@ func (s *CallReadStore) flowSteps(ctx context.Context, tx pgx.Tx, task Task, sin
 		       coalesce(array_agg(CASE WHEN sentinel <> '' THEN sentinel ELSE next_reason END)
 		                FILTER (WHERE NOT (is_terminal AND NOT failed)), '{}')
 		  FROM attempts
-		 GROUP BY decision, tier`, string(task), since, answeredSentinels)
+		 GROUP BY decision, tier`, args...)
 	if err != nil {
 		return nil, err
 	}

@@ -11,7 +11,7 @@ import { Callout } from "../design-system/callout";
 import { Heading } from "../design-system/heading";
 import { Modal } from "../design-system/modal";
 import { Select } from "../design-system/select";
-import { formatNumber } from "../format/format";
+import { formatNumber, identifierNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
@@ -418,10 +418,10 @@ function TimeoutField({
       {(control) => (
         <Select
           {...control}
-          value={String(value)}
+          value={identifierNumber(value)}
           disabled={disabled}
           options={timeoutOptions(bounds, fallback, value).map((s) => ({
-            value: String(s),
+            value: identifierNumber(s),
             label:
               s === fallback
                 ? t("aiTaskSheet.seconds.default", {

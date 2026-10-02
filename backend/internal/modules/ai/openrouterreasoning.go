@@ -24,11 +24,13 @@ package ai
 // out of the answer.
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
+	"slices"
 	"time"
 )
 
@@ -95,6 +97,31 @@ func (c *openAICompatClient) reasoningFloor(ctx context.Context, modelID, floor 
 	}
 	meta := catalog[modelID]
 	return openRouterReasoningFor(meta, floor)
+}
+
+// adminReasoning is the block an admin's level sends, replacing the binding's;
+// nil off the broker. Unlike the floor it is sent with tools, since the admin
+// chose it for this task, but only to a model the broker lists as reasoning
+// (under require_parameters a reasoning block filters out every other host),
+// and at the lowest effort it lists at or above the level.
+func (c *openAICompatClient) adminReasoning(ctx context.Context, modelID, level string) *OpenRouterReasoning {
+	if c.reasoning == nil || level == "" {
+		return nil
+	}
+	catalog, err := c.reasoning.get(ctx, c.fetchReasoning)
+	if err != nil {
+		slog.WarnContext(ctx, "the broker's model list could not be read; this call is sent without the task's thinking level",
+			"model", modelID, "level", level, "error", err)
+		return nil
+	}
+	meta := catalog[modelID]
+	if !meta.listed {
+		return nil
+	}
+	if len(meta.SupportedEfforts) > 0 && !slices.Contains(meta.SupportedEfforts, level) {
+		level = cmp.Or(lowestEffortAtLeast(level, meta.SupportedEfforts), level)
+	}
+	return &OpenRouterReasoning{Effort: level}
 }
 
 // fetchReasoning reads the broker's model list into the reasoning object of

@@ -88,19 +88,9 @@ func writeTaskOverrides(w http.ResponseWriter, stored ai.TaskOverrides) {
 func taskOverridesToWire(v ai.TaskOverrides) crmcontracts.AiTaskOverrides {
 	out := crmcontracts.AiTaskOverrides{}
 	for task, o := range v {
-		out[string(task)] = taskOverrideToWire(o)
+		out[string(task)] = o.Wire()
 	}
 	return out
-}
-
-// taskOverrideToWire leaves a zero field absent: zero is "keep the product's
-// value", which the contract spells as a missing key.
-func taskOverrideToWire(o ai.TaskOverride) crmcontracts.AiTaskOverride {
-	return crmcontracts.AiTaskOverride{
-		Thinking:          optionalEnum[crmcontracts.AiTaskOverrideThinking](o.Thinking),
-		DecisionTimeoutMs: optionalInt(o.DecisionTimeoutMs),
-		AttemptTimeoutMs:  optionalInt(o.AttemptTimeoutMs),
-	}
 }
 
 func taskOverridesFromWire(v crmcontracts.AiTaskOverrides) ai.TaskOverrides {

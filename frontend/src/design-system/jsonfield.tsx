@@ -99,14 +99,18 @@ export function parseProblem(text: string): ParseProblem | null {
     JSON.parse(text);
     return null;
   } catch (error) {
-    const said = error instanceof Error ? error.message : "";
-    const byLine = /line (\d+)/.exec(said);
-    if (byLine) return { line: Number(byLine[1]) };
-    const byPosition = /position (\d+)/.exec(said);
-    return {
-      line: byPosition ? lineAt(text, Number(byPosition[1])) : undefined,
-    };
+    return { line: lineOfSyntaxError(text, error) };
   }
+}
+
+// The engine's own SyntaxError, never a server's words: only the line number is
+// read out of it, and nothing of its text reaches the screen.
+function lineOfSyntaxError(text: string, error: unknown): number | undefined {
+  const said = error instanceof SyntaxError ? error.message : "";
+  const byLine = /line (\d+)/.exec(said);
+  if (byLine) return Number(byLine[1]);
+  const byPosition = /position (\d+)/.exec(said);
+  return byPosition ? lineAt(text, Number(byPosition[1])) : undefined;
 }
 
 /**

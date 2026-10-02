@@ -39,7 +39,7 @@ type TaskOverride struct {
 	AttemptTimeoutMs int `json:"attempt_timeout_ms,omitempty"`
 }
 
-// TaskOverrides is every task's override, keyed by task.
+// TaskOverrides holds one override per task that has one, keyed by task.
 type TaskOverrides map[Task]TaskOverride
 
 // The bounds an override is held to. The defaults are today's behaviour, so an
@@ -53,7 +53,8 @@ const (
 
 // TaskThinkingLevels are the levels an override may name: the four every
 // adapter maps (docs/reference/ai-thinking.md), the same words a site floor
-// takes.
+// takes. The contract's AiTaskOverride mirrors these and the bounds above,
+// held by gates/airoutingschema_test.go.
 var TaskThinkingLevels = []string{effortMinimal, effortLow, effortMedium, effortHigh}
 
 // TaskOverridesSetting stores the overrides installation-wide, under the same
@@ -90,13 +91,10 @@ func (o TaskOverride) validate(task string, decides bool) error {
 		errs = append(errs, invalidAt(task+".thinking",
 			fmt.Sprintf("must be one of %s. You wrote %q.", strings.Join(TaskThinkingLevels, ", "), o.Thinking)))
 	}
-	if o.DecisionTimeoutMs != 0 {
-		switch {
-		case !decides:
-			errs = append(errs, invalidAt(task+".decision_timeout_ms", "applies only to a task that asks a decision model first; remove it"))
-		default:
-			errs = append(errs, withinBounds(task+".decision_timeout_ms", o.DecisionTimeoutMs, MinDecisionTimeout, MaxDecisionTimeout))
-		}
+	if o.DecisionTimeoutMs != 0 && !decides {
+		errs = append(errs, invalidAt(task+".decision_timeout_ms", "applies only to a task that asks a decision model first; remove it"))
+	} else if o.DecisionTimeoutMs != 0 {
+		errs = append(errs, withinBounds(task+".decision_timeout_ms", o.DecisionTimeoutMs, MinDecisionTimeout, MaxDecisionTimeout))
 	}
 	if o.AttemptTimeoutMs != 0 {
 		errs = append(errs, withinBounds(task+".attempt_timeout_ms", o.AttemptTimeoutMs, MinAttemptTimeout, MaxAttemptTimeout))

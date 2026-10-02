@@ -80,17 +80,7 @@ func withTaskOverrides(rows []crmcontracts.AiFeatureRoute, overrides TaskOverrid
 		if !ok || o == (TaskOverride{}) {
 			continue
 		}
-		wire := crmcontracts.AiTaskOverride{}
-		if o.Thinking != "" {
-			level := crmcontracts.AiTaskOverrideThinking(o.Thinking)
-			wire.Thinking = &level
-		}
-		if o.DecisionTimeoutMs != 0 {
-			wire.DecisionTimeoutMs = &o.DecisionTimeoutMs
-		}
-		if o.AttemptTimeoutMs != 0 {
-			wire.AttemptTimeoutMs = &o.AttemptTimeoutMs
-		}
+		wire := o.Wire()
 		rows[i].Overrides = &wire
 	}
 }
