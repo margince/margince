@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { components } from "../api/schema";
-import { useCan, useCanUpsert, useCanWrite } from "../app/capability";
+import { useCan, useCanWrite } from "../app/capability";
 import { Badge, Button, EmptyState } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
@@ -39,11 +39,6 @@ import {
 import { providerUsage, useRouting } from "./ai-routing-query";
 import { PanelTitle } from "./ai-terms";
 import { problemMessageOf, QueryGate } from "./common";
-import {
-  RefreshModelPricesButton,
-  RefreshSummary,
-  useRefreshModelPrices,
-} from "./rate-catalogue-refresh";
 import "./ai-settings.css";
 
 // The vendor credentials this installation calls models with.
@@ -78,12 +73,6 @@ export function AiProviderKeysCard() {
   // The provider whose sheet is open, by name so it follows the list as a key
   // is saved rather than holding a copy that goes stale.
   const [opened, setOpened] = useState<string | null>(null);
-  const refresh = useRefreshModelPrices();
-  // The refresh reads the sheet before it writes it, so the server asks for
-  // both grants; a writer without the read would press it into a refusal.
-  const canReadPrices = useCan("ai_model_rate", "read");
-  const canWritePrices = useCanUpsert("ai_model_rate");
-  const canPrice = canReadPrices && canWritePrices;
 
   if (!canSee) {
     // Withheld, not absent. An absent key card would say this installation has
@@ -111,16 +100,12 @@ export function AiProviderKeysCard() {
       title={
         <PanelTitle term="provider">{t("aiProviderKeys.title")}</PanelTitle>
       }
-      titleAction={
-        canPrice ? <RefreshModelPricesButton refresh={refresh} /> : undefined
-      }
     >
       <QueryGate query={query} pendingLabel={t("aiProviderKeys.title")}>
         {(list) => {
           const openStatus = list.providers.find((p) => p.provider === opened);
           return (
             <>
-              <RefreshSummary refresh={refresh} />
               {list.providers.map((p) => (
                 <ProviderRow
                   key={p.provider}
@@ -133,7 +118,6 @@ export function AiProviderKeysCard() {
                 <ProviderSheet
                   status={openStatus}
                   usage={usage?.get(openStatus.provider)}
-                  refresh={refresh}
                   connection={
                     <>
                       <ProviderConnection

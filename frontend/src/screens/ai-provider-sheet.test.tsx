@@ -109,18 +109,27 @@ function backend(
         models: [{ id: "gemini-4-pro" }],
       });
     }
-    if (path.endsWith("/ai-model-rates/refresh")) {
+    if (path.endsWith("/ai/price-sync")) {
       return jsonResponse({
-        providers: [
-          {
-            provider: "gemini",
-            outcome: "not_available",
-            updated: 0,
-            unchanged: 0,
-            models: [],
-            unlisted: [],
+        auto_sync: true,
+        last_run: {
+          ran_at: "2026-10-02T10:00:00Z",
+          trigger: "scheduled",
+          report: {
+            providers: [
+              {
+                provider: "gemini",
+                outcome: "unchanged",
+                updated: 0,
+                unchanged: 0,
+                added: 0,
+                kept: 1,
+                models: [],
+                unlisted: [],
+              },
+            ],
           },
-        ],
+        },
       });
     }
     if (path.endsWith("/ai-model-rates") && req.method === "POST") {
@@ -395,14 +404,13 @@ describe("a provider's sheet", () => {
     ).toBeTruthy();
   });
 
-  it("says a refresh left this vendor to be priced by hand", async () => {
+  it("says what the last price sync did for this vendor", async () => {
     const user = userEvent.setup();
     mount();
-    await user.click(
-      await screen.findByRole("button", { name: "Refresh model prices" }),
-    );
     const sheet = await open(user, "gemini");
-    expect(await within(sheet).findByText("Set by hand")).toBeTruthy();
+    expect(
+      await within(sheet).findByText("1 hand-set price kept"),
+    ).toBeTruthy();
   });
 
   it("offers a reader who may not write the sheet no verb at all", async () => {
@@ -413,17 +421,6 @@ describe("a provider's sheet", () => {
     expect(
       within(sheet).queryByRole("button", { name: /Add price|Edit|Remove/ }),
     ).toBeNull();
-    expect(
-      screen.queryByRole("button", { name: "Refresh model prices" }),
-    ).toBeNull();
-  });
-
-  // The refresh reads the sheet before writing it, so a write grant without
-  // the read would press the button into a refusal.
-  it("offers no refresh to a writer who may not read the sheet", async () => {
-    const user = userEvent.setup();
-    mount({ ai_routing: ["read"], ai_model_rate: ["create", "update"] });
-    await open(user, "gemini");
     expect(
       screen.queryByRole("button", { name: "Refresh model prices" }),
     ).toBeNull();

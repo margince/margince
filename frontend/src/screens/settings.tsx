@@ -68,6 +68,7 @@ import { LOCALES, type Locale, localeNameKey, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { AcquisitionSourcesCard } from "./acquisitionsources";
 import { AiBudgetCard } from "./ai-admin";
+import { ModelPricesCard } from "./ai-price-sync";
 import { AiProviderKeysCard } from "./ai-provider-keys";
 import { AiRoutingCard } from "./ai-routing";
 import { AiTasksCard } from "./ai-tasks";
@@ -330,6 +331,8 @@ export function tabContent(id: SettingsPageId): ReactNode {
               the thing an operator came here to fix. */}
           <ProvidersStat />
           <AiProviderKeysCard />
+          {/* The prices those vendors charge, below the keys that decide which vendors are priced. */}
+          <ModelPricesCard />
           <AiRoutingCard />
           <AiTasksCard />
         </>
