@@ -14,6 +14,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -268,8 +269,10 @@ func wire(a row, now time.Time) crmcontracts.Approval {
 		out.TargetEntityId = &v
 	}
 	if len(a.ProposedChange) > 0 {
-		var change map[string]any
-		if json.Unmarshal(a.ProposedChange, &change) == nil {
+		// diffhash's decode, not a plain Unmarshal: a reader shown an amount
+		// rounded to the nearest float64 would be shown a change nobody proposed,
+		// and this is the value they approve from.
+		if change, err := diffhash.DecodeObject(a.ProposedChange); err == nil {
 			out.ProposedChange = &change
 		}
 	}
