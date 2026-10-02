@@ -586,7 +586,7 @@ def main():
         for path in sys.argv[2:]:
             if not parse_scenario(path).get("judge", []):
                 continue
-            judge.configured()
+            judge.ready()
             break
         return 0
 

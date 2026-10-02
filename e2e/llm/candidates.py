@@ -57,3 +57,21 @@ def resolve(candidate, via, model="", folder=""):
         candidate, via, chosen, filed, route["wire"], base_url, route["key_env"],
         row["effort"], route.get("routing"),
     )
+
+
+def judge_route(via, model):
+    """The judge's route: a canonical model id in, the id this route's wire names out.
+
+    The id the judge's verdicts are recorded under stays the canonical one
+    whatever the route, so a corpus recorded over the CLI replays over a key.
+    """
+    routes = table()["judge"]["judge_routes"]
+    if via not in routes:
+        raise RouteError(f"E2E_LLM_JUDGE_VIA={via!r} is not one of: cli, {', '.join(sorted(routes))}")
+    route = routes[via]
+    canonical = routes["api"]["model"]
+    wire_model = route["model"] if model == canonical else model
+    base_url = route.get("base_url", "")
+    if via == "openrouter":
+        base_url = os.environ.get("OPENAI_COMPATIBLE_BASE_URL") or _OPENROUTER
+    return Route("judge", via, wire_model, "", route["wire"], base_url, route["key_env"], "n/a", None)
