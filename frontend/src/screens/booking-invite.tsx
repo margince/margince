@@ -14,7 +14,6 @@ import { useT } from "../i18n";
 import { useBookingCalendar } from "./booking-calendar-state";
 import {
   BookingBlocked,
-  BookingLinkSummary,
   type BookingMode,
   BookingPicker,
   type BookingSlot,
@@ -116,10 +115,10 @@ export function BookingInviteScreen({
         ]}
       />
       <div className="book-compose">
+        {/* Every mode keeps the week on screen, a personal link as the times
+            the guest will choose from, so changing mode never reflows the page. */}
         {settled && !ready ? (
           <BookingBlocked />
-        ) : mode === "link" ? (
-          <BookingLinkSummary name={name ?? t("scheduling.guest")} />
         ) : (
           <BookingPicker
             mode={mode}

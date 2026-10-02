@@ -89,6 +89,12 @@ export function weekDays(
     });
 }
 
+const PICKER_TITLE = {
+  propose: "scheduling.pickOffer",
+  invite: "scheduling.pickAgreed",
+  link: "scheduling.openTimes",
+} as const;
+
 export function BookingPicker({
   mode,
   configured,
@@ -105,7 +111,7 @@ export function BookingPicker({
   picks,
   onPick,
 }: Readonly<{
-  mode: Exclude<BookingMode, "link">;
+  mode: BookingMode;
   configured: boolean;
   profile: components["schemas"]["SchedulingProfile"] | undefined;
   hours: ReturnType<typeof useWorkingHours>;
@@ -146,11 +152,7 @@ export function BookingPicker({
     onSearchAhead(false);
   };
   return (
-    <Panel
-      title={t(
-        mode === "invite" ? "scheduling.pickAgreed" : "scheduling.pickOffer",
-      )}
-    >
+    <Panel title={t(PICKER_TITLE[mode])}>
       <PanelBody className="book-picker">
         <div className="book-picker-bar">
           <IconAction
@@ -200,8 +202,10 @@ export function BookingPicker({
                     locale,
                     zone,
                   )}
-                  selected={picks.map((pick) => pick.start)}
-                  onSelect={onPick}
+                  selected={
+                    mode === "link" ? [] : picks.map((pick) => pick.start)
+                  }
+                  onSelect={mode === "link" ? undefined : onPick}
                   emptyDay={t("scheduling.noFreeTime")}
                 />
                 {value.slots.length === 0 && searchAhead && (
@@ -229,21 +233,6 @@ export function BookingPicker({
           </QueryGate>
         )}
         <ErrorLine error={hours.error} />
-      </PanelBody>
-    </Panel>
-  );
-}
-
-export function BookingLinkSummary({ name }: Readonly<{ name: string }>) {
-  const t = useT();
-  return (
-    <Panel title={t("scheduling.guestPicks", { name })}>
-      <PanelBody className="book-picker">
-        <p>{t("scheduling.guestPicksHelp")}</p>
-        <p className="t-caption">{t("scheduling.linkHelp")}</p>
-        <a href="#/settings/meetings" target="_blank" rel="noreferrer">
-          {t("scheduling.openSettings")}
-        </a>
       </PanelBody>
     </Panel>
   );

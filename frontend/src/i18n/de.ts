@@ -240,9 +240,10 @@ export const de = {
     "Dein Kontakt wählt eine freie Zeit. Der Link bucht einmal und läuft nach 7 Tagen ab.",
   "scheduling.pickOffer": "Wähle zwei oder drei Zeiten zum Anbieten",
   "scheduling.pickAgreed": "Wähle die vereinbarte Zeit",
+  "scheduling.openTimes": "Deine freien Zeiten",
   "scheduling.guestPicks": "{name} wählt die Zeit",
-  "scheduling.guestPicksHelp":
-    "Du sendest einen persönlichen Link. Dein Kontakt sieht deine freien Zeiten und bucht eine.",
+  "scheduling.guestPicksOne":
+    "Dein Kontakt bucht eine der freien Zeiten im Kalender.",
   "scheduling.guest": "Dein Gast",
   "scheduling.length": "Dauer",
   "scheduling.minutes_one": "{count} Min.",

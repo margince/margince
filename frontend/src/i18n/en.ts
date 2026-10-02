@@ -238,9 +238,10 @@ export const en = {
     "They pick any open time. The link books once and expires in 7 days.",
   "scheduling.pickOffer": "Pick two or three times to offer",
   "scheduling.pickAgreed": "Pick the agreed time",
+  "scheduling.openTimes": "Your open times",
   "scheduling.guestPicks": "{name} picks the time",
-  "scheduling.guestPicksHelp":
-    "You send one personal link. They see your open times and book one.",
+  "scheduling.guestPicksOne":
+    "They book one of the open times in the calendar.",
   "scheduling.guest": "Your guest",
   "scheduling.length": "Length",
   "scheduling.minutes_one": "{count} min",

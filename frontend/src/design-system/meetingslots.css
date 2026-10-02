@@ -25,3 +25,15 @@
 .meeting-week-empty {
   text-align: center;
 }
+
+/* A time in a preview week takes a slot button's footprint, so a week that
+   turns from pickable to preview keeps its height; without the button's fill
+   and shadow it does not offer itself to be pressed. */
+.meeting-week-time {
+  display: grid;
+  place-items: center;
+  min-block-size: var(--controlHeight);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-control);
+  color: var(--textSecondary);
+}

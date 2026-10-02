@@ -227,20 +227,27 @@ it("shows the calendar setup step instead of times when no calendar can send inv
   expect(paths.some((path) => path.endsWith("/availability"))).toBe(false);
 });
 
-it("lets the guest pick for a personal link, without asking for times", async () => {
+it("lets the guest pick for a personal link, showing the open times without asking for any", async () => {
   const user = userEvent.setup();
   const { proposals } = mount();
+  const slot = slotName(bookingSlots[0].start);
+  await user.click(await screen.findByRole("button", { name: slot }));
   await user.click(
-    await screen.findByRole("radio", { name: /Share a personal link/ }),
+    screen.getByRole("radio", { name: /Share a personal link/ }),
   );
-  expect(
-    screen.getByRole("heading", { name: "Nina Weber picks the time" }),
-  ).toBeTruthy();
+  // The same week stays on screen as the times the guest will choose from,
+  // and none of them is a time the host can pick.
+  expect(screen.getByRole("heading", { name: "Your open times" })).toBeTruthy();
+  expect(screen.getByText(slot)).toBeTruthy();
+  expect(screen.queryByRole("button", { name: slot })).toBeNull();
+  expect(screen.getByText("Nina Weber picks the time")).toBeTruthy();
+  // The link books a meeting of the length chosen here.
+  await user.click(screen.getByRole("button", { name: "45 min" }));
   await user.click(
     screen.getByRole("button", { name: "Create link and review email" }),
   );
   await waitFor(() => expect(proposals).toHaveLength(1));
-  expect(proposals[0]).toMatchObject({ options: [] });
+  expect(proposals[0]).toMatchObject({ options: [], duration_minutes: 45 });
 });
 
 it("stops at the booking horizon when paging forward by week", async () => {
