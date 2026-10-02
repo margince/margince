@@ -65,6 +65,12 @@ class MainTest(unittest.TestCase):
             code, out = self.run_main(server.url)
         self.assertEqual((code, "no hits" in out), (3, True))
 
+    def test_json_of_the_wrong_shape_is_a_harness_fault_not_lexical(self):
+        for body in ("[]", '{"data": []}', '{"data": {"notes": 5, "hits": [1]}}'):
+            with FakeMcp(SEARCH, replies={"search_context": (body, False)}) as server:
+                code, _out = self.run_main(server.url)
+            self.assertEqual(code, 3, body)
+
     def test_a_lexical_search_is_exit_1_with_its_reason(self):
         with FakeMcp(SEARCH, replies={"search_context": reply(0, ["semantic_ranking_degraded_to_lexical"])}) as server:
             code, out = self.run_main(server.url)

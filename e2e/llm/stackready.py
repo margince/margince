@@ -36,8 +36,12 @@ def semantic_problem(session):
     text, is_error = session.call("search_context", {"query": _PROBE, "limit": 5})
     if is_error:
         return f"search_context refused the probe: {text[:200]}", False
-    data = json.loads(text).get("data") or {}
-    if any(note.get("code") == _DEGRADED for note in data.get("notes") or ()):
+    reply = json.loads(text)
+    data = reply.get("data") if isinstance(reply, dict) else None
+    notes = data.get("notes") or [] if isinstance(data, dict) else None
+    if not isinstance(notes, list):
+        return f"search_context answered in a shape the probe cannot read: {text[:200]}", False
+    if any(isinstance(note, dict) and note.get("code") == _DEGRADED for note in notes):
         return "search_context is ranking by word overlap alone (lexical): no embedding model serves it", True
     if not data.get("hits"):
         return "search_context answered with no hits: nothing is indexed yet", False
@@ -68,4 +72,10 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    # A crash exits 1, which the lane would read as a confirmed lexical search;
+    # whatever went wrong, it is a probe that could not be run.
+    try:
+        sys.exit(main())
+    except Exception as crash:  # noqa: BLE001 — the backstop is the point
+        print(f"the search probe crashed: {crash!r}")
+        sys.exit(3)

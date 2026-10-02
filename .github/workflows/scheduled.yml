@@ -488,6 +488,9 @@ jobs:
           # No embedding key reaches this runner, so search_context ranks by
           # word overlap; the verdicts it would write say `search: lexical`.
           E2E_LLM_ALLOW_LEXICAL: "1"
+          # Verdicts go to a directory this run alone writes, so the upload
+          # below can never carry the committed ones in its place.
+          E2E_LLM_VERDICTS: ${{ runner.temp }}/e2e-llm-verdicts
         run: |
           set -o pipefail
           if make e2e-llm 2>&1 | tee llm.log; then
@@ -518,14 +521,13 @@ jobs:
           # seconds in. The absence of transcripts is itself the finding.
           if-no-files-found: error
       # The verdicts each say how they were measured (route, search mode), which
-      # the transcripts do not. A separate step: the directory is tracked, so
-      # sharing the step above would make its empty-records error unreachable.
+      # the transcripts do not; a lane that stopped first leaves none, so warn.
       - name: Keep the run verdicts
         if: always() && steps.funded.outputs.configured == 'yes'
         uses: ./.github/actions/upload-artifact-retried
         with:
           name: e2e-llm-verdicts
-          path: backend/internal/compose/aicert/records/mcp_e2e/
+          path: ${{ runner.temp }}/e2e-llm-verdicts/
           retention-days: 30
           if-no-files-found: warn
 
