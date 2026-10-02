@@ -56,6 +56,7 @@ import tempfile
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+import transcript  # noqa: E402  — the one writer of the shape check.py reads
 import check  # the judge itself, imported after its directory is on the path
 
 
@@ -81,17 +82,15 @@ def _tool_calls(scenario):
     reported as a FALSE RED for a reason that is not in the prose.
     """
     calls = [
-        {"type": "tool_use", "name": "mcp__margince__" + check.alternatives(entry)[0], "input": {}}
-        for entry in scenario.get("must_call", [])
+        (f"probe{n}", check.alternatives(entry)[0], {})
+        for n, entry in enumerate(scenario.get("must_call", []))
     ]
     for entry in scenario.get("must_call_with", []):
         target, _, value = check.alternatives(entry)[0].partition("=")
         tool, _, argument = target.partition(".")
         if not tool or not argument:
             continue
-        calls.append(
-            {"type": "tool_use", "name": "mcp__margince__" + tool, "input": {argument: value}}
-        )
+        calls.append((f"probe{len(calls)}", tool, {argument: value}))
     return calls
 
 
@@ -107,19 +106,11 @@ def _transcript(scenario, answer):
     handle = tempfile.NamedTemporaryFile(
         "w", suffix=".jsonl", delete=False, dir=tempfile.gettempdir(), encoding="utf-8"
     )
-    with handle as out:
-        if calls:
-            out.write(json.dumps({"type": "assistant", "message": {"content": calls}}) + "\n")
-        out.write(
-            json.dumps(
-                {"type": "assistant", "message": {"content": [{"type": "text", "text": answer}]}}
-            )
-            + "\n"
-        )
-        out.write(
-            json.dumps({"type": "result", "subtype": "success", "is_error": False, "result": answer})
-            + "\n"
-        )
+    handle.close()
+    with transcript.Transcript(handle.name) as out:
+        out.assistant("", calls)
+        out.assistant(answer)
+        out.finish(False, answer, 1)
     return handle.name
 
 
