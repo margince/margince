@@ -99,7 +99,12 @@ func (s *Sink) joinThread(
 	if err != nil || len(neighbours) == 0 {
 		return err
 	}
-	return s.mergeLinkedThreads(ctx, tx, seat, id, neighbours, created)
+	if err := s.mergeLinkedThreads(ctx, tx, seat, id, neighbours, created); err != nil {
+		return err
+	}
+	// Last, because it asks what thread this message is in and only the merge
+	// above knows the answer.
+	return s.holdFromJoinedThreadTx(ctx, tx, id)
 }
 
 // mergeLockStatement is ONE workspace-wide lock for every thread merge, spelled
