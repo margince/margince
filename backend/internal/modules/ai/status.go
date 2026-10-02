@@ -91,34 +91,6 @@ func (s *AdminStore) PreviewBudget(ctx context.Context, change BudgetChange) (cr
 	return crmcontracts.AiBudgetPreview{Current: current, Proposed: proposed, Features: visibleFeatureRoutes(ctx, cfg, proposed.Band), DeferredWork: deferred}, nil
 }
 
-// PreviewRouting compares both bindings under the same current allowance band.
-func (s *AdminStore) PreviewRouting(ctx context.Context, next RoutingConfig) (crmcontracts.AiRoutingPreview, error) {
-	if err := auth.Require(ctx, routingSettingsObject, principal.ActionRead); err != nil {
-		return crmcontracts.AiRoutingPreview{}, err
-	}
-	if err := auth.Require(ctx, routingSettingsObject, principal.ActionUpdate); err != nil {
-		return crmcontracts.AiRoutingPreview{}, err
-	}
-	if err := auth.Require(ctx, budgetObject, principal.ActionRead); err != nil {
-		return crmcontracts.AiRoutingPreview{}, err
-	}
-	budget, cfg, err := s.observed(ctx)
-	if err != nil {
-		return crmcontracts.AiRoutingPreview{}, err
-	}
-	// Judged as the write would store it — settled against the stored document,
-	// which holds the providers an old client never sends — or a binding the
-	// save accepts could preview as unhosted or as a residency breach.
-	draft, _, err := next.replacing(cfg)
-	if err != nil {
-		return crmcontracts.AiRoutingPreview{}, err
-	}
-	if err := validateStoredRouting(draft); err != nil {
-		return crmcontracts.AiRoutingPreview{}, settings.InvalidValue{Setting: RoutingKey, Code: settings.CodeInvalidValue, Reason: err.Error()}
-	}
-	return crmcontracts.AiRoutingPreview{CurrentVersion: cfg.Revision(), Features: compareFeatureRoutes(cfg, draft, budget.Band, budget.Band), UnusedTiers: unusedTiers(draft)}, nil
-}
-
 // Budget-only editors can preview their policy without gaining diagnostics or
 // routing access. Omitted readings remain absent rather than being fetched via
 // the machinery-only settings path.

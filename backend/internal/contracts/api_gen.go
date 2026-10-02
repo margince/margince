@@ -847,6 +847,135 @@ func (e AiModelRateSource) Valid() bool {
 	}
 }
 
+// Defines values for AiOpenRouterProviderDataCollection.
+const (
+	AiOpenRouterProviderDataCollectionAllow AiOpenRouterProviderDataCollection = "allow"
+	AiOpenRouterProviderDataCollectionDeny  AiOpenRouterProviderDataCollection = "deny"
+)
+
+// Valid indicates whether the value is a known member of the AiOpenRouterProviderDataCollection enum.
+func (e AiOpenRouterProviderDataCollection) Valid() bool {
+	switch e {
+	case AiOpenRouterProviderDataCollectionAllow:
+		return true
+	case AiOpenRouterProviderDataCollectionDeny:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AiOpenRouterProviderSort0.
+const (
+	AiOpenRouterProviderSort0Latency    AiOpenRouterProviderSort0 = "latency"
+	AiOpenRouterProviderSort0Price      AiOpenRouterProviderSort0 = "price"
+	AiOpenRouterProviderSort0Throughput AiOpenRouterProviderSort0 = "throughput"
+)
+
+// Valid indicates whether the value is a known member of the AiOpenRouterProviderSort0 enum.
+func (e AiOpenRouterProviderSort0) Valid() bool {
+	switch e {
+	case AiOpenRouterProviderSort0Latency:
+		return true
+	case AiOpenRouterProviderSort0Price:
+		return true
+	case AiOpenRouterProviderSort0Throughput:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AiOpenRouterReasoningEffort.
+const (
+	AiOpenRouterReasoningEffortHigh    AiOpenRouterReasoningEffort = "high"
+	AiOpenRouterReasoningEffortLow     AiOpenRouterReasoningEffort = "low"
+	AiOpenRouterReasoningEffortMax     AiOpenRouterReasoningEffort = "max"
+	AiOpenRouterReasoningEffortMedium  AiOpenRouterReasoningEffort = "medium"
+	AiOpenRouterReasoningEffortMinimal AiOpenRouterReasoningEffort = "minimal"
+	AiOpenRouterReasoningEffortNone    AiOpenRouterReasoningEffort = "none"
+	AiOpenRouterReasoningEffortXhigh   AiOpenRouterReasoningEffort = "xhigh"
+)
+
+// Valid indicates whether the value is a known member of the AiOpenRouterReasoningEffort enum.
+func (e AiOpenRouterReasoningEffort) Valid() bool {
+	switch e {
+	case AiOpenRouterReasoningEffortHigh:
+		return true
+	case AiOpenRouterReasoningEffortLow:
+		return true
+	case AiOpenRouterReasoningEffortMax:
+		return true
+	case AiOpenRouterReasoningEffortMedium:
+		return true
+	case AiOpenRouterReasoningEffortMinimal:
+		return true
+	case AiOpenRouterReasoningEffortNone:
+		return true
+	case AiOpenRouterReasoningEffortXhigh:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AiOpenRouterSortBy.
+const (
+	AiOpenRouterSortByLatency    AiOpenRouterSortBy = "latency"
+	AiOpenRouterSortByPrice      AiOpenRouterSortBy = "price"
+	AiOpenRouterSortByThroughput AiOpenRouterSortBy = "throughput"
+)
+
+// Valid indicates whether the value is a known member of the AiOpenRouterSortBy enum.
+func (e AiOpenRouterSortBy) Valid() bool {
+	switch e {
+	case AiOpenRouterSortByLatency:
+		return true
+	case AiOpenRouterSortByPrice:
+		return true
+	case AiOpenRouterSortByThroughput:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AiOpenRouterSortPartition.
+const (
+	AiOpenRouterSortPartitionModel AiOpenRouterSortPartition = "model"
+	AiOpenRouterSortPartitionNone  AiOpenRouterSortPartition = "none"
+)
+
+// Valid indicates whether the value is a known member of the AiOpenRouterSortPartition enum.
+func (e AiOpenRouterSortPartition) Valid() bool {
+	switch e {
+	case AiOpenRouterSortPartitionModel:
+		return true
+	case AiOpenRouterSortPartitionNone:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AiOpenRouterUpstreamDataCollection.
+const (
+	AiOpenRouterUpstreamDataCollectionAllow AiOpenRouterUpstreamDataCollection = "allow"
+	AiOpenRouterUpstreamDataCollectionDeny  AiOpenRouterUpstreamDataCollection = "deny"
+)
+
+// Valid indicates whether the value is a known member of the AiOpenRouterUpstreamDataCollection enum.
+func (e AiOpenRouterUpstreamDataCollection) Valid() bool {
+	switch e {
+	case AiOpenRouterUpstreamDataCollectionAllow:
+		return true
+	case AiOpenRouterUpstreamDataCollectionDeny:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AiPriceSyncRunTrigger.
 const (
 	AiPriceSyncRunTriggerManual    AiPriceSyncRunTrigger = "manual"
@@ -21756,13 +21885,18 @@ type AiEmbeddingsBinding struct {
 	// | openai | gemini | gemini_vertex. The credential is never part of this document.
 	Provider string `json:"provider"`
 
-	// Routing How an openai_compatible binding pointed at OpenRouter serves its model; refused on any
-	// other binding, and on the embeddings lane every preference but only, ignore and
-	// allow_fallbacks is refused. Absent means the product default (reliability over price);
-	// an empty object means no preferences (the broker's own price-weighted routing). The two
-	// are different choices and a client must not turn one into the other. `only`, `ignore`
-	// and `allow_fallbacks` belong to the provider (`AiOpenRouterUpstream`): on a tier they
-	// are accepted only when equal to the provider's, or lifted onto a provider that has none.
+	// Routing How an openai_compatible binding pointed at OpenRouter serves its model, in OpenRouter's
+	// own request shape: `provider` (which hosts and how) and `reasoning` (how hard the model
+	// thinks). Refused on any other binding; on the embeddings lane only provider.only,
+	// provider.ignore and provider.allow_fallbacks are accepted. Absent means the product
+	// default (reliability over price); an empty object means no preferences (the broker's own
+	// price-weighted routing). The two are different choices and a client must not turn one
+	// into the other. The keys that say which hosts may read a request (only, ignore,
+	// allow_fallbacks, zdr, data_collection, enforce_distillable_text) belong to the provider
+	// (`AiOpenRouterUpstream`): on a tier they are accepted only when equal to the provider's,
+	// and refused otherwise, each by its path. `GET /ai/routing/schema` describes every field.
+	// The flat keys are the older spelling, still read; a response writes `provider` and
+	// `reasoning`.
 	Routing *AiOpenRouterRouting `json:"routing,omitempty"`
 
 	// ThinkingLevel How deeply a gemini tier thinks when the request names no level of its own.
@@ -21804,6 +21938,17 @@ type AiFeatureRoute struct {
 	// Summary What the task does, in plain words.
 	Summary *string `json:"summary,omitempty"`
 	Task    string  `json:"task"`
+}
+
+// AiFieldError One refused input, the shape a 422's details.errors carries.
+type AiFieldError struct {
+	Code string `json:"code"`
+
+	// Field The path of the refused key.
+	Field string `json:"field"`
+
+	// Message What is wrong and what to write instead.
+	Message string `json:"message"`
 }
 
 // AiHealth defines model for AiHealth.
@@ -21894,38 +22039,169 @@ type AiModelRateRefreshReport struct {
 	Providers []AiModelRateProviderRefresh `json:"providers"`
 }
 
-// AiOpenRouterRouting How an openai_compatible binding pointed at OpenRouter serves its model; refused on any
-// other binding, and on the embeddings lane every preference but only, ignore and
-// allow_fallbacks is refused. Absent means the product default (reliability over price);
-// an empty object means no preferences (the broker's own price-weighted routing). The two
-// are different choices and a client must not turn one into the other. `only`, `ignore`
-// and `allow_fallbacks` belong to the provider (`AiOpenRouterUpstream`): on a tier they
-// are accepted only when equal to the provider's, or lifted onto a provider that has none.
-type AiOpenRouterRouting struct {
-	// AllowFallbacks Override the broker's host fallback. False is a real choice, distinct from absent.
+// AiOpenRouterPercentiles defines model for AiOpenRouterPercentiles.
+type AiOpenRouterPercentiles struct {
+	P50 *float64 `json:"p50,omitempty"`
+	P75 *float64 `json:"p75,omitempty"`
+	P90 *float64 `json:"p90,omitempty"`
+	P99 *float64 `json:"p99,omitempty"`
+}
+
+// AiOpenRouterPrice The most a request may cost, in USD per million prompt or completion tokens, or per request or image.
+type AiOpenRouterPrice struct {
+	Completion *float64 `json:"completion,omitempty"`
+	Image      *float64 `json:"image,omitempty"`
+	Prompt     *float64 `json:"prompt,omitempty"`
+	Request    *float64 `json:"request,omitempty"`
+}
+
+// AiOpenRouterProvider OpenRouter's `provider` request object, sent as written. Every key is optional; GET /ai/routing/schema documents each.
+type AiOpenRouterProvider struct {
+	// AllowFallbacks Whether the broker may switch hosts on failure. Set on the provider.
 	AllowFallbacks *bool `json:"allow_fallbacks,omitempty"`
 
-	// Ignore Upstream slugs excluded; a hard filter.
+	// DataCollection Whether hosts that may store prompts are allowed. Set on the provider.
+	DataCollection *AiOpenRouterProviderDataCollection `json:"data_collection,omitempty"`
+
+	// EnforceDistillableText Only models whose output may train other models. Set on the provider.
+	EnforceDistillableText *bool `json:"enforce_distillable_text,omitempty"`
+
+	// Ignore Upstream slugs excluded; a hard filter. Set on the provider.
 	Ignore *[]string `json:"ignore,omitempty"`
 
-	// Only Upstream slugs allowed; a hard filter.
+	// MaxPrice The most a request may cost, in USD per million prompt or completion tokens, or per request or image.
+	MaxPrice *AiOpenRouterPrice `json:"max_price,omitempty"`
+
+	// Only Upstream slugs allowed; a hard filter. Set on the provider.
 	Only *[]string `json:"only,omitempty"`
 
-	// PreferredMaxLatencyP90 Seconds; hosts above it are deprioritized, never removed. Omit to leave unset.
-	PreferredMaxLatencyP90 *float64 `json:"preferred_max_latency_p90,omitempty"`
+	// Order Host slugs to try first, in this order.
+	Order *[]string `json:"order,omitempty"`
+
+	// PreferredMaxLatency Seconds, one number or per percentile; a soft preference.
+	PreferredMaxLatency *AiOpenRouterProvider_PreferredMaxLatency `json:"preferred_max_latency,omitempty"`
+
+	// PreferredMinThroughput Tokens per second, one number or per percentile; a soft preference.
+	PreferredMinThroughput *AiOpenRouterProvider_PreferredMinThroughput `json:"preferred_min_throughput,omitempty"`
 
 	// Quantizations Serving precisions allowed (bf16, fp16, fp8, fp4, int8 …); a hard filter.
 	Quantizations *[]string `json:"quantizations,omitempty"`
 
-	// ReasoningEffort none | minimal | low | medium | high | xhigh | max. Unset leaves each host its own default.
-	ReasoningEffort *string `json:"reasoning_effort,omitempty"`
-
-	// RequireParameters Keep the request off hosts that lack any parameter it carries. False is a real choice, distinct from absent.
+	// RequireParameters Keep the request off hosts that lack any parameter it carries.
 	RequireParameters *bool `json:"require_parameters,omitempty"`
 
-	// Sort price | throughput | latency. Reorders rather than filters, and disables load balancing.
+	// Sort price | throughput | latency, or {by, partition}. Reorders rather than filters, and disables load balancing.
+	Sort *AiOpenRouterProvider_Sort `json:"sort,omitempty"`
+
+	// Zdr Zero data retention only. Set on the provider.
+	Zdr *bool `json:"zdr,omitempty"`
+}
+
+// AiOpenRouterProviderDataCollection Whether hosts that may store prompts are allowed. Set on the provider.
+type AiOpenRouterProviderDataCollection string
+
+// AiOpenRouterProviderPreferredMaxLatency0 defines model for .
+type AiOpenRouterProviderPreferredMaxLatency0 = float64
+
+// AiOpenRouterProvider_PreferredMaxLatency Seconds, one number or per percentile; a soft preference.
+type AiOpenRouterProvider_PreferredMaxLatency struct {
+	union json.RawMessage
+}
+
+// AiOpenRouterProviderPreferredMinThroughput0 defines model for .
+type AiOpenRouterProviderPreferredMinThroughput0 = float64
+
+// AiOpenRouterProvider_PreferredMinThroughput Tokens per second, one number or per percentile; a soft preference.
+type AiOpenRouterProvider_PreferredMinThroughput struct {
+	union json.RawMessage
+}
+
+// AiOpenRouterProviderSort0 defines model for AiOpenRouterProvider.Sort.0.
+type AiOpenRouterProviderSort0 string
+
+// AiOpenRouterProvider_Sort price | throughput | latency, or {by, partition}. Reorders rather than filters, and disables load balancing.
+type AiOpenRouterProvider_Sort struct {
+	union json.RawMessage
+}
+
+// AiOpenRouterReasoning OpenRouter's `reasoning` request object. effort and max_tokens are two spellings of one budget; write one.
+type AiOpenRouterReasoning struct {
+	Effort  *AiOpenRouterReasoningEffort `json:"effort,omitempty"`
+	Enabled *bool                        `json:"enabled,omitempty"`
+
+	// Exclude Think, but leave the reasoning out of the answer.
+	Exclude   *bool `json:"exclude,omitempty"`
+	MaxTokens *int  `json:"max_tokens,omitempty"`
+}
+
+// AiOpenRouterReasoningEffort defines model for AiOpenRouterReasoning.Effort.
+type AiOpenRouterReasoningEffort string
+
+// AiOpenRouterRouting How an openai_compatible binding pointed at OpenRouter serves its model, in OpenRouter's
+// own request shape: `provider` (which hosts and how) and `reasoning` (how hard the model
+// thinks). Refused on any other binding; on the embeddings lane only provider.only,
+// provider.ignore and provider.allow_fallbacks are accepted. Absent means the product
+// default (reliability over price); an empty object means no preferences (the broker's own
+// price-weighted routing). The two are different choices and a client must not turn one
+// into the other. The keys that say which hosts may read a request (only, ignore,
+// allow_fallbacks, zdr, data_collection, enforce_distillable_text) belong to the provider
+// (`AiOpenRouterUpstream`): on a tier they are accepted only when equal to the provider's,
+// and refused otherwise, each by its path. `GET /ai/routing/schema` describes every field.
+// The flat keys are the older spelling, still read; a response writes `provider` and
+// `reasoning`.
+type AiOpenRouterRouting struct {
+	// AllowFallbacks Older spelling of provider.allow_fallbacks.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	AllowFallbacks *bool `json:"allow_fallbacks,omitempty"`
+
+	// Ignore Older spelling of provider.ignore.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	Ignore *[]string `json:"ignore,omitempty"`
+
+	// Only Older spelling of provider.only.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	Only *[]string `json:"only,omitempty"`
+
+	// PreferredMaxLatencyP90 Older spelling of provider.preferred_max_latency.p90, in seconds.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	PreferredMaxLatencyP90 *float64 `json:"preferred_max_latency_p90,omitempty"`
+
+	// Provider OpenRouter's `provider` request object, sent as written. Every key is optional; GET /ai/routing/schema documents each.
+	Provider *AiOpenRouterProvider `json:"provider,omitempty"`
+
+	// Quantizations Older spelling of provider.quantizations.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	Quantizations *[]string `json:"quantizations,omitempty"`
+
+	// Reasoning OpenRouter's `reasoning` request object. effort and max_tokens are two spellings of one budget; write one.
+	Reasoning *AiOpenRouterReasoning `json:"reasoning,omitempty"`
+
+	// ReasoningEffort Older spelling of reasoning.effort.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	ReasoningEffort *string `json:"reasoning_effort,omitempty"`
+
+	// RequireParameters Older spelling of provider.require_parameters.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	RequireParameters *bool `json:"require_parameters,omitempty"`
+
+	// Sort Older spelling of provider.sort.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	Sort *string `json:"sort,omitempty"`
 }
+
+// AiOpenRouterSort defines model for AiOpenRouterSort.
+type AiOpenRouterSort struct {
+	By AiOpenRouterSortBy `json:"by"`
+
+	// Partition none sorts across every model of a fallback list at once.
+	Partition *AiOpenRouterSortPartition `json:"partition,omitempty"`
+}
+
+// AiOpenRouterSortBy defines model for AiOpenRouterSort.By.
+type AiOpenRouterSortBy string
+
+// AiOpenRouterSortPartition none sorts across every model of a fallback list at once.
+type AiOpenRouterSortPartition string
 
 // AiOpenRouterUpstream Which OpenRouter hosts may serve this provider's requests, for every lane on it: a
 // residency pin lives here. Accepted on `openai_compatible` with an OpenRouter host only.
@@ -21934,12 +22210,24 @@ type AiOpenRouterUpstream struct {
 	// AllowFallbacks Override the broker's host fallback. False is a real choice, distinct from absent.
 	AllowFallbacks *bool `json:"allow_fallbacks,omitempty"`
 
+	// DataCollection deny keeps every request off hosts that may store or train on prompts.
+	DataCollection *AiOpenRouterUpstreamDataCollection `json:"data_collection,omitempty"`
+
+	// EnforceDistillableText Only models whose licence allows their output to train other models.
+	EnforceDistillableText *bool `json:"enforce_distillable_text,omitempty"`
+
 	// Ignore Upstream slugs excluded; a hard filter.
 	Ignore *[]string `json:"ignore,omitempty"`
 
 	// Only Upstream slugs allowed; a hard filter.
 	Only *[]string `json:"only,omitempty"`
+
+	// Zdr Zero data retention: only hosts that keep no copy of the prompt or the answer may serve a request.
+	Zdr *bool `json:"zdr,omitempty"`
 }
+
+// AiOpenRouterUpstreamDataCollection deny keeps every request off hosts that may store or train on prompts.
+type AiOpenRouterUpstreamDataCollection string
 
 // AiPriceSync defines model for AiPriceSync.
 type AiPriceSync struct {
@@ -22117,11 +22405,24 @@ type AiRouting struct {
 // `gemini_vertex` lane must name an EU location.
 type AiRoutingProfile string
 
+// AiRoutingEffective What each tier will send OpenRouter once saved, the connection's keys and the product default merged in. Only tiers whose binding sends a block.
+type AiRoutingEffective struct {
+	Tiers map[string]AiOpenRouterRouting `json:"tiers"`
+}
+
 // AiRoutingPreview defines model for AiRoutingPreview.
 type AiRoutingPreview struct {
-	CurrentVersion string           `json:"current_version"`
-	Features       []AiFeatureRoute `json:"features"`
-	UnusedTiers    []string         `json:"unused_tiers"`
+	CurrentVersion string `json:"current_version"`
+
+	// Effective What each tier will send OpenRouter once saved, the connection's keys and the product default merged in. Only tiers whose binding sends a block.
+	Effective *AiRoutingEffective `json:"effective,omitempty"`
+
+	// Errors Every key the save would refuse, by its path in the routing document
+	// (tiers.cheap_cloud.routing.provider.sort.by). Absent when the draft is valid; when
+	// present, features are judged with each refused tier routing left as stored.
+	Errors      *[]AiFieldError  `json:"errors,omitempty"`
+	Features    []AiFeatureRoute `json:"features"`
+	UnusedTiers []string         `json:"unused_tiers"`
 }
 
 // AiRunModelUsage One task, route, and served-model slice within a correlated AI run.
@@ -22237,13 +22538,18 @@ type AiTierBinding struct {
 	// | openai | gemini | gemini_vertex. The credential is never part of this document.
 	Provider string `json:"provider"`
 
-	// Routing How an openai_compatible binding pointed at OpenRouter serves its model; refused on any
-	// other binding, and on the embeddings lane every preference but only, ignore and
-	// allow_fallbacks is refused. Absent means the product default (reliability over price);
-	// an empty object means no preferences (the broker's own price-weighted routing). The two
-	// are different choices and a client must not turn one into the other. `only`, `ignore`
-	// and `allow_fallbacks` belong to the provider (`AiOpenRouterUpstream`): on a tier they
-	// are accepted only when equal to the provider's, or lifted onto a provider that has none.
+	// Routing How an openai_compatible binding pointed at OpenRouter serves its model, in OpenRouter's
+	// own request shape: `provider` (which hosts and how) and `reasoning` (how hard the model
+	// thinks). Refused on any other binding; on the embeddings lane only provider.only,
+	// provider.ignore and provider.allow_fallbacks are accepted. Absent means the product
+	// default (reliability over price); an empty object means no preferences (the broker's own
+	// price-weighted routing). The two are different choices and a client must not turn one
+	// into the other. The keys that say which hosts may read a request (only, ignore,
+	// allow_fallbacks, zdr, data_collection, enforce_distillable_text) belong to the provider
+	// (`AiOpenRouterUpstream`): on a tier they are accepted only when equal to the provider's,
+	// and refused otherwise, each by its path. `GET /ai/routing/schema` describes every field.
+	// The flat keys are the older spelling, still read; a response writes `provider` and
+	// `reasoning`.
 	Routing *AiOpenRouterRouting `json:"routing,omitempty"`
 
 	// ThinkingLevel How deeply a gemini tier thinks when the request names no level of its own.
@@ -62981,6 +63287,192 @@ func (a UpdateProjectRequest) MarshalJSON() ([]byte, error) {
 	return json.Marshal(object)
 }
 
+// AsAiOpenRouterProviderPreferredMaxLatency0 returns the union data inside the AiOpenRouterProvider_PreferredMaxLatency as a AiOpenRouterProviderPreferredMaxLatency0
+func (t AiOpenRouterProvider_PreferredMaxLatency) AsAiOpenRouterProviderPreferredMaxLatency0() (AiOpenRouterProviderPreferredMaxLatency0, error) {
+	var body AiOpenRouterProviderPreferredMaxLatency0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromAiOpenRouterProviderPreferredMaxLatency0 overwrites any union data inside the AiOpenRouterProvider_PreferredMaxLatency as the provided AiOpenRouterProviderPreferredMaxLatency0
+func (t *AiOpenRouterProvider_PreferredMaxLatency) FromAiOpenRouterProviderPreferredMaxLatency0(v AiOpenRouterProviderPreferredMaxLatency0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeAiOpenRouterProviderPreferredMaxLatency0 performs a merge with any union data inside the AiOpenRouterProvider_PreferredMaxLatency, using the provided AiOpenRouterProviderPreferredMaxLatency0
+func (t *AiOpenRouterProvider_PreferredMaxLatency) MergeAiOpenRouterProviderPreferredMaxLatency0(v AiOpenRouterProviderPreferredMaxLatency0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsAiOpenRouterPercentiles returns the union data inside the AiOpenRouterProvider_PreferredMaxLatency as a AiOpenRouterPercentiles
+func (t AiOpenRouterProvider_PreferredMaxLatency) AsAiOpenRouterPercentiles() (AiOpenRouterPercentiles, error) {
+	var body AiOpenRouterPercentiles
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromAiOpenRouterPercentiles overwrites any union data inside the AiOpenRouterProvider_PreferredMaxLatency as the provided AiOpenRouterPercentiles
+func (t *AiOpenRouterProvider_PreferredMaxLatency) FromAiOpenRouterPercentiles(v AiOpenRouterPercentiles) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeAiOpenRouterPercentiles performs a merge with any union data inside the AiOpenRouterProvider_PreferredMaxLatency, using the provided AiOpenRouterPercentiles
+func (t *AiOpenRouterProvider_PreferredMaxLatency) MergeAiOpenRouterPercentiles(v AiOpenRouterPercentiles) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t AiOpenRouterProvider_PreferredMaxLatency) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *AiOpenRouterProvider_PreferredMaxLatency) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsAiOpenRouterProviderPreferredMinThroughput0 returns the union data inside the AiOpenRouterProvider_PreferredMinThroughput as a AiOpenRouterProviderPreferredMinThroughput0
+func (t AiOpenRouterProvider_PreferredMinThroughput) AsAiOpenRouterProviderPreferredMinThroughput0() (AiOpenRouterProviderPreferredMinThroughput0, error) {
+	var body AiOpenRouterProviderPreferredMinThroughput0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromAiOpenRouterProviderPreferredMinThroughput0 overwrites any union data inside the AiOpenRouterProvider_PreferredMinThroughput as the provided AiOpenRouterProviderPreferredMinThroughput0
+func (t *AiOpenRouterProvider_PreferredMinThroughput) FromAiOpenRouterProviderPreferredMinThroughput0(v AiOpenRouterProviderPreferredMinThroughput0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeAiOpenRouterProviderPreferredMinThroughput0 performs a merge with any union data inside the AiOpenRouterProvider_PreferredMinThroughput, using the provided AiOpenRouterProviderPreferredMinThroughput0
+func (t *AiOpenRouterProvider_PreferredMinThroughput) MergeAiOpenRouterProviderPreferredMinThroughput0(v AiOpenRouterProviderPreferredMinThroughput0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsAiOpenRouterPercentiles returns the union data inside the AiOpenRouterProvider_PreferredMinThroughput as a AiOpenRouterPercentiles
+func (t AiOpenRouterProvider_PreferredMinThroughput) AsAiOpenRouterPercentiles() (AiOpenRouterPercentiles, error) {
+	var body AiOpenRouterPercentiles
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromAiOpenRouterPercentiles overwrites any union data inside the AiOpenRouterProvider_PreferredMinThroughput as the provided AiOpenRouterPercentiles
+func (t *AiOpenRouterProvider_PreferredMinThroughput) FromAiOpenRouterPercentiles(v AiOpenRouterPercentiles) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeAiOpenRouterPercentiles performs a merge with any union data inside the AiOpenRouterProvider_PreferredMinThroughput, using the provided AiOpenRouterPercentiles
+func (t *AiOpenRouterProvider_PreferredMinThroughput) MergeAiOpenRouterPercentiles(v AiOpenRouterPercentiles) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t AiOpenRouterProvider_PreferredMinThroughput) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *AiOpenRouterProvider_PreferredMinThroughput) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsAiOpenRouterProviderSort0 returns the union data inside the AiOpenRouterProvider_Sort as a AiOpenRouterProviderSort0
+func (t AiOpenRouterProvider_Sort) AsAiOpenRouterProviderSort0() (AiOpenRouterProviderSort0, error) {
+	var body AiOpenRouterProviderSort0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromAiOpenRouterProviderSort0 overwrites any union data inside the AiOpenRouterProvider_Sort as the provided AiOpenRouterProviderSort0
+func (t *AiOpenRouterProvider_Sort) FromAiOpenRouterProviderSort0(v AiOpenRouterProviderSort0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeAiOpenRouterProviderSort0 performs a merge with any union data inside the AiOpenRouterProvider_Sort, using the provided AiOpenRouterProviderSort0
+func (t *AiOpenRouterProvider_Sort) MergeAiOpenRouterProviderSort0(v AiOpenRouterProviderSort0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsAiOpenRouterSort returns the union data inside the AiOpenRouterProvider_Sort as a AiOpenRouterSort
+func (t AiOpenRouterProvider_Sort) AsAiOpenRouterSort() (AiOpenRouterSort, error) {
+	var body AiOpenRouterSort
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromAiOpenRouterSort overwrites any union data inside the AiOpenRouterProvider_Sort as the provided AiOpenRouterSort
+func (t *AiOpenRouterProvider_Sort) FromAiOpenRouterSort(v AiOpenRouterSort) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeAiOpenRouterSort performs a merge with any union data inside the AiOpenRouterProvider_Sort, using the provided AiOpenRouterSort
+func (t *AiOpenRouterProvider_Sort) MergeAiOpenRouterSort(v AiOpenRouterSort) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t AiOpenRouterProvider_Sort) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *AiOpenRouterProvider_Sort) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
 // AsColdStartRequest0 returns the union data inside the ColdStartRequest as a ColdStartRequest0
 func (t ColdStartRequest) AsColdStartRequest0() (ColdStartRequest0, error) {
 	var body ColdStartRequest0
@@ -63607,6 +64099,9 @@ type ServerInterface interface {
 	// Preview affected features without calling a model (ai_routing read/update and ai_budget read).
 	// (POST /ai/routing/preview)
 	PreviewAiRouting(w http.ResponseWriter, r *http.Request)
+	// The JSON Schema of the routing document, with a description and documentation link per OpenRouter field (ai_routing read).
+	// (GET /ai/routing/schema)
+	GetAiRoutingSchema(w http.ResponseWriter, r *http.Request)
 	// Read AI administration status (ai_diagnostics and ai_budget read).
 	// (GET /ai/status)
 	GetAiStatus(w http.ResponseWriter, r *http.Request)
@@ -66094,6 +66589,12 @@ func (_ Unimplemented) ReplaceAiRouting(w http.ResponseWriter, r *http.Request) 
 // Preview affected features without calling a model (ai_routing read/update and ai_budget read).
 // (POST /ai/routing/preview)
 func (_ Unimplemented) PreviewAiRouting(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The JSON Schema of the routing document, with a description and documentation link per OpenRouter field (ai_routing read).
+// (GET /ai/routing/schema)
+func (_ Unimplemented) GetAiRoutingSchema(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -72696,6 +73197,26 @@ func (siw *ServerInterfaceWrapper) PreviewAiRouting(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PreviewAiRouting(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAiRoutingSchema operation middleware
+func (siw *ServerInterfaceWrapper) GetAiRoutingSchema(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAiRoutingSchema(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -103601,6 +104122,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/ai/routing/preview", wrapper.PreviewAiRouting)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/ai/routing/schema", wrapper.GetAiRoutingSchema)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/status", wrapper.GetAiStatus)

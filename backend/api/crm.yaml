@@ -16188,6 +16188,26 @@ paths:
           description: The configuration changed; reload before saving.
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /ai/routing/schema:
+    get:
+      tags: [AI]
+      operationId: getAiRoutingSchema
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: The JSON Schema of the routing document, with a description and documentation link per OpenRouter field (ai_routing read).
+      description: |
+        The routing $defs of the configuration schema the editor gate holds to the parser, so
+        the admin screen documents exactly what a save accepts. Each OpenRouter field carries
+        `x-doc-url` and `x-placement` (tier, or connection for the keys set on the provider).
+      responses:
+        '200':
+          description: The routing $defs.
+          content:
+            application/schema+json:
+              schema: { type: object, additionalProperties: true }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+
   /ai/routing/preview:
     post:
       tags: [AI]
@@ -28815,6 +28835,9 @@ components:
         only: { type: array, items: { type: string }, description: "Upstream slugs allowed; a hard filter." }
         ignore: { type: array, items: { type: string }, description: "Upstream slugs excluded; a hard filter." }
         allow_fallbacks: { type: boolean, description: "Override the broker's host fallback. False is a real choice, distinct from absent." }
+        zdr: { type: boolean, description: "Zero data retention: only hosts that keep no copy of the prompt or the answer may serve a request." }
+        data_collection: { type: string, enum: [allow, deny], description: "deny keeps every request off hosts that may store or train on prompts." }
+        enforce_distillable_text: { type: boolean, description: "Only models whose licence allows their output to train other models." }
 
     AiTierBinding:
       type: object
@@ -28866,22 +28889,97 @@ components:
       type: object
       additionalProperties: false
       description: |
-        How an openai_compatible binding pointed at OpenRouter serves its model; refused on any
-        other binding, and on the embeddings lane every preference but only, ignore and
-        allow_fallbacks is refused. Absent means the product default (reliability over price);
-        an empty object means no preferences (the broker's own price-weighted routing). The two
-        are different choices and a client must not turn one into the other. `only`, `ignore`
-        and `allow_fallbacks` belong to the provider (`AiOpenRouterUpstream`): on a tier they
-        are accepted only when equal to the provider's, or lifted onto a provider that has none.
+        How an openai_compatible binding pointed at OpenRouter serves its model, in OpenRouter's
+        own request shape: `provider` (which hosts and how) and `reasoning` (how hard the model
+        thinks). Refused on any other binding; on the embeddings lane only provider.only,
+        provider.ignore and provider.allow_fallbacks are accepted. Absent means the product
+        default (reliability over price); an empty object means no preferences (the broker's own
+        price-weighted routing). The two are different choices and a client must not turn one
+        into the other. The keys that say which hosts may read a request (only, ignore,
+        allow_fallbacks, zdr, data_collection, enforce_distillable_text) belong to the provider
+        (`AiOpenRouterUpstream`): on a tier they are accepted only when equal to the provider's,
+        and refused otherwise, each by its path. `GET /ai/routing/schema` describes every field.
+        The flat keys are the older spelling, still read; a response writes `provider` and
+        `reasoning`.
       properties:
-        only: { type: array, items: { type: string }, description: "Upstream slugs allowed; a hard filter." }
-        ignore: { type: array, items: { type: string }, description: "Upstream slugs excluded; a hard filter." }
+        provider: { $ref: '#/components/schemas/AiOpenRouterProvider' }
+        reasoning: { $ref: '#/components/schemas/AiOpenRouterReasoning' }
+        only: { type: array, items: { type: string }, deprecated: true, description: "Older spelling of provider.only." }
+        ignore: { type: array, items: { type: string }, deprecated: true, description: "Older spelling of provider.ignore." }
+        quantizations: { type: array, items: { type: string }, deprecated: true, description: 'Older spelling of provider.quantizations.' }
+        sort: { type: string, deprecated: true, description: 'Older spelling of provider.sort.' }
+        require_parameters: { type: boolean, deprecated: true, description: "Older spelling of provider.require_parameters." }
+        allow_fallbacks: { type: boolean, deprecated: true, description: "Older spelling of provider.allow_fallbacks." }
+        preferred_max_latency_p90: { type: number, format: double, deprecated: true, description: "Older spelling of provider.preferred_max_latency.p90, in seconds." }
+        reasoning_effort: { type: string, deprecated: true, description: 'Older spelling of reasoning.effort.' }
+
+    AiOpenRouterProvider:
+      type: object
+      additionalProperties: false
+      description: OpenRouter's `provider` request object, sent as written. Every key is optional; GET /ai/routing/schema documents each.
+      properties:
+        order: { type: array, items: { type: string }, description: 'Host slugs to try first, in this order.' }
+        only: { type: array, items: { type: string }, description: 'Upstream slugs allowed; a hard filter. Set on the provider.' }
+        ignore: { type: array, items: { type: string }, description: 'Upstream slugs excluded; a hard filter. Set on the provider.' }
+        allow_fallbacks: { type: boolean, description: "Whether the broker may switch hosts on failure. Set on the provider." }
+        require_parameters: { type: boolean, description: 'Keep the request off hosts that lack any parameter it carries.' }
+        data_collection: { type: string, enum: [allow, deny], description: 'Whether hosts that may store prompts are allowed. Set on the provider.' }
+        zdr: { type: boolean, description: 'Zero data retention only. Set on the provider.' }
+        enforce_distillable_text: { type: boolean, description: 'Only models whose output may train other models. Set on the provider.' }
         quantizations: { type: array, items: { type: string }, description: 'Serving precisions allowed (bf16, fp16, fp8, fp4, int8 …); a hard filter.' }
-        sort: { type: string, description: 'price | throughput | latency. Reorders rather than filters, and disables load balancing.' }
-        require_parameters: { type: boolean, description: "Keep the request off hosts that lack any parameter it carries. False is a real choice, distinct from absent." }
-        allow_fallbacks: { type: boolean, description: "Override the broker's host fallback. False is a real choice, distinct from absent." }
-        preferred_max_latency_p90: { type: number, format: double, description: "Seconds; hosts above it are deprioritized, never removed. Omit to leave unset." }
-        reasoning_effort: { type: string, description: 'none | minimal | low | medium | high | xhigh | max. Unset leaves each host its own default.' }
+        sort:
+          description: 'price | throughput | latency, or {by, partition}. Reorders rather than filters, and disables load balancing.'
+          oneOf:
+            - { type: string, enum: [price, throughput, latency] }
+            - $ref: '#/components/schemas/AiOpenRouterSort'
+        max_price: { $ref: '#/components/schemas/AiOpenRouterPrice' }
+        preferred_min_throughput:
+          description: Tokens per second, one number or per percentile; a soft preference.
+          oneOf:
+            - { type: number, format: double, minimum: 0 }
+            - $ref: '#/components/schemas/AiOpenRouterPercentiles'
+        preferred_max_latency:
+          description: Seconds, one number or per percentile; a soft preference.
+          oneOf:
+            - { type: number, format: double, minimum: 0 }
+            - $ref: '#/components/schemas/AiOpenRouterPercentiles'
+
+    AiOpenRouterSort:
+      type: object
+      additionalProperties: false
+      required: [by]
+      properties:
+        by: { type: string, enum: [price, throughput, latency] }
+        partition: { type: string, enum: [model, none], description: 'none sorts across every model of a fallback list at once.' }
+
+    AiOpenRouterPrice:
+      type: object
+      additionalProperties: false
+      description: The most a request may cost, in USD per million prompt or completion tokens, or per request or image.
+      properties:
+        prompt: { type: number, format: double, minimum: 0 }
+        completion: { type: number, format: double, minimum: 0 }
+        request: { type: number, format: double, minimum: 0 }
+        image: { type: number, format: double, minimum: 0 }
+
+    AiOpenRouterPercentiles:
+      type: object
+      additionalProperties: false
+      properties:
+        p50: { type: number, format: double, minimum: 0 }
+        p75: { type: number, format: double, minimum: 0 }
+        p90: { type: number, format: double, minimum: 0 }
+        p99: { type: number, format: double, minimum: 0 }
+
+    AiOpenRouterReasoning:
+      type: object
+      additionalProperties: false
+      description: OpenRouter's `reasoning` request object. effort and max_tokens are two spellings of one budget; write one.
+      properties:
+        effort: { type: string, enum: [max, xhigh, high, medium, low, minimal, none] }
+        max_tokens: { type: integer, minimum: 1 }
+        exclude: { type: boolean, description: 'Think, but leave the reasoning out of the answer.' }
+        enabled: { type: boolean }
 
     AiEmbeddingsBinding:
       allOf:
@@ -30582,6 +30680,30 @@ components:
         current_version: { type: string }
         features: { type: array, items: { $ref: '#/components/schemas/AiFeatureRoute' } }
         unused_tiers: { type: array, items: { type: string } }
+        errors:
+          type: array
+          description: |
+            Every key the save would refuse, by its path in the routing document
+            (tiers.cheap_cloud.routing.provider.sort.by). Absent when the draft is valid; when
+            present, features are judged with each refused tier routing left as stored.
+          items: { $ref: '#/components/schemas/AiFieldError' }
+        effective: { $ref: '#/components/schemas/AiRoutingEffective' }
+    AiRoutingEffective:
+      type: object
+      required: [tiers]
+      description: What each tier will send OpenRouter once saved, the connection's keys and the product default merged in. Only tiers whose binding sends a block.
+      properties:
+        tiers:
+          type: object
+          additionalProperties: { $ref: '#/components/schemas/AiOpenRouterRouting' }
+    AiFieldError:
+      type: object
+      required: [field, code, message]
+      description: One refused input, the shape a 422's details.errors carries.
+      properties:
+        field: { type: string, description: 'The path of the refused key.' }
+        code: { type: string }
+        message: { type: string, description: 'What is wrong and what to write instead.' }
     AiUsage:
       type: object
       description: 'AI usage + budget (AIRT-WIRE-1): the AIRT-PARAM-33 meter aggregated per day × task × tier, plus the budget band. Token-denominated; cost_est_minor is computed on read from the workspace''s ai_model_rate price sheet as of each call''s day (ADR-0067, price-on-read) — omitted, never a fabricated 0, when a task line''s window carries no priced call, and accompanied by unpriced_calls when it is a partial total.'

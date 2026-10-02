@@ -82,7 +82,8 @@ func (h aiAdminHandlers) PreviewAiRouting(w http.ResponseWriter, r *http.Request
 	if !httperr.Decode(w, r, &next) {
 		return
 	}
-	out, err := h.store.PreviewRouting(r.Context(), fromContractAiRouting(next))
+	draft, refused := fromContractAiRouting(next, sentRouting(r))
+	out, err := h.store.PreviewRouting(r.Context(), draft, refused)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

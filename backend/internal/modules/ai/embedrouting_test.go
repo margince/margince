@@ -54,7 +54,7 @@ func TestTheEUPresetsEmbeddingsPinReachesTheBroker(t *testing.T) {
 		t.Fatalf("the EU preset does not parse: %v", err)
 	}
 	sent := embedBodyFrom(t, cfg.Embeddings.ProviderConfig)
-	var provider openAICompatProviderWire
+	var provider OpenRouterProvider
 	if err := json.Unmarshal(sent["provider"], &provider); err != nil {
 		t.Fatalf("the embeddings request carried no provider object (%s): %v", sent["provider"], err)
 	}

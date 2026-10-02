@@ -46,7 +46,7 @@ func TestNoPreferencesPutNoProviderObjectOnTheWire(t *testing.T) {
 // Reasoning effort travels on its own, without dragging a provider object with
 // it: capping the thinking budget is not a statement about which host serves.
 func TestReasoningEffortAloneCarriesNoProviderObject(t *testing.T) {
-	routing := &OpenRouterRouting{ReasoningEffort: "low"}
+	routing := &OpenRouterRouting{Reasoning: &OpenRouterReasoning{Effort: "low"}}
 	if got := routing.providerWire(); got != nil {
 		t.Errorf("providerWire() = %+v, want nil — effort says nothing about upstream selection", got)
 	}
@@ -60,14 +60,14 @@ func TestReasoningEffortAloneCarriesNoProviderObject(t *testing.T) {
 // omitted entirely when unset — a `preferred_max_latency` of {"p90":0} would
 // ask the broker to prefer hosts faster than zero seconds.
 func TestPreferredLatencyIsOmittedUntilItIsSet(t *testing.T) {
-	unset, err := json.Marshal((&OpenRouterRouting{Sort: "throughput"}).providerWire())
+	unset, err := json.Marshal((&OpenRouterRouting{Provider: OpenRouterProvider{Sort: &OpenRouterSort{By: "throughput"}}}).providerWire())
 	if err != nil {
 		t.Fatal(err)
 	}
 	if strings.Contains(string(unset), "preferred_max_latency") {
 		t.Errorf("unset threshold reached the wire: %s", unset)
 	}
-	set, err := json.Marshal((&OpenRouterRouting{PreferredMaxLatencyP90: 8}).providerWire())
+	set, err := json.Marshal((&OpenRouterRouting{Provider: OpenRouterProvider{PreferredMaxLatency: &OpenRouterPctile{P90: new(float64(8))}}}).providerWire())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -85,8 +85,8 @@ func TestAllowFallbacksDistinguishesUnsetFromFalse(t *testing.T) {
 		routing *OpenRouterRouting
 		wantKey bool
 	}{
-		"unset stays off the wire":  {&OpenRouterRouting{Sort: "price"}, false},
-		"an explicit false is sent": {&OpenRouterRouting{AllowFallbacks: &no}, true},
+		"unset stays off the wire":  {&OpenRouterRouting{Provider: OpenRouterProvider{Sort: &OpenRouterSort{By: "price"}}}, false},
+		"an explicit false is sent": {&OpenRouterRouting{Provider: OpenRouterProvider{AllowFallbacks: &no}}, true},
 	} {
 		t.Run(name, func(t *testing.T) {
 			body, err := json.Marshal(tc.routing.providerWire())
@@ -113,10 +113,10 @@ func TestTheDocumentedPreferenceSpellingParses(t *testing.T) {
 	if err := decoder.Decode(&routing); err != nil {
 		t.Fatalf("the spelling the reference documents must parse: %v", err)
 	}
-	if routing.ReasoningEffort != "low" || routing.Sort != "throughput" || routing.PreferredMaxLatencyP90 != 8 {
+	if routing.reasoningEffort() != "low" || routing.Provider.Sort.By != "throughput" || *routing.Provider.PreferredMaxLatency.P90 != 8 {
 		t.Errorf("decoded %+v", routing)
 	}
-	if routing.AllowFallbacks == nil || *routing.AllowFallbacks {
+	if routing.Provider.AllowFallbacks == nil || *routing.Provider.AllowFallbacks {
 		t.Error("an explicit allow_fallbacks:false must survive as a set false, not an unset nil")
 	}
 
@@ -160,8 +160,8 @@ func TestTheUpstreamDefaultReachesTheBrokerAndNobodyElse(t *testing.T) {
 				if got == nil {
 					t.Fatal("the broker binding inherited no preferences")
 				}
-				if got.Sort != SortThroughput || got.RequireParameters == nil || !*got.RequireParameters ||
-					len(got.Quantizations) == 0 {
+				if got.Provider.Sort.By != SortThroughput || got.Provider.RequireParameters == nil || !*got.Provider.RequireParameters ||
+					len(got.Provider.Quantizations) == 0 {
 					t.Errorf("inherited %+v, want reliability over price", got)
 				}
 				return
@@ -208,14 +208,14 @@ func TestAPreferenceTheBrokerWouldIgnoreIsRefused(t *testing.T) {
 		routing *OpenRouterRouting
 		wantErr string
 	}{
-		"an unknown sort":            {&OpenRouterRouting{Sort: "cheapest"}, "sort"},
-		"an unknown quantization":    {&OpenRouterRouting{Quantizations: []string{"fp5"}}, "quantization"},
-		"an unknown effort":          {&OpenRouterRouting{ReasoningEffort: "lots"}, "reasoning_effort"},
-		"a negative latency ceiling": {&OpenRouterRouting{PreferredMaxLatencyP90: -1}, "negative"},
+		"an unknown sort":            {&OpenRouterRouting{Provider: OpenRouterProvider{Sort: &OpenRouterSort{By: "cheapest"}}}, "sort"},
+		"an unknown quantization":    {&OpenRouterRouting{Provider: OpenRouterProvider{Quantizations: []string{"fp5"}}}, "quantization"},
+		"an unknown effort":          {&OpenRouterRouting{Reasoning: &OpenRouterReasoning{Effort: "lots"}}, "reasoning.effort"},
+		"a negative latency ceiling": {&OpenRouterRouting{Provider: OpenRouterProvider{PreferredMaxLatency: &OpenRouterPctile{P90: new(float64(-1))}}}, "negative"},
 		"the accepted vocabulary":    {DefaultOpenRouterRouting(), ""},
 	} {
 		t.Run(name, func(t *testing.T) {
-			err := tc.routing.Validate()
+			err := tc.routing.Validate("")
 			if tc.wantErr == "" {
 				if err != nil {
 					t.Fatalf("the default must validate: %v", err)
@@ -241,11 +241,11 @@ func TestARoutingBlockIsRefusedWhereItCannotApply(t *testing.T) {
 		wantErr string
 	}{
 		"a native vendor": {
-			ProviderConfig{Provider: providerGemini, Model: "m", Routing: &OpenRouterRouting{Sort: SortThroughput}},
+			ProviderConfig{Provider: providerGemini, Model: "m", Routing: &OpenRouterRouting{Provider: OpenRouterProvider{Sort: &OpenRouterSort{By: SortThroughput}}}},
 			"serves one model from one host",
 		},
 		"the OpenAI wire pointed elsewhere": {
-			ProviderConfig{Provider: providerOpenAICompatible, Model: "m", BaseURL: "https://api.mistral.ai", Routing: &OpenRouterRouting{Sort: SortThroughput}},
+			ProviderConfig{Provider: providerOpenAICompatible, Model: "m", BaseURL: "https://api.mistral.ai", Routing: &OpenRouterRouting{Provider: OpenRouterProvider{Sort: &OpenRouterSort{By: SortThroughput}}}},
 			"is not an OpenRouter host",
 		},
 		"the broker itself": {
@@ -279,7 +279,7 @@ func TestARoutingBlockIsRefusedWhereItCannotApply(t *testing.T) {
 // supporting every parameter" would silently become the broker's own default.
 func TestAnExplicitRequireParametersFalseReachesTheWire(t *testing.T) {
 	no := false
-	routing := &OpenRouterRouting{RequireParameters: &no}
+	routing := &OpenRouterRouting{Provider: OpenRouterProvider{RequireParameters: &no}}
 	if routing.IsEmpty() {
 		t.Fatal("a block that says require_parameters:false is not an empty block")
 	}
@@ -322,7 +322,7 @@ func TestANonFiniteLatencyThresholdIsRefused(t *testing.T) {
 		"negative infinity": math.Inf(-1),
 	} {
 		t.Run(name, func(t *testing.T) {
-			err := (&OpenRouterRouting{PreferredMaxLatencyP90: value}).Validate()
+			err := (&OpenRouterRouting{Provider: OpenRouterProvider{PreferredMaxLatency: &OpenRouterPctile{P90: new(float64(value))}}}).Validate("")
 			if err == nil {
 				t.Fatalf("accepted %g, which no request could then encode", value)
 			}

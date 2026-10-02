@@ -50,10 +50,10 @@ func EURegionPinGap(binding ProviderConfig) string {
 	if !UpstreamPreferencesApply(binding) || isOpenRouterEUAddress(binding.BaseURL) {
 		return ""
 	}
-	if binding.Routing == nil || len(binding.Routing.Only) == 0 {
+	if binding.Routing == nil || len(binding.Routing.Provider.Only) == 0 {
 		return "no `only:` — the broker may serve " + binding.Model + " from any region"
 	}
-	for _, slug := range binding.Routing.Only {
+	for _, slug := range binding.Routing.Provider.Only {
 		if !isEURegionHost(slug) {
 			return "`only:` admits " + slug + ", which is not an EU-region endpoint"
 		}

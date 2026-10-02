@@ -63,7 +63,7 @@ func openRouterReasoningFacts(baseURL string) *catalogFact[openRouterCatalog] {
 
 // openRouterReasoningFor is the `reasoning` block floor sends to a model
 // described by meta, nil for none.
-func openRouterReasoningFor(meta openRouterReasoning, floor string) *openAICompatReasoningWire {
+func openRouterReasoningFor(meta openRouterReasoning, floor string) *OpenRouterReasoning {
 	if !meta.listed || floor == "" {
 		return nil
 	}
@@ -72,10 +72,10 @@ func openRouterReasoningFor(meta openRouterReasoning, floor string) *openAICompa
 		return nil
 	}
 	if effort := lowestEffortAtLeast(floor, meta.SupportedEfforts); effort != "" {
-		return &openAICompatReasoningWire{Effort: effort}
+		return &OpenRouterReasoning{Effort: effort}
 	}
 	if on && len(meta.SupportedEfforts) == 0 {
-		return &openAICompatReasoningWire{Effort: floor}
+		return &OpenRouterReasoning{Effort: floor}
 	}
 	return nil
 }
@@ -83,7 +83,7 @@ func openRouterReasoningFor(meta openRouterReasoning, floor string) *openAICompa
 // reasoningFloor is the `reasoning` block a request's floor sends on this
 // binding, nil off the broker. A model list that cannot be read is logged and
 // sends nothing: the floor is a hint, and the call it would fail worked before.
-func (c *openAICompatClient) reasoningFloor(ctx context.Context, modelID, floor string, tools int) *openAICompatReasoningWire {
+func (c *openAICompatClient) reasoningFloor(ctx context.Context, modelID, floor string, tools int) *OpenRouterReasoning {
 	if c.reasoning == nil || floor == "" || tools > 0 {
 		return nil
 	}

@@ -14,8 +14,8 @@ const keepBroker = "https://openrouter.ai/api"
 // the EU pin, and each lane carries its resolved host, its serving preferences
 // and that pin.
 func storedAtBroker() RoutingConfig {
-	eu := &OpenRouterRouting{Only: []string{"mistral/eu"}}
-	served := &OpenRouterRouting{Sort: "throughput", Only: eu.Only}
+	eu := &OpenRouterRouting{Provider: OpenRouterProvider{Only: []string{"mistral/eu"}}}
+	served := &OpenRouterRouting{Provider: OpenRouterProvider{Sort: &OpenRouterSort{By: "throughput"}, Only: eu.Provider.Only}}
 	return RoutingConfig{
 		Providers: map[string]ProviderSettings{providerOpenAICompatible: {BaseURL: keepBroker, Upstream: eu}},
 		Tiers: map[Tier]ProviderConfig{
@@ -25,7 +25,7 @@ func storedAtBroker() RoutingConfig {
 		},
 		Embeddings: EmbeddingsConfig{ProviderConfig: ProviderConfig{
 			Provider: providerOpenAICompatible, Model: "e", BaseURL: keepBroker,
-			Routing: &OpenRouterRouting{Quantizations: []string{"bf16"}, Only: eu.Only},
+			Routing: &OpenRouterRouting{Provider: OpenRouterProvider{Quantizations: []string{"bf16"}, Only: eu.Provider.Only}},
 		}},
 	}
 }
@@ -35,7 +35,7 @@ func storedAtBroker() RoutingConfig {
 // a lane stating its own get nothing carried.
 func TestKeep_ServingPrefsCarryOnSameProviderAndModel(t *testing.T) {
 	t.Parallel()
-	own := &OpenRouterRouting{Sort: "latency"}
+	own := &OpenRouterRouting{Provider: OpenRouterProvider{Sort: &OpenRouterSort{By: "latency"}}}
 	next := RoutingConfig{
 		Providers: map[string]ProviderSettings{providerOpenAICompatible: {BaseURL: keepBroker}},
 		Tiers: map[Tier]ProviderConfig{
@@ -49,10 +49,10 @@ func TestKeep_ServingPrefsCarryOnSameProviderAndModel(t *testing.T) {
 
 	got := next.keepingStoredUpstream(storedAtBroker())
 
-	if r := got.Tiers[TierPremium].Routing; r == nil || r.Sort != "throughput" {
+	if r := got.Tiers[TierPremium].Routing; r == nil || r.Provider.Sort.By != "throughput" {
 		t.Errorf("premium = %+v, want the stored sort kept on the unchanged binding", r)
 	}
-	if r := got.Embeddings.Routing; r == nil || !slices.Equal(r.Quantizations, []string{"bf16"}) {
+	if r := got.Embeddings.Routing; r == nil || !slices.Equal(r.Provider.Quantizations, []string{"bf16"}) {
 		t.Errorf("embeddings = %+v, want the stored quantizations kept on the unchanged binding", r)
 	}
 	if r := got.Tiers[TierCheapCloud].Routing; r != nil {
@@ -112,7 +112,7 @@ func TestKeep_EmbeddingsServingPrefsStayOnTheSameServer(t *testing.T) {
 	const server = "https://openrouter.ai/api/embed"
 	stored := storedAtBroker()
 	stored.Embeddings.BaseURL = server
-	stored.Embeddings.Routing = &OpenRouterRouting{Quantizations: []string{"bf16"}}
+	stored.Embeddings.Routing = &OpenRouterRouting{Provider: OpenRouterProvider{Quantizations: []string{"bf16"}}}
 	for _, tc := range []struct {
 		baseURL string
 		keeps   bool
@@ -130,7 +130,7 @@ func TestKeep_EmbeddingsServingPrefsStayOnTheSameServer(t *testing.T) {
 			}},
 		}
 		got := next.keepingStoredUpstream(stored).Embeddings.Routing
-		if kept := got != nil && slices.Equal(got.Quantizations, []string{"bf16"}); kept != tc.keeps {
+		if kept := got != nil && slices.Equal(got.Provider.Quantizations, []string{"bf16"}); kept != tc.keeps {
 			t.Errorf("embeddings base_url %q: preferences kept = %v, want %v", tc.baseURL, kept, tc.keeps)
 		}
 	}

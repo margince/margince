@@ -578,7 +578,7 @@ func stampFor(t *testing.T, sc Scenario) string {
 func TestAJournaledRunIsNotReplayedUnderOtherUpstreamPreferences(t *testing.T) {
 	broker := ai.ProviderConfig{Provider: "openai_compatible", Model: "z-ai/glm-5.2", BaseURL: "https://openrouter.ai/api"}
 	pinned := broker
-	pinned.Routing = &ai.OpenRouterRouting{Only: []string{"deepinfra"}}
+	pinned.Routing = &ai.OpenRouterRouting{Provider: ai.OpenRouterProvider{Only: []string{"deepinfra"}}}
 	ownRouting := broker
 	ownRouting.Routing = &ai.OpenRouterRouting{}
 	spelledDefault := broker

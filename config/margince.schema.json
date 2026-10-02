@@ -472,8 +472,8 @@
           "description": "Where the provider is reached. REQUIRED on openai_compatible while a lane binds it (the vendor host root, NO /v1), and on jev_compatible while the decisions lane binds it (the FULL decision endpoint, posted to as written). Empty ⇒ the adapter's compiled default."
         },
         "upstream": {
-          "description": "openai_compatible on an OpenRouter host only: which upstream providers the broker may serve this provider's requests from — only, ignore, allow_fallbacks. Every lane on the provider is served under them; how each tier is served (sort, quantizations, latency) stays on its own routing.",
-          "$ref": "#/$defs/embeddingsRouting"
+          "description": "openai_compatible on an OpenRouter host only: which upstream hosts may read this provider's requests, and under what privacy — only, ignore, allow_fallbacks, zdr, data_collection, enforce_distillable_text. Every lane on the provider is served under them; how each tier is served (sort, quantizations, latency) stays on its own routing.",
+          "$ref": "#/$defs/connectionUpstream"
         },
         "location": {
           "type": "string",
@@ -618,7 +618,315 @@
       }
     },
     "upstreamRouting": {
-      "description": "Which of a broker's upstream hosts may serve this tier. OpenRouter fronts many inference hosts per model, and its own default picks among them weighted by the inverse square of price — so one model id is served at fp4 on one call and at bf16 on the next, with latency to match. Valid ONLY on an openai_compatible binding whose base_url is an OpenRouter host; the parser refuses it anywhere else rather than send a vendor fields it never asked for. OMIT the block to inherit the product default (sort: throughput, quantizations: [fp16, bf16], require_parameters: true — reliability over price); write an empty object to opt out and take the broker's own price-weighted routing. Measured 2026-09-02 — see docs/reference/openrouter.md.",
+      "description": "How OpenRouter serves this tier: OpenRouter's own request fields, provider (which hosts and how) and reasoning (how hard the model thinks). OpenRouter fronts many inference hosts per model, and its own default picks among them weighted by the inverse square of price — so one model id is served at fp4 on one call and at bf16 on the next, with latency to match. Valid ONLY on an openai_compatible binding whose base_url is an OpenRouter host. OMIT the block to inherit the product default (sort: throughput, quantizations: [fp16, bf16], require_parameters: true — reliability over price); write an empty object to opt out and take the broker's own price-weighted routing. The host filters and privacy keys (x-placement: connection) are set on providers.openai_compatible.upstream; a seed that writes them on a tier has them lifted there, and the settings API refuses them on a tier unless they repeat the connection's own. The older flat spelling (upstreamRoutingFlat) is still read.",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/upstreamRoutingNested"
+        },
+        {
+          "$ref": "#/$defs/upstreamRoutingFlat"
+        }
+      ]
+    },
+    "upstreamRoutingNested": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "provider": {
+          "$ref": "#/$defs/openRouterProvider"
+        },
+        "reasoning": {
+          "$ref": "#/$defs/openRouterReasoning"
+        }
+      }
+    },
+    "openRouterProvider": {
+      "description": "OpenRouter's provider request object. Each key is sent as written; an absent key leaves the broker's own behaviour.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "order": {
+          "description": "Host slugs to try first, in this order, before the broker's own ranking. Soft: with allow_fallbacks the rest are still tried.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          },
+          "x-doc-url": "https://openrouter.ai/docs/guides/routing/provider-selection",
+          "x-placement": "tier"
+        },
+        "only": {
+          "description": "Allowlist of upstream host slugs; a base slug matches every region and variant, a full slug such as deepinfra/turbo pins one endpoint. A HARD filter, and the residency pin.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          },
+          "x-doc-url": "https://openrouter.ai/docs/guides/routing/provider-selection",
+          "x-placement": "connection"
+        },
+        "ignore": {
+          "description": "Blocklist of upstream host slugs. A HARD filter, for excluding one endpoint measured bad rather than for choosing among the rest.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          },
+          "x-doc-url": "https://openrouter.ai/docs/guides/routing/provider-selection",
+          "x-placement": "connection"
+        },
+        "allow_fallbacks": {
+          "description": "Whether the broker may switch hosts when the chosen one fails. Omit to keep its own default of true; false trades availability for the certainty of one host.",
+          "type": "boolean",
+          "x-doc-url": "https://openrouter.ai/docs/guides/routing/provider-selection",
+          "x-placement": "connection"
+        },
+        "require_parameters": {
+          "description": "Route only to hosts supporting every parameter the request carries, so a structured-output call never reaches a host that ignores response_format.",
+          "type": "boolean",
+          "x-doc-url": "https://openrouter.ai/docs/guides/routing/provider-selection",
+          "x-placement": "tier"
+        },
+        "data_collection": {
+          "description": "deny keeps the request off hosts that may store or train on prompts; allow (the broker's default) permits them.",
+          "enum": [
+            "allow",
+            "deny"
+          ],
+          "x-doc-url": "https://openrouter.ai/docs/guides/routing/provider-selection",
+          "x-placement": "connection"
+        },
+        "zdr": {
+          "description": "Zero data retention: only hosts that keep no copy of the prompt or the answer may serve the request.",
+          "type": "boolean",
+          "x-doc-url": "https://openrouter.ai/docs/guides/features/zdr",
+          "x-placement": "connection"
+        },
+        "enforce_distillable_text": {
+          "description": "Only models whose licence allows their output to be used to train other models.",
+          "type": "boolean",
+          "x-doc-url": "https://openrouter.ai/docs/guides/routing/provider-selection",
+          "x-placement": "connection"
+        },
+        "quantizations": {
+          "description": "Serving precisions a host may use. A HARD filter, and what makes repeated calls comparable: two answers from one model id at fp4 and at bf16 are two different models for every purpose except billing.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "int4",
+              "int8",
+              "fp4",
+              "mxfp4",
+              "nvfp4",
+              "fp6",
+              "fp8",
+              "mxfp8",
+              "fp16",
+              "bf16",
+              "fp32",
+              "unknown"
+            ]
+          },
+          "x-doc-url": "https://openrouter.ai/docs/guides/routing/provider-selection",
+          "x-placement": "tier"
+        },
+        "sort": {
+          "description": "Order candidate hosts by throughput, price or latency. The lever that collapses the latency tail, and it disables the broker's load balancing, which is the trade. Write {by, partition: none} to sort across every model of a fallback list at once.",
+          "oneOf": [
+            {
+              "enum": [
+                "throughput",
+                "price",
+                "latency"
+              ]
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "by"
+              ],
+              "properties": {
+                "by": {
+                  "enum": [
+                    "throughput",
+                    "price",
+                    "latency"
+                  ]
+                },
+                "partition": {
+                  "enum": [
+                    "model",
+                    "none"
+                  ]
+                }
+              }
+            }
+          ],
+          "x-doc-url": "https://openrouter.ai/docs/guides/routing/provider-selection",
+          "x-placement": "tier"
+        },
+        "max_price": {
+          "description": "The most a request may cost: USD per million prompt or completion tokens, or per request or image. Hosts above it are filtered out.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "prompt": {
+              "type": "number",
+              "minimum": 0
+            },
+            "completion": {
+              "type": "number",
+              "minimum": 0
+            },
+            "request": {
+              "type": "number",
+              "minimum": 0
+            },
+            "image": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "x-doc-url": "https://openrouter.ai/docs/guides/routing/provider-selection",
+          "x-placement": "tier"
+        },
+        "preferred_min_throughput": {
+          "description": "Prefer hosts producing at least this many tokens per second: one number for every percentile, or {p50, p75, p90, p99}. SOFT: a slower host is moved down the list, never removed.",
+          "$ref": "#/$defs/openRouterPercentiles",
+          "x-doc-url": "https://openrouter.ai/docs/guides/routing/provider-selection",
+          "x-placement": "tier"
+        },
+        "preferred_max_latency": {
+          "description": "Prefer hosts answering within this many seconds: one number for every percentile, or {p50, p75, p90, p99}. SOFT: it reorders and never excludes, so it cannot bound a tail on its own.",
+          "$ref": "#/$defs/openRouterPercentiles",
+          "x-doc-url": "https://openrouter.ai/docs/guides/routing/provider-selection",
+          "x-placement": "tier"
+        }
+      }
+    },
+    "openRouterPercentiles": {
+      "oneOf": [
+        {
+          "type": "number",
+          "minimum": 0
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "minProperties": 1,
+          "properties": {
+            "p50": {
+              "type": "number",
+              "minimum": 0
+            },
+            "p75": {
+              "type": "number",
+              "minimum": 0
+            },
+            "p90": {
+              "type": "number",
+              "minimum": 0
+            },
+            "p99": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        }
+      ]
+    },
+    "openRouterReasoning": {
+      "description": "OpenRouter's reasoning request object: how hard a reasoning model thinks. Unset leaves each host its own default. effort and max_tokens are two ways to set one budget, so only one may be written.",
+      "type": "object",
+      "additionalProperties": false,
+      "not": {
+        "required": [
+          "effort",
+          "max_tokens"
+        ]
+      },
+      "properties": {
+        "effort": {
+          "description": "The thinking budget as a level. Halves latency and cost at low, and cost a fifth of the certification score on a drafting task, so set it where throughput dominates.",
+          "enum": [
+            "max",
+            "xhigh",
+            "high",
+            "medium",
+            "low",
+            "minimal",
+            "none"
+          ],
+          "x-doc-url": "https://openrouter.ai/docs/use-cases/reasoning-tokens",
+          "x-placement": "tier"
+        },
+        "max_tokens": {
+          "description": "The thinking budget in tokens, for models that take one.",
+          "type": "integer",
+          "minimum": 1,
+          "x-doc-url": "https://openrouter.ai/docs/use-cases/reasoning-tokens",
+          "x-placement": "tier"
+        },
+        "exclude": {
+          "description": "Think, but leave the reasoning text out of the answer.",
+          "type": "boolean",
+          "x-doc-url": "https://openrouter.ai/docs/use-cases/reasoning-tokens",
+          "x-placement": "tier"
+        },
+        "enabled": {
+          "description": "Turn thinking on at the model's default budget, or off on a model that allows it.",
+          "type": "boolean",
+          "x-doc-url": "https://openrouter.ai/docs/use-cases/reasoning-tokens",
+          "x-placement": "tier"
+        }
+      }
+    },
+    "connectionUpstream": {
+      "description": "Which upstream hosts may read every request on this provider, and under what privacy. Only the connection keys of openRouterProvider; how each tier is served stays on its routing. The flat spelling (only, ignore, allow_fallbacks at top level) is still read.",
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "provider": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "only": {
+                  "$ref": "#/$defs/openRouterProvider/properties/only"
+                },
+                "ignore": {
+                  "$ref": "#/$defs/openRouterProvider/properties/ignore"
+                },
+                "allow_fallbacks": {
+                  "$ref": "#/$defs/openRouterProvider/properties/allow_fallbacks"
+                },
+                "zdr": {
+                  "$ref": "#/$defs/openRouterProvider/properties/zdr"
+                },
+                "data_collection": {
+                  "$ref": "#/$defs/openRouterProvider/properties/data_collection"
+                },
+                "enforce_distillable_text": {
+                  "$ref": "#/$defs/openRouterProvider/properties/enforce_distillable_text"
+                }
+              }
+            }
+          }
+        },
+        {
+          "$ref": "#/$defs/embeddingsRoutingFlat"
+        }
+      ]
+    },
+    "upstreamRoutingFlat": {
+      "description": "The older flat spelling of upstreamRouting, still read at every door and written nested on the next save that needs a field it lacks. Which of a broker's upstream hosts may serve this tier. OpenRouter fronts many inference hosts per model, and its own default picks among them weighted by the inverse square of price — so one model id is served at fp4 on one call and at bf16 on the next, with latency to match. Valid ONLY on an openai_compatible binding whose base_url is an OpenRouter host; the parser refuses it anywhere else rather than send a vendor fields it never asked for. OMIT the block to inherit the product default (sort: throughput, quantizations: [fp16, bf16], require_parameters: true — reliability over price); write an empty object to opt out and take the broker's own price-weighted routing. Measured 2026-09-02 — see docs/reference/openrouter.md.",
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -805,18 +1113,55 @@
       }
     },
     "embeddingsRouting": {
-      "description": "Which of a broker's upstream hosts may read the text this lane embeds. Only the host-selection fields: the lane embeds the same text the chat tiers send, so a residency pin must reach it too, and the other upstreamRouting fields bound a completion's tail, which a single forward pass does not have. Valid only on an openai_compatible binding whose base_url is an OpenRouter host. Omit it to leave the broker's own choice of host.",
+      "description": "Which of a broker's upstream hosts may read the text this lane embeds, and under what privacy. Only the connection keys: the lane embeds the same text the chat tiers send, so a residency pin or a retention rule must reach it too, and the other upstreamRouting fields bound a completion's tail, which a single forward pass does not have. Valid only on an openai_compatible binding whose base_url is an OpenRouter host. Omit it to leave the broker's own choice of host.",
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "provider": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "only": {
+                  "$ref": "#/$defs/openRouterProvider/properties/only"
+                },
+                "ignore": {
+                  "$ref": "#/$defs/openRouterProvider/properties/ignore"
+                },
+                "allow_fallbacks": {
+                  "$ref": "#/$defs/openRouterProvider/properties/allow_fallbacks"
+                },
+                "zdr": {
+                  "$ref": "#/$defs/openRouterProvider/properties/zdr"
+                },
+                "data_collection": {
+                  "$ref": "#/$defs/openRouterProvider/properties/data_collection"
+                },
+                "enforce_distillable_text": {
+                  "$ref": "#/$defs/openRouterProvider/properties/enforce_distillable_text"
+                }
+              }
+            }
+          }
+        },
+        {
+          "$ref": "#/$defs/embeddingsRoutingFlat"
+        }
+      ]
+    },
+    "embeddingsRoutingFlat": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
         "only": {
-          "$ref": "#/$defs/upstreamRouting/properties/only"
+          "$ref": "#/$defs/upstreamRoutingFlat/properties/only"
         },
         "ignore": {
-          "$ref": "#/$defs/upstreamRouting/properties/ignore"
+          "$ref": "#/$defs/upstreamRoutingFlat/properties/ignore"
         },
         "allow_fallbacks": {
-          "$ref": "#/$defs/upstreamRouting/properties/allow_fallbacks"
+          "$ref": "#/$defs/upstreamRoutingFlat/properties/allow_fallbacks"
         }
       }
     }

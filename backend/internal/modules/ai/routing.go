@@ -312,19 +312,24 @@ func (cfg RoutingConfig) validate() error {
 	if len(cfg.Tiers) == 0 {
 		return fmt.Errorf("ai: routing config: no tiers bound")
 	}
-	for tier, binding := range cfg.Tiers {
+	// Every tier's routing faults are gathered before refusing, so an editor
+	// that sent several bad values hears about all of them at once.
+	var routingFaults []error
+	for _, tier := range cfg.sortedTiers() {
+		binding := cfg.Tiers[tier]
 		if !knownTiers[tier] {
 			return fmt.Errorf("ai: routing config: unknown tier %q", tier)
 		}
 		if err := ValidateTierBinding(cfg.Profile, tier, binding); err != nil {
 			return err
 		}
-		if err := validateUpstreamPreferences(string(tier), binding); err != nil {
-			return err
-		}
+		routingFaults = append(routingFaults, validateUpstreamPreferences(TierRoutingPath(tier), binding))
 		if err := validateThinkingLevel("tier "+string(tier), binding); err != nil {
 			return err
 		}
+	}
+	if err := joinFaults(routingFaults...); err != nil {
+		return err
 	}
 	if cfg.Embeddings.Provider == "" {
 		return fmt.Errorf("ai: routing config: embeddings lane has no provider")

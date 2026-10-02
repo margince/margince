@@ -183,14 +183,14 @@ func TestLift_DisagreeingLanesFirstInOrderWinsAndWarns(t *testing.T) {
 func TestLift_ServingPrefsStayOnTheTier(t *testing.T) {
 	log, _ := warnings()
 	cfg := RoutingConfig{Tiers: map[Tier]ProviderConfig{
-		TierPremium:    brokerLane("m", &OpenRouterRouting{Only: []string{"mistral/eu"}, Sort: SortThroughput, ReasoningEffort: effortHigh}),
-		TierCheapCloud: brokerLane("m", &OpenRouterRouting{Only: []string{"mistral/eu"}}),
+		TierPremium:    brokerLane("m", &OpenRouterRouting{Provider: OpenRouterProvider{Only: []string{"mistral/eu"}, Sort: &OpenRouterSort{By: SortThroughput}}, Reasoning: &OpenRouterReasoning{Effort: effortHigh}}),
+		TierCheapCloud: brokerLane("m", &OpenRouterRouting{Provider: OpenRouterProvider{Only: []string{"mistral/eu"}}}),
 	}}
 	lifted := cfg.liftLaneProviderFields(log)
-	if got := lifted.Providers[providerOpenAICompatible].Upstream; !reflect.DeepEqual(got, &OpenRouterRouting{Only: []string{"mistral/eu"}}) {
+	if got := lifted.Providers[providerOpenAICompatible].Upstream; !reflect.DeepEqual(got, &OpenRouterRouting{Provider: OpenRouterProvider{Only: []string{"mistral/eu"}}}) {
 		t.Errorf("provider upstream = %+v, want the pin alone", got)
 	}
-	if got := lifted.Tiers[TierPremium].Routing; !reflect.DeepEqual(got, &OpenRouterRouting{Sort: SortThroughput, ReasoningEffort: effortHigh}) {
+	if got := lifted.Tiers[TierPremium].Routing; !reflect.DeepEqual(got, &OpenRouterRouting{Provider: OpenRouterProvider{Sort: &OpenRouterSort{By: SortThroughput}}, Reasoning: &OpenRouterReasoning{Effort: effortHigh}}) {
 		t.Errorf("tier premium routing = %+v, want its sort and effort without the pin", got)
 	}
 	if got := lifted.Tiers[TierCheapCloud].Routing; got == nil || !got.IsEmpty() {
@@ -203,10 +203,10 @@ func TestLift_IsIdempotent(t *testing.T) {
 	cfg := RoutingConfig{
 		Profile: ProfileCloudFrontier,
 		Tiers: map[Tier]ProviderConfig{
-			TierCheapCloud: brokerLane("m", &OpenRouterRouting{Sort: SortThroughput, ReasoningEffort: effortLow}),
+			TierCheapCloud: brokerLane("m", &OpenRouterRouting{Provider: OpenRouterProvider{Sort: &OpenRouterSort{By: SortThroughput}}, Reasoning: &OpenRouterReasoning{Effort: effortLow}}),
 			TierPremium:    brokerLane("m", nil),
 		},
-		Embeddings: EmbeddingsConfig{ProviderConfig: brokerLane("e", &OpenRouterRouting{Ignore: []string{"x"}})},
+		Embeddings: EmbeddingsConfig{ProviderConfig: brokerLane("e", &OpenRouterRouting{Provider: OpenRouterProvider{Ignore: []string{"x"}}})},
 		Decisions:  &DecisionsConfig{Provider: providerJevCompatible, Model: "d", BaseURL: exampleBrokerDecisionEndpoint},
 	}
 	once := cfg.liftLaneProviderFields(log)
@@ -242,10 +242,10 @@ tiers:
 embeddings: {provider: openai_compatible, model: e}
 `)
 	off := false
-	if got, want := cfg.Embeddings.Routing, (&OpenRouterRouting{Only: []string{"a"}, AllowFallbacks: &off}); !reflect.DeepEqual(got, want) {
+	if got, want := cfg.Embeddings.Routing, (&OpenRouterRouting{Provider: OpenRouterProvider{Only: []string{"a"}, AllowFallbacks: &off}}); !reflect.DeepEqual(got, want) {
 		t.Errorf("embeddings routing = %+v, want only the provider's pins %+v", got, want)
 	}
-	full := &OpenRouterRouting{Only: []string{"a"}, Sort: SortThroughput, Quantizations: []string{"fp8"}, AllowFallbacks: &off}
+	full := &OpenRouterRouting{Provider: OpenRouterProvider{Only: []string{"a"}, Sort: &OpenRouterSort{By: SortThroughput}, Quantizations: []string{"fp8"}, AllowFallbacks: &off}}
 	if got := cfg.Tiers[TierPremium].Routing; !reflect.DeepEqual(got, full) {
 		t.Errorf("tier routing = %+v, want its own serving preferences plus the pins %+v", got, full)
 	}
@@ -260,7 +260,7 @@ tiers:
 embeddings: {provider: gemini, model: e}
 `)
 	want := DefaultOpenRouterRouting()
-	want.Only = []string{"mistral/eu"}
+	want.Provider.Only = []string{"mistral/eu"}
 	if got := cfg.Tiers[TierPremium].Routing; !reflect.DeepEqual(got, want) {
 		t.Errorf("tier routing = %+v, want the product default pinned %+v", got, want)
 	}
@@ -274,7 +274,7 @@ tiers:
   premium: {provider: openai_compatible, model: m, routing: {}}
 embeddings: {provider: gemini, model: e}
 `)
-	if got, want := cfg.Tiers[TierPremium].Routing, (&OpenRouterRouting{Only: []string{"mistral/eu"}}); !reflect.DeepEqual(got, want) {
+	if got, want := cfg.Tiers[TierPremium].Routing, (&OpenRouterRouting{Provider: OpenRouterProvider{Only: []string{"mistral/eu"}}}); !reflect.DeepEqual(got, want) {
 		t.Errorf("tier routing = %+v, want the pin and none of the product default %+v", got, want)
 	}
 }
@@ -308,15 +308,15 @@ tiers:
   cheap_cloud: {provider: openai_compatible, model: m}
 embeddings: {provider: openai_compatible, model: e}
 `)
-	cfg.Tiers[TierPremium].Routing.Only[0] = "mutated"
-	cfg.Tiers[TierPremium].Routing.Sort = SortPrice
-	if got := cfg.Tiers[TierCheapCloud].Routing; got.Only[0] != "a" || got.Sort != SortThroughput {
+	cfg.Tiers[TierPremium].Routing.Provider.Only[0] = "mutated"
+	cfg.Tiers[TierPremium].Routing.Provider.Sort.By = SortPrice
+	if got := cfg.Tiers[TierCheapCloud].Routing; got.Provider.Only[0] != "a" || got.Provider.Sort.By != SortThroughput {
 		t.Errorf("tier cheap_cloud routing = %+v, changed with its sibling's", got)
 	}
-	if got := cfg.Embeddings.Routing.Only[0]; got != "a" {
+	if got := cfg.Embeddings.Routing.Provider.Only[0]; got != "a" {
 		t.Errorf("embeddings only = %q, changed with a tier's", got)
 	}
-	if got := cfg.Providers[providerOpenAICompatible].Upstream.Only[0]; got != "a" {
+	if got := cfg.Providers[providerOpenAICompatible].Upstream.Provider.Only[0]; got != "a" {
 		t.Errorf("provider only = %q, changed with a lane's", got)
 	}
 }
@@ -355,19 +355,19 @@ func TestValidateProviderEntries(t *testing.T) {
 	}{
 		"an unknown provider": {ProfileCloudFrontier, map[string]ProviderSettings{"openrouter": {BaseURL: broker}}, "not a provider this build knows"},
 		"upstream on a provider that fronts one host": {
-			ProfileCloudFrontier, map[string]ProviderSettings{providerVLLM: {Upstream: &OpenRouterRouting{Sort: SortThroughput}}}, "vllm serves one model from one host",
+			ProfileCloudFrontier, map[string]ProviderSettings{providerVLLM: {Upstream: &OpenRouterRouting{Provider: OpenRouterProvider{Sort: &OpenRouterSort{By: SortThroughput}}}}}, "vllm serves one model from one host",
 		},
 		"upstream on a direct vendor host": {
 			ProfileCloudFrontier, map[string]ProviderSettings{providerOpenAICompatible: {BaseURL: "https://api.mistral.ai", Upstream: &OpenRouterRouting{}}}, "not an OpenRouter host",
 		},
 		"a reasoning effort in upstream": {
-			ProfileCloudFrontier, map[string]ProviderSettings{providerOpenAICompatible: {BaseURL: broker, Upstream: &OpenRouterRouting{ReasoningEffort: effortLow}}}, "set per tier",
+			ProfileCloudFrontier, map[string]ProviderSettings{providerOpenAICompatible: {BaseURL: broker, Upstream: &OpenRouterRouting{Reasoning: &OpenRouterReasoning{Effort: effortLow}}}}, "set per tier",
 		},
 		"a serving preference in upstream": {
-			ProfileCloudFrontier, map[string]ProviderSettings{providerOpenAICompatible: {BaseURL: broker, Upstream: &OpenRouterRouting{Sort: SortThroughput}}}, "set per tier",
+			ProfileCloudFrontier, map[string]ProviderSettings{providerOpenAICompatible: {BaseURL: broker, Upstream: &OpenRouterRouting{Provider: OpenRouterProvider{Sort: &OpenRouterSort{By: SortThroughput}}}}}, "set per tier",
 		},
 		"a pin naming one host twice": {
-			ProfileCloudFrontier, map[string]ProviderSettings{providerOpenAICompatible: {BaseURL: broker, Upstream: &OpenRouterRouting{Only: []string{"a", "a"}}}}, "twice",
+			ProfileCloudFrontier, map[string]ProviderSettings{providerOpenAICompatible: {BaseURL: broker, Upstream: &OpenRouterRouting{Provider: OpenRouterProvider{Only: []string{"a", "a"}}}}}, "twice",
 		},
 		"a proxy host on a vendor adapter": {
 			ProfileCloudFrontier, map[string]ProviderSettings{providerAnthropic: {BaseURL: "https://gateway.example"}}, "",
@@ -432,7 +432,7 @@ func TestDigest_RefinalizingAResolvedConfigKeepsItsVersion(t *testing.T) {
 	if reloaded.RoutingVersion() != resolved.RoutingVersion() {
 		t.Error("reloading a resolved config moved its routing version")
 	}
-	if got := reloaded.Providers[providerOpenAICompatible].Upstream; !reflect.DeepEqual(got, &OpenRouterRouting{Only: []string{"mistral/eu"}}) {
+	if got := reloaded.Providers[providerOpenAICompatible].Upstream; !reflect.DeepEqual(got, &OpenRouterRouting{Provider: OpenRouterProvider{Only: []string{"mistral/eu"}}}) {
 		t.Errorf("provider upstream = %+v after reload, want the pin alone, with no serving preference pinned onto it", got)
 	}
 }
@@ -478,7 +478,7 @@ func TestLift_EmbeddingsPinsStayOnTheirLaneBesideATier(t *testing.T) {
 	if got := cfg.Tiers[TierPremium].Routing; !reflect.DeepEqual(got, DefaultOpenRouterRouting()) {
 		t.Errorf("tier routing = %+v, want the product default without the embedder's pin: the pinned host may not serve this model", got)
 	}
-	if got := cfg.Embeddings.Routing; !reflect.DeepEqual(got, &OpenRouterRouting{Only: []string{"mistral/eu"}}) {
+	if got := cfg.Embeddings.Routing; !reflect.DeepEqual(got, &OpenRouterRouting{Provider: OpenRouterProvider{Only: []string{"mistral/eu"}}}) {
 		t.Errorf("embeddings routing = %+v, want its own pin", got)
 	}
 }
@@ -492,11 +492,11 @@ embeddings: {provider: openai_compatible, model: e, base_url: "https://openroute
 `
 	cfg := mustParse(t, doc)
 	pinned := DefaultOpenRouterRouting()
-	pinned.Only = []string{"mistral/eu"}
+	pinned.Provider.Only = []string{"mistral/eu"}
 	if got := cfg.Tiers[TierPremium].Routing; !reflect.DeepEqual(got, pinned) {
 		t.Errorf("tier premium routing = %+v, want the default under the provider's pin", got)
 	}
-	if got := cfg.Embeddings.Routing; !reflect.DeepEqual(got, &OpenRouterRouting{Only: []string{"mistral/eu"}}) {
+	if got := cfg.Embeddings.Routing; !reflect.DeepEqual(got, &OpenRouterRouting{Provider: OpenRouterProvider{Only: []string{"mistral/eu"}}}) {
 		t.Errorf("embeddings routing = %+v, want the provider's pin", got)
 	}
 	var raw RoutingConfig
@@ -532,7 +532,7 @@ func TestResolve_ADirectVendorTierBesideAPinnedBrokerEmbedder(t *testing.T) {
 	if got := cfg.Tiers[TierPremium]; got.BaseURL != "https://api.mistral.ai" || got.Routing != nil {
 		t.Errorf("tier = %+v, want the vendor host with no broker preferences", got)
 	}
-	if got := cfg.Embeddings; got.BaseURL != broker || !reflect.DeepEqual(got.Routing, &OpenRouterRouting{Only: []string{"mistral/eu"}}) {
+	if got := cfg.Embeddings; got.BaseURL != broker || !reflect.DeepEqual(got.Routing, &OpenRouterRouting{Provider: OpenRouterProvider{Only: []string{"mistral/eu"}}}) {
 		t.Errorf("embeddings = %+v, want the broker and its own pin", got.ProviderConfig)
 	}
 }

@@ -10821,6 +10821,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ai/routing/schema": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The JSON Schema of the routing document, with a description and documentation link per OpenRouter field (ai_routing read).
+         * @description The routing $defs of the configuration schema the editor gate holds to the parser, so
+         *     the admin screen documents exactly what a save accepts. Each OpenRouter field carries
+         *     `x-doc-url` and `x-placement` (tier, or connection for the keys set on the provider).
+         */
+        get: operations["getAiRoutingSchema"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ai/routing/preview": {
         parameters: {
             query?: never;
@@ -19403,6 +19425,15 @@ export interface components {
             ignore?: string[];
             /** @description Override the broker's host fallback. False is a real choice, distinct from absent. */
             allow_fallbacks?: boolean;
+            /** @description Zero data retention: only hosts that keep no copy of the prompt or the answer may serve a request. */
+            zdr?: boolean;
+            /**
+             * @description deny keeps every request off hosts that may store or train on prompts.
+             * @enum {string}
+             */
+            data_collection?: "allow" | "deny";
+            /** @description Only models whose licence allows their output to train other models. */
+            enforce_distillable_text?: boolean;
         };
         AiTierBinding: {
             /**
@@ -19446,34 +19477,133 @@ export interface components {
             thinking_level?: "default" | "minimal" | "low" | "medium" | "high";
         };
         /**
-         * @description How an openai_compatible binding pointed at OpenRouter serves its model; refused on any
-         *     other binding, and on the embeddings lane every preference but only, ignore and
-         *     allow_fallbacks is refused. Absent means the product default (reliability over price);
-         *     an empty object means no preferences (the broker's own price-weighted routing). The two
-         *     are different choices and a client must not turn one into the other. `only`, `ignore`
-         *     and `allow_fallbacks` belong to the provider (`AiOpenRouterUpstream`): on a tier they
-         *     are accepted only when equal to the provider's, or lifted onto a provider that has none.
+         * @description How an openai_compatible binding pointed at OpenRouter serves its model, in OpenRouter's
+         *     own request shape: `provider` (which hosts and how) and `reasoning` (how hard the model
+         *     thinks). Refused on any other binding; on the embeddings lane only provider.only,
+         *     provider.ignore and provider.allow_fallbacks are accepted. Absent means the product
+         *     default (reliability over price); an empty object means no preferences (the broker's own
+         *     price-weighted routing). The two are different choices and a client must not turn one
+         *     into the other. The keys that say which hosts may read a request (only, ignore,
+         *     allow_fallbacks, zdr, data_collection, enforce_distillable_text) belong to the provider
+         *     (`AiOpenRouterUpstream`): on a tier they are accepted only when equal to the provider's,
+         *     and refused otherwise, each by its path. `GET /ai/routing/schema` describes every field.
+         *     The flat keys are the older spelling, still read; a response writes `provider` and
+         *     `reasoning`.
          */
         AiOpenRouterRouting: {
-            /** @description Upstream slugs allowed; a hard filter. */
+            provider?: components["schemas"]["AiOpenRouterProvider"];
+            reasoning?: components["schemas"]["AiOpenRouterReasoning"];
+            /**
+             * @deprecated
+             * @description Older spelling of provider.only.
+             */
             only?: string[];
-            /** @description Upstream slugs excluded; a hard filter. */
+            /**
+             * @deprecated
+             * @description Older spelling of provider.ignore.
+             */
             ignore?: string[];
-            /** @description Serving precisions allowed (bf16, fp16, fp8, fp4, int8 …); a hard filter. */
+            /**
+             * @deprecated
+             * @description Older spelling of provider.quantizations.
+             */
             quantizations?: string[];
-            /** @description price | throughput | latency. Reorders rather than filters, and disables load balancing. */
+            /**
+             * @deprecated
+             * @description Older spelling of provider.sort.
+             */
             sort?: string;
-            /** @description Keep the request off hosts that lack any parameter it carries. False is a real choice, distinct from absent. */
+            /**
+             * @deprecated
+             * @description Older spelling of provider.require_parameters.
+             */
             require_parameters?: boolean;
-            /** @description Override the broker's host fallback. False is a real choice, distinct from absent. */
+            /**
+             * @deprecated
+             * @description Older spelling of provider.allow_fallbacks.
+             */
             allow_fallbacks?: boolean;
             /**
              * Format: double
-             * @description Seconds; hosts above it are deprioritized, never removed. Omit to leave unset.
+             * @deprecated
+             * @description Older spelling of provider.preferred_max_latency.p90, in seconds.
              */
             preferred_max_latency_p90?: number;
-            /** @description none | minimal | low | medium | high | xhigh | max. Unset leaves each host its own default. */
+            /**
+             * @deprecated
+             * @description Older spelling of reasoning.effort.
+             */
             reasoning_effort?: string;
+        };
+        /** @description OpenRouter's `provider` request object, sent as written. Every key is optional; GET /ai/routing/schema documents each. */
+        AiOpenRouterProvider: {
+            /** @description Host slugs to try first, in this order. */
+            order?: string[];
+            /** @description Upstream slugs allowed; a hard filter. Set on the provider. */
+            only?: string[];
+            /** @description Upstream slugs excluded; a hard filter. Set on the provider. */
+            ignore?: string[];
+            /** @description Whether the broker may switch hosts on failure. Set on the provider. */
+            allow_fallbacks?: boolean;
+            /** @description Keep the request off hosts that lack any parameter it carries. */
+            require_parameters?: boolean;
+            /**
+             * @description Whether hosts that may store prompts are allowed. Set on the provider.
+             * @enum {string}
+             */
+            data_collection?: "allow" | "deny";
+            /** @description Zero data retention only. Set on the provider. */
+            zdr?: boolean;
+            /** @description Only models whose output may train other models. Set on the provider. */
+            enforce_distillable_text?: boolean;
+            /** @description Serving precisions allowed (bf16, fp16, fp8, fp4, int8 …); a hard filter. */
+            quantizations?: string[];
+            /** @description price | throughput | latency, or {by, partition}. Reorders rather than filters, and disables load balancing. */
+            sort?: ("price" | "throughput" | "latency") | components["schemas"]["AiOpenRouterSort"];
+            max_price?: components["schemas"]["AiOpenRouterPrice"];
+            /** @description Tokens per second, one number or per percentile; a soft preference. */
+            preferred_min_throughput?: number | components["schemas"]["AiOpenRouterPercentiles"];
+            /** @description Seconds, one number or per percentile; a soft preference. */
+            preferred_max_latency?: number | components["schemas"]["AiOpenRouterPercentiles"];
+        };
+        AiOpenRouterSort: {
+            /** @enum {string} */
+            by: "price" | "throughput" | "latency";
+            /**
+             * @description none sorts across every model of a fallback list at once.
+             * @enum {string}
+             */
+            partition?: "model" | "none";
+        };
+        /** @description The most a request may cost, in USD per million prompt or completion tokens, or per request or image. */
+        AiOpenRouterPrice: {
+            /** Format: double */
+            prompt?: number;
+            /** Format: double */
+            completion?: number;
+            /** Format: double */
+            request?: number;
+            /** Format: double */
+            image?: number;
+        };
+        AiOpenRouterPercentiles: {
+            /** Format: double */
+            p50?: number;
+            /** Format: double */
+            p75?: number;
+            /** Format: double */
+            p90?: number;
+            /** Format: double */
+            p99?: number;
+        };
+        /** @description OpenRouter's `reasoning` request object. effort and max_tokens are two spellings of one budget; write one. */
+        AiOpenRouterReasoning: {
+            /** @enum {string} */
+            effort?: "max" | "xhigh" | "high" | "medium" | "low" | "minimal" | "none";
+            max_tokens?: number;
+            /** @description Think, but leave the reasoning out of the answer. */
+            exclude?: boolean;
+            enabled?: boolean;
         };
         AiEmbeddingsBinding: components["schemas"]["AiTierBinding"] & {
             /**
@@ -21072,6 +21202,27 @@ export interface components {
             current_version: string;
             features: components["schemas"]["AiFeatureRoute"][];
             unused_tiers: string[];
+            /**
+             * @description Every key the save would refuse, by its path in the routing document
+             *     (tiers.cheap_cloud.routing.provider.sort.by). Absent when the draft is valid; when
+             *     present, features are judged with each refused tier routing left as stored.
+             */
+            errors?: components["schemas"]["AiFieldError"][];
+            effective?: components["schemas"]["AiRoutingEffective"];
+        };
+        /** @description What each tier will send OpenRouter once saved, the connection's keys and the product default merged in. Only tiers whose binding sends a block. */
+        AiRoutingEffective: {
+            tiers: {
+                [key: string]: components["schemas"]["AiOpenRouterRouting"];
+            };
+        };
+        /** @description One refused input, the shape a 422's details.errors carries. */
+        AiFieldError: {
+            /** @description The path of the refused key. */
+            field: string;
+            code: string;
+            /** @description What is wrong and what to write instead. */
+            message: string;
         };
         /** @description AI usage + budget (AIRT-WIRE-1): the AIRT-PARAM-33 meter aggregated per day × task × tier, plus the budget band. Token-denominated; cost_est_minor is computed on read from the workspace's ai_model_rate price sheet as of each call's day (ADR-0067, price-on-read) — omitted, never a fabricated 0, when a task line's window carries no priced call, and accompanied by unpriced_calls when it is a partial total. */
         AiUsage: {
@@ -58718,6 +58869,30 @@ export interface operations {
                 content?: never;
             };
             422: components["responses"]["ValidationError"];
+        };
+    };
+    getAiRoutingSchema: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The routing $defs. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/schema+json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
         };
     };
     previewAiRouting: {

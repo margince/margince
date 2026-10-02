@@ -21,7 +21,9 @@ package gates
 // no schema, because the operator was told it was fine.
 
 import (
+	"encoding/json"
 	"os"
+	"reflect"
 	"testing"
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
@@ -200,6 +202,45 @@ func TestTheSchemaAndTheParserAgreeOnEveryUpstreamRoutingDeclaration(t *testing.
 		// same limit `input:` runs into one field over.
 		"a zero latency ceiling": {tiered(broker + ", routing: {preferred_max_latency_p90: 0}"), true},
 
+		// OpenRouter's own nested request shape, every field the parser reads.
+		"a nested sort":                    {tiered(broker + ", routing: {provider: {sort: latency}}"), true},
+		"a nested sort with a partition":   {tiered(broker + ", routing: {provider: {sort: {by: price, partition: none}}}"), true},
+		"a host order":                     {tiered(broker + ", routing: {provider: {order: [groq, cerebras]}}"), true},
+		"a price ceiling":                  {tiered(broker + ", routing: {provider: {max_price: {prompt: 0.5, completion: 2}}}"), true},
+		"a throughput floor":               {tiered(broker + ", routing: {provider: {preferred_min_throughput: {p50: 40}}}"), true},
+		"one latency for every percentile": {tiered(broker + ", routing: {provider: {preferred_max_latency: 3}}"), true},
+		"a reasoning budget":               {tiered(broker + ", routing: {reasoning: {max_tokens: 512, exclude: true}}"), true},
+		"an empty nested declaration":      {tiered(broker + ", routing: {provider: {}}"), true},
+		// A seed writing the connection's keys on a tier has them lifted, as the
+		// flat spelling always was; the settings API is where they are refused.
+		"a nested privacy key on a tier": {tiered(broker + ", routing: {provider: {zdr: true}}"), true},
+
+		"an unknown nested key":               {tiered(broker + ", routing: {provider: {sort_by: price}}"), false},
+		"an unknown reasoning key":            {tiered(broker + ", routing: {reasoning: {budget: 10}}"), false},
+		"an unknown sort partition":           {tiered(broker + ", routing: {provider: {sort: {by: price, partition: all}}}"), false},
+		"a sort object with no order":         {tiered(broker + ", routing: {provider: {sort: {partition: none}}}"), false},
+		"an unknown data collection":          {tiered(broker + ", routing: {provider: {data_collection: maybe}}"), false},
+		"a negative price ceiling":            {tiered(broker + ", routing: {provider: {max_price: {prompt: -1}}}"), false},
+		"an unknown percentile":               {tiered(broker + ", routing: {provider: {preferred_max_latency: {p95: 3}}}"), false},
+		"a percentile object with none":       {tiered(broker + ", routing: {provider: {preferred_max_latency: {}}}"), false},
+		"effort and a token budget":           {tiered(broker + ", routing: {reasoning: {effort: low, max_tokens: 10}}"), false},
+		"a zero token budget":                 {tiered(broker + ", routing: {reasoning: {max_tokens: 0}}"), false},
+		"the flat and nested spellings mixed": {tiered(broker + ", routing: {sort: price, provider: {order: [groq]}}"), false},
+		"a nested order written empty":        {tiered(broker + ", routing: {provider: {order: []}}"), false},
+
+		// The connection takes its own keys in either spelling, and nothing else.
+		"privacy on the connection": {
+			"profile: cloud_frontier\nproviders:\n  openai_compatible: {base_url: 'https://openrouter.ai/api', upstream: {provider: {zdr: true, data_collection: deny, only: [mistral]}}}\n" +
+				"tiers:\n  premium: {provider: openai_compatible, model: m}\nembeddings: {provider: gemini, model: e}\n", true,
+		},
+		"a serving key on the connection": {
+			"profile: cloud_frontier\nproviders:\n  openai_compatible: {base_url: 'https://openrouter.ai/api', upstream: {provider: {sort: price}}}\n" +
+				"tiers:\n  premium: {provider: openai_compatible, model: m}\nembeddings: {provider: gemini, model: e}\n", false,
+		},
+		"a nested host pin on the embeddings lane":    {embedded("routing: {provider: {only: [mistral/eu]}}"), true},
+		"a nested privacy key on the embeddings lane": {embedded("routing: {provider: {zdr: true}}"), true},
+		"a nested serving key on the embeddings lane": {embedded("routing: {provider: {order: [groq]}}"), false},
+
 		// The block cannot be honoured here: a native vendor fronts one host.
 		"a block on a native vendor": {
 			tiered("provider: gemini, model: m, routing: {sort: throughput}"), false,
@@ -350,5 +391,35 @@ func TestTheSchemaAndTheParserAgreeOnEveryThinkingLevel(t *testing.T) {
 				t.Errorf("the PARSER accepts=%v, want %v (err: %v)", parserAccepts, tc.legal, parseErr)
 			}
 		})
+	}
+}
+
+// The admin screen is served the routing $defs from a copy embedded in the ai
+// module at generation time. It must be this document, byte for byte in
+// meaning, or the field reference would describe a schema nobody gates.
+//
+// Held by: TestTheServedRoutingSchemaIsTheGatedSchema (backend/gates/airoutingschema_test.go) — this test.
+func TestTheServedRoutingSchemaIsTheGatedSchema(t *testing.T) {
+	t.Parallel()
+	raw, err := os.ReadFile("../config/margince.schema.json")
+	if err != nil {
+		t.Fatalf("read schema: %v", err)
+	}
+	var doc struct {
+		Defs json.RawMessage `json:"$defs"`
+	}
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		t.Fatalf("parse schema: %v", err)
+	}
+	served := ai.RoutingSchemaDocument()
+	var want, got any
+	if err := json.Unmarshal(doc.Defs, &want); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(served, &got); err != nil {
+		t.Fatalf("the served schema is not JSON: %v", err)
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatal("GET /ai/routing/schema serves a schema other than config/margince.schema.json's $defs; run make gen")
 	}
 }
