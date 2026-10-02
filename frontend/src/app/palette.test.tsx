@@ -143,7 +143,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     expect(window.location.hash).toBe("#/deals");
   });
 
-  it("filters by label+subtitle case-insensitively and appends the see-all row last", async () => {
+  it("filters by label+subtitle case-insensitively and puts the see-all row after them", async () => {
     render(<CommandPalette open onClose={() => {}} commands={commands} />);
     await userEvent.type(screen.getByRole("searchbox"), "COMPANY");
     const rows = destinationRows();
@@ -307,6 +307,68 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
 
     await userEvent.click(screen.getByText("Dana Buyer at Acme"));
     expect(window.location.hash).toBe("#/contacts/p1");
+  });
+
+  // Half a name is still a search. Enter used to open whatever ranked first,
+  // so a reader who stopped typing at "strai" landed on one record when they
+  // meant to see what matched.
+  it("opens every result on Enter when the words only begin a record's name", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: [{ type: "company", id: "o1", title: "Straight" }],
+          page: { next_cursor: null, has_more: false },
+        }),
+      ),
+    );
+    render(<CommandPalette open onClose={() => {}} commands={commands} />);
+    await user.type(screen.getByRole("searchbox"), "strai");
+    await screen.findByRole("button", { name: /Straight/ });
+    await user.keyboard("{Enter}");
+    expect(window.location.hash).toBe("#/search/strai");
+  });
+
+  it("opens the record on Enter when the words name it whole", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: [
+            { type: "company", id: "o1", title: "Straight" },
+            { type: "contact", id: "p1", title: "Anna Becker" },
+          ],
+          page: { next_cursor: null, has_more: false },
+        }),
+      ),
+    );
+    render(<CommandPalette open onClose={() => {}} commands={commands} />);
+    await user.type(screen.getByRole("searchbox"), "straight");
+    await screen.findByRole("button", { name: /Straight/ });
+    await user.keyboard("{Enter}");
+    expect(window.location.hash).toBe("#/companies/o1");
+  });
+
+  // The arrows still choose: the see-all row leads, and the hits sit one
+  // press below it.
+  it("opens the hit the reader arrowed to", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: [{ type: "company", id: "o1", title: "Straight" }],
+          page: { next_cursor: null, has_more: false },
+        }),
+      ),
+    );
+    render(<CommandPalette open onClose={() => {}} commands={commands} />);
+    await user.type(screen.getByRole("searchbox"), "strai");
+    await screen.findByRole("button", { name: /Straight/ });
+    await user.keyboard("{ArrowDown}{Enter}");
+    expect(window.location.hash).toBe("#/companies/o1");
   });
 
   // A failed record search used to answer with an empty list, which is the

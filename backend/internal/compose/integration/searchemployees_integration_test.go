@@ -16,8 +16,10 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/search"
@@ -401,4 +403,42 @@ func contactIDs(page search.Page) []ids.UUID {
 		}
 	}
 	return out
+}
+
+// The palette's own question, end to end: a company and its staff made the way
+// the app makes them, then half the company's name typed. Every other case here
+// seeds employment by statement; this one proves the writers the app uses
+// produce rows the arm finds.
+func TestThePaletteFindsTheStaffOfACompanyMadeThroughTheApp(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	var company struct {
+		ID string `json:"id"`
+	}
+	if status := e.Call(t, "POST", "/v1/companies", AnyMap{"display_name": "Straight"}, nil, &company); status != 201 {
+		t.Fatalf("create company → %d", status)
+	}
+	staff := map[string]bool{}
+	for _, name := range []string{"Anna Becker", "Ben Fischer", "Clara Wolf"} {
+		var contact contactRecord
+		if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"full_name": name, "source": "manual"}, nil, &contact); status != 201 {
+			t.Fatalf("create contact %s → %d", name, status)
+		}
+		linkEdge(t, e, AnyMap{"kind": "employment", "contact_id": contact.ID, "company_id": company.ID, "source": "manual"})
+		staff[contact.ID] = true
+	}
+
+	asked := url.Values{"q": {"strai"}, "per_type": {"3"}, "with_employees": {"true"}}
+	var page crmcontracts.SearchResponse
+	if status := e.Call(t, "GET", "/v1/search?"+asked.Encode(), nil, nil, &page); status != 200 {
+		t.Fatalf("search → %d", status)
+	}
+	for _, hit := range page.Data {
+		if hit.Type == crmcontracts.SearchResultTypeContact && hit.WorksAt != nil && hit.WorksAt.CompanyId.String() == company.ID {
+			delete(staff, hit.Id.String())
+		}
+	}
+	if len(staff) != 0 {
+		t.Fatalf("staff %v missing from the palette's page %+v", staff, page.Data)
+	}
 }
