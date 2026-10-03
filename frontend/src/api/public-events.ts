@@ -899,7 +899,7 @@ export interface components {
              * @enum {string}
              */
             direction?: "outbound";
-            /** @description True when the sender's own provider filing attested a message already stored as their outbound mail (absent otherwise). */
+            /** @description True when the sender's own provider filing attested the message as their outbound mail, whether it was stored as received or as unattested outbound (absent otherwise). */
             outbound_attested?: boolean;
             /**
              * @description The activity's new audience (absent when this update did not touch it). Who is named is not carried: a subscriber that must know re-reads the row under its own audience, exactly as a human does.

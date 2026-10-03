@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -53,14 +54,19 @@ func (s *Sink) claimOwnSentMailTx(ctx context.Context, tx pgx.Tx, id ids.Activit
 	if err != nil {
 		return err
 	}
-	if self.Covers(cp.Email) {
+	if self.CoversAddressExactly(cp.Email) {
 		return nil
 	}
 	ours, err := storedAsThisSeatsTx(ctx, tx, id, direction, stored, cp.Email)
 	if err != nil || !ours {
 		return err
 	}
-	return s.claimOwnSentMail(ctx, tx, id, stored, cp.Email)
+	// Archived between the read above and the claim's lock, by an erasure
+	// racing this capture: nothing to correct, and the capture goes on.
+	if err := s.claimOwnSentMail(ctx, tx, id, stored, cp.Email); err != nil && !errors.Is(err, apperrors.ErrNotFound) {
+		return err
+	}
+	return nil
 }
 
 // storedAsThisSeatsTx is the standing to rewrite a row another mailbox stored.
@@ -74,7 +80,9 @@ func storedAsThisSeatsTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, dire
 	_, seat := capturePrincipal(ctx)
 	switch {
 	case direction == connector.DirectionInbound:
-		return SeatProvedAddressTx(ctx, tx, seat, stored)
+		// Unambiguously: an address two seats proved, a shared mailbox, is
+		// nobody's to claim, or whichever seat synced first would take it.
+		return ProvedUnambiguouslyTx(ctx, tx, seat, stored)
 	case direction == connector.DirectionOutbound && foldAddress(stored) == foldAddress(recipient):
 		var sentBySeat bool
 		err := tx.QueryRow(ctx, `

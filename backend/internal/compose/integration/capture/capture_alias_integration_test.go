@@ -178,7 +178,7 @@ func TestAnAddressTheSeatAlreadyHoldsIsNotRediscovered(t *testing.T) {
 }
 
 // A service's no-reply address on a Delivered-To line is never the seat's own,
-// however often it appears, and one already claimed that way is withdrawn.
+// however often it appears, and one claimed that way before is no longer read.
 func TestAMachineAddressIsNeverClaimedAsTheSeatsOwn(t *testing.T) {
 	env := newCaptureEnv(t)
 	const service = "drive-shares-noreply@google.com"
@@ -198,11 +198,16 @@ func TestAMachineAddressIsNeverClaimedAsTheSeatsOwn(t *testing.T) {
 		deliveredMail(service, "", "shares@google.com", "machine-2@google.com"),
 		deliveredMail(service, "", "shares@google.com", "machine-3@google.com"))
 
-	own := ownAddresses(t, env, env.e.Rep1)
-	if _, claimed := own[service]; claimed {
+	if _, claimed := ownAddresses(t, env, env.e.Rep1)[service]; claimed {
 		t.Errorf("%s was claimed as the seat's own address", service)
 	}
-	if _, kept := own["esignature-noreply@google.com"]; kept {
-		t.Error("a machine address claimed before this rule is still the seat's own")
+	listed, err := capturemod.NewOwnerIdentityStore(env.e.DB()).List(seatContext(env.e, env.e.Rep1))
+	if err != nil {
+		t.Fatalf("listing the seat's own addresses: %v", err)
+	}
+	for _, identity := range listed {
+		if identity.Value == "esignature-noreply@google.com" {
+			t.Error("a machine address claimed before this rule is still listed as the seat's own")
+		}
 	}
 }

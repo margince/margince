@@ -22,6 +22,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -131,6 +132,9 @@ func (s *OwnerIdentityStore) List(ctx context.Context) ([]OwnerIdentity, error) 
 		if err != nil {
 			return fmt.Errorf("capture: listing owner identities: %w", err)
 		}
+		out = slices.DeleteFunc(out, func(identity OwnerIdentity) bool {
+			return discoveredMachineAddress(identity.Source, identity.Value)
+		})
 		return nil
 	})
 	return out, err

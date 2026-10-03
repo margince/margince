@@ -893,7 +893,7 @@ type PublicEventActivityChangedFields struct {
 	// OccurredAt The activity's new occurred_at (absent when this update did not touch it).
 	OccurredAt *time.Time `json:"occurred_at,omitempty"`
 
-	// OutboundAttested True when the sender's own provider filing attested a message already stored as their outbound mail (absent otherwise).
+	// OutboundAttested True when the sender's own provider filing attested the message as their outbound mail, whether it was stored as received or as unattested outbound (absent otherwise).
 	OutboundAttested *bool `json:"outbound_attested,omitempty"`
 
 	// Relinked The entity an activity was relinked onto (activities/lifecycle.go's RelinkActivity) — an association change, not a re-capture, so it travels as one changed_fields key rather than its own event verb.

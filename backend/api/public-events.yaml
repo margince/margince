@@ -2006,8 +2006,9 @@ components:
         outbound_attested:
           type: boolean
           description: >-
-            True when the sender's own provider filing attested a message
-            already stored as their outbound mail (absent otherwise).
+            True when the sender's own provider filing attested the message as
+            their outbound mail, whether it was stored as received or as
+            unattested outbound (absent otherwise).
         audience:
           type: string
           enum: [workspace, participants, selected]
