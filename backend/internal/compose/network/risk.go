@@ -27,12 +27,14 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/dealrole"
 	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
@@ -242,7 +244,10 @@ func CoverageFor(ctx context.Context, tx pgx.Tx, dealID ids.DealID, now time.Tim
 		})
 	}
 
-	out.Risks = foldRisks(out, now)
+	// The finding is shared-record text — written once, read by everyone on the
+	// deal — so it follows the installation rather than whoever opened the page.
+	lang := identity.BaseLanguageForRecord(ctx, tx)
+	out.Risks = foldRisks(out, langcopy.For(string(lang)))
 	return out, nil
 }
 
@@ -250,10 +255,10 @@ func CoverageFor(ctx context.Context, tx pgx.Tx, dealID ids.DealID, now time.Tim
 // Pure so it can be tested against hand-built inputs with no database — the
 // gather/fold split every detector in this codebase uses.
 //
-// The clock is the SAME instant the gather ran against, passed in rather than
-// read here: going-cold compares a stored timestamp to now, and a fold that
-// called time.Now() could not be asserted on without sleeping.
-func foldRisks(c DealCoverage, now time.Time) []Risk {
+// It takes no clock. Every instant it judges against was stamped by the
+// database and carried here on the coverage view, for the reason goingCold
+// spells out below.
+func foldRisks(c DealCoverage, say langcopy.Spoken) []Risk {
 	var risks []Risk
 
 	// Every rule here is a PIPELINE rule. REPORT-PARAM-1 says "an open deal",
@@ -288,12 +293,12 @@ func foldRisks(c DealCoverage, now time.Time) []Risk {
 	if c.EverTouched && len(engaged) < reportThreadingFloor {
 		risks = append(risks, Risk{
 			Kind: RiskSingleThreadedTheirs, DealID: c.DealID, ContactIDs: engaged,
-			Summary: "fewer than two engaged contacts — the deal rests on one relationship",
+			Summary: say.Say(riskWords.SingleThreaded),
 		})
 	}
 
 	// GRAPH-RISK-1: one of OUR contacts carries almost all the contact.
-	if r, found := ourSideConcentration(c); found {
+	if r, found := ourSideConcentration(c, say); found {
 		risks = append(risks, r)
 	}
 
@@ -309,14 +314,14 @@ func foldRisks(c DealCoverage, now time.Time) []Risk {
 	if c.EverTouched && !hasEngagedChampion(c.Stakeholders) && len(c.Stakeholders) > 0 {
 		risks = append(risks, Risk{
 			Kind: RiskCoverageGap, DealID: c.DealID,
-			Summary: "no engaged champion — nobody inside the account is carrying this",
+			Summary: say.Say(riskWords.CoverageGap),
 		})
 	}
 
 	// Who has left, and REPORT-PARAM-2's silence. Both are appended last so a
 	// deal's structural findings read before its temporal ones.
-	risks = append(risks, departureRisks(c)...)
-	if r, found := goingCold(c); found {
+	risks = append(risks, departureRisks(c, say)...)
+	if r, found := goingCold(c, say); found {
 		risks = append(risks, r)
 	}
 	return risks
@@ -329,7 +334,7 @@ func foldRisks(c DealCoverage, now time.Time) []Risk {
 // champion leaving means the argument for the deal left the building; another
 // seat leaving means a name on the list is now wrong. Collapsing them would
 // make the milder case shout and the severe one whisper.
-func departureRisks(c DealCoverage) []Risk {
+func departureRisks(c DealCoverage, say langcopy.Spoken) []Risk {
 	departed := make(map[ids.UUID]bool, len(c.DepartedContactIDs))
 	for _, id := range c.DepartedContactIDs {
 		departed[id] = true
@@ -352,13 +357,13 @@ func departureRisks(c DealCoverage) []Risk {
 	if len(champions) > 0 {
 		out = append(out, Risk{
 			Kind: RiskChampionLeft, DealID: c.DealID, ContactIDs: champions,
-			Summary: "the champion has left the account — the contact arguing for this deal no longer works there",
+			Summary: say.Say(riskWords.ChampionDeparted),
 		})
 	}
 	if len(others) > 0 {
 		out = append(out, Risk{
 			Kind: RiskStakeholderLeft, DealID: c.DealID, ContactIDs: others,
-			Summary: "a stakeholder has left the account — the seat is still on the deal, the relationship is not",
+			Summary: say.Say(riskWords.StakeholderLeft),
 		})
 	}
 	return out
@@ -377,7 +382,7 @@ func departureRisks(c DealCoverage) []Risk {
 // subtraction across two that a real deployment does not keep in step. A zero
 // TouchedAsOf is the same "do not judge" a zero LastTouchAt is — a coverage
 // built by hand described no clock, so it described no silence either.
-func goingCold(c DealCoverage) (Risk, bool) {
+func goingCold(c DealCoverage, say langcopy.Spoken) (Risk, bool) {
 	if c.Status != dealStatusOpen || c.LastTouchAt.IsZero() || c.TouchedAsOf.IsZero() {
 		return Risk{}, false
 	}
@@ -387,7 +392,7 @@ func goingCold(c DealCoverage) (Risk, bool) {
 	}
 	return Risk{
 		Kind: RiskGoingCold, DealID: c.DealID, DaysSinceTouch: days,
-		Summary: fmt.Sprintf("no captured touch for %d days — the deal is open and nobody is talking", days),
+		Summary: fmt.Sprintf(say.Say(riskWords.GoingCold), days),
 	}, true
 }
 
@@ -401,7 +406,7 @@ const reportThreadingFloor = 2
 // The minimum matters as much as the share. Without it a deal where one contact
 // sent the only two messages that have ever been exchanged would flag as
 // concentrated, when it is simply new.
-func ourSideConcentration(c DealCoverage) (Risk, bool) {
+func ourSideConcentration(c DealCoverage, say langcopy.Spoken) (Risk, bool) {
 	total := 0
 	byUser := map[ids.UUID]int{}
 	for _, e := range c.OurSide {
@@ -415,7 +420,7 @@ func ourSideConcentration(c DealCoverage) (Risk, bool) {
 		if float64(n) >= ourSideDominanceShare*float64(total) {
 			return Risk{
 				Kind: RiskSingleThreadedOurs, DealID: c.DealID, UserIDs: []ids.UUID{user},
-				Summary: "one colleague carries almost all the contact — the deal depends on their availability",
+				Summary: say.Say(riskWords.OurSideDominance),
 			}, true
 		}
 	}

@@ -107,24 +107,24 @@ func changeLine(change ChangeIn, say spoken) string {
 	case string(crmcontracts.ContactRelationshipChangeKindRepliedAfterGap):
 		switch {
 		case change.Days == 1:
-			return say.say(floor.AnsweredAfterADay)
+			return say.Say(floor.AnsweredAfterADay)
 		case change.Days > 1:
-			return fmt.Sprintf(say.say(floor.AnsweredAfterDays), change.Days)
+			return fmt.Sprintf(say.Say(floor.AnsweredAfterDays), change.Days)
 		}
-		return say.say(floor.AnsweredAfterLong)
+		return say.Say(floor.AnsweredAfterLong)
 	case string(crmcontracts.ContactRelationshipChangeKindWentQuiet):
 		switch {
 		case change.Days == 1:
-			return say.say(floor.QuietForADay)
+			return say.Say(floor.QuietForADay)
 		case change.Days > 1:
-			return fmt.Sprintf(say.say(floor.QuietForDays), change.Days)
+			return fmt.Sprintf(say.Say(floor.QuietForDays), change.Days)
 		}
-		return say.say(floor.GoneQuiet)
+		return say.Say(floor.GoneQuiet)
 	case string(crmcontracts.ContactRelationshipChangeKindWarmed), string(crmcontracts.ContactRelationshipChangeKindCooled):
-		return fmt.Sprintf(say.say(floor.BandMoved),
+		return fmt.Sprintf(say.Say(floor.BandMoved),
 			readableBand(change.From, say), readableBand(change.To, say))
 	default:
-		return fmt.Sprintf(say.say(floor.RelationshipMoved), readableRole(change.Kind))
+		return fmt.Sprintf(say.Say(floor.RelationshipMoved), readableRole(change.Kind))
 	}
 }
 
@@ -133,7 +133,7 @@ func changeLine(change ChangeIn, say spoken) string {
 // reason: inventing a label for a value nobody defined would be a claim.
 func readableBand(band string, say spoken) string {
 	if band == "" {
-		return say.say(floor.UnrecordedBand)
+		return say.Say(floor.UnrecordedBand)
 	}
 	return readableRole(band)
 }
@@ -143,13 +143,13 @@ func readableBand(band string, say spoken) string {
 func identityLine(in Input, say spoken) string {
 	switch {
 	case in.Title != "" && in.Employer != "":
-		return fmt.Sprintf(say.say(floor.IdentityTitleEmployer), in.Name, in.Title, in.Employer)
+		return fmt.Sprintf(say.Say(floor.IdentityTitleEmployer), in.Name, in.Title, in.Employer)
 	case in.Employer != "":
-		return fmt.Sprintf(say.say(floor.IdentityEmployer), in.Name, in.Employer)
+		return fmt.Sprintf(say.Say(floor.IdentityEmployer), in.Name, in.Employer)
 	case in.Title != "":
-		return fmt.Sprintf(say.say(floor.IdentityTitle), in.Name, in.Title)
+		return fmt.Sprintf(say.Say(floor.IdentityTitle), in.Name, in.Title)
 	default:
-		return fmt.Sprintf(say.say(floor.IdentityBare), in.Name)
+		return fmt.Sprintf(say.Say(floor.IdentityBare), in.Name)
 	}
 }
 
@@ -166,9 +166,9 @@ func dealLine(in Input, say spoken) string {
 	}
 	line := strings.Join(parts, " · ")
 	if in.BuyingRole != "" {
-		return fmt.Sprintf(say.say(floor.RecordedRoleOnDeal), readableRole(in.BuyingRole), line)
+		return fmt.Sprintf(say.Say(floor.RecordedRoleOnDeal), readableRole(in.BuyingRole), line)
 	}
-	return fmt.Sprintf(say.say(floor.OnDealNoRole), line)
+	return fmt.Sprintf(say.Say(floor.OnDealNoRole), line)
 }
 
 // readableRole turns the stored role key into words. The keys are a naming
@@ -186,15 +186,15 @@ func caresAboutLine(in Input, say spoken) (string, []Evidence, bool) {
 	objections := claimsOfKind(in, string(crmcontracts.ConversationClaimKindObjection))
 	switch {
 	case len(priorities) > 0 && len(objections) > 0:
-		return fmt.Sprintf(say.say(floor.CaresBoth), priorities[0].Body, objections[0].Body), []Evidence{
+		return fmt.Sprintf(say.Say(floor.CaresBoth), priorities[0].Body, objections[0].Body), []Evidence{
 			{EntityType: citeActivity, EntityID: priorities[0].SourceID},
 			{EntityType: citeActivity, EntityID: objections[0].SourceID},
 		}, true
 	case len(priorities) > 0:
-		return fmt.Sprintf(say.say(floor.CaresPriority), priorities[0].Body),
+		return fmt.Sprintf(say.Say(floor.CaresPriority), priorities[0].Body),
 			[]Evidence{{EntityType: citeActivity, EntityID: priorities[0].SourceID}}, true
 	case len(objections) > 0:
-		return fmt.Sprintf(say.say(floor.CaresObjection), objections[0].Body),
+		return fmt.Sprintf(say.Say(floor.CaresObjection), objections[0].Body),
 			[]Evidence{{EntityType: citeActivity, EntityID: objections[0].SourceID}}, true
 	default:
 		return "", nil, false
@@ -221,19 +221,19 @@ func lastTouchLine(in Input, last ActIn, say spoken) string {
 	case last.Withheld:
 		// The date is the reader's even though the words are not, and saying so
 		// is the honest sentence: silence here reads as nobody having written.
-		return say.say(floor.WithheldMessage)
+		return say.Say(floor.WithheldMessage)
 	case in.LastInbound != "" && in.LastInbound > in.LastOutbound:
 		if outstanding(last) {
-			return fmt.Sprintf(say.say(floor.TheyWroteLastOpen), aboutClause(last, say))
+			return fmt.Sprintf(say.Say(floor.TheyWroteLastOpen), aboutClause(last, say))
 		}
-		return fmt.Sprintf(say.say(floor.TheyWroteLastClosed), aboutClause(last, say))
+		return fmt.Sprintf(say.Say(floor.TheyWroteLastClosed), aboutClause(last, say))
 	case in.LastOutbound != "":
 		if outstanding(last) {
-			return fmt.Sprintf(say.say(floor.YouWroteLastOpen), aboutClause(last, say))
+			return fmt.Sprintf(say.Say(floor.YouWroteLastOpen), aboutClause(last, say))
 		}
-		return fmt.Sprintf(say.say(floor.YouWroteLastClosed), aboutClause(last, say))
+		return fmt.Sprintf(say.Say(floor.YouWroteLastClosed), aboutClause(last, say))
 	default:
-		return fmt.Sprintf(say.say(floor.LastCaptured), aboutClause(last, say))
+		return fmt.Sprintf(say.Say(floor.LastCaptured), aboutClause(last, say))
 	}
 }
 
@@ -269,12 +269,12 @@ func outstanding(last ActIn) bool {
 // nothing else.
 func aboutClause(last ActIn, say spoken) string {
 	if last.Preview != "" {
-		return fmt.Sprintf(say.say(floor.AboutSaying), trimmedPreview(last.Preview))
+		return fmt.Sprintf(say.Say(floor.AboutSaying), trimmedPreview(last.Preview))
 	}
 	if last.Subject != "" {
-		return fmt.Sprintf(say.say(floor.AboutSubject), last.Subject)
+		return fmt.Sprintf(say.Say(floor.AboutSubject), last.Subject)
 	}
-	return fmt.Sprintf(say.say(floor.AboutKind), readableRole(last.Kind))
+	return fmt.Sprintf(say.Say(floor.AboutKind), readableRole(last.Kind))
 }
 
 // previewWords bounds the quoted line. A preview is one line by construction,
