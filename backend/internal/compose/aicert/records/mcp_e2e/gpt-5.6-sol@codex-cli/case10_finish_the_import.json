@@ -1,0 +1,24 @@
+{
+  "scenario": "case10_finish_the_import",
+  "criteria": [
+    1,
+    2
+  ],
+  "passed": 1,
+  "runs": 3,
+  "pass_at": 2,
+  "driver": "gpt:cli",
+  "effort": "reasoning medium",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": false,
+  "usage": {
+    "input_tokens": 124567,
+    "output_tokens": 9060,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 1667200,
+    "runs_measured": 3,
+    "runs_costed": 0,
+    "cost_usd": null
+  }
+}

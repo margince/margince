@@ -1,0 +1,24 @@
+{
+  "scenario": "case31_wrong_word_on_the_record",
+  "criteria": [
+    1,
+    2
+  ],
+  "passed": 2,
+  "runs": 3,
+  "pass_at": 2,
+  "driver": "gpt:cli",
+  "effort": "reasoning medium",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": false,
+  "usage": {
+    "input_tokens": 122977,
+    "output_tokens": 5558,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 564864,
+    "runs_measured": 3,
+    "runs_costed": 0,
+    "cost_usd": null
+  }
+}
