@@ -155,14 +155,25 @@ var repliedRequestsSQL = outstandingRequestSQL + `
 // has been answered and to stamp what it was answered through. That pass ships
 // the prior message's body to a model. The clauses that bound an exposure
 // belong where the exposure is.
-var newestOutboundSince = `SELECT newest.id FROM activity newest
+var newestOutboundSince = newestOutbound("newest.id")
+
+// newestOutboundRow is that newest reply's id and send time, read by the same
+// walk, for the candidate read to select and order by without walking twice.
+var newestOutboundRow = newestOutbound("newest.id, newest.occurred_at")
+
+func newestOutbound(column string) string {
+	return `SELECT ` + column + ` FROM activity newest
         WHERE ` + ourOutboundInThisThread("newest", "a") + `
           AND newest.occurred_at <= $1
           AND (newest.occurred_at, newest.id) > (a.occurred_at, a.id)
         ORDER BY newest.occurred_at DESC, newest.id DESC LIMIT 1`
+}
 
 // RepliedRequests reads the requests this workspace has answered and not yet
-// judged, oldest first.
+// judged, latest reply first: a bounded pass spends its budget on what was just
+// answered, not on a backlog an import brought in. Ordered by the reply rather
+// than the request, so a fresh reply to an old request a human still holds is
+// judged at once instead of queuing behind newer asks.
 //
 // System principal only, like the pass that mints the tasks: this hands thread
 // text to a model, and the audience clause is what decides that a conversation
@@ -179,7 +190,7 @@ func (s *Store) RepliedRequests(ctx context.Context, asOf time.Time, limit int) 
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, storekit.SQLf(`
 			SELECT a.id, coalesce(a.counterparty_email, ''),
-			       (`+newestOutboundSince+`),
+			       latest.id,
 			       task.id, coalesce(task.version, 0),
 			       -- Whether the reminder is still the machine's to sharpen: the
 			       -- pass filed it, nobody has dated it, and nobody has renamed
@@ -190,11 +201,12 @@ func (s *Store) RepliedRequests(ctx context.Context, asOf time.Time, limit int) 
 			       coalesce(task.captured_by = $2 AND task.due_at IS NULL
 			                AND task.subject IS NOT DISTINCT FROM a.subject, false)
 			  FROM activity a
+			  CROSS JOIN LATERAL (`+newestOutboundRow+`) latest
 			  LEFT JOIN activity task
 			    ON task.source_system = '%s' AND task.source_activity_id = a.id
 			   AND task.archived_at IS NULL AND task.is_done = false
 			 WHERE %s
-			 ORDER BY a.occurred_at, a.id
+			 ORDER BY latest.occurred_at DESC, latest.id DESC, a.id DESC
 			 LIMIT $3`, EmailRequestTaskSource, repliedRequestsSQL),
 			asOf, OwedVerdictCapturedBy, limit)
 		if err != nil {
