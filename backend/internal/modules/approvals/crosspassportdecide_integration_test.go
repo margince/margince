@@ -181,9 +181,9 @@ func (e *stagingEnv) connectedPassport(t *testing.T, human, grant ids.UUID) cont
 // after doing nothing but waiting for its own access token to expire — and the
 // receipt names the human who never saw it.
 //
-// The sibling test above allows exactly this shape for two DIRECTLY minted
-// passports of one human, on the grounds that a human had to be present to mint
-// each. That reasoning is what fails here: nobody is present at a rotation.
+// The service here declares no kind undoable, so this is the rule for a release
+// that cannot be taken back; TestACredentialReleasesTheUndoableChangeItStaged
+// is the other half.
 func TestARotatedCredentialDoesNotReleaseWhatItStagedAgainstTheDatabase(t *testing.T) {
 	e := setupStaging(t)
 	ctx := context.Background()
@@ -307,11 +307,10 @@ func TestARotatedCredentialStillPollsAndWithdrawsItsOwnProposal(t *testing.T) {
 // shape is reachable by instruction — a tool loop told "the user already said
 // yes" has a named tool to reach for.
 //
-// The GRANT is the line, and the sibling tests are why. A rotation is one
-// connection and is refused because nobody is present at a rotation; two
-// directly minted passports are allowed because a human session had to mint
-// each. A second connection is the first case wearing the second's clothes:
-// connecting an agent is not being present when it answers.
+// For a release that cannot be taken back the GRANT is the line: two directly
+// minted passports are allowed because a human session had to mint each, and
+// connecting an agent is not being present when it answers. The service here
+// declares no kind undoable, so every kind takes that rule.
 func TestASecondConnectionOfTheSameContactDoesNotReleaseWhatTheFirstStaged(t *testing.T) {
 	e := setupStaging(t)
 	ctx := context.Background()
@@ -378,5 +377,50 @@ func TestASecondConnectionOfTheSameContactDoesNotReleaseWhatTheFirstStaged(t *te
 	}
 	if _, _, err := e.svc.Redeem(proposer, sanctioned, control.Kind, control.DiffHash); err != nil {
 		t.Errorf("the proposing connection could not redeem what its contact released: %v", err)
+	}
+}
+
+// A credential acts for its human, so a change that human could release in the
+// CRM and put back afterwards it releases itself — rotated, connected, its own.
+// What it still cannot release is the same change staged for somebody else.
+func TestACredentialReleasesTheUndoableChangeItStaged(t *testing.T) {
+	e := setupStaging(t)
+	e.svc.WithUndoableRelease(func(kind, _ string) bool { return kind == "company_name_promotion" })
+	target := ids.NewV7()
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO company (id, display_name, source, captured_by)
+		VALUES ($1, 'Selfrel', 'gmail:seed', 'connector:gmail')`, target); err != nil {
+		t.Fatalf("seeding the target: %v", err)
+	}
+	grant := e.connection(t, e.rep)
+	before := e.connectedPassport(t, e.rep, grant)
+	after := e.connectedPassport(t, e.rep, grant)
+	rename := StageInput{
+		Kind:           "company_name_promotion",
+		ProposedChange: []byte(`{"proposed_name":"Selfrel Global"}`),
+		DiffHash:       "selfrel-" + target.String(),
+		TargetType:     tableCompany,
+		TargetID:       target,
+		Summary:        "Rename Selfrel?",
+	}
+	staged, err := e.svc.Stage(before, rename)
+	if err != nil {
+		t.Fatalf("staging on the connection: %v", err)
+	}
+
+	stranger := ids.NewV7()
+	if _, err := e.owner.Exec(context.Background(),
+		`INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Stranger')`,
+		stranger, "stranger-"+stranger.String()+"@st.test"); err != nil {
+		t.Fatalf("seeding the other human: %v", err)
+	}
+	if _, err := e.svc.Decide(e.lentPassport(t, stranger), staged, true, nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("another human's credential released the change → %v, want ErrPermissionDenied", err)
+	}
+	if _, err := e.svc.Decide(after, staged, true, nil); err != nil {
+		t.Fatalf("the connection could not release the undoable change it staged for its human: %v", err)
+	}
+	if _, _, err := e.svc.Redeem(after, staged, rename.Kind, rename.DiffHash); err != nil {
+		t.Errorf("the connection could not redeem the change it released: %v", err)
 	}
 }

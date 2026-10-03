@@ -139,19 +139,22 @@ Concretely:
 These are not "staged for approval". They are refused.
 
 **An agent may never release a proposal that is not its own business.** Two
-rules, and the second is what makes the first worth having:
+rules:
 
-- **A credential does not release the proposal it made.** Otherwise an agent
-  could stage a confirm-first action, approve its own card, and the
-  confirmation would have confirmed nothing.
 - **A credential does not release a proposal staged for somebody else.**
   Without this, two colleagues each lend a passport, A's agent stages the
   confirm-first call and B's approves it — and the tier has been satisfied by
   two agents with nobody having looked.
+- **A credential does not release a send it proposed.** A message, a page
+  fetch or a webhook leaves the workspace and cannot be taken back, so the
+  colleague releases it in the app. A connected agent does not release one
+  another credential staged either.
 
-What is left is narrow and deliberate: an agent may answer a card staged for
-the colleague it acts for, which is exactly what that colleague could have
-answered themselves in the app.
+What is left is deliberate: an agent may answer a card staged for the colleague
+it acts for — its own proposal included, when it only changes records — which
+is exactly what that colleague could have answered themselves in the app, and
+could put back afterwards. A scheduled agent never answers a card at all:
+nobody is watching it to have said yes.
 
 **A step-up is the exception with no exception.** A request to widen a
 credential's own allowance is never an agent's to answer, either way — a

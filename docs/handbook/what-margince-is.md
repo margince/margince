@@ -33,8 +33,8 @@ can your agent. If you are not allowed to do something, it cannot do it for you.
 
 And there is a short list of things it can never do at all, however it is
 configured — chief among them: **an agent never releases a proposal that is not
-its own business.** It may not approve the card its own credential staged, nor
-one staged for a different colleague. It may answer a card staged for the
+its own business.** It may not approve one staged for a different colleague,
+nor a send its own credential proposed. It may answer a card staged for the
 colleague it acts for, which is exactly what they could have answered
 themselves; and it may always reject its own proposal.
 

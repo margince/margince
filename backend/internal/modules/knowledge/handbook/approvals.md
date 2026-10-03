@@ -39,7 +39,7 @@ An approval in Margince expires after **72 hours** by default if nobody decides 
 Also called: approval timed out, missed an approval, stale approval.
 
 ### Who approves agent actions?
-An agent action in Margince is approved by the colleague the agent acts for, or by a colleague who could have made the same change themselves. You only see approvals whose target you can see and whose effect you could perform. No agent may approve its own proposal or one staged for somebody else. An administrator has no override beyond their own permissions.
+An agent action in Margince is approved by the colleague the agent acts for, or by a colleague who could have made the same change themselves. You only see approvals whose target you can see and whose effect you could perform. No agent may approve a proposal staged for somebody else, or a send it proposed itself. An administrator has no override beyond their own permissions.
 Also called: approver, who signs off, permission to approve.
 
 ### How do I stop Margince making automatic changes?
@@ -161,8 +161,11 @@ listed and then refused, because listing it would tell you the record exists.
 Opening such a card by its link answers "not found", the same as an
 out-of-scope record does.
 
-**Nobody releases their own proposal.** An agent may not approve a card its own
-credential staged. It may still reject it.
+**An agent releases its own proposal only when it can be undone.** On your word,
+an agent may approve a record change it staged for you, and the decision is
+recorded as yours, given through that agent. A message, a page fetch or a
+webhook it proposed is yours to release here, because once sent it cannot be
+taken back. It may always reject its own proposal.
 
 A colleague's own direct action needs no approval: a human doing the thing
 themselves *is* the confirmation.

@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 81 |
 | Resources | 11 |
-| Tool catalog | 243.9 KB |
+| Tool catalog | 244.1 KB |
 | Resource catalog | 4.1 KB |
-| Approx. wire tokens | 63482 |
+| Approx. wire tokens | 63524 |
 | Largest tool | `prep_for_meeting` (9.0 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -30,10 +30,10 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 108.0 KB | 44% | **No** — a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 63.2 KB | 25% | Yes, every step |
+| Descriptions (incl. governance clause) | 63.4 KB | 25% | Yes, every step |
 | Input schemas | 55.7 KB | 22% | Yes, every step |
 | _Names, annotations, punctuation_ | 16.9 KB | 6% | Partly |
-| **Description + input schema** | **119.0 KB** | **48%** | **the recurring cost** |
+| **Description + input schema** | **119.1 KB** | **48%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -81,7 +81,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`create_tag`](#create_tag) | Create a tag |  |  | 1.9 KB |
 | [`create_task`](#create_task) | Create a task |  |  | 2.2 KB |
 | [`data_coverage`](#data_coverage) | How current the sources are | yes |  | 2.0 KB |
-| [`decide_approval`](#decide_approval) | Approve or reject one staged action |  |  | 2.9 KB |
+| [`decide_approval`](#decide_approval) | Approve or reject one staged action |  |  | 3.1 KB |
 | [`decide_approval_bundle`](#decide_approval_bundle) | Approve or reject one act's proposals together |  |  | 2.9 KB |
 | [`demote_lead`](#demote_lead) | Reverse a lead promotion |  |  | 2.4 KB |
 | [`describe_analytics_vocabulary`](#describe_analytics_vocabulary) | Describe the analytics vocabulary | yes |  | 2.2 KB |
@@ -3957,7 +3957,7 @@ Answer how much of what is going on this workspace can actually SEE — which co
 
 **Approve or reject one staged action**
 
-Answer one staged action for the colleague asking you: approve it, which lets it happen, or reject it, which discards it. The verdict is theirs — take an explicit approve or reject rather than deciding what they would have wanted. Approving is what makes the change real, including sending a message that was only drafted; a rejection cannot be taken back. An item already answered, or lapsed, is reported as such and nothing is written. read_approval when they have not seen what it holds; decide_approval_bundle for every proposal one act staged. If the proposal is your OWN refused call, approving does not perform it — re-issue that same call with approval_id set. (Governance: runs immediately; requires passport scope "write".)
+Answer one staged action for the colleague asking you: approve it, which lets it happen, or reject it, which discards it. The verdict is theirs — take an explicit approve or reject rather than deciding what they would have wanted. Approving is what makes the change real, including sending a message that was only drafted; a rejection cannot be taken back. You may approve a record change you proposed yourself; a send, fetch or webhook you proposed is theirs to release in the CRM, because what leaves cannot be recalled. An item already answered, or lapsed, is reported as such and nothing is written. read_approval when they have not seen what it holds; decide_approval_bundle for every proposal one act staged. If the proposal is your OWN refused call, approving does not perform it — re-issue that same call with approval_id set. (Governance: runs immediately; requires passport scope "write".)
 
 <details><summary>Input schema</summary>
 

@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 81,
     "system_frame_tokens": 561,
-    "tokens": 28272,
-    "median_tool_tokens": 278,
-    "mean_tool_tokens": 348
+    "tokens": 28314,
+    "median_tool_tokens": 286,
+    "mean_tool_tokens": 349
   },
   "agents": [
     {
@@ -231,6 +231,10 @@
       "tokens": 317
     },
     {
+      "name": "decide_approval",
+      "tokens": 314
+    },
+    {
       "name": "promote_lead",
       "tokens": 304
     },
@@ -261,10 +265,6 @@
     {
       "name": "draft_follow_ups_for",
       "tokens": 273
-    },
-    {
-      "name": "decide_approval",
-      "tokens": 272
     },
     {
       "name": "list_approvals",
