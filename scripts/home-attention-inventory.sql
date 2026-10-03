@@ -20,21 +20,32 @@ BEGIN TRANSACTION READ ONLY;
 
 \echo '1. Received mail by origin'
 -- Mail a seat's mailbox already held when it was first connected is imported
--- history.
+-- history. A calendar connection says nothing about mail, so only mailbox
+-- providers count. A message more than one seat imported is placed once, in
+-- the first bucket any of its imports reaches, so the buckets sum to the mail.
 WITH first_connection AS (
   SELECT user_id, min(created_at) AS connected_at
     FROM capture_connection
-   GROUP BY user_id)
-SELECT CASE WHEN ci.provider_received_at IS NULL THEN 'arrival time not recorded'
-            WHEN fc.connected_at IS NULL THEN 'no mailbox connection on record'
-            WHEN ci.provider_received_at < fc.connected_at THEN 'held before the mailbox was connected'
-            ELSE 'arrived after connection' END AS origin,
-       count(DISTINCT a.id) AS messages
-  FROM activity a
-  JOIN capture_import ci ON ci.activity_id = a.id
-  LEFT JOIN first_connection fc ON fc.user_id = ci.user_id
- WHERE a.kind = 'email' AND a.direction = 'inbound' AND a.archived_at IS NULL
- GROUP BY 1 ORDER BY 1;
+   WHERE provider IN ('gmail', 'imap', 'graph', 'test_mailbox')
+   GROUP BY user_id),
+placed AS (
+  SELECT a.id,
+         min(CASE WHEN ci.provider_received_at IS NULL THEN 4
+                  WHEN fc.connected_at IS NULL THEN 3
+                  WHEN ci.provider_received_at < fc.connected_at THEN 1
+                  ELSE 2 END) AS bucket
+    FROM activity a
+    JOIN capture_import ci ON ci.activity_id = a.id
+    LEFT JOIN first_connection fc ON fc.user_id = ci.user_id
+   WHERE a.kind = 'email' AND a.direction = 'inbound' AND a.archived_at IS NULL
+   GROUP BY a.id)
+SELECT CASE bucket WHEN 1 THEN 'held before the mailbox was connected'
+                   WHEN 2 THEN 'arrived after connection'
+                   WHEN 3 THEN 'no mailbox connection on record'
+                   ELSE 'arrival time not recorded' END AS origin,
+       count(*) AS messages
+  FROM placed
+ GROUP BY bucket ORDER BY bucket;
 
 \echo '2. Open confirmed requests by age against the horizon, and whether a human holds them'
 -- Open and confirmed as backend/internal/modules/activities/requeststate.go

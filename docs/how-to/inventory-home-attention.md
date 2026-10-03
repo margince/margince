@@ -22,15 +22,18 @@ Against your own dev stack, with the host port your stack's Postgres listens on:
 bash scripts/dev-psql.sh 15432 margince -v horizon_days=90 < scripts/home-attention-inventory.sql
 ```
 
-`horizon_days` is the waiting horizon to count against. The product measures it
-per installation and falls back to 90 days on thin history
-(`backend/internal/modules/activities/waitinghorizon.go`). Pass the measured
-value when you know it; the default is 90.
+`horizon_days` is the waiting horizon to count against; the default is 90. The
+product measures its own horizon per installation from how long its replies
+take, between 14 and 365 days, and uses 90 only on thin history
+(`backend/internal/modules/activities/waitinghorizon.go`). The script cannot
+measure it, so count 2 is an approximation: it matches the Worklist only when
+`horizon_days` equals the measured value.
 
 ## Read the counts
 
 1. **Received mail by origin.** Mail a mailbox already held when it was first
-   connected is imported history. "Arrival time not recorded" is mail with no
+   connected is imported history. Calendar connections are not counted, and a
+   message several seats imported is counted once. "Arrival time not recorded" is mail with no
    provider receipt time stored, which includes older imports never
    backfilled; its origin is unknown, not current.
 2. **Open confirmed requests by age.** Open and confirmed as the waiting lane
