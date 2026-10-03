@@ -6,7 +6,7 @@
     "required_only_as_one_of_a_set": 1,
     "never_driven": 44,
     "permitted_but_never_required": 19,
-    "tokens_served_but_never_driven": 15881,
+    "tokens_served_but_never_driven": 15999,
     "use_case_cases": 21,
     "acceptance_criteria_named": 49,
     "tools_added_by_shipped_units": 0,
@@ -1622,20 +1622,8 @@
       "measured_by_model": {}
     },
     {
-      "name": "send_email",
-      "tokens": 754,
-      "agents": [],
-      "required_by_cases": [],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [],
-      "driven": false,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {}
-    },
-    {
       "name": "list_records",
-      "tokens": 721,
+      "tokens": 781,
       "agents": [
         "morning_brief",
         "overnight_at_risk_sweep"
@@ -1659,6 +1647,18 @@
       "graded_by_certification_tasks": [
         "agent_loop"
       ],
+      "measured_by_model": {}
+    },
+    {
+      "name": "send_email",
+      "tokens": 754,
+      "agents": [],
+      "required_by_cases": [],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [],
+      "driven": false,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": null,
       "measured_by_model": {}
     },
     {
@@ -1969,6 +1969,42 @@
       "measured_by_model": {}
     },
     {
+      "name": "read_record",
+      "tokens": 278,
+      "agents": [
+        "morning_brief",
+        "overnight_at_risk_sweep"
+      ],
+      "required_by_cases": [],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [
+        "case10_finish_the_import",
+        "case1_log_it",
+        "case21_what_are_we_closing",
+        "case23_find_us_a_slot",
+        "case2_business_card",
+        "case30_a_word_for_it",
+        "case31_wrong_word_on_the_record",
+        "case32_two_words_for_one_thing",
+        "case33_two_cards_for_one_company",
+        "case40_sort_the_queue",
+        "case41_close_the_project",
+        "case42_can_i_answer_on_whatsapp",
+        "case4_use_the_moment",
+        "case5_before_the_meeting",
+        "case6_ask_the_company",
+        "case7_ask_for_a_number",
+        "case8_whats_waiting",
+        "case9_filed_in_the_wrong_place"
+      ],
+      "driven": false,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": [
+        "agent_loop"
+      ],
+      "measured_by_model": {}
+    },
+    {
       "name": "draft_follow_ups_for",
       "tokens": 273,
       "agents": [],
@@ -2073,42 +2109,6 @@
       "required_only_as_one_of_a_set": false,
       "graded_by_certification_tasks": [
         "deal_health"
-      ],
-      "measured_by_model": {}
-    },
-    {
-      "name": "read_record",
-      "tokens": 220,
-      "agents": [
-        "morning_brief",
-        "overnight_at_risk_sweep"
-      ],
-      "required_by_cases": [],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [
-        "case10_finish_the_import",
-        "case1_log_it",
-        "case21_what_are_we_closing",
-        "case23_find_us_a_slot",
-        "case2_business_card",
-        "case30_a_word_for_it",
-        "case31_wrong_word_on_the_record",
-        "case32_two_words_for_one_thing",
-        "case33_two_cards_for_one_company",
-        "case40_sort_the_queue",
-        "case41_close_the_project",
-        "case42_can_i_answer_on_whatsapp",
-        "case4_use_the_moment",
-        "case5_before_the_meeting",
-        "case6_ask_the_company",
-        "case7_ask_for_a_number",
-        "case8_whats_waiting",
-        "case9_filed_in_the_wrong_place"
-      ],
-      "driven": false,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": [
-        "agent_loop"
       ],
       "measured_by_model": {}
     },
@@ -2706,59 +2706,8 @@
       }
     },
     {
-      "name": "advance_project_phase",
-      "tokens": 416,
-      "agents": [],
-      "required_by_cases": [
-        "case41_close_the_project"
-      ],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [],
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {
-        "claude-haiku-4-5-20251001": {
-          "runs": 3,
-          "passed": 1,
-          "reliability": 0.3333333333333333,
-          "cases_below_their_bar": [
-            "case41_close_the_project"
-          ]
-        },
-        "claude-opus-5": {
-          "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "claude-sonnet-5": {
-          "runs": 3,
-          "passed": 0,
-          "reliability": 0,
-          "cases_below_their_bar": [
-            "case41_close_the_project"
-          ]
-        },
-        "claude-sonnet-5-5@claude-cli": {
-          "runs": 3,
-          "passed": 0,
-          "reliability": 0,
-          "cases_below_their_bar": [
-            "case41_close_the_project"
-          ]
-        },
-        "gpt-5.6-sol@codex-cli": {
-          "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        }
-      }
-    },
-    {
       "name": "search_records",
-      "tokens": 383,
+      "tokens": 443,
       "agents": [],
       "required_by_cases": [
         "case5_before_the_meeting"
@@ -2815,6 +2764,57 @@
           "passed": 3,
           "reliability": 1,
           "cases_below_their_bar": []
+        },
+        "gpt-5.6-sol@codex-cli": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        }
+      }
+    },
+    {
+      "name": "advance_project_phase",
+      "tokens": 416,
+      "agents": [],
+      "required_by_cases": [
+        "case41_close_the_project"
+      ],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [],
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {
+        "claude-haiku-4-5-20251001": {
+          "runs": 3,
+          "passed": 1,
+          "reliability": 0.3333333333333333,
+          "cases_below_their_bar": [
+            "case41_close_the_project"
+          ]
+        },
+        "claude-opus-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "claude-sonnet-5": {
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "cases_below_their_bar": [
+            "case41_close_the_project"
+          ]
+        },
+        "claude-sonnet-5-5@claude-cli": {
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "cases_below_their_bar": [
+            "case41_close_the_project"
+          ]
         },
         "gpt-5.6-sol@codex-cli": {
           "runs": 3,

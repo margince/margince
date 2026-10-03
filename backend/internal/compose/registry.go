@@ -79,7 +79,8 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	// Every mutating tool shares retry claims and replay authorization on every host role.
 	opts = append(opts, withContractTierFloor(),
 		agents.WithIdempotency(toolIdempotency(pool)), agents.WithReplayReader(provider),
-		agents.WithBaseLanguage(installationLanguage(pool)))
+		agents.WithBaseLanguage(installationLanguage(pool)),
+		agents.WithSeatNamer(seatNamer(identity.NewService(pool))))
 	// Approval decisions need the same registered effects as the HTTP path.
 	approvalsSvc := decidingApprovalsService(pool, send, log)
 	registry := agents.NewRegistry(approvalsAdapter{svc: approvalsSvc}, gate, opts...)
@@ -114,8 +115,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	agents.RegisterCoverageTool(registry, coverageToolReader(pool))
 	// Search references are read back through the governed provider before disclosure.
 	agents.RegisterQueryTool(registry, provider,
-		queryRunner(pool, embedder),
-		seatNamer(identity.NewService(pool)))
+		queryRunner(pool, embedder))
 	agents.RegisterVocabularyTool(registry, search.NewQuerySchemaResource(queryVocabulary(pool)))
 	agents.RegisterBriefTool(registry, briefReader(pool))
 	agents.RegisterAnnotateBriefTool(registry, briefAnnotator(pool))

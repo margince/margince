@@ -86,7 +86,7 @@ This page does not grade single steps or name a best model per site — that is
 | … some case requires as one of a set | 1 |
 | … **no case requires** | 44 |
 | … of those, permitted somewhere but never required | 19 |
-| Prompt tokens spent on tools no case requires | 15881 |
+| Prompt tokens spent on tools no case requires | 15999 |
 | Use cases | 21 |
 | Acceptance criteria the cases declare, each with a statement | 49 |
 
@@ -352,8 +352,8 @@ Every run of every case requiring this tool passed, for the model named.
 | `query_workspace` | 1.00 | 3 | `case4_use_the_moment` |
 | `forecast_readings` | 1.00 | 3 | `case21_what_are_we_closing` |
 | `run_analytics_query` | 1.00 | 3 | `case20_put_it_in_the_board_pack` |
-| `advance_project_phase` | 1.00 | 3 | `case41_close_the_project` |
 | `search_records` | 1.00 | 3 | `case5_before_the_meeting` |
+| `advance_project_phase` | 1.00 | 3 | `case41_close_the_project` |
 | `search_context` | 1.00 | 3 | `case6_ask_the_company` |
 | `check_availability` | 1.00 | 3 | `case23_find_us_a_slot` |
 | `promote_lead` | 1.00 | 3 | `case40_sort_the_queue` |
@@ -443,8 +443,8 @@ Every run of every case requiring this tool passed, for the model named.
 | Tool | Reliability | Runs | Required by |
 |---|---:|---:|---|
 | `log_activity` | 1.00 | 6 | `case1_log_it`, `case42_can_i_answer_on_whatsapp` |
-| `advance_project_phase` | 1.00 | 3 | `case41_close_the_project` |
 | `search_records` | 1.00 | 3 | `case5_before_the_meeting` |
+| `advance_project_phase` | 1.00 | 3 | `case41_close_the_project` |
 | `search_context` | 1.00 | 3 | `case6_ask_the_company` |
 | `check_availability` | 1.00 | 3 | `case23_find_us_a_slot` |
 | `relink_activity` | 1.00 | 3 | `case9_filed_in_the_wrong_place` |
@@ -478,8 +478,8 @@ Driven, and not every run passed. Open the case to see what was asked.
 | `query_workspace` | 0.00 | 0/3 | `case4_use_the_moment` | `case4_use_the_moment` |
 | `forecast_readings` | 0.33 | 1/3 | `case21_what_are_we_closing` | `case21_what_are_we_closing` |
 | `run_analytics_query` | 0.00 | 0/3 | `case20_put_it_in_the_board_pack` | `case20_put_it_in_the_board_pack` |
-| `advance_project_phase` | 0.33 | 1/3 | `case41_close_the_project` | `case41_close_the_project` |
 | `search_records` | 0.00 | 0/3 | `case5_before_the_meeting` | `case5_before_the_meeting` |
+| `advance_project_phase` | 0.33 | 1/3 | `case41_close_the_project` | `case41_close_the_project` |
 | `search_context` | 0.00 | 0/3 | `case6_ask_the_company` | `case6_ask_the_company` |
 | `check_availability` | 0.67 | 2/3 | — | `case23_find_us_a_slot` |
 | `merge_records` | 0.67 | 2/3 | — | `case33_two_cards_for_one_company` |
@@ -515,8 +515,8 @@ Driven, and not every run passed. Open the case to see what was asked.
 | `create_record` | 0.83 | 5/6 | — | `case1_log_it`, `case2_business_card` |
 | `query_workspace` | 0.00 | 0/3 | `case4_use_the_moment` | `case4_use_the_moment` |
 | `run_analytics_query` | 0.67 | 2/3 | — | `case20_put_it_in_the_board_pack` |
-| `advance_project_phase` | 0.00 | 0/3 | `case41_close_the_project` | `case41_close_the_project` |
 | `search_records` | 0.00 | 0/3 | `case5_before_the_meeting` | `case5_before_the_meeting` |
+| `advance_project_phase` | 0.00 | 0/3 | `case41_close_the_project` | `case41_close_the_project` |
 | `search_context` | 0.00 | 0/3 | `case6_ask_the_company` | `case6_ask_the_company` |
 | `update_tag` | 0.67 | 2/3 | — | `case32_two_words_for_one_thing` |
 | `commit_import` | 0.00 | 0/3 | `case10_finish_the_import` | `case10_finish_the_import` |
@@ -606,8 +606,8 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 | Tool | Tokens | Graded by | Permitted in | Attached to |
 |---|---:|---|---|---|
 | `send_company_email` | 823 | — | — | — |
+| `list_records` | 781 | `agent_loop` | `case10_finish_the_import`, `case21_what_are_we_closing`, `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case41_close_the_project`, `case7_ask_for_a_number`, `case9_filed_in_the_wrong_place` | `morning_brief`, `overnight_at_risk_sweep` |
 | `send_email` | 754 | — | — | — |
-| `list_records` | 721 | `agent_loop` | `case10_finish_the_import`, `case21_what_are_we_closing`, `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case41_close_the_project`, `case7_ask_for_a_number`, `case9_filed_in_the_wrong_place` | `morning_brief`, `overnight_at_risk_sweep` |
 | `bulk_update_records` | 720 | — | — | — |
 | `read_lists` | 699 | — | — | — |
 | `send_message` | 603 | — | — | — |
@@ -630,6 +630,7 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 | `demote_lead` | 317 | — | — | — |
 | `describe_analytics_vocabulary` | 286 | — | `case7_ask_for_a_number` | — |
 | `draft_email` | 278 | `draft_reply` | — | — |
+| `read_record` | 278 | `agent_loop` | `case10_finish_the_import`, `case1_log_it`, `case21_what_are_we_closing`, `case23_find_us_a_slot`, `case2_business_card`, `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case41_close_the_project`, `case42_can_i_answer_on_whatsapp`, `case4_use_the_moment`, `case5_before_the_meeting`, `case6_ask_the_company`, `case7_ask_for_a_number`, `case8_whats_waiting`, `case9_filed_in_the_wrong_place` | `morning_brief`, `overnight_at_risk_sweep` |
 | `draft_follow_ups_for` | 273 | — | — | — |
 | `prepare_handoff` | 267 | — | `case41_close_the_project` | — |
 | `describe_query_vocabulary` | 266 | — | `case4_use_the_moment` | — |
@@ -638,7 +639,6 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 | `describe_report_blocks` | 245 | — | `case20_put_it_in_the_board_pack` | — |
 | `decide_approval_bundle` | 235 | — | — | — |
 | `create_task` | 221 | `deal_health` | `case42_can_i_answer_on_whatsapp` | — |
-| `read_record` | 220 | `agent_loop` | `case10_finish_the_import`, `case1_log_it`, `case21_what_are_we_closing`, `case23_find_us_a_slot`, `case2_business_card`, `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case41_close_the_project`, `case42_can_i_answer_on_whatsapp`, `case4_use_the_moment`, `case5_before_the_meeting`, `case6_ask_the_company`, `case7_ask_for_a_number`, `case8_whats_waiting`, `case9_filed_in_the_wrong_place` | `morning_brief`, `overnight_at_risk_sweep` |
 | `whats_slipping_this_week` | 211 | `agent_loop` | — | `overnight_at_risk_sweep` |
 | `at_risk_relationships` | 209 | — | — | `overnight_at_risk_sweep` |
 | `list_input_checks` | 209 | — | `case21_what_are_we_closing`, `case22_can_i_trust_the_numbers` | — |

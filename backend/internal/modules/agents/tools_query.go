@@ -109,15 +109,15 @@ type QueryRef struct {
 // the same conditional registration the other injected-engine tools take. An
 // installation whose executor is unwired serves no query tool rather than one
 // that refuses every call.
-// The seat namer is separately optional: an installation that cannot name
-// seats still serves the tool, and its rows carry an owner id and an is_you
-// marker without a name. Refusing to serve the query at all because ownership
-// cannot be spelled out would trade a whole capability for a label.
-func RegisterQueryTool(r *Registry, p datasource.SystemOfRecordProvider, run QueryRunner, name SeatNamer) {
+// The seat namer (WithSeatNamer) is separately optional: an installation that
+// cannot name seats still serves the tool, and its rows carry an owner id and
+// an is_you marker without a name. Refusing to serve the query at all because
+// ownership cannot be spelled out would trade a whole capability for a label.
+func RegisterQueryTool(r *Registry, p datasource.SystemOfRecordProvider, run QueryRunner) {
 	if run == nil {
 		return
 	}
-	r.Register(queryWorkspace{p: p, run: run, name: name})
+	r.Register(queryWorkspace{p: p, run: run, name: r.seats})
 }
 
 type queryWorkspace struct {

@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 81,
     "system_frame_tokens": 561,
-    "tokens": 28059,
+    "tokens": 28236,
     "median_tool_tokens": 278,
-    "mean_tool_tokens": 346
+    "mean_tool_tokens": 348
   },
   "agents": [
     {
@@ -47,11 +47,11 @@
         "read_record"
       ],
       "of_served_tools": 81,
-      "tokens": 3597,
-      "listing_tokens": 1746,
+      "tokens": 3714,
+      "listing_tokens": 1864,
       "step_schema_tokens": 1288,
-      "percent_of_ceiling": 10,
-      "headroom_tokens": 19613,
+      "percent_of_ceiling": 11,
+      "headroom_tokens": 19496,
       "dangling_cross_references": [],
       "temptation_weight": 5
     },
@@ -68,11 +68,11 @@
         "whats_slipping_this_week"
       ],
       "of_served_tools": 81,
-      "tokens": 4953,
-      "listing_tokens": 2585,
+      "tokens": 5071,
+      "listing_tokens": 2702,
       "step_schema_tokens": 1807,
       "percent_of_ceiling": 15,
-      "headroom_tokens": 18257,
+      "headroom_tokens": 18139,
       "dangling_cross_references": [
         "at_risk_relationships → intro_path_to",
         "at_risk_relationships → who_knows",
@@ -95,6 +95,10 @@
       "tokens": 823
     },
     {
+      "name": "list_records",
+      "tokens": 781
+    },
+    {
       "name": "compose_analytics_report",
       "tokens": 770
     },
@@ -105,10 +109,6 @@
     {
       "name": "preview_import",
       "tokens": 725
-    },
-    {
-      "name": "list_records",
-      "tokens": 721
     },
     {
       "name": "bulk_update_records",
@@ -171,6 +171,10 @@
       "tokens": 446
     },
     {
+      "name": "search_records",
+      "tokens": 443
+    },
+    {
       "name": "annotate_brief",
       "tokens": 417
     },
@@ -189,10 +193,6 @@
     {
       "name": "enrich",
       "tokens": 390
-    },
-    {
-      "name": "search_records",
-      "tokens": 383
     },
     {
       "name": "describe_report_vocabulary",
@@ -251,6 +251,10 @@
       "tokens": 278
     },
     {
+      "name": "read_record",
+      "tokens": 278
+    },
+    {
       "name": "relink_activity",
       "tokens": 276
     },
@@ -301,10 +305,6 @@
     {
       "name": "create_task",
       "tokens": 221
-    },
-    {
-      "name": "read_record",
-      "tokens": 220
     },
     {
       "name": "whats_slipping_this_week",

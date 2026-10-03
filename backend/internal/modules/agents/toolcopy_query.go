@@ -26,7 +26,11 @@ var queryWorkspaceCopy = toolCopy{
 		"says which. Keep each row's record_type and id for any follow-up call, and its `evidence` " +
 		"for the related record that admitted it. A row's `owner` is the colleague who holds that " +
 		"company: rows come back from across the whole workspace, so most of them belong to " +
-		"someone other than the contact asking. When `owner.is_you` is false, say whose it is when " +
-		"you report the record, and treat contacting it as theirs to decide rather than advising " +
-		"an approach as though the record were unowned.",
+		"someone other than the contact asking. " + sayWhoseItIs,
 }
+
+// sayWhoseItIs is what every record-serving tool tells a model to do with the
+// `owner` its rows carry, spliced in so the four give the same advice.
+const sayWhoseItIs = "When `owner.is_you` is false, say whose it is when you report the record, " +
+	"and treat contacting it as theirs to decide rather than advising an approach as though " +
+	"the record were unowned."

@@ -17,7 +17,8 @@ var searchRecordsCopy = toolCopy{
 		"what one is called, read_record when you already hold the record's id, and run_report " +
 		"when the question is a count, a total or a breakdown rather than a set of records.",
 	Retain: "Keep each result's record_type and id together: every other tool identifies a record " +
-		"by both, and an id alone does not say which type it belongs to.",
+		"by both, and an id alone does not say which type it belongs to. A result's `owner` " +
+		"names the colleague who holds it. " + sayWhoseItIs,
 }
 
 var listRecordsCopy = toolCopy{
@@ -30,7 +31,7 @@ var listRecordsCopy = toolCopy{
 		"records meet a condition, and run_report when the answer is a count or a total rather " +
 		"than the records themselves.",
 	Retain: "Keep next_cursor and pass it back to read the next page — a second call without it " +
-		"re-reads the first one.",
+		"re-reads the first one. A result's `owner` names the colleague who holds it. " + sayWhoseItIs,
 }
 
 var readRecordCopy = toolCopy{
@@ -41,7 +42,8 @@ var readRecordCopy = toolCopy{
 	Instead: "Use catch_me_up_on when the goal is what has been happening on the record rather " +
 		"than what it currently says.",
 	Retain: "Keep the version from the result and pass it back as if_version on a later update, " +
-		"so a write is refused rather than silently overwriting a change made in between.",
+		"so a write is refused rather than silently overwriting a change made in between. Its " +
+		"`owner` names the colleague who holds it. " + sayWhoseItIs,
 }
 
 var createRecordCopy = toolCopy{

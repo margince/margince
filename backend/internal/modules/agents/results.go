@@ -50,7 +50,7 @@ import (
 // when the search was confined to one type and more remain, the cursor that
 // resumes it.
 type SearchRecordsResult struct {
-	Records []wireRecord `json:"records"`
+	Records []recordWithOwner `json:"records"`
 	// NextCursor is absent rather than empty when there is no next page — an
 	// empty string reads as a cursor a caller might try to use.
 	NextCursor string `json:"next_cursor,omitempty"`

@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 81 |
 | Resources | 11 |
-| Tool catalog | 242.5 KB |
+| Tool catalog | 243.7 KB |
 | Resource catalog | 4.1 KB |
-| Approx. wire tokens | 63132 |
+| Approx. wire tokens | 63429 |
 | Largest tool | `prep_for_meeting` (9.0 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,11 +29,11 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 107.5 KB | 44% | **No** — a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 62.4 KB | 25% | Yes, every step |
+| Output schemas | 107.9 KB | 44% | **No** — a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 63.1 KB | 25% | Yes, every step |
 | Input schemas | 55.7 KB | 22% | Yes, every step |
 | _Names, annotations, punctuation_ | 16.9 KB | 6% | Partly |
-| **Description + input schema** | **118.1 KB** | **48%** | **the recurring cost** |
+| **Description + input schema** | **118.8 KB** | **48%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -105,7 +105,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`list_colleagues`](#list_colleagues) | List colleagues | yes |  | 2.4 KB |
 | [`list_input_checks`](#list_input_checks) | What the forecast's inputs still need | yes |  | 2.3 KB |
 | [`list_pipelines`](#list_pipelines) | List pipelines and their stages | yes |  | 2.3 KB |
-| [`list_records`](#list_records) | List records | yes |  | 4.1 KB |
+| [`list_records`](#list_records) | List records | yes |  | 4.5 KB |
 | [`list_tags`](#list_tags) | List tags | yes |  | 1.6 KB |
 | [`log_activity`](#log_activity) | Log an activity |  |  | 3.9 KB |
 | [`merge_records`](#merge_records) | Merge two records |  |  | 2.4 KB |
@@ -123,7 +123,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`read_import_run`](#read_import_run) | Read an import run | yes |  | 1.4 KB |
 | [`read_lists`](#read_lists) | Find and read lists | yes |  | 3.8 KB |
 | [`read_project_360`](#read_project_360) | Read a project's page | yes |  | 6.4 KB |
-| [`read_record`](#read_record) | Read a record | yes |  | 2.0 KB |
+| [`read_record`](#read_record) | Read a record | yes |  | 2.4 KB |
 | [`read_reporting`](#read_reporting) | Read sales reporting | yes |  | 3.2 KB |
 | [`relink_activities`](#relink_activities) | Re-associate a set of activities to a record |  |  | 2.0 KB |
 | [`relink_activity`](#relink_activity) | Re-associate an activity to a record |  |  | 2.3 KB |
@@ -134,7 +134,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`run_analytics_query`](#run_analytics_query) | Run an analytics query | yes |  | 3.3 KB |
 | [`run_report`](#run_report) | Run a report | yes |  | 5.4 KB |
 | [`search_context`](#search_context) | Search for relevant material | yes |  | 3.1 KB |
-| [`search_records`](#search_records) | Search records | yes |  | 2.8 KB |
+| [`search_records`](#search_records) | Search records | yes |  | 3.2 KB |
 | [`search_report_evidence`](#search_report_evidence) | Search the evidence behind a saved run | yes |  | 3.9 KB |
 | [`send_company_email`](#send_company_email) | Start an email conversation from a record |  |  | 4.6 KB |
 | [`send_email`](#send_email) | Send an email |  |  | 4.2 KB |
@@ -7902,7 +7902,7 @@ List every pipeline this workspace has with its live stages — the configuratio
 
 **List records**
 
-Enumerate the contacts, companies, deals, leads or projects that meet exact conditions — every deal in one pipeline, the leads one rep owns, the projects still being delivered. It narrows only by the filters this workspace publishes for that record_type, which the schema lists per type, and it answers ONE page: the set continues past it. Use search_records when the question is what a record is called rather than which records meet a condition, and run_report when the answer is a count or a total rather than the records themselves. Keep next_cursor and pass it back to read the next page — a second call without it re-reads the first one. (Governance: runs immediately; requires passport scope "read".)
+Enumerate the contacts, companies, deals, leads or projects that meet exact conditions — every deal in one pipeline, the leads one rep owns, the projects still being delivered. It narrows only by the filters this workspace publishes for that record_type, which the schema lists per type, and it answers ONE page: the set continues past it. Use search_records when the question is what a record is called rather than which records meet a condition, and run_report when the answer is a count or a total rather than the records themselves. Keep next_cursor and pass it back to read the next page — a second call without it re-reads the first one. A result's `owner` names the colleague who holds it. When `owner.is_you` is false, say whose it is when you report the record, and treat contacting it as theirs to decide rather than advising an approach as though the record were unowned. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 
@@ -8031,6 +8031,25 @@ Enumerate the contacts, companies, deals, leads or projects that meet exact cond
               "id": {
                 "format": "uuid",
                 "type": "string"
+              },
+              "owner": {
+                "properties": {
+                  "id": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "is_you": {
+                    "type": "boolean"
+                  },
+                  "name": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "is_you"
+                ],
+                "type": "object"
               },
               "record_type": {
                 "type": "string"
@@ -12702,7 +12721,7 @@ Read one project's whole page: company, phase history with time per phase, deals
 
 **Read a record**
 
-Read one record's own stored fields — the values a reader would see on its detail page — when you already know which record you mean. It returns that record and nothing around it: no timeline, no related contacts, no deals on the company. Use catch_me_up_on when the goal is what has been happening on the record rather than what it currently says. Keep the version from the result and pass it back as if_version on a later update, so a write is refused rather than silently overwriting a change made in between. (Governance: runs immediately; requires passport scope "read".)
+Read one record's own stored fields — the values a reader would see on its detail page — when you already know which record you mean. It returns that record and nothing around it: no timeline, no related contacts, no deals on the company. Use catch_me_up_on when the goal is what has been happening on the record rather than what it currently says. Keep the version from the result and pass it back as if_version on a later update, so a write is refused rather than silently overwriting a change made in between. Its `owner` names the colleague who holds it. When `owner.is_you` is false, say whose it is when you report the record, and treat contacting it as theirs to decide rather than advising an approach as though the record were unowned. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 
@@ -12751,6 +12770,25 @@ Read one record's own stored fields — the values a reader would see on its det
         "id": {
           "format": "uuid",
           "type": "string"
+        },
+        "owner": {
+          "properties": {
+            "id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "is_you": {
+              "type": "boolean"
+            },
+            "name": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "is_you"
+          ],
+          "type": "object"
         },
         "record_type": {
           "type": "string"
@@ -14896,7 +14934,7 @@ Find the records most relevant to a description, ranked by meaning as well as by
 
 **Search records**
 
-Find contacts, companies, deals, leads and projects when you know roughly what they are called but not which record they are. It matches text stored ON the record. It does not read a timeline: message bodies, call notes and meeting content are not searched, so a query describing what someone said or did will not find them. Use list_records when the question is which records meet a condition rather than what one is called, read_record when you already hold the record's id, and run_report when the question is a count, a total or a breakdown rather than a set of records. Keep each result's record_type and id together: every other tool identifies a record by both, and an id alone does not say which type it belongs to. (Governance: runs immediately; requires passport scope "read".)
+Find contacts, companies, deals, leads and projects when you know roughly what they are called but not which record they are. It matches text stored ON the record. It does not read a timeline: message bodies, call notes and meeting content are not searched, so a query describing what someone said or did will not find them. Use list_records when the question is which records meet a condition rather than what one is called, read_record when you already hold the record's id, and run_report when the question is a count, a total or a breakdown rather than a set of records. Keep each result's record_type and id together: every other tool identifies a record by both, and an id alone does not say which type it belongs to. A result's `owner` names the colleague who holds it. When `owner.is_you` is false, say whose it is when you report the record, and treat contacting it as theirs to decide rather than advising an approach as though the record were unowned. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 
@@ -14955,6 +14993,25 @@ Find contacts, companies, deals, leads and projects when you know roughly what t
               "id": {
                 "format": "uuid",
                 "type": "string"
+              },
+              "owner": {
+                "properties": {
+                  "id": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "is_you": {
+                    "type": "boolean"
+                  },
+                  "name": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "is_you"
+                ],
+                "type": "object"
               },
               "record_type": {
                 "type": "string"

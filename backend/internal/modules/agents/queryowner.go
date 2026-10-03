@@ -38,6 +38,13 @@ import (
 // reps is one call, not twenty.
 type SeatNamer func(ctx context.Context, seats []ids.UUID) (map[ids.UUID]string, error)
 
+// WithSeatNamer injects the namer search_records, list_records, read_record
+// and query_workspace all name owners through, so the four give one answer to
+// whose a record is.
+func WithSeatNamer(name SeatNamer) RegistryOption {
+	return func(r *Registry) { r.seats = name }
+}
+
 // RecordOwner is who a served record belongs to.
 //
 // The three members answer three different questions and none substitutes for
@@ -122,7 +129,7 @@ func callerSeat(ctx context.Context) (ids.UUID, bool) {
 // means "ask around before you contact this account".
 const CodeOwnerNamesUnavailable = "owner_names_unavailable"
 
-// attachOwners names the owner on every row that has one, in ONE lookup.
+// attachOwners names the owner on every query row that has one, in ONE lookup.
 //
 // It runs after the rows are assembled rather than during, so the query is
 // per PAGE and not per row. A naming failure is not fatal and does not fail
@@ -131,45 +138,87 @@ const CodeOwnerNamesUnavailable = "owner_names_unavailable"
 // is_you still ride out, so the disclosure degrades rather than disappearing —
 // and the caller is TOLD it degraded, which is what keeps "no name" honest.
 func attachOwners(ctx context.Context, name SeatNamer, rows []QueryWorkspaceRow) ([]QueryWorkspaceRow, *QueryNote) {
-	owners := make(map[int]ids.UUID, len(rows))
-	seats := make([]ids.UUID, 0, len(rows))
-	seen := make(map[ids.UUID]bool, len(rows))
+	fields := make([]json.RawMessage, len(rows))
 	for i, row := range rows {
-		owner, ok := ownerIDOf(row.Record.Fields)
+		fields[i] = row.Record.Fields
+	}
+	owners, unnamed := ownersOf(ctx, name, fields)
+	for i := range rows {
+		rows[i].Owner = owners[i]
+	}
+	if !unnamed {
+		return rows, nil
+	}
+	return rows, &QueryNote{Code: CodeOwnerNamesUnavailable, Detail: ownerNamesUnavailableDetail}
+}
+
+const ownerNamesUnavailableDetail = "the owner of one or more of these records could not be named; " +
+	"each row still says who owns it by id and whether it is yours, " +
+	"but a missing name here does not mean the owner has left"
+
+// recordWithOwner is a record served to a reader together with whose it is — the
+// row search_records and list_records page through and read_record answers.
+// A record found by name is as likely to be a colleague's as one found by a
+// plan, so it carries the same owner a query row does.
+type recordWithOwner struct {
+	wireRecord
+	// Owner is absent for a record that carries no owner; see RecordOwner.
+	Owner *RecordOwner `json:"owner,omitempty"`
+}
+
+// withOwners names the owners of a page of served records in one lookup. The
+// envelope carries the degradation warning, because these results have no
+// notes of their own.
+func withOwners(ctx context.Context, name SeatNamer, records []wireRecord) []recordWithOwner {
+	fields := make([]json.RawMessage, len(records))
+	for i, rec := range records {
+		fields[i] = rec.Fields
+	}
+	owners, unnamed := ownersOf(ctx, name, fields)
+	if unnamed {
+		noteWarning(ctx, CodeOwnerNamesUnavailable, ownerNamesUnavailableDetail)
+	}
+	out := make([]recordWithOwner, len(records))
+	for i, rec := range records {
+		out[i] = recordWithOwner{wireRecord: rec, Owner: owners[i]}
+	}
+	return out
+}
+
+// ownersOf resolves the owner of each record's fields, nil where a record has
+// none. unnamed reports a failed seat lookup, never a seat that simply did not
+// resolve: an owner who left is an ordinary answer.
+func ownersOf(ctx context.Context, name SeatNamer, fields []json.RawMessage) (owners []*RecordOwner, unnamed bool) {
+	owners = make([]*RecordOwner, len(fields))
+	ownerIDs := make(map[int]ids.UUID, len(fields))
+	seats := make([]ids.UUID, 0, len(fields))
+	seen := make(map[ids.UUID]bool, len(fields))
+	for i, f := range fields {
+		owner, ok := ownerIDOf(f)
 		if !ok {
 			continue
 		}
-		owners[i] = owner
+		ownerIDs[i] = owner
 		if !seen[owner] {
 			seen[owner] = true
 			seats = append(seats, owner)
 		}
 	}
-	if len(owners) == 0 {
-		return rows, nil
+	if len(ownerIDs) == 0 {
+		return owners, false
 	}
 	named := map[ids.UUID]string{}
-	var note *QueryNote
-	// A nil namer is not a failure and is not noted: the installation cannot
+	// A nil namer is not a failure and is not reported: the installation cannot
 	// name seats at all, which is a standing property, and noting it per call
 	// would put the same warning on every answer it ever gives.
 	if name != nil {
 		resolved, err := name(ctx, seats)
-		if err != nil {
-			note = &QueryNote{
-				Code: CodeOwnerNamesUnavailable,
-				Detail: "the owner of one or more of these records could not be named; " +
-					"each row still says who owns it by id and whether it is yours, " +
-					"but a missing name here does not mean the owner has left",
-			}
-		}
+		unnamed = err != nil
 		named = resolved
 	}
 	me, haveSeat := callerSeat(ctx)
-	for i, owner := range owners {
-		rows[i].Owner = &RecordOwner{
-			ID: owner, Name: named[owner], IsYou: haveSeat && owner == me,
-		}
+	for i, owner := range ownerIDs {
+		owners[i] = &RecordOwner{ID: owner, Name: named[owner], IsYou: haveSeat && owner == me}
 	}
-	return rows, note
+	return owners, unnamed
 }

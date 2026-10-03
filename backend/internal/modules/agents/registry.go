@@ -83,6 +83,9 @@ type Registry struct {
 	// language writes every staged summary in the installation's base
 	// language (summarycopy.go). Nil writes English.
 	language baselanguage.Resolver
+	// seats names the owner every served record row carries (queryowner.go).
+	// Nil leaves owners unnamed but still disclosed.
+	seats SeatNamer
 }
 
 // NewRegistry builds the tool surface over its approvals engine and admission
