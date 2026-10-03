@@ -50,8 +50,8 @@ func TestAContactAVerdictWithdrewEndsItsNoticeDuty(t *testing.T) {
 	// was never business data, and its duty stays.
 	archivedByHand := archivedWithDuty(ctx, t, conn, "Archived by hand", "human:01a07544-e5ac-7844-8569-1f5df68e962c")
 
-	// Withdrawn by a verdict, restored, then archived again by a person: the
-	// current archive is the person's.
+	// Withdrawn by a verdict, restored, then archived again by a human seat:
+	// the current archive is the seat's.
 	rearchived := archivedWithDuty(ctx, t, conn, "Re-archived", "agent:capture_confidentiality_verdict")
 	if _, err := conn.Exec(ctx, `
 		INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id, occurred_at)
