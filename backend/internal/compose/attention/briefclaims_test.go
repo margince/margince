@@ -117,4 +117,12 @@ func TestADutyRecordedAfterItsDeadlineIsBacklogNotToday(t *testing.T) {
 	if !urgentWork(classifyLegalDeadline(live, rankInstant)) {
 		t.Error("a duty that fell due while recorded was demoted; a live breach stays urgent")
 	}
+
+	// An Art. 13 duty is due at acquisition and recorded moments after it.
+	art13 := item("case", "notice_case", withDue(rankInstant.Add(-2*time.Hour)))
+	moments := rankInstant.Add(-2*time.Hour + time.Second)
+	art13.OccurredAt = &moments
+	if !urgentWork(classifyLegalDeadline(art13, rankInstant)) {
+		t.Error("an Art. 13 duty recorded a second after acquisition was read as imported backlog")
+	}
 }

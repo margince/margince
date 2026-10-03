@@ -11302,7 +11302,8 @@ export const en = {
   "worklist.because.routine": "routine cleanup",
   "worklist.because.repeated_failure": "repeated failure",
   "worklist.because.legal_deadline": "legal deadline running",
-  "worklist.because.opened_overdue": "recorded after its deadline, from imported history",
+  "worklist.because.opened_overdue":
+    "recorded after its deadline, from imported history",
   "worklist.because.meeting_soon": "starting soon",
   "worklist.because.meeting_unprepared": "nothing prepared",
   "worklist.because.outcome_unrecorded": "no outcome recorded",
