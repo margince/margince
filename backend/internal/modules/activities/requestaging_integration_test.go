@@ -36,7 +36,7 @@ func (e *loadEnv) asSeat(user ids.UUID) context.Context {
 	})
 }
 
-func (e *loadEnv) waitingAt(t *testing.T, ctx context.Context, asOf time.Time) map[ids.UUID]bool {
+func (e *loadEnv) waitingAt(ctx context.Context, t *testing.T, asOf time.Time) map[ids.UUID]bool {
 	t.Helper()
 	rows, err := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws))).WaitingReplies(ctx, asOf)
 	if err != nil {
@@ -58,19 +58,19 @@ func TestOnlyAHumanKeepsARequestPastTheHorizon(t *testing.T) {
 	if err := storeKnowing(e).CaptureEmailRequests(asClassifier(e), requestInstant.Add(time.Hour)); err != nil {
 		t.Fatal(err)
 	}
-	if e.waitingAt(t, colleague, pastTheHorizon)[reminded] {
+	if e.waitingAt(colleague, t, pastTheHorizon)[reminded] {
 		t.Fatal("a reminder only the system wrote kept its request past the horizon")
 	}
 	id := seedEmailRequest(t, e, "Please send the contract", "commitment", OwedVerdictAsksUs)
 
-	if e.waitingAt(t, colleague, pastTheHorizon)[id] {
+	if e.waitingAt(colleague, t, pastTheHorizon)[id] {
 		t.Fatal("a request nobody holds is still daily work 200 days later")
 	}
 	request := LogActivityInput{Kind: "task", Source: "manual", RequestActivityID: &id}
 	if _, _, err := storeKnowing(e).LogActivity(e.asSeat(e.rep), request); err != nil {
 		t.Fatalf("taking the request: %v", err)
 	}
-	if !e.waitingAt(t, colleague, pastTheHorizon)[id] {
+	if !e.waitingAt(colleague, t, pastTheHorizon)[id] {
 		t.Fatal("a request a human took aged out of the queue")
 	}
 }
@@ -87,7 +87,7 @@ func TestMailOnAnOpenDealAgesOut(t *testing.T) {
 	activity := e.seedWait(t, "Old question on the deal", "deal_id", deal)
 	e.exec(t, `UPDATE activity SET occurred_at = now() - interval '200 days' WHERE id = $1`, activity)
 
-	if e.waitingAt(t, e.as(), time.Now())[activity] {
+	if e.waitingAt(e.as(), t, time.Now())[activity] {
 		t.Fatal("200-day-old mail on an open deal is still daily work")
 	}
 }

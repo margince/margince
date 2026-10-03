@@ -53,10 +53,12 @@ const acceptedRequestSQL = `EXISTS (SELECT 1 FROM activity accepted
 // heldRequestSQL is a request a human kept: an open reminder a human wrote,
 // whether they took the request or edited the reminder the system filed. Only
 // this outlives the waiting horizon; a classifier verdict does not.
-var heldRequestSQL = `EXISTS (SELECT 1 FROM activity held
- WHERE held.source_system = '` + EmailRequestTaskSource + `'
- AND held.source_activity_id = a.id AND NOT held.is_done AND held.archived_at IS NULL
+func heldRequestSQL() string {
+	return `EXISTS (SELECT 1 FROM activity held
+ WHERE held.archived_at IS NULL AND NOT held.is_done AND held.source_activity_id = a.id
+ AND held.source_system = '` + EmailRequestTaskSource + `'
  AND ` + humanWroteReminderSQL("held") + `)`
+}
 
 // humanWroteReminderSQL is whether a human ever wrote the reminder under alias,
 // read off the audit trail because an edit leaves captured_by as it was.

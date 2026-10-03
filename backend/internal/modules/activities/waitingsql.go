@@ -201,8 +201,9 @@ var waitingRepliesSQL = `
          AND (request_task.assignee_id = $%[9]d OR $%[9]d = '00000000-0000-0000-0000-000000000000'::uuid))))
 	   -- Age retires every wait, a classified request and mail on an open deal
 	   -- included, unless a human kept the request. Old mail stays on the
-	   -- record's timeline; the queue is for current work.
-	   AND ((` + requestUnsettledSQL + ` AND ` + heldRequestSQL + `)
+	   -- record's timeline; the queue is for current work. requestOpenSQL, not
+	   -- requestUnsettledSQL: owedSQL below is the one relaxable not-sales gate.
+	   AND ((` + requestOpenSQL + ` AND ` + heldRequestSQL() + `)
 	     OR a.occurred_at >= $%[1]d - make_interval(days => %[5]d))
 	   -- A SALES link, or it is not this queue's business.
 	   --

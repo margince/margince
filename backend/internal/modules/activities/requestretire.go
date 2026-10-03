@@ -40,9 +40,21 @@ func (s *Store) retireAgedReminders(ctx context.Context, tx pgx.Tx, asOf time.Ti
 	if err != nil {
 		return fmt.Errorf("activities: reading reminders past the waiting horizon: %w", err)
 	}
-	aged, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	locked, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
 	if err != nil {
 		return fmt.Errorf("activities: reading reminders past the waiting horizon: %w", err)
+	}
+	// Asked again now the rows are locked: the read above judged the audit
+	// trail as of its own snapshot, so a human edit that committed while it
+	// waited for a lock is visible only to a later statement.
+	rows, err = tx.Query(ctx, `SELECT reminder.id FROM activity reminder
+		 WHERE reminder.id = ANY($1) AND NOT `+humanWroteReminderSQL("reminder"), locked)
+	if err != nil {
+		return fmt.Errorf("activities: rechecking aged reminders under their lock: %w", err)
+	}
+	aged, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		return fmt.Errorf("activities: rechecking aged reminders under their lock: %w", err)
 	}
 	for _, id := range aged {
 		if _, err := archiveActivityInTx(ctx, tx, ids.From[ids.ActivityKind](id), nil); err != nil {
