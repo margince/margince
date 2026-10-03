@@ -213,6 +213,9 @@ func activityRowClauses(in ListActivitiesInput, arg func(any) int) []string {
 		// and excluding it would empty this question on a connected calendar.
 		where = append(where, "(a.meeting_status IS NULL OR a.meeting_status = 'booked')")
 	}
+	if in.CustomerMeetingsOnly {
+		where = append(where, CustomerMeetingSQL("a"))
+	}
 	return where
 }
 
