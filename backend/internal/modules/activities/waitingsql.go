@@ -17,6 +17,18 @@ package activities
 
 import "fmt"
 
+// waitingContactRank orders the contacts one message is filed under so the
+// waiting row names who wrote it: the sender's own contact, then a contact that
+// is no seat's record, then any other. The contact pick and the owner walk both
+// sort by it, so the owner named is the named contact's.
+func waitingContactRank(contact string) string {
+	return `CASE WHEN ` + contact + ` = sender.contact_id THEN 0
+	   WHEN EXISTS (SELECT 1 FROM contact_email seat_mail
+	         JOIN app_user seat ON lower(seat.email) = lower(seat_mail.email)
+	        WHERE seat_mail.contact_id = ` + contact + ` AND seat_mail.archived_at IS NULL) THEN 2
+	   ELSE 1 END`
+}
+
 // waitingRepliesSQL is owedSQL narrowed by the queue's own rules: horizon,
 // sales link, colleagues and the reader's set-asides. Requests survive replies and
 // closed deals until explicit resolution, and age only while a human holds them.
@@ -27,12 +39,14 @@ var waitingRepliesSQL = `
 	       COALESCE((array_agg(sender.address ORDER BY sender.address)
 	                 FILTER (WHERE sender.address IS NOT NULL))[1], ''),
 	       a.occurred_at,
-	       -- One row per message however many records it is filed under. There
-	       -- is no max(uuid) in Postgres, so the pick is the first by text
-	       -- order: arbitrary but STABLE, which is what a card needs — the same
-	       -- message must not point at the contact on one read and the company
-	       -- on the next.
-	       COALESCE((array_agg(wl.contact_id ORDER BY wl.contact_id::text)
+	       -- One row per message however many records it is filed under, and
+	       -- the contact it names is the one who WROTE: a message is filed under
+	       -- every participant with a record, the recipient seat included, and
+	       -- naming the recipient would open the rep's own record as the buyer.
+	       -- waitingContactRank orders the sender first, then contacts that are
+	       -- nobody's seat, then the rest; text order breaks ties, so the pick is
+	       -- STABLE across reads.
+	       COALESCE((array_agg(wl.contact_id ORDER BY ` + waitingContactRank("wl.contact_id") + `, wl.contact_id::text)
 	                 FILTER (WHERE wl.contact_id IS NOT NULL))[1],
 	                '00000000-0000-0000-0000-000000000000'::uuid),
 	       COALESCE((array_agg(wl.company_id ORDER BY wl.company_id::text)
@@ -134,7 +148,7 @@ var waitingRepliesSQL = `
 	          FILTER (WHERE ownerDeal.owner_id IS NOT NULL))[1],
 	         (array_agg(ownerLead.owner_id ORDER BY ownerLead.id::text)
 	          FILTER (WHERE ownerLead.owner_id IS NOT NULL))[1],
-	         (array_agg(ownerContact.owner_id ORDER BY ownerContact.id::text)
+	         (array_agg(ownerContact.owner_id ORDER BY ` + waitingContactRank("ownerContact.id") + `, ownerContact.id::text)
 	          FILTER (WHERE ownerContact.owner_id IS NOT NULL))[1],
 	         (array_agg(ownerCompany.owner_id ORDER BY ownerCompany.id::text)
 	          FILTER (WHERE ownerCompany.owner_id IS NOT NULL))[1],
