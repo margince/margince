@@ -47,10 +47,14 @@ func TestAConversationsRequestsAreOneCard(t *testing.T) {
 // one conversation merge their counts and keep the earliest first request.
 func TestTwoCardsOfOneConversationMergeTheirCounts(t *testing.T) {
 	at := time.Date(2026, 9, 20, 9, 0, 0, 0, time.UTC)
-	newer := activities.WaitingReply{ActivityID: ids.NewV7(), OccurredAt: at.Add(5 * time.Hour),
-		EarlierRequests: 1, FirstAskedAt: at.Add(4 * time.Hour)}
-	older := activities.WaitingReply{ActivityID: ids.NewV7(), OccurredAt: at.Add(2 * time.Hour),
-		EarlierRequests: 2, FirstAskedAt: at}
+	newer := activities.WaitingReply{
+		ActivityID: ids.NewV7(), OccurredAt: at.Add(5 * time.Hour),
+		EarlierRequests: 1, FirstAskedAt: at.Add(4 * time.Hour),
+	}
+	older := activities.WaitingReply{
+		ActivityID: ids.NewV7(), OccurredAt: at.Add(2 * time.Hour),
+		EarlierRequests: 2, FirstAskedAt: at,
+	}
 
 	foldIntoCard(&older, newer)
 
