@@ -32,6 +32,9 @@ and no fallback: every path that cannot produce a real verdict raises
 JudgeUnavailable, which arrives here as exit 2 and stops the lane. A silent pass
 would be this lane reporting green having checked nothing.
 
+What the run left in the database is not read here: a scenario's
+`must_end_with` is endstate.py's, which the lane calls with the stack still up.
+
 Deliberately NOT judged: wording, tone, length, formatting, the order it did
 things in, or extra correct information. Only whether the facts are right and
 the required things were said.
@@ -79,9 +82,9 @@ _REPO_ROOT = os.path.realpath(
 _TEMP_ROOT = os.path.realpath(tempfile.gettempdir())
 
 
-def _open_checked(path):
-    """Open a file this script was told to read, refusing anything outside
-    the repo or the system temp directory.
+def checked_path(path):
+    """The real path of a file this lane was told to open, refusing anything
+    outside the repo or the system temp directory.
 
     Every path this script opens arrives as one of its own CLI arguments,
     built by scripts/e2e-llm.sh from a scenario glob or its own mktemp
@@ -95,7 +98,11 @@ def _open_checked(path):
     roots = (_REPO_ROOT + os.sep, _TEMP_ROOT + os.sep)
     if real != _REPO_ROOT and not real.startswith(roots):
         raise ValueError(f"refusing to open {path!r}: outside the repo and the system temp directory")
-    return open(real, encoding="utf-8")
+    return real
+
+
+def _open_checked(path):
+    return open(checked_path(path), encoding="utf-8")
 
 
 def parse_scenario(path):

@@ -4,14 +4,14 @@
 # Which answer each company gets is decided by the AUDIT TRAIL, not by the
 # prompt, and the case is whether the assistant follows both through.
 #
-#   Three companies were created by a person who never touched their lifecycle,
+#   Three companies were created by someone who never touched their lifecycle,
 #   so it still holds the column's own default, 'unknown'. Nobody typed that, so
 #   nobody is overwritten, and update_record applies the change at once. A value
 #   the database supplied is not a human's edit; before that rule, every one of
 #   these staged for approval and the user was asked to sign off on undoing
 #   nothing.
 #
-#   The fourth, Emsland Ventilbau, had its lifecycle set to 'target' by a person
+#   The fourth, Emsland Ventilbau, had its lifecycle set to 'target' by a human
 #   in an edit of its own. That value is theirs, and the agent's update_record
 #   stages a confirm-first proposal instead of writing.
 #
@@ -72,9 +72,9 @@ may_call:
 # approval_id=* is the redemption. Approving releases the proposal and writes
 # nothing; the change lands only when update_record is called again carrying
 # the approval's id, and the id is minted at run time, so the entry asks that
-# it was sent at all. Without this, a run that approved and stopped — the
-# fourth company still at 'target' — and then reported four prospects scored
-# green on the strength of its own sentence.
+# it was sent at all. must_end_with below now reads the outcome directly, and
+# this stays because the free replay (make test-e2e-llm-check) has no world to
+# read: it is the only thing that holds the run that approved and stopped there.
 #
 # The staged_action_id on decide_approval is not pinned for the same reason.
 must_call_with:
@@ -82,6 +82,15 @@ must_call_with:
   - update_record.fields={"lifecycle":"prospect"}
   - decide_approval.decision=approve
   - update_record.approval_id=*
+
+# THE WORLD AFTER THE RUN, read through the lane's own passport before the
+# snapshot is restored. A run that approved and stopped, or wrote some other
+# company, ends with one of these unmoved whatever its answer reports.
+must_end_with:
+  - company "Kieler Pumpenwerk GmbH" lifecycle=prospect
+  - company "Rhön Hydraulik AG" lifecycle=prospect
+  - company "Altmark Fördertechnik GmbH" lifecycle=prospect
+  - company "Emsland Ventilbau GmbH" lifecycle=prospect
 
 must_mention:
   # CRITERION 3, MECHANICAL HALF: the company that needed sign-off is named at

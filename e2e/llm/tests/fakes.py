@@ -40,7 +40,9 @@ class _Server:
 class FakeMcp(_Server):
     """A streamable-HTTP MCP server offering `tools`.
 
-    replies maps a tool name to (text, is_error); sse answers every request as
+    replies maps a tool name to (text, is_error), or to a function of the call's
+    arguments returning one, for a tool whose answer depends on what it was
+    asked; sse answers every request as
     an event stream with a notification ahead of the response; page_size splits
     tools/list across cursors; status != 200 refuses every request.
     """
@@ -81,7 +83,8 @@ class FakeMcp(_Server):
         if method != "tools/call":
             raise AssertionError(f"FakeMcp was sent {method!r}, which it does not serve")
         self.calls.append((params["name"], params.get("arguments")))
-        text, is_error = replies.get(params["name"], ("ok", False))
+        reply = replies.get(params["name"], ("ok", False))
+        text, is_error = reply(params.get("arguments") or {}) if callable(reply) else reply
         return {"content": [{"type": "text", "text": text}], "isError": is_error}
 
 

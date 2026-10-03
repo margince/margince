@@ -180,8 +180,27 @@ lane stops on it rather than scoring, because a refused key or a tool the model
 was never offered would otherwise read as the product failing.
 
 A failing scenario lists what did not hold: a tool it never called, a fact it
-never said, something it must not say, or a judged criterion with the judge's
-one-sentence reason.
+never said, something it must not say, a judged criterion with the judge's
+one-sentence reason, or a record the run left in the wrong state.
+
+### The end state
+
+A case that writes can name the world it must leave behind:
+
+```yaml
+must_end_with:
+  - company "Emsland Ventilbau GmbH" lifecycle=prospect
+```
+
+After each run, and before the lane restores the snapshot, `e2e/llm/endstate.py`
+finds the record by its type and whole display name (every page of
+`list_records`), reads the field with `read_record` through the lane's own
+passport, and compares. A wrong value or a missing record fails the run, e.g.
+`ended with company "Emsland Ventilbau GmbH" lifecycle=target, wanted prospect`.
+A read that cannot be made — a refusal, two records of one name, a field the
+read does not carry — is a harness stop. The outcome is appended to the
+transcript as an `end_state` event. Only `company` is readable by name today;
+another type is one line in `endstate.py`.
 
 ## 6. Diagnose a failure from the transcript
 

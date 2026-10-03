@@ -1237,7 +1237,7 @@ if [[ -z "$nuria" ]]; then
   link_employment "$nuria" "$levante" "Nuria Sanz at Levante Cold Chain"
 fi
 
-# --- CASE 43: four fair leads, one of whose stage a person already chose -----
+# --- CASE 43: four fair leads, one of whose stage a human already chose -----
 #
 # All four are created by the admin's own session and none is sent a lifecycle,
 # so each starts at the column default 'unknown' — a value nobody typed, which an
@@ -1260,10 +1260,10 @@ seed_fair_lead "Kieler Pumpenwerk GmbH" "Pumpentechnik" >/dev/null
 seed_fair_lead "Rhön Hydraulik AG" "Hydraulik" >/dev/null
 seed_fair_lead "Altmark Fördertechnik GmbH" "Fördertechnik" >/dev/null
 emsland="$(seed_fair_lead "Emsland Ventilbau GmbH" "Armaturen")"
-# A repeat still leaves a person as lifecycle's last writer, so a re-run converges.
+# A repeat still leaves a human as lifecycle's last writer, so a re-run converges.
 code="$(status_of PATCH "/companies/$emsland" '{"lifecycle":"target"}')"
 [[ "$code" = "200" ]] || {
-  echo "setting Emsland Ventilbau's lifecycle as a person answered HTTP $code" >&2; exit 1; }
+  echo "setting Emsland Ventilbau's lifecycle as a human answered HTTP $code" >&2; exit 1; }
 
 # --- THE ROSTER IS VERIFIED, not assumed ---------------------------------
 #

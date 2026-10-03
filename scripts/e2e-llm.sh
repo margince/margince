@@ -591,6 +591,22 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
       cp "$transcript" "$RECORD_DIR/" 2>/dev/null && echo "  the transcript is at $RECORD_DIR/$(basename "$transcript")"
       exit 2
     fi
+    # THE WORLD IS READ BEFORE IT IS RESTORED. An answer can report a write
+    # that never landed, and nothing above reads the database, so a case's
+    # must_end_with is read back here through the same passport. Exit 3 is a
+    # world the reader could not read, a harness stop like the bridge's.
+    ended=0
+    MARGINCE_E2E_TOKEN="$PASSPORT" python3 "$ROOT/e2e/llm/endstate.py" \
+      --scenario "$scenario" --transcript "$transcript" \
+      --mcp-url "$APP_BASE/mcp" --token-env MARGINCE_E2E_TOKEN >> "$results" 2>&1 || ended=$?
+    if [[ "$ended" -ne 0 && "$ended" -ne 1 ]]; then
+      echo
+      echo "HARNESS: $name run $i left a world that could not be read:"
+      tail -3 "$results" | sed 's/^/  /'
+      echo "  This is not a use-case failure. Nothing was scored."
+      cp "$transcript" "$RECORD_DIR/" 2>/dev/null && echo "  the transcript is at $RECORD_DIR/$(basename "$transcript")"
+      exit 2
+    fi
     # EXIT 2 IS NOT A FAILED RUN. `--check` answers 1 for a scenario the answer
     # did badly and 2 for a judge it could not reach, and reading the second as
     # the first is the shape that once reported an expired credential as six
@@ -601,8 +617,12 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
     python3 "$ROOT/e2e/llm/check.py" --check "$scenario" "$transcript" >> "$results" 2>&1 || scored=$?
     case "$scored" in
       0)
-        ok=$((ok + 1))
-        echo "  run $i: pass"
+        if [[ "$ended" -eq 0 ]]; then
+          ok=$((ok + 1))
+          echo "  run $i: pass"
+        else
+          echo "  run $i: fail"
+        fi
         ;;
       1)
         echo "  run $i: fail"

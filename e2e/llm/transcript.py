@@ -91,6 +91,20 @@ class Transcript:
         self._emit(event)
 
 
+def append_end_state(path, held=(), failed=(), fault=""):
+    """Append what endstate.py read of the world after the run.
+
+    Appended after the terminal result, to a transcript any route wrote, because
+    the world is read once the run is over. check.py reads no `end_state` event,
+    so the line is for the reader of the kept records and changes no score.
+    """
+    event = {"type": "end_state", "held": list(held), "failed": list(failed)}
+    if fault:
+        event["fault"] = fault
+    with open(path, "a", encoding="utf-8") as out:
+        out.write(json.dumps(event) + "\n")
+
+
 # What a codex run may do besides call this lane's server. Codex cannot offer
 # MCP tools alone: whatever else it reaches for stops the run, so a GPT verdict
 # never rests on a shell read of the scenario files.

@@ -180,7 +180,9 @@ Write a case as an errand a contact would actually say, never a tool drill.
 - `must_call` lists the tools the job cannot be done without. Use `a|b` where two
   engines are equally honest, and `must_call_with` where the argument is the
   point, such as `decide_approval` with `approve`.
-- `writes: true` if the case changes anything.
+- `writes: true` if the case changes anything, and `must_end_with` for the
+  records it must leave changed. The answer can claim a write that never
+  landed; the end state cannot.
 - Seed through the real writers, never raw SQL, so the audit trail is real.
 - Give each criterion a judged statement in `criteria.yaml`, with labelled
   correct and defective answers under `e2e/llm/testdata/<case>/`.

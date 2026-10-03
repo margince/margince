@@ -1536,8 +1536,8 @@
     {
       "case": "case43_the_fair_leads_are_prospects",
       "number": 3,
-      "name": "The company that needed sign-off is the one a person had set",
-      "statement": "Only the company whose lifecycle a person had already chosen was held, and the answer names that one, because the contact asked which needed them and a wrong name sends them to check the wrong record."
+      "name": "The company that needed sign-off is the one a human had set",
+      "statement": "Only the company whose lifecycle a human had already chosen was held, and the answer names that one, because the contact asked which needed them and a wrong name sends them to check the wrong record."
     },
     {
       "case": "case4_use_the_moment",

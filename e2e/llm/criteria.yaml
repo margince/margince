@@ -346,8 +346,8 @@ cases:
         the held proposal is approved and then redeemed from the conversation
         rather than returned to the contact to release in the app.
     3:
-      name: The company that needed sign-off is the one a person had set
+      name: The company that needed sign-off is the one a human had set
       statement: >-
-        Only the company whose lifecycle a person had already chosen was held,
+        Only the company whose lifecycle a human had already chosen was held,
         and the answer names that one, because the contact asked which needed
         them and a wrong name sends them to check the wrong record.

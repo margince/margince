@@ -1005,7 +1005,7 @@ c43="case43-the-fair-leads-are-prospects.yaml"
 c43_default="the judge says NO to: Criterion 1."
 c43_used="the judge says NO to: Criterion 2."
 c43_named="the judge says NO to: Criterion 3."
-judges "$c43" case43 approves-the-one-a-person-set 0 "!the judge says NO"
+judges "$c43" case43 approves-the-one-a-human-set 0 "!the judge says NO"
 judges "$c43" case43 says-it-in-one-paragraph 0 "!the judge says NO"
 # Staged and handed back: no release, no redemption, and the app named as where
 # the user must go — the tool half and the judge both catch it.
