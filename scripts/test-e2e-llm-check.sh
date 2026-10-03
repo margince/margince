@@ -140,6 +140,14 @@ case_is "exhausting the turn budget is a run that happened" 0 "" <<'JSONL'
 {"type":"result","subtype":"error_max_turns","is_error":true,"result":"Reached the maximum number of turns (20)."}
 JSONL
 
+# A driver that died mid-run leaves a stream that stops after an assistant
+# turn. Every driver writes a terminal result on a finish the model caused, the
+# turn cap included, so the missing one is the harness's fault, not a score.
+case_is "a run that never reached its result event is a harness stop" 1 "no result event" <<'JSONL'
+{"type":"system","subtype":"init","tools":["mcp__margince__list_records"]}
+{"type":"assistant","message":{"content":[{"type":"tool_use","name":"mcp__margince__list_records","input":{}}]}}
+JSONL
+
 # And one that did the right thing.
 case_is "a run that called a tool and answered is a run" 0 "" <<'JSONL'
 {"type":"system","subtype":"init","tools":["mcp__margince__list_records"]}

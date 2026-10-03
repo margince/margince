@@ -337,15 +337,16 @@ def unrun(path):
     on all eighteen runs of a lane, every scenario was recorded as failing its
     criteria, and the verdict said six use cases were broken.
 
-    ONLY those two shapes. A transcript with no assistant turn never got as far
-    as the model, and a terminal error naming a credential refusal never got
-    past the door. Every OTHER `is_error` is a run that happened — the lane sets
+    ONLY three shapes. A transcript with no assistant turn never got as far as
+    the model, one with no terminal `result` was cut off by its driver, and a
+    terminal error naming a credential refusal never got past the door. Every
+    OTHER `is_error` is a run that happened — the lane sets
     `--max-turns 20`, and exhausting it is a finding about the scenario, not
     about the harness. Excusing one of those would be this same defect inverted:
     a real answer thrown away as a harness fault, and the rest of the lane
     abandoned with it.
     """
-    saw_assistant, called_tool = False, False
+    saw_assistant, called_tool, saw_result = False, False, False
     failure = ""
     for line in _open_checked(path):
         line = line.strip()
@@ -360,10 +361,14 @@ def unrun(path):
             for block in (event.get("message") or {}).get("content") or []:
                 if isinstance(block, dict) and block.get("type") == "tool_use":
                     called_tool = True
-        if event.get("type") == "result" and event.get("is_error"):
-            failure = str(event.get("result") or "")
+        if event.get("type") == "result":
+            saw_result = True
+            if event.get("is_error"):
+                failure = str(event.get("result") or "")
     if not saw_assistant:
         return "the transcript carries no assistant turn: the model was never reached"
+    if not saw_result:
+        return "the run never finished: no result event — the driver stopped mid-run"
     # A REFUSAL AFTER A TOOL CALL IS NOT A REFUSAL AT THE DOOR. The credential
     # that shipped this defect produced one assistant turn carrying the error
     # text and called nothing — the model was never reached. A tool answering

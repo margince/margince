@@ -359,7 +359,7 @@ restart_stack snapshot_world
 #                                bypass buys nothing.
 #   --max-turns                  hidden from --help on this version but present.
 run_claude() {
-  local prompt_file="$1" out="$2"
+  local prompt_file="$1" out="$2" exited=0
   claude -p "$(cat "$prompt_file")" \
     --model "$MODEL" \
     --mcp-config "$MCP_CONFIG" --strict-mcp-config \
@@ -367,7 +367,7 @@ run_claude() {
     --permission-mode dontAsk \
     --output-format stream-json --verbose \
     --max-turns 20 \
-    > "$out" 2>"$out.err" || true
+    > "$out" 2>"$out.err" || exited=$?
 
   # An unknown flag produces an empty transcript, which a naive checker reads as
   # a scenario that called nothing — a false failure that looks like a finding.
@@ -412,10 +412,26 @@ else:
     echo "  not override; anything else points at the stack or the passport." >&2
     return 1
   fi
+
+  # A NONZERO EXIT IS SCORED ONLY WHEN THE RESULT OWNS IT. The CLI exits nonzero
+  # on the turn cap, and its result says so with is_error; a nonzero exit whose
+  # result claims success, or that wrote none, is the program failing — the
+  # missing result is check.py --ran's to name, this is the other half.
+  if [[ "$exited" -ne 0 ]] && [[ "$(python3 -c '
+import json, sys
+for line in open(sys.argv[1]):
+    try: event = json.loads(line)
+    except ValueError: continue
+    if event.get("type") == "result" and not event.get("is_error"):
+        print("clean")
+' "$out")" == clean ]]; then
+    echo "the claude CLI exited $exited under a result that reports no error" >>"$out.err"
+    return 3
+  fi
 }
 
 # run_once drives one run on the chosen route: 0 when it ran, 1 when it left no
-# usable transcript (scored as a failed run, as before), 3 when the bridge could
+# usable transcript (scored as a failed run, as before), 3 when the route could
 # not run it at all — a harness stop, never a score. drive.py reads the
 # passport from the variable it is named, so it reaches no command line.
 run_once() {
