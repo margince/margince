@@ -9,15 +9,18 @@ package attention
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // ContactEmployers answers where each of a set of contacts works today, under
 // the caller's own grants. A contact whose employer the caller may not see is
-// absent from the answer.
+// absent from the answer; a caller who may not read contacts or companies at
+// all is refused with apperrors.ErrPermissionDenied.
 type ContactEmployers interface {
 	CurrentEmployers(ctx context.Context, contactIDs []ids.UUID) (map[ids.UUID]crmcontracts.ContactEmployer, error)
 }
@@ -57,6 +60,10 @@ func (s *Service) nameTheEmployers(ctx context.Context, rows []crmcontracts.Work
 		return nil
 	}
 	employers, err := s.employers.CurrentEmployers(ctx, wanted)
+	// Refused is withheld: the row still names its contact, and no account.
+	if errors.Is(err, apperrors.ErrPermissionDenied) {
+		return nil
+	}
 	if err != nil {
 		return fmt.Errorf("attention: naming where the meetings' contacts work: %w", err)
 	}

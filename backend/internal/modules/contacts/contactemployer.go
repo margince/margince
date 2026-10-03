@@ -119,8 +119,15 @@ func attachContactEmployers(ctx context.Context, tx pgx.Tx, idx map[openapi_type
 // CurrentEmployers answers where each of these contacts works today, as this
 // caller may see it: a contact whose employer is withheld from them is absent
 // from the map. The edge scope in employerScope covers both ends of the
-// employment, so a contact the caller may not see is withheld with it.
+// employment, so a contact the caller may not see is withheld with it. A caller
+// without read on contacts or companies is refused with
+// apperrors.ErrPermissionDenied.
 func (s *Store) CurrentEmployers(ctx context.Context, contactIDs []ids.UUID) (map[ids.UUID]crmcontracts.ContactEmployer, error) {
+	for _, object := range []string{contactEntity, companyEntity} {
+		if err := auth.Require(ctx, object, principal.ActionRead); err != nil {
+			return nil, err
+		}
+	}
 	var out map[ids.UUID]crmcontracts.ContactEmployer
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		var err error

@@ -10,6 +10,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -18,7 +19,9 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // partiesContact creates a contact owned by owner (unowned when zero), employed
@@ -186,5 +189,43 @@ func TestAContactsEmployerIsWithheldWithTheContact(t *testing.T) {
 	}
 	if employer, told := got[hidden]; told {
 		t.Errorf("a contact the reader may not see is said to work at %q", employer.CompanyName)
+	}
+}
+
+// A reader without the company grant is refused the employer read, and their
+// meeting row still names the customer with no account beside it.
+func TestAReaderWhoMayNotReadCompaniesSeesTheMeetingRowWithoutAnAccount(t *testing.T) {
+	e := integration.Setup(t)
+	acme, err := e.Contacts.CreateCompany(e.Admin(), contacts.CreateCompanyInput{DisplayName: "Acme"})
+	if err != nil {
+		t.Fatalf("creating the company: %v", err)
+	}
+	acmeID := ids.From[ids.CompanyKind](ids.UUID(acme.Id))
+	customer := partiesContact(t, e, "Customer Buyer", ids.UUID{}, &acmeID)
+	meeting := partiesMeeting(t, e.Admin(), e, "Quarterly review", customer)
+
+	noCompany := integration.AdminPerms
+	noCompany.Objects = map[string]principal.ObjectGrant{}
+	for object, grant := range integration.AdminPerms.Objects {
+		if object != "company" {
+			noCompany.Objects[object] = grant
+		}
+	}
+	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, noCompany)
+	if _, err := e.Contacts.CurrentEmployers(reader, []ids.UUID{customer}); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("the employer read without a company grant = %v, want it refused", err)
+	}
+
+	feed := newAttentionService(e.Pool, approvals.NewService(e.DB()), time.Now)
+	day, err := feed.Worklist(reader, "all", "all", ids.Nil, 100, "")
+	if err != nil {
+		t.Fatalf("reading the Worklist without a company grant: %v", err)
+	}
+	row := outcomeRow(t, day.Queue, meeting)
+	if row.Contact == nil || ids.UUID(row.Contact.Id) != customer {
+		t.Fatalf("contact = %+v, want the customer %v", row.Contact, customer)
+	}
+	if row.Contact.Employer != nil {
+		t.Errorf("a reader without a company grant is told the customer works at %q", row.Contact.Employer.CompanyName)
 	}
 }
