@@ -128,7 +128,8 @@ func (s *Store) dealUpdatePatch(ctx context.Context, tx pgx.Tx, current crmcontr
 		p.Set(arrField, current.ExpectedArrMinor, *in.ExpectedArrMinor)
 	}
 	if err := applyDealLinkPatches(ctx, tx, current, in, p, clearPartner,
-		s.installation.EnsurePartner, s.ensureProjectAttachable); err != nil {
+		s.installation.EnsurePartner, s.ensureProjectAttachable,
+		s.installation.EnsureContractsShareCompany); err != nil {
 		return nil, err
 	}
 	if in.Description != nil {

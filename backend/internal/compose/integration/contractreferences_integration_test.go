@@ -279,11 +279,11 @@ func TestEveryContractMutationResponseWithholdsTheSameReferences(t *testing.T) {
 		call func() (crmcontracts.Contract, error)
 	}{
 		{"a patch that changes nothing still echoes the row", func() (crmcontracts.Contract, error) {
-			return e.Contracts.UpdateContract(rep, fx.onPrivateCompany, crmcontracts.UpdateContractRequest{}, nil)
+			return e.Contracts.UpdateContract(rep, fx.onPrivateCompany, crmcontracts.UpdateContractRequest{}, nil, nil)
 		}},
 		{"a patch that changes something", func() (crmcontracts.Contract, error) {
 			return e.Contracts.UpdateContract(rep, fx.onPrivateCompany,
-				crmcontracts.UpdateContractRequest{Title: &retitled}, nil)
+				crmcontracts.UpdateContractRequest{Title: &retitled}, nil, nil)
 		}},
 		{"activating the agreement", func() (crmcontracts.Contract, error) {
 			return e.Contracts.ChangeStatus(rep, fx.onPrivateCompany, contracts.StatusActive, nil)

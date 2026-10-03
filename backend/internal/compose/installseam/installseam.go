@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/projects"
@@ -41,6 +42,10 @@ func Deals() deals.Installation {
 		// live there and the edges are injected here for the same reason.
 		EnsureProjectAttachable: projects.EnsureAttachable,
 		StartDeliveryForWonDeal: projects.StartDeliveryForWonDeal,
+		// contracts owns `contract`, so the "do this deal's agreements name
+		// another company" read lives there and the edge is injected here for
+		// the same reason.
+		EnsureContractsShareCompany: contracts.EnsureDealContractsShareCompany,
 		// approvals owns the pending proposals that follow a deal to its new
 		// owner, so the hand-over lives there and the edge is injected here.
 		FollowOwner: approvals.FollowDealOwnerInTx,

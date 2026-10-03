@@ -140,7 +140,10 @@ func createContractTx(ctx context.Context, tx pgx.Tx, in CreateContractInput, by
 // UpdateContract applies a partial patch. Status is absent by design: it moves
 // through ChangeStatus, so a correction to a term can never silently activate
 // an agreement.
-func (s *Store) UpdateContract(ctx context.Context, id ids.ContractID, in crmcontracts.UpdateContractRequest, ifVersion *int64) (crmcontracts.Contract, error) {
+//
+// cleared names the wire fields the request sent as an explicit null, which a
+// nil pointer cannot say for itself.
+func (s *Store) UpdateContract(ctx context.Context, id ids.ContractID, in crmcontracts.UpdateContractRequest, cleared []string, ifVersion *int64) (crmcontracts.Contract, error) {
 	active, err := s.catalogColumns(ctx)
 	if err != nil {
 		return crmcontracts.Contract{}, err
@@ -184,6 +187,11 @@ func (s *Store) UpdateContract(ctx context.Context, id ids.ContractID, in crmcon
 			return err
 		}
 		patch := contractPatch(existing, in)
+		if err := storekit.ApplyClears(patch,
+			storekit.CoreFieldClears(cleared, active, in.AdditionalProperties),
+			clearableContractColumns(existing)); err != nil {
+			return err
+		}
 		// The cf_* values travel in the request's extension bag, so they are
 		// patched from it rather than from a named field. Without this a PATCH
 		// carrying custom fields succeeds and changes nothing.
