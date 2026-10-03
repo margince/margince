@@ -61,8 +61,8 @@ func (e *ConfidentialityVerdictEngine) retractPrivateContactsTx(
 }
 
 // retractCapturedContactTx withdraws one capture-made contact and ends the
-// notice duties it owed, in the caller's transaction. Every retraction goes
-// through here, so a withdrawn record never leaves a duty on the worklist.
+// notice duties it owed, in the caller's transaction, so a withdrawn record
+// leaves no duty on the worklist.
 func retractCapturedContactTx(
 	ctx context.Context, tx pgx.Tx, store *contacts.Store, id ids.ContactID, owner ids.UUID,
 ) (bool, error) {

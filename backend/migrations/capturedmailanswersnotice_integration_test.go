@@ -41,7 +41,8 @@ SELECT contact_id, id, 'art14', now() + interval '1 month', 'open' FROM e RETURN
 // capturedMail seeds one mail the seat's mailbox captured, with its participants
 // given as role → address ("from" may be the seat itself, as "seat").
 func capturedMail(ctx context.Context, t *testing.T, conn *pgx.Conn, seat, direction string, attested bool,
-	dated time.Time, parties map[string]string) {
+	dated time.Time, parties map[string]string,
+) {
 	t.Helper()
 	var id string
 	if err := conn.QueryRow(ctx, `

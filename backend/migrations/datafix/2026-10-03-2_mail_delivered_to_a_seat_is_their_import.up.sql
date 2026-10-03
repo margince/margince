@@ -17,12 +17,15 @@ SET LOCAL lock_timeout = '3s';
 --   * that address is an exact address the seat holds: one in
 --     capture_owner_identity, or the account a live connection of theirs was
 --     granted for.
--- The decisions a live capture writes onto the row (posture, verdict) stay
--- empty: they were never taken for this message. Run the data fix
+-- An import row is a vote in the activity's audience (activities.contributionOf),
+-- so each row carries what keeps the message exactly as private as it is now:
+-- for a held message, the seat's mailbox posture and the hold's own reason, and
+-- `pending` where it waits on a verdict. A row that would still read as a vote
+-- for the workspace on a held message is not written at all. Run the data fix
 -- 1790871111_mail_a_mailbox_already_held_owes_no_notice afterwards; it stamps
 -- the arrival time on these rows and settles the notice duties they excuse.
 WITH candidate AS (
-    SELECT a.id, u.id AS seat,
+    SELECT a.id, u.id AS seat, a.audience, a.audience_reason, split_part(a.captured_by, ':', 2) AS provider,
            CASE
              WHEN jsonb_typeof(rc.payload) = 'string' THEN left(rc.payload #>> '{}', 65536)
              WHEN left(rc.payload ->> 'data', 87380) ~ '^([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$'
@@ -36,25 +39,37 @@ WITH candidate AS (
        AND NOT EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = a.id AND ci.user_id = u.id)
 ),
 first_line AS (
-    SELECT id, seat,
+    SELECT id, seat, audience, audience_reason, provider,
            regexp_match(E'\n' || substring(text_head FROM '^(.*?)\r?\n\r?\n'),
                         '\n(delivered-to|received):[ \t]*([^\r\n]*)', 'i') AS m
       FROM candidate
 ),
 delivered AS (
-    SELECT id, seat,
+    SELECT id, seat, audience, audience_reason, provider,
            lower(btrim(coalesce(substring(m[2] FROM '<([^>]*)>'), m[2]))) AS address
       FROM first_line
      WHERE lower(m[1]) = 'delivered-to'
+),
+held_as AS (
+    SELECT d.id, d.seat, d.audience, d.address,
+           CASE WHEN d.audience = 'participants' THEN
+             (SELECT cc.mail_posture FROM capture_connection cc
+               WHERE cc.user_id = d.seat AND cc.provider = d.provider AND cc.archived_at IS NULL
+               ORDER BY cc.created_at DESC LIMIT 1)
+           END AS posture,
+           CASE WHEN d.audience = 'participants' AND d.audience_reason = 'pending_verdict' THEN 'pending' END AS status,
+           CASE WHEN d.audience = 'participants' THEN d.audience_reason END AS reason
+      FROM delivered d
 )
-INSERT INTO capture_import (activity_id, user_id)
-SELECT d.id, d.seat
-  FROM delivered d
- WHERE d.address <> ''
+INSERT INTO capture_import (activity_id, user_id, posture_at_import, verdict_status, verdict_reason)
+SELECT h.id, h.seat, h.posture, h.status, h.reason
+  FROM held_as h
+ WHERE h.address <> ''
+   AND (h.audience <> 'participants' OR h.status = 'pending' OR h.posture IN ('held', 'classified'))
    AND (EXISTS (SELECT 1 FROM capture_owner_identity oi
-                 WHERE oi.user_id = d.seat AND oi.kind = 'address' AND oi.value = d.address)
+                 WHERE oi.user_id = h.seat AND oi.kind = 'address' AND oi.value = h.address)
         OR EXISTS (SELECT 1 FROM capture_connection cc
-                    WHERE cc.user_id = d.seat AND cc.archived_at IS NULL
+                    WHERE cc.user_id = h.seat AND cc.archived_at IS NULL
                       AND lower(btrim(coalesce(substring(cc.account_label FROM '<([^>]*)>'), cc.account_label)))
-                          = d.address))
+                          = h.address))
 ON CONFLICT (activity_id, user_id) DO NOTHING;

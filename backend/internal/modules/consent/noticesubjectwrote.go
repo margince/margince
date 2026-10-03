@@ -63,8 +63,8 @@ func SettleWhenSubjectWroteTx(ctx context.Context, tx pgx.Tx, acquisitions []ids
 }
 
 // closeOwedCasesTx ends each named case as exempt_with_reason on one ground,
-// with one audit entry each. Every reason a case ends without a disclosure
-// closes it here, so the lock, the re-check and the audit cannot drift apart.
+// with one audit entry each, for the settlers that end a duty without a
+// disclosure.
 //
 // Re-checked under the lock: an officer may have closed one between the
 // caller's read and here, and their ground must not be overwritten. A queued
