@@ -84,3 +84,20 @@ func TestACardNeverOverwritesAnEarlierJudgement(t *testing.T) {
 		t.Error("the request the card set aside did not come back")
 	}
 }
+
+// A time snooze that has already lapsed hides nothing, so the card's
+// set-aside reaches that request as if it had no state.
+func TestACardReachesARequestWhoseSnoozeHasLapsed(t *testing.T) {
+	e := setupLoad(t)
+	asks := requestsInOneConversation(t, e)
+	rep, store := e.asSeat(e.rep), storeKnowing(e)
+	e.exec(t, `INSERT INTO activity_reader_state (activity_id, reader_id, state, snoozed_until, reopen_on, set_by, set_at)
+		VALUES ($1, $2, 'snoozed', now() - interval '1 day', 'time', 'human:test', now() - interval '3 days')`, asks[0], e.rep)
+
+	if err := store.SetMessageNotMine(rep, ids.From[ids.ActivityKind](asks[2])); err != nil {
+		t.Fatalf("setting the card aside: %v", err)
+	}
+	if e.waitingAt(rep, t, time.Now())[asks[0]] {
+		t.Error("a request whose snooze had lapsed came back while its card was set aside")
+	}
+}

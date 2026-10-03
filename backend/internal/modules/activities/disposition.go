@@ -355,8 +355,12 @@ func (s *Store) setReaderState(
 		if err := write(id, replaceReaderState); err != nil {
 			return err
 		}
+		// A time snooze already past hides nothing, so it is replaced like an
+		// absent state; any judgement still in force is kept.
 		return s.setOnEarlierRequests(ctx, tx, id, func(earlier ids.ActivityID) error {
-			return write(earlier, "DO NOTHING")
+			return write(earlier, replaceReaderState+`
+				WHERE activity_reader_state.state = '`+stateSnoozed+`'
+				  AND activity_reader_state.snoozed_until <= EXCLUDED.set_at`)
 		})
 	})
 }
