@@ -201,7 +201,13 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 	}
 
 	var page Page
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+	// Contract /search and the retrieval lane both call Store.Search without
+	// going through QueryExecutor. Arm the same 5s ceiling planStatementBudget
+	// uses for query_workspace on the HANDLE, so DB.Tx applies BoundStatement
+	// only when this call owns the transaction. A joined workspace snapshot
+	// keeps the opener's statement_timeout for countTagReach,
+	// attachEmailSummaries, and every later lane sharing that snapshot.
+	err := s.bounded(planStatementBudget).db.Tx(ctx, func(tx pgx.Tx) error {
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
 
