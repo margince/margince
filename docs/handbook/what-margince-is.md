@@ -35,7 +35,8 @@ And there is a short list of things it can never do at all, however it is
 configured — chief among them: **an agent never releases a proposal that is not
 its own business.** It may not approve one staged for a different colleague,
 nor its own proposal unless that is a change that would have gone straight
-through but for a human's earlier edit. It may answer a card staged for the
+through but for a human's earlier edit, sends nothing outside the workspace,
+and is approved in a conversation rather than on a schedule. It may answer a card staged for the
 colleague it acts for, which is exactly what they could have answered
 themselves; and it may always reject its own proposal.
 

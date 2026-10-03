@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
 // A credential releases only a change that would have gone straight through
@@ -77,5 +78,35 @@ func TestNoEgressingVerbIsAnUndoableRelease(t *testing.T) {
 	}
 	if checked == 0 {
 		t.Fatal("no egressing operation in the admission table — this compared nothing")
+	}
+}
+
+// An installation's tier floor stages a call its verb would run straight
+// through, so every pair the floor tightens must stay the human's to release —
+// or a credential could approve the very confirmation the operator demanded.
+func TestNoFlooredPairIsAnUndoableRelease(t *testing.T) {
+	if len(contractTierFloors) == 0 {
+		t.Fatal("the contract floors no (verb, record type) pair — this compared nothing")
+	}
+	for pair := range contractTierFloors {
+		if undoableAgentRelease(pair.tool, pair.recordType) {
+			t.Errorf("%s on %q is floored confirm-first and reads as undoable", pair.tool, pair.recordType)
+		}
+	}
+}
+
+// The classifier reads the admission table, but the tool door stages on the
+// registered spec: a verb declared confirm-first or dynamic there stages calls
+// the table calls straight-through, and its credential must not release them.
+func TestEveryUndoablePairIsAStraightThroughTool(t *testing.T) {
+	registry := NewRegistry(nil, SendPath{})
+	for pair, undoable := range agentStraightThrough {
+		if !undoable {
+			continue
+		}
+		spec, registered := registry.Spec(pair.tool)
+		if !registered || spec.Tier != mcp.TierAutoExecute || spec.TierResolver != nil {
+			t.Errorf("%s on %q reads as undoable, but its tool is not a static auto-execute verb", pair.tool, pair.recordType)
+		}
 	}
 }

@@ -145,14 +145,18 @@ rules:
   Without this, two colleagues each lend a passport, A's agent stages the
   confirm-first call and B's approves it — and the tier has been satisfied by
   two agents with nobody having looked.
-- **A credential releases its own proposal only when it is a change that
-  would have gone straight through but for a human's earlier edit** — no
-  deal close, no relink, no tag merge, no schema change, no send. Anything its
-  own route puts before a human first, the colleague releases in the app. A
-  connected agent does not release one another credential staged either.
+- **An agent's proposal that can be undone, any of the colleague's credentials
+  may release** — a change that would have gone straight through but for a
+  human's earlier edit: no deal close, no relink, no tag merge, no schema
+  change, no send, and nothing your installation's floor puts before a human.
+  That includes the credential that proposed it and a connected one.
+- **Anything else an agent proposed** the colleague releases in the app, or on
+  a credential they minted by hand themselves. Neither the credential that
+  proposed it nor a connected one releases it: nobody had to be present for
+  either.
 
 What is left is deliberate: an agent may answer a card staged for the colleague
-it acts for — its own proposal included, within the rule above — which
+it acts for — its own proposal included, within the rules above — which
 is exactly what that colleague could have answered themselves in the app, and
 could put back afterwards. A scheduled agent never answers a card at all:
 nobody is watching it to have said yes.

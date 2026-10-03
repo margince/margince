@@ -31,8 +31,9 @@ func TestAgentChangesAFieldThatStillHoldsItsColumnDefault(t *testing.T) {
 	if status := e.Call(t, "PATCH", "/v1/companies/"+companyID, AnyMap{"lifecycle": "customer"}, nil, nil); status != http.StatusOK {
 		t.Fatalf("human sets lifecycle → %d", status)
 	}
-	if _, approval := agentPatchCompany(t, e, bearer, companyID, "lifecycle", "former_customer"); approval == "" {
-		t.Error("agent overwrote a lifecycle a human set, with no approval staged")
+	if lifecycle, approval := agentPatchCompany(t, e, bearer, companyID, "lifecycle", "former_customer"); approval == "" || lifecycle != "customer" {
+		t.Errorf("agent overwrote a lifecycle a human set → lifecycle %q, approval %q; want it staged and unchanged",
+			lifecycle, approval)
 	}
 }
 
@@ -79,6 +80,12 @@ func TestAgentAsksBeforeMovingABooleanDefaultOnAHumanCreatedRecord(t *testing.T)
 	status := e.Call(t, "PATCH", "/v1/products/"+productID, AnyMap{"active": false}, bearer, &problem)
 	if status != http.StatusForbidden || problem.Code != "approval_required" {
 		t.Errorf("agent took a human's product off sale → %d %q; want it staged for approval", status, problem.Code)
+	}
+	var product struct {
+		Active bool `json:"active"`
+	}
+	if status := e.Call(t, "GET", "/v1/products/"+productID, nil, nil, &product); status != http.StatusOK || !product.Active {
+		t.Errorf("after the staged refusal the product reads %d active=%v; want it still on sale", status, product.Active)
 	}
 }
 

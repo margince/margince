@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -56,6 +57,11 @@ func TestAScheduledRunDoesNotReleaseTheChangeItsCredentialProposed(t *testing.T)
 	re.enqueue(t, releasingSpecName, trigger, &re.passportID)
 	re.tick(t)
 
+	_, trace, _ := re.runRow(t, trigger)
+	if len(trace) == 0 || trace[0].Tool != "decide_approval" || trace[0].Admission != runner.AdmissionRefused ||
+		!strings.Contains(trace[0].Observation, "proposed the action") {
+		t.Fatalf("the run never had its own release refused: trace = %+v", trace)
+	}
 	var status string
 	if err := database.WithWorkspaceTx(re.wsCtx, re.pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
