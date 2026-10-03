@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { viewerZone } from "../format/timezone";
 import { translate } from "../i18n";
 import { row } from "./worklist.testkit";
-import { heldText } from "./worklist.when";
+import { heldText } from "./worklist.held";
 
 const t = (key: "worklist.when.held", values: { when: string }) =>
   translate("en", key, values);

@@ -1,5 +1,5 @@
 import { sourceName } from "./worklist.sources";
-import { heldText } from "./worklist.when";
+import { heldText } from "./worklist.held";
 
 export { sourceName } from "./worklist.sources";
 

@@ -113,6 +113,9 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (
 	if where, err = appendRequestReviewClause(ctx, in, arg, where); err != nil {
 		return nil, "", nil, nil, err
 	}
+	if where, err = appendCustomerMeetingClause(ctx, in, arg, where); err != nil {
+		return nil, "", nil, nil, err
+	}
 	where = append(where, activityRowClauses(in, arg)...)
 	keyset, err := timelineKeyset(in, sorted, arg)
 	if err != nil {
@@ -212,9 +215,6 @@ func activityRowClauses(in ListActivitiesInput, arg func(any) int) []string {
 		// NULL counts as awaiting: a captured calendar event carries no status,
 		// and excluding it would empty this question on a connected calendar.
 		where = append(where, "(a.meeting_status IS NULL OR a.meeting_status = 'booked')")
-	}
-	if in.CustomerMeetingsOnly {
-		where = append(where, CustomerMeetingSQL("a"))
 	}
 	return where
 }
