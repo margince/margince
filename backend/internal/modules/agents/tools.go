@@ -63,8 +63,8 @@ type StageResolver interface {
 // those functions. A declared verb with no tool is not a gap to describe here:
 // TestEveryDeclaredToolVerbIsRegistered fails the build for it.
 func RegisterCoreTools(r *Registry, p datasource.SystemOfRecordProvider, stages StageResolver, promoter LeadPromoter, ownership FieldOwnership, consumerMail ConsumerMail, duplicates OpenDuplicatesFor) {
-	r.Register(searchRecords{p: p})
-	r.Register(readRecord{p: p})
+	r.Register(searchRecords{p: p, name: r.seats})
+	r.Register(readRecord{p: p, name: r.seats})
 	r.Register(createRecord{p: p, duplicates: duplicates, language: r.language})
 	r.Register(updateRecord{p: p, ownership: ownership, staging: r.approvals, language: r.language})
 	r.Register(logActivity{p: p})
@@ -110,7 +110,8 @@ func schema(s string) json.RawMessage {
 // --- search_records (🟢 read) ---
 
 type searchRecords struct {
-	p datasource.SystemOfRecordProvider
+	p    datasource.SystemOfRecordProvider
+	name SeatNamer
 }
 
 func (t searchRecords) Spec() mcp.ToolSpec {
@@ -151,7 +152,7 @@ func (t searchRecords) Handle(ctx context.Context, in json.RawMessage) (json.Raw
 	if err != nil {
 		return nil, err
 	}
-	return json.Marshal(searchResult(ctx, res))
+	return json.Marshal(searchResult(ctx, t.name, res))
 }
 
 type wireRecord struct {
@@ -191,18 +192,19 @@ func newWireRecord(ctx context.Context, rec datasource.Record) wireRecord {
 	return w
 }
 
-func searchResult(ctx context.Context, res datasource.SearchResult) SearchRecordsResult {
+func searchResult(ctx context.Context, name SeatNamer, res datasource.SearchResult) SearchRecordsResult {
 	records := make([]wireRecord, 0, len(res.Records))
 	for _, r := range res.Records {
 		records = append(records, newWireRecord(ctx, r))
 	}
-	return SearchRecordsResult{Records: records, NextCursor: res.NextCursor}
+	return SearchRecordsResult{Records: withOwners(ctx, name, records), NextCursor: res.NextCursor}
 }
 
 // --- read_record (🟢 read) ---
 
 type readRecord struct {
-	p datasource.SystemOfRecordProvider
+	p    datasource.SystemOfRecordProvider
+	name SeatNamer
 }
 
 func (t readRecord) Spec() mcp.ToolSpec {
@@ -216,7 +218,7 @@ func (t readRecord) Spec() mcp.ToolSpec {
 			"record_type":{"type":"string","enum":["contact","company","deal","lead","activity","project","partner"],"description":"partner is addressed by its COMPANY's id: the row is that company's partner terms, not a separate record."},
 			"id":{"type":"string","format":"uuid"}},
 			"additionalProperties":false}`),
-		OutputSchema: schemaFor[wireRecord](),
+		OutputSchema: schemaFor[recordWithOwner](),
 	}
 }
 
@@ -232,7 +234,7 @@ func (t readRecord) Handle(ctx context.Context, in json.RawMessage) (json.RawMes
 	if err != nil {
 		return nil, err
 	}
-	return json.Marshal(newWireRecord(ctx, rec))
+	return json.Marshal(withOwners(ctx, t.name, []wireRecord{newWireRecord(ctx, rec)})[0])
 }
 
 // --- create_record (🟢 write, reversible) ---

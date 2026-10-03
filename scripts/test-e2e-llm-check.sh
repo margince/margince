@@ -140,6 +140,14 @@ case_is "exhausting the turn budget is a run that happened" 0 "" <<'JSONL'
 {"type":"result","subtype":"error_max_turns","is_error":true,"result":"Reached the maximum number of turns (20)."}
 JSONL
 
+# A driver that died mid-run leaves a stream that stops after an assistant
+# turn. Every driver writes a terminal result on a finish the model caused, the
+# turn cap included, so the missing one is the harness's fault, not a score.
+case_is "a run that never reached its result event is a harness stop" 1 "no result event" <<'JSONL'
+{"type":"system","subtype":"init","tools":["mcp__margince__list_records"]}
+{"type":"assistant","message":{"content":[{"type":"tool_use","name":"mcp__margince__list_records","input":{}}]}}
+JSONL
+
 # And one that did the right thing.
 case_is "a run that called a tool and answered is a run" 0 "" <<'JSONL'
 {"type":"system","subtype":"init","tools":["mcp__margince__list_records"]}
@@ -259,6 +267,43 @@ anyof_is "neither door fails, naming both" 1 "never called list_records or searc
 {"type":"result","subtype":"success","is_error":false,"result":"Four companies."}
 JSONL
 
+# --- AN ID THE RUN MINTS ITSELF -----------------------------------------------
+#
+# `tool.argument=*` holds when the call carried the argument with a value. Case
+# 43's redeeming update_record is the same call as the one that staged, plus an
+# approval_id no scenario file can know; without it the held change never lands,
+# and the answer saying it did is a sentence rather than a write.
+present="$work/present.yaml"
+cat >"$present" <<'YAML'
+name: present_case
+runs: 1
+pass_at: 1
+prompt: |
+  irrelevant, the transcripts here are written by hand
+must_call_with:
+  - update_record.approval_id=*
+YAML
+present_is() {
+	local name="$1" want="$2" file="$work/present.jsonl" status=0
+	cat >"$file"
+	python3 "$check" --check "$present" "$file" >/dev/null 2>&1 || status=$?
+	if [[ $status -ne $want ]]; then
+		echo "FAIL: present/$name — exit $status, want $want"
+		failures=$((failures + 1))
+		return
+	fi
+	echo "ok: present/$name"
+}
+present_is "a redeeming call carries the id" 0 <<'JSONL'
+{"type":"assistant","message":{"content":[{"type":"tool_use","name":"mcp__margince__update_record","input":{"approval_id":"0b9e6c1e-4f0a-4c55-9d7e-3a1f2b6c8d90"}}]}}
+JSONL
+present_is "a call without the id is not a redemption" 1 <<'JSONL'
+{"type":"assistant","message":{"content":[{"type":"tool_use","name":"mcp__margince__update_record","input":{"fields":{"lifecycle":"prospect"}}}]}}
+JSONL
+present_is "an empty id is not one" 1 <<'JSONL'
+{"type":"assistant","message":{"content":[{"type":"tool_use","name":"mcp__margince__update_record","input":{"approval_id":""}}]}}
+JSONL
+
 # The lane's own wiring. Asserted as the whole stop BLOCK rather than as tokens
 # anywhere in the file: a check that is present but not reached, or reached and
 # not exited on, satisfies three greps and none of the behaviour.
@@ -276,7 +321,7 @@ if block is None:
     print("the lane does not carry a --ran check that exits, as one block")
     sys.exit(1)
 body = block.group(0)
-for required in ("HARNESS: the model was never reached", "$why", "exit 2"):
+for required in ("did not run to an answer", "$why", "exit 2"):
     if required not in body:
         print(f"the stop block does not carry {required!r}")
         sys.exit(1)
@@ -959,6 +1004,25 @@ judges "$c42" case42 reports-a-message-sent-to-her 1 "$c42_sent" "$c42_limit"
 # unable to SEND says nothing about whether the conversation can be captured,
 # and this run has just captured one.
 judges "$c42" case42 says-margince-does-not-do-whatsapp 1 "$c42_capability" "!$c42_limit"
+
+# CASE 43 — written judged from the start. Which companies needed sign-off is
+# a claim about four records at once, and the wrong answers are the right words
+# on the wrong company: a pattern cannot tell "Rhön Hydraulik needed sign-off"
+# from "Rhön Hydraulik changed directly".
+c43="case43-the-fair-leads-are-prospects.yaml"
+c43_default="the judge says NO to: Criterion 1."
+c43_used="the judge says NO to: Criterion 2."
+c43_named="the judge says NO to: Criterion 3."
+judges "$c43" case43 approves-the-one-a-human-set 0 "!the judge says NO"
+judges "$c43" case43 says-it-in-one-paragraph 0 "!the judge says NO"
+# Staged and handed back: no release, no redemption, and the app named as where
+# the user must go — the tool half and the judge both catch it.
+judges "$c43" case43 hands-the-approval-back 1 "$c43_used" "never called decide_approval" \
+	"update_record.approval_id=*" "!$c43_default" "!$c43_named"
+# Every change reported as gated: the default-is-nobody's rule read backwards.
+judges "$c43" case43 claims-all-four-needed-sign-off 1 "$c43_default" "$c43_named" "!$c43_used"
+# Right calls, wrong company named, so only the judge can see it.
+judges "$c43" case43 names-the-wrong-company 1 "$c43_named" "$c43_default" "!never called"
 
 # --- THE CORPUS CARRIES NOTHING NOBODY ASKS -----------------------------------
 #

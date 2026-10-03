@@ -15,7 +15,8 @@ the one question they cannot — can a model drive the surface.
 > runs the checker, the judge's recorded verdicts and the bridge's unit tests
 > against in-process fakes. Run it after any change under `e2e/llm/`.
 
-See also [connect-an-mcp-client.md](connect-an-mcp-client.md) (the surface being
+See also [improve-mcp-quality.md](improve-mcp-quality.md) (what to do with a red
+result), [connect-an-mcp-client.md](connect-an-mcp-client.md) (the surface being
 tested), [certify-an-ai-model.md](certify-an-ai-model.md) (a different lane: one
 AI feature, one model) and the `e2e-llm` row of
 [reference/make-targets.md](../reference/make-targets.md) for every variable.
@@ -108,11 +109,12 @@ Drop `SCENARIO=` for the full sweep: every scenario, three runs each. Add
 
 ## 4. Know what a full sweep costs
 
-A full sweep is every scenario, three runs each: 21 use cases are 63 runs. These
-figures were measured on the seeded test world through the routes above. The
-judge's calls (Haiku, through the claude CLI by default) are not included.
+A full sweep is every scenario, three runs each: 22 use cases are 66 runs. These
+figures were measured on the seeded test world, over 21 of them, through the
+routes above. The judge's calls (Haiku, through the claude CLI by default) are
+not included.
 
-| Candidate · route | Tokens per sweep | Cost per sweep | Wall time |
+| Candidate · route | Tokens per 21-case sweep | Cost per 21-case sweep | Wall time |
 |---|---|---|---|
 | `claude-sonnet-5-5` · `cli` | ~19M, 95% of it cache reads | ~$8 API-equivalent, drawn from a Claude subscription | ~1 h 10 |
 | `claude-opus-5` · `cli` | ~20M | ~$22 API-equivalent | — |
@@ -178,8 +180,28 @@ lane stops on it rather than scoring, because a refused key or a tool the model
 was never offered would otherwise read as the product failing.
 
 A failing scenario lists what did not hold: a tool it never called, a fact it
-never said, something it must not say, or a judged criterion with the judge's
-one-sentence reason.
+never said, something it must not say, a judged criterion with the judge's
+one-sentence reason, or a record the run left in the wrong state.
+
+### The end state
+
+A case that writes can name the world it must leave behind:
+
+```yaml
+must_end_with:
+  - company "Emsland Ventilbau GmbH" lifecycle=prospect
+```
+
+After each run, and before the lane restores the snapshot, `e2e/llm/endstate.py`
+finds the record by its type and whole display name (every page of
+`list_records`), reads the field with `read_record` through the lane's own
+passport, and compares. A wrong value, a missing record or two records of one
+name fails the run, e.g.
+`ended with company "Emsland Ventilbau GmbH" lifecycle=target, wanted prospect`.
+A read that cannot be made — a refusal, a field the read does not carry, a
+reader that crashes — is a harness stop. The outcome is appended to the
+transcript as an `end_state` event. Only `company` is readable by name today;
+another type is one line in `endstate.py`.
 
 ## 6. Diagnose a failure from the transcript
 
@@ -217,6 +239,7 @@ Before calling a red scenario a product regression, rule out the harness:
 | OpenRouter 404 "No endpoints found that can handle the requested parameters" | `require_parameters` routing and a parameter no endpoint declares | Remove the parameter from the bridge's request |
 | `codex refused to call …: MCP tool call requires approval` | Codex in exec mode refuses MCP writes it would ask about | The lane approves its own server (`default_tools_approval_mode`); this stop means the installed codex no longer honours that key. Find the key it does accept with `codex exec --strict-config -c 'mcp_servers.x.<key>="approve"' "hi"` (an unknown key is refused before any model call) and set it in `run_codex` in `e2e/llm/drive.py` |
 | Turn cap reached | The model makes one tool call per turn | A finding, not a fault: the cap is the same for every candidate |
+| `the run never finished: no result event` | The driver (claude CLI, codex, or the bridge) died mid-run; a CLI exiting nonzero under a result that reports no error stops the lane the same way | A harness stop, never a score: every driver writes a terminal result on a finish the model caused, the turn cap included. The stop prints the last lines the driver wrote to stderr |
 
 Always run a control — the same scenario on a model that passes it — before
 blaming your own change.

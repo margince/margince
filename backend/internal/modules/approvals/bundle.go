@@ -116,7 +116,7 @@ func (s *Service) decideBundleInTx(ctx context.Context, tx pgx.Tx, p principal.P
 	if err != nil {
 		return nil, err
 	}
-	mine, err := decidableMembers(ctx, tx, p, rows, approve)
+	mine, err := s.decidableMembers(ctx, tx, p, rows, approve)
 	if err != nil {
 		return nil, err
 	}
@@ -163,14 +163,14 @@ func (s *Service) decideBundleInTx(ctx context.Context, tx pgx.Tx, p principal.P
 // and one held message, answered by a credential carrying no send cap, decides
 // the five and leaves the message where it was, which is what deciding "on its
 // own terms" means everywhere else in this file.
-func decidableMembers(ctx context.Context, tx pgx.Tx, p principal.Principal, rows []row, approve bool) ([]row, error) {
+func (s *Service) decidableMembers(ctx context.Context, tx pgx.Tx, p principal.Principal, rows []row, approve bool) ([]row, error) {
 	mine := make([]row, 0, len(rows))
 	for _, a := range rows {
 		visible, err := decidable(ctx, tx, p, a)
 		if err != nil {
 			return nil, err
 		}
-		if visible && agentMayDecide(p, a, approve) == nil {
+		if visible && agentMayDecide(p, a, approve, s.ownReleaseFor(ctx, a)) == nil {
 			mine = append(mine, a)
 		}
 	}

@@ -32,6 +32,9 @@ and no fallback: every path that cannot produce a real verdict raises
 JudgeUnavailable, which arrives here as exit 2 and stops the lane. A silent pass
 would be this lane reporting green having checked nothing.
 
+What the run left in the database is not read here: a scenario's
+`must_end_with` is endstate.py's, which the lane calls with the stack still up.
+
 Deliberately NOT judged: wording, tone, length, formatting, the order it did
 things in, or extra correct information. Only whether the facts are right and
 the required things were said.
@@ -79,9 +82,9 @@ _REPO_ROOT = os.path.realpath(
 _TEMP_ROOT = os.path.realpath(tempfile.gettempdir())
 
 
-def _open_checked(path):
-    """Open a file this script was told to read, refusing anything outside
-    the repo or the system temp directory.
+def checked_path(path):
+    """The real path of a file this lane was told to open, refusing anything
+    outside the repo or the system temp directory.
 
     Every path this script opens arrives as one of its own CLI arguments,
     built by scripts/e2e-llm.sh from a scenario glob or its own mktemp
@@ -95,7 +98,11 @@ def _open_checked(path):
     roots = (_REPO_ROOT + os.sep, _TEMP_ROOT + os.sep)
     if real != _REPO_ROOT and not real.startswith(roots):
         raise ValueError(f"refusing to open {path!r}: outside the repo and the system temp directory")
-    return open(real, encoding="utf-8")
+    return real
+
+
+def _open_checked(path):
+    return open(checked_path(path), encoding="utf-8")
 
 
 def parse_scenario(path):
@@ -330,15 +337,16 @@ def unrun(path):
     on all eighteen runs of a lane, every scenario was recorded as failing its
     criteria, and the verdict said six use cases were broken.
 
-    ONLY those two shapes. A transcript with no assistant turn never got as far
-    as the model, and a terminal error naming a credential refusal never got
-    past the door. Every OTHER `is_error` is a run that happened — the lane sets
+    ONLY three shapes. A transcript with no assistant turn never got as far as
+    the model, one with no terminal `result` was cut off by its driver, and a
+    terminal error naming a credential refusal never got past the door. Every
+    OTHER `is_error` is a run that happened — the lane sets
     `--max-turns 20`, and exhausting it is a finding about the scenario, not
     about the harness. Excusing one of those would be this same defect inverted:
     a real answer thrown away as a harness fault, and the rest of the lane
     abandoned with it.
     """
-    saw_assistant, called_tool = False, False
+    saw_assistant, called_tool, saw_result = False, False, False
     failure = ""
     for line in _open_checked(path):
         line = line.strip()
@@ -353,10 +361,14 @@ def unrun(path):
             for block in (event.get("message") or {}).get("content") or []:
                 if isinstance(block, dict) and block.get("type") == "tool_use":
                     called_tool = True
-        if event.get("type") == "result" and event.get("is_error"):
-            failure = str(event.get("result") or "")
+        if event.get("type") == "result":
+            saw_result = True
+            if event.get("is_error"):
+                failure = str(event.get("result") or "")
     if not saw_assistant:
         return "the transcript carries no assistant turn: the model was never reached"
+    if not saw_result:
+        return "the run never finished: no result event — the driver stopped mid-run"
     # A REFUSAL AFTER A TOOL CALL IS NOT A REFUSAL AT THE DOOR. The credential
     # that shipped this defect produced one assistant turn carrying the error
     # text and called nothing — the model was never reached. A tool answering
@@ -436,6 +448,10 @@ def _called_with(calls, alternative):
     for a plain string, so both `report=activities-by-kind` and
     `group_by=["direction"]` are expressible.
 
+    `=*` asks only that the argument was sent with a value, for an id the run
+    mints itself: an approval_id a scenario cannot know but the redeeming call
+    must carry, since the same call without it stages a second proposal.
+
     A malformed alternative RAISES rather than answering no: it is a fault in
     the scenario, and reading it as an argument the answer failed to send would
     file a broken entry as a finding about the product.
@@ -451,6 +467,8 @@ def _called_with(calls, alternative):
         actual = arguments.get(argument)
         rendered = actual if isinstance(actual, str) else json.dumps(actual, separators=(",", ":"))
         seen.append(rendered)
+        if expected == "*" and actual not in (None, "", [], {}):
+            return True, seen
         if rendered == expected:
             return True, seen
     return False, seen

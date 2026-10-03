@@ -1237,6 +1237,34 @@ if [[ -z "$nuria" ]]; then
   link_employment "$nuria" "$levante" "Nuria Sanz at Levante Cold Chain"
 fi
 
+# --- CASE 43: four fair leads, one of whose stage a human already chose -----
+#
+# All four are created by the admin's own session and none is sent a lifecycle,
+# so each starts at the column default 'unknown' — a value nobody typed, which an
+# agent may move without asking. The fourth then gets 'target' through a PATCH
+# from the same session: that writes the audit row naming a human as the last
+# writer of lifecycle, and it is that row, not the value, that makes the agent's
+# change to it stage for sign-off. Setting it in the create body would hold it
+# too, through the unaudited-field rule, and would not be the case's subject.
+#
+# Owned by the caller, because these are the caller's own leads and the held
+# proposal has to be one the caller's credential may release.
+seed_fair_lead() {
+  local name="$1" industry="$2" id body
+  id="$(company_id_by_name "$name")"
+  if [[ -n "$id" ]]; then printf '%s' "$id"; return 0; fi
+  body="$(printf '{"display_name":"%s","owner_id":"%s","industry":"%s"}' "$name" "$me" "$industry")"
+  create_or_die "/companies" "$body" "$name"
+}
+seed_fair_lead "Kieler Pumpenwerk GmbH" "Pumpentechnik" >/dev/null
+seed_fair_lead "Rhön Hydraulik AG" "Hydraulik" >/dev/null
+seed_fair_lead "Altmark Fördertechnik GmbH" "Fördertechnik" >/dev/null
+emsland="$(seed_fair_lead "Emsland Ventilbau GmbH" "Armaturen")"
+# A repeat still leaves a human as lifecycle's last writer, so a re-run converges.
+code="$(status_of PATCH "/companies/$emsland" '{"lifecycle":"target"}')"
+[[ "$code" = "200" ]] || {
+  echo "setting Emsland Ventilbau's lifecycle as a human answered HTTP $code" >&2; exit 1; }
+
 # --- THE ROSTER IS VERIFIED, not assumed ---------------------------------
 #
 # The seats above are the fixture's most silent failure mode. A seat that stays

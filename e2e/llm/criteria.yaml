@@ -331,3 +331,23 @@ cases:
         A transport that can carry no reply still captures, files and reads, and
         reporting the first as the second tells the reader the product cannot do
         what it has just done.
+  case43_the_fair_leads_are_prospects:
+    1:
+      name: A default nobody set changes without asking
+      statement: >-
+        Three of the four companies still hold the lifecycle the database gave
+        them, so moving it overwrites nobody's edit and goes straight through;
+        an answer that says they needed sign-off reports a gate the product did
+        not raise.
+    2:
+      name: The sign-off given up front is used, not handed back
+      statement: >-
+        The user approved in advance, and a record change can be undone, so
+        the held proposal is approved and then redeemed from the conversation
+        rather than returned to the user to release in the app.
+    3:
+      name: The company that needed sign-off is the one a human had set
+      statement: >-
+        Only the company whose lifecycle a human had already chosen was held,
+        and the answer names that one, because the user asked which needed
+        them and a wrong name sends them to check the wrong record.

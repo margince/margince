@@ -133,7 +133,19 @@ must_mention:
   # report writes "I mapped size→size_band" or "size_band, from your size
   # column". A run that names no invented field has not told the asker what
   # their spreadsheet actually became.
-  - "(?:map\w*|→|->|=>|placed|put|assigned|matched|treated|filed|went)[^\n]{0,60}(?:size[_ ]band|address\.(?:city|country)|display[_ ]name)|(?:size[_ ]band|address\.(?:city|country)|display[_ ]name)[^\n]{0,60}(?:map\w*|→|->|=>|from (?:your |the )?(?:size|country|city|name)\b)"
+  #
+  # The verb is any act of placing ("size landed in size_band", "stored size as
+  # size_band", "the size column became the size band field"), and a table row
+  # `| size | size_band |` says the same with no verb at all. Every form still
+  # needs the target field: "imported with the supplied city, size, and country
+  # fields" names only the file's own columns.
+  #
+  # A NEGATED PLACING IS NOT ONE. "I did not map size to size_band" and
+  # "Nothing went into size_band" name the field and say it got nothing, so
+  # each order is held to one clause and may not cross a negation on its way to
+  # the verb, nor between the verb and the field: "I mapped size to description,
+  # not size_band" names the field only to say it got nothing.
+  - "(?:^|[.;!?\n|])(?:(?!\b(?:not|nothing|no|never|none)\b|n['’]t\b)[^.;!?\n|])*?(?:map\w*|→|->|=>|placed|put|assigned|matched|treated|filed|went|\b(?:landed|stored|saved|became|set|into|as)\b)(?:(?!\b(?:not|nothing|no|never|none)\b|n['’]t\b)[^.;!?\n|]){0,60}(?:size[_ ]band|address\.(?:city|country)|display[_ ]name)|(?:size[_ ]band|address\.(?:city|country)|display[_ ]name)(?:(?!\b(?:not|never|no)\b|n['’]t\b)[^.;!?\n|]){0,60}(?:map\w*|→|->|=>|from (?:your |the )?(?:size|country|city|name)\b)|\|\s*`?(?:name|city|size|country)`?\s*\|\s*`?(?:size[_ ]band|address\.(?:city|country)|display[_ ]name)`?\s*\|"
 
 must_not_mention:
   # THE FAILURE THIS CASE EXISTS FOR. The asker pre-authorized the write in the

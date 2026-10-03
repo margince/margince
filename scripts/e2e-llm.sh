@@ -359,7 +359,7 @@ restart_stack snapshot_world
 #                                bypass buys nothing.
 #   --max-turns                  hidden from --help on this version but present.
 run_claude() {
-  local prompt_file="$1" out="$2"
+  local prompt_file="$1" out="$2" exited=0
   claude -p "$(cat "$prompt_file")" \
     --model "$MODEL" \
     --mcp-config "$MCP_CONFIG" --strict-mcp-config \
@@ -367,7 +367,7 @@ run_claude() {
     --permission-mode dontAsk \
     --output-format stream-json --verbose \
     --max-turns 20 \
-    > "$out" 2>"$out.err" || true
+    > "$out" 2>"$out.err" || exited=$?
 
   # An unknown flag produces an empty transcript, which a naive checker reads as
   # a scenario that called nothing — a false failure that looks like a finding.
@@ -412,10 +412,26 @@ else:
     echo "  not override; anything else points at the stack or the passport." >&2
     return 1
   fi
+
+  # A NONZERO EXIT IS SCORED ONLY WHEN THE RESULT OWNS IT. The CLI exits nonzero
+  # on the turn cap, and its result says so with is_error; a nonzero exit whose
+  # result claims success, or that wrote none, is the program failing — the
+  # missing result is check.py --ran's to name, this is the other half.
+  if [[ "$exited" -ne 0 ]] && [[ "$(python3 -c '
+import json, sys
+for line in open(sys.argv[1]):
+    try: event = json.loads(line)
+    except ValueError: continue
+    if event.get("type") == "result" and not event.get("is_error"):
+        print("clean")
+' "$out")" == clean ]]; then
+    echo "the claude CLI exited $exited under a result that reports no error" >>"$out.err"
+    return 3
+  fi
 }
 
 # run_once drives one run on the chosen route: 0 when it ran, 1 when it left no
-# usable transcript (scored as a failed run, as before), 3 when the bridge could
+# usable transcript (scored as a failed run, as before), 3 when the route could
 # not run it at all — a harness stop, never a score. drive.py reads the
 # passport from the variable it is named, so it reaches no command line.
 run_once() {
@@ -568,8 +584,9 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
     # same after eighteen of them as after one.
     if ! why="$(python3 "$ROOT/e2e/llm/check.py" --ran "$transcript")"; then
       echo
-      echo "HARNESS: the model was never reached on $name run $i:"
+      echo "HARNESS: $name run $i did not run to an answer:"
       echo "  $why"
+      tail -5 "$transcript.err" 2>/dev/null | sed 's/^/  driver: /'
       echo "  This is not a use-case failure. Nothing was scored."
       # The transcript is the only evidence of WHICH failure this was, so a
       # copy that fails says so rather than leaving the reader with a verdict
@@ -591,6 +608,23 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
       cp "$transcript" "$RECORD_DIR/" 2>/dev/null && echo "  the transcript is at $RECORD_DIR/$(basename "$transcript")"
       exit 2
     fi
+    # THE WORLD IS READ BEFORE IT IS RESTORED. An answer can report a write
+    # that never landed, and nothing above reads the database, so a case's
+    # must_end_with is read back here through the same passport. Exit 4 is a
+    # world that did not hold; any other failure is a world the reader could
+    # not read, a harness stop like the bridge's.
+    ended=0
+    MARGINCE_E2E_TOKEN="$PASSPORT" python3 "$ROOT/e2e/llm/endstate.py" \
+      --scenario "$scenario" --transcript "$transcript" \
+      --mcp-url "$APP_BASE/mcp" --token-env MARGINCE_E2E_TOKEN >> "$results" 2>&1 || ended=$?
+    if [[ "$ended" -ne 0 && "$ended" -ne 4 ]]; then
+      echo
+      echo "HARNESS: $name run $i left a world that could not be read:"
+      tail -3 "$results" | sed 's/^/  /' || :
+      echo "  This is not a use-case failure. Nothing was scored."
+      cp "$transcript" "$RECORD_DIR/" 2>/dev/null && echo "  the transcript is at $RECORD_DIR/$(basename "$transcript")"
+      exit 2
+    fi
     # EXIT 2 IS NOT A FAILED RUN. `--check` answers 1 for a scenario the answer
     # did badly and 2 for a judge it could not reach, and reading the second as
     # the first is the shape that once reported an expired credential as six
@@ -601,8 +635,12 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
     python3 "$ROOT/e2e/llm/check.py" --check "$scenario" "$transcript" >> "$results" 2>&1 || scored=$?
     case "$scored" in
       0)
-        ok=$((ok + 1))
-        echo "  run $i: pass"
+        if [[ "$ended" -eq 0 ]]; then
+          ok=$((ok + 1))
+          echo "  run $i: pass"
+        else
+          echo "  run $i: fail"
+        fi
         ;;
       1)
         echo "  run $i: fail"
@@ -610,7 +648,7 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
       *)
         echo
         echo "HARNESS: $name run $i could not be scored:"
-        tail -3 "$results" | sed 's/^/  /'
+        tail -3 "$results" | sed 's/^/  /' || :
         echo "  This is not a use-case failure. Nothing was scored."
         exit 2
         ;;
