@@ -11233,7 +11233,7 @@ export const de = {
   "noticeDuty.askConfirm": "Bestätigung der Daten anfragen",
   "noticeDuty.end": "Pflicht beenden…",
   "noticeDuty.sent":
-    "An {address} gesendet. Der Eintrag verschwindet jetzt von deiner Liste und kommt zurück, falls die Nachricht nicht ankommt.",
+    "An {address} gesendet. Der Eintrag verschwindet aus deiner Worklist, bleibt aber offen, bis die Nachricht zugestellt ist, und kommt zurück, falls die Nachricht nicht ankommt.",
   "noticeDuty.notSent":
     "Nicht gesendet: Diese Installation kann keine E-Mail an {address} senden.",
   "noticeDuty.ended":

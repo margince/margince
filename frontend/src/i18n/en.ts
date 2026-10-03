@@ -11379,7 +11379,7 @@ export const en = {
   "noticeDuty.askConfirm": "Ask them to confirm their details",
   "noticeDuty.end": "End the duty…",
   "noticeDuty.sent":
-    "Sent to {address}. It leaves your list now and comes back if it bounces.",
+    "Sent to {address}. It leaves your Worklist but stays owed on the compliance queue until delivered, and comes back here if it bounces.",
   "noticeDuty.notSent":
     "Not sent: this installation cannot send mail to {address}.",
   "noticeDuty.ended": "The duty is ended, with your ground on record.",

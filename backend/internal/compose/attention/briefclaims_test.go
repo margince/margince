@@ -6,6 +6,7 @@ package attention
 import (
 	"context"
 	"errors"
+	"slices"
 	"testing"
 	"time"
 
@@ -109,6 +110,11 @@ func TestADutyRecordedAfterItsDeadlineIsBacklogNotToday(t *testing.T) {
 	}
 	if row.item.DueAt == nil || !row.item.DueAt.Equal(due) {
 		t.Fatalf("the legal deadline was changed: %+v", row.item.DueAt)
+	}
+	if !slices.ContainsFunc(row.item.Because, func(r crmcontracts.WorklistReason) bool {
+		return r.Kind == "opened_overdue"
+	}) {
+		t.Errorf("a backlog duty does not say why: %+v", row.item.Because)
 	}
 
 	live := item("case", "notice_case", withDue(rankInstant.Add(-30*24*time.Hour)))

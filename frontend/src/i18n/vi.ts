@@ -11141,7 +11141,7 @@ export const vi = {
   "noticeDuty.askConfirm": "Đề nghị họ xác nhận thông tin",
   "noticeDuty.end": "Kết thúc nghĩa vụ…",
   "noticeDuty.sent":
-    "Đã gửi tới {address}. Mục này rời khỏi danh sách của bạn và sẽ quay lại nếu thư bị trả lại.",
+    "Đã gửi tới {address}. Mục này rời khỏi danh sách việc của bạn nhưng vẫn còn trong hàng đợi tuân thủ cho đến khi được giao, và sẽ quay lại nếu thư bị trả lại.",
   "noticeDuty.notSent":
     "Chưa gửi: hệ thống này không thể gửi thư tới {address}.",
   "noticeDuty.ended": "Nghĩa vụ đã kết thúc, lý do của bạn đã được lưu.",
