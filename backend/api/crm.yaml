@@ -53227,9 +53227,10 @@ components:
           type: string
           format: uuid
           description: |
-            Whose record a `meeting` row's brief is read on. Sent only for
-            `source: meeting`, and only where the meeting names a contact this caller may
-            see.
+            Who a meeting is with: the first attendee who holds no seat here, is not
+            employed by the installation's own company, and is a contact this caller may
+            see. Sent by `source: meeting` and `source: meeting_outcome`. On a `meeting`
+            row it is also whose record the brief is read on.
 
             It is not the row's SUBJECT, which is the meeting itself — the row is about
             the appointment, and the brief happens to be reached through somebody's page:
@@ -54707,8 +54708,10 @@ components:
             Whose record a `meeting` row's brief is read on, carried out from
             `AttentionItem.with_contact`.
 
-            Sent only for `source: meeting`, and only where the meeting names a contact
-            this caller may see. It is not the row's SUBJECT — the row is about the
+            Sent for `source: meeting` and `source: meeting_outcome`, and only where the
+            meeting names a contact this caller may see. On a `meeting_outcome` row no
+            move opens a brief, so the field only says who the meeting was with, as
+            `contact` does. It is not the row's SUBJECT — the row is about the
             appointment — and it exists because the brief is not a page of its own: it
             opens as `?prep=<activity>` on a contact's record, so the address needs both
             ids and the subject carries only one.
@@ -54718,6 +54721,16 @@ components:
             attendees are all withheld both produce, and both mean the same thing here.
         contact:
           $ref: '#/components/schemas/WorklistContactFacts'
+        host:
+          allOf:
+            - $ref: '#/components/schemas/WorklistOwner'
+          description: |
+            Who hosted the meeting a `meeting` or `meeting_outcome` row is about: the
+            seat whose calendar it came off. `kind` is always `user`.
+
+            A fact about the meeting, kept apart from `owner`, which says who answers
+            for the row. Absent where no calendar claims the meeting. `label` follows
+            `WorklistOwner.label`: absent where this caller may not resolve the name.
         due_at: { type: string, format: date-time, description: 'When this is due, or when the meeting starts.' }
         overdue: { type: boolean, description: 'Past due at the read instant, resolved server-side so every surface agrees.' }
         due_group:
@@ -55461,6 +55474,16 @@ components:
         label: { type: string, description: "The contact's display name. Absent when the caller may not read the contact." }
         touch:
           $ref: '#/components/schemas/WorklistContactTouch'
+        employer:
+          allOf:
+            - $ref: '#/components/schemas/ContactEmployer'
+          description: |
+            Where the contact works today, so a meeting row says which account the
+            meeting was with. Sent on `meeting` and `meeting_outcome` rows only: every
+            other row's title already names its record.
+
+            Absent where the contact has no current employer, or where this caller may
+            not read the employment or the company. Absent never means "works nowhere".
 
     WorklistContactTouch:
       type: object
