@@ -39,7 +39,7 @@ var settleVerdicts = map[string]bool{
 const settleSystem = `You judge whether OUR OWN reply settled what THEIR message asked of us.
 You are given one email conversation per id, oldest first. The first message is the request. Messages are marked "from them" (the customer) or "from us" (this workspace).
 Some entries are our answers from outside the email thread, marked as such: "from us, separate email" is our own mail to them with the same subject; "from us, call logged" is a call we logged with them, and its text is our notes; "from us, meeting held" is a meeting that took place with them, and its text is our notes. Judge them as you judge a reply: by what they show we did.
-A held meeting settles a request to meet or talk: the meeting is the answer. For any other ask, a call or meeting settles it only when its notes show the ask was answered or delivered; notes that promise a next step are still_owed; a call or meeting whose notes say nothing about the ask is unsure.
+A held meeting settles a request to meet or talk: the meeting is the answer. For any other ask, a call or meeting settles it only when its notes show the ask was answered or delivered. Notes that promise a next step are still_owed. Notes about other matters leave the ask untouched: that is still_owed, naming the ask, because nothing we did addressed it. unsure stays for a reply to the ask itself that is too thin to tell.
 
 For EACH conversation emit exactly one verdict:
 "settled" — our words answered the question, declined it, delivered what was asked, agreed a time, or handed it to a named colleague. Nothing is left for us to do.
