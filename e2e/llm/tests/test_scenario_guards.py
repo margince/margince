@@ -75,6 +75,21 @@ class UseTheMomentTest(GuardCase):
             self.advice,
         )
 
+    def test_leads_carrying_no_address_is_a_true_aside(self):
+        self.assertGreen(
+            "All three are owned by Sofia Meier, not you, so check with her before you drop in. "
+            "I didn't check leads, because they carry no address field."
+        )
+
+    def test_a_workspace_with_no_address_field_still_fires(self):
+        for answer in (
+            "Sofia Meier owns them, so check with her first. There is no address field to search by.",
+            "Check with Sofia first. The CRM has no address field, so nearby cannot be worked out.",
+        ):
+            _, fired, _, fault = probe.judge(guards(self.scenario), answer)
+            self.assertEqual(fault, [])
+            self.assertTrue(fired, f"{answer!r} slipped past must_not_mention")
+
 
 class FinishTheImportTest(GuardCase):
     scenario = "case10-finish-the-import.yaml"
