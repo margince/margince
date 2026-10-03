@@ -11155,6 +11155,10 @@ export const de = {
   "worklist.because.blocks_customer_work": "Kontakt wartet darauf",
   "worklist.because.routine": "Routinebereinigung",
   "worklist.because.repeated_failure": "wiederholter Fehler",
+  "worklist.because.earlier_requests":
+    "frühere Anfragen in dieser Unterhaltung",
+  "worklist.because.earlier_requests.value":
+    "frühere Anfragen in dieser Unterhaltung, die erste am {value}",
   "worklist.because.legal_deadline": "gesetzliche Frist läuft",
   "worklist.because.opened_overdue":
     "erst nach Fristablauf erfasst, aus importiertem Bestand",

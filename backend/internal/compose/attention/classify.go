@@ -265,6 +265,13 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 		reason("buyer_wrote_last", nil),
 		reason("waiting_days", daysValue(days)),
 	}
+	if waiting.EarlierRequests > 0 {
+		// One card per conversation: the earlier requests are evidence on it,
+		// dated from the first, rather than rows of their own.
+		first := waiting.FirstAskedAt
+		because = append(because, reason("earlier_requests",
+			&crmcontracts.WorklistValue{Kind: "date", Date: &first}))
+	}
 	if stale {
 		because = append(because, reason("stale", nil))
 	}

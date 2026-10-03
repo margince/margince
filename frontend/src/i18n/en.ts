@@ -11309,6 +11309,9 @@ export const en = {
   "worklist.because.blocks_customer_work": "customer waiting on this",
   "worklist.because.routine": "routine cleanup",
   "worklist.because.repeated_failure": "repeated failure",
+  "worklist.because.earlier_requests": "earlier requests in this conversation",
+  "worklist.because.earlier_requests.value":
+    "earlier requests in this conversation, the first on {value}",
   "worklist.because.legal_deadline": "legal deadline running",
   "worklist.because.opened_overdue":
     "recorded after its deadline, from imported history",

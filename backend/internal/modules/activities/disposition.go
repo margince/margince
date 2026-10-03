@@ -258,18 +258,29 @@ func (s *Store) ClearMessageDisposition(ctx context.Context, id ids.ActivityID) 
 		if reader.IsZero() {
 			return apperrors.ErrPermissionDenied
 		}
-		tag, err := tx.Exec(ctx,
-			`DELETE FROM activity_reader_state WHERE activity_id = $1 AND reader_id = $2`,
-			id, reader)
+		// What the same press set aside with the card, read before the card's
+		// own row goes, since its set_at is what ties them together.
+		withIt, err := sameAct(ctx, tx, id, reader)
 		if err != nil {
-			return fmt.Errorf("activities: picking the message back up: %w", err)
+			return err
 		}
-		if tag.RowsAffected() == 0 {
+		for _, message := range append([]ids.ActivityID{id}, withIt...) {
+			tag, err := tx.Exec(ctx,
+				`DELETE FROM activity_reader_state WHERE activity_id = $1 AND reader_id = $2`,
+				message, reader)
+			if err != nil {
+				return fmt.Errorf("activities: picking the message back up: %w", err)
+			}
 			// The reader had set nothing aside. A success, for the reason the
 			// sibling above states, and silent for the same one.
-			return nil
+			if tag.RowsAffected() == 0 {
+				continue
+			}
+			if err := s.recordDisposition(ctx, tx, message, statePickedUp, nil, ""); err != nil {
+				return err
+			}
 		}
-		return s.recordDisposition(ctx, tx, id, statePickedUp, nil, "")
+		return nil
 	})
 }
 
@@ -309,20 +320,27 @@ func (s *Store) setReaderState(
 		// one side of that comparison. A wall-clock stamp against injected
 		// instants makes every seeded reply look older than the snooze, which
 		// is a snooze that never lifts.
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO activity_reader_state (activity_id, reader_id, state, snoozed_until, reopen_on, reopen_ref, set_by, set_at)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-			ON CONFLICT (activity_id, reader_id) DO UPDATE
-			   SET state = EXCLUDED.state,
-			       snoozed_until = EXCLUDED.snoozed_until,
-			       reopen_on = EXCLUDED.reopen_on,
-			       reopen_ref = EXCLUDED.reopen_ref,
-			       set_by = EXCLUDED.set_by,
-			       set_at = EXCLUDED.set_at`,
-			id, reader, state, until, storedOn, ref, capturedBy, s.now().UTC()); err != nil {
-			return fmt.Errorf("activities: setting the message aside: %w", err)
+		setAt := s.now().UTC()
+		write := func(message ids.ActivityID) error {
+			if _, err := tx.Exec(ctx, `
+				INSERT INTO activity_reader_state (activity_id, reader_id, state, snoozed_until, reopen_on, reopen_ref, set_by, set_at)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+				ON CONFLICT (activity_id, reader_id) DO UPDATE
+				   SET state = EXCLUDED.state,
+				       snoozed_until = EXCLUDED.snoozed_until,
+				       reopen_on = EXCLUDED.reopen_on,
+				       reopen_ref = EXCLUDED.reopen_ref,
+				       set_by = EXCLUDED.set_by,
+				       set_at = EXCLUDED.set_at`,
+				message, reader, state, until, storedOn, ref, capturedBy, setAt); err != nil {
+				return fmt.Errorf("activities: setting the message aside: %w", err)
+			}
+			return s.recordDisposition(ctx, tx, message, state, until, on)
 		}
-		return s.recordDisposition(ctx, tx, id, state, until, on)
+		if err := write(id); err != nil {
+			return err
+		}
+		return s.setOnEarlierRequests(ctx, tx, id, write)
 	})
 }
 

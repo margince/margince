@@ -174,6 +174,8 @@ const VALUED_REASONS = {
   // renders a date value in the reader's locale and zone, so the sentence says
   // when without this file composing one.
   response_due_soon: true,
+  // When the conversation's first request arrived, as a date.
+  earlier_requests: true,
 } as const;
 
 type ValuedReason = keyof typeof VALUED_REASONS;

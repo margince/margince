@@ -11073,6 +11073,10 @@ export const vi = {
   "worklist.because.blocks_customer_work": "một khách hàng đang bị chặn",
   "worklist.because.routine": "dọn dẹp thường lệ",
   "worklist.because.repeated_failure": "cùng một lỗi lặp lại nhiều lần",
+  "worklist.because.earlier_requests":
+    "các yêu cầu trước đó trong cuộc trao đổi này",
+  "worklist.because.earlier_requests.value":
+    "các yêu cầu trước đó trong cuộc trao đổi này, yêu cầu đầu tiên vào {value}",
   "worklist.because.legal_deadline": "thời hạn pháp lý đang chạy",
   "worklist.because.opened_overdue":
     "được ghi nhận sau thời hạn, từ dữ liệu đã nhập",

@@ -18371,6 +18371,7 @@ const (
 	WorklistReasonKindBuyerWroteLast     WorklistReasonKind = "buyer_wrote_last"
 	WorklistReasonKindClosingSoon        WorklistReasonKind = "closing_soon"
 	WorklistReasonKindDueToday           WorklistReasonKind = "due_today"
+	WorklistReasonKindEarlierRequests    WorklistReasonKind = "earlier_requests"
 	WorklistReasonKindExpectedRevenue    WorklistReasonKind = "expected_revenue"
 	WorklistReasonKindLegalDeadline      WorklistReasonKind = "legal_deadline"
 	WorklistReasonKindMaterial           WorklistReasonKind = "material"
@@ -18411,6 +18412,8 @@ func (e WorklistReasonKind) Valid() bool {
 	case WorklistReasonKindClosingSoon:
 		return true
 	case WorklistReasonKindDueToday:
+		return true
+	case WorklistReasonKindEarlierRequests:
 		return true
 	case WorklistReasonKindExpectedRevenue:
 		return true
