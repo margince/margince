@@ -116,6 +116,9 @@ func (c *horizonCache) lookup(ws ids.WorkspaceID, asOf, now time.Time) (int, boo
 // serialise every waiting read in the process behind one slow statement, which
 // is the cost this cache exists to remove.
 //
+// A fallback never displaces a measurement that is still good: a reader whose
+// measurement timed out must not replace what a concurrent reader measured.
+//
 // ttl is how long the entry holds: waitingHorizonTTL for a measurement,
 // waitingHorizonFallbackTTL for the compiled horizon that stood in for one.
 func (c *horizonCache) remember(ws ids.WorkspaceID, asOf, now time.Time, days int, ttl time.Duration) {
@@ -124,5 +127,10 @@ func (c *horizonCache) remember(ws ids.WorkspaceID, asOf, now time.Time, days in
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	if held, ok := c.memos[ws]; ok && ttl == waitingHorizonFallbackTTL && held.ttl == waitingHorizonTTL {
+		if age := now.Sub(held.measuredAt); age >= 0 && age < held.ttl {
+			return
+		}
+	}
 	c.memos[ws] = horizonMemo{days: days, asOf: asOf, measuredAt: now, ttl: ttl}
 }

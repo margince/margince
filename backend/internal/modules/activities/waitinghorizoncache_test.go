@@ -73,6 +73,25 @@ func TestAFallbackHorizonIsReusedOnlyBrieflyAfterAFailedMeasurement(t *testing.T
 	}
 }
 
+// A reader whose measurement timed out must not replace what a concurrent
+// reader measured; once that measurement has expired, the fallback may stand.
+func TestAFallbackDoesNotDisplaceAMeasurementThatIsStillGood(t *testing.T) {
+	cache := newHorizonCache()
+	ws := ids.New[ids.WorkspaceKind]()
+	cache.remember(ws, horizonNoon, horizonNoon, 42, waitingHorizonTTL)
+	soon := horizonNoon.Add(time.Minute)
+	cache.remember(ws, soon, soon, waitingHorizonDays, waitingHorizonFallbackTTL)
+	if got, ok := cache.lookup(ws, soon, soon); !ok || got != 42 {
+		t.Errorf("a fallback displaced the live measurement: (%d, %v), want 42", got, ok)
+	}
+
+	expired := horizonNoon.Add(waitingHorizonTTL)
+	cache.remember(ws, expired, expired, waitingHorizonDays, waitingHorizonFallbackTTL)
+	if got, ok := cache.lookup(ws, expired, expired); !ok || got != waitingHorizonDays {
+		t.Errorf("past the measurement's hour the fallback was refused: (%d, %v)", got, ok)
+	}
+}
+
 // A store assembled bare, without NewStore, has no cache — and must measure
 // rather than panic, which is what every such store did before it existed.
 func TestANilHorizonCacheAlwaysMisses(t *testing.T) {
