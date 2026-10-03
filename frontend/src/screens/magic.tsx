@@ -248,6 +248,32 @@ function rowsOf(rows: readonly MagicLine[] | undefined): readonly MagicLine[] {
 }
 
 // How many records the lines stand for; a line without a count is one.
+// What a lane holds, in records on THIS PAGE, which is all the endpoint
+// promises: one line may stand for 1,200 filed emails. "Done for you" is what an
+// agent did; sync and rules keep records current, which is maintenance, so they
+// are counted apart. A full page makes both halves floors, since what did not
+// fit could be either.
+function laneCountText(
+  lane: MagicLane,
+  rows: readonly MagicLine[],
+  say: (base: PluralBase, count: number, floor: boolean) => string,
+): string {
+  const full = fillsPage(lane, rows);
+  const figure = (base: PluralBase, of: readonly MagicLine[]) =>
+    say(
+      base,
+      recordsOf(of),
+      full || of.some((row) => row.count_is_floor === true),
+    );
+  if (lane !== "done") return figure(LANE_COUNT[lane], rows);
+  const agent = rows.filter(byAnAgent);
+  const kept = rows.filter((row) => !byAnAgent(row));
+  return [
+    ...(agent.length > 0 ? [figure(LANE_COUNT.done, agent)] : []),
+    ...(kept.length > 0 ? [figure("magic.count.keptInSync", kept)] : []),
+  ].join(" · ");
+}
+
 function byAnAgent(row: MagicLine): boolean {
   return row.actor.type === "agent";
 }
@@ -290,33 +316,14 @@ function LaneSummary({
     if (rows.length === 0) {
       return { lane, tone: "success" as const, text: t(LANE_CLEAR[lane]) };
     }
-    // "Done for you" is what an agent did. Sync and rules keep records
-    // current, which is maintenance, so they are counted apart rather than
-    // inflating the headline.
-    const agent = lane === "done" ? rows.filter(byAnAgent) : rows;
-    const kept = lane === "done" ? rows.filter((row) => !byAnAgent(row)) : [];
-    const figure = (base: PluralBase, of: readonly MagicLine[]) => {
-      // Records on THIS PAGE, which is all the endpoint promises: one line may
-      // stand for 1,200 filed emails, and the tiles and the fold count it so.
-      const count = recordsOf(of);
-      return plural(base, count, {
-        count: floorFigure(
-          formatNumber(count, locale),
-          sumIsFloor(lane, of),
-          count,
-        ),
-      });
-    };
-    const parts = [
-      ...(agent.length > 0 || kept.length === 0
-        ? [figure(LANE_COUNT[lane], agent)]
-        : []),
-      ...(kept.length > 0 ? [figure("magic.count.keptInSync", kept)] : []),
-    ];
     return {
       lane,
-      tone: agent.length > 0 ? LANE_TONE[lane] : ("neutral" as const),
-      text: parts.join(" · "),
+      tone: LANE_TONE[lane],
+      text: laneCountText(lane, rows, (base, count, floor) =>
+        plural(base, count, {
+          count: floorFigure(formatNumber(count, locale), floor, count),
+        }),
+      ),
     };
   });
   return (
