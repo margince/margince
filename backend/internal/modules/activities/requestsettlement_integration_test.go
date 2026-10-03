@@ -404,3 +404,23 @@ func TestACandidateNamesTheCorrespondentItWasWith(t *testing.T) {
 			candidate.CounterpartyEmail, requestCounterparty)
 	}
 }
+
+// A bounded pass judges the current request before an old one: the old one
+// ages out of daily work whether or not it is judged, the current one is what
+// a rep is looking at.
+func TestASettlementPassJudgesTheNewestRequestFirst(t *testing.T) {
+	e := setupLoad(t)
+	old := seedEmailRequest(t, e, "Old ask from the import", "commitment", OwedVerdictAsksUs)
+	e.exec(t, `UPDATE activity SET occurred_at = $2 WHERE id = $1`, old, requestInstant.AddDate(0, 0, -120))
+	replyTo(t, e, old, "Done, see attached.", requestInstant.AddDate(0, 0, -119))
+	current := seedEmailRequest(t, e, "Current ask", "commitment", OwedVerdictAsksUs)
+	replyTo(t, e, current, "Sent you the slots.", requestInstant.Add(time.Hour))
+
+	rows, err := storeKnowing(e).RepliedRequests(asClassifier(e), requestInstant.Add(48*time.Hour), 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 || rows[0].RequestID != current {
+		t.Fatalf("a pass with room for one judged %v, want the current request %v", rows, current)
+	}
+}

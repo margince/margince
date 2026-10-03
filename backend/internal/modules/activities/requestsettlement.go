@@ -162,7 +162,9 @@ var newestOutboundSince = `SELECT newest.id FROM activity newest
         ORDER BY newest.occurred_at DESC, newest.id DESC LIMIT 1`
 
 // RepliedRequests reads the requests this workspace has answered and not yet
-// judged, oldest first.
+// judged, newest first: a bounded pass spends its budget on the requests still
+// in daily work, not on a backlog an import brought in, which ages out of the
+// queue whether or not it is judged.
 //
 // System principal only, like the pass that mints the tasks: this hands thread
 // text to a model, and the audience clause is what decides that a conversation
@@ -194,7 +196,7 @@ func (s *Store) RepliedRequests(ctx context.Context, asOf time.Time, limit int) 
 			    ON task.source_system = '%s' AND task.source_activity_id = a.id
 			   AND task.archived_at IS NULL AND task.is_done = false
 			 WHERE %s
-			 ORDER BY a.occurred_at, a.id
+			 ORDER BY a.occurred_at DESC, a.id DESC
 			 LIMIT $3`, EmailRequestTaskSource, repliedRequestsSQL),
 			asOf, OwedVerdictCapturedBy, limit)
 		if err != nil {
