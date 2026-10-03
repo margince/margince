@@ -335,6 +335,32 @@ describe("NotificationBell", () => {
     );
   });
 
+  it("links a notice asking for a decision to that decision", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor([
+        notice("n1", "Is boris@customer.example a contact worth keeping?", {
+          kind: "approval_pending",
+          target: {
+            type: "approval",
+            id: "22222222-2222-4222-8222-222222222222",
+          },
+        }),
+      ]).fetchMock,
+    );
+    const user = userEvent.setup();
+    render(<NotificationBell />);
+
+    await user.click(await screen.findByRole("button", { name: /waiting/i }));
+
+    const link = await screen.findByRole("link", {
+      name: "Is boris@customer.example a contact worth keeping?",
+    });
+    expect(link.getAttribute("href")).toBe(
+      "#/home?approval=22222222-2222-4222-8222-222222222222",
+    );
+  });
+
   // A record KIND this app has no page for is named and not linked. Offering a
   // link into nothing is worse than offering none.
   it("names a notice it cannot route to, without linking it", async () => {

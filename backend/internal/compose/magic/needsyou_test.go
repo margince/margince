@@ -359,3 +359,24 @@ func TestADecisionAboutNoRecordCarriesNoEntity(t *testing.T) {
 		t.Errorf("a targetless staging carries entity %+v", lines[0].Entity)
 	}
 }
+
+// A new contact offered from mail names who wrote; one staged before it
+// carried a name falls back to the sentence that names only the kind.
+func TestAContactProposalNamesWhoWroteWhenItCan(t *testing.T) {
+	named := stagedApproval("capture_counterparty")
+	label := "Boris <boris@customer.example>"
+	named.TargetLabel = &label
+	unnamed := stagedApproval("capture_counterparty")
+
+	lines := decisionsWaiting(t, named, unnamed)
+	if len(lines) != 2 {
+		t.Fatalf("got %d lines, want 2", len(lines))
+	}
+	if lines[0].Summary.Key != "magic.action.approval_capture_counterparty" ||
+		(*lines[0].Summary.Values)["target"] != label {
+		t.Errorf("a named proposal reads %+v, want the sentence naming %q", lines[0].Summary, label)
+	}
+	if lines[1].Summary.Key != genericApprovalSentence {
+		t.Errorf("a proposal with no name reads %q, want the generic sentence", lines[1].Summary.Key)
+	}
+}

@@ -11780,6 +11780,8 @@ export const vi = {
     "Một đề xuất từ đêm qua đang chờ bạn duyệt",
   "magic.action.approval_transcript_proposal":
     "Một đề xuất từ bản ghi âm đang chờ bạn duyệt",
+  "magic.action.approval_capture_counterparty":
+    "{target} đã viết cho bạn. Giữ lại làm liên hệ?",
   "magic.action.approval_pending": "Một đề xuất loại {kind} đang chờ bạn duyệt",
   "magic.action.capture_reauth_required": "{provider} cần được kết nối lại",
   "magic.action.capture_connection_error": "Không kết nối được tới {provider}",
