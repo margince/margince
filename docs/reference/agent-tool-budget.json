@@ -30,7 +30,7 @@
   ],
   "catalog": {
     "tools": 81,
-    "system_frame_tokens": 561,
+    "system_frame_tokens": 586,
     "tokens": 28314,
     "median_tool_tokens": 286,
     "mean_tool_tokens": 349
@@ -47,11 +47,11 @@
         "read_record"
       ],
       "of_served_tools": 81,
-      "tokens": 3714,
+      "tokens": 3739,
       "listing_tokens": 1864,
       "step_schema_tokens": 1288,
       "percent_of_ceiling": 11,
-      "headroom_tokens": 19496,
+      "headroom_tokens": 19471,
       "dangling_cross_references": [],
       "temptation_weight": 5
     },
@@ -68,11 +68,11 @@
         "whats_slipping_this_week"
       ],
       "of_served_tools": 81,
-      "tokens": 5071,
+      "tokens": 5095,
       "listing_tokens": 2702,
       "step_schema_tokens": 1807,
       "percent_of_ceiling": 15,
-      "headroom_tokens": 18139,
+      "headroom_tokens": 18115,
       "dangling_cross_references": [
         "at_risk_relationships → intro_path_to",
         "at_risk_relationships → who_knows",

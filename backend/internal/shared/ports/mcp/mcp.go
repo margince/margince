@@ -217,7 +217,8 @@ const ConflictingSourcesRule = "When two sources disagree, say that they disagre
 	"(a date, an amount, a status) disagrees with prose someone wrote, the field wins: " +
 	"say which one you relied on and why. When you repeat what the prose claims, attribute " +
 	"it in that same sentence (\"the note dates it to March\"), including in a translation, and " +
-	"never restate it as something that happened."
+	"never restate it as something that happened. Leaving the prose's claim out does not " +
+	"settle the disagreement: still say that the two disagree."
 
 // RiskTier is the autonomy class (A34/ADR-0026). AutoExecute and ConfirmationRequired are
 // static — the declared value is the tool's whole tier. Dynamic means the
