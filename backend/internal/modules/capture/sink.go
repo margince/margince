@@ -250,14 +250,8 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 			if err := s.takeMergeLockFirst(ctx, tx, rec); err != nil {
 				return err
 			}
-			// BEFORE the activity is captured, so a message that completes the
-			// corroboration is judged under the claim it just proved rather
-			// than being the last one read as mail from a stranger.
-			if err := s.noteAliasSightingTx(ctx, tx, actor.UserID, rec.DeliveredTo, rec.Source); err != nil {
-				return err
-			}
 			var err error
-			if rec, fields, err = s.asSentFromOwnAddressTx(ctx, tx, rec, fields); err != nil {
+			if rec, fields, err = s.readAgainstTheSeatsAddressesTx(ctx, tx, actor.UserID, rec, fields); err != nil {
 				return err
 			}
 			ref, activityCreated, decision, err = s.captureActivity(ctx, tx, rec, fields)

@@ -9,8 +9,22 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
+
+// readAgainstTheSeatsAddressesTx settles what the seat's own addresses decide
+// about a message before it is captured. The sighting comes FIRST, so a
+// message that completes an alias's corroboration is judged under the claim it
+// just proved rather than being the last one read as mail from a stranger.
+func (s *Sink) readAgainstTheSeatsAddressesTx(
+	ctx context.Context, tx pgx.Tx, seat ids.UUID, rec connector.NormalizedRecord, fields ActivityFields,
+) (connector.NormalizedRecord, ActivityFields, error) {
+	if err := s.noteAliasSightingTx(ctx, tx, seat, rec.DeliveredTo, rec.Source); err != nil {
+		return rec, fields, err
+	}
+	return s.asSentFromOwnAddressTx(ctx, tx, rec, fields)
+}
 
 // asSentFromOwnAddressTx re-reads mail the seat sent from another address of
 // theirs as the outbound mail it is.
