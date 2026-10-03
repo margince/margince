@@ -18,7 +18,7 @@ export function modelText(
   if (answering) {
     return `${answering.provider}/${answering.served_model}`;
   }
-  const indexing = read.calls[0];
+  const indexing = read.calls.find((call) => call.kind === "embedding");
   if (indexing) {
     return t("agent.fact.searchIndex", {
       model: `${indexing.provider}/${indexing.served_model}`,

@@ -54,6 +54,16 @@ describe("modelText — which model the agent panel names", () => {
     expect(modelText({ allowed: true, calls }, t)).toBe("gemini/newer");
   });
 
+  it("names no model when every call in the window failed", () => {
+    const failed = {
+      ...call("completion", "anthropic", "failed"),
+      error_sentinel: "provider_unavailable",
+    };
+    expect(modelText({ allowed: true, calls: [failed] }, t)).toBe(
+      translate("en", "agent.fact.noCalls"),
+    );
+  });
+
   it("names an embedding as the search index when that is all there is", () => {
     const calls = [call("embedding", "openai", "text-embedding")];
     expect(modelText({ allowed: true, calls }, t)).toBe(
