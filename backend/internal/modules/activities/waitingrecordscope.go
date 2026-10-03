@@ -103,7 +103,6 @@ func waitingReplyExistsClause(ctx context.Context, arg func(any) int, asOf time.
 			liveRecord(openDealPredicate, "d"),
 			liveRecord(workingLeadPredicate, "ld"),
 			liveRecord(openDealPredicate, "openDeal"),
-			liveRecord(openDealPredicate, "fd"),
 			reader,
 			entityClause,
 			neverRelaxed, neverRelaxed,

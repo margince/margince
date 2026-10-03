@@ -40,7 +40,8 @@ const emailRequestAssigneeSQL = `SELECT min(u.id::text)::uuid AS user_id FROM ca
       HAVING count(DISTINCT u.id) = 1`
 
 // CaptureEmailRequests reconciles recent confirmed requests into undated tasks
-// for their one directly addressed importing seat. Historical and ambiguously
+// for their one directly addressed importing seat, and retires the ones it filed
+// whose request has aged past the waiting horizon untouched. Historical and ambiguously
 // addressed requests remain in review; this pass neither assigns them silently
 // nor recreates reminders a human archived or completed.
 func (s *Store) CaptureEmailRequests(ctx context.Context, asOf time.Time) error {
@@ -51,7 +52,13 @@ func (s *Store) CaptureEmailRequests(ctx context.Context, asOf time.Time) error 
 	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
 		return err
 	}
+	if err := auth.Require(ctx, "activity", principal.ActionDelete); err != nil {
+		return err
+	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := s.retireAgedReminders(ctx, tx, asOf); err != nil {
+			return err
+		}
 		args := []any{}
 		arg := func(v any) int { args = append(args, v); return len(args) }
 		domains, err := s.ownDomainList(ctx, tx)

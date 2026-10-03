@@ -18,8 +18,9 @@ package activities
 import "fmt"
 
 // waitingRepliesSQL is owedSQL narrowed by the queue's own rules: horizon,
-// sales link, colleagues and the reader's set-asides. Requests survive replies, age and closed deals until
-// explicit resolution. All eligibility predicates precede the cap. Every rule
+// sales link, colleagues and the reader's set-asides. Requests survive replies and
+// closed deals until explicit resolution, and age only while a human holds them.
+// All eligibility predicates precede the cap. Every rule
 // that hides a row owed a reply has a figure in hiddenbacklog.go.
 var waitingRepliesSQL = `
 	SELECT a.id, a.kind, COALESCE(a.subject, ''),
@@ -111,7 +112,7 @@ var waitingRepliesSQL = `
 	       --
 	       -- REPORTED, never used to exclude. The caller demotes what it
 	       -- cannot prove.
-	       (coalesce(array_length(%[17]s::text[], 1), 0) > 0
+	       (coalesce(array_length(%[16]s::text[], 1), 0) > 0
 	        AND EXISTS (
 	          SELECT 1 FROM activity_participant anyTo
 	           WHERE anyTo.activity_id = a.id AND anyTo.role = 'to'
@@ -119,7 +120,7 @@ var waitingRepliesSQL = `
 	        AND NOT EXISTS (
 	          SELECT 1 FROM activity_participant addressed
 	           WHERE addressed.activity_id = a.id AND addressed.role = 'to'
-	             AND lower(addressed.address) = ANY(%[17]s::text[]))),
+	             AND lower(addressed.address) = ANY(%[16]s::text[]))),
 	       EXISTS (
 	         SELECT 1 FROM activity ours
 	          WHERE ours.thread_key = a.thread_key
@@ -176,7 +177,7 @@ var waitingRepliesSQL = `
 	   -- workspace-wide, and narrowing after the cap would report nothing
 	   -- waiting on the very record this asks about. "TRUE" for the
 	   -- workspace-wide Worklist read.
-	   AND (%[11]s)
+	   AND (%[10]s)
 	   -- A message with no thread key is judged by the rules below like any
 	   -- other, rather than being required to carry request evidence first.
 	   --
@@ -197,14 +198,13 @@ var waitingRepliesSQL = `
 	     WHERE request_task.source_system = '` + EmailRequestTaskSource + `'
 	       AND request_task.source_activity_id = a.id
        AND (request_task.is_done OR (request_task.archived_at IS NULL
-         AND (request_task.assignee_id = $%[10]d OR $%[10]d = '00000000-0000-0000-0000-000000000000'::uuid))))
-	   -- Age bounds incidental unanswered mail, never a recognized request.
-	   -- Old requests remain reviewable; the attention rank decides prominence.
-	   AND ((` + requestCandidateSQL + `) OR a.occurred_at >= $%[1]d - make_interval(days => %[5]d)
-	     OR EXISTS (
-	          SELECT 1 FROM activity_link funded
-	          JOIN deal fd ON fd.id = funded.deal_id AND %[9]s
-	           WHERE funded.activity_id = a.id))
+         AND (request_task.assignee_id = $%[9]d OR $%[9]d = '00000000-0000-0000-0000-000000000000'::uuid))))
+	   -- Age retires every wait, a classified request and mail on an open deal
+	   -- included, unless a human kept the request. Old mail stays on the
+	   -- record's timeline; the queue is for current work. requestOpenSQL, not
+	   -- requestUnsettledSQL: owedSQL below is the one relaxable not-sales gate.
+	   AND ((` + requestOpenSQL + ` AND ` + heldRequestSQL() + `)
+	     OR a.occurred_at >= $%[1]d - make_interval(days => %[5]d))
 	   -- A SALES link, or it is not this queue's business.
 	   --
 	   -- The rule that was missing: this read used to answer "somebody wrote and
@@ -216,7 +216,7 @@ var waitingRepliesSQL = `
 	   -- that join is filtered by what the reader may SEE. Qualifying through it
 	   -- would make eligibility depend on the reader, so the same message would
 	   -- be work for one colleague and personal mail for another.
-	   AND (%[13]s OR EXISTS (
+	   AND (%[12]s OR EXISTS (
 	         SELECT 1 FROM activity_link sales
 	          WHERE sales.activity_id = a.id
 	            AND (sales.contact_id IS NOT NULL
@@ -241,15 +241,15 @@ var waitingRepliesSQL = `
 	   -- Matched on the address's domain, and on a subdomain of one of ours, the
 	   -- way the seam's own set does — mail from a departmental host is still
 	   -- from a colleague.
-	   AND (%[14]s OR NOT %[15]s)
+	   AND (%[13]s OR NOT %[14]s)
 	   -- Owed a reply at all, before the cap like every rule above. The
 	   -- obvious machine senders go here: two hundred notification threads
 	   -- must not fill the scan and push a real customer past it. The
 	   -- not-sales judgement is keyed on the THREAD, so the next issue of a
-	   -- newsletter somebody recognised does not arrive as fresh work. Slots 12
-	   -- and 18 relax the not-sales and informs_us judgements for their hidden
+	   -- newsletter somebody recognised does not arrive as fresh work. Slots 11
+	   -- and 17 relax the not-sales and informs_us judgements for their hidden
 	   -- figures.
-	   AND ` + owedSQL("$%[1]d", "%[12]s", "%[18]s") + `
+	   AND ` + owedSQL("$%[1]d", "%[11]s", "%[17]s") + `
 	   -- Set aside by THIS reader, and only this reader.
 	   --
 	   -- Judged against the row's CURRENT state rather than against what it was
@@ -274,9 +274,9 @@ var waitingRepliesSQL = `
 	   AND NOT EXISTS (
 	         SELECT 1 FROM activity_reader_state mine
 	          WHERE mine.activity_id = a.id
-	            AND mine.reader_id = $%[10]d
+	            AND mine.reader_id = $%[9]d
 	            AND (mine.state = 'not_mine'
-	              OR (mine.state = 'snoozed' AND NOT %[16]s)))
+	              OR (mine.state = 'snoozed' AND NOT %[15]s)))
 	 GROUP BY a.id, a.kind, a.subject, a.occurred_at
 	 -- NEWEST first, which is the opposite of how the rows are then shown.
 	 --
@@ -291,13 +291,13 @@ var waitingRepliesSQL = `
 	 -- The caller sorts oldest-first for display, so what a reader sees is
 	 -- unchanged. This decides only WHICH waits survive the bound.
 	 --
-	 -- %[19]s is the keyset continuation, empty on the first page. The machine
+	 -- %[18]s is the keyset continuation, empty on the first page. The machine
 	 -- rule this scan can express is a coarse subset of the real one — the full
 	 -- test reads a registrable domain against a transactional baseline, which
 	 -- is a public-suffix question rather than a LIKE — so the caller filters
 	 -- what survives and asks for another page when too much of it went. The
 	 -- cap bounds ONE page; the caller bounds how many it will ask for.
-	 HAVING TRUE %[19]s
+	 HAVING TRUE %[18]s
 	 ORDER BY a.occurred_at DESC
 	 LIMIT %[4]d`
 

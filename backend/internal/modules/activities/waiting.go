@@ -47,9 +47,9 @@ type WaitingReply struct {
 	ContactID ids.UUID
 	CompanyID ids.UUID
 	DealID    ids.UUID
-	// HasOpenDeal reports whether an open deal is on this thread. It is what
-	// lets a caller keep an old wait that still has money behind it, and drop
-	// one that does not.
+	// HasOpenDeal reports whether an open deal is on this thread. Inside the
+	// horizon it is what lets a caller keep a stale wait with money behind it
+	// above routine work; past the horizon no wait survives on it.
 	//
 	// Read through the SAME visibility-gated links as the record ids above, so
 	// it means "an open deal this reader can see" rather than "an open deal
@@ -128,9 +128,9 @@ const WaitingScanCap = 200
 // on purpose: the bands separating an urgent wait from a stale one are the
 // caller's.
 //
-// A thread with an open deal is exempt — the one case where a long silence still
-// costs money, and a horizon outranking it would leave the caller's own
-// staleness rule nothing to act on.
+// No thread is exempt, an open deal included: only a request a human holds
+// outlives the horizon (heldRequestSQL). A deal gone quiet is the risk lane's
+// to raise, not the reply queue's.
 //
 // Applied BEFORE the cap, which is the whole shape of this query: a filter after
 // LIMIT lets two hundred rows nobody wants fill the scan and push a real
@@ -300,7 +300,6 @@ func (s *Store) WaitingRepliesBefore(ctx context.Context, asOf time.Time, before
 				liveRecord(openDealPredicate, "d"),
 				liveRecord(workingLeadPredicate, "ld"),
 				liveRecord(openDealPredicate, "openDeal"),
-				liveRecord(openDealPredicate, "fd"),
 				reader,
 				scopeUnbounded,
 				neverRelaxed, neverRelaxed,
