@@ -36,6 +36,7 @@ The 8 tables owned by `dealrooms`, as the migrations build them. [Back to the en
 
 - `deal_room_archived_agrees` — `CHECK (((state = 'archived') = (archived_at IS NOT NULL)))`
 - `deal_room_state_check` — `CHECK ((state = ANY (ARRAY['draft', 'building', 'ready', 'publishing', 'live', 'paused', 'closed', 'expired', 'archived'])))`
+- `deal_room_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
@@ -115,6 +116,7 @@ The 8 tables owned by `dealrooms`, as the migrations build them. [Back to the en
 
 - `deal_room_document_group_check` — `CHECK ((group_key = ANY (ARRAY['commercial', 'legal', 'security_privacy', 'delivery_operations'])))`
 - `deal_room_document_title_check` — `CHECK ((length(btrim(title)) > 0))`
+- `deal_room_document_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 - `uq_deal_room_document_in_room` — `UNIQUE (id, room_id)`
 
 **Indexes**
@@ -324,6 +326,7 @@ The 8 tables owned by `dealrooms`, as the migrations build them. [Back to the en
 - `deal_room_thread_one_author` — `CHECK (((author_participant_id IS NOT NULL) <> (author_user_id IS NOT NULL)))`
 - `deal_room_thread_resolution_complete` — `CHECK ((((state = 'open') AND (resolved_at IS NULL) AND (resolved_by_user_id IS NULL)) OR ((state = 'resolved') AND (resolved_at IS NOT NULL))))`
 - `deal_room_thread_state_check` — `CHECK ((state = ANY (ARRAY['open', 'resolved'])))`
+- `deal_room_thread_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 

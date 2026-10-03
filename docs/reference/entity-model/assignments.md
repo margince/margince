@@ -39,6 +39,7 @@ The 2 tables owned by `assignments`, as the migrations build them. [Back to the 
 
 - `record_assignment_one_assignee` — `CHECK ((num_nonnulls(user_id, team_id) = 1))`
 - `record_assignment_one_parent` — `CHECK ((num_nonnulls(company_id, deal_id, project_id) = 1))`
+- `record_assignment_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
@@ -84,6 +85,7 @@ The 2 tables owned by `assignments`, as the migrations build them. [Back to the 
 - `record_role_key_shape` — `CHECK (((key = lower(key)) AND (length(btrim(key)) > 0)))`
 - `record_role_label_present` — `CHECK ((length(btrim(label)) > 0))`
 - `record_role_record_types_bounded` — `CHECK (((cardinality(record_types) > 0) AND (record_types <@ ARRAY['company', 'deal', 'project'])))`
+- `record_role_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
