@@ -41,6 +41,7 @@ import { WaitingEmailLine } from "./worklist.emailtitle";
 import { conditionOf, eyebrowKeyFor, kindClass } from "./worklist.eyebrow";
 import { leadFactsText } from "./worklist.leadfacts";
 import { MeetingOutcome } from "./worklist.meetingoutcome";
+import { hostText } from "./worklist.meetingparties";
 import { lastTouch } from "./worklist.pane";
 import { PlanWorkActions } from "./worklist.plan";
 import {
@@ -202,6 +203,7 @@ export function WorklistRow({
     ? undefined
     : aboutRecord(item, emailOpener !== undefined);
   const touch = lastTouch(touchOf(item, framed), t, locale, zone);
+  const host = framed ? null : hostText(item, viewer?.id, t);
   // Whether the day put a state on this row — overdue, or a meeting with
   // nothing prepared. They ride on the title line, which is why it is drawn on
   // a row that has no title of its own to draw.
@@ -230,6 +232,7 @@ export function WorklistRow({
     sample,
     zone,
     about,
+    host,
     touch,
   });
   const named = conditionOf(item);
@@ -418,6 +421,7 @@ function RowText({
       <VerdictLine verdict={item.verdict} zone={zone} />
       <RowCaptions
         about={readings.about}
+        host={readings.host}
         touch={readings.touch}
         when={when}
         facts={facts}

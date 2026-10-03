@@ -183,7 +183,8 @@
 .worklist-row-above {
   margin: 0;
 }
-.worklist-row-about {
+.worklist-row-about,
+.worklist-row-host {
   margin: 0;
 }
 /* The set-asides on the row in hand take the leading edge and push the rest

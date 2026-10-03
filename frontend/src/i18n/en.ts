@@ -11540,6 +11540,8 @@ export const en = {
   "worklist.verb.open_meeting_brief": "Prepare for meeting",
   "worklist.deal.closes": "closes {date}",
   "worklist.when.held": "held {when}",
+  "worklist.meeting.hostedBy": "hosted by {name}",
+  "worklist.meeting.hostedByYou": "hosted by you",
   "worklist.when.starts": "starts {when}",
   "worklist.when.due": "due {when}",
   "worklist.batch.system_incident_one": "{cause} failed {count} time",

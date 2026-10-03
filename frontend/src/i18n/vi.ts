@@ -11261,6 +11261,8 @@ export const vi = {
   "worklist.verb.open_meeting_brief": "Chuẩn bị cho cuộc họp",
   "worklist.deal.closes": "chốt {date}",
   "worklist.when.held": "đã diễn ra {when}",
+  "worklist.meeting.hostedBy": "do {name} chủ trì",
+  "worklist.meeting.hostedByYou": "do bạn chủ trì",
   "worklist.when.starts": "bắt đầu {when}",
   "worklist.when.due": "đến hạn {when}",
   "worklist.batch.system_incident_one": "{cause} đã lỗi {count} lần",

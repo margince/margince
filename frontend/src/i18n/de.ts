@@ -11371,6 +11371,8 @@ export const de = {
   "worklist.verb.open_meeting_brief": "Termin vorbereiten",
   "worklist.deal.closes": "Abschluss {date}",
   "worklist.when.held": "Fand statt: {when}",
+  "worklist.meeting.hostedBy": "Organisiert von {name}",
+  "worklist.meeting.hostedByYou": "Von dir organisiert",
   "worklist.when.starts": "Beginn: {when}",
   "worklist.when.due": "Fällig: {when}",
   "worklist.batch.system_incident_one":

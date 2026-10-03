@@ -6,6 +6,7 @@ import { routeHash } from "../app/router";
 import { formatNumber } from "../format/format";
 import { translatePlural, useLocale, useT } from "../i18n";
 import { subjectHref } from "./worklist.copy";
+import { employerOf } from "./worklist.meetingparties";
 import type { WorklistItem } from "./worklist.queries";
 import type { RowReadings } from "./worklist.row.compact";
 
@@ -65,7 +66,11 @@ export function aboutRecord(
 ): RowReadings["about"] {
   const contact = item.contact;
   if (contact?.label && (named || contact.id !== item.subject?.id)) {
-    return { href: contactHref(contact), label: contact.label };
+    return {
+      href: contactHref(contact),
+      label: contact.label,
+      company: employerOf(contact),
+    };
   }
   if (!named) return undefined;
   const label = item.subject?.label;
@@ -203,6 +208,7 @@ function RowWhyHere({
  */
 export function RowCaptions({
   about,
+  host,
   touch,
   when,
   facts,
@@ -212,6 +218,7 @@ export function RowCaptions({
   above,
 }: Readonly<{
   about?: RowReadings["about"];
+  host?: string | null;
   touch: RowReadings["touch"];
   when: string | null;
   facts: string | null;
@@ -235,6 +242,14 @@ export function RowCaptions({
             </a>
           </p>
         )}
+        {about?.company && (
+          <p className="t-caption worklist-row-about">
+            <a className="entity-link" href={about.company.href}>
+              {about.company.label}
+            </a>
+          </p>
+        )}
+        {host && <p className="t-caption worklist-row-host">{host}</p>}
         {when && <p className="t-caption worklist-row-when">{when}</p>}
         {facts && <p className="t-caption worklist-row-facts">{facts}</p>}
         <RowWhyHere said={said} folded={folded} above={above} />
