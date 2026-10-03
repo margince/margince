@@ -417,6 +417,12 @@ func TestACredentialReleasesTheUndoableChangeItStaged(t *testing.T) {
 	if _, err := e.svc.Decide(e.lentPassport(t, stranger), staged, true, nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("another human's credential released the change → %v, want ErrPermissionDenied", err)
 	}
+	// A scheduled run has nobody behind it to have said yes, so the same
+	// credential on the same change is refused once it runs unattended.
+	scheduled := principal.WithAgentRunID(after, ids.NewV7())
+	if _, err := e.svc.Decide(scheduled, staged, true, nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("a scheduled run released the change it staged → %v, want ErrPermissionDenied", err)
+	}
 	if _, err := e.svc.Decide(after, staged, true, nil); err != nil {
 		t.Fatalf("the connection could not release the undoable change it staged for its human: %v", err)
 	}
