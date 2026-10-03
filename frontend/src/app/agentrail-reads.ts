@@ -183,7 +183,9 @@ export function useLastCall(): Readonly<{
     staleTime: 30_000,
     queryFn: async () => {
       const { data, error } = await api.GET("/ai/calls", {
-        params: { query: { limit: 1 } },
+        // A few, not one: the newest call is often an embedding, which says
+        // which model indexes search rather than which model answers.
+        params: { query: { limit: 10 } },
       });
       if (error) {
         // Chrome must not take a page down over telemetry: an unreadable log is

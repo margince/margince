@@ -185,9 +185,17 @@ function modelText(
   read: Readonly<{ allowed: boolean; calls: readonly AiCall[] }>,
   t: Translator,
 ): string {
-  const latest = read.calls[0];
-  if (latest) {
-    return `${latest.provider}/${latest.served_model}`;
+  // The model that answers, not the one that indexes search: an embedding is
+  // named only when it is all there is, and then as what it is.
+  const answering = read.calls.find((call) => call.kind !== "embedding");
+  if (answering) {
+    return `${answering.provider}/${answering.served_model}`;
+  }
+  const indexing = read.calls[0];
+  if (indexing) {
+    return t("agent.fact.searchIndex", {
+      model: `${indexing.provider}/${indexing.served_model}`,
+    });
   }
   return t(read.allowed ? "agent.fact.noCalls" : "agent.fact.hidden");
 }
