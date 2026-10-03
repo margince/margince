@@ -106,7 +106,59 @@ the result:
 Drop `SCENARIO=` for the full sweep: every scenario, three runs each. Add
 `E2E_LLM_KEEP=1` to leave the stack up afterwards.
 
-## 4. Read the result
+## 4. Know what a full sweep costs
+
+A full sweep is every scenario, three runs each: 21 use cases are 63 runs. These
+figures were measured on the seeded test world through the routes above. The
+judge's calls (Haiku, through the claude CLI by default) are not included.
+
+| Candidate · route | Tokens per sweep | Cost per sweep | Wall time |
+|---|---|---|---|
+| `claude-sonnet-5-5` · `cli` | ~19M, 95% of it cache reads | ~$8 API-equivalent, drawn from a Claude subscription | ~1 h 10 |
+| `claude-opus-5` · `cli` | ~20M | ~$22 API-equivalent | — |
+| `gpt-5.6-sol` · `cli` (codex) | ~19M; codex's own prompt and tools add 70–100k input tokens to every run | ~$17 at API prices; codex reports none and draws ChatGPT plan credits | ~4 h |
+| `mistral-medium-3-5` · `openrouter` | — | ~$45–90, extrapolated from one scenario at ~$4 for 3 runs: one tool call per turn runs long conversations | — |
+
+`usage:` under each scenario, and `sweep total:` at the end, print what a run
+actually spent; the committed verdict keeps the same totals.
+
+**Run one scenario before a sweep** (section 3), and read its transcript: a
+harness problem found on one scenario costs one scenario.
+
+### Sweeping through a subscription limit
+
+A CLI route draws a subscription with a rolling limit, and a full GPT sweep needs
+more than one five-hour ChatGPT window. When the limit runs out, the lane stops
+with exit 2 and scores nothing — codex reports `Your workspace is out of
+credits`, the claude CLI its own usage-limit message — so a sweep run as one
+command ends at that scenario.
+
+Run the scenarios one at a time instead, skip the ones already scored, and wait
+when a stop names a limit:
+
+```bash
+mkdir -p .tmp/sweep
+for f in e2e/llm/scenarios/*.yaml; do
+  name="$(python3 e2e/llm/check.py --field name "$f")"
+  [[ -f ".tmp/sweep/$name.done" ]] && continue
+  until MARGINCE_E2E_LLM=1 E2E_LLM_CANDIDATE=gpt E2E_LLM_VIA=cli \
+        E2E_LLM_STACK_PRESET=config/presets/openrouter_cloud_eu.yaml \
+        SCENARIO="$name" make e2e-llm > ".tmp/sweep/$name.log" 2>&1 \
+      || grep -q '^scenarios: ' ".tmp/sweep/$name.log"; do
+    grep -qiE 'out of credits|usage limit|answered HTTP 429' ".tmp/sweep/$name.log" \
+      e2e/llm/records/"$name".run*.jsonl || break   # any other stop: read it
+    sleep 1800                                      # wait for the limit to reset
+  done
+  touch ".tmp/sweep/$name.done"
+done
+```
+
+`make` exits 2 for a scored failure as well as for a harness stop, so the lane's
+`scenarios:` summary line — not the exit code — is what says a scenario was
+scored. A seed refused with `answered HTTP 429` is the stack's own rate limiter
+after many restarts in a row; it clears within minutes.
+
+## 5. Read the result
 
 | Exit | Meaning |
 |---|---|
@@ -122,7 +174,7 @@ A failing scenario lists what did not hold: a tool it never called, a fact it
 never said, something it must not say, or a judged criterion with the judge's
 one-sentence reason.
 
-## 5. Diagnose a failure from the transcript
+## 6. Diagnose a failure from the transcript
 
 The verdict says which scenario failed; only the transcript says what the model
 did. Transcripts land in the gitignored `e2e/llm/records/` — every run of each
@@ -153,7 +205,7 @@ Before calling a red scenario a product regression, rule out the harness:
 | Symptom | Cause | Fix |
 |---|---|---|
 | Every run "called nothing" | The MCP server never attached: a disabled server name in the claude CLI's config, or a codex run that could not reach its tools | Read the transcript's system line; the lane now stops on both |
-| `search_context` returns `semantic_ranking_degraded_to_lexical` | No embedding model serves the stack | Section 2 |
+| `search_context` returns `semantic_ranking_degraded_to_lexical` | No embedding model serves the stack | section 2 |
 | `CERTIFICATE_VERIFY_FAILED` | A Python with no CA bundle | The bridge falls back to the system bundle; check it exists |
 | OpenRouter 404 "No endpoints found that can handle the requested parameters" | `require_parameters` routing and a parameter no endpoint declares | Remove the parameter from the bridge's request |
 | `codex refused to call …: MCP tool call requires approval` | Codex in exec mode refuses MCP writes it would ask about | The lane approves its own server (`default_tools_approval_mode`); this stop means the installed codex no longer honours that key. Find the key it does accept with `codex exec --strict-config -c 'mcp_servers.x.<key>="approve"' "hi"` (an unknown key is refused before any model call) and set it in `run_codex` in `e2e/llm/drive.py` |
@@ -162,7 +214,7 @@ Before calling a red scenario a product regression, rule out the harness:
 Always run a control — the same scenario on a model that passes it — before
 blaming your own change.
 
-## 6. Experiment with effort or another model
+## 7. Experiment with effort or another model
 
 A run at a different reasoning effort or on a different model is an experiment,
 and must be filed apart so it never overwrites the default's verdict:
@@ -176,7 +228,7 @@ MARGINCE_E2E_LLM=1 E2E_LLM_CANDIDATE=mistral E2E_LLM_VIA=openrouter \
 
 Without `E2E_LLM_FOLDER` the lane refuses before anything boots.
 
-## 7. Publish the result
+## 8. Publish the result
 
 The lane writes one verdict per scenario to
 `backend/internal/compose/aicert/records/mcp_e2e/<folder>/<scenario>.json`, with
