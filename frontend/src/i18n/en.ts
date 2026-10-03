@@ -11204,7 +11204,8 @@ export const en = {
   "worklist.coaching.promises_other":
     "{name} has {count} customer commitments due",
   "worklist.coaching.waiting_one": "{count} conversation is waiting on {name}",
-  "worklist.coaching.waiting_other": "{count} conversations are waiting on {name}",
+  "worklist.coaching.waiting_other":
+    "{count} conversations are waiting on {name}",
   "worklist.coaching.overdue_one": "{name} has {count} overdue task",
   "worklist.coaching.overdue_other": "{name} has {count} overdue tasks",
   "worklist.board.promises": "Commitments due",
@@ -11251,6 +11252,8 @@ export const en = {
     "Snoozed or marked not yours. Snoozed items return automatically.",
   "worklist.hidden.shown": "The Worklist shows {count}.",
   "worklist.hidden.rows.loading": "Loading the held-back messages…",
+  "worklist.hidden.rows.outOfReach":
+    "None could be read at this size. Some may still be held back.",
   "worklist.hidden.rows.empty": "Nothing is held back by this rule now.",
   "worklist.filter.label": "Work type",
   "worklist.filter.all": "All",

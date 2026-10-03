@@ -490,7 +490,9 @@ describe("whose queue the page is answering", () => {
       <OwnerPicker owner="" onOwner={() => {}} scope="all" />,
     );
 
-    expect((await screen.findByRole("combobox")).textContent).toContain("Everyone");
+    expect((await screen.findByRole("combobox")).textContent).toContain(
+      "Everyone",
+    );
     expect(screen.queryByText("My Worklist")).toBeNull();
   });
 

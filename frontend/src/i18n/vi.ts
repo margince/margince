@@ -11015,6 +11015,8 @@ export const vi = {
     "Đã hoãn hoặc đánh dấu không phải của bạn. Một lần hoãn sẽ tự quay lại.",
   "worklist.hidden.shown": "Bản thân danh sách mang {count}.",
   "worklist.hidden.rows.loading": "Đang tải các thư bị giữ lại…",
+  "worklist.hidden.rows.outOfReach":
+    "Không đọc được thư nào ở quy mô này. Có thể vẫn còn thư bị giữ lại.",
   "worklist.hidden.rows.empty": "Quy tắc này hiện không giữ lại thư nào.",
   "worklist.filter.label": "Loại công việc",
   "worklist.filter.all": "Tất cả",

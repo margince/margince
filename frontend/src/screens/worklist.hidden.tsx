@@ -261,7 +261,12 @@ function Reading({
           </span>
         }
       >
-        <HiddenRows rule={rule} open={open} onOpenEmail={onOpenEmail} />
+        <HiddenRows
+          rule={rule}
+          open={open}
+          measured={measured}
+          onOpenEmail={onOpenEmail}
+        />
       </Disclosure>
     </li>
   );
@@ -273,10 +278,12 @@ function Reading({
 function HiddenRows({
   rule,
   open,
+  measured,
   onOpenEmail,
 }: Readonly<{
   rule: HiddenRule;
   open: boolean;
+  measured: boolean;
   onOpenEmail: (activityId: string) => void;
 }>) {
   const t = useT();
@@ -293,7 +300,13 @@ function HiddenRows({
     <SurfaceState
       state={state}
       loadingLabel={t("worklist.hidden.rows.loading")}
-      emptyLabel={t("worklist.hidden.rows.empty")}
+      // At the reading limit an empty page is not "nothing held back": the
+      // rows are read under the same limit, so it may only be out of reach.
+      emptyLabel={t(
+        measured
+          ? "worklist.hidden.rows.empty"
+          : "worklist.hidden.rows.outOfReach",
+      )}
     >
       <ul className="worklist-hidden-rows">
         {rows.data?.rows.map((row) => (

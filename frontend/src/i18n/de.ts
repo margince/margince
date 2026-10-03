@@ -11097,6 +11097,8 @@ export const de = {
     "Zurückgestellt oder als nicht zuständig markiert. Zurückgestellte Einträge kommen automatisch zurück.",
   "worklist.hidden.shown": "Angezeigt in der Worklist: {count}.",
   "worklist.hidden.rows.loading": "Zurückgehaltene Nachrichten werden geladen…",
+  "worklist.hidden.rows.outOfReach":
+    "Bei dieser Menge ließ sich keine Nachricht lesen. Es können trotzdem welche zurückgehalten werden.",
   "worklist.hidden.rows.empty": "Diese Regel hält gerade nichts zurück.",
   "worklist.filter.label": "Art der Arbeit",
   "worklist.filter.all": "Alle",
