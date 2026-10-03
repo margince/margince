@@ -115,6 +115,18 @@ class FinishTheImportTest(GuardCase):
         )
         self.assertMissed(self.report + "\n\n| Column | Value |\n|---|---|\n| size | 51-200 |\n", self.mapping)
 
+    def test_a_negated_placing_still_fails(self):
+        for said in (
+            "No size_band was set.",
+            "size_band was not set.",
+            "I did not map size to size_band.",
+            "I didn't map size to size_band.",
+            "Nothing went into size_band.",
+            "size_band wasn't mapped from your size column.",
+        ):
+            with self.subTest(said=said):
+                self.assertMissed(self.report + said, self.mapping)
+
 
 class FairLeadsTest(GuardCase):
     scenario = "case43-the-fair-leads-are-prospects.yaml"
