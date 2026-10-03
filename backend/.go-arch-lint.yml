@@ -356,8 +356,15 @@ deps:
     # holds it to the layout keys the offer-template form writes: the PDF reads
     # a free jsonb bag, so a spelling on one side only is typed and never
     # printed, and deals must not depend on a TypeScript file to notice.
+    # contractadmission_test.go reads identity.AdmittedWithoutSession and holds it to
+    # every operation api/crm.yaml declares `security: []`: the same "only gates may
+    # hold both halves" shape. A route the contract says needs no credential and the
+    # middleware refuses is unreachable in production while its handler test passes,
+    # because the test drives the handler and only the middleware decides what arrives
+    # there — and identity must not gain a YAML dependency to check a document it does
+    # not own.
     # gates carries test files only, so this grants no production edge.
-    mayDependOn: [contracts, compose, ai, collections, platform, activities, aiactivity, agents, approvals, contacts, customfields, deals, forecasting, comms]
+    mayDependOn: [contracts, compose, ai, collections, platform, activities, aiactivity, agents, approvals, contacts, customfields, deals, forecasting, comms, identity]
     canUse: [yaml, jsonschema]
   cmd:
     mayDependOn: [compose, identity, contacts, privacy, continuity, deals, activities, aiactivity, approvals, agents, automation, ai, search, capture, consent, collections, signals, customfields, migration, webhooks, comms, notices, introductions, weeklyplan, forecasting, reporting, assurance, finance, integrations, agreements, commissions, contracts, dealrooms, assignments, platform, migrations, projects]

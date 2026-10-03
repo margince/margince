@@ -30,6 +30,11 @@ var publicRequests = map[string]map[string]bool{
 	"/v1/auth/logout":          {http.MethodPost: true},
 	"/v1/auth/forgot-password": {http.MethodPost: true},
 	"/v1/auth/reset-password":  {http.MethodPost: true},
+	// The second sign-in step, which cannot have a session yet: the signed
+	// challenge /v1/auth/login returned IS the credential, and the handler
+	// verifies it. Without this entry the 202 from the first step is a dead
+	// end, so anyone holding an authenticator can never finish signing in.
+	"/v1/auth/mfa": {http.MethodPost: true},
 	// The reachability probe external uptime monitors call: a fixed body,
 	// no dependency work, nothing disclosed (see compose.Server.GetStatus).
 	"/v1/status": {http.MethodGet: true},
@@ -63,6 +68,29 @@ var publicRequests = map[string]map[string]bool{
 // this asymmetry off it.
 func isConsentEntry(r *http.Request) bool {
 	return r.Method == http.MethodGet && r.URL.Path == authorizePath
+}
+
+// AdmittedWithoutSession reports whether this request reaches its handler with no
+// session cookie. ONE spelling, because a route the contract declares `security: []`
+// and this rule does not admit is unreachable in production while its handler test
+// passes: the test drives the handler, and only this decides what arrives there.
+//
+// Exported for that reason: the parity gate over crm.yaml asks this rule rather than
+// restating it, and a restatement is what drifts.
+//
+//   - isPublicRequest: the sign-in and discovery routes, each proving its own
+//     credential — a signed challenge, a reset token, or nothing to disclose.
+//   - /v1/public/: the anonymous booking surface. The singleton company is bound
+//     above; principal and rate limits are the public-booking middleware's job,
+//     composed downstream.
+//   - a capture-connector OAuth callback arrives with neither cookie (SameSite
+//     blocks it on the cross-site redirect) nor workspace slug. Its signed `state`
+//     is the auth: the handler verifies it and rebuilds the workspace and granting
+//     human from it before persisting.
+func AdmittedWithoutSession(r *http.Request) bool {
+	return isPublicRequest(r) ||
+		strings.HasPrefix(r.URL.Path, "/v1/public/") ||
+		isConnectorOAuthCallback(r.URL.Path)
 }
 
 func isPublicRequest(r *http.Request) bool {
@@ -129,24 +157,7 @@ func (h Handlers) Middleware(next http.Handler) http.Handler {
 		}
 		ctx = principal.WithWorkspaceID(ctx, wsID.UUID)
 
-		if isPublicRequest(r) {
-			next.ServeHTTP(w, r.WithContext(ctx))
-			return
-		}
-		// The anonymous booking surface needs no session; the singleton
-		// company is already bound above. Everything else about the
-		// request (principal, rate limits) is the public-booking
-		// middleware's job, composed downstream.
-		if strings.HasPrefix(r.URL.Path, "/v1/public/") {
-			next.ServeHTTP(w, r.WithContext(ctx))
-			return
-		}
-		// A capture-connector OAuth callback (provider → CRM redirect) arrives
-		// with neither a session cookie (SameSite blocks it on the cross-site
-		// redirect) nor a workspace slug. Its signed `state` is the auth: the
-		// handler verifies it and rebuilds the workspace + granting human from
-		// it before persisting. So it passes the session/workspace gate here.
-		if isConnectorOAuthCallback(r.URL.Path) {
+		if AdmittedWithoutSession(r) {
 			next.ServeHTTP(w, r.WithContext(ctx))
 			return
 		}

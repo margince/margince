@@ -46,6 +46,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `configschema_test.go` | H3 | The margince.yaml schema is editor tooling, and editor tooling that lies is worse than none: an operator trusts the squiggle. |
 | `consumergroupwiring_test.go` | H3 | Every lane the worker starts is a group the catalog declares. |
 | `contextanchorenum_test.go` | H3 | GET /records/{entity\_type}/{id}/context accepts exactly the record types the search module can anchor a context read on — every searchable type but the text-only ones — and the contract has to say the same set. |
+| `contractadmission_test.go` | H3 | A route the contract declares `security: []` is reachable without a session. |
 | `contractdaycaps_test.go` | H3 | A day-count bound published in the contract and enforced in Go is ONE rule with two spellings, so it is held here. |
 | `contractfrontendlane_test.go` | H3 | A contract change owes three regenerations, and the one that strands the FRONTEND types is enforced in two different places for two different readers. |
 | `contractvocabulary_test.go` | H3 | A membership set built from a generated enum's own constants must hold every member of that enum. |
