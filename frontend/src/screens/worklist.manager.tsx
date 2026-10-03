@@ -26,6 +26,7 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import { useAssignableUserOptions } from "./assigneepicker";
 import { problemCodeOf, useMe } from "./common";
 import { useRosterPartial, useRosterPartialHint } from "./entityref";
@@ -36,6 +37,7 @@ import {
   useReassignTask,
   useTakeOwnership,
   type WorklistItem,
+  type WorklistScope,
 } from "./worklist.queries";
 
 // COACH_KINDS is the contract's vocabulary, spelled once. A kind the server
@@ -60,10 +62,22 @@ type CoachKind = (typeof COACH_KINDS)[number];
 // control at them, which makes the visible label the accessible name: ONE
 // spelling, rather than a label a screen reader hears and a label a reader
 // sees being two different strings.
+const NOBODY_NAMED = {
+  mine: "worklist.owner.mine",
+  team: "worklist.owner.wholeTeam",
+  all: "worklist.owner.everyone",
+  unassigned: "worklist.owner.nobodyYet",
+} as const satisfies Record<WorklistScope, MessageKey>;
+
 export function OwnerPicker({
   owner,
   onOwner,
-}: Readonly<{ owner: string; onOwner: (next: string) => void }>) {
+  scope,
+}: Readonly<{
+  owner: string;
+  onOwner: (next: string) => void;
+  scope: WorklistScope;
+}>) {
   const t = useT();
   const contacts = useAssignableUserOptions();
   // A ROSTER THAT STOPPED SHORT IS SAID SO. The walk is bounded, so past its
@@ -73,7 +87,9 @@ export function OwnerPicker({
   // own, and the `Field` wires them into the control's `aria-describedby`.
   const partial = useRosterPartial("user", true);
   const partialHint = useRosterPartialHint(partial);
-  const options = [{ value: "", label: t("worklist.owner.mine") }, ...contacts];
+  // Naming nobody follows the scope dial, so the empty choice says which
+  // population that is; "My Worklist" over the whole team misstates it.
+  const options = [{ value: "", label: t(NOBODY_NAMED[scope]) }, ...contacts];
   return (
     <Field
       label={t("worklist.owner.visibleLabel")}
