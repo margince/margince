@@ -62,7 +62,7 @@ func TestAGroupPostIsReReadAsItsAuthorsMail(t *testing.T) {
 	}
 	const google = "<mailto:googlegroups-manage+1+unsubscribe@googlegroups.com>, <https://groups.google.com/a/grouppost.test/group/info/subscribe>"
 
-	person := storedGroupPost(ctx, t, conn, seat, "g1@customer.test", "henry@customer.test", google)
+	authored := storedGroupPost(ctx, t, conn, seat, "g1@customer.test", "henry@customer.test", google)
 	newsletter := storedGroupPost(ctx, t, conn, seat, "g2@esp.test", "news@esp.test",
 		"<https://esp.test/u?r=groups.google.com>, "+google)
 
@@ -73,7 +73,7 @@ func TestAGroupPostIsReReadAsItsAuthorsMail(t *testing.T) {
 		id, counterparty, sender string
 		bulk                     bool
 	}{
-		"an author's post":        {person, "henry@customer.test", "henry@customer.test", false},
+		"an author's post":        {authored, "henry@customer.test", "henry@customer.test", false},
 		"a newsletter through it": {newsletter, "news@esp.test", "news@esp.test", true},
 	} {
 		var counterparty, sender string
