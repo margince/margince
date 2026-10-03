@@ -18378,6 +18378,7 @@ const (
 	WorklistReasonKindMeetingUnprepared  WorklistReasonKind = "meeting_unprepared"
 	WorklistReasonKindNoChampion         WorklistReasonKind = "no_champion"
 	WorklistReasonKindNoReplyHistory     WorklistReasonKind = "no_reply_history"
+	WorklistReasonKindOpenedOverdue      WorklistReasonKind = "opened_overdue"
 	WorklistReasonKindOutcomeUnrecorded  WorklistReasonKind = "outcome_unrecorded"
 	WorklistReasonKindOverdue            WorklistReasonKind = "overdue"
 	WorklistReasonKindPinned             WorklistReasonKind = "pinned"
@@ -18424,6 +18425,8 @@ func (e WorklistReasonKind) Valid() bool {
 	case WorklistReasonKindNoChampion:
 		return true
 	case WorklistReasonKindNoReplyHistory:
+		return true
+	case WorklistReasonKindOpenedOverdue:
 		return true
 	case WorklistReasonKindOutcomeUnrecorded:
 		return true

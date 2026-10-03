@@ -187,29 +187,6 @@ func classifyIntroduction(item crmcontracts.AttentionItem, asOf time.Time) ranke
 	}
 }
 
-// classifyLegalDeadline ranks both compliance clocks by the same deadline.
-// Subject requests remain unassigned; disclosure duties carry the responsible
-// officer, falling back to their contact owner. Ownerless duties remain
-// available in the unassigned view.
-func classifyLegalDeadline(item crmcontracts.AttentionItem, asOf time.Time) ranked {
-	// Seven days is the agenda preparation window, not a change to the legal deadline.
-	level := levelRoutine
-	if item.DueAt != nil && item.DueAt.Sub(asOf) <= 7*24*time.Hour {
-		level = levelWaiting
-	}
-	row := base(item, level, "system", "legal_deadline_missed")
-	stampDeadline(&row, item.DueAt, asOf)
-	row.Because = []crmcontracts.WorklistReason{reason("legal_deadline", nil)}
-	return ranked{
-		ownerRef:   ownerFromAssignee(item.AssigneeId),
-		owner:      assigneeID(item.AssigneeId),
-		item:       row,
-		deadlineAt: deadlineOf(item.DueAt),
-		overdue:    overdueAt(item.DueAt, asOf),
-		occurredAt: occurredOf(item, asOf),
-	}
-}
-
 // waitingStaleDays is when an unanswered message stops being today's work.
 //
 // Past it the wait is still real, but acting on it is no longer urgent in the
