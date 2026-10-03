@@ -37,8 +37,10 @@ must_mention:
   # queued match appears at all. It cannot be the case's proof, because the
   # DENIAL is written in the same words — "Margince found nothing resembling her
   # already on file" satisfies this through the bare "already". What catches the
-  # denial is the judged half below.
-  - "duplicate|already|possible match|review|similar"
+  # denial is the judged half below. "flagged" is how a run reports the queued
+  # match ("a same-name contact was flagged"); "existing" stays out, because "no
+  # existing record matched" is the COMPANY's true all-clear.
+  - "duplicate|already|possible match|review|similar|flagged"
 
 # CRITERION 4, THE OTHER DIRECTION, AND WHY IT IS NOT A REGEX.
 #
