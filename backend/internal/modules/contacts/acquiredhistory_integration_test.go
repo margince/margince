@@ -240,3 +240,26 @@ func TestBulkMailTheMailboxAlreadyHeldDoesNotMakeHistory(t *testing.T) {
 		t.Errorf("bulk mail held before the connection made the contact %q, want %q", kind, AcquiredUnknownLegacy)
 	}
 }
+
+// Somebody the seat copied on its own mail is as much a correspondent as the
+// one it was addressed to: the company's mailbox held them both.
+func TestSomebodyWeCopiedBeforeTheMailboxWasConnectedIsMailboxHistory(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	e.connectMailbox(ctx, t, time.Now().Add(-24*time.Hour))
+	in := e.sentBy(ctx, t, e.rep, "addressed@history.test", time.Now().AddDate(-3, 0, 0))
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `
+			INSERT INTO activity_participant (activity_id, role, address) VALUES ($1, 'cc', 'copied@history.test')`,
+			in.ActivityID)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	in.Email = "copied@history.test"
+
+	if kind := e.ensuredKind(ctx, t, in); kind != AcquiredMailboxHistory {
+		t.Errorf("an address the seat copied three years before the connection is %q, want %q",
+			kind, AcquiredMailboxHistory)
+	}
+}

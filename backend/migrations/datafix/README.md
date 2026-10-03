@@ -12,6 +12,7 @@ rewrites and is idempotent: running it again changes nothing.
 |---|---|---|
 | `1790871111_mail_a_mailbox_already_held_owes_no_notice.up.sql` | the installation captured mail before migration 1790871110 | stamps `capture_import.provider_received_at` from the stored original's top `Received` header, then re-labels qualifying `unknown_legacy` acquisitions as `mailbox_history` and closes their open notice cases |
 | `1790871111_mail_a_mailbox_already_held_owes_no_notice.down.sql` | rolling that fix back | reopens the cases it closed and restores the acquisition kinds |
+| `2026-10-03_mail_sent_from_a_former_address_owes_no_notice.up.sql` | the installation captured mail a seat sent from another address of theirs before that mail was read as outbound | re-labels qualifying `unknown_legacy` acquisitions of that mail's To and Cc recipients as `mailbox_history` and closes their open notice cases; the activities stay as captured |
 
 ## Running one
 

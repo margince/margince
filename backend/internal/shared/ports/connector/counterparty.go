@@ -50,6 +50,10 @@ type Counterparty struct {
 	// conversion from a look-alike struct, a pointer handed to a decoder.
 	// WithOwnerAttestation is the sole way in, and SentByOwner the sole way out.
 	sentByOwner bool
+	// filedAsSent is the provider's filing alone, kept apart from sentByOwner
+	// for a reader that can check authorship against more than the grant
+	// address — the capture sink, which holds the seat's other addresses.
+	filedAsSent bool
 	// mayCorroborateByEmail records that the SOURCE of this record declared the
 	// email merge key, so an address riding alongside a channel identity may
 	// reach the resolution ladder. Like sentByOwner it is unexported, and for
@@ -97,7 +101,28 @@ const (
 // rather than trusts.
 func (c Counterparty) WithOwnerAttestation(providerFiled bool) Counterparty {
 	c.sentByOwner = providerFiled && c.Direction == DirectionOutbound
+	c.filedAsSent = providerFiled
 	return c
+}
+
+// FiledAsSent reports the provider's filing on its own, whatever Direction
+// says. It is not authorship: a reader must pair it with a From address it
+// knows to be the seat's before treating the message as the seat's own.
+func (c Counterparty) FiledAsSent() bool { return c.filedAsSent }
+
+// AsSentBySeat returns this message re-read as the seat's own outbound mail to
+// recipient. The caller has established that its From is one of the seat's own
+// addresses; the provider's filing is still required here, so the attestation
+// carries over only where the provider vouched for it.
+func (c Counterparty) AsSentBySeat(recipient, domain string) Counterparty {
+	return Counterparty{
+		Email:                 recipient,
+		Domain:                domain,
+		Direction:             DirectionOutbound,
+		sentByOwner:           c.filedAsSent,
+		filedAsSent:           c.filedAsSent,
+		mayCorroborateByEmail: c.mayCorroborateByEmail,
+	}
 }
 
 // SentByOwner reports whether both halves of the attestation agreed.
