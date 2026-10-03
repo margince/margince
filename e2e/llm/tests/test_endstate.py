@@ -81,9 +81,10 @@ class EndStateTest(unittest.TestCase):
         _, problems = self.read(world(SEEDED[:3]), ['company "Emsland" lifecycle=customer'])
         self.assertEqual(problems, ['ended with no company named "Emsland"'])
 
-    def test_two_records_of_one_name_are_a_harness_fault(self):
-        with self.assertRaisesRegex(endstate.Unreadable, "2 company records are named"):
-            self.read(world(SEEDED + [("Emsland Ventilbau GmbH", "target")]))
+    def test_two_records_of_one_name_are_a_scored_failure(self):
+        held, problems = self.read(world(SEEDED + [("Emsland Ventilbau GmbH", "target")]))
+        self.assertEqual(held, [])
+        self.assertEqual(problems, ['ended with 2 company records named "Emsland Ventilbau GmbH"'])
 
     def test_a_refused_read_is_a_harness_fault(self):
         replies = {**world(SEEDED), "read_record": ("permission denied", True)}

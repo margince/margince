@@ -116,10 +116,11 @@ def end_state(session, entries):
     """(the entries that held, a problem line per entry that did not).
 
     A SCORED failure is only what the world itself says: the record is absent,
-    or its field holds another value. Everything that leaves the reader unable
-    to say — a refusal, a shape it cannot read, a field the read does not carry,
-    two records answering to one name — raises Unreadable, because scoring it
-    would file the reader's blindness as the model's mistake.
+    its field holds another value, or two records answer to its name. Everything
+    that leaves the reader unable to say — a refusal, a shape it cannot read, a
+    field the read does not carry — raises Unreadable, because scoring it would
+    file the reader's blindness as the model's mistake. A record the run hid
+    from the lane's own seat reads as absent.
     """
     held, problems = [], []
     for entry in entries:
@@ -128,11 +129,11 @@ def end_state(session, entries):
         if not matches:
             problems.append(f'ended with no {want.record_type} named "{want.name}"')
             continue
-        # The scenario promises one record by this name and the seed writes one,
-        # so a second is not something the reader can attribute: it cannot say
-        # which of them the expectation means.
+        # The seed writes one record by this name, so a second can only be the
+        # run's own create — a duplicate the model made, and scored as one.
         if len(matches) > 1:
-            raise Unreadable(f'{len(matches)} {want.record_type} records are named "{want.name}"')
+            problems.append(f'ended with {len(matches)} {want.record_type} records named "{want.name}"')
+            continue
         fields = _data(session, "read_record", {"record_type": want.record_type, "id": matches[0].get("id")}).get("fields")
         if not isinstance(fields, dict) or want.field not in fields:
             raise Unreadable(f'read_record on {want.record_type} "{want.name}" carries no field {want.field!r}')
