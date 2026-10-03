@@ -15,7 +15,8 @@ the one question they cannot — can a model drive the surface.
 > runs the checker, the judge's recorded verdicts and the bridge's unit tests
 > against in-process fakes. Run it after any change under `e2e/llm/`.
 
-See also [connect-an-mcp-client.md](connect-an-mcp-client.md) (the surface being
+See also [improve-mcp-quality.md](improve-mcp-quality.md) (what to do with a red
+result), [connect-an-mcp-client.md](connect-an-mcp-client.md) (the surface being
 tested), [certify-an-ai-model.md](certify-an-ai-model.md) (a different lane: one
 AI feature, one model) and the `e2e-llm` row of
 [reference/make-targets.md](../reference/make-targets.md) for every variable.
