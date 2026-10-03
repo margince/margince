@@ -42,3 +42,20 @@ func TestAConversationsRequestsAreOneCard(t *testing.T) {
 		t.Errorf("another conversation's request was folded: %+v", kept[1])
 	}
 }
+
+// The lane folds each scan page and then the pages together, so two cards of
+// one conversation merge their counts and keep the earliest first request.
+func TestTwoCardsOfOneConversationMergeTheirCounts(t *testing.T) {
+	at := time.Date(2026, 9, 20, 9, 0, 0, 0, time.UTC)
+	newer := activities.WaitingReply{ActivityID: ids.NewV7(), OccurredAt: at.Add(5 * time.Hour),
+		EarlierRequests: 1, FirstAskedAt: at.Add(4 * time.Hour)}
+	older := activities.WaitingReply{ActivityID: ids.NewV7(), OccurredAt: at.Add(2 * time.Hour),
+		EarlierRequests: 2, FirstAskedAt: at}
+
+	foldIntoCard(&older, newer)
+
+	if older.ActivityID != newer.ActivityID || older.EarlierRequests != 4 || !older.FirstAskedAt.Equal(at) {
+		t.Errorf("merged card = %v with %d earlier from %v, want %v with 4 from %v",
+			older.ActivityID, older.EarlierRequests, older.FirstAskedAt, newer.ActivityID, at)
+	}
+}

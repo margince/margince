@@ -63,24 +63,25 @@ func (s *Store) setOnEarlierRequests(
 // sameAct is the reader's judgements written with the card's own, by set_at:
 // undoing the card takes back exactly what that press set aside, and nothing
 // the reader judged on its own before or after.
-func sameAct(ctx context.Context, tx pgx.Tx, card ids.ActivityID, reader ids.UUID) ([]ids.ActivityID, error) {
+func sameAct(ctx context.Context, tx pgx.Tx, card ids.ActivityID, reader ids.UUID) ([]ids.ActivityID, time.Time, error) {
 	var at time.Time
 	err := tx.QueryRow(ctx, `SELECT set_at FROM activity_reader_state WHERE activity_id = $1 AND reader_id = $2`,
 		card, reader).Scan(&at)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, nil
+		return nil, time.Time{}, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("activities: reading when the card was set aside: %w", err)
+		return nil, time.Time{}, fmt.Errorf("activities: reading when the card was set aside: %w", err)
 	}
 	earlier, err := earlierRequestsOnCard(ctx, tx, card)
 	if err != nil || len(earlier) == 0 {
-		return nil, err
+		return nil, at, err
 	}
 	rows, err := tx.Query(ctx, `SELECT activity_id FROM activity_reader_state
 		 WHERE reader_id = $1 AND set_at = $2 AND activity_id = ANY($3)`, reader, at, earlier)
 	if err != nil {
-		return nil, fmt.Errorf("activities: reading what the card set aside with it: %w", err)
+		return nil, at, fmt.Errorf("activities: reading what the card set aside with it: %w", err)
 	}
-	return pgx.CollectRows(rows, pgx.RowTo[ids.ActivityID])
+	same, err := pgx.CollectRows(rows, pgx.RowTo[ids.ActivityID])
+	return same, at, err
 }

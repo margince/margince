@@ -78,8 +78,10 @@ type WaitingReply struct {
 	// letting the caller infer it from a record id that is absent for other
 	// reasons too.
 	Threaded bool
-	// ThreadKey is the conversation the message belongs to, or empty.
-	ThreadKey string
+	// ThreadKey is the conversation the message belongs to, or empty. With Kind
+	// and ChannelProvider it names the conversation, as the thread walks do.
+	ThreadKey       string
+	ChannelProvider string
 	// EarlierRequests counts the conversation's earlier unanswered requests a
 	// caller folded into this row, and FirstAskedAt is when the first of them
 	// arrived. Zero when nothing was folded.
@@ -325,7 +327,7 @@ func (s *Store) WaitingRepliesBefore(ctx context.Context, asOf time.Time, before
 			if err := rows.Scan(&row.ActivityID, &row.Kind, &row.Subject, &row.Sender, &row.OccurredAt,
 				&row.ContactID, &row.CompanyID, &row.DealID,
 				&row.HasOpenDeal, &row.OwedVerdict, &row.CaptureLabel, &row.AddressedElsewhere,
-				&row.Engaged, &row.OwnerID, &row.Threaded, &row.ThreadKey); err != nil {
+				&row.Engaged, &row.OwnerID, &row.Threaded, &row.ThreadKey, &row.ChannelProvider); err != nil {
 				return err
 			}
 			waiting = append(waiting, row)

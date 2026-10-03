@@ -238,11 +238,12 @@ func keepWaitingCustomers(rows []activities.WaitingReply) []activities.WaitingRe
 			continue
 		}
 		if row.OwedVerdict == activities.OwedVerdictAsksUs && row.ThreadKey != "" {
-			if at, folded := cardOf[row.ThreadKey]; folded {
+			conversation := row.Kind + "\x00" + row.ChannelProvider + "\x00" + row.ThreadKey
+			if at, folded := cardOf[conversation]; folded {
 				foldIntoCard(&kept[at], row)
 				continue
 			}
-			cardOf[row.ThreadKey] = len(kept)
+			cardOf[conversation] = len(kept)
 		}
 		if row.Subject != "" && row.OwedVerdict != activities.OwedVerdictAsksUs {
 			key := row.Sender + "\x00" + row.Subject
@@ -258,15 +259,27 @@ func keepWaitingCustomers(rows []activities.WaitingReply) []activities.WaitingRe
 
 // foldIntoCard adds an earlier request to its conversation's card. The card is
 // the newest request, whichever order the rows arrive in.
-func foldIntoCard(card *activities.WaitingReply, earlier activities.WaitingReply) {
-	if earlier.OccurredAt.After(card.OccurredAt) {
-		earlier.EarlierRequests, earlier.FirstAskedAt = card.EarlierRequests, card.FirstAskedAt
-		*card, earlier = earlier, *card
+//
+// Either side may already be a card: the lane folds each scan page and then the
+// pages together, so the counts and first dates of both are merged.
+func foldIntoCard(card *activities.WaitingReply, other activities.WaitingReply) {
+	count := card.EarlierRequests + other.EarlierRequests + 1
+	first := earliestAsk(*card, other)
+	if other.OccurredAt.After(card.OccurredAt) {
+		*card = other
 	}
-	card.EarlierRequests++
-	if card.FirstAskedAt.IsZero() || earlier.OccurredAt.Before(card.FirstAskedAt) {
-		card.FirstAskedAt = earlier.OccurredAt
+	card.EarlierRequests, card.FirstAskedAt = count, first
+}
+
+// earliestAsk is when the first request among two cards arrived.
+func earliestAsk(a, b activities.WaitingReply) time.Time {
+	first := a.OccurredAt
+	for _, at := range []time.Time{a.FirstAskedAt, b.FirstAskedAt, b.OccurredAt} {
+		if !at.IsZero() && at.Before(first) {
+			first = at
+		}
 	}
+	return first
 }
 
 // emailRows reads the canonical email row behind each waiting message that is

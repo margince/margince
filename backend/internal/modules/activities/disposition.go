@@ -260,14 +260,19 @@ func (s *Store) ClearMessageDisposition(ctx context.Context, id ids.ActivityID) 
 		}
 		// What the same press set aside with the card, read before the card's
 		// own row goes, since its set_at is what ties them together.
-		withIt, err := sameAct(ctx, tx, id, reader)
+		withIt, setAt, err := sameAct(ctx, tx, id, reader)
 		if err != nil {
 			return err
 		}
-		for _, message := range append([]ids.ActivityID{id}, withIt...) {
-			tag, err := tx.Exec(ctx,
-				`DELETE FROM activity_reader_state WHERE activity_id = $1 AND reader_id = $2`,
-				message, reader)
+		for i, message := range append([]ids.ActivityID{id}, withIt...) {
+			// The earlier requests only while they still hold this act's
+			// judgement: one judged again since keeps its newer state.
+			query, args := `DELETE FROM activity_reader_state WHERE activity_id = $1 AND reader_id = $2`,
+				[]any{message, reader}
+			if i > 0 {
+				query, args = query+` AND set_at = $3`, append(args, setAt)
+			}
+			tag, err := tx.Exec(ctx, query, args...)
 			if err != nil {
 				return fmt.Errorf("activities: picking the message back up: %w", err)
 			}
