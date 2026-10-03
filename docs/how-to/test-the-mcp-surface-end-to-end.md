@@ -239,7 +239,7 @@ Before calling a red scenario a product regression, rule out the harness:
 | OpenRouter 404 "No endpoints found that can handle the requested parameters" | `require_parameters` routing and a parameter no endpoint declares | Remove the parameter from the bridge's request |
 | `codex refused to call …: MCP tool call requires approval` | Codex in exec mode refuses MCP writes it would ask about | The lane approves its own server (`default_tools_approval_mode`); this stop means the installed codex no longer honours that key. Find the key it does accept with `codex exec --strict-config -c 'mcp_servers.x.<key>="approve"' "hi"` (an unknown key is refused before any model call) and set it in `run_codex` in `e2e/llm/drive.py` |
 | Turn cap reached | The model makes one tool call per turn | A finding, not a fault: the cap is the same for every candidate |
-| `the run never finished: no result event` | The driver (claude CLI, codex, or the bridge) died mid-run; a CLI exiting nonzero under a result that reports no error stops the lane the same way | A harness stop, never a score: every driver writes a terminal result on a finish the model caused, the turn cap included. Read `<run>.jsonl.err` |
+| `the run never finished: no result event` | The driver (claude CLI, codex, or the bridge) died mid-run; a CLI exiting nonzero under a result that reports no error stops the lane the same way | A harness stop, never a score: every driver writes a terminal result on a finish the model caused, the turn cap included. The stop prints the last lines the driver wrote to stderr |
 
 Always run a control — the same scenario on a model that passes it — before
 blaming your own change.

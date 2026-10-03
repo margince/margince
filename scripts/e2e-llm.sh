@@ -584,8 +584,9 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
     # same after eighteen of them as after one.
     if ! why="$(python3 "$ROOT/e2e/llm/check.py" --ran "$transcript")"; then
       echo
-      echo "HARNESS: the model was never reached on $name run $i:"
+      echo "HARNESS: $name run $i did not run to an answer:"
       echo "  $why"
+      tail -5 "$transcript.err" 2>/dev/null | sed 's/^/  driver: /'
       echo "  This is not a use-case failure. Nothing was scored."
       # The transcript is the only evidence of WHICH failure this was, so a
       # copy that fails says so rather than leaving the reader with a verdict

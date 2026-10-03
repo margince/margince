@@ -321,7 +321,7 @@ if block is None:
     print("the lane does not carry a --ran check that exits, as one block")
     sys.exit(1)
 body = block.group(0)
-for required in ("HARNESS: the model was never reached", "$why", "exit 2"):
+for required in ("did not run to an answer", "$why", "exit 2"):
     if required not in body:
         print(f"the stop block does not carry {required!r}")
         sys.exit(1)
