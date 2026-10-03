@@ -44,6 +44,9 @@ export function ApprovalDecisionDrawer({
   // per row to fill cards nobody has opened.
   const approval = useApproval(approvalId, open && approvalId !== "");
   const usable = approval.data?.kind ? approval.data : undefined;
+  // A notice outlives its decision, so a link can arrive after somebody
+  // answered it. That reads as the answer, with nothing left to press.
+  const pending = usable?.status === "pending";
   return (
     <Modal
       open={open}
@@ -56,11 +59,12 @@ export function ApprovalDecisionDrawer({
       <Heading size="large" id={titleId} className="modal-title">
         {t("worklist.decision.title")}
       </Heading>
-      {usable?.bundle_id ? (
+      {usable?.bundle_id && pending ? (
         <ApprovalBundleReview approval={usable} />
       ) : usable ? (
         <ApprovalRow
           approval={usable}
+          decided={!pending}
           extraInvalidateKeys={[worklistKey]}
           onAlreadyDecided={onClose}
         />

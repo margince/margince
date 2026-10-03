@@ -11893,7 +11893,7 @@ export const de = {
   "magic.action.approval_transcript_proposal":
     "Ein Vorschlag aus einer Aufzeichnung wartet auf dein Wort",
   "magic.action.approval_capture_counterparty":
-    "{target} hat Ihnen geschrieben. Als Kontakt behalten?",
+    "{target} hat dir geschrieben. Als Kontakt behalten?",
   "magic.action.approval_pending":
     "Ein Vorschlag vom Typ {kind} wartet auf dein Wort",
   "magic.action.capture_reauth_required":

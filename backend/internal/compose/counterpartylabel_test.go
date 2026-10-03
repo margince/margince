@@ -9,7 +9,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 )
 
-// A contact proposal is staged under who wrote, so its caption is a person.
+// A contact proposal is staged under who wrote, so its caption names the sender.
 func TestAContactProposalIsStagedUnderWhoWrote(t *testing.T) {
 	for _, tc := range []struct {
 		row  capture.PendingCounterparty
