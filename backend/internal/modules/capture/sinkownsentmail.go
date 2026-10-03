@@ -70,10 +70,12 @@ func (s *Sink) claimOwnSentMailTx(ctx context.Context, tx pgx.Tx, id ids.Activit
 }
 
 // storedAsThisSeatsTx is the standing to rewrite a row another mailbox stored.
-// A seat can declare any address and plant a sent copy through the provider's
-// API, so neither a declared address nor a matching Message-ID is enough:
-//   - a received reading is turned round only when its sender is an address
-//     this seat PROVED, by connecting that mailbox (SeatProvedAddressTx);
+// A matching Message-ID is not enough on its own, and the replay that reaches
+// here has already matched the stored content:
+//   - a received reading is turned round when its sender is an address this
+//     seat proved by connecting that mailbox, or one of the seat's own exact
+//     addresses — declared or discovered — that no other seat holds. A seat's
+//     known alias is theirs; an address two seats hold is nobody's to claim;
 //   - an outbound reading is attested only when it already names this seat as
 //     its sender.
 func storedAsThisSeatsTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, direction, stored, recipient string) (bool, error) {
@@ -82,7 +84,11 @@ func storedAsThisSeatsTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, dire
 	case direction == connector.DirectionInbound:
 		// Unambiguously: an address two seats proved, a shared mailbox, is
 		// nobody's to claim, or whichever seat synced first would take it.
-		return ProvedUnambiguouslyTx(ctx, tx, seat, stored)
+		proved, err := ProvedUnambiguouslyTx(ctx, tx, seat, stored)
+		if err != nil || proved {
+			return proved, err
+		}
+		return ownAddressHeldAloneTx(ctx, tx, seat, stored)
 	case direction == connector.DirectionOutbound && foldAddress(stored) == foldAddress(recipient):
 		var sentBySeat bool
 		err := tx.QueryRow(ctx, `
@@ -94,4 +100,25 @@ func storedAsThisSeatsTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, dire
 		return sentBySeat, nil
 	}
 	return false, nil
+}
+
+// ownAddressHeldAloneTx reports that address is one of the acting seat's own
+// exact addresses and that no other seat holds it, as an identity or as the
+// account a connection of theirs was granted for.
+func ownAddressHeldAloneTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, address string) (bool, error) {
+	self, err := ownerIdentitiesTx(ctx, tx)
+	if err != nil || !self.CoversAddressExactly(address) {
+		return false, err
+	}
+	var elsewhere bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM capture_owner_identity
+		                WHERE kind = 'address' AND value = $2 AND user_id <> $1)
+		    OR EXISTS (SELECT 1 FROM capture_connection
+		                WHERE user_id <> $1 AND archived_at IS NULL
+		                  AND lower(btrim(coalesce(substring(account_label FROM '<([^>]*)>'), account_label))) = $2)`,
+		seat, foldAddress(address)).Scan(&elsewhere); err != nil {
+		return false, fmt.Errorf("capture: reading whether another seat holds %s: %w", address, err)
+	}
+	return !elsewhere, nil
 }
