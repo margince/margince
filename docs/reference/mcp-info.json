@@ -10,16 +10,16 @@
   "totals": {
     "tools": 81,
     "resources": 11,
-    "tool_catalog_bytes": 249994,
+    "tool_catalog_bytes": 249993,
     "resource_catalog_bytes": 4179,
     "approx_wire_tokens_total": 63543,
     "largest_tool_bytes": 9253,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
-      "description_bytes": 64996,
+      "description_bytes": 64995,
       "input_schema_bytes": 57066,
       "output_schema_bytes": 110585,
-      "description_plus_input_schema_bytes": 122062
+      "description_plus_input_schema_bytes": 122061
     }
   },
   "tools": {
@@ -3480,7 +3480,7 @@
           "readOnlyHint": false,
           "title": "Approve or reject one staged action"
         },
-        "description": "Answer one staged action for the colleague asking you: approve it, which lets it happen, or reject it, which discards it. The verdict is theirs — take an explicit approve or reject rather than deciding what they would have wanted. Approving is what makes the change real, including sending a message that was only drafted; a rejection cannot be taken back. You may approve your own proposal only when it is a change that would have gone straight through but for a person's earlier edit — no deal close, no relink, no tag merge, no schema change, no send; the rest is theirs to release in the CRM. An item already answered, or lapsed, is reported as such and nothing is written. read_approval when they have not seen what it holds; decide_approval_bundle for every proposal one act staged. If the proposal is your OWN refused call, approving does not perform it — re-issue that same call with approval_id set. (Governance: runs immediately; requires passport scope \"write\".)",
+        "description": "Answer one staged action for the colleague asking you: approve it, which lets it happen, or reject it, which discards it. The verdict is theirs — take an explicit approve or reject rather than deciding what they would have wanted. Approving is what makes the change real, including sending a message that was only drafted; a rejection cannot be taken back. You may approve your own proposal only when it is a change that would have gone straight through but for a human's earlier edit — no deal close, no relink, no tag merge, no schema change, no send; the rest is theirs to release in the CRM. An item already answered, or lapsed, is reported as such and nothing is written. read_approval when they have not seen what it holds; decide_approval_bundle for every proposal one act staged. If the proposal is your OWN refused call, approving does not perform it — re-issue that same call with approval_id set. (Governance: runs immediately; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {

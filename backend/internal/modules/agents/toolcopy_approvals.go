@@ -43,7 +43,7 @@ var decideApprovalCopy = toolCopy{
 	Limits: "The verdict is theirs — take an explicit approve or reject rather than deciding what " +
 		"they would have wanted. Approving is what makes the change real, including sending a " +
 		"message that was only drafted; a rejection cannot be taken back. You may approve your own " +
-		"proposal only when it is a change that would have gone straight through but for a person's " +
+		"proposal only when it is a change that would have gone straight through but for a human's " +
 		"earlier edit — no deal close, no relink, no tag merge, no schema change, no send; the rest " +
 		"is theirs to release in the CRM. An item already answered, or lapsed, is reported as such " +
 		"and nothing is written.",

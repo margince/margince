@@ -31,7 +31,7 @@
   "catalog": {
     "tools": 81,
     "system_frame_tokens": 586,
-    "tokens": 28333,
+    "tokens": 28332,
     "median_tool_tokens": 286,
     "mean_tool_tokens": 349
   },
@@ -224,7 +224,7 @@
     },
     {
       "name": "decide_approval",
-      "tokens": 333
+      "tokens": 332
     },
     {
       "name": "forecast_input_checks",

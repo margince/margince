@@ -427,7 +427,7 @@ func TestACredentialReleasesTheUndoableChangeItStaged(t *testing.T) {
 		t.Fatalf("the connection could not release the undoable change it staged for its human: %v", err)
 	}
 	// The human never looked, so the release is no evidence for their track
-	// record: the autonomy ladder counts only a decision a person made.
+	// record: the autonomy ladder counts only a decision a human made.
 	var counted int
 	if err := e.owner.QueryRow(context.Background(),
 		`SELECT count(*) FROM approval_autonomy_policy WHERE user_id = $1 AND kind = $2`,

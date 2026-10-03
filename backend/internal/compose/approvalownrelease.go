@@ -14,7 +14,7 @@ type releaseTarget struct {
 
 // agentStraightThrough maps every (verb, record type) the admission table
 // names to whether EVERY route behind it auto-executes and spends no cap that
-// leaves the workspace. Such a call was staged only because a person had edited
+// leaves the workspace. Such a call was staged only because a human had edited
 // a field it touched; any other was staged because its own route asks a human
 // first — a deal close, a relink, a tag merge, a schema change, a webhook, a
 // send — and stays that human's to release.

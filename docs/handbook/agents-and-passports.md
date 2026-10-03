@@ -146,7 +146,7 @@ rules:
   confirm-first call and B's approves it — and the tier has been satisfied by
   two agents with nobody having looked.
 - **A credential releases its own proposal only when it is a change that
-  would have gone straight through but for a person's earlier edit** — no
+  would have gone straight through but for a human's earlier edit** — no
   deal close, no relink, no tag merge, no schema change, no send. Anything its
   own route puts before a human first, the colleague releases in the app. A
   connected agent does not release one another credential staged either.

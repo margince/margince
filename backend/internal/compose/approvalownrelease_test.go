@@ -10,7 +10,7 @@ import (
 )
 
 // A credential releases only a change that would have gone straight through
-// but for a person's earlier edit: never a send, a deal close, a relink, a tag
+// but for a human's earlier edit: never a send, a deal close, a relink, a tag
 // merge or a schema change, each of which its own route stages for a human.
 func TestOnlyAStraightThroughRecordChangeIsAnUndoableRelease(t *testing.T) {
 	for _, tc := range []struct {
