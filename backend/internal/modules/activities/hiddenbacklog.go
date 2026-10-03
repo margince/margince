@@ -311,7 +311,6 @@ func (s *Store) waitingStatement(
 		liveRecord(openDealPredicate, "d"),
 		liveRecord(workingLeadPredicate, "ld"),
 		liveRecord(openDealPredicate, "openDeal"),
-		liveRecord(openDealPredicate, "fd"),
 		arg(relax.reader),
 		scopeUnbounded,
 		notSales, unlinked,

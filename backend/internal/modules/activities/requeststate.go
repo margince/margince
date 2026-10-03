@@ -3,6 +3,8 @@
 
 package activities
 
+import "github.com/margince/margince/backend/internal/shared/kernel/principal"
+
 // requestUnsettledSQL uses the activity alias a. Classification records intent;
 // a topic label, a deal outcome and elapsed time do not prove fulfillment.
 // Every reader still composes its own content gate.
@@ -48,6 +50,22 @@ const acceptedRequestSQL = `EXISTS (SELECT 1 FROM activity accepted
  WHERE accepted.source_system = '` + EmailRequestTaskSource + `'
  AND accepted.source_activity_id = a.id)`
 
+// heldRequestSQL is a request a human kept: an open reminder a human wrote,
+// whether they took the request or edited the reminder the system filed. Only
+// this outlives the waiting horizon; a classifier verdict does not.
+var heldRequestSQL = `EXISTS (SELECT 1 FROM activity held
+ WHERE held.source_system = '` + EmailRequestTaskSource + `'
+ AND held.source_activity_id = a.id AND NOT held.is_done AND held.archived_at IS NULL
+ AND ` + humanWroteReminderSQL("held") + `)`
+
+// humanWroteReminderSQL is whether a human ever wrote the reminder under alias,
+// read off the audit trail because an edit leaves captured_by as it was.
+func humanWroteReminderSQL(alias string) string {
+	return `EXISTS (SELECT 1 FROM audit_log worked
+ WHERE worked.entity_type = 'activity' AND worked.entity_id = ` + alias + `.id
+   AND worked.actor_type = '` + string(principal.PrincipalHuman) + `')`
+}
+
 const openRequestReminderSQL = `EXISTS (SELECT 1 FROM activity reminder
  WHERE reminder.source_system = '` + EmailRequestTaskSource + `'
  AND reminder.source_activity_id = a.id AND NOT reminder.is_done
@@ -59,8 +77,7 @@ const confirmedRequestSQL = `a.owed_verdict = 'asks_us' OR ` + acceptedRequestSQ
 const outstandingRequestSQL = requestUnsettledSQL + ` AND (` + confirmedRequestSQL + `)`
 
 // A scheduling/commitment label is enough to keep an unjudged candidate for
-// review, never enough to assign it. This also lets the classifier reconcile
-// older imported requests instead of aging them out before it reads them.
+// review, never enough to assign it.
 const requestIntentSQL = confirmedRequestSQL + `
  OR (a.owed_verdict IS NULL AND a.capture_label IN ('commitment', 'meeting'))`
 

@@ -300,7 +300,6 @@ func (s *Store) WaitingRepliesBefore(ctx context.Context, asOf time.Time, before
 				liveRecord(openDealPredicate, "d"),
 				liveRecord(workingLeadPredicate, "ld"),
 				liveRecord(openDealPredicate, "openDeal"),
-				liveRecord(openDealPredicate, "fd"),
 				reader,
 				scopeUnbounded,
 				neverRelaxed, neverRelaxed,
