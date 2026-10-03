@@ -167,8 +167,8 @@ would have gone straight through but for a human's earlier edit — no deal
 close, no relink, no tag merge, no schema change, no send, and nothing your
 installation's floor puts before a human — and only in a conversation, never
 on a schedule. The decision is recorded as yours, given through that agent.
-Everything else it proposed is yours to release here. It may always reject its
-own proposal.
+Everything else it proposed is yours to release here, or through a passport you
+minted by hand for that purpose. It may always reject its own proposal.
 
 A colleague's own direct action needs no approval: a human doing the thing
 themselves *is* the confirmation.

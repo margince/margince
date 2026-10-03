@@ -31,7 +31,7 @@
   "catalog": {
     "tools": 81,
     "system_frame_tokens": 586,
-    "tokens": 28408,
+    "tokens": 28410,
     "median_tool_tokens": 289,
     "mean_tool_tokens": 350
   },
@@ -151,11 +151,11 @@
       "tokens": 506
     },
     {
-      "name": "progress_deal",
-      "tokens": 505
+      "name": "run_analytics_query",
+      "tokens": 506
     },
     {
-      "name": "run_analytics_query",
+      "name": "progress_deal",
       "tokens": 505
     },
     {

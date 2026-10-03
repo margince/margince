@@ -15,7 +15,7 @@ receives it. This page is rendered from that file.
 | Resources | 11 |
 | Tool catalog | 244.4 KB |
 | Resource catalog | 4.1 KB |
-| Approx. wire tokens | 63619 |
+| Approx. wire tokens | 63620 |
 | Largest tool | `prep_for_meeting` (9.0 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -131,7 +131,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`remove_tag`](#remove_tag) | Take a tag off a record |  |  | 1.9 KB |
 | [`resolve_entities`](#resolve_entities) | Resolve contacts and companies | yes |  | 3.5 KB |
 | [`review_commitments`](#review_commitments) | Review open commitments | yes | [`ui://margince/commitments.html`](#commitments_view) | 3.4 KB |
-| [`run_analytics_query`](#run_analytics_query) | Run an analytics query | yes |  | 3.3 KB |
+| [`run_analytics_query`](#run_analytics_query) | Run an analytics query | yes |  | 3.4 KB |
 | [`run_report`](#run_report) | Run a report | yes |  | 5.4 KB |
 | [`search_context`](#search_context) | Search for relevant material | yes |  | 3.1 KB |
 | [`search_records`](#search_records) | Search records | yes |  | 3.2 KB |
@@ -14242,7 +14242,7 @@ Renders its result in [`ui://margince/commitments.html`](#commitments_view), vis
 
 **Run an analytics query**
 
-Compute a grouped aggregate — counts, sums, averages, medians — over a governed population, in the database. The answer carries its columns, rows and schema version; groups too small to disclose are withheld, never estimated. Populations, dimensions and measures come from margince://schema/analytics, derived for this seat and answered by describe_analytics_vocabulary; a name outside it is refused with what would work. Money measures are minor units. An omitted scope is this seat's own default population, never the workspace. run_report answers a prebuilt report by key; query_workspace lists exact records; the forecast tools answer forecast readings and movement. This one is for a novel aggregate no prebuilt report shapes, and for an ad-hoc figure a compose_analytics_report document will cite as a query cell: only a saved run can be. Set save to get a run_id whose cells compose_analytics_report can cite; without it the answer is served once and not stored. (Governance: runs immediately; requires passport scope "read".)
+Compute a grouped aggregate — counts, sums, averages, medians — over a governed population, in the database. The answer carries its columns, rows and schema version; groups too small to disclose are withheld, never estimated. Populations, dimensions and measures come from margince://schema/analytics, derived for this seat and answered by describe_analytics_vocabulary; a name outside it is refused with what would work. Money measures are minor units. An omitted scope is this seat's own default population, never the workspace. run_report answers a prebuilt report by key; query_workspace lists exact records; the forecast tools answer forecast readings and movement. This one is for a novel aggregate no prebuilt report shapes, and for an ad-hoc figure a compose_analytics_report document will cite as a query cell: only a saved run can be cited. Set save to get a run_id whose cells compose_analytics_report can cite; without it the answer is served once and not stored. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 

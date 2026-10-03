@@ -2703,7 +2703,7 @@
     },
     {
       "name": "run_analytics_query",
-      "tokens": 505,
+      "tokens": 506,
       "agents": [],
       "required_by_cases": [
         "case20_put_it_in_the_board_pack"
