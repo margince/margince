@@ -157,8 +157,9 @@ var repliedRequestsSQL = outstandingRequestSQL + `
 // belong where the exposure is.
 var newestOutboundSince = newestOutbound("newest.id")
 
-// newestOutboundAt is when that newest reply was sent, read by the same walk.
-var newestOutboundAt = newestOutbound("newest.occurred_at")
+// newestOutboundRow is that newest reply's id and send time, read by the same
+// walk, for the candidate read to select and order by without walking twice.
+var newestOutboundRow = newestOutbound("newest.id, newest.occurred_at")
 
 func newestOutbound(column string) string {
 	return `SELECT ` + column + ` FROM activity newest
@@ -189,7 +190,7 @@ func (s *Store) RepliedRequests(ctx context.Context, asOf time.Time, limit int) 
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, storekit.SQLf(`
 			SELECT a.id, coalesce(a.counterparty_email, ''),
-			       (`+newestOutboundSince+`),
+			       latest.id,
 			       task.id, coalesce(task.version, 0),
 			       -- Whether the reminder is still the machine's to sharpen: the
 			       -- pass filed it, nobody has dated it, and nobody has renamed
@@ -200,11 +201,12 @@ func (s *Store) RepliedRequests(ctx context.Context, asOf time.Time, limit int) 
 			       coalesce(task.captured_by = $2 AND task.due_at IS NULL
 			                AND task.subject IS NOT DISTINCT FROM a.subject, false)
 			  FROM activity a
+			  CROSS JOIN LATERAL (`+newestOutboundRow+`) latest
 			  LEFT JOIN activity task
 			    ON task.source_system = '%s' AND task.source_activity_id = a.id
 			   AND task.archived_at IS NULL AND task.is_done = false
 			 WHERE %s
-			 ORDER BY (`+newestOutboundAt+`) DESC, a.id DESC
+			 ORDER BY latest.occurred_at DESC, latest.id DESC, a.id DESC
 			 LIMIT $3`, EmailRequestTaskSource, repliedRequestsSQL),
 			asOf, OwedVerdictCapturedBy, limit)
 		if err != nil {

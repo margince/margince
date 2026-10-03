@@ -437,6 +437,21 @@ func TestAFreshReplyToAnOldRequestIsJudgedFirst(t *testing.T) {
 	}
 }
 
+// Two replies sent in the same instant are ordered by which was written last,
+// not by which request is newer.
+func TestRepliesSentTogetherAreJudgedLatestReplyFirst(t *testing.T) {
+	e := setupLoad(t)
+	earlierAsk := seedEmailRequest(t, e, "Earlier ask", "commitment", OwedVerdictAsksUs)
+	laterAsk := seedEmailRequest(t, e, "Later ask", "commitment", OwedVerdictAsksUs)
+	sent := requestInstant.Add(time.Hour)
+	replyTo(t, e, laterAsk, "Here are the slots.", sent)
+	replyTo(t, e, earlierAsk, "And here is the quote.", sent)
+
+	if before := settledBefore(t, e, earlierAsk, laterAsk); !before {
+		t.Fatalf("the pass would judge %v, whose reply was written last, after %v", earlierAsk, laterAsk)
+	}
+}
+
 // settledBefore reports whether the pass reads first before second. Positions
 // within one read rather than a budget of one: the package's tests share a
 // template, so another test's requests are in the read too.
