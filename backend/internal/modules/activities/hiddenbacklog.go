@@ -89,8 +89,8 @@ type HiddenBacklog struct {
 	// judgement worth watching: one rep's mistake removes a customer from
 	// everybody's day permanently.
 	NotSales int
-	// PastHorizon is work older than the queue's horizon with no open deal
-	// behind it. NOBODY CHOSE THIS. A customer who wrote four months ago and was
+	// PastHorizon is work older than the queue's horizon that no human holds,
+	// open deal or not. NOBODY CHOSE THIS. A customer who wrote four months ago and was
 	// never answered is exactly the failure a sales queue exists to prevent, and
 	// the horizon removes them silently.
 	PastHorizon int

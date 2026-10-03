@@ -290,8 +290,8 @@ func (s *Store) OwedBacklog(ctx context.Context, ruleset string, asOf time.Time,
 // IT DELIBERATELY DOES NOT ASK THE WAITING QUEUE, and that is the whole design.
 // A wrong verdict can exclude itself from the queue that would correct it, two
 // ways, both live: past the waiting horizon a row survives only when a human
-// holds its request (heldRequestSQL), which a wrongly-`informs_us` row never
-// has; and the
+// holds its request (heldRequestSQL), which the verdict does not decide and a
+// wrongly-`informs_us` row rarely has; and the
 // queue drops a row carrying a request task, which the same pass mints from the
 // old verdict moments earlier. Either one makes the sweep unable to reach the
 // rows it exists for. That is the identical self-feeding exclusion that put

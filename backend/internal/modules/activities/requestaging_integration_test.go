@@ -126,6 +126,16 @@ func TestAnAgedSystemReminderRetiresAndAWorkedOneStays(t *testing.T) {
 	if _, archived := reminderOf(worked); archived {
 		t.Fatal("a reminder a human worked was retired by age")
 	}
+	// The read side of the same rule: the request behind a worked reminder is
+	// still work for a colleague, and the untouched one is not.
+	colleague := e.asSeat(e.other)
+	still := e.waitingAt(colleague, t, pastTheHorizon)
+	if !still[worked] {
+		t.Error("the request whose reminder a human worked left the queue")
+	}
+	if still[untouched] {
+		t.Error("the request whose reminder nobody touched is still in the queue")
+	}
 	var done bool
 	if err := e.owner.QueryRow(context.Background(),
 		`SELECT is_done FROM activity WHERE source_activity_id = $1`, untouched).Scan(&done); err != nil {

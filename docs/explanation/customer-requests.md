@@ -114,8 +114,10 @@ a request a human holds, meaning an open reminder a human wrote, by taking the
 request or by editing the reminder the system filed. Each pass also archives the
 reminders it filed itself once their request passes the horizon untouched;
 archiving rather than completing, because an aged request is not an answered
-one. A request that aged out is counted under the past-horizon figure in
-`/worklist/hidden`, and its record still offers **Create task** to take it back.
+one. A request that aged out within the last year is counted under the
+past-horizon figure in `/worklist/hidden`, which counts conversations rather
+than single requests; older ones are not counted. Its record still offers
+**Create task** to take it back.
 
 The deal offers **Create task** for a request awaiting acceptance. Both task and
 activity creation accept `request_activity_id`: the server checks readable source
