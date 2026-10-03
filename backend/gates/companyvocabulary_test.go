@@ -100,6 +100,8 @@ var exempt = gatekit.Waive(map[string]string{
 		"baseline commit by rbacbaselineerafixture_test.go; it IS the matrix the server seeded then",
 	"CHANGELOG.md": "entries say what they said when they were written",
 	"sbom-schemas": "a vendored SPDX schema, not ours to rename",
+	".github/workflows/cla.yml": "a GitHub organisation — its members are the staff the CLA " +
+		"does not cover, not this record type",
 	".github/workflows/release.yml": "a GitHub organisation — the account a repository belongs " +
 		"to, not this record type",
 	"sonar-project.properties": "`sonar.organization` is the scanner's own mandatory property, " +

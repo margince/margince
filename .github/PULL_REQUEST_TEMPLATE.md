@@ -29,3 +29,7 @@ By opening this PR I confirm I am **accountable** for this change and can
 **explain every line** in it — human-written or AI-assisted. See
 [CONTRIBUTING.md](/CONTRIBUTING.md) and the
 [Code of Conduct](/CODE_OF_CONDUCT.md).
+
+If you are contributing from outside the Margince team, a bot will ask you
+to accept the [Contributor License Agreement](/CLA.md) before this PR can
+merge. One acceptance covers every later contribution.
