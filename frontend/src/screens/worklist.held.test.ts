@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { viewerZone } from "../format/timezone";
 import { translate } from "../i18n";
-import { row } from "./worklist.testkit";
 import { heldText } from "./worklist.held";
+import { row } from "./worklist.testkit";
 
 const t = (key: "worklist.when.held", values: { when: string }) =>
   translate("en", key, values);

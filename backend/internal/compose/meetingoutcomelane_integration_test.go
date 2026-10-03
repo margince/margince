@@ -162,7 +162,7 @@ func TestABacklogDeeperThanThePageStillLeadsWithTheOldest(t *testing.T) {
 
 // bookCustomerMeeting books a meeting with a customer: the outcome lane asks
 // only about meetings linked to a customer record.
-func bookCustomerMeeting(t *testing.T, e *integration.Env, subject string, at time.Time, status string) ids.UUID {
+func bookCustomerMeeting(t *testing.T, e *integration.Env, subject string, at time.Time, status string) {
 	t.Helper()
 	contact, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "Customer for " + subject})
 	if err != nil {
@@ -175,9 +175,7 @@ func bookCustomerMeeting(t *testing.T, e *integration.Env, subject string, at ti
 	if status != "" {
 		in.MeetingStatus = &status
 	}
-	row, _, err := e.Activities.LogActivity(e.Admin(), in)
-	if err != nil {
+	if _, _, err := e.Activities.LogActivity(e.Admin(), in); err != nil {
 		t.Fatalf("booking %q: %v", subject, err)
 	}
-	return ids.UUID(row.Id)
 }
