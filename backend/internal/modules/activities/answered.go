@@ -63,6 +63,13 @@ func answerArms(inbound, until string) []answerArm {
 	    AND ` + later("answer_mail") + `
 	    AND ` + normalisedSubject(inbound+".subject") + ` <> ''
 	    AND ` + normalisedSubject("answer_mail.subject") + ` = ` + normalisedSubject(inbound+".subject")
+	// The clauses of idx_activity_answer_mail, inside the lateral so the index
+	// qualifies with the address as its leading key.
+	ourMailIndexed := `answer_mail.kind = ` + inbound + `.kind
+	       AND answer_mail.direction = 'outbound'
+	       AND answer_mail.counterparty_outbound_attested
+	       AND ` + everyoneReads("answer_mail") + `
+	       AND ` + later("answer_mail")
 	asker := `answer_asker.activity_id = ` + inbound + `.id AND answer_asker.role = 'from'`
 	// The sender's own address and every live address of their contact.
 	senderAddresses := `CROSS JOIN LATERAL (
@@ -84,13 +91,17 @@ func answerArms(inbound, until string) []answerArm {
 	// planner proving its index applies, and the arm walks every activity of
 	// the contact again.
 	// OFFSET 0 keeps the planner walking from the sender to the mail they were
-	// named on: flattened, it scanned every later outbound and ran the subject
-	// expression on each.
+	// named on, in both same-subject arms: flattened, the planner ranged
+	// idx_activity_answer_mail on kind and time alone and applied the address
+	// afterwards, so every message read every later attested mail of the
+	// installation and ran the subject expression on each.
 	return []answerArm{
 		threadAnswerArm(inbound, later("answer_thread")),
 		{at: "answer_mail.occurred_at", from: `FROM activity_participant answer_asker
 	  ` + senderAddresses + `
-	  JOIN activity answer_mail ON answer_mail.counterparty_email = answer_address.address
+	  CROSS JOIN LATERAL (SELECT answer_mail.* FROM activity answer_mail
+	     WHERE answer_mail.counterparty_email = answer_address.address
+	       AND ` + ourMailIndexed + ` OFFSET 0) answer_mail
 	  WHERE ` + asker + `
 	    AND ` + ourMail},
 		{at: "answer_mail.occurred_at", from: `FROM activity_participant answer_asker
