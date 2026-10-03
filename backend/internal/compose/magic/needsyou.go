@@ -16,6 +16,7 @@ import (
 	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/approvalsubject"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
@@ -101,7 +102,7 @@ const genericApprovalSentence = "magic.action.approval_pending"
 
 // kindCaptureCounterparty is the sender a capture could not place, offered as
 // a new contact.
-const kindCaptureCounterparty = "capture_counterparty"
+const kindCaptureCounterparty = approvalsubject.KindCounterparty
 
 // pendingLine dresses one staged decision, or refuses it.
 //

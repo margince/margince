@@ -214,6 +214,7 @@ describe("the receipt draws every lane it promises", () => {
       receipt({
         needs_you: [
           line({
+            id: "0198a0de-0000-7000-8000-00000000d0c2",
             lane: "needs_you",
             summary: {
               key: "magic.action.approval_pending",
@@ -221,6 +222,7 @@ describe("the receipt draws every lane it promises", () => {
             },
           }),
           line({
+            id: "0198a0de-0000-7000-8000-00000000d0c3",
             lane: "needs_you",
             summary: {
               key: "magic.action.approval_capture_counterparty",

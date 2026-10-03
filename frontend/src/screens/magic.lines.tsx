@@ -163,8 +163,8 @@ function noWayBack(line: MagicLine, t: ReturnType<typeof useT>): string | null {
  * that put back 150 changes nobody had looked at would be the same unasked
  * bulk write this page exists to report.
  *
- * A decision waiting has nothing to undo. Its control is the way to the
- * worklist, where every staged decision is answered.
+ * A decision waiting has nothing to undo. Its control opens that decision in
+ * the drawer over Home, where it is answered.
  */
 function LineUndo({ line }: Readonly<{ line: MagicLine }>) {
   const t = useT();
