@@ -485,5 +485,15 @@ const (
 	// 112: collections.lastChecks reads the latest check of lists its caller
 	// already found through their sharing (ListLists, GetList); it answers only
 	// for the ids it was handed, so it names no list the reader could not find.
-	modulesTierUnscopedCeiling = 112
+	//
+	// 113: contacts.nameDomainClaimant is the dedupe ladder's rival for a company
+	// named after a domain, the sibling of exactCompanyByDomain above it and
+	// unscoped for the same reason: the ladder scores every company in the
+	// installation, and the id it finds becomes a review row, never a response.
+	//
+	// 114: contacts.OpenDuplicateCompanyPairsTx is system-only and hands Deal
+	// Scout the open company pairs, so it can withdraw a suggestion raised twice
+	// for one business. The ids select suggestions to supersede; a rep sees a
+	// suggestion only through deals' visibility clause.
+	modulesTierUnscopedCeiling = 114
 )
