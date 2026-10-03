@@ -134,22 +134,29 @@ credits`, the claude CLI its own usage-limit message — so a sweep run as one
 command ends at that scenario.
 
 Run the scenarios one at a time instead, skip the ones already scored, and wait
-when a stop names a limit:
+when a stop names a limit. Save it as a script: it exits on a stop it does not
+recognise, so that scenario is read rather than skipped.
 
 ```bash
 mkdir -p .tmp/sweep
 for f in e2e/llm/scenarios/*.yaml; do
   name="$(python3 e2e/llm/check.py --field name "$f")"
   [[ -f ".tmp/sweep/$name.done" ]] && continue
-  until MARGINCE_E2E_LLM=1 E2E_LLM_CANDIDATE=gpt E2E_LLM_VIA=cli \
-        E2E_LLM_STACK_PRESET=config/presets/openrouter_cloud_eu.yaml \
-        SCENARIO="$name" make e2e-llm > ".tmp/sweep/$name.log" 2>&1 \
-      || grep -q '^scenarios: ' ".tmp/sweep/$name.log"; do
-    grep -qiE 'out of credits|usage limit|answered HTTP 429' ".tmp/sweep/$name.log" \
-      e2e/llm/records/"$name".run*.jsonl || break   # any other stop: read it
-    sleep 1800                                      # wait for the limit to reset
+  while :; do
+    rm -f e2e/llm/records/"$name".run*.jsonl     # read only this attempt's transcripts
+    MARGINCE_E2E_LLM=1 E2E_LLM_CANDIDATE=gpt E2E_LLM_VIA=cli \
+      E2E_LLM_STACK_PRESET=config/presets/openrouter_cloud_eu.yaml \
+      SCENARIO="$name" make e2e-llm > ".tmp/sweep/$name.log" 2>&1
+    if grep -q '^scenarios: ' ".tmp/sweep/$name.log"; then
+      touch ".tmp/sweep/$name.done"; break         # scored, pass or fail
+    fi
+    if grep -qiE 'out of credits|usage limit|answered HTTP 429' \
+        ".tmp/sweep/$name.log" e2e/llm/records/"$name".run*.jsonl 2>/dev/null; then
+      sleep 1800; continue                         # wait for the limit to reset
+    fi
+    echo "$name stopped for another reason; read .tmp/sweep/$name.log" >&2
+    exit 1
   done
-  touch ".tmp/sweep/$name.done"
 done
 ```
 
