@@ -162,10 +162,11 @@ Opening such a card by its link answers "not found", the same as an
 out-of-scope record does.
 
 **An agent releases its own proposal only when it can be undone.** On your word,
-an agent may approve a record change it staged for you, and the decision is
-recorded as yours, given through that agent. A message, a page fetch or a
-webhook it proposed is yours to release here, because once sent it cannot be
-taken back. It may always reject its own proposal.
+an agent may approve a proposal it staged for you only when it is a change that
+would have gone straight through but for a person's earlier edit — no deal
+close, no relink, no tag merge, no schema change, no send. The decision is
+recorded as yours, given through that agent. Everything else it proposed is
+yours to release here. It may always reject its own proposal.
 
 A colleague's own direct action needs no approval: a human doing the thing
 themselves *is* the confirmation.

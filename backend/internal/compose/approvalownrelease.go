@@ -5,30 +5,36 @@ package compose
 
 import "github.com/margince/margince/backend/internal/shared/kernel/principal"
 
-// agentToolEgresses maps every tool verb the agent admission table names to
-// whether any operation it backs spends a cap that leaves the workspace. An
-// agent call is staged under its tool verb as the approval kind.
-var agentToolEgresses = func() map[string]bool {
-	egresses := make(map[string]bool, len(agentPolicies))
+// releaseTarget is one tool verb aimed at one record type — the pair an agent
+// call is staged under, as the approval's kind and target type.
+type releaseTarget struct {
+	tool       string
+	recordType agentRecordType
+}
+
+// agentStraightThrough maps every (verb, record type) the admission table
+// names to whether EVERY route behind it auto-executes and spends no cap that
+// leaves the workspace. Such a call was staged only because a person had edited
+// a field it touched; any other was staged because its own route asks a human
+// first — a deal close, a relink, a tag merge, a schema change, a webhook, a
+// send — and stays that human's to release.
+var agentStraightThrough = func() map[releaseTarget]bool {
+	straight := make(map[releaseTarget]bool, len(agentPolicies))
 	for _, pol := range agentPolicies {
-		if pol.Tool == "" {
+		if pol.Tool == "" || pol.RecordType == "" {
 			continue
 		}
-		egresses[pol.Tool] = egresses[pol.Tool] || principal.Scope(pol.Scope).Egresses()
+		key := releaseTarget{pol.Tool, pol.RecordType}
+		allSoFar, seen := straight[key]
+		route := pol.Tier == tierAutoExecute && !principal.Scope(pol.Scope).Egresses()
+		straight[key] = route && (allSoFar || !seen)
 	}
-	return egresses
+	return straight
 }()
 
-// undoableAgentRelease is approvals.UndoableRelease for agent-staged calls: a
-// verb the admission table knows, spending no egressing cap. A webhook
-// subscription is the one write-scoped record that opens a channel out — every
-// later event is delivered to an address the agent chose — and the contract
-// carries no marker that says so, so it is named here. An unknown kind is not
-// undoable, which keeps the stricter rule for it.
+// undoableAgentRelease is approvals.UndoableRelease for agent-staged calls. A
+// pair the admission table does not name — an unknown kind, or no target type
+// — is not undoable, which keeps the stricter rule for it.
 func undoableAgentRelease(kind, targetType string) bool {
-	if targetType == string(recordTypeWebhookSubscription) {
-		return false
-	}
-	egresses, known := agentToolEgresses[kind]
-	return known && !egresses
+	return agentStraightThrough[releaseTarget{kind, agentRecordType(targetType)}]
 }

@@ -42,10 +42,11 @@ var decideApprovalCopy = toolCopy{
 		"or reject it, which discards it.",
 	Limits: "The verdict is theirs — take an explicit approve or reject rather than deciding what " +
 		"they would have wanted. Approving is what makes the change real, including sending a " +
-		"message that was only drafted; a rejection cannot be taken back. You may approve a record " +
-		"change you proposed yourself; a send, fetch or webhook you proposed is theirs to release in " +
-		"the CRM, because what leaves cannot be recalled. An item already answered, or lapsed, is " +
-		"reported as such and nothing is written.",
+		"message that was only drafted; a rejection cannot be taken back. You may approve your own " +
+		"proposal only when it is a change that would have gone straight through but for a person's " +
+		"earlier edit — no deal close, no relink, no tag merge, no schema change, no send; the rest " +
+		"is theirs to release in the CRM. An item already answered, or lapsed, is reported as such " +
+		"and nothing is written.",
 	Instead: "read_approval when they have not seen what it holds; decide_approval_bundle for every " +
 		"proposal one act staged.",
 	Retain: "If the proposal is your OWN refused call, approving does not perform it — re-issue that " +
