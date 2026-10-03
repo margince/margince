@@ -53,7 +53,7 @@ func (n planNode) walk(visit func(planNode)) {
 // Inside the caller's transaction, which the test rolls back: the suite shares
 // one database, and a thousand answered messages left behind would move every
 // figure the neighbouring tests measure.
-func seedMailbox(ctx context.Context, t *testing.T, tx pgx.Tx) {
+func seedMailbox(ctx context.Context, t *testing.T, tx pgx.Tx, shape mailboxShape) {
 	t.Helper()
 	if _, err := tx.Exec(ctx, `
 	INSERT INTO contact (id, full_name, source, captured_by)
@@ -74,17 +74,41 @@ func seedMailbox(ctx context.Context, t *testing.T, tx pgx.Tx) {
 	  SELECT i.id, 'contact', c.id FROM mailbox_inbound i JOIN mailbox_customer c ON c.n = i.n;
 	INSERT INTO activity (kind, subject, occurred_at, direction, source, captured_by, thread_key, counterparty_email, counterparty_outbound_attested)
 	  SELECT 'email', 'Re: Topic '||g, at_time + interval '2 days', 'outbound', 'manual', 'human:seed', 'reply'||g, 'c'||n||'@customers.example', true
-	    FROM mailbox_inbound WHERE random() < 0.75;
+	    FROM mailbox_inbound WHERE random() < `+fmt.Sprint(shape.replyShare)+`;
 	INSERT INTO activity (kind, subject, occurred_at, direction, source, captured_by, thread_key, counterparty_email, counterparty_outbound_attested)
 	  SELECT 'email', 'Update '||g, now() - random() * 364 * interval '1 day', 'outbound', 'manual', 'human:seed', 'out'||g,
 	         'c'||(1 + floor(random() * 400))::int||'@customers.example', true
-	    FROM generate_series(1, 5000) g;
+	    FROM generate_series(1, `+fmt.Sprint(shape.strayOutbound)+`) g;
 	ANALYZE activity`); err != nil {
 		t.Fatalf("seeding the mailbox: %v", err)
 	}
 }
 
+// mailboxShape is how much attested outbound mail the seeded installation has.
+// A sparse one makes a range over the whole index look cheap to the planner, so
+// it is the shape on which an arm left free to start from the activity side
+// does.
+type mailboxShape struct {
+	replyShare    float64
+	strayOutbound int
+}
+
+var (
+	busyMailbox   = mailboxShape{replyShare: 0.75, strayOutbound: 5000}
+	sparseMailbox = mailboxShape{replyShare: 0.05, strayOutbound: 300}
+)
+
 func TestTheHorizonMeasurementRunsEachAnswerCheckOnceAndFromTheAddressIndex(t *testing.T) {
+	for name, shape := range map[string]mailboxShape{
+		"busy outbound":   busyMailbox,
+		"sparse outbound": sparseMailbox,
+	} {
+		t.Run(name, func(t *testing.T) { checkHorizonPlan(t, shape) })
+	}
+}
+
+func checkHorizonPlan(t *testing.T, shape mailboxShape) {
+	t.Helper()
 	e := setupPromises(t)
 	ctx := context.Background()
 	tx, err := e.owner.Begin(ctx)
@@ -96,7 +120,7 @@ func TestTheHorizonMeasurementRunsEachAnswerCheckOnceAndFromTheAddressIndex(t *t
 			t.Errorf("rolling back the seeded mailbox: %v", err)
 		}
 	}()
-	seedMailbox(ctx, t, tx)
+	seedMailbox(ctx, t, tx, shape)
 
 	statement := fmt.Sprintf(firstResponseSQL,
 		scopeUnbounded,
@@ -126,7 +150,8 @@ func TestTheHorizonMeasurementRunsEachAnswerCheckOnceAndFromTheAddressIndex(t *t
 		if alias == "answer_mail" && n.IndexName == "idx_activity_kind" {
 			kindIndexUnderCounterpartyArm++
 		}
-		if alias == "answer_mail" && n.IndexName == "idx_activity_answer_mail" && strings.Contains(n.IndexCond, "kind") {
+		if alias == "answer_mail" && n.IndexName == "idx_activity_answer_mail" &&
+			strings.Contains(n.IndexCond, "counterparty_email") && strings.Contains(n.IndexCond, "kind") {
 			addressIndexBoundsKind++
 		}
 		// A heap scan of activity under the touch alias, or an index read keyed
@@ -144,7 +169,7 @@ func TestTheHorizonMeasurementRunsEachAnswerCheckOnceAndFromTheAddressIndex(t *t
 		t.Errorf("the thread answer arm is planned %d times, want once — the measurement runs every answer check twice per message", seen["answer_thread"])
 	}
 	if addressIndexBoundsKind == 0 {
-		t.Errorf("no answer arm reads idx_activity_answer_mail with the kind in its key, so the time bound falls to a second index")
+		t.Errorf("no answer arm reads idx_activity_answer_mail keyed on the sender's address and the kind: the address falls to a join filter and every message reads every later attested mail of the installation")
 	}
 	if touchRangedOnTime != 0 {
 		t.Errorf("a touch arm reads activity %d times by something other than the linked id: it walks every later call and meeting of the installation for each message, where the sender's contact bounds it",
