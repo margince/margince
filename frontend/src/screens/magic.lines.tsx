@@ -11,8 +11,10 @@ import { routeHash } from "../app/router";
 import { Disclosure } from "../design-system/atoms";
 import { PanelBody, PanelGroupHead } from "../design-system/panel";
 import { formatDateTime, formatNumber } from "../format/format";
-import { useLocale, usePlural, useT } from "../i18n";
+import { type Translator, useLocale, usePlural, useT } from "../i18n";
 import type { Locale } from "../i18n/locale";
+import { approvalHref } from "./approvaldrawer";
+import { approvalKindLabel } from "./approvalkind";
 import {
   magicByKey,
   magicConsequenceKey,
@@ -104,7 +106,7 @@ function MagicLineRow({
         {/* A sentence this build has no key for is DROPPED rather than
             printed: `magic.action.something` on a receipt is worse than a row
             that says only what it was about and when. */}
-        {sentence && t(sentence, line.summary.values)}{" "}
+        {sentence && t(sentence, readableValues(line.summary.values, t))}{" "}
         <LineSubject line={line} since={since} />
         {detail.length > 0 && (
           <span className="sr-only">
@@ -161,15 +163,15 @@ function noWayBack(line: MagicLine, t: ReturnType<typeof useT>): string | null {
  * that put back 150 changes nobody had looked at would be the same unasked
  * bulk write this page exists to report.
  *
- * A decision waiting has nothing to undo. Its control is the way to the
- * worklist, where every staged decision is answered.
+ * A decision waiting has nothing to undo. Its control opens that decision in
+ * the drawer over Home, where it is answered.
  */
 function LineUndo({ line }: Readonly<{ line: MagicLine }>) {
   const t = useT();
   if (line.lane === "needs_you") {
     return (
       <div className="magic-line-controls">
-        <a href={routeHash({ screen: "worklist" })}>{t("magic.decide")}</a>
+        <a href={approvalHref(line.id)}>{t("magic.decide")}</a>
       </div>
     );
   }
@@ -348,4 +350,16 @@ function recordHref(line: MagicLine): string | undefined {
     return undefined;
   }
   return routeHash(ENTITY[entity.type].route(entity.id));
+}
+
+/**
+ * A proposal's kind as the reader names it. The wire carries the kind's code
+ * (`capture_counterparty`), which is vocabulary, not a sentence.
+ */
+function readableValues(
+  values: Readonly<Record<string, string>> | undefined,
+  t: Translator,
+): Record<string, string> | undefined {
+  if (!values?.kind) return values;
+  return { ...values, kind: approvalKindLabel(values.kind, t) };
 }

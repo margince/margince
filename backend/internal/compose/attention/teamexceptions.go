@@ -90,7 +90,17 @@ func (s *Service) teamExceptionsIn(ctx context.Context) (crmcontracts.TeamExcept
 	if len(found) > exceptionsBound {
 		out.Exceptions = found[:exceptionsBound]
 	}
+	nameExceptionOwners(out.Exceptions, rosterNames(roster))
 	return out, nil
+}
+
+// nameExceptionOwners names each row's owner from the roster this page already
+// read, as the queue names its own. Unnamed, a client draws a real colleague as
+// "Hidden", which is the word it keeps for an owner this reader may not resolve.
+func nameExceptionOwners(found []crmcontracts.TeamException, names map[ids.UUID]string) {
+	for i := range found {
+		nameAnOwner(&found[i].Owner, names)
+	}
 }
 
 // exceptionsIn reads the conditions out of an assembled day.

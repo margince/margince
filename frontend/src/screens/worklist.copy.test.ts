@@ -325,6 +325,35 @@ describe("reasonText — the lead's own deadline", () => {
   });
 });
 
+// One card per conversation: the earlier requests ride the card as a reason,
+// dated from the first. A reason this census does not list is dropped.
+describe("reasonText — a thread's earlier requests", () => {
+  it("counts them in the reader's plural", () => {
+    const one: WorklistReason = {
+      kind: "earlier_requests",
+      value: { kind: "count", count: 1 },
+    };
+    const two: WorklistReason = {
+      kind: "earlier_requests",
+      value: { kind: "count", count: 2 },
+    };
+    expect(reasonText(one, t, "en", zone)).toBe(
+      "1 earlier request in this thread",
+    );
+    expect(reasonText(two, t, "en", zone)).toBe(
+      "2 earlier requests in this thread",
+    );
+  });
+
+  it("names when the first was asked", () => {
+    const reason: WorklistReason = {
+      kind: "first_asked",
+      value: { kind: "date", date: "2026-09-03T14:30:00Z" },
+    };
+    expect(reasonText(reason, t, "en", zone)).toMatch(/^first asked .*2026/);
+  });
+});
+
 describe("itemTitle — an incident names what broke, never an internal id", () => {
   // `cause` and `label` are two halves of one contract and the fixture supplies
   // both: `cause` is the identity the group was formed on, opaque and never

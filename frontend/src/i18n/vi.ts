@@ -10799,6 +10799,7 @@ export const vi = {
     "{urgent} khẩn · {due} đến hạn · {inPlay} đang xử lý · {lower} thường lệ — tổng {total}",
   "worklist.summary.noMiddle":
     "{urgent} khẩn · {due} đến hạn · {lower} thường lệ — tổng {total}",
+  "worklist.summary.wholeDay": "Cả ngày: {sentence}",
   "worklist.summary.split": "{today} hôm nay · {review} cần xem xét",
   "worklist.completeness": "Hiển thị {shown} trong {considered}",
   "worklist.review.partial":
@@ -10883,6 +10884,9 @@ export const vi = {
   "worklist.scope.all": "Tất cả",
   "worklist.owner.visibleLabel": "Đang xem",
   "worklist.manager.cancel": "Huỷ",
+  "worklist.owner.wholeTeam": "Cả nhóm",
+  "worklist.owner.everyone": "Tất cả",
+  "worklist.owner.nobodyYet": "Chưa có ai",
   "worklist.owner.mine": "Ngày của tôi",
   "worklist.owner.backToMine": "Quay lại ngày của tôi",
   "worklist.manager.reassign": "Giao lại",
@@ -10963,8 +10967,8 @@ export const vi = {
     "{name} còn {count} cam kết đã đến hạn — khách hàng đang chờ.",
   "worklist.coaching.promises_other":
     "{name} còn {count} cam kết đã đến hạn — khách hàng đang chờ.",
-  "worklist.coaching.waiting_one": "{count} khách hàng đang chờ {name}.",
-  "worklist.coaching.waiting_other": "{count} khách hàng đang chờ {name}.",
+  "worklist.coaching.waiting_one": "{count} cuộc trao đổi đang chờ {name}.",
+  "worklist.coaching.waiting_other": "{count} cuộc trao đổi đang chờ {name}.",
   "worklist.coaching.overdue_one": "{name} có {count} công việc đã quá hạn.",
   "worklist.coaching.overdue_other": "{name} có {count} công việc đã quá hạn.",
   "worklist.board.promises": "Cam kết đến hạn",
@@ -10989,7 +10993,8 @@ export const vi = {
   "worklist.hidden.clear":
     "Không có gì bị giữ lại. Mọi khách đang chờ đều đến được một danh sách.",
   "worklist.hidden.truncated":
-    "Có nhiều việc hơn số đếm được ở đây. Đây là mức tối thiểu, không phải tổng số.",
+    "Worklist đã chạm giới hạn đọc, nên các con số là mức tối thiểu và một quy tắc ghi “Chưa đếm được” vẫn có thể giữ lại thư. Mở một quy tắc để xem.",
+  "worklist.hidden.notCounted": "Chưa đếm được",
   "worklist.hidden.count": "{count} đang chờ",
   "worklist.hidden.pastHorizon": "Quá cũ đối với danh sách",
   "worklist.hidden.pastHorizon.detail":
@@ -11010,6 +11015,8 @@ export const vi = {
     "Đã hoãn hoặc đánh dấu không phải của bạn. Một lần hoãn sẽ tự quay lại.",
   "worklist.hidden.shown": "Bản thân danh sách mang {count}.",
   "worklist.hidden.rows.loading": "Đang tải các thư bị giữ lại…",
+  "worklist.hidden.rows.outOfReach":
+    "Không đọc được thư nào ở quy mô này. Có thể vẫn còn thư bị giữ lại.",
   "worklist.hidden.rows.empty": "Quy tắc này hiện không giữ lại thư nào.",
   "worklist.filter.label": "Loại công việc",
   "worklist.filter.all": "Tất cả",
@@ -11066,6 +11073,14 @@ export const vi = {
   "worklist.because.blocks_customer_work": "một khách hàng đang bị chặn",
   "worklist.because.routine": "dọn dẹp thường lệ",
   "worklist.because.repeated_failure": "cùng một lỗi lặp lại nhiều lần",
+  "worklist.because.earlier_requests":
+    "các yêu cầu trước đó trong luồng thư này",
+  "worklist.because.earlier_requests.value_one":
+    "{value} yêu cầu trước đó trong luồng thư này",
+  "worklist.because.earlier_requests.value_other":
+    "{value} yêu cầu trước đó trong luồng thư này",
+  "worklist.because.first_asked": "đã hỏi trước đó",
+  "worklist.because.first_asked.value": "hỏi lần đầu vào {value}",
   "worklist.because.legal_deadline": "thời hạn pháp lý đang chạy",
   "worklist.because.opened_overdue":
     "được ghi nhận sau thời hạn, từ dữ liệu đã nhập",
@@ -11242,6 +11257,7 @@ export const vi = {
   // giờ mở trình soạn thảo nên không cần tách "ngay bây giờ" như trên.
   "worklist.verb.open_meeting_brief": "Chuẩn bị cho cuộc họp",
   "worklist.deal.closes": "chốt {date}",
+  "worklist.when.held": "đã diễn ra {when}",
   "worklist.when.starts": "bắt đầu {when}",
   "worklist.when.due": "đến hạn {when}",
   "worklist.batch.system_incident_one": "{cause} đã lỗi {count} lần",
@@ -11780,6 +11796,8 @@ export const vi = {
     "Một đề xuất từ đêm qua đang chờ bạn duyệt",
   "magic.action.approval_transcript_proposal":
     "Một đề xuất từ bản ghi âm đang chờ bạn duyệt",
+  "magic.action.approval_capture_counterparty":
+    "{target} đã viết cho bạn. Giữ lại làm liên hệ?",
   "magic.action.approval_pending": "Một đề xuất loại {kind} đang chờ bạn duyệt",
   "magic.action.capture_reauth_required": "{provider} cần được kết nối lại",
   "magic.action.capture_connection_error": "Không kết nối được tới {provider}",

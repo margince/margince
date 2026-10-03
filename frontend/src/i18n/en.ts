@@ -11042,6 +11042,7 @@ export const en = {
     "{urgent} urgent · {due} due · {inPlay} in play · {lower} routine · {total} total",
   "worklist.summary.noMiddle":
     "{urgent} urgent · {due} due · {lower} routine · {total} total",
+  "worklist.summary.wholeDay": "Whole day: {sentence}",
   "worklist.summary.split": "{today} today · {review} to review",
   "worklist.completeness": "{shown} of {considered} shown",
   "worklist.review.partial":
@@ -11123,6 +11124,9 @@ export const en = {
   "worklist.scope.all": "All",
   "worklist.owner.visibleLabel": "Viewing",
   "worklist.manager.cancel": "Cancel",
+  "worklist.owner.wholeTeam": "The whole team",
+  "worklist.owner.everyone": "Everyone",
+  "worklist.owner.nobodyYet": "Nobody yet",
   "worklist.owner.mine": "My Worklist",
   "worklist.owner.backToMine": "Back to your Worklist",
   "worklist.manager.reassign": "Reassign",
@@ -11199,8 +11203,9 @@ export const en = {
     "{name} has {count} customer commitment due",
   "worklist.coaching.promises_other":
     "{name} has {count} customer commitments due",
-  "worklist.coaching.waiting_one": "{count} customer is waiting on {name}",
-  "worklist.coaching.waiting_other": "{count} customers are waiting on {name}",
+  "worklist.coaching.waiting_one": "{count} conversation is waiting on {name}",
+  "worklist.coaching.waiting_other":
+    "{count} conversations are waiting on {name}",
   "worklist.coaching.overdue_one": "{name} has {count} overdue task",
   "worklist.coaching.overdue_other": "{name} has {count} overdue tasks",
   "worklist.board.promises": "Commitments due",
@@ -11224,7 +11229,8 @@ export const en = {
   "worklist.hidden.clear":
     "Nothing is hidden. Every waiting customer reaches a Worklist.",
   "worklist.hidden.truncated":
-    "Counts are incomplete. Each figure is a minimum.",
+    "The Worklist is at its reading limit, so these figures are minimums and a rule reading “Not counted” may still hold messages. Open a rule to see them.",
+  "worklist.hidden.notCounted": "Not counted",
   "worklist.hidden.count": "{count} waiting",
   "worklist.hidden.pastHorizon": "Too old for the Worklist",
   "worklist.hidden.pastHorizon.detail":
@@ -11246,6 +11252,8 @@ export const en = {
     "Snoozed or marked not yours. Snoozed items return automatically.",
   "worklist.hidden.shown": "The Worklist shows {count}.",
   "worklist.hidden.rows.loading": "Loading the held-back messages…",
+  "worklist.hidden.rows.outOfReach":
+    "None could be read at this size. Some may still be held back.",
   "worklist.hidden.rows.empty": "Nothing is held back by this rule now.",
   "worklist.filter.label": "Work type",
   "worklist.filter.all": "All",
@@ -11301,6 +11309,13 @@ export const en = {
   "worklist.because.blocks_customer_work": "customer waiting on this",
   "worklist.because.routine": "routine cleanup",
   "worklist.because.repeated_failure": "repeated failure",
+  "worklist.because.earlier_requests": "earlier requests in this thread",
+  "worklist.because.earlier_requests.value_one":
+    "{value} earlier request in this thread",
+  "worklist.because.earlier_requests.value_other":
+    "{value} earlier requests in this thread",
+  "worklist.because.first_asked": "asked earlier",
+  "worklist.because.first_asked.value": "first asked {value}",
   "worklist.because.legal_deadline": "legal deadline running",
   "worklist.because.opened_overdue":
     "recorded after its deadline, from imported history",
@@ -11521,6 +11536,7 @@ export const en = {
   // composer and so never needs the reply/write "now" split above.
   "worklist.verb.open_meeting_brief": "Prepare for meeting",
   "worklist.deal.closes": "closes {date}",
+  "worklist.when.held": "held {when}",
   "worklist.when.starts": "starts {when}",
   "worklist.when.due": "due {when}",
   "worklist.batch.system_incident_one": "{cause} failed {count} time",
@@ -12047,6 +12063,8 @@ export const en = {
     "An overnight proposal is waiting for your word",
   "magic.action.approval_transcript_proposal":
     "A proposal from a recording is waiting for your word",
+  "magic.action.approval_capture_counterparty":
+    "{target} wrote to you. Keep them as a contact?",
   "magic.action.approval_pending": "A {kind} proposal is waiting for your word",
   "magic.action.capture_reauth_required":
     "{provider} needs to be connected again",

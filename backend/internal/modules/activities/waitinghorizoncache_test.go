@@ -20,7 +20,7 @@ var horizonNoon = time.Date(2026, 9, 30, 12, 0, 0, 0, time.UTC)
 func TestARememberedHorizonIsReusedWithinTheHour(t *testing.T) {
 	cache := newHorizonCache()
 	ws := ids.New[ids.WorkspaceKind]()
-	cache.remember(ws, horizonNoon, horizonNoon, 42)
+	cache.remember(ws, horizonNoon, horizonNoon, 42, waitingHorizonTTL)
 
 	for _, later := range []time.Duration{0, time.Minute, waitingHorizonTTL - time.Second} {
 		got, ok := cache.lookup(ws, horizonNoon.Add(later), horizonNoon.Add(later))
@@ -49,10 +49,46 @@ func TestARememberedHorizonIsNotReusedPastWhatItAnswered(t *testing.T) {
 	}
 	for name, c := range cases {
 		cache := newHorizonCache()
-		cache.remember(ws, horizonNoon, horizonNoon, 42)
+		cache.remember(ws, horizonNoon, horizonNoon, 42, waitingHorizonTTL)
 		if got, ok := cache.lookup(c.ws, c.asOf, c.now); ok {
 			t.Errorf("%s: the lookup reused %d, want a miss that measures again", name, got)
 		}
+	}
+}
+
+// The compiled horizon standing in for a failed measurement is held for
+// minutes, not the hour a measurement is: it is not this installation's answer.
+func TestAFallbackHorizonIsReusedOnlyBrieflyAfterAFailedMeasurement(t *testing.T) {
+	cache := newHorizonCache()
+	ws := ids.New[ids.WorkspaceKind]()
+	cache.remember(ws, horizonNoon, horizonNoon, waitingHorizonDays, waitingHorizonFallbackTTL)
+
+	soon := horizonNoon.Add(waitingHorizonFallbackTTL - time.Second)
+	if got, ok := cache.lookup(ws, soon, soon); !ok || got != waitingHorizonDays {
+		t.Errorf("inside the fallback window the lookup answered (%d, %v), want the compiled %d", got, ok, waitingHorizonDays)
+	}
+	later := horizonNoon.Add(waitingHorizonFallbackTTL)
+	if got, ok := cache.lookup(ws, later, later); ok {
+		t.Errorf("past the fallback window the lookup reused %d, want a miss that measures again", got)
+	}
+}
+
+// A reader whose measurement timed out must not replace what a concurrent
+// reader measured; once that measurement has expired, the fallback may stand.
+func TestAFallbackDoesNotDisplaceAMeasurementThatIsStillGood(t *testing.T) {
+	cache := newHorizonCache()
+	ws := ids.New[ids.WorkspaceKind]()
+	cache.remember(ws, horizonNoon, horizonNoon, 42, waitingHorizonTTL)
+	soon := horizonNoon.Add(time.Minute)
+	cache.remember(ws, soon, soon, waitingHorizonDays, waitingHorizonFallbackTTL)
+	if got, ok := cache.lookup(ws, soon, soon); !ok || got != 42 {
+		t.Errorf("a fallback displaced the live measurement: (%d, %v), want 42", got, ok)
+	}
+
+	expired := horizonNoon.Add(waitingHorizonTTL)
+	cache.remember(ws, expired, expired, waitingHorizonDays, waitingHorizonFallbackTTL)
+	if got, ok := cache.lookup(ws, expired, expired); !ok || got != waitingHorizonDays {
+		t.Errorf("past the measurement's hour the fallback was refused: (%d, %v)", got, ok)
 	}
 }
 
@@ -60,7 +96,7 @@ func TestARememberedHorizonIsNotReusedPastWhatItAnswered(t *testing.T) {
 // rather than panic, which is what every such store did before it existed.
 func TestANilHorizonCacheAlwaysMisses(t *testing.T) {
 	var cache *horizonCache
-	cache.remember(ids.New[ids.WorkspaceKind](), horizonNoon, horizonNoon, 42)
+	cache.remember(ids.New[ids.WorkspaceKind](), horizonNoon, horizonNoon, 42, waitingHorizonTTL)
 	if got, ok := cache.lookup(ids.New[ids.WorkspaceKind](), horizonNoon, horizonNoon); ok {
 		t.Fatalf("a nil cache answered %d, want a miss", got)
 	}
@@ -72,7 +108,7 @@ func TestANilHorizonCacheAlwaysMisses(t *testing.T) {
 func TestTheStoreServesTheRememberedHorizonWithoutMeasuring(t *testing.T) {
 	ws := ids.New[ids.WorkspaceKind]()
 	store := NewStore(database.BindTo(nil, ws)).WithClock(func() time.Time { return horizonNoon })
-	store.horizons.remember(ws, horizonNoon, horizonNoon, 42)
+	store.horizons.remember(ws, horizonNoon, horizonNoon, 42, waitingHorizonTTL)
 
 	got, err := store.waitingHorizonFor(context.Background(), nil, horizonNoon)
 	if err != nil || got != 42 {

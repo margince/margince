@@ -113,6 +113,9 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (
 	if where, err = appendRequestReviewClause(ctx, in, arg, where); err != nil {
 		return nil, "", nil, nil, err
 	}
+	if where, err = appendCustomerMeetingClause(ctx, in, arg, where); err != nil {
+		return nil, "", nil, nil, err
+	}
 	where = append(where, activityRowClauses(in, arg)...)
 	keyset, err := timelineKeyset(in, sorted, arg)
 	if err != nil {

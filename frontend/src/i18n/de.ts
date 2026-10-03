@@ -10884,6 +10884,7 @@ export const de = {
     "{urgent} dringend · {due} fällig · {inPlay} in Arbeit · {lower} Routine · {total} gesamt",
   "worklist.summary.noMiddle":
     "{urgent} dringend · {due} fällig · {lower} Routine · {total} gesamt",
+  "worklist.summary.wholeDay": "Ganzer Tag: {sentence}",
   "worklist.summary.split": "{today} heute · {review} zu prüfen",
   "worklist.completeness": "{shown} von {considered} angezeigt",
   "worklist.review.partial":
@@ -10966,6 +10967,9 @@ export const de = {
   "worklist.scope.all": "Alle",
   "worklist.owner.visibleLabel": "Ansicht",
   "worklist.manager.cancel": "Abbrechen",
+  "worklist.owner.wholeTeam": "Das ganze Team",
+  "worklist.owner.everyone": "Alle",
+  "worklist.owner.nobodyYet": "Noch niemand",
   "worklist.owner.mine": "Meine Worklist",
   "worklist.owner.backToMine": "Zurück zu deiner Worklist",
   "worklist.manager.reassign": "Neu zuweisen",
@@ -11045,8 +11049,8 @@ export const de = {
   "worklist.coaching.promises_one": "{name} hat {count} fällige Kundenzusage",
   "worklist.coaching.promises_other":
     "{name} hat {count} fällige Kundenzusagen",
-  "worklist.coaching.waiting_one": "{count} Kontakt wartet auf {name}",
-  "worklist.coaching.waiting_other": "{count} Kontakte warten auf {name}",
+  "worklist.coaching.waiting_one": "{count} Unterhaltung wartet auf {name}",
+  "worklist.coaching.waiting_other": "{count} Unterhaltungen warten auf {name}",
   "worklist.coaching.overdue_one": "{name} hat {count} überfällige Aufgabe",
   "worklist.coaching.overdue_other": "{name} hat {count} überfällige Aufgaben",
   "worklist.board.promises": "Fällige Zusagen",
@@ -11070,7 +11074,8 @@ export const de = {
   "worklist.hidden.clear":
     "Nichts ist ausgeblendet. Jeder wartende Kontakt erreicht eine Worklist.",
   "worklist.hidden.truncated":
-    "Die Zählung ist unvollständig. Jede Zahl ist ein Mindestwert.",
+    "Die Worklist ist an ihrer Lesegrenze. Die Zahlen sind Mindestwerte, und eine Regel mit „Nicht gezählt“ kann trotzdem Nachrichten zurückhalten. Öffne eine Regel, um sie zu sehen.",
+  "worklist.hidden.notCounted": "Nicht gezählt",
   "worklist.hidden.count": "{count} wartend",
   "worklist.hidden.pastHorizon": "Zu alt für die Worklist",
   "worklist.hidden.pastHorizon.detail":
@@ -11092,6 +11097,8 @@ export const de = {
     "Zurückgestellt oder als nicht zuständig markiert. Zurückgestellte Einträge kommen automatisch zurück.",
   "worklist.hidden.shown": "Angezeigt in der Worklist: {count}.",
   "worklist.hidden.rows.loading": "Zurückgehaltene Nachrichten werden geladen…",
+  "worklist.hidden.rows.outOfReach":
+    "Bei dieser Menge ließ sich keine Nachricht lesen. Es können trotzdem welche zurückgehalten werden.",
   "worklist.hidden.rows.empty": "Diese Regel hält gerade nichts zurück.",
   "worklist.filter.label": "Art der Arbeit",
   "worklist.filter.all": "Alle",
@@ -11148,6 +11155,13 @@ export const de = {
   "worklist.because.blocks_customer_work": "Kontakt wartet darauf",
   "worklist.because.routine": "Routinebereinigung",
   "worklist.because.repeated_failure": "wiederholter Fehler",
+  "worklist.because.earlier_requests": "frühere Anfragen in diesem Thread",
+  "worklist.because.earlier_requests.value_one":
+    "{value} frühere Anfrage in diesem Thread",
+  "worklist.because.earlier_requests.value_other":
+    "{value} frühere Anfragen in diesem Thread",
+  "worklist.because.first_asked": "früher angefragt",
+  "worklist.because.first_asked.value": "zuerst angefragt am {value}",
   "worklist.because.legal_deadline": "gesetzliche Frist läuft",
   "worklist.because.opened_overdue":
     "erst nach Fristablauf erfasst, aus importiertem Bestand",
@@ -11353,6 +11367,7 @@ export const de = {
   // nicht braucht.
   "worklist.verb.open_meeting_brief": "Termin vorbereiten",
   "worklist.deal.closes": "Abschluss {date}",
+  "worklist.when.held": "Fand statt: {when}",
   "worklist.when.starts": "Beginn: {when}",
   "worklist.when.due": "Fällig: {when}",
   "worklist.batch.system_incident_one":
@@ -11892,6 +11907,8 @@ export const de = {
     "Ein Vorschlag aus der Nacht wartet auf dein Wort",
   "magic.action.approval_transcript_proposal":
     "Ein Vorschlag aus einer Aufzeichnung wartet auf dein Wort",
+  "magic.action.approval_capture_counterparty":
+    "{target} hat dir geschrieben. Als Kontakt behalten?",
   "magic.action.approval_pending":
     "Ein Vorschlag vom Typ {kind} wartet auf dein Wort",
   "magic.action.capture_reauth_required":

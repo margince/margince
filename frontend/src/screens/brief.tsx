@@ -12,6 +12,7 @@ import { formatDateTime } from "../format/format";
 import { useNow } from "../format/now";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
+import { LinkedApprovalDrawer } from "./approvaldrawer";
 import { changedSinceBrief } from "./brief.changed";
 import { BriefChanges } from "./brief.changes";
 import { BriefDials } from "./brief.dials";
@@ -85,6 +86,8 @@ export function BriefScreen() {
           under it, and the controls on the far edge where a record's verbs
           stand. The one raised surface under it is the Focus panel — the
           work is the card, and everything around it is the page. */}
+      {/* A link to one decision, from a notice or a receipt, opens it here. */}
+      <LinkedApprovalDrawer />
       <div className="brief-head">
         <BriefGlance
           view={address.view}

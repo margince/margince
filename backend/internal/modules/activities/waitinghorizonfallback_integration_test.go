@@ -29,7 +29,7 @@ func TestATimedOutHorizonMeasurementLeavesTheTransactionUsable(t *testing.T) {
 			t.Errorf("rolling back the seeded mailbox: %v", err)
 		}
 	}()
-	seedMailbox(ctx, t, tx)
+	seedMailbox(ctx, t, tx, busyMailbox)
 	// The seeded year takes well over a hundred milliseconds to measure, so a
 	// 20 ms budget stops the measurement the way a statement budget does,
 	// while the savepoint and SET statements around it, which take
@@ -53,7 +53,12 @@ func TestATimedOutHorizonMeasurementLeavesTheTransactionUsable(t *testing.T) {
 	if err := tx.QueryRow(ctx, `SELECT count(*) FROM activity WHERE direction = 'inbound'`).Scan(&inbound); err != nil || inbound < 1500 {
 		t.Fatalf("the caller's transaction reads (%d, %v), want the seeded mailbox it wrote", inbound, err)
 	}
-	if days, ok := store.horizons.lookup(ws, asOf, time.Now()); ok {
-		t.Errorf("the compiled horizon was remembered as a measurement (%d days)", days)
+	// The stand-in is remembered, so the next page of this read does not run the
+	// doomed measurement again, but only for the short fallback window.
+	if days, ok := store.horizons.lookup(ws, asOf, time.Now()); !ok || days != waitingHorizonDays {
+		t.Errorf("the compiled horizon was not remembered after the timeout (%d, %v)", days, ok)
+	}
+	if days, ok := store.horizons.lookup(ws, asOf, time.Now().Add(waitingHorizonFallbackTTL)); ok {
+		t.Errorf("the compiled horizon outlived the fallback window as %d days", days)
 	}
 }

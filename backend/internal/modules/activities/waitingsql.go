@@ -160,7 +160,10 @@ var waitingRepliesSQL = `
 	       -- snoozing until a reply wakes on a later message with the same
 	       -- thread_key. A row without one can do neither, so the caller must
 	       -- know before it offers them.
-	       a.thread_key IS NOT NULL AND a.thread_key <> ''
+	       a.thread_key IS NOT NULL AND a.thread_key <> '',
+	       -- Which conversation, so a caller can show one card per
+	       -- conversation; '' for a message that belongs to none.
+	       coalesce(a.thread_key, ''), coalesce(a.channel_provider, '')
 	  FROM activity a
 	  LEFT JOIN activity_link wl ON wl.activity_id = a.id AND (%[3]s)
 	  -- Who wrote. The sender participant is where capture records the address,

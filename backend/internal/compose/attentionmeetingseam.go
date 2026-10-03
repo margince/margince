@@ -243,7 +243,7 @@ func (m attentionMeetingsAwaitingOutcome) Since(
 	deep := limit * unansweredReadDepth
 	in := activities.ListActivitiesInput{
 		Kind: &kind, OccurredAfter: &from, OccurredBefore: &until,
-		AwaitingOutcome: true, Limit: &deep, ReadableOnly: true,
+		AwaitingOutcome: true, CustomerMeetingsOnly: true, Limit: &deep, ReadableOnly: true,
 	}
 	if !applyMeetingScope(ctx, &in, scope, owner) {
 		return nil, nil
