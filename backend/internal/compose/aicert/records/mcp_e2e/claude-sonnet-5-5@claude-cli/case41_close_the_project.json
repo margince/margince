@@ -1,0 +1,24 @@
+{
+  "scenario": "case41_close_the_project",
+  "criteria": [
+    1,
+    2
+  ],
+  "passed": 0,
+  "runs": 3,
+  "pass_at": 2,
+  "driver": "claude:cli",
+  "effort": "thinking off",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": true,
+  "usage": {
+    "input_tokens": 18,
+    "output_tokens": 3309,
+    "cache_creation_input_tokens": 27968,
+    "cache_read_input_tokens": 506813,
+    "runs_measured": 3,
+    "runs_costed": 3,
+    "cost_usd": 0.2464
+  }
+}

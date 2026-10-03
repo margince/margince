@@ -1,0 +1,25 @@
+{
+  "scenario": "case6_ask_the_company",
+  "criteria": [
+    1,
+    3,
+    5
+  ],
+  "passed": 1,
+  "runs": 3,
+  "pass_at": 2,
+  "driver": "claude:cli",
+  "effort": "thinking off",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": true,
+  "usage": {
+    "input_tokens": 44,
+    "output_tokens": 9325,
+    "cache_creation_input_tokens": 150429,
+    "cache_read_input_tokens": 1679689,
+    "runs_measured": 3,
+    "runs_costed": 3,
+    "cost_usd": 1.031
+  }
+}
