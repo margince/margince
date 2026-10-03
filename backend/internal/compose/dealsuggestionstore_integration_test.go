@@ -264,8 +264,8 @@ func TestAnAcceptedSuggestionIsNotReofferedOnTheDuplicateCompany(t *testing.T) {
 	}
 }
 
-// Archiving one end closes a duplicate pair, as the dedupe queue reads it. A
-// dismissal on the archived company then holds nothing back on the live one.
+// Archiving one end closes a duplicate pair, as the dedupe queue reads it, so
+// the live company is no longer read as anybody's duplicate.
 func TestAnArchivedTwinNoLongerPairsTheLiveCompany(t *testing.T) {
 	e := setupScout(t)
 	named := e.SeedCompany(t, "Northwind Traders", nil)
@@ -276,5 +276,60 @@ func TestAnArchivedTwinNoLongerPairsTheLiveCompany(t *testing.T) {
 
 	if twins := e.twinsOf(t, twin); len(twins) != 0 {
 		t.Fatalf("the live company is still paired with %v, want the archived end closed", twins)
+	}
+}
+
+// Two passes recording a duplicate pair at once: the second waits on the
+// first's evidence lock, then finds its suggestion and writes nothing.
+func TestTwinsRecordedAtOnceRaiseOneSuggestion(t *testing.T) {
+	e := setupScout(t)
+	named := e.SeedCompany(t, "Northwind Traders", nil)
+	twin := e.SeedCompany(t, "NORTHWIND TRADERS", nil)
+	dana := e.employee(t, "Dana Buyer", named)
+	meeting := e.meeting(e.Admin(), t, "Scoping workshop", &dana, e.daysAgo(3))
+	namedDraft, twinDraft := e.meetingDraft(t, named, meeting), e.meetingDraft(t, twin, meeting)
+	ctx := e.system()
+
+	firstPID, release, firstDone := make(chan int, 1), make(chan struct{}), make(chan error, 1)
+	go func() {
+		firstDone <- database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+			if _, err := deals.RecordSuggestionTx(ctx, tx, namedDraft); err != nil {
+				return err
+			}
+			var pid int
+			if err := tx.QueryRow(ctx, `SELECT pg_backend_pid()`).Scan(&pid); err != nil {
+				return err
+			}
+			firstPID <- pid
+			<-release
+			return nil
+		})
+	}()
+	pid := <-firstPID
+
+	var secondRaised bool
+	secondDone := make(chan error, 1)
+	go func() {
+		var err error
+		secondRaised, err = e.record(ctx, t, twinDraft)
+		secondDone <- err
+	}()
+	probe, err := e.Pool.Begin(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := probe.Rollback(context.Background()); err != nil {
+			t.Errorf("releasing the probe: %v", err)
+		}
+	}()
+	waitForBackendBlockedBy(t, probe, pid, secondDone)
+	close(release)
+
+	if err := <-firstDone; err != nil {
+		t.Fatalf("the first pass: %v", err)
+	}
+	if err := <-secondDone; err != nil || secondRaised {
+		t.Fatalf("the twin recorded at the same time raised a second suggestion = %v, %v", secondRaised, err)
 	}
 }

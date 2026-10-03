@@ -172,8 +172,8 @@ func suggestionFloorTx(ctx context.Context, tx pgx.Tx, companyID ids.UUID) (*tim
 //
 // It writes nothing, without error, when the company already has an open deal
 // or an open suggestion, when this exact evidence already raised one, when an
-// open suggestion for any company already cites any of it, or when any item is
-// not newer than the company's floor.
+// open, dismissed or accepted suggestion on a company in DuplicateOf already
+// cites any of it, or when any item is not newer than the company's floor.
 func RecordSuggestionTx(ctx context.Context, tx pgx.Tx, d SuggestionDraft) (bool, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return false, err
