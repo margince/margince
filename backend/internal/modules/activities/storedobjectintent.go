@@ -30,6 +30,15 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 )
 
+// attachmentKind is the key kind the writers in this module put bytes under, and the
+// only kind this sweep can adjudicate.
+//
+// ONE spelling, because the two sides fail in opposite and silent directions: a
+// writer whose kind drifts from this filter records intents the sweep stops offering,
+// so the bytes leak where no erasure can reach them — and nothing fails, because
+// finding no orphans is what a healthy tree looks like.
+const attachmentKind = "attachment"
+
 // recordStoredObjectIntent declares a key provisional.
 //
 // It commits on its OWN transaction, and that is the whole point rather than an
@@ -96,6 +105,12 @@ type OrphanedObject struct {
 // the table alone would delete the bytes of a document somebody can still see
 // in the product.
 //
+// ONLY ATTACHMENT KEYS. The check below asks whether an `attachment` row carries the
+// key, which answers "unreferenced" for every other kind by construction — a
+// knowledge document's key has no attachment row, so without the filter this offers
+// the reaper bytes somebody can still open. A second kind needs its owning row
+// declared here before anything records it.
+//
 // `limit` bounds one pass. A sweep that could run unbounded over a large
 // backlog is one that holds a worker for as long as the backlog is deep.
 func (s *Store) ListOrphanedObjects(ctx context.Context, before time.Time, limit int) ([]OrphanedObject, error) {
@@ -108,9 +123,10 @@ func (s *Store) ListOrphanedObjects(ctx context.Context, before time.Time, limit
 			SELECT i.storage_key, i.recorded_at
 			  FROM stored_object_intent i
 			 WHERE i.recorded_at < $1
+			   AND split_part(i.storage_key, '/', 2) = $2
 			   AND NOT EXISTS (SELECT 1 FROM attachment a WHERE a.storage_key = i.storage_key)
 			 ORDER BY i.recorded_at
-			 LIMIT $2`, before, limit)
+			 LIMIT $3`, before, attachmentKind, limit)
 		if err != nil {
 			return fmt.Errorf("list provisional objects: %w", err)
 		}

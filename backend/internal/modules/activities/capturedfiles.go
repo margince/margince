@@ -114,7 +114,7 @@ func (s *Store) StageCapturedFiles(
 	staged := make([]StagedFile, 0, len(files))
 	for _, file := range files {
 		id := ids.NewV7()
-		key := blobstore.WorkspaceKey(workspace, "attachment", id.String())
+		key := blobstore.WorkspaceKey(workspace, attachmentKind, id.String())
 		sum := sha256.Sum256(file.Body)
 		// Declared provisional BEFORE the bytes exist, on its own transaction,
 		// so the declaration survives the failure of the caller's — which is
