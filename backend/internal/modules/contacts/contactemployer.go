@@ -117,22 +117,14 @@ func attachContactEmployers(ctx context.Context, tx pgx.Tx, idx map[openapi_type
 }
 
 // CurrentEmployers answers where each of these contacts works today, as this
-// caller may see it: a contact the caller may not see, or whose employer is
-// withheld from them, is absent from the map.
+// caller may see it: a contact whose employer is withheld from them is absent
+// from the map. The edge scope in employerScope covers both ends of the
+// employment, so a contact the caller may not see is withheld with it.
 func (s *Store) CurrentEmployers(ctx context.Context, contactIDs []ids.UUID) (map[ids.UUID]crmcontracts.ContactEmployer, error) {
 	var out map[ids.UUID]crmcontracts.ContactEmployer
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		visible, err := auth.VisibleSubset(ctx, tx, contactEntity, contactIDs)
-		if err != nil {
-			return err
-		}
-		readable := make([]ids.UUID, 0, len(visible))
-		for _, id := range contactIDs {
-			if visible[id] {
-				readable = append(readable, id)
-			}
-		}
-		out, err = readContactEmployers(ctx, tx, readable)
+		var err error
+		out, err = readContactEmployers(ctx, tx, contactIDs)
 		return err
 	})
 	return out, err

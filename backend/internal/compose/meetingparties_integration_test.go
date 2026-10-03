@@ -45,8 +45,8 @@ func partiesContact(t *testing.T, e *integration.Env, name string, owner ids.UUI
 	return ids.UUID(contact.Id)
 }
 
-// partiesMeeting logs a past meeting as host, linked to the given contacts in
-// order; the writer records each as a participant in that order.
+// partiesMeeting logs a past meeting as host, linked to the given contacts;
+// the writer records each as a participant.
 func partiesMeeting(t *testing.T, ctx context.Context, e *integration.Env, subject string, with ...ids.UUID) ids.UUID {
 	t.Helper()
 	at := time.Now().Add(-2 * time.Hour)
@@ -72,8 +72,8 @@ func outcomeRow(t *testing.T, queue []crmcontracts.WorklistItem, meeting ids.UUI
 	return crmcontracts.WorklistItem{}
 }
 
-// The colleague is linked FIRST, so a reading that took the first link would
-// name our own employee as the customer.
+// The colleague is linked first and sorts first by name, so a reading that took
+// either would name our own employee as the customer.
 func TestAMeetingOwedAnAnswerNamesItsCustomerTheirAccountAndItsHost(t *testing.T) {
 	e := integration.Setup(t)
 	anchor, err := e.Contacts.SaveCompany(e.Admin(), contacts.SaveCompanyInput{DisplayName: "Ourselves GmbH"})
@@ -127,17 +127,17 @@ func TestAMeetingOwedAnAnswerNamesItsCustomerTheirAccountAndItsHost(t *testing.T
 }
 
 // The counterparty is the first outside participant THIS reader may see. A
-// colleague's private customer, recorded first, is skipped for another reader
+// colleague's private customer, first by name, is skipped for another reader
 // and named for the colleague who may see them.
 func TestAMeetingNamesOnlyACustomerTheReaderMaySee(t *testing.T) {
 	e := integration.Setup(t)
-	hidden := partiesContact(t, e, "Someone Else's Buyer", e.Rep3, nil)
+	hidden := partiesContact(t, e, "Alex Private", e.Rep3, nil)
 	visibility := "owner"
 	if _, err := e.Contacts.UpdateContact(e.Admin(), ids.From[ids.ContactKind](hidden),
 		contacts.UpdateContactInput{Visibility: &visibility}); err != nil {
 		t.Fatalf("making the colleague's buyer private: %v", err)
 	}
-	visible := partiesContact(t, e, "Shared Buyer", ids.UUID{}, nil)
+	visible := partiesContact(t, e, "Blair Shared", ids.UUID{}, nil)
 	owner := e.As(e.Rep3, []ids.UUID{e.Team2}, integration.AccountRepPerms)
 	joint := partiesMeeting(t, owner, e, "Joint call", hidden, visible)
 
@@ -156,6 +156,35 @@ func TestAMeetingNamesOnlyACustomerTheReaderMaySee(t *testing.T) {
 		t.Fatalf("reading who the meeting was with, as its owner: %v", err)
 	}
 	if theirs[joint] != hidden {
-		t.Errorf("for the owner the joint call is with %v, want the first attendee %v", theirs[joint], hidden)
+		t.Errorf("for the owner the joint call is with %v, want the first attendee by name %v", theirs[joint], hidden)
+	}
+}
+
+// Where a contact works is told only about a contact the reader may see.
+func TestAContactsEmployerIsWithheldWithTheContact(t *testing.T) {
+	e := integration.Setup(t)
+	acme, err := e.Contacts.CreateCompany(e.Admin(), contacts.CreateCompanyInput{DisplayName: "Acme"})
+	if err != nil {
+		t.Fatalf("creating the company: %v", err)
+	}
+	acmeID := ids.From[ids.CompanyKind](ids.UUID(acme.Id))
+	hidden := partiesContact(t, e, "Alex Private", e.Rep3, &acmeID)
+	visibility := "owner"
+	if _, err := e.Contacts.UpdateContact(e.Admin(), ids.From[ids.ContactKind](hidden),
+		contacts.UpdateContactInput{Visibility: &visibility}); err != nil {
+		t.Fatalf("making the colleague's buyer private: %v", err)
+	}
+	visible := partiesContact(t, e, "Blair Shared", ids.UUID{}, &acmeID)
+
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
+	got, err := e.Contacts.CurrentEmployers(rep, []ids.UUID{hidden, visible})
+	if err != nil {
+		t.Fatalf("reading the employers: %v", err)
+	}
+	if got[visible].CompanyName != "Acme" {
+		t.Errorf("the shared buyer's employer = %+v, want Acme", got[visible])
+	}
+	if employer, told := got[hidden]; told {
+		t.Errorf("a contact the reader may not see is said to work at %q", employer.CompanyName)
 	}
 }

@@ -24180,7 +24180,7 @@ type AttentionItem struct {
 	// acting on one task each overwrite the other and neither is told.
 	Version *RowVersion `json:"version,omitempty"`
 
-	// WithContact Who a meeting is with: the first attendee who holds no seat here, is not
+	// WithContact Who a meeting is with: the first attendee by name who holds no seat here, is not
 	// employed by the installation's own company, and is a contact this caller may
 	// see. Sent by `source: meeting` and `source: meeting_outcome`. On a `meeting`
 	// row it is also whose record the brief is read on.

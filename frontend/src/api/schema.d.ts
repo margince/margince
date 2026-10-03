@@ -39734,7 +39734,7 @@ export interface components {
             relationship?: components["schemas"]["AttentionRelationshipFacts"];
             /**
              * Format: uuid
-             * @description Who a meeting is with: the first attendee who holds no seat here, is not
+             * @description Who a meeting is with: the first attendee by name who holds no seat here, is not
              *     employed by the installation's own company, and is a contact this caller may
              *     see. Sent by `source: meeting` and `source: meeting_outcome`. On a `meeting`
              *     row it is also whose record the brief is read on.

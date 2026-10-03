@@ -18,9 +18,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// meetingWithQuery picks, per meeting, the first participant in recorded order
-// who holds no seat and is not employed by the installation's own company: the
-// same "outside" HeldMeetingCounterparties means, without needing an employer.
+// meetingWithQuery picks, per meeting, the first participant by name who holds
+// no seat and is not employed by the installation's own company: the same
+// "outside" HeldMeetingCounterparties means, without needing an employer. By
+// name, because participant rows carry no reliable order of their own, and two
+// reads of an unchanged meeting must name the same contact.
 const meetingWithQuery = `
 	SELECT DISTINCT ON (ap.activity_id) ap.activity_id, ap.contact_id
 	  FROM activity_participant ap
@@ -32,11 +34,11 @@ const meetingWithQuery = `
 	         JOIN company co ON co.id = emp.company_id AND co.is_anchor
 	        WHERE emp.contact_id = c.id AND emp.kind = 'employment' AND emp.archived_at IS NULL
 	          AND %s)
-	 ORDER BY ap.activity_id, ap.id`
+	 ORDER BY ap.activity_id, c.full_name, c.id`
 
 // MeetingCounterparties answers who each of these meetings was with, for THIS
-// caller: the first outside participant who is a contact the caller may see. A
-// meeting with no such participant is absent from the map.
+// caller: the first outside participant, by name, who is a contact the caller
+// may see. A meeting with no such participant is absent from the map.
 //
 // Participants and not activity links: a link says what a meeting is filed
 // under, and a meeting filed under a deal or a colleague's record is still with
