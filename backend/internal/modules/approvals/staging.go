@@ -407,7 +407,7 @@ func (s *Service) insertProposalInTx(ctx context.Context, tx pgx.Tx, in StageInp
 		id, in.Kind, p.ID, nullUUID(p.OnBehalfOf), nullUUID(p.PassportID), nullUUID(p.ConnectionID),
 		nullStr(in.TargetType), nullUUID(in.TargetID), in.TargetVersion,
 		nullStr(in.CoTargetType), nullUUID(in.CoTargetID), coTargetVersion,
-		targetLabel(ctx, tx, in.TargetType, in.TargetID),
+		stagedTargetLabel(ctx, tx, in),
 		nullStr(in.Summary), in.ProposedChange, in.DiffHash, ttlFor(in.Kind, in.TTL).String(),
 		nullUUID(in.BundleID), evidence).Scan(&expiresAt); err != nil {
 		return ids.ApprovalID{}, err

@@ -209,11 +209,45 @@ describe("the receipt draws every lane it promises", () => {
     expect(screen.queryByText(/magic\.action\./)).toBeNull();
   });
 
-  it("points a waiting decision at the worklist, where it is decided", async () => {
+  it("names a proposal's kind and subject in words, never its code", async () => {
     stub(
       receipt({
         needs_you: [
           line({
+            lane: "needs_you",
+            summary: {
+              key: "magic.action.approval_pending",
+              values: { kind: "capture_counterparty" },
+            },
+          }),
+          line({
+            lane: "needs_you",
+            summary: {
+              key: "magic.action.approval_capture_counterparty",
+              values: {
+                kind: "capture_counterparty",
+                target: "Boris <boris@customer.example>",
+              },
+            },
+          }),
+        ],
+        totals: { done: 0, needs_you: 2, could_not_complete: 0, watching: 0 },
+      }),
+    );
+    renderMagic();
+    const waiting = await lane("Waiting on you");
+    expect(within(waiting).queryByText(/capture_counterparty/)).toBeNull();
+    expect(
+      within(waiting).getByText(/Boris <boris@customer\.example> wrote to you/),
+    ).toBeTruthy();
+  });
+
+  it("points a waiting decision at that decision, where it is decided", async () => {
+    stub(
+      receipt({
+        needs_you: [
+          line({
+            id: "0198a0de-0000-7000-8000-00000000d0c1",
             lane: "needs_you",
             summary: {
               key: "magic.action.approval_advance_deal",
@@ -234,7 +268,9 @@ describe("the receipt draws every lane it promises", () => {
       within(waiting).getByText("Nothing happens until you decide."),
     ).toBeTruthy();
     const decide = within(waiting).getByRole("link", { name: "Decide" });
-    expect(decide.getAttribute("href")).toBe("#/worklist");
+    expect(decide.getAttribute("href")).toBe(
+      "#/home?approval=0198a0de-0000-7000-8000-00000000d0c1",
+    );
     expect(within(waiting).queryAllByRole("button")).toEqual([]);
     expect(within(waiting).queryByText("Undo")).toBeNull();
     expect(

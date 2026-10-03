@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -428,4 +429,24 @@ func effective(chosen map[string]string) []Preference {
 //craft:ignore naked-any the audit seam takes an entity's own snapshot shape, serialized to jsonb
 func preferenceImage(class string, delivery *string) map[string]any {
 	return map[string]any{class: delivery}
+}
+
+// TargetApproval is the target type of a notice that opens a pending decision.
+const TargetApproval = "approval"
+
+// ApprovalNoticeKey names one announcement of a pending decision across every
+// seat told about it. The writer, the retraction and the centre's routing all
+// read this one spelling.
+func ApprovalNoticeKey(approvalID ids.UUID) string {
+	return KindApprovalPending + ":" + approvalID.String()
+}
+
+// approvalOfNoticeKey is the decision an approval notice announces.
+func approvalOfNoticeKey(kind, dedupeKey string) (ids.UUID, bool) {
+	rest, ok := strings.CutPrefix(dedupeKey, KindApprovalPending+":")
+	if kind != KindApprovalPending || !ok {
+		return ids.UUID{}, false
+	}
+	id, err := ids.Parse(rest)
+	return id, err == nil
 }

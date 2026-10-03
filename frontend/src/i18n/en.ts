@@ -12047,6 +12047,8 @@ export const en = {
     "An overnight proposal is waiting for your word",
   "magic.action.approval_transcript_proposal":
     "A proposal from a recording is waiting for your word",
+  "magic.action.approval_capture_counterparty":
+    "{target} wrote to you. Keep them as a contact?",
   "magic.action.approval_pending": "A {kind} proposal is waiting for your word",
   "magic.action.capture_reauth_required":
     "{provider} needs to be connected again",
