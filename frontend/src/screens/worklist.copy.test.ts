@@ -334,7 +334,9 @@ describe("reasonText — a conversation's earlier requests", () => {
       value: { kind: "date", date: "2026-09-03T14:30:00Z" },
     };
     const got = reasonText(reason, t, "en", zone);
-    expect(got).toContain("earlier requests in this conversation, the first on");
+    expect(got).toContain(
+      "earlier requests in this conversation, the first on",
+    );
   });
 });
 
