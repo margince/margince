@@ -6,18 +6,19 @@ SET LOCAL lock_timeout = '3s';
 -- ends the ones left open before that.
 --
 -- A withdrawn contact is one that is archived, was made by a connector or an
--- agent, and whose archive the audit log attributes to one of the two verdict
--- agents that retract (contacts.RetractCaptureOnlyContactTx). An archive a
--- human made is not this, and its duties stay as they are.
+-- agent, and whose CURRENT archive the audit log attributes to one of the two
+-- verdict agents that retract (contacts.RetractCaptureOnlyContactTx): its
+-- latest archive or restore entry. A verdict's archive that was restored and
+-- archived again by a human is the human's, and its duties stay as they are.
 WITH withdrawn AS (
     SELECT c.id
       FROM contact c
      WHERE c.archived_at IS NOT NULL
        AND (starts_with(c.captured_by, 'connector:') OR starts_with(c.captured_by, 'agent:'))
-       AND EXISTS (SELECT 1 FROM audit_log a
-                    WHERE a.entity_type = 'contact' AND a.entity_id = c.id AND a.action = 'archive'
-                      AND a.actor_id IN ('agent:capture_confidentiality_verdict',
-                                         'agent:capture_counterparty_verdict'))
+       AND (SELECT a.actor_id FROM audit_log a
+             WHERE a.entity_type = 'contact' AND a.entity_id = c.id AND a.action IN ('archive', 'restore')
+             ORDER BY a.occurred_at DESC, a.id DESC LIMIT 1)
+           IN ('agent:capture_confidentiality_verdict', 'agent:capture_counterparty_verdict')
 ),
 owed AS (
     SELECT n.id, n.state, n.rule, n.owner_user_id, n.blocked_reason

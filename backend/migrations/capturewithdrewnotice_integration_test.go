@@ -50,10 +50,22 @@ func TestAContactAVerdictWithdrewEndsItsNoticeDuty(t *testing.T) {
 	// was never business data, and its duty stays.
 	archivedByHand := archivedWithDuty(ctx, t, conn, "Archived by hand", "human:01a07544-e5ac-7844-8569-1f5df68e962c")
 
+	// Withdrawn by a verdict, restored, then archived again by a person: the
+	// current archive is the person's.
+	rearchived := archivedWithDuty(ctx, t, conn, "Re-archived", "agent:capture_confidentiality_verdict")
+	if _, err := conn.Exec(ctx, `
+		INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id, occurred_at)
+		SELECT 'human', 'human:01a07544-e5ac-7844-8569-1f5df68e962c', action, 'contact', n.contact_id,
+		       now() + make_interval(secs => ord)
+		  FROM privacy_notice_case n, unnest(ARRAY['restore', 'archive']) WITH ORDINALITY AS x(action, ord)
+		 WHERE n.id = $1`, rearchived); err != nil {
+		t.Fatal(err)
+	}
+
 	execFile(ctx, t, conn, captureWithdrewUp)
 	execFile(ctx, t, conn, captureWithdrewUp)
 
-	for id, want := range map[string]string{withdrawn: "exempt_with_reason", archivedByHand: "open"} {
+	for id, want := range map[string]string{withdrawn: "exempt_with_reason", archivedByHand: "open", rearchived: "open"} {
 		var state string
 		if err := conn.QueryRow(ctx, `SELECT state FROM privacy_notice_case WHERE id = $1`, id).Scan(&state); err != nil {
 			t.Fatal(err)
