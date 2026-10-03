@@ -76,21 +76,22 @@ type RecordOwner struct {
 // a new owned record type is covered the moment it exists.
 //
 // A record with no owner, or a type that has no owner at all, answers false —
-// not a zero UUID, which would read as an owner nobody can name.
-func ownerIDOf(fields json.RawMessage) (ids.UUID, bool) {
+// not a zero UUID, which would read as an owner nobody can name. Fields that
+// will not decode answer the error, so the caller says ownership went unread.
+func ownerIDOf(fields json.RawMessage) (ids.UUID, bool, error) {
 	if len(fields) == 0 {
-		return ids.UUID{}, false
+		return ids.UUID{}, false, nil
 	}
 	var envelope struct {
 		OwnerID *ids.UUID `json:"owner_id"`
 	}
 	if err := json.Unmarshal(fields, &envelope); err != nil {
-		return ids.UUID{}, false
+		return ids.UUID{}, false, err
 	}
 	if envelope.OwnerID == nil || *envelope.OwnerID == (ids.UUID{}) {
-		return ids.UUID{}, false
+		return ids.UUID{}, false, nil
 	}
-	return *envelope.OwnerID, true
+	return *envelope.OwnerID, true, nil
 }
 
 // callerSeat is the human a call is made AS: the caller themselves, or the
@@ -153,8 +154,8 @@ func attachOwners(ctx context.Context, name SeatNamer, rows []QueryWorkspaceRow)
 }
 
 const ownerNamesUnavailableDetail = "the owner of one or more of these records could not be named; " +
-	"each row still says who owns it by id and whether it is yours, " +
-	"but a missing name here does not mean the owner has left"
+	"each row whose owner could be read still says who owns it by id and whether it is yours, " +
+	"but a missing name or owner here does not mean the record is unowned or the owner has left"
 
 // recordWithOwner is a record served to a reader together with whose it is — the
 // row search_records and list_records page through and read_record answers.
@@ -186,15 +187,17 @@ func withOwners(ctx context.Context, name SeatNamer, records []wireRecord) []rec
 }
 
 // ownersOf resolves the owner of each record's fields, nil where a record has
-// none. unnamed reports a failed seat lookup, never a seat that simply did not
-// resolve: an owner who left is an ordinary answer.
+// none. unnamed reports a failed seat lookup or an owner that would not decode,
+// never a seat that simply did not resolve: an owner who left is an ordinary
+// answer.
 func ownersOf(ctx context.Context, name SeatNamer, fields []json.RawMessage) (owners []*RecordOwner, unnamed bool) {
 	owners = make([]*RecordOwner, len(fields))
 	ownerIDs := make(map[int]ids.UUID, len(fields))
 	seats := make([]ids.UUID, 0, len(fields))
 	seen := make(map[ids.UUID]bool, len(fields))
 	for i, f := range fields {
-		owner, ok := ownerIDOf(f)
+		owner, ok, err := ownerIDOf(f)
+		unnamed = unnamed || err != nil
 		if !ok {
 			continue
 		}
@@ -205,7 +208,7 @@ func ownersOf(ctx context.Context, name SeatNamer, fields []json.RawMessage) (ow
 		}
 	}
 	if len(ownerIDs) == 0 {
-		return owners, false
+		return owners, unnamed
 	}
 	named := map[ids.UUID]string{}
 	// A nil namer is not a failure and is not reported: the installation cannot
@@ -213,7 +216,7 @@ func ownersOf(ctx context.Context, name SeatNamer, fields []json.RawMessage) (ow
 	// would put the same warning on every answer it ever gives.
 	if name != nil {
 		resolved, err := name(ctx, seats)
-		unnamed = err != nil
+		unnamed = unnamed || err != nil
 		named = resolved
 	}
 	me, haveSeat := callerSeat(ctx)
