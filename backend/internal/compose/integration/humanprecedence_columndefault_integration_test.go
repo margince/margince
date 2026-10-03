@@ -5,7 +5,7 @@
 
 package integration
 
-// A column default is not something a person typed. A company created by a
+// A column default is not something a human typed. A company created by a
 // human without a lifecycle holds 'unknown' only because the column says so;
 // an agent moving it on overwrites nobody, so the write applies directly.
 
@@ -27,12 +27,12 @@ func TestAgentChangesAFieldThatStillHoldsItsColumnDefault(t *testing.T) {
 			lifecycle, approval)
 	}
 
-	// Once a person sets the field, it is theirs.
+	// Once a human sets the field, it is theirs.
 	if status := e.Call(t, "PATCH", "/v1/companies/"+companyID, AnyMap{"lifecycle": "customer"}, nil, nil); status != http.StatusOK {
 		t.Fatalf("human sets lifecycle → %d", status)
 	}
 	if _, approval := agentPatchCompany(t, e, bearer, companyID, "lifecycle", "former_customer"); approval == "" {
-		t.Error("agent overwrote a lifecycle a person set, with no approval staged")
+		t.Error("agent overwrote a lifecycle a human set, with no approval staged")
 	}
 }
 
