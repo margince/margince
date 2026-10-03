@@ -345,6 +345,7 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		// and a row planted under a guessed Message-ID would make the real
 		// message unreachable.
 		WithAssertedTakeOver(activities.TakeOverAssertedActivityTx).
+		WithOwnSentMailClaim(activities.ClaimOwnSentMailTx).
 		// The identity both ingestion doors agree on. Without it each door
 		// files under its own natural key, those keys never meet, and a
 		// customer who imports their history and THEN connects the mailbox

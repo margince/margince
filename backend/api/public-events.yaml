@@ -1940,7 +1940,8 @@ components:
         fields (subject, body, occurred_at, due_at, remind_at,
         assignee_id, is_done, meeting_status) each carried only when this update touched
         them, plus RelinkActivity's relinked target and SetActivityAudience's
-        audience, plus explicit request-reminder restoration's restored flag — a fixed, KNOWN key
+        audience, plus explicit request-reminder restoration's restored flag and
+        capture's own-sent-mail direction correction — a fixed, KNOWN key
         set (unlike contact/company/deal/lead.updated's genuinely
         open patch), so it is typed rather than an open map.
       properties:
@@ -1993,6 +1994,21 @@ components:
             field on any other kind.
         relinked:
           $ref: '#/components/schemas/PublicEventActivityRelinkedRef'
+        direction:
+          type: string
+          enum: [outbound]
+          x-enum-varnames:
+            - DirectionBecameOutbound
+          description: >-
+            Set when capture learned that a message stored as received was the
+            seat's own sent mail (absent otherwise). The counterparty changes
+            with it; a subscriber that must know re-reads the row.
+        outbound_attested:
+          type: boolean
+          description: >-
+            True when the sender's own provider filing attested the message as
+            their outbound mail, whether it was stored as received or as
+            unattested outbound (absent otherwise).
         audience:
           type: string
           enum: [workspace, participants, selected]

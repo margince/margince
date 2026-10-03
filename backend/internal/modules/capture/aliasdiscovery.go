@@ -168,5 +168,14 @@ func (s *Sink) claimDiscoveredAliasTx(ctx context.Context, tx pgx.Tx, seat ids.U
 // a caller the chance to fail a capture over a header nobody reads.
 func storableAddress(deliveredTo string) (string, bool) {
 	value, err := ValidExclusionValue(IdentityKindAddress, deliveredTo)
-	return value, err == nil
+	return value, err == nil && !IsMachineAddress(value)
+}
+
+// discoveredMachineAddress is a delivery-discovered claim that names a machine
+// sender. Discovery no longer adopts one, and every reader of the seat's
+// addresses, the settings list included, skips one adopted before. Skipped
+// rather than deleted, so the capture path never fails over bookkeeping. A
+// claim a human declared is theirs to make and is never second-guessed.
+func discoveredMachineAddress(source, value string) bool {
+	return source == IdentitySourceDeliveredTo && IsMachineAddress(bareAddress(value))
 }

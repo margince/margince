@@ -74,6 +74,9 @@ type Sink struct {
 	// an importer asserted. Nil leaves an asserted incumbent alone, which is
 	// the behaviour that predates the take-over.
 	takeOverAsserted AssertedTakeOver
+	// claimOwnSentMail corrects a colleague's earlier reading of this seat's
+	// sent mail; nil leaves the first reading standing.
+	claimOwnSentMail OwnSentMailClaim
 	// mailIdentityKind is activities.IdentityKindMail, and the two identity
 	// seams below are that module's own resolve and claim. All three are set
 	// together by WithMessageIdentity or none is: an empty kind is what
