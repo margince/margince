@@ -438,12 +438,15 @@ const TargetApproval = "approval"
 // seat told about it. The writer, the retraction and the centre's routing all
 // read this one spelling.
 func ApprovalNoticeKey(approvalID ids.UUID) string {
-	return KindApprovalPending + ":" + approvalID.String()
+	return approvalNoticePrefix + approvalID.String()
 }
 
+// approvalNoticePrefix opens every approval notice's dedupe key.
+const approvalNoticePrefix = KindApprovalPending + ":"
+
 // approvalOfNoticeKey is the decision an approval notice announces.
-func approvalOfNoticeKey(kind, dedupeKey string) (ids.UUID, bool) {
-	rest, ok := strings.CutPrefix(dedupeKey, KindApprovalPending+":")
+func approvalOfNoticeKey(kind, noticeKey string) (ids.UUID, bool) {
+	rest, ok := strings.CutPrefix(noticeKey, approvalNoticePrefix)
 	if kind != KindApprovalPending || !ok {
 		return ids.UUID{}, false
 	}
