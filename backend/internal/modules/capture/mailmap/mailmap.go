@@ -126,6 +126,10 @@ func Parse(raw []byte, owner string) (Message, error) {
 	occurredAt, _ := header.Date()
 
 	fromList, _ := header.AddressList("From")
+	groupOriginal, viaGroup := googleGroupSender(header)
+	if viaGroup {
+		fromList = groupOriginal
+	}
 	toList, _ := header.AddressList("To")
 	// A malformed Cc line yields no addresses rather than failing the message:
 	// the mail is already read off the wire, and losing the CCs is a smaller
@@ -194,7 +198,7 @@ func Parse(raw []byte, owner string) (Message, error) {
 		calendarNotice:   calendarNotice,
 		hasCalendarPart:  hasCalendarPart,
 		deliveryReport:   deliveryReport,
-		listUnsubscribe:  strings.TrimSpace(header.Get("List-Unsubscribe")) != "",
+		listUnsubscribe:  hasListUnsubscribe(header.Get("List-Unsubscribe"), viaGroup),
 		participants:     otherParties(toList, ccList, bccList, ownerLower, participantExclusion(counterparty, calendarNotice)),
 		addresses:        allAddresses(fromList, toList, ccList, bccList),
 		parts:            parts,
