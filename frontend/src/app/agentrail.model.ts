@@ -10,9 +10,11 @@ export function modelText(
   read: Readonly<{ allowed: boolean; calls: readonly AiCall[] }>,
   t: Translator,
 ): string {
-  // The model that answers, not the one that indexes search: an embedding is
-  // named only when it is all there is, and then as what it is.
-  const answering = read.calls.find((call) => call.kind !== "embedding");
+  // The model that answered, not the one that indexes search or a call that
+  // failed: an embedding is named only when it is all there is.
+  const answering = read.calls.find(
+    (call) => call.kind !== "embedding" && !call.error_sentinel,
+  );
   if (answering) {
     return `${answering.provider}/${answering.served_model}`;
   }

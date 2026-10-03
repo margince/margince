@@ -40,6 +40,20 @@ describe("modelText — which model the agent panel names", () => {
     expect(modelText({ allowed: true, calls }, t)).toBe("gemini/served");
   });
 
+  it("names the newest model that answered, past an embedding and a failure", () => {
+    const failed = {
+      ...call("completion", "anthropic", "failed"),
+      error_sentinel: "provider_unavailable",
+    };
+    const calls = [
+      failed,
+      call("embedding", "openai", "text-embedding"),
+      call("completion", "gemini", "newer"),
+      call("completion", "openai", "older"),
+    ];
+    expect(modelText({ allowed: true, calls }, t)).toBe("gemini/newer");
+  });
+
   it("names an embedding as the search index when that is all there is", () => {
     const calls = [call("embedding", "openai", "text-embedding")];
     expect(modelText({ allowed: true, calls }, t)).toBe(
