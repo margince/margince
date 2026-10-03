@@ -109,9 +109,10 @@ Drop `SCENARIO=` for the full sweep: every scenario, three runs each. Add
 
 ## 4. Know what a full sweep costs
 
-A full sweep is every scenario, three runs each: 21 use cases are 63 runs. These
-figures were measured on the seeded test world through the routes above. The
-judge's calls (Haiku, through the claude CLI by default) are not included.
+A full sweep is every scenario, three runs each: 22 use cases are 66 runs. These
+figures were measured on the seeded test world, over 21 of them, through the
+routes above. The judge's calls (Haiku, through the claude CLI by default) are
+not included.
 
 | Candidate · route | Tokens per sweep | Cost per sweep | Wall time |
 |---|---|---|---|

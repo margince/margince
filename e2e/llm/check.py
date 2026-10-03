@@ -436,6 +436,10 @@ def _called_with(calls, alternative):
     for a plain string, so both `report=activities-by-kind` and
     `group_by=["direction"]` are expressible.
 
+    `=*` asks only that the argument was sent with a value, for an id the run
+    mints itself: an approval_id a scenario cannot know but the redeeming call
+    must carry, since the same call without it stages a second proposal.
+
     A malformed alternative RAISES rather than answering no: it is a fault in
     the scenario, and reading it as an argument the answer failed to send would
     file a broken entry as a finding about the product.
@@ -451,6 +455,8 @@ def _called_with(calls, alternative):
         actual = arguments.get(argument)
         rendered = actual if isinstance(actual, str) else json.dumps(actual, separators=(",", ":"))
         seen.append(rendered)
+        if expected == "*" and actual not in (None, "", [], {}):
+            return True, seen
         if rendered == expected:
             return True, seen
     return False, seen

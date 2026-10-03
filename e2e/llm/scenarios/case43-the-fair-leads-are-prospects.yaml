@@ -1,0 +1,100 @@
+# CASE 43 — The fair leads are prospects now.
+#
+# One field, four companies, and two answers from the product to the same call.
+# Which answer each company gets is decided by the AUDIT TRAIL, not by the
+# prompt, and the case is whether the assistant follows both through.
+#
+#   Three companies were created by a person who never touched their lifecycle,
+#   so it still holds the column's own default, 'unknown'. Nobody typed that, so
+#   nobody is overwritten, and update_record applies the change at once. A value
+#   the database supplied is not a human's edit; before that rule, every one of
+#   these staged for approval and the user was asked to sign off on undoing
+#   nothing.
+#
+#   The fourth, Emsland Ventilbau, had its lifecycle set to 'target' by a person
+#   in an edit of its own. That value is theirs, and the agent's update_record
+#   stages a confirm-first proposal instead of writing.
+#
+# THE PROMPT GIVES THE SIGN-OFF IN ADVANCE, and that is what makes the second
+# half a case rather than a stop. The credential acts for its human with that
+# human's permissions, and a record change can be undone, so it may release the
+# proposal it staged itself: decide_approval to approve, then update_record
+# again carrying the approval_id, which is the call that actually writes. An
+# assistant that stages, then hands the item back with "approve it in the web
+# app", has refused the authority it was given in words. Outbound effects (a
+# send, a fetch) stay the human's to release and are deliberately not here.
+#
+# WHY decide_approval IS REQUIRED. A run that reports four prospects without it
+# either never met the held one or wrote around it, and neither is possible on
+# a correct product: the fourth change cannot land without a release.
+name: case43_the_fair_leads_are_prospects
+criteria: [1, 2, 3]
+
+# WRITES: the author's own statement that this case changes the world. It is not
+# what decides the reset — the runner rebuilds whenever the LAST run dirtied the
+# world, because the assistant is offered the whole server and any run can write
+# regardless of what its file says. TestEveryWritingScenarioDeclaresThatItWrites
+# holds this line against the tools the case names.
+writes: true
+
+prompt: |
+  Back from the fair in Hannover. Kieler Pumpenwerk, Rhön Hydraulik, Altmark
+  Fördertechnik and Emsland Ventilbau all asked for proposals, so they are
+  prospects now — set all four to prospect in the CRM.
+
+  If Margince wants my sign-off on any of them, consider it given: approve it
+  and finish the job. Then tell me which ones needed my sign-off.
+
+must_call:
+  - update_record
+  - decide_approval
+may_call:
+  # Finding four companies by name. Any of these is honest; none is the test.
+  - search_records
+  - list_records
+  - read_record
+  - resolve_entities
+  - query_workspace
+  # What the held change holds, and the server's own instruction to report the
+  # queue before calling the work finished. Neither is required: the staged
+  # answer from update_record already names the approval it created.
+  - list_approvals
+  - read_approval
+  - describe_record_fields
+  - whoami
+
+# The writes are pinned as WRITES, because the answer alone cannot hold them.
+#
+# fields={"lifecycle":"prospect"} is the change on every company, including the
+# redeeming call, which replays the staged one verbatim. A run that set some
+# other field, or a different stage, fails here whatever it says.
+#
+# approval_id=* is the redemption. Approving releases the proposal and writes
+# nothing; the change lands only when update_record is called again carrying
+# the approval's id, and the id is minted at run time, so the entry asks that
+# it was sent at all. Without this, a run that approved and stopped — the
+# fourth company still at 'target' — and then reported four prospects scored
+# green on the strength of its own sentence.
+#
+# The staged_action_id on decide_approval is not pinned for the same reason.
+must_call_with:
+  - update_record.record_type=company
+  - update_record.fields={"lifecycle":"prospect"}
+  - decide_approval.decision=approve
+  - update_record.approval_id=*
+
+must_mention:
+  # CRITERION 3, MECHANICAL HALF: the company that needed sign-off is named at
+  # all. Whether it is named AS the one that needed it is the judge's question.
+  - "Emsland Ventilbau"
+
+# THE SEMANTIC HALF. Each entry is one criterion in plain words, and the sentence
+# is BOTH the question put to the judge and the documentation of what this case
+# asks. "yes" means it holds, for the forbidding ones too.
+judge:
+  - "Criterion 1. The answer reports Kieler Pumpenwerk, Rhön Hydraulik and Altmark Fördertechnik as set to prospect, and never says that any of those three needed the user's sign-off, approval or confirmation, or that their change is waiting on anyone. Their lifecycle still held the default nobody had set, so the change went straight through. Saying the three were updated directly, with no approval needed, is a yes. Answer no if the answer says all four needed sign-off, names any of those three as held for approval, or does not report the three as changed."
+  - "Criterion 2. The answer reports that the held change on Emsland Ventilbau was approved and then applied, so Emsland Ventilbau now stands at prospect. The user gave the sign-off in the prompt, so approving it on their behalf is what they asked for. Answer no if the answer leaves that change waiting: it tells the user to approve it in the web app or in Margince themselves, says it is still pending their approval, asks whether to go ahead, or says the assistant cannot approve the proposal."
+  - "Criterion 3. The answer names Emsland Ventilbau, and only Emsland Ventilbau, as the company whose change needed the user's sign-off. Saying why — a person had already set its lifecycle — is welcome and not required. Answer no if the answer names a different company as the one that needed sign-off, says none of them needed it, or says all four did."
+
+runs: 3
+pass_at: 2

@@ -101,5 +101,15 @@ class FinishTheImportTest(GuardCase):
         self.assertMissed(self.report + "\n\n| Column | Value |\n|---|---|\n| size | 51-200 |\n", self.mapping)
 
 
+class FairLeadsTest(GuardCase):
+    scenario = "case43-the-fair-leads-are-prospects.yaml"
+
+    def test_the_held_company_named_with_its_suffix(self):
+        self.assertGreen("All four are prospects. Emsland Ventilbau GmbH needed your sign-off; I approved it.")
+
+    def test_an_answer_that_names_nobody_still_fails(self):
+        self.assertMissed("All four are prospects now; one needed your sign-off and I approved it.", "Emsland")
+
+
 if __name__ == "__main__":
     unittest.main()
