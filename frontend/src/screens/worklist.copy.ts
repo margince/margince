@@ -1,3 +1,4 @@
+import { heldText } from "./worklist.held";
 import { sourceName } from "./worklist.sources";
 
 export { sourceName } from "./worklist.sources";
@@ -404,7 +405,7 @@ export function dealFactsText(
 }
 
 // Notices retain the original change date even when delivery happens later.
-// Meetings use the reader's clock; tasks use the agreed deadline's record zone.
+// A meeting's start uses the reader's clock; a held meeting and a task, the record's.
 //
 // Today's meeting shows the CLOCK TIME and nothing else — a rep reads this at
 // their desk on the morning it matters, and "today" is the frame they are
@@ -426,6 +427,8 @@ export function whenText(
 ): string | null {
   if (item.source === "notice" && item.notice_origin)
     return formatDateTime(item.notice_origin.occurred_at, locale, viewer);
+  const held = heldText(item, t, locale, record);
+  if (held) return held;
   if (!item.due_at) {
     return item.source === "task" ? t("brief.task.undated") : null;
   }
@@ -441,14 +444,10 @@ export function whenText(
   return t(key, { when: momentText(item.due_at, locale, zone, now) });
 }
 
-// Which sentence the moment goes in — and null for a row whose `due_at` is not
-// a clock the reader is racing.
-//
-// An approval's `due_at` is when the proposal LAPSES, which is a fact about the
-// staged work rather than a deadline the rep owes; the contract says so where
-// the field is declared. Drawing it as "due" would turn "this offer goes stale"
-// into "you are late", which is the row telling the reader something untrue
-// about their own day.
+// Which sentence the moment goes in, or null for a row whose `due_at` is not a
+// clock the reader is racing. An approval's `due_at` is when the proposal
+// LAPSES (the contract says so): drawn as "due", "this offer goes stale" would
+// read as "you are late", which is untrue about the reader's own day.
 function whenKeyFor(
   item: WorklistItem,
 ): "worklist.when.starts" | "worklist.when.due" | null {

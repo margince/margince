@@ -11257,6 +11257,7 @@ export const vi = {
   // giờ mở trình soạn thảo nên không cần tách "ngay bây giờ" như trên.
   "worklist.verb.open_meeting_brief": "Chuẩn bị cho cuộc họp",
   "worklist.deal.closes": "chốt {date}",
+  "worklist.when.held": "đã diễn ra {when}",
   "worklist.when.starts": "bắt đầu {when}",
   "worklist.when.due": "đến hạn {when}",
   "worklist.batch.system_incident_one": "{cause} đã lỗi {count} lần",
