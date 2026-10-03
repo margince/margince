@@ -11067,6 +11067,7 @@ export const vi = {
   "worklist.because.routine": "dọn dẹp thường lệ",
   "worklist.because.repeated_failure": "cùng một lỗi lặp lại nhiều lần",
   "worklist.because.legal_deadline": "thời hạn pháp lý đang chạy",
+  "worklist.because.opened_overdue": "được ghi nhận sau thời hạn, từ dữ liệu đã nhập",
   "worklist.because.meeting_soon": "sắp bắt đầu",
   "worklist.because.meeting_unprepared": "chưa chuẩn bị gì",
   "worklist.because.outcome_unrecorded": "chưa ghi nhận kết quả",
@@ -11139,7 +11140,7 @@ export const vi = {
   "noticeDuty.askConfirm": "Đề nghị họ xác nhận thông tin",
   "noticeDuty.end": "Kết thúc nghĩa vụ…",
   "noticeDuty.sent":
-    "Đã gửi tới {address}. Nghĩa vụ hoàn tất khi thư được gửi đi.",
+    "Đã gửi tới {address}. Mục này rời khỏi danh sách của bạn và sẽ quay lại nếu thư bị trả lại.",
   "noticeDuty.notSent":
     "Chưa gửi: hệ thống này không thể gửi thư tới {address}.",
   "noticeDuty.ended": "Nghĩa vụ đã kết thúc, lý do của bạn đã được lưu.",

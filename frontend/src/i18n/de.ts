@@ -11149,6 +11149,7 @@ export const de = {
   "worklist.because.routine": "Routinebereinigung",
   "worklist.because.repeated_failure": "wiederholter Fehler",
   "worklist.because.legal_deadline": "gesetzliche Frist läuft",
+  "worklist.because.opened_overdue": "erst nach Fristablauf erfasst, aus importiertem Bestand",
   "worklist.because.meeting_soon": "beginnt bald",
   "worklist.because.meeting_unprepared": "nichts vorbereitet",
   "worklist.because.outcome_unrecorded": "kein Ergebnis erfasst",
@@ -11231,7 +11232,7 @@ export const de = {
   "noticeDuty.askConfirm": "Bestätigung der Daten anfragen",
   "noticeDuty.end": "Pflicht beenden…",
   "noticeDuty.sent":
-    "An {address} gesendet. Die Pflicht ist erfüllt, sobald die Nachricht verschickt ist.",
+    "An {address} gesendet. Sie verschwindet jetzt von Ihrer Liste und kommt zurück, falls sie nicht zugestellt wird.",
   "noticeDuty.notSent":
     "Nicht gesendet: Diese Installation kann keine E-Mail an {address} senden.",
   "noticeDuty.ended":

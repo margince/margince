@@ -187,6 +187,12 @@ func classifyIntroduction(item crmcontracts.AttentionItem, asOf time.Time) ranke
 	}
 }
 
+// openedOverdue is a disclosure duty recorded after it fell due.
+func openedOverdue(item crmcontracts.AttentionItem) bool {
+	return item.Source == sourceNoticeCase && item.OccurredAt != nil && item.DueAt != nil &&
+		item.OccurredAt.After(*item.DueAt)
+}
+
 // classifyLegalDeadline ranks both compliance clocks by the same deadline.
 // Subject requests remain unassigned; disclosure duties carry the responsible
 // officer, falling back to their contact owner. Ownerless duties remain
@@ -197,9 +203,17 @@ func classifyLegalDeadline(item crmcontracts.AttentionItem, asOf time.Time) rank
 	if item.DueAt != nil && item.DueAt.Sub(asOf) <= 7*24*time.Hour {
 		level = levelWaiting
 	}
+	because := []crmcontracts.WorklistReason{reason("legal_deadline", nil)}
+	// A duty recorded after its own deadline came from imported history: it is
+	// owed, and reviewed as a backlog rather than ranked as today's breach. The
+	// deadline itself is unchanged. A duty that fell due while recorded stays urgent.
+	if openedOverdue(item) {
+		level = levelRoutine
+		because = append(because, reason("opened_overdue", nil))
+	}
 	row := base(item, level, "system", "legal_deadline_missed")
 	stampDeadline(&row, item.DueAt, asOf)
-	row.Because = []crmcontracts.WorklistReason{reason("legal_deadline", nil)}
+	row.Because = because
 	return ranked{
 		ownerRef:   ownerFromAssignee(item.AssigneeId),
 		owner:      assigneeID(item.AssigneeId),

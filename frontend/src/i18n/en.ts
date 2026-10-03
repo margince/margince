@@ -11302,6 +11302,7 @@ export const en = {
   "worklist.because.routine": "routine cleanup",
   "worklist.because.repeated_failure": "repeated failure",
   "worklist.because.legal_deadline": "legal deadline running",
+  "worklist.because.opened_overdue": "recorded after its deadline, from imported history",
   "worklist.because.meeting_soon": "starting soon",
   "worklist.because.meeting_unprepared": "nothing prepared",
   "worklist.because.outcome_unrecorded": "no outcome recorded",
@@ -11377,7 +11378,7 @@ export const en = {
   "noticeDuty.askConfirm": "Ask them to confirm their details",
   "noticeDuty.end": "End the duty…",
   "noticeDuty.sent":
-    "Sent to {address}. The duty is discharged once it goes out.",
+    "Sent to {address}. It leaves your list now and comes back if it bounces.",
   "noticeDuty.notSent":
     "Not sent: this installation cannot send mail to {address}.",
   "noticeDuty.ended": "The duty is ended, with your ground on record.",
