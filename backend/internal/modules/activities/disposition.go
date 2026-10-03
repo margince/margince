@@ -289,6 +289,15 @@ func (s *Store) ClearMessageDisposition(ctx context.Context, id ids.ActivityID) 
 	})
 }
 
+// replaceReaderState is the upsert arm for the judgement a reader just made.
+const replaceReaderState = `DO UPDATE
+   SET state = EXCLUDED.state,
+       snoozed_until = EXCLUDED.snoozed_until,
+       reopen_on = EXCLUDED.reopen_on,
+       reopen_ref = EXCLUDED.reopen_ref,
+       set_by = EXCLUDED.set_by,
+       set_at = EXCLUDED.set_at`
+
 // setReaderState writes one reader's own judgement about one message.
 func (s *Store) setReaderState(
 	ctx context.Context, id ids.ActivityID, state string, until *time.Time,
@@ -326,26 +335,29 @@ func (s *Store) setReaderState(
 		// instants makes every seeded reply look older than the snooze, which
 		// is a snooze that never lifts.
 		setAt := s.now().UTC()
-		write := func(message ids.ActivityID) error {
-			if _, err := tx.Exec(ctx, `
+		// The card's own judgement replaces whatever it held. An earlier request
+		// keeps a judgement the reader already made on it, so undoing the card
+		// can never erase one: it only gains a state where it had none.
+		write := func(message ids.ActivityID, onConflict string) error {
+			tag, err := tx.Exec(ctx, `
 				INSERT INTO activity_reader_state (activity_id, reader_id, state, snoozed_until, reopen_on, reopen_ref, set_by, set_at)
 				VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-				ON CONFLICT (activity_id, reader_id) DO UPDATE
-				   SET state = EXCLUDED.state,
-				       snoozed_until = EXCLUDED.snoozed_until,
-				       reopen_on = EXCLUDED.reopen_on,
-				       reopen_ref = EXCLUDED.reopen_ref,
-				       set_by = EXCLUDED.set_by,
-				       set_at = EXCLUDED.set_at`,
-				message, reader, state, until, storedOn, ref, capturedBy, setAt); err != nil {
+				ON CONFLICT (activity_id, reader_id) `+onConflict,
+				message, reader, state, until, storedOn, ref, capturedBy, setAt)
+			if err != nil {
 				return fmt.Errorf("activities: setting the message aside: %w", err)
+			}
+			if tag.RowsAffected() == 0 {
+				return nil
 			}
 			return s.recordDisposition(ctx, tx, message, state, until, on)
 		}
-		if err := write(id); err != nil {
+		if err := write(id, replaceReaderState); err != nil {
 			return err
 		}
-		return s.setOnEarlierRequests(ctx, tx, id, write)
+		return s.setOnEarlierRequests(ctx, tx, id, func(earlier ids.ActivityID) error {
+			return write(earlier, "DO NOTHING")
+		})
 	})
 }
 

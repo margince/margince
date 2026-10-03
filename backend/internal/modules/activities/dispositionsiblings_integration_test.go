@@ -59,3 +59,28 @@ func TestSettingACardAsideReachesItsEarlierRequests(t *testing.T) {
 		}
 	}
 }
+
+// A judgement the reader already made on an earlier request survives setting
+// the card aside and undoing it: the card only fills in where there was none.
+func TestACardNeverOverwritesAnEarlierJudgement(t *testing.T) {
+	e := setupLoad(t)
+	asks := requestsInOneConversation(t, e)
+	rep, store := e.asSeat(e.rep), storeKnowing(e)
+	if err := store.SetMessageNotMine(rep, ids.From[ids.ActivityKind](asks[0])); err != nil {
+		t.Fatalf("judging the first request on its own: %v", err)
+	}
+	card := ids.From[ids.ActivityKind](asks[2])
+	if err := store.SetMessageNotMine(rep, card); err != nil {
+		t.Fatalf("setting the card aside: %v", err)
+	}
+	if err := store.ClearMessageDisposition(rep, card); err != nil {
+		t.Fatalf("undoing: %v", err)
+	}
+	waiting := e.waitingAt(rep, t, requestInstant.Add(4*time.Hour))
+	if waiting[asks[0]] {
+		t.Error("undoing the card erased the reader's own earlier judgement")
+	}
+	if !waiting[asks[1]] {
+		t.Error("the request the card set aside did not come back")
+	}
+}

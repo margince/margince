@@ -18373,6 +18373,7 @@ const (
 	WorklistReasonKindDueToday           WorklistReasonKind = "due_today"
 	WorklistReasonKindEarlierRequests    WorklistReasonKind = "earlier_requests"
 	WorklistReasonKindExpectedRevenue    WorklistReasonKind = "expected_revenue"
+	WorklistReasonKindFirstAsked         WorklistReasonKind = "first_asked"
 	WorklistReasonKindLegalDeadline      WorklistReasonKind = "legal_deadline"
 	WorklistReasonKindMaterial           WorklistReasonKind = "material"
 	WorklistReasonKindMeetingSoon        WorklistReasonKind = "meeting_soon"
@@ -18416,6 +18417,8 @@ func (e WorklistReasonKind) Valid() bool {
 	case WorklistReasonKindEarlierRequests:
 		return true
 	case WorklistReasonKindExpectedRevenue:
+		return true
+	case WorklistReasonKindFirstAsked:
 		return true
 	case WorklistReasonKindLegalDeadline:
 		return true
@@ -18480,6 +18483,7 @@ func (e WorklistSourceUnavailableReason) Valid() bool {
 
 // Defines values for WorklistValueKind.
 const (
+	WorklistValueKindCount WorklistValueKind = "count"
 	WorklistValueKindDate  WorklistValueKind = "date"
 	WorklistValueKindDays  WorklistValueKind = "days"
 	WorklistValueKindLevel WorklistValueKind = "level"
@@ -18491,6 +18495,8 @@ const (
 // Valid indicates whether the value is a known member of the WorklistValueKind enum.
 func (e WorklistValueKind) Valid() bool {
 	switch e {
+	case WorklistValueKindCount:
+		return true
 	case WorklistValueKindDate:
 		return true
 	case WorklistValueKindDays:
@@ -46749,6 +46755,8 @@ type WorklistSummary struct {
 // rather than pre-formatted because the reader's language and notation are the
 // client's to apply.
 type WorklistValue struct {
+	// Count How many of something, such as earlier requests folded into one card.
+	Count    *int              `json:"count,omitempty"`
 	Currency *string           `json:"currency,omitempty"`
 	Date     *time.Time        `json:"date,omitempty"`
 	Days     *int              `json:"days,omitempty"`

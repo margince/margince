@@ -41,6 +41,14 @@ func TestAConversationsRequestsAreOneCard(t *testing.T) {
 	if kept[1].ActivityID != elsewhere.ActivityID || kept[1].EarlierRequests != 0 {
 		t.Errorf("another conversation's request was folded: %+v", kept[1])
 	}
+
+	// One thread key, another medium or provider: a different conversation.
+	mail, chat, otherProvider := ask("t9", 0), ask("t9", 1), ask("t9", 2)
+	mail.Kind, chat.Kind, otherProvider.Kind = "email", "message", "email"
+	mail.ChannelProvider, chat.ChannelProvider, otherProvider.ChannelProvider = "gmail", "gmail", "graph"
+	if got := keepWaitingCustomers([]activities.WaitingReply{mail, chat, otherProvider}); len(got) != 3 {
+		t.Errorf("three conversations sharing a thread key folded into %d cards", len(got))
+	}
 }
 
 // The lane folds each scan page and then the pages together, so two cards of

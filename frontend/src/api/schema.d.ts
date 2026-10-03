@@ -41538,7 +41538,7 @@ export interface components {
              * @description Which fact this is. The client writes the phrase.
              * @enum {string}
              */
-            kind: "pinned" | "buyer_wrote_last" | "waiting_days" | "overdue" | "due_today" | "closing_soon" | "expected_revenue" | "material" | "below_material" | "quiet_days" | "no_champion" | "promised" | "approved_and_failed" | "blocks_customer_work" | "routine" | "repeated_failure" | "legal_deadline" | "opened_overdue" | "earlier_requests" | "meeting_soon" | "meeting_unprepared" | "response_overdue" | "response_due_soon" | "unassigned" | "stale" | "no_reply_history" | "asks_nothing" | "addressed_elsewhere" | "outcome_unrecorded";
+            kind: "pinned" | "buyer_wrote_last" | "waiting_days" | "overdue" | "due_today" | "closing_soon" | "expected_revenue" | "material" | "below_material" | "quiet_days" | "no_champion" | "promised" | "approved_and_failed" | "blocks_customer_work" | "routine" | "repeated_failure" | "legal_deadline" | "opened_overdue" | "earlier_requests" | "first_asked" | "meeting_soon" | "meeting_unprepared" | "response_overdue" | "response_due_soon" | "unassigned" | "stale" | "no_reply_history" | "asks_nothing" | "addressed_elsewhere" | "outcome_unrecorded";
             value?: components["schemas"]["WorklistValue"];
         };
         /**
@@ -41571,7 +41571,7 @@ export interface components {
          */
         WorklistValue: {
             /** @enum {string} */
-            kind: "date" | "money" | "days" | "level" | "score" | "none";
+            kind: "date" | "money" | "days" | "level" | "score" | "count" | "none";
             /** Format: date-time */
             date?: string;
             /**
@@ -41581,6 +41581,8 @@ export interface components {
             minor?: number;
             currency?: string;
             days?: number;
+            /** @description How many of something, such as earlier requests folded into one card. */
+            count?: number;
             level?: number;
             /**
              * @description A ranking judgement between 0 and 1 — today, the overnight brief's composite

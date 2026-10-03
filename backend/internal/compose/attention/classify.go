@@ -188,14 +188,16 @@ func classifyIntroduction(item crmcontracts.AttentionItem, asOf time.Time) ranke
 }
 
 // earlierRequests is the evidence a conversation card carries for the requests
-// folded into it, dated from the first, or nothing for a single message.
+// folded into it: how many, and when the first arrived. Nothing for a single
+// message.
 func earlierRequests(waiting WaitingCustomer) []crmcontracts.WorklistReason {
 	if waiting.EarlierRequests == 0 {
 		return nil
 	}
-	first := waiting.FirstAskedAt
+	count, first := waiting.EarlierRequests, waiting.FirstAskedAt
 	return []crmcontracts.WorklistReason{
-		reason("earlier_requests", &crmcontracts.WorklistValue{Kind: "date", Date: &first}),
+		reason("earlier_requests", &crmcontracts.WorklistValue{Kind: "count", Count: &count}),
+		reason("first_asked", &crmcontracts.WorklistValue{Kind: "date", Date: &first}),
 	}
 }
 

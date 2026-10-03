@@ -32,7 +32,7 @@ func earlierRequestsOnCard(ctx context.Context, tx pgx.Tx, card ids.ActivityID) 
 		SELECT a.id FROM activity a
 		  JOIN activity card ON card.id = $%[1]d AND card.owed_verdict = '`+OwedVerdictAsksUs+`'
 		 WHERE a.archived_at IS NULL AND a.thread_key = card.thread_key AND a.kind = card.kind
-		   AND a.channel_provider IS NOT DISTINCT FROM card.channel_provider
+		   AND coalesce(a.channel_provider, '') = coalesce(card.channel_provider, '')
 		   AND (a.occurred_at, a.id) < (card.occurred_at, card.id)
 		   AND a.owed_verdict = '`+OwedVerdictAsksUs+`'
 		   AND `+requestOpenSQL+`
@@ -60,9 +60,11 @@ func (s *Store) setOnEarlierRequests(
 	return nil
 }
 
-// sameAct is the reader's judgements written with the card's own, by set_at:
-// undoing the card takes back exactly what that press set aside, and nothing
-// the reader judged on its own before or after.
+// sameAct is the reader's judgements written with the card's own: the same
+// conversation, sent before the card, set in the same instant. Found by that
+// and not by whether the requests are still open, so a request settled since
+// the press still has the press taken back. Undo then deletes only rows that
+// still carry that instant, so a judgement made since is kept.
 func sameAct(ctx context.Context, tx pgx.Tx, card ids.ActivityID, reader ids.UUID) ([]ids.ActivityID, time.Time, error) {
 	var at time.Time
 	err := tx.QueryRow(ctx, `SELECT set_at FROM activity_reader_state WHERE activity_id = $1 AND reader_id = $2`,
@@ -73,12 +75,14 @@ func sameAct(ctx context.Context, tx pgx.Tx, card ids.ActivityID, reader ids.UUI
 	if err != nil {
 		return nil, time.Time{}, fmt.Errorf("activities: reading when the card was set aside: %w", err)
 	}
-	earlier, err := earlierRequestsOnCard(ctx, tx, card)
-	if err != nil || len(earlier) == 0 {
-		return nil, at, err
-	}
-	rows, err := tx.Query(ctx, `SELECT activity_id FROM activity_reader_state
-		 WHERE reader_id = $1 AND set_at = $2 AND activity_id = ANY($3)`, reader, at, earlier)
+	rows, err := tx.Query(ctx, `
+		SELECT state.activity_id FROM activity_reader_state state
+		  JOIN activity a ON a.id = state.activity_id AND a.archived_at IS NULL
+		  JOIN activity card ON card.id = $3
+		 WHERE state.reader_id = $1 AND state.set_at = $2 AND state.activity_id <> card.id
+		   AND a.thread_key = card.thread_key AND a.kind = card.kind
+		   AND coalesce(a.channel_provider, '') = coalesce(card.channel_provider, '')
+		   AND (a.occurred_at, a.id) < (card.occurred_at, card.id)`, reader, at, card)
 	if err != nil {
 		return nil, at, fmt.Errorf("activities: reading what the card set aside with it: %w", err)
 	}

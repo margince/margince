@@ -11309,9 +11309,13 @@ export const en = {
   "worklist.because.blocks_customer_work": "customer waiting on this",
   "worklist.because.routine": "routine cleanup",
   "worklist.because.repeated_failure": "repeated failure",
-  "worklist.because.earlier_requests": "earlier requests in this conversation",
-  "worklist.because.earlier_requests.value":
-    "earlier requests in this conversation, the first on {value}",
+  "worklist.because.earlier_requests": "earlier requests in this thread",
+  "worklist.because.earlier_requests.value_one":
+    "{value} earlier request in this thread",
+  "worklist.because.earlier_requests.value_other":
+    "{value} earlier requests in this thread",
+  "worklist.because.first_asked": "asked earlier",
+  "worklist.because.first_asked.value": "first asked {value}",
   "worklist.because.legal_deadline": "legal deadline running",
   "worklist.because.opened_overdue":
     "recorded after its deadline, from imported history",

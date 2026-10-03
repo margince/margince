@@ -11074,9 +11074,13 @@ export const vi = {
   "worklist.because.routine": "dọn dẹp thường lệ",
   "worklist.because.repeated_failure": "cùng một lỗi lặp lại nhiều lần",
   "worklist.because.earlier_requests":
-    "các yêu cầu trước đó trong cuộc trao đổi này",
-  "worklist.because.earlier_requests.value":
-    "các yêu cầu trước đó trong cuộc trao đổi này, yêu cầu đầu tiên vào {value}",
+    "các yêu cầu trước đó trong luồng thư này",
+  "worklist.because.earlier_requests.value_one":
+    "{value} yêu cầu trước đó trong luồng thư này",
+  "worklist.because.earlier_requests.value_other":
+    "{value} yêu cầu trước đó trong luồng thư này",
+  "worklist.because.first_asked": "đã hỏi trước đó",
+  "worklist.because.first_asked.value": "hỏi lần đầu vào {value}",
   "worklist.because.legal_deadline": "thời hạn pháp lý đang chạy",
   "worklist.because.opened_overdue":
     "được ghi nhận sau thời hạn, từ dữ liệu đã nhập",
