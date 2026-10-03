@@ -35,9 +35,9 @@ import (
 )
 
 // dateColumnLine matches one `date`-typed column in the head catalog, e.g.
-// `public.deal.expected_close_date date gen=- def=-`. Anchored on the type
-// standing alone so `timestamp with time zone` never matches.
-var dateColumnLine = regexp.MustCompile(`^public\.([a-z_]+)\.([a-z_0-9]+) date(?: NOT NULL)? `)
+// `public.deal.expected_close_date date gen=- def=-`, a `date[]` included.
+// Anchored on the type standing alone so `timestamp with time zone` never matches.
+var dateColumnLine = regexp.MustCompile(`^public\.([a-z_0-9]+)\.([a-z_0-9]+) date(?:\[\])?(?: NOT NULL)? `)
 
 // tablesUndoReads are the tables whose field images reach the undo path's
 // comparison: compose/undoability.go's undoableRecordTypes, plus the edge type
