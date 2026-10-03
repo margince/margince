@@ -170,11 +170,9 @@ const VALUED_REASONS = {
   expected_revenue: true,
   material: true,
   below_material: true,
-  // The lead's own deadline, which is a MOMENT rather than a figure: valueText
-  // renders a date value in the reader's locale and zone, so the sentence says
-  // when without this file composing one.
+  // MOMENTS rather than figures (a lead's deadline, a conversation's first
+  // request): valueText renders a date in the reader's locale and zone.
   response_due_soon: true,
-  // When the conversation's first request arrived, as a date.
   earlier_requests: true,
 } as const;
 
