@@ -29,6 +29,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -79,7 +80,11 @@ func scoutPass(ctx context.Context, tx pgx.Tx, now time.Time, companyCap int) (D
 	}
 	for _, company := range byCompany(items) {
 		pass.Considered++
-		raised, err := deals.RecordSuggestionTx(ctx, tx, draftSuggestion(company))
+		draft := draftSuggestion(company)
+		if draft.DuplicateOf, err = contacts.OpenDuplicateCompaniesTx(ctx, tx, draft.CompanyID); err != nil {
+			return pass, err
+		}
+		raised, err := deals.RecordSuggestionTx(ctx, tx, draft)
 		if err != nil {
 			return pass, err
 		}
