@@ -34,12 +34,9 @@ export const KNOWN_REASONS = {
   routine: true,
   repeated_failure: true,
   legal_deadline: true,
-<<<<<<< HEAD
   earlier_requests: true,
   first_asked: true,
-=======
   no_next_step: true,
->>>>>>> 8d8caeae6 (fix(worklist): a deal at risk says when nothing is planned to move it)
   opened_overdue: true,
   meeting_soon: true,
   meeting_unprepared: true,
