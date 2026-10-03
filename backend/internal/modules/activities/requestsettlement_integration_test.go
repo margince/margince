@@ -424,3 +424,23 @@ func TestASettlementPassJudgesTheNewestRequestFirst(t *testing.T) {
 		t.Fatalf("a pass with room for one judged %v, want the current request %v", rows, current)
 	}
 }
+
+// A fresh reply to an old request is judged before an older reply to a newer
+// one: the order follows the answer, so a request a human still holds is not
+// starved behind newer asks.
+func TestAFreshReplyToAnOldRequestIsJudgedFirst(t *testing.T) {
+	e := setupLoad(t)
+	old := seedEmailRequest(t, e, "Old ask a rep still holds", "commitment", OwedVerdictAsksUs)
+	e.exec(t, `UPDATE activity SET occurred_at = $2 WHERE id = $1`, old, requestInstant.AddDate(0, 0, -120))
+	current := seedEmailRequest(t, e, "Current ask", "commitment", OwedVerdictAsksUs)
+	replyTo(t, e, current, "Sent you the slots.", requestInstant.Add(time.Hour))
+	replyTo(t, e, old, "Finally, here it is.", requestInstant.Add(2*time.Hour))
+
+	rows, err := storeKnowing(e).RepliedRequests(asClassifier(e), requestInstant.Add(48*time.Hour), 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 || rows[0].RequestID != old {
+		t.Fatalf("a pass with room for one judged %v, want the request answered last %v", rows, old)
+	}
+}
