@@ -9,7 +9,9 @@ package agents
 var queryWorkspaceCopy = toolCopy{
 	Purpose: "Answer a question that has STRUCTURE — a record type, conditions on its fields, a " +
 		"hop to a related record, or a likeness to describe — by sending a plan and reading back " +
-		"the records that satisfy it, together with what kind of answer it is.",
+		"the records that satisfy it, together with what kind of answer it is. It also finds " +
+		"where records are: an address is filtered by its city (address.city) or by distance " +
+		"(within_radius).",
 	Limits: "Every name in a plan comes from the published vocabulary; one outside it is refused " +
 		"by name. The margince://schema/query resource — not this description — says which " +
 		"record types, fields, operators and relationships can be asked about. At most one " +

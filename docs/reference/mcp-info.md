@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 81 |
 | Resources | 11 |
-| Tool catalog | 241.5 KB |
+| Tool catalog | 242.5 KB |
 | Resource catalog | 4.1 KB |
-| Approx. wire tokens | 62862 |
+| Approx. wire tokens | 63132 |
 | Largest tool | `prep_for_meeting` (9.0 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -30,10 +30,10 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 107.5 KB | 44% | **No** — a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 61.4 KB | 25% | Yes, every step |
-| Input schemas | 55.7 KB | 23% | Yes, every step |
-| _Names, annotations, punctuation_ | 16.9 KB | 7% | Partly |
-| **Description + input schema** | **117.1 KB** | **48%** | **the recurring cost** |
+| Descriptions (incl. governance clause) | 62.4 KB | 25% | Yes, every step |
+| Input schemas | 55.7 KB | 22% | Yes, every step |
+| _Names, annotations, punctuation_ | 16.9 KB | 6% | Partly |
+| **Description + input schema** | **118.1 KB** | **48%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -64,7 +64,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | Tool | What it is for | Read-only | View | Size |
 |---|---|:-:|---|---:|
 | [`advance_deal`](#advance_deal) | Advance a deal to a stage |  |  | 3.1 KB |
-| [`advance_project_phase`](#advance_project_phase) | Move a project to a phase |  |  | 2.5 KB |
+| [`advance_project_phase`](#advance_project_phase) | Move a project to a phase |  |  | 2.8 KB |
 | [`annotate_brief`](#annotate_brief) | Write findings onto the morning brief |  |  | 2.9 KB |
 | [`apply_tag`](#apply_tag) | Apply a tag to a record |  |  | 2.2 KB |
 | [`archive_record`](#archive_record) | Archive a record |  |  | 2.3 KB |
@@ -76,8 +76,8 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 2.6 KB |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 2.0 KB |
 | [`company_coverage`](#company_coverage) | Relationship coverage on a deal | yes |  | 3.2 KB |
-| [`compose_analytics_report`](#compose_analytics_report) | Compose an analytics report | yes |  | 4.1 KB |
-| [`create_record`](#create_record) | Create a record |  |  | 3.6 KB |
+| [`compose_analytics_report`](#compose_analytics_report) | Compose an analytics report | yes |  | 4.2 KB |
+| [`create_record`](#create_record) | Create a record |  |  | 3.9 KB |
 | [`create_tag`](#create_tag) | Create a tag |  |  | 1.9 KB |
 | [`create_task`](#create_task) | Create a task |  |  | 2.2 KB |
 | [`data_coverage`](#data_coverage) | How current the sources are | yes |  | 2.0 KB |
@@ -116,7 +116,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`progress_deal`](#progress_deal) | Progress a deal with a note |  |  | 3.4 KB |
 | [`promote_lead`](#promote_lead) | Promote a lead to a contact |  |  | 2.6 KB |
 | [`qualify_lead`](#qualify_lead) | Qualify a lead |  |  | 2.4 KB |
-| [`query_workspace`](#query_workspace) | Query the workspace | yes |  | 4.0 KB |
+| [`query_workspace`](#query_workspace) | Query the workspace | yes |  | 4.1 KB |
 | [`read_approval`](#read_approval) | Read one staged action in full | yes |  | 2.4 KB |
 | [`read_brief`](#read_brief) | Read the morning brief | yes | [`ui://margince/company-brief.html`](#company_brief_view) | 3.2 KB |
 | [`read_import_report`](#read_import_report) | Read an import report | yes |  | 2.9 KB |
@@ -131,7 +131,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`remove_tag`](#remove_tag) | Take a tag off a record |  |  | 1.9 KB |
 | [`resolve_entities`](#resolve_entities) | Resolve contacts and companies | yes |  | 3.5 KB |
 | [`review_commitments`](#review_commitments) | Review open commitments | yes | [`ui://margince/commitments.html`](#commitments_view) | 3.4 KB |
-| [`run_analytics_query`](#run_analytics_query) | Run an analytics query | yes |  | 3.2 KB |
+| [`run_analytics_query`](#run_analytics_query) | Run an analytics query | yes |  | 3.3 KB |
 | [`run_report`](#run_report) | Run a report | yes |  | 5.4 KB |
 | [`search_context`](#search_context) | Search for relevant material | yes |  | 3.1 KB |
 | [`search_records`](#search_records) | Search records | yes |  | 2.8 KB |
@@ -513,7 +513,7 @@ Move a deal to a different stage of its pipeline. The stage is named by id from 
 
 **Move a project to a phase**
 
-Move a project to another phase — initiative, pursuing, delivering, closed. The four names are fixed but the order is not enforced: a project may go back a phase, and a closed one may be reopened. Closing requires a reason, which is recorded on the phase history either way. Use advance_deal for a deal's pipeline stages; a project's phases are a different vocabulary on a different record. Send if_version with the version you read. By default the phase moves when this call answers. Where an installation has raised this verb to confirm first, the answer is a staged approval and the phase has NOT moved — keep its id and do not report the project as advanced until the retry that carries the approval has answered. (Governance: runs immediately; requires passport scope "write".)
+Move a project to another phase — initiative, pursuing, delivering, closed. The four names are fixed but the order is not enforced: a project may go back a phase, and a closed one may be reopened. Closing requires a reason, which is recorded on the phase history either way. Closing does not complete, cancel or hide anything open on the project: its tasks and commitments stay open on their own records. When the user has asked for the close, report what is still open and close — an open commitment is something to tell them, not a reason to hold back a close they asked for. Use advance_deal for a deal's pipeline stages; a project's phases are a different vocabulary on a different record. Send if_version with the version you read. By default the phase moves when this call answers. Where an installation has raised this verb to confirm first, the answer is a staged approval and the phase has NOT moved — keep its id and do not report the project as advanced until the retry that carries the approval has answered. (Governance: runs immediately; requires passport scope "write".)
 
 <details><summary>Input schema</summary>
 
@@ -2610,7 +2610,7 @@ Find candidate times for a host without booking or sending anything. Set reliabl
 
 **Commit an import**
 
-Write a checked import into the workspace. The dry run is the check; this commits when it answers. Only from awaiting_approval, the state a run reaches by producing a dry-run report, so there is always a report first. This cannot be undone from here — undoing an import needs the web app — so show the counts to whoever asked for the file unless they have already been through it and asked for it to be loaded. read_import_report first: numbers nobody read are not a check. (Governance: runs immediately; requires passport scope "write".)
+Write a checked import into the workspace. The dry run is the check; this commits when it answers. Only from awaiting_approval, the state a run reaches by producing a dry-run report, so there is always a report first. This cannot be undone from here — undoing an import needs the web app. A request to get a file in is not a review of it: unless the asker says they have already been through these rows, show the counts and the mapping and wait for their go-ahead. read_import_report first: numbers nobody read are not a check. (Governance: runs immediately; requires passport scope "write".)
 
 <details><summary>Input schema</summary>
 
@@ -3005,7 +3005,7 @@ Answer "is this deal covered?": which roles at the company we have a relationshi
 
 **Compose an analytics report**
 
-WRITE a DOCUMENT somebody keeps and reads — a board-pack section, a summary for a meeting — whose numbers come from governed queries, standard metrics or frozen editions instead of being typed. Not for answering with a figure: a number in the reply is run_analytics_query's or run_report's. The document carries the STRUCTURE and the WORDS; each figure names a query cell, metric_ref or edition_ref, and the server resolves those handles under the reader's own authority. It writes no number of its own and refuses any document that does. A block carrying a literal figure is refused EVEN WHEN a valid handle sits beside it: the literal is what renders, the two can disagree, and no reader could tell the page shows a figure the database never computed. Preserve returned coverage, units and capture context. For a query cell, run an analytics query with save, and cite the run id it answers with. Ask run_analytics_query for one number when a figure is what is wanted. This composes a DOCUMENT of several, which is worth the round trip only when the answer is a report somebody reads. describe_report_blocks holds the block kinds and their fields for a caller that wants them before composing. Never put a number in a block — cite the cell that holds it. A block kind outside the grammar is refused BY NAME with the whole set, so a first attempt costs one refusal rather than a lookup. (Governance: runs immediately; requires passport scope "read".)
+WRITE a DOCUMENT somebody keeps and reads — a board-pack section, a summary for a meeting — whose numbers come from governed queries, standard metrics or frozen editions instead of being typed. Not for answering with a figure: a number in the reply is run_analytics_query's or run_report's. Its figures come from run_analytics_query with save; a run_report answer has no run id and cannot be cited. The document carries the STRUCTURE and the WORDS; each figure names a query cell, metric_ref or edition_ref, and the server resolves those handles under the reader's own authority. It writes no number of its own and refuses any document that does. A block carrying a literal figure is refused EVEN WHEN a valid handle sits beside it: the literal is what renders, the two can disagree, and no reader could tell the page shows a figure the database never computed. Preserve returned coverage, units and capture context. For a query cell, run an analytics query with save, and cite the run id it answers with. Ask run_analytics_query for one number when a figure is what is wanted. This composes a DOCUMENT of several, which is worth the round trip only when the answer is a report somebody reads. describe_report_blocks holds the block kinds and their fields for a caller that wants them before composing. Never put a number in a block — cite the cell that holds it. A block kind outside the grammar is refused BY NAME with the whole set, so a first attempt costs one refusal rather than a lookup. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 
@@ -3271,7 +3271,7 @@ WRITE a DOCUMENT somebody keeps and reads — a board-pack section, a summary fo
 
 **Create a record**
 
-Create a contact, company, deal, lead, project, activity or relationship that does not exist yet. Creating a deal requires a pipeline_id and a stage_id, and list_pipelines is what yields them for a deal that does not exist yet. Only the fields the chosen record_type actually stores are accepted, and a field belonging to a neighbouring type is refused rather than dropped. A CONTACT created here is visible to the human you are acting for and to nobody else, until they publish it or correspondence with that address earns a widening verdict — attending a meeting together does not earn one. Do not tell anyone a contact you just created is on their colleagues' screens. Search first when the record might already exist — a second copy of a contact or company is a problem that then needs merge_records to undo. The new record's id comes back in the result; keep it for anything that links to it. (Governance: runs immediately; requires passport scope "write".)
+Create a contact, company, deal, lead, project, activity or relationship that does not exist yet. Creating a deal requires a pipeline_id and a stage_id, and list_pipelines is what yields them for a deal that does not exist yet. Only the fields the chosen record_type actually stores are accepted, and a field belonging to a neighbouring type is refused rather than dropped. A CONTACT created here is visible to the human you are acting for and to nobody else, until they publish it or correspondence with that address earns a widening verdict — attending a meeting together does not earn one. Do not tell anyone a contact you just created is on their colleagues' screens. Search first when the record might already exist — a second copy of a contact or company is a problem that then needs merge_records to undo. A record that shares only a name, with a different email, phone or employer, is not the same record: create it — the create files the pair for review, its warning says so, and that is what you report. Several rows at once — a pasted list, a CSV — go through preview_import, which checks every row and writes nothing; creating them one by one skips that check. The new record's id comes back in the result; keep it for anything that links to it. (Governance: runs immediately; requires passport scope "write".)
 
 <details><summary>Input schema</summary>
 
@@ -10717,7 +10717,7 @@ Fill in what a lead's own data already implies — today the company name, from 
 
 **Query the workspace**
 
-Answer a question that has STRUCTURE — a record type, conditions on its fields, a hop to a related record, or a likeness to describe — by sending a plan and reading back the records that satisfy it, together with what kind of answer it is. Every name in a plan comes from the published vocabulary; one outside it is refused by name. The margince://schema/query resource — not this description — says which record types, fields, operators and relationships can be asked about. At most one similarity clause and one hop. It cannot group, count or total, and has no cursor: an answer that hit its limit says so. Use search_records when you only have a name or a phrase and no conditions to apply, and run_report when the answer wanted is a count, a total or a breakdown rather than the records themselves. Read `coverage` before you use the rows: `complete_exact` means every record matching the plan is here, `ranked_semantic` means these ranked highest and others may match, and `partial_degraded` means something in the plan could not be answered as asked — `notes` says which. Keep each row's record_type and id for any follow-up call, and its `evidence` for the related record that admitted it. A row's `owner` is the colleague who holds that company: rows come back from across the whole workspace, so most of them belong to someone other than the contact asking. When `owner.is_you` is false, say whose it is when you report the record, and treat contacting it as theirs to decide rather than advising an approach as though the record were unowned. (Governance: runs immediately; requires passport scope "read".)
+Answer a question that has STRUCTURE — a record type, conditions on its fields, a hop to a related record, or a likeness to describe — by sending a plan and reading back the records that satisfy it, together with what kind of answer it is. It also finds where records are: an address is filtered by its city (address.city) or by distance (within_radius). Every name in a plan comes from the published vocabulary; one outside it is refused by name. The margince://schema/query resource — not this description — says which record types, fields, operators and relationships can be asked about. At most one similarity clause and one hop. It cannot group, count or total, and has no cursor: an answer that hit its limit says so. Use search_records when you only have a name or a phrase and no conditions to apply, and run_report when the answer wanted is a count, a total or a breakdown rather than the records themselves. Read `coverage` before you use the rows: `complete_exact` means every record matching the plan is here, `ranked_semantic` means these ranked highest and others may match, and `partial_degraded` means something in the plan could not be answered as asked — `notes` says which. Keep each row's record_type and id for any follow-up call, and its `evidence` for the related record that admitted it. A row's `owner` is the colleague who holds that company: rows come back from across the whole workspace, so most of them belong to someone other than the contact asking. When `owner.is_you` is false, say whose it is when you report the record, and treat contacting it as theirs to decide rather than advising an approach as though the record were unowned. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 
@@ -14198,7 +14198,7 @@ Renders its result in [`ui://margince/commitments.html`](#commitments_view), vis
 
 **Run an analytics query**
 
-Compute a grouped aggregate — counts, sums, averages, medians — over a governed population, in the database. The answer carries its columns, rows and schema version; groups too small to disclose are withheld, never estimated. Populations, dimensions and measures come from margince://schema/analytics, derived for this seat and answered by describe_analytics_vocabulary; a name outside it is refused with what would work. Money measures are minor units. An omitted scope is this seat's own default population, never the workspace. run_report answers a prebuilt report by key; query_workspace lists exact records; the forecast tools answer forecast readings and movement. This one is for a novel aggregate no prebuilt report shapes. Set save to get a run_id whose cells compose_analytics_report can cite; without it the answer is served once and not stored. (Governance: runs immediately; requires passport scope "read".)
+Compute a grouped aggregate — counts, sums, averages, medians — over a governed population, in the database. The answer carries its columns, rows and schema version; groups too small to disclose are withheld, never estimated. Populations, dimensions and measures come from margince://schema/analytics, derived for this seat and answered by describe_analytics_vocabulary; a name outside it is refused with what would work. Money measures are minor units. An omitted scope is this seat's own default population, never the workspace. run_report answers a prebuilt report by key; query_workspace lists exact records; the forecast tools answer forecast readings and movement. This one is for a novel aggregate no prebuilt report shapes, and for any figure a compose_analytics_report document will cite: only a saved run can be cited. Set save to get a run_id whose cells compose_analytics_report can cite; without it the answer is served once and not stored. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 
@@ -14435,7 +14435,7 @@ Compute a grouped aggregate — counts, sums, averages, medians — over a gover
 
 **Run a report**
 
-Answer a question about totals, counts or breakdowns by running one of this workspace's prebuilt reports. Only the named reports exist, each with its own filter, grouping and measure names; anything else is refused. It aggregates: how many and how much, never which record. Use search_records or whats_slipping_this_week when the answer wanted is the records themselves rather than a number over them. Reach for run_analytics_query only when NO prebuilt report answers the question: a report already carries the filter and the grouping, so it is one call where a query is a vocabulary lookup and a query. Call a report with no plan first to see its default answer, then narrow with the names describe_report_vocabulary gives for it. (Governance: runs immediately; requires passport scope "read".)
+Answer a question about totals, counts or breakdowns by running one of this workspace's prebuilt reports. Only the named reports exist, each with its own filter, grouping and measure names; anything else is refused. It aggregates: how many and how much, never which record. Use search_records or whats_slipping_this_week when the answer is the records rather than a number over them. Reach for run_analytics_query only when NO prebuilt report answers the question — a report is one call, a query is a lookup and a call — or when the figures go into a written document: a report's answer has no run_id, so compose_analytics_report cannot cite it. Call a report with no plan first for its default answer, then narrow with the names describe_report_vocabulary gives. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 

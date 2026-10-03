@@ -348,14 +348,14 @@ Every run of every case requiring this tool passed, for the model named.
 |---|---:|---:|---|
 | `compose_analytics_report` | 1.00 | 3 | `case20_put_it_in_the_board_pack` |
 | `update_record` | 1.00 | 3 | `case33_two_cards_for_one_company` |
-| `forecast_readings` | 1.00 | 3 | `case21_what_are_we_closing` |
-| `query_workspace` | 1.00 | 3 | `case4_use_the_moment` |
 | `create_record` | 1.00 | 6 | `case1_log_it`, `case2_business_card` |
+| `query_workspace` | 1.00 | 3 | `case4_use_the_moment` |
+| `forecast_readings` | 1.00 | 3 | `case21_what_are_we_closing` |
 | `run_analytics_query` | 1.00 | 3 | `case20_put_it_in_the_board_pack` |
+| `advance_project_phase` | 1.00 | 3 | `case41_close_the_project` |
 | `search_records` | 1.00 | 3 | `case5_before_the_meeting` |
 | `search_context` | 1.00 | 3 | `case6_ask_the_company` |
 | `check_availability` | 1.00 | 3 | `case23_find_us_a_slot` |
-| `advance_project_phase` | 1.00 | 3 | `case41_close_the_project` |
 | `promote_lead` | 1.00 | 3 | `case40_sort_the_queue` |
 | `merge_records` | 1.00 | 3 | `case33_two_cards_for_one_company` |
 | `archive_record` | 1.00 | 3 | `case33_two_cards_for_one_company` |
@@ -410,9 +410,9 @@ Every run of every case requiring this tool passed, for the model named.
 |---|---:|---:|---|
 | `compose_analytics_report` | 1.00 | 3 | `case20_put_it_in_the_board_pack` |
 | `update_record` | 1.00 | 3 | `case33_two_cards_for_one_company` |
-| `forecast_readings` | 1.00 | 3 | `case21_what_are_we_closing` |
-| `query_workspace` | 1.00 | 3 | `case4_use_the_moment` |
 | `create_record` | 1.00 | 6 | `case1_log_it`, `case2_business_card` |
+| `query_workspace` | 1.00 | 3 | `case4_use_the_moment` |
+| `forecast_readings` | 1.00 | 3 | `case21_what_are_we_closing` |
 | `run_analytics_query` | 1.00 | 3 | `case20_put_it_in_the_board_pack` |
 | `search_records` | 1.00 | 3 | `case5_before_the_meeting` |
 | `check_availability` | 1.00 | 3 | `case23_find_us_a_slot` |
@@ -427,9 +427,9 @@ Every run of every case requiring this tool passed, for the model named.
 | `disqualify_lead` | 1.00 | 3 | `case40_sort_the_queue` |
 | `relink_activities` | 1.00 | 3 | `case9_filed_in_the_wrong_place` |
 | `update_tag` | 1.00 | 3 | `case32_two_words_for_one_thing` |
+| `commit_import` | 1.00 | 3 | `case10_finish_the_import` |
 | `merge_tags` | 1.00 | 3 | `case32_two_words_for_one_thing` |
 | `list_colleagues` | 1.00 | 3 | `case33_two_cards_for_one_company` |
-| `commit_import` | 1.00 | 3 | `case10_finish_the_import` |
 | `create_tag` | 1.00 | 3 | `case30_a_word_for_it` |
 | `remove_tag` | 1.00 | 3 | `case31_wrong_word_on_the_record` |
 | `read_approval` | 1.00 | 3 | `case8_whats_waiting` |
@@ -443,10 +443,10 @@ Every run of every case requiring this tool passed, for the model named.
 | Tool | Reliability | Runs | Required by |
 |---|---:|---:|---|
 | `log_activity` | 1.00 | 6 | `case1_log_it`, `case42_can_i_answer_on_whatsapp` |
+| `advance_project_phase` | 1.00 | 3 | `case41_close_the_project` |
 | `search_records` | 1.00 | 3 | `case5_before_the_meeting` |
 | `search_context` | 1.00 | 3 | `case6_ask_the_company` |
 | `check_availability` | 1.00 | 3 | `case23_find_us_a_slot` |
-| `advance_project_phase` | 1.00 | 3 | `case41_close_the_project` |
 | `relink_activity` | 1.00 | 3 | `case9_filed_in_the_wrong_place` |
 | `decide_approval` | 1.00 | 3 | `case8_whats_waiting` |
 | `list_approvals` | 1.00 | 3 | `case8_whats_waiting` |
@@ -474,20 +474,20 @@ Driven, and not every run passed. Open the case to see what was asked.
 | `preview_import` | 0.33 | 2/6 | `case10_finish_the_import` | `case10_finish_the_import`, `case3_spreadsheet` |
 | `log_activity` | 0.33 | 2/6 | `case1_log_it`, `case42_can_i_answer_on_whatsapp` | `case1_log_it`, `case42_can_i_answer_on_whatsapp` |
 | `update_record` | 0.67 | 2/3 | — | `case33_two_cards_for_one_company` |
-| `forecast_readings` | 0.33 | 1/3 | `case21_what_are_we_closing` | `case21_what_are_we_closing` |
-| `query_workspace` | 0.00 | 0/3 | `case4_use_the_moment` | `case4_use_the_moment` |
 | `create_record` | 0.50 | 3/6 | `case1_log_it` | `case1_log_it`, `case2_business_card` |
+| `query_workspace` | 0.00 | 0/3 | `case4_use_the_moment` | `case4_use_the_moment` |
+| `forecast_readings` | 0.33 | 1/3 | `case21_what_are_we_closing` | `case21_what_are_we_closing` |
 | `run_analytics_query` | 0.00 | 0/3 | `case20_put_it_in_the_board_pack` | `case20_put_it_in_the_board_pack` |
+| `advance_project_phase` | 0.33 | 1/3 | `case41_close_the_project` | `case41_close_the_project` |
 | `search_records` | 0.00 | 0/3 | `case5_before_the_meeting` | `case5_before_the_meeting` |
 | `search_context` | 0.00 | 0/3 | `case6_ask_the_company` | `case6_ask_the_company` |
 | `check_availability` | 0.67 | 2/3 | — | `case23_find_us_a_slot` |
-| `advance_project_phase` | 0.33 | 1/3 | `case41_close_the_project` | `case41_close_the_project` |
 | `merge_records` | 0.67 | 2/3 | — | `case33_two_cards_for_one_company` |
 | `archive_record` | 0.67 | 2/3 | — | `case33_two_cards_for_one_company` |
 | `update_tag` | 0.00 | 0/3 | `case32_two_words_for_one_thing` | `case32_two_words_for_one_thing` |
+| `commit_import` | 0.00 | 0/3 | `case10_finish_the_import` | `case10_finish_the_import` |
 | `merge_tags` | 0.00 | 0/3 | `case32_two_words_for_one_thing` | `case32_two_words_for_one_thing` |
 | `list_colleagues` | 0.67 | 2/3 | — | `case33_two_cards_for_one_company` |
-| `commit_import` | 0.00 | 0/3 | `case10_finish_the_import` | `case10_finish_the_import` |
 | `list_channel_providers` | 0.33 | 1/3 | `case42_can_i_answer_on_whatsapp` | `case42_can_i_answer_on_whatsapp` |
 | `remove_tag` | 0.00 | 0/3 | `case31_wrong_word_on_the_record` | `case31_wrong_word_on_the_record` |
 | `read_project_360` | 0.33 | 1/3 | `case41_close_the_project` | `case41_close_the_project` |
@@ -512,15 +512,15 @@ Driven, and not every run passed. Open the case to see what was asked.
 |---|---:|---:|---|---|
 | `compose_analytics_report` | 0.67 | 2/3 | — | `case20_put_it_in_the_board_pack` |
 | `preview_import` | 0.50 | 3/6 | `case10_finish_the_import` | `case10_finish_the_import`, `case3_spreadsheet` |
-| `query_workspace` | 0.00 | 0/3 | `case4_use_the_moment` | `case4_use_the_moment` |
 | `create_record` | 0.83 | 5/6 | — | `case1_log_it`, `case2_business_card` |
+| `query_workspace` | 0.00 | 0/3 | `case4_use_the_moment` | `case4_use_the_moment` |
 | `run_analytics_query` | 0.67 | 2/3 | — | `case20_put_it_in_the_board_pack` |
+| `advance_project_phase` | 0.00 | 0/3 | `case41_close_the_project` | `case41_close_the_project` |
 | `search_records` | 0.00 | 0/3 | `case5_before_the_meeting` | `case5_before_the_meeting` |
 | `search_context` | 0.00 | 0/3 | `case6_ask_the_company` | `case6_ask_the_company` |
-| `advance_project_phase` | 0.00 | 0/3 | `case41_close_the_project` | `case41_close_the_project` |
 | `update_tag` | 0.67 | 2/3 | — | `case32_two_words_for_one_thing` |
-| `merge_tags` | 0.67 | 2/3 | — | `case32_two_words_for_one_thing` |
 | `commit_import` | 0.00 | 0/3 | `case10_finish_the_import` | `case10_finish_the_import` |
+| `merge_tags` | 0.67 | 2/3 | — | `case32_two_words_for_one_thing` |
 | `read_project_360` | 0.00 | 0/3 | `case41_close_the_project` | `case41_close_the_project` |
 | `list_tags` | 0.83 | 5/6 | — | `case30_a_word_for_it`, `case32_two_words_for_one_thing` |
 | `get_tag` | 0.67 | 2/3 | — | `case32_two_words_for_one_thing` |
@@ -532,8 +532,8 @@ Driven, and not every run passed. Open the case to see what was asked.
 |---|---:|---:|---|---|
 | `preview_import` | 0.83 | 5/6 | — | `case10_finish_the_import`, `case3_spreadsheet` |
 | `log_activity` | 0.83 | 5/6 | — | `case1_log_it`, `case42_can_i_answer_on_whatsapp` |
-| `search_context` | 0.33 | 1/3 | `case6_ask_the_company` | `case6_ask_the_company` |
 | `advance_project_phase` | 0.00 | 0/3 | `case41_close_the_project` | `case41_close_the_project` |
+| `search_context` | 0.33 | 1/3 | `case6_ask_the_company` | `case6_ask_the_company` |
 | `data_coverage` | 0.67 | 2/3 | — | `case22_can_i_trust_the_numbers` |
 | `list_channel_providers` | 0.67 | 2/3 | — | `case42_can_i_answer_on_whatsapp` |
 | `read_project_360` | 0.00 | 0/3 | `case41_close_the_project` | `case41_close_the_project` |
@@ -545,17 +545,17 @@ Driven, and not every run passed. Open the case to see what was asked.
 | `compose_analytics_report` | 0.33 | 1/3 | `case20_put_it_in_the_board_pack` | `case20_put_it_in_the_board_pack` |
 | `preview_import` | 0.17 | 1/6 | `case10_finish_the_import`, `case3_spreadsheet` | `case10_finish_the_import`, `case3_spreadsheet` |
 | `update_record` | 0.67 | 2/3 | — | `case33_two_cards_for_one_company` |
-| `forecast_readings` | 0.67 | 2/3 | — | `case21_what_are_we_closing` |
-| `query_workspace` | 0.00 | 0/3 | `case4_use_the_moment` | `case4_use_the_moment` |
 | `create_record` | 0.67 | 4/6 | `case2_business_card` | `case1_log_it`, `case2_business_card` |
+| `query_workspace` | 0.00 | 0/3 | `case4_use_the_moment` | `case4_use_the_moment` |
+| `forecast_readings` | 0.67 | 2/3 | — | `case21_what_are_we_closing` |
 | `run_analytics_query` | 0.33 | 1/3 | `case20_put_it_in_the_board_pack` | `case20_put_it_in_the_board_pack` |
 | `promote_lead` | 0.67 | 2/3 | — | `case40_sort_the_queue` |
 | `merge_records` | 0.67 | 2/3 | — | `case33_two_cards_for_one_company` |
 | `archive_record` | 0.67 | 2/3 | — | `case33_two_cards_for_one_company` |
 | `qualify_lead` | 0.67 | 2/3 | — | `case40_sort_the_queue` |
 | `disqualify_lead` | 0.67 | 2/3 | — | `case40_sort_the_queue` |
-| `list_colleagues` | 0.67 | 2/3 | — | `case33_two_cards_for_one_company` |
 | `commit_import` | 0.33 | 1/3 | `case10_finish_the_import` | `case10_finish_the_import` |
+| `list_colleagues` | 0.67 | 2/3 | — | `case33_two_cards_for_one_company` |
 | `remove_tag` | 0.67 | 2/3 | — | `case31_wrong_word_on_the_record` |
 | `get_record_tags` | 0.67 | 2/3 | — | `case31_wrong_word_on_the_record` |
 | `read_import_report` | 0.33 | 1/3 | `case10_finish_the_import` | `case10_finish_the_import` |
@@ -591,7 +591,7 @@ and the case's pass rate belongs to the set rather than to this row — which is
 
 | Tool | Tokens | Required as one of a set by | Permitted in | Graded by | Attached to |
 |---|---:|---|---|---|---|
-| `run_report` | 1014 | `case7_ask_for_a_number` | `case20_put_it_in_the_board_pack`, `case21_what_are_we_closing`, `case22_can_i_trust_the_numbers` | — | — |
+| `run_report` | 1023 | `case7_ask_for_a_number` | `case20_put_it_in_the_board_pack`, `case21_what_are_we_closing`, `case22_can_i_trust_the_numbers` | — | — |
 
 ## 4. What no use case requires
 

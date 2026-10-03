@@ -30,10 +30,10 @@
   ],
   "catalog": {
     "tools": 81,
-    "system_frame_tokens": 516,
-    "tokens": 27789,
+    "system_frame_tokens": 561,
+    "tokens": 28059,
     "median_tool_tokens": 278,
-    "mean_tool_tokens": 342
+    "mean_tool_tokens": 346
   },
   "agents": [
     {
@@ -47,11 +47,11 @@
         "read_record"
       ],
       "of_served_tools": 81,
-      "tokens": 3551,
+      "tokens": 3597,
       "listing_tokens": 1746,
       "step_schema_tokens": 1288,
       "percent_of_ceiling": 10,
-      "headroom_tokens": 19659,
+      "headroom_tokens": 19613,
       "dangling_cross_references": [],
       "temptation_weight": 5
     },
@@ -68,11 +68,11 @@
         "whats_slipping_this_week"
       ],
       "of_served_tools": 81,
-      "tokens": 4908,
+      "tokens": 4953,
       "listing_tokens": 2585,
       "step_schema_tokens": 1807,
-      "percent_of_ceiling": 14,
-      "headroom_tokens": 18302,
+      "percent_of_ceiling": 15,
+      "headroom_tokens": 18257,
       "dangling_cross_references": [
         "at_risk_relationships → intro_path_to",
         "at_risk_relationships → who_knows",
@@ -88,19 +88,19 @@
   "tool_cost": [
     {
       "name": "run_report",
-      "tokens": 1014
+      "tokens": 1023
     },
     {
       "name": "send_company_email",
       "tokens": 823
     },
     {
-      "name": "send_email",
-      "tokens": 754
+      "name": "compose_analytics_report",
+      "tokens": 770
     },
     {
-      "name": "compose_analytics_report",
-      "tokens": 743
+      "name": "send_email",
+      "tokens": 754
     },
     {
       "name": "preview_import",
@@ -135,6 +135,14 @@
       "tokens": 581
     },
     {
+      "name": "create_record",
+      "tokens": 573
+    },
+    {
+      "name": "query_workspace",
+      "tokens": 513
+    },
+    {
       "name": "forecast_readings",
       "tokens": 509
     },
@@ -147,20 +155,12 @@
       "tokens": 505
     },
     {
+      "name": "run_analytics_query",
+      "tokens": 501
+    },
+    {
       "name": "resolve_entities",
       "tokens": 493
-    },
-    {
-      "name": "query_workspace",
-      "tokens": 484
-    },
-    {
-      "name": "create_record",
-      "tokens": 481
-    },
-    {
-      "name": "run_analytics_query",
-      "tokens": 476
     },
     {
       "name": "forecast_movement",
@@ -173,6 +173,10 @@
     {
       "name": "annotate_brief",
       "tokens": 417
+    },
+    {
+      "name": "advance_project_phase",
+      "tokens": 416
     },
     {
       "name": "review_commitments",
@@ -213,10 +217,6 @@
     {
       "name": "check_availability",
       "tokens": 342
-    },
-    {
-      "name": "advance_project_phase",
-      "tokens": 340
     },
     {
       "name": "search_report_evidence",
@@ -335,6 +335,10 @@
       "tokens": 205
     },
     {
+      "name": "commit_import",
+      "tokens": 200
+    },
+    {
       "name": "merge_tags",
       "tokens": 198
     },
@@ -357,10 +361,6 @@
     {
       "name": "list_pipelines",
       "tokens": 191
-    },
-    {
-      "name": "commit_import",
-      "tokens": 187
     },
     {
       "name": "intro_path_to",

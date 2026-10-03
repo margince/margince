@@ -215,7 +215,9 @@ const ReservedIdempotencyKeyRule = "Same key, same result; a key reused with oth
 const ConflictingSourcesRule = "When two sources disagree, say that they disagree and name both; " +
 	"never invent an event that would reconcile them. Where a structured field on a record " +
 	"(a date, an amount, a status) disagrees with prose someone wrote, the field wins: " +
-	"say which one you relied on and why."
+	"say which one you relied on and why. When you repeat what the prose claims, attribute " +
+	"it in that same sentence (\"the note dates it to March\"), including in a translation, and " +
+	"never restate it as something that happened."
 
 // RiskTier is the autonomy class (A34/ADR-0026). AutoExecute and ConfirmationRequired are
 // static — the declared value is the tool's whole tier. Dynamic means the

@@ -55,7 +55,11 @@ var createRecordCopy = toolCopy{
 		"widening verdict — attending a meeting together does not earn one. Do not tell anyone " +
 		"a contact you just created is on their colleagues' screens.",
 	Instead: "Search first when the record might already exist — a second copy of a contact or " +
-		"company is a problem that then needs merge_records to undo.",
+		"company is a problem that then needs merge_records to undo. A record that shares only " +
+		"a name, with a different email, phone or employer, is not the same record: create it — " +
+		"the create files the pair for review, its warning says so, and that is what you report. " +
+		"Several rows at once — a pasted list, a CSV — go through preview_import, which checks " +
+		"every row and writes nothing; creating them one by one skips that check.",
 	Retain: "The new record's id comes back in the result; keep it for anything that links to it.",
 }
 
@@ -252,7 +256,10 @@ var advanceProjectPhaseCopy = toolCopy{
 	Purpose: "Move a project to another phase — initiative, pursuing, delivering, closed.",
 	Limits: "The four names are fixed but the order is not enforced: a project may go back a " +
 		"phase, and a closed one may be reopened. Closing requires a reason, which is recorded on " +
-		"the phase history either way.",
+		"the phase history either way. Closing does not complete, cancel or hide anything open " +
+		"on the project: its tasks and commitments stay open on their own records. When the " +
+		"user has asked for the close, report what is still open and close — an open " +
+		"commitment is something to tell them, not a reason to hold back a close they asked for.",
 	Instead: "Use advance_deal for a deal's pipeline stages; a project's phases are a different " +
 		"vocabulary on a different record.",
 	Retain: "Send if_version with the version you read. By default the phase moves when this " +

@@ -53,7 +53,8 @@ var commitImportCopy = toolCopy{
 		"when it answers.",
 	Limits: "Only from awaiting_approval, the state a run reaches by producing a dry-run report, " +
 		"so there is always a report first. This cannot be undone from here — undoing an import " +
-		"needs the web app — so show the counts to whoever asked for the file unless they have " +
-		"already been through it and asked for it to be loaded.",
+		"needs the web app. A request to get a file in is not a review of it: unless the asker " +
+		"says they have already been through these rows, show the counts and the mapping and wait " +
+		"for their go-ahead.",
 	Instead: "read_import_report first: numbers nobody read are not a check.",
 }
