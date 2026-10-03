@@ -16,14 +16,16 @@ import "./worklist.css";
 // What to check in each frame:
 //   · the contact is linked in the facts line only where the title does not
 //     already name them;
-//   · "They last wrote / We last wrote" stand on a line of their own, the dates
+//   · "Last inbound / Last outbound" stand on a line of their own, the dates
 //     in the reading ink, "Never" where a side never wrote;
-//   · a row whose moments the server withheld draws no line at all.
+//   · a row whose moments the server withheld draws no line at all;
+//   · a row about an account draws the account's pair in the same words.
 
 type WorklistItem = components["schemas"]["WorklistItem"];
 
 const SONYA = "01a05500-0000-7000-8000-000000000009";
 const DEAL = "01a05500-0000-7000-8000-0000000000da";
+const ACCOUNT = "01a05500-0000-7000-8000-0000000000c0";
 
 /** A thread filed under a deal, from a contact the server named beside it. */
 function dealFiledThread(): WorklistItem {
@@ -98,6 +100,37 @@ export const MomentsWithheld: Story = {
     item: {
       ...dealFiledThread(),
       contact: { id: SONYA, label: "Sonya Beck" },
+    },
+    position: 1,
+    owner: "",
+  },
+  render: (args) => {
+    stubRow();
+    return <WorklistRow {...args} />;
+  },
+};
+
+// A row about an account says which side wrote last in the same two terms a
+// contact's row does: they wrote in March, nobody here has since.
+export const AccountWhoWroteLast: Story = {
+  args: {
+    item: {
+      id: "task-renewal",
+      source: "task",
+      category: "tasks",
+      level: 2,
+      consequence: "task_slips",
+      title: "Send the renewal terms",
+      because: [],
+      subject: { type: "company", id: ACCOUNT, label: "Turbinenbau GmbH" },
+      company: {
+        id: ACCOUNT,
+        touch: {
+          last_inbound_at: "2026-03-12T10:05:00Z",
+          last_outbound_at: null,
+        },
+      },
+      actions: ["complete", "open"],
     },
     position: 1,
     owner: "",

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import type { components } from "../api/schema";
 import { ENTITY } from "../app/entity";
 import { routeHash } from "../app/router";
 import { formatNumber } from "../format/format";
@@ -8,6 +9,8 @@ import { translatePlural, useLocale, useT } from "../i18n";
 import { subjectHref } from "./worklist.copy";
 import type { WorklistItem } from "./worklist.queries";
 import type { RowReadings } from "./worklist.row.compact";
+
+type WorklistTouch = components["schemas"]["WorklistContactTouch"];
 
 // Everything a row says about itself UNDER its title: whose row it is, which
 // side wrote last, when it is due, what it is worth, why it is here and what
@@ -74,15 +77,26 @@ export function aboutRecord(
 }
 
 /**
- * How the silence runs both ways, on every row the server put a contact on.
- * The triage shape names them under the row itself (brief.feed.tsx) and
- * withholds this, as it withholds the about line.
+ * How the silence runs both ways with whoever the row is about. A contact on
+ * the row outranks its account, since the pair belongs to whoever a reply would
+ * go to; the account's shows only on a row naming no one. Keyed on which
+ * record is present rather than on which pair is, so a contact whose moments
+ * were withheld never borrows the account's.
+ */
+export function rowTouch(item: WorklistItem): WorklistTouch | undefined {
+  return item.contact ? item.contact.touch : item.company?.touch;
+}
+
+/**
+ * The pair as the queue's row prints it. The triage shape names them under
+ * the row itself (brief.feed.tsx) and withholds this, as it withholds the
+ * about line.
  */
 export function touchOf(
   item: WorklistItem,
   framed: boolean,
-): NonNullable<WorklistItem["contact"]>["touch"] | undefined {
-  return framed ? undefined : item.contact?.touch;
+): WorklistTouch | undefined {
+  return framed ? undefined : rowTouch(item);
 }
 
 /**

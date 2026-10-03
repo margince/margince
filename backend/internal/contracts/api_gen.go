@@ -45718,6 +45718,31 @@ type WorklistBuckets struct {
 	Urgent int `json:"urgent"`
 }
 
+// WorklistCompanyFacts The account behind the row, and how the silence runs both ways, so a reader
+// knows whether the account or we wrote last before choosing a verb.
+//
+// Present on every row whose `subject` is a company. Absent on a row about
+// anything else — a contact's row names its human in `contact`, and the account
+// that human works for is not this row's subject.
+//
+// The `id` is the producer's claim and always travels. The moments are the
+// READER's, filled under their own grants, and absent where the reader may not
+// have them, which is not the same as never.
+type WorklistCompanyFacts struct {
+	Id openapi_types.UUID `json:"id"`
+
+	// Touch When they last wrote to us and when we last wrote to them — the same two dates,
+	// over the same walk, that the record's own page reports: the contact page's
+	// `last_inbound_at` and `last_outbound_at` for a contact, the company page's
+	// engagement strip for an account. A queue row and the record it opens cannot
+	// disagree about who wrote last.
+	//
+	// Absent from the row when the caller may not read activity, or may not read this
+	// contact or account: a withheld answer. Present with both nulls for a record
+	// nobody has ever exchanged a message with.
+	Touch *WorklistContactTouch `json:"touch,omitempty"`
+}
+
 // WorklistComparison The first tie-break at which this item beat the one below it, with both sides'
 // values — so a row can say "above the next because it closes sooner" instead of
 // asking the reader to trust the order.
@@ -45774,24 +45799,26 @@ type WorklistContactFacts struct {
 	Label *string `json:"label,omitempty"`
 
 	// Touch When they last wrote to us and when we last wrote to them — the same two dates,
-	// over the same walk, that the contact's own page reports as `last_inbound_at` and
-	// `last_outbound_at`, so a queue row and the record it opens cannot disagree about
-	// who wrote last.
+	// over the same walk, that the record's own page reports: the contact page's
+	// `last_inbound_at` and `last_outbound_at` for a contact, the company page's
+	// engagement strip for an account. A queue row and the record it opens cannot
+	// disagree about who wrote last.
 	//
 	// Absent from the row when the caller may not read activity, or may not read this
-	// contact: a withheld answer. Present with both nulls for a contact nobody has ever
-	// exchanged a message with.
+	// contact or account: a withheld answer. Present with both nulls for a record
+	// nobody has ever exchanged a message with.
 	Touch *WorklistContactTouch `json:"touch,omitempty"`
 }
 
 // WorklistContactTouch When they last wrote to us and when we last wrote to them — the same two dates,
-// over the same walk, that the contact's own page reports as `last_inbound_at` and
-// `last_outbound_at`, so a queue row and the record it opens cannot disagree about
-// who wrote last.
+// over the same walk, that the record's own page reports: the contact page's
+// `last_inbound_at` and `last_outbound_at` for a contact, the company page's
+// engagement strip for an account. A queue row and the record it opens cannot
+// disagree about who wrote last.
 //
 // Absent from the row when the caller may not read activity, or may not read this
-// contact: a withheld answer. Present with both nulls for a contact nobody has ever
-// exchanged a message with.
+// contact or account: a withheld answer. Present with both nulls for a record
+// nobody has ever exchanged a message with.
 type WorklistContactTouch struct {
 	// LastInboundAt When they last wrote to us. Null means nothing inbound was ever captured.
 	LastInboundAt *time.Time `json:"last_inbound_at"`
@@ -46078,6 +46105,18 @@ type WorklistItem struct {
 	// Absent when there is no run today to compare against, which is different from
 	// false: false says the night saw this, absent says there was no night.
 	ChangedSinceBrief *bool `json:"changed_since_brief,omitempty"`
+
+	// Company The account behind the row, and how the silence runs both ways, so a reader
+	// knows whether the account or we wrote last before choosing a verb.
+	//
+	// Present on every row whose `subject` is a company. Absent on a row about
+	// anything else — a contact's row names its human in `contact`, and the account
+	// that human works for is not this row's subject.
+	//
+	// The `id` is the producer's claim and always travels. The moments are the
+	// READER's, filled under their own grants, and absent where the reader may not
+	// have them, which is not the same as never.
+	Company *WorklistCompanyFacts `json:"company,omitempty"`
 
 	// Consequence What happens if the reader does nothing. Derived per ITEM rather than per
 	// source, because one source has several honest answers: a deal past its close

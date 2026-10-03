@@ -1,7 +1,13 @@
 /** @vitest-environment happy-dom */
 import { cleanup, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
-import { day, renderWorklist, row, stub } from "./worklist.testkit";
+import {
+  day,
+  renderWorklist,
+  row,
+  stub,
+  type WorklistItem,
+} from "./worklist.testkit";
 
 afterEach(() => {
   cleanup();
@@ -73,7 +79,7 @@ it("names the sender behind a deal-filed thread, and which side wrote last", asy
             id: "01a05500-0000-7000-8000-000000000009",
             label: "Sonya Beck",
             touch: {
-              last_inbound_at: "2026-09-03T16:46:00Z",
+              last_inbound_at: "2026-09-03T09:00:00Z",
               last_outbound_at: null,
             },
           },
@@ -130,4 +136,87 @@ it("claims no moments when the server withheld them", async () => {
 
   await screen.findByText("Confirm the workshop date");
   expect(document.querySelector(".worklist-row-touch")).toBeNull();
+});
+
+const ACCOUNT = "01a05500-0000-7000-8000-0000000000c0";
+
+function accountTask(
+  company: WorklistItem["company"],
+  contact?: WorklistItem["contact"],
+) {
+  return day({
+    queue: [
+      row({
+        id: "t2",
+        source: "task",
+        category: "tasks",
+        title: "Send the renewal terms",
+        subject: { type: "company", id: ACCOUNT, label: "Turbinenbau GmbH" },
+        company,
+        contact,
+      }),
+    ],
+    summary: { urgent: 0, due: 1, lower_priority: 0, total: 1 },
+  });
+}
+
+// A row about an account says which side went last in the same two terms a
+// contact's row does.
+it("says which side wrote last on a row about an account", async () => {
+  stub(
+    accountTask({
+      id: ACCOUNT,
+      touch: {
+        last_inbound_at: null,
+        last_outbound_at: "2026-08-28T09:00:00Z",
+      },
+    }),
+  );
+  renderWorklist();
+
+  await screen.findByText("Send the renewal terms · Turbinenbau GmbH");
+  const touch = document.querySelector(".worklist-row-touch");
+  expect(touch?.textContent).toContain("Last inbound Never");
+  expect(touch?.textContent).toContain("Last outbound");
+  expect(touch?.textContent).toContain("28/08/2026");
+});
+
+it("claims no moments for an account whose activity was withheld", async () => {
+  stub(accountTask({ id: ACCOUNT }));
+  renderWorklist();
+
+  await screen.findByText("Send the renewal terms · Turbinenbau GmbH");
+  expect(document.querySelector(".worklist-row-touch")).toBeNull();
+});
+
+// The pair belongs to whoever a reply would go to, so a row naming both a
+// contact and their account says when the contact last wrote, not the account.
+it("prefers the contact's moments to the account's on a row naming both", async () => {
+  stub(
+    accountTask(
+      {
+        id: ACCOUNT,
+        touch: {
+          last_inbound_at: "2026-07-14T09:00:00Z",
+          last_outbound_at: "2026-08-28T09:00:00Z",
+        },
+      },
+      {
+        id: "01a05500-0000-7000-8000-000000000009",
+        label: "Sonya Beck",
+        touch: {
+          last_inbound_at: "2026-09-03T09:00:00Z",
+          last_outbound_at: null,
+        },
+      },
+    ),
+  );
+  renderWorklist();
+
+  await screen.findByText(/Send the renewal terms/);
+  const touch = document.querySelector(".worklist-row-touch")?.textContent;
+  expect(touch).toContain("03/09/2026");
+  expect(touch).toContain("Last outbound Never");
+  expect(touch).not.toContain("14/07/2026");
+  expect(touch).not.toContain("28/08/2026");
 });
