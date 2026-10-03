@@ -187,6 +187,20 @@ func classifyIntroduction(item crmcontracts.AttentionItem, asOf time.Time) ranke
 	}
 }
 
+// earlierRequests is the evidence a conversation card carries for the requests
+// folded into it: how many, and when the first arrived. Nothing for a single
+// message.
+func earlierRequests(waiting WaitingCustomer) []crmcontracts.WorklistReason {
+	if waiting.EarlierRequests == 0 {
+		return nil
+	}
+	count, first := waiting.EarlierRequests, waiting.FirstAskedAt
+	return []crmcontracts.WorklistReason{
+		reason("earlier_requests", &crmcontracts.WorklistValue{Kind: "count", Count: &count}),
+		reason("first_asked", &crmcontracts.WorklistValue{Kind: "date", Date: &first}),
+	}
+}
+
 // waitingStaleDays is when an unanswered message stops being today's work.
 //
 // Past it the wait is still real, but acting on it is no longer urgent in the
@@ -265,6 +279,7 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 		reason("buyer_wrote_last", nil),
 		reason("waiting_days", daysValue(days)),
 	}
+	because = append(because, earlierRequests(waiting)...)
 	if stale {
 		because = append(because, reason("stale", nil))
 	}

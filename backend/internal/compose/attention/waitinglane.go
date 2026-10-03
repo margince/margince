@@ -138,6 +138,10 @@ func (h HiddenWork) Clear() bool {
 
 // WaitingCustomer is one message nobody has answered.
 type WaitingCustomer struct {
+	// EarlierRequests counts the conversation's earlier unanswered requests
+	// folded into this card; FirstAskedAt is when the first arrived.
+	EarlierRequests int
+	FirstAskedAt    time.Time
 	// ActivityID is the message itself — what a reply would be drafted to.
 	ActivityID ids.UUID
 	// EmailSummary is the canonical email row, present exactly when this wait

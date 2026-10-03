@@ -152,7 +152,10 @@ function valueText(
         ? null
         : formatMoney(value.minor, value.currency, locale);
     case "days":
-      return value.days == null ? null : formatNumber(value.days, locale);
+    case "count": {
+      const figure = value.days ?? value.count;
+      return figure == null ? null : formatNumber(figure, locale);
+    }
     case "level":
       return value.level == null ? null : formatNumber(value.level, locale);
     default:
@@ -160,20 +163,16 @@ function valueText(
   }
 }
 
-// The reasons that read differently with a figure in them and whose figure is
-// a currency amount, not a count — a money figure never needs the reader's
-// plural rule, which is what sets these apart from DAYS_VALUED_REASONS below.
-// Spelled as a set rather than inferred from whether a value arrived: a value
-// can travel for a reason whose sentence has nowhere to put it, and a key
-// composed from that would not exist.
+// Reasons that read with an amount or a moment, needing no plural rule (counts
+// are DAYS_VALUED_REASONS). A set, since a key composed for a reason whose
+// sentence has nowhere to put an arrived value would not exist.
 const VALUED_REASONS = {
   expected_revenue: true,
   material: true,
   below_material: true,
-  // The lead's own deadline, which is a MOMENT rather than a figure: valueText
-  // renders a date value in the reader's locale and zone, so the sentence says
-  // when without this file composing one.
+  // MOMENTS rather than figures: valueText renders a date in the reader's zone.
   response_due_soon: true,
+  first_asked: true,
 } as const;
 
 type ValuedReason = keyof typeof VALUED_REASONS;
@@ -188,6 +187,7 @@ function valued(kind: WorklistReason["kind"]): kind is ValuedReason {
 const DAYS_VALUED_REASONS = {
   waiting_days: true,
   quiet_days: true,
+  earlier_requests: true,
 } as const;
 
 function daysValued(
@@ -298,11 +298,11 @@ export function reasonText(
   if (
     value !== null &&
     daysValued(reason.kind) &&
-    reason.value?.kind === "days" &&
-    reason.value.days != null
+    (reason.value?.days ?? reason.value?.count) != null
   ) {
     const base = `worklist.because.${reason.kind}.value` as const;
-    return translatePlural(locale, base, reason.value.days, { value });
+    const figure = reason.value?.days ?? reason.value?.count ?? 0;
+    return translatePlural(locale, base, figure, { value });
   }
   if (value !== null && valued(reason.kind)) {
     return t(`worklist.because.${reason.kind}.value` as const, { value });
