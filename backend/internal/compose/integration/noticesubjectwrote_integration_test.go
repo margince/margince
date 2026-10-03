@@ -40,10 +40,17 @@ func withAddress(t *testing.T, e *apptest.AppEnv, contactID, email string) {
 // source: unknown_legacy, written by a connector.
 func capturedUnknown(t *testing.T, e *apptest.AppEnv, name string) string {
 	t.Helper()
+	return capturedUnknownBy(t, e, name, "connector:gmail")
+}
+
+// capturedUnknownBy is capturedUnknown with the writer named: a connector, or
+// the counterparty verdict that mints contacts from captured mail afterwards.
+func capturedUnknownBy(t *testing.T, e *apptest.AppEnv, name, capturedBy string) string {
+	t.Helper()
 	contact := contactAcquiredAs(t, e, name, "unknown_legacy")
 	if _, err := e.Owner.Exec(context.Background(), `
-		UPDATE contact_acquisition_evidence SET captured_by = 'connector:gmail' WHERE contact_id = $1`,
-		contact); err != nil {
+		UPDATE contact_acquisition_evidence SET captured_by = $2 WHERE contact_id = $1`,
+		contact, capturedBy); err != nil {
 		t.Fatalf("stating capture wrote the acquisition: %v", err)
 	}
 	return contact
@@ -212,5 +219,21 @@ func TestAnUnknownASeatStatedStaysOwed(t *testing.T) {
 
 	if _, state, _, _ := noticeCaseFor(t, e, contact); state != "open" {
 		t.Errorf("a seat-stated unknown moved to %q after they wrote, want it still open", state)
+	}
+}
+
+// The counterparty verdict mints contacts from captured mail after the fact,
+// and its unknown is capture's own as much as a connector's is.
+func TestTheirMailSettlesTheCaseOfAContactTheVerdictMade(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	contact := capturedUnknownBy(t, e, "Verdict Made", "agent:capture_counterparty_verdict")
+	withAddress(t, e, contact, "verdict.made@customer.test")
+	driveNoticeCase(t, e, contact)
+
+	driveCapturedMail(t, e, capturedMailFrom(t, e, "verdict.made@customer.test", false))
+
+	if _, state, _, _ := noticeCaseFor(t, e, contact); state != "exempt_with_reason" {
+		t.Errorf("a verdict-made contact who wrote to us has a %q case, want exempt_with_reason", state)
 	}
 }
