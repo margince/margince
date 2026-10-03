@@ -57,4 +57,6 @@ var commitImportCopy = toolCopy{
 		"says they have already been through these rows, show the counts and the mapping and wait " +
 		"for their go-ahead.",
 	Instead: "read_import_report first: numbers nobody read are not a check.",
+	Retain: "Report what landed from read_import_report once this answers — the counts and the " +
+		"mapping the run used, each column by the field it went to.",
 }

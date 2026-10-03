@@ -8107,6 +8107,12 @@
                   "offered"
                 ]
               },
+              "mapping": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
               "rows_read": {
                 "type": "integer"
               },

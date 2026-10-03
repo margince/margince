@@ -55,7 +55,7 @@ spends it on every run of every agent.
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 5 | 5 of 81 | 1864 | 1288 | 3714 | 11% | 19496 | 0 | 5 |
 | `overnight_at_risk_sweep` | 7 | 7 of 81 | 2702 | 1807 | 5071 | 15% | 18139 | 7 | 6 |
-| _whole served catalog's listing, for scale — no run is offered it_ | 81 | — | 28236 | — | — | 86% | — | — | — |
+| _whole served catalog's listing, for scale — no run is offered it_ | 81 | — | 28272 | — | — | 86% | — | — | — |
 
 ### `morning_brief`
 
@@ -189,6 +189,7 @@ a term in an addition.
 | `invite_meeting` | 264 | — |
 | `company_coverage` | 246 | — |
 | `describe_report_blocks` | 245 | — |
+| `commit_import` | 236 | — |
 | `decide_approval_bundle` | 235 | — |
 | `qualify_lead` | 229 | — |
 | `apply_tag` | 226 | — |
@@ -200,7 +201,6 @@ a term in an addition.
 | `read_brief` | 205 | — |
 | `relink_activities` | 205 | — |
 | `update_tag` | 205 | — |
-| `commit_import` | 200 | — |
 | `merge_tags` | 198 | — |
 | `who_knows` | 197 | — |
 | `relink_thread` | 196 | — |

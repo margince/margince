@@ -34484,7 +34484,10 @@ type ImportRunReport struct {
 	//
 	// Today the only link a delimited file carries is a contact's employer,
 	// named by a company column the mapping points at `company`.
-	Links    *ImportRunLinks    `json:"links,omitempty"`
+	Links *ImportRunLinks `json:"links,omitempty"`
+
+	// Mapping `{source column → target field}` as the run was staged with it, after validation — the same shape the create request's `mapping` takes. A report says where each column went, not only how many rows landed. Absent for a run that carries no mapping.
+	Mapping  *map[string]string `json:"mapping,omitempty"`
 	RowsRead int                `json:"rows_read"`
 	RunId    openapi_types.UUID `json:"run_id"`
 

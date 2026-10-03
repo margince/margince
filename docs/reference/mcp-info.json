@@ -10,16 +10,16 @@
   "totals": {
     "tools": 81,
     "resources": 11,
-    "tool_catalog_bytes": 249540,
+    "tool_catalog_bytes": 249752,
     "resource_catalog_bytes": 4179,
-    "approx_wire_tokens_total": 63429,
+    "approx_wire_tokens_total": 63482,
     "largest_tool_bytes": 9253,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
-      "description_bytes": 64611,
+      "description_bytes": 64754,
       "input_schema_bytes": 57066,
-      "output_schema_bytes": 110516,
-      "description_plus_input_schema_bytes": 121677
+      "output_schema_bytes": 110585,
+      "description_plus_input_schema_bytes": 121820
     }
   },
   "tools": {
@@ -2203,7 +2203,7 @@
           "readOnlyHint": false,
           "title": "Commit an import"
         },
-        "description": "Write a checked import into the workspace. The dry run is the check; this commits when it answers. Only from awaiting_approval, the state a run reaches by producing a dry-run report, so there is always a report first. This cannot be undone from here — undoing an import needs the web app. A request to get a file in is not a review of it: unless the asker says they have already been through these rows, show the counts and the mapping and wait for their go-ahead. read_import_report first: numbers nobody read are not a check. (Governance: runs immediately; requires passport scope \"write\".)",
+        "description": "Write a checked import into the workspace. The dry run is the check; this commits when it answers. Only from awaiting_approval, the state a run reaches by producing a dry-run report, so there is always a report first. This cannot be undone from here — undoing an import needs the web app. A request to get a file in is not a review of it: unless the asker says they have already been through these rows, show the counts and the mapping and wait for their go-ahead. read_import_report first: numbers nobody read are not a check. Report what landed from read_import_report once this answers — the counts and the mapping the run used, each column by the field it went to. (Governance: runs immediately; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -10685,6 +10685,12 @@
                         "applied",
                         "offered"
                       ],
+                      "type": "object"
+                    },
+                    "mapping": {
+                      "additionalProperties": {
+                        "type": "string"
+                      },
                       "type": "object"
                     },
                     "rows_read": {

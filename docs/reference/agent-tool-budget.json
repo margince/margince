@@ -31,7 +31,7 @@
   "catalog": {
     "tools": 81,
     "system_frame_tokens": 561,
-    "tokens": 28236,
+    "tokens": 28272,
     "median_tool_tokens": 278,
     "mean_tool_tokens": 348
   },
@@ -291,6 +291,10 @@
       "tokens": 245
     },
     {
+      "name": "commit_import",
+      "tokens": 236
+    },
+    {
       "name": "decide_approval_bundle",
       "tokens": 235
     },
@@ -333,10 +337,6 @@
     {
       "name": "update_tag",
       "tokens": 205
-    },
-    {
-      "name": "commit_import",
-      "tokens": 200
     },
     {
       "name": "merge_tags",

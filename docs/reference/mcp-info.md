@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 81 |
 | Resources | 11 |
-| Tool catalog | 243.7 KB |
+| Tool catalog | 243.9 KB |
 | Resource catalog | 4.1 KB |
-| Approx. wire tokens | 63429 |
+| Approx. wire tokens | 63482 |
 | Largest tool | `prep_for_meeting` (9.0 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,11 +29,11 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 107.9 KB | 44% | **No** — a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 63.1 KB | 25% | Yes, every step |
+| Output schemas | 108.0 KB | 44% | **No** — a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 63.2 KB | 25% | Yes, every step |
 | Input schemas | 55.7 KB | 22% | Yes, every step |
 | _Names, annotations, punctuation_ | 16.9 KB | 6% | Partly |
-| **Description + input schema** | **118.8 KB** | **48%** | **the recurring cost** |
+| **Description + input schema** | **119.0 KB** | **48%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -74,7 +74,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`catch_me_up_on`](#catch_me_up_on) | Catch me up on a record | yes |  | 3.1 KB |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 3.5 KB |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 2.6 KB |
-| [`commit_import`](#commit_import) | Commit an import |  |  | 2.0 KB |
+| [`commit_import`](#commit_import) | Commit an import |  |  | 2.2 KB |
 | [`company_coverage`](#company_coverage) | Relationship coverage on a deal | yes |  | 3.2 KB |
 | [`compose_analytics_report`](#compose_analytics_report) | Compose an analytics report | yes |  | 4.2 KB |
 | [`create_record`](#create_record) | Create a record |  |  | 3.9 KB |
@@ -119,7 +119,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`query_workspace`](#query_workspace) | Query the workspace | yes |  | 4.1 KB |
 | [`read_approval`](#read_approval) | Read one staged action in full | yes |  | 2.4 KB |
 | [`read_brief`](#read_brief) | Read the morning brief | yes | [`ui://margince/company-brief.html`](#company_brief_view) | 3.2 KB |
-| [`read_import_report`](#read_import_report) | Read an import report | yes |  | 2.9 KB |
+| [`read_import_report`](#read_import_report) | Read an import report | yes |  | 3.0 KB |
 | [`read_import_run`](#read_import_run) | Read an import run | yes |  | 1.4 KB |
 | [`read_lists`](#read_lists) | Find and read lists | yes |  | 3.8 KB |
 | [`read_project_360`](#read_project_360) | Read a project's page | yes |  | 6.4 KB |
@@ -2610,7 +2610,7 @@ Find candidate times for a host without booking or sending anything. Set reliabl
 
 **Commit an import**
 
-Write a checked import into the workspace. The dry run is the check; this commits when it answers. Only from awaiting_approval, the state a run reaches by producing a dry-run report, so there is always a report first. This cannot be undone from here — undoing an import needs the web app. A request to get a file in is not a review of it: unless the asker says they have already been through these rows, show the counts and the mapping and wait for their go-ahead. read_import_report first: numbers nobody read are not a check. (Governance: runs immediately; requires passport scope "write".)
+Write a checked import into the workspace. The dry run is the check; this commits when it answers. Only from awaiting_approval, the state a run reaches by producing a dry-run report, so there is always a report first. This cannot be undone from here — undoing an import needs the web app. A request to get a file in is not a review of it: unless the asker says they have already been through these rows, show the counts and the mapping and wait for their go-ahead. read_import_report first: numbers nobody read are not a check. Report what landed from read_import_report once this answers — the counts and the mapping the run used, each column by the field it went to. (Governance: runs immediately; requires passport scope "write".)
 
 <details><summary>Input schema</summary>
 
@@ -11538,6 +11538,12 @@ What an import will do, or did: rows created, updated, failed, unusable, duplica
                 "applied",
                 "offered"
               ],
+              "type": "object"
+            },
+            "mapping": {
+              "additionalProperties": {
+                "type": "string"
+              },
               "type": "object"
             },
             "rows_read": {

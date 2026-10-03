@@ -21888,6 +21888,10 @@ export interface components {
             issues: components["schemas"]["ImportRowIssue"][];
             /** @description Which column identified a row for idempotency — the request's `source_key`, or the natural key chosen in its absence. Stated because the whole re-run guarantee rests on it. */
             source_key_used: string;
+            /** @description `{source column → target field}` as the run was staged with it, after validation — the same shape the create request's `mapping` takes. A report says where each column went, not only how many rows landed. Absent for a run that carries no mapping. */
+            mapping?: {
+                [key: string]: string;
+            };
             links?: components["schemas"]["ImportRunLinks"];
             /** @description A dry run's estimate for the commit. Null when the run has already finished and the real duration is on the run record. */
             estimated_duration_seconds?: number | null;

@@ -422,12 +422,12 @@ Every run of every case requiring this tool passed, for the model named.
 | `relink_activity` | 1.00 | 3 | `case9_filed_in_the_wrong_place` |
 | `decide_approval` | 1.00 | 3 | `case8_whats_waiting` |
 | `list_approvals` | 1.00 | 3 | `case8_whats_waiting` |
+| `commit_import` | 1.00 | 3 | `case10_finish_the_import` |
 | `qualify_lead` | 1.00 | 3 | `case40_sort_the_queue` |
 | `apply_tag` | 1.00 | 3 | `case30_a_word_for_it` |
 | `disqualify_lead` | 1.00 | 3 | `case40_sort_the_queue` |
 | `relink_activities` | 1.00 | 3 | `case9_filed_in_the_wrong_place` |
 | `update_tag` | 1.00 | 3 | `case32_two_words_for_one_thing` |
-| `commit_import` | 1.00 | 3 | `case10_finish_the_import` |
 | `merge_tags` | 1.00 | 3 | `case32_two_words_for_one_thing` |
 | `list_colleagues` | 1.00 | 3 | `case33_two_cards_for_one_company` |
 | `create_tag` | 1.00 | 3 | `case30_a_word_for_it` |
@@ -484,8 +484,8 @@ Driven, and not every run passed. Open the case to see what was asked.
 | `check_availability` | 0.67 | 2/3 | — | `case23_find_us_a_slot` |
 | `merge_records` | 0.67 | 2/3 | — | `case33_two_cards_for_one_company` |
 | `archive_record` | 0.67 | 2/3 | — | `case33_two_cards_for_one_company` |
-| `update_tag` | 0.00 | 0/3 | `case32_two_words_for_one_thing` | `case32_two_words_for_one_thing` |
 | `commit_import` | 0.00 | 0/3 | `case10_finish_the_import` | `case10_finish_the_import` |
+| `update_tag` | 0.00 | 0/3 | `case32_two_words_for_one_thing` | `case32_two_words_for_one_thing` |
 | `merge_tags` | 0.00 | 0/3 | `case32_two_words_for_one_thing` | `case32_two_words_for_one_thing` |
 | `list_colleagues` | 0.67 | 2/3 | — | `case33_two_cards_for_one_company` |
 | `list_channel_providers` | 0.33 | 1/3 | `case42_can_i_answer_on_whatsapp` | `case42_can_i_answer_on_whatsapp` |
@@ -518,8 +518,8 @@ Driven, and not every run passed. Open the case to see what was asked.
 | `search_records` | 0.00 | 0/3 | `case5_before_the_meeting` | `case5_before_the_meeting` |
 | `advance_project_phase` | 0.00 | 0/3 | `case41_close_the_project` | `case41_close_the_project` |
 | `search_context` | 0.00 | 0/3 | `case6_ask_the_company` | `case6_ask_the_company` |
-| `update_tag` | 0.67 | 2/3 | — | `case32_two_words_for_one_thing` |
 | `commit_import` | 0.00 | 0/3 | `case10_finish_the_import` | `case10_finish_the_import` |
+| `update_tag` | 0.67 | 2/3 | — | `case32_two_words_for_one_thing` |
 | `merge_tags` | 0.67 | 2/3 | — | `case32_two_words_for_one_thing` |
 | `read_project_360` | 0.00 | 0/3 | `case41_close_the_project` | `case41_close_the_project` |
 | `list_tags` | 0.83 | 5/6 | — | `case30_a_word_for_it`, `case32_two_words_for_one_thing` |
@@ -552,9 +552,9 @@ Driven, and not every run passed. Open the case to see what was asked.
 | `promote_lead` | 0.67 | 2/3 | — | `case40_sort_the_queue` |
 | `merge_records` | 0.67 | 2/3 | — | `case33_two_cards_for_one_company` |
 | `archive_record` | 0.67 | 2/3 | — | `case33_two_cards_for_one_company` |
+| `commit_import` | 0.33 | 1/3 | `case10_finish_the_import` | `case10_finish_the_import` |
 | `qualify_lead` | 0.67 | 2/3 | — | `case40_sort_the_queue` |
 | `disqualify_lead` | 0.67 | 2/3 | — | `case40_sort_the_queue` |
-| `commit_import` | 0.33 | 1/3 | `case10_finish_the_import` | `case10_finish_the_import` |
 | `list_colleagues` | 0.67 | 2/3 | — | `case33_two_cards_for_one_company` |
 | `remove_tag` | 0.67 | 2/3 | — | `case31_wrong_word_on_the_record` |
 | `get_record_tags` | 0.67 | 2/3 | — | `case31_wrong_word_on_the_record` |
