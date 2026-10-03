@@ -308,6 +308,12 @@ func replayClaimIsProvenTx(
 // is on this message — the evidence that their provider delivered it, rather
 // than that they typed its Message-ID.
 //
+// The Delivered-To the receiving server wrote counts as much as a recipient
+// line: mail to a list, a group address or a Bcc names none of the seat's
+// addresses anywhere else, yet it reached their mailbox. Only the trusted
+// position is read (connector.NormalizedRecord.DeliveredTo), which a sender
+// cannot write.
+//
 // EXACT addresses only, never a declared domain. A seat declares a domain with
 // no proof of control, so a domain arm here would let anybody claim a colleague's
 // domain and then treat any message naming an address on it as delivered to
@@ -322,6 +328,9 @@ func mailboxWasARecipientTx(ctx context.Context, tx pgx.Tx, rec connector.Normal
 	}
 	if self.Empty() {
 		return false, nil
+	}
+	if self.CoversAddressExactly(rec.DeliveredTo) {
+		return true, nil
 	}
 	for _, a := range rec.Addresses {
 		if self.CoversAddressExactly(a) {
