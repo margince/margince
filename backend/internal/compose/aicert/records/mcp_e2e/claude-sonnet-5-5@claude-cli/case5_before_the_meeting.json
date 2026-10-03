@@ -1,0 +1,26 @@
+{
+  "scenario": "case5_before_the_meeting",
+  "criteria": [
+    1,
+    2,
+    3,
+    5
+  ],
+  "passed": 3,
+  "runs": 3,
+  "pass_at": 2,
+  "driver": "claude:cli",
+  "effort": "thinking off",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": true,
+  "usage": {
+    "input_tokens": 30,
+    "output_tokens": 5993,
+    "cache_creation_input_tokens": 51242,
+    "cache_read_input_tokens": 910196,
+    "runs_measured": 3,
+    "runs_costed": 3,
+    "cost_usd": 0.447
+  }
+}
