@@ -8,7 +8,8 @@ SET LOCAL lock_timeout = '3s';
 --   * the activity's captured_by names this seat's own Gmail or Graph
 --     connection, and exactly one seat imported it;
 --   * its counterparty is an exact address the seat holds: one in
---     capture_owner_identity, or the account its connection was granted for;
+--     capture_owner_identity, or the account its Gmail or Graph connection
+--     was granted for;
 --   * the head of the stored original carries no Received header. Every hop
 --     that delivers mail prepends one, so a message in the mailbox without any
 --     was never delivered to it: it was written there, by its owner, as sent;
@@ -38,8 +39,13 @@ WITH candidate AS (
        AND (EXISTS (SELECT 1 FROM capture_owner_identity oi
                      WHERE oi.user_id = ci.user_id AND oi.kind = 'address'
                        AND oi.value = a.counterparty_email)
+            -- A grant address only where the provider supplied the label;
+            -- an IMAP label is typed by whoever connected it. A label may carry
+            -- a display name around the address.
             OR EXISTS (SELECT 1 FROM capture_connection cc
-                        WHERE cc.user_id = ci.user_id AND lower(cc.account_label) = a.counterparty_email))
+                        WHERE cc.user_id = ci.user_id AND cc.provider IN ('gmail', 'graph')
+                          AND lower(btrim(coalesce(substring(cc.account_label FROM '<([^>]*)>'), cc.account_label)))
+                              = a.counterparty_email))
        AND a.occurred_at < (SELECT min(cc.created_at) FROM capture_connection cc WHERE cc.user_id = ci.user_id)
 ),
 sent AS (

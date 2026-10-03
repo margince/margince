@@ -22,6 +22,11 @@ import (
 // the connector takes from the grant address. Exact addresses only — a domain
 // claim names colleagues too, and a seat declares one without proving control.
 //
+// Only Gmail and Graph, where the PROVIDER filed the message and sends only
+// from addresses the account verified. An IMAP \Sent folder is whatever the
+// server the seat chose says it is, so its From proves nothing
+// (SeatProvedAddressTx makes the same cut for the same reason).
+//
 // Without this, everybody the seat wrote to from that address reads as a
 // stranger, and the notice duty for mail they already held is owed again.
 func (s *Sink) asSentFromOwnAddressTx(
@@ -30,7 +35,7 @@ func (s *Sink) asSentFromOwnAddressTx(
 	cp := rec.Counterparty
 	// An invitation is left as it is: whom the seat invited is not whom they
 	// wrote to (mailmap.recordCounterparty).
-	if fields.Kind != kindEmail || fields.HasCalendarPart ||
+	if !providerFiledTransport(rec.CapturedBy) || fields.Kind != kindEmail || fields.HasCalendarPart ||
 		cp.Direction != connector.DirectionInbound || !cp.FiledAsSent() {
 		return rec, fields, nil
 	}
@@ -55,4 +60,10 @@ func (s *Sink) asSentFromOwnAddressTx(
 	fields.Direction = connector.DirectionOutbound
 	rec.Fields = fields
 	return rec, fields, nil
+}
+
+// providerFiledTransport reports a mail connector whose sent filing the provider
+// made. capturedBy is the authenticated connector's own id (admitRecord).
+func providerFiledTransport(capturedBy string) bool {
+	return capturedBy == "connector:"+providerGmail || capturedBy == "connector:"+providerGraph
 }
