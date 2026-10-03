@@ -42,6 +42,12 @@ const (
 	lockTakerName   = "takeMergeLockFirst"
 	lockStatement   = "mergeLockStatement"
 	captureEntryFn  = "Upsert"
+	// The alias sighting sits one call down, behind the wrapper that settles what
+	// the seat's own addresses decide. The gate reads both halves: the wrapper's
+	// position inside Upsert, and the sighting's presence inside the wrapper.
+	seatAddressFile = "internal/modules/capture/sentfromownaddress.go"
+	seatAddressFn   = "readAgainstTheSeatsAddressesTx"
+	aliasSightingFn = "noteAliasSightingTx"
 )
 
 // TestTheMergeLockIsTakenBeforeAnythingTouchesAnActivity holds the ordering where
@@ -63,7 +69,16 @@ func TestTheMergeLockIsTakenBeforeAnythingTouchesAnActivity(t *testing.T) {
 		t.Fatalf("%s does not call %s — a capture that locks an activity row before the merge "+
 			"lock deadlocks against a concurrent merge of the same thread", captureEntryFn, lockTakerName)
 	}
-	for _, reaches := range []string{"noteAliasSightingTx", "captureActivity"} {
+	// The sighting is still the first thing that can reach an activity; it is just
+	// reached through the wrapper now. Asserting the wrapper alone would let the
+	// sighting move out from under it without a word, so the chain is read as two
+	// links and each one fails on its own.
+	wrapper := functionNamed(t, moduleRoot(t), seatAddressFile, seatAddressFn)
+	if offsetOfCall(wrapper, aliasSightingFn) < 0 {
+		t.Errorf("%s no longer calls %s, so the ordering below pins the wrapper and not the "+
+			"alias path it stands for", seatAddressFn, aliasSightingFn)
+	}
+	for _, reaches := range []string{seatAddressFn, "captureActivity"} {
 		at := offsetOfCall(entry, reaches)
 		if at < 0 {
 			t.Errorf("%s no longer calls %s — this gate reads the order of the two, so a rename "+
@@ -82,8 +97,12 @@ func TestTheMergeLockIsTakenBeforeAnythingTouchesAnActivity(t *testing.T) {
 // at different nesting depths — one inside a type switch — and an index among
 // top-level statements cannot order those.
 func offsetOfCall(fn *ast.FuncDecl, name string) int {
+	invoked := invokedLiterals(fn)
 	found := -1
 	ast.Inspect(fn.Body, func(n ast.Node) bool {
+		if lit, isLit := n.(*ast.FuncLit); isLit && !invoked[lit] {
+			return false
+		}
 		call, ok := n.(*ast.CallExpr)
 		if !ok || found >= 0 {
 			return found < 0
@@ -238,4 +257,30 @@ func TestAnAbsentCallIsNotTheEarliestOne(t *testing.T) {
 		t.Errorf("a function that never takes the lock read as offset %d, want negative — a zero "+
 			"would compare as earlier than every real call and the gate would pass", got)
 	}
+}
+
+// invokedLiterals collects the function literals this body actually runs: the ones
+// handed straight to a call, which is how the whole capture transaction reaches the
+// store — s.db.Tx(ctx, func(tx pgx.Tx) error { ... }) — and the ones called in
+// place. A literal nobody passes anywhere does not execute, so a call inside one
+// says nothing about what the function does, and reading position cannot tell the
+// two apart without this.
+func invokedLiterals(fn *ast.FuncDecl) map[*ast.FuncLit]bool {
+	invoked := map[*ast.FuncLit]bool{}
+	ast.Inspect(fn.Body, func(n ast.Node) bool {
+		call, ok := n.(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+		if lit, isLit := call.Fun.(*ast.FuncLit); isLit {
+			invoked[lit] = true
+		}
+		for _, arg := range call.Args {
+			if lit, isLit := arg.(*ast.FuncLit); isLit {
+				invoked[lit] = true
+			}
+		}
+		return true
+	})
+	return invoked
 }
