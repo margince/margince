@@ -101,7 +101,7 @@ jobs:
     concurrency:
       group: ${{ github.workflow }}-draft-${{ github.ref }}
       cancel-in-progress: true
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-26.04-arm
     permissions:
       contents: read
       # Pull the private release-management image from ghcr.io with the
@@ -214,7 +214,7 @@ jobs:
     concurrency:
       group: ${{ github.workflow }}-bake-${{ github.ref }}
       cancel-in-progress: true
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-26.04-arm
     permissions:
       contents: read
       # Pull the private release-management image from ghcr.io; the baked
@@ -341,7 +341,7 @@ jobs:
     # this up server-side with a 409. The implicit success() still applies, so
     # a failed draft or image job keeps blocking the publish.
     if: needs.draft.outputs.patched != 'false'
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-26.04-arm
     permissions:
       contents: read
       # Pull the private release-management image from ghcr.io with the
@@ -386,7 +386,7 @@ jobs:
     name: Record the published revision
     timeout-minutes: 10
     needs: [publish]
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-26.04-arm
     permissions:
       contents: write
     steps:
