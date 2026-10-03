@@ -14,6 +14,7 @@ import (
 	"context"
 	"errors"
 	"maps"
+	"sync"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -291,6 +292,9 @@ func TestTwinsRecordedAtOnceRaiseOneSuggestion(t *testing.T) {
 	ctx := e.system()
 
 	firstPID, release, firstDone := make(chan int, 1), make(chan struct{}), make(chan error, 1)
+	var releaseOnce sync.Once
+	releaseFirst := func() { releaseOnce.Do(func() { close(release) }) }
+	t.Cleanup(releaseFirst)
 	go func() {
 		firstDone <- database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			if _, err := deals.RecordSuggestionTx(ctx, tx, namedDraft); err != nil {
@@ -305,7 +309,12 @@ func TestTwinsRecordedAtOnceRaiseOneSuggestion(t *testing.T) {
 			return nil
 		})
 	}()
-	pid := <-firstPID
+	var pid int
+	select {
+	case pid = <-firstPID:
+	case err := <-firstDone:
+		t.Fatalf("the first pass ended before it held its lock: %v", err)
+	}
 
 	var secondRaised bool
 	secondDone := make(chan error, 1)
@@ -324,7 +333,7 @@ func TestTwinsRecordedAtOnceRaiseOneSuggestion(t *testing.T) {
 		}
 	}()
 	waitForBackendBlockedBy(t, probe, pid, secondDone)
-	close(release)
+	releaseFirst()
 
 	if err := <-firstDone; err != nil {
 		t.Fatalf("the first pass: %v", err)
