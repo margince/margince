@@ -196,11 +196,10 @@ func TestAWaitOlderThanTheHorizonIsNotReported(t *testing.T) {
 	}
 }
 
-// Money outlives the horizon. A wait past ninety days with an open deal on it
-// still reaches the reader, because the caller's staleness rule promises to keep
-// exactly that case and a horizon that removed it first would leave that promise
-// with nothing to act on.
-func TestAnOldWaitWithAnOpenDealSurvivesTheHorizon(t *testing.T) {
+// An open deal does not keep old mail in the day. A wait past the horizon
+// leaves the queue with or without money on it; the deal's own risk lane
+// speaks for a deal that has gone quiet.
+func TestAnOldWaitWithAnOpenDealAgesOutLikeAnyOther(t *testing.T) {
 	e := Setup(t)
 	contact := seedWaitingContact(t, e)
 	deal := seedWaitingDeal(t, "open")
@@ -213,8 +212,8 @@ func TestAnOldWaitWithAnOpenDealSurvivesTheHorizon(t *testing.T) {
 		t.Fatalf("reading who is waiting: %v", err)
 	}
 
-	if !containsSubject(waiting, "Still open") {
-		t.Fatal("a 200-day wait on an OPEN deal was dropped by the horizon")
+	if containsSubject(waiting, "Still open") {
+		t.Fatal("a 200-day wait on an open deal is still daily work")
 	}
 }
 
