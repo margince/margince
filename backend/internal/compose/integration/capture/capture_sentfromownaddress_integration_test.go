@@ -204,3 +204,24 @@ func TestAPlantedSentCopyDoesNotAttestAColleaguesMail(t *testing.T) {
 		t.Errorf("a planted sent copy changed the colleague's mail from %+v to %+v", before, got)
 	}
 }
+
+// One address in two spellings is one address: a Unicode domain and its
+// punycode are the same mailbox, and a second seat holding either spelling
+// keeps the alias nobody's to claim.
+func TestAnAliasAnotherSeatHoldsInAnotherSpellingDoesNotTurnACopyRound(t *testing.T) {
+	env := newCaptureEnv(t)
+	const punycode = "founder@xn--bcher-kva.example"
+	declareIdentity(t, env.e, env.e.Rep1, capturemod.IdentityKindAddress, punycode)
+	declareIdentity(t, env.e, env.e.Rep3, capturemod.IdentityKindAddress, "founder@bücher.example")
+	colleague := secondMailbox(t, env.e, env.e.Rep3)
+	const msgID = "spelled-twice@xn--bcher-kva.example"
+	raw := emailCC(punycode, "Founder", "buyer@customer.example", secondSeatAddress, msgID)
+
+	colleague(t, raw)
+	before := endsOf(t, env, msgID)
+	env.syncSent(t, map[string]bool{msgID: true}, raw)
+
+	if got := endsOf(t, env, msgID); got != before {
+		t.Errorf("an alias the colleague holds in its Unicode spelling rewrote their copy from %+v to %+v", before, got)
+	}
+}

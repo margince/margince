@@ -103,22 +103,60 @@ func storedAsThisSeatsTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, dire
 }
 
 // ownAddressHeldAloneTx reports that address is one of the acting seat's own
-// exact addresses and that no other seat holds it, as an identity or as the
-// account a connection of theirs was granted for.
+// exact addresses and that no other seat holds it.
+//
+// Under the address's own lock, which every identity writer also takes, so a
+// seat adding the same alias in a concurrent transaction is seen or waits.
 func ownAddressHeldAloneTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, address string) (bool, error) {
 	self, err := ownerIdentitiesTx(ctx, tx)
 	if err != nil || !self.CoversAddressExactly(address) {
 		return false, err
 	}
-	var elsewhere bool
-	if err := tx.QueryRow(ctx, `
-		SELECT EXISTS (SELECT 1 FROM capture_owner_identity
-		                WHERE kind = 'address' AND value = $2 AND user_id <> $1)
-		    OR EXISTS (SELECT 1 FROM capture_connection
-		                WHERE user_id <> $1 AND archived_at IS NULL
-		                  AND lower(btrim(coalesce(substring(account_label FROM '<([^>]*)>'), account_label))) = $2)`,
-		seat, foldAddress(address)).Scan(&elsewhere); err != nil {
+	if err := lockOwnAddressTx(ctx, tx, address); err != nil {
+		return false, err
+	}
+	held, err := addressHeldByAnotherSeatTx(ctx, tx, seat, address)
+	return !held, err
+}
+
+// addressHeldByAnotherSeatTx reports whether any other seat holds address as one
+// of its own: an address identity, or the account a connected mailbox of theirs
+// was granted for. Read the way ownerIdentitiesTx reads a seat's own set —
+// bareAddress and foldAddress in Go, and a discovered machine address skipped —
+// so two spellings of one address are one address here as well.
+func addressHeldByAnotherSeatTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, address string) (bool, error) {
+	rows, err := tx.Query(ctx, `
+		SELECT value, source FROM capture_owner_identity WHERE kind = $2 AND user_id <> $1
+		 UNION ALL
+		SELECT account_label, '' FROM capture_connection
+		 WHERE user_id <> $1 AND status = 'connected' AND archived_at IS NULL
+		   AND coalesce(account_label, '') <> ''`, seat, IdentityKindAddress)
+	if err != nil {
 		return false, fmt.Errorf("capture: reading whether another seat holds %s: %w", address, err)
 	}
-	return !elsewhere, nil
+	defer rows.Close()
+	want := foldAddress(address)
+	for rows.Next() {
+		var value, source string
+		if err := rows.Scan(&value, &source); err != nil {
+			return false, fmt.Errorf("capture: reading whether another seat holds %s: %w", address, err)
+		}
+		if discoveredMachineAddress(source, value) {
+			continue
+		}
+		if foldAddress(bareAddress(value)) == want {
+			return true, nil
+		}
+	}
+	return false, rows.Err()
+}
+
+// lockOwnAddressTx serializes everything that decides or changes which seats
+// hold one address, keyed on its folded form.
+func lockOwnAddressTx(ctx context.Context, tx pgx.Tx, address string) error {
+	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtext('margince:own-address:' || $1)::bigint)`,
+		foldAddress(bareAddress(address))); err != nil {
+		return fmt.Errorf("capture: locking who holds %s: %w", address, err)
+	}
+	return nil
 }

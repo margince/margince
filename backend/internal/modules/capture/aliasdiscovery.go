@@ -137,6 +137,9 @@ func foldIdentityRows(rows pgx.Rows) (addresses, domains []string, err error) {
 // from now on, and an address deferred moments earlier would still become a
 // contact through the very door this claim closes.
 func (s *Sink) claimDiscoveredAliasTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, value string) error {
+	if err := lockOwnAddressTx(ctx, tx, value); err != nil {
+		return err
+	}
 	var identity OwnerIdentity
 	err := tx.QueryRow(ctx, `
 		INSERT INTO capture_owner_identity (user_id, kind, value, source, created_by)
