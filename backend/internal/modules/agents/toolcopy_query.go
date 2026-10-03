@@ -31,6 +31,7 @@ var queryWorkspaceCopy = toolCopy{
 
 // sayWhoseItIs is what every record-serving tool tells a model to do with the
 // `owner` its rows carry, spliced in so the four give the same advice.
-const sayWhoseItIs = "When `owner.is_you` is false, say whose it is when you report the record, " +
+const sayWhoseItIs = "When `owner.is_you` is false, say whose it is when you report the record " +
+	"(or that its owner could not be named, when `owner.name` is absent), " +
 	"and treat contacting it as theirs to decide rather than advising an approach as though " +
 	"the record were unowned."

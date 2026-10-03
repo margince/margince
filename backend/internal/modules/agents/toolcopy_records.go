@@ -18,7 +18,7 @@ var searchRecordsCopy = toolCopy{
 		"when the question is a count, a total or a breakdown rather than a set of records.",
 	Retain: "Keep each result's record_type and id together: every other tool identifies a record " +
 		"by both, and an id alone does not say which type it belongs to. A result's `owner` " +
-		"names the colleague who holds it. " + sayWhoseItIs,
+		"says who holds it. " + sayWhoseItIs,
 }
 
 var listRecordsCopy = toolCopy{
@@ -31,7 +31,7 @@ var listRecordsCopy = toolCopy{
 		"records meet a condition, and run_report when the answer is a count or a total rather " +
 		"than the records themselves.",
 	Retain: "Keep next_cursor and pass it back to read the next page — a second call without it " +
-		"re-reads the first one. A result's `owner` names the colleague who holds it. " + sayWhoseItIs,
+		"re-reads the first one. A result's `owner` says who holds it. " + sayWhoseItIs,
 }
 
 var readRecordCopy = toolCopy{
@@ -43,7 +43,7 @@ var readRecordCopy = toolCopy{
 		"than what it currently says.",
 	Retain: "Keep the version from the result and pass it back as if_version on a later update, " +
 		"so a write is refused rather than silently overwriting a change made in between. Its " +
-		"`owner` names the colleague who holds it. " + sayWhoseItIs,
+		"`owner` says who holds it. " + sayWhoseItIs,
 }
 
 var createRecordCopy = toolCopy{
@@ -58,9 +58,10 @@ var createRecordCopy = toolCopy{
 		"a contact you just created is on their colleagues' screens.",
 	Instead: "Search first when the record might already exist — a second copy of a contact or " +
 		"company is a problem that then needs merge_records to undo. A record that shares only " +
-		"a name, with a different email, phone or employer, is not the same record: create it — " +
-		"the create files the pair for review, its warning says so, and that is what you report. " +
-		"Several rows at once — a pasted list, a CSV — go through preview_import, which checks " +
+		"a name, with a different email, phone or employer, is not proof of a duplicate: create " +
+		"it — the create files the pair for review, and you report the pair as filed, unresolved " +
+		"until the reviewer decides. Several contacts, companies or leads at once — a pasted list, " +
+		"a CSV — go through preview_import, which checks " +
 		"every row and writes nothing; creating them one by one skips that check.",
 	Retain: "The new record's id comes back in the result; keep it for anything that links to it.",
 }

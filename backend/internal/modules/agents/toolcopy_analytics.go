@@ -21,8 +21,8 @@ var runAnalyticsQueryCopy = toolCopy{
 		"is this seat's own default population, never the workspace.",
 	Instead: "run_report answers a prebuilt report by key; query_workspace lists exact " +
 		"records; the forecast tools answer forecast readings and movement. This one is for " +
-		"a novel aggregate no prebuilt report shapes, and for any figure a " +
-		"compose_analytics_report document will cite: only a saved run can be cited.",
+		"a novel aggregate no prebuilt report shapes, and for an ad-hoc figure a " +
+		"compose_analytics_report document will cite as a query cell: only a saved run can be.",
 	Retain: "Set save to get a run_id whose cells compose_analytics_report can cite; " +
 		"without it the answer is served once and not stored.",
 }
