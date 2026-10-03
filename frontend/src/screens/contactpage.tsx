@@ -51,9 +51,10 @@ import { ContactSubtitle } from "./contactsubtitle";
 import { CONTACT_TABS, type ContactTab, contactTabRoute } from "./contacttab";
 import { ContactTimelineTab } from "./contacttabs";
 import { transportForActivity, useTransports } from "./contacttransports";
-import { rosterOwnerName, useRoster, useRosterPartial } from "./entityref";
+import { rosterOwnerName } from "./entityref";
 import { LogActivityAction } from "./logactivity";
 import { ContactMeetingBrief } from "./meetingbrief";
+import { useMemberName } from "./membernames";
 import { useOpenEmail } from "./openemail";
 import { RecordAccess } from "./recordaccess";
 import {
@@ -838,11 +839,7 @@ function ContactFacts({ view }: Readonly<{ view: Contact360 }>): ReactNode {
   const { locale } = useLocale();
   const zone = useRecordZone();
   const viewerId = useViewerId();
-  const roster = useRoster("user", Boolean(view.contact.owner_id));
-  const rosterPartial = useRosterPartial(
-    "user",
-    Boolean(view.contact.owner_id),
-  );
+  const ownerName = useMemberName(view.contact.owner_id);
   const contact = view.contact;
   const email = contact.emails?.[0]?.email;
   const phone = contact.phones?.[0]?.phone;
@@ -880,8 +877,7 @@ function ContactFacts({ view }: Readonly<{ view: Contact360 }>): ReactNode {
       <Fact label={t("contact.page.owner")}>
         {rosterOwnerName(
           contact.owner_id,
-          roster,
-          rosterPartial,
+          ownerName,
           t,
           t("contact.page.ownerUnassigned"),
         )}

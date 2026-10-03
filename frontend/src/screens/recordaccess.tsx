@@ -34,8 +34,8 @@ import {
   throwProblem,
   useViewerId,
 } from "./common";
+import { useMemberName } from "./membernames";
 import { invalidateRecord, recordWriteKeys } from "./recordwritekeys";
-import { memberName, useRosterNames } from "./roster";
 import "./recordaccess.css";
 
 // The shape both records share, which is all this component reads. Spelled
@@ -355,9 +355,9 @@ function useAudienceSentence(
   const isPrivate = record.visibility === "owner";
   const ownerId = record.owner_id ?? undefined;
   const yours = viewerId !== undefined && ownerId === viewerId;
-  // The cache entry the facts strip already names the owner from, so this
-  // costs no request on either record page.
-  const roster = useRosterNames("user", isPrivate && !yours && !!ownerId);
+  // Named by id, batched with the facts strip's own request for the same
+  // owner within the same tick — this costs no extra round trip.
+  const name = useMemberName(isPrivate && !yours ? ownerId : null);
   if (!record.visibility) {
     return undefined;
   }
@@ -367,6 +367,7 @@ function useAudienceSentence(
   if (yours) {
     return t(copy.privateYours);
   }
-  const owner = ownerId && memberName(roster.data, ownerId);
-  return owner ? t(copy.privateOf, { owner }) : t(copy.privateOfOwner);
+  return name.data != null
+    ? t(copy.privateOf, { owner: name.data })
+    : t(copy.privateOfOwner);
 }

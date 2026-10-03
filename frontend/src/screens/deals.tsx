@@ -140,7 +140,6 @@ import {
   type OwnerNaming,
   rosterOwnerNaming,
   useEntityName,
-  useRoster,
 } from "./entityref";
 import { searchCompanies } from "./filterreference";
 import {
@@ -156,6 +155,7 @@ import {
   withListPage,
   withoutScreenDials,
 } from "./listquery";
+import { useMemberNames } from "./membernames";
 import { useOpenEmail } from "./openemail";
 import { usePipelines } from "./pipelines.queries";
 import type { Project } from "./projects.form";
@@ -1593,11 +1593,10 @@ function DealBoardBody({
 }>) {
   const t = useT();
   const recordZone = useRecordZone();
-  // Only walked when a card has an owner to name: a board of unowned deals
-  // needs no roster read to say so.
-  const roster = useRoster(
-    "user",
-    loadedDeals.some((deal) => Boolean(deal.owner_id)),
+  // Named by id, batched into one request for every card's owner at once —
+  // an unowned deal contributes no id, so a board of them asks nothing.
+  const ownerNames = useMemberNames(
+    loadedDeals.flatMap((deal) => (deal.owner_id ? [deal.owner_id] : [])),
   );
   // Every company the CARDS name. The picker's capped page answers most of them
   // for free; the rest are resolved by id (useCompanyMarks), so no card is left
@@ -1637,7 +1636,7 @@ function DealBoardBody({
                   stageTotalsQuery.data ?? new Map(),
                   companyMarks,
                   totalsWithheld ? t(totalsWithheld) : undefined,
-                  rosterOwnerNaming(roster),
+                  rosterOwnerNaming(ownerNames),
                 )}
                 onOpen={openDeal}
                 mailAside={dealMailAside}

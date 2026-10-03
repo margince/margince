@@ -239,7 +239,7 @@ describe("EntityRef", () => {
     expect(screen.queryByText("Loading…")).toBeNull();
   });
 
-  it("says a name is on its way while the roster read is in flight, rather than showing the user's id", async () => {
+  it("says a name is on its way while the naming read is in flight, rather than showing the user's id", async () => {
     const answer: Array<(response: Response) => void> = [];
     vi.stubGlobal(
       "fetch",
@@ -257,10 +257,7 @@ describe("EntityRef", () => {
 
     for (const resolve of answer) {
       resolve(
-        jsonResponse({
-          data: [{ id: "u-slow", display_name: "Priya Shah" }],
-          page: { next_cursor: null, has_more: false },
-        }),
+        jsonResponse({ data: [{ id: "u-slow", display_name: "Priya Shah" }] }),
       );
     }
 
@@ -275,17 +272,16 @@ describe("EntityRef", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("resolves a user from the roster list and renders the name as plain text (no link)", async () => {
+  it("resolves a user by id and renders the name as plain text (no link)", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (request: Request) => {
-        if (request.url.includes("/users")) {
+        if (request.url.includes("/users/names")) {
           return jsonResponse({
             data: [
               { id: "u-1", display_name: "Priya Shah" },
               { id: "u-2", display_name: "Someone Else" },
             ],
-            page: { next_cursor: null, has_more: false },
           });
         }
         return jsonResponse({}, 404);
@@ -316,14 +312,13 @@ describe("EntityRef", () => {
     expect(screen.queryByRole("button", { name: "Platform Team" })).toBeNull();
   });
 
-  it("falls back to the raw id as plain text (no link) when the settled roster does not carry the user", async () => {
+  it("falls back to the raw id as plain text (no link) when the naming read settles without the user", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (request: Request) => {
-        if (request.url.includes("/users")) {
+        if (request.url.includes("/users/names")) {
           return jsonResponse({
             data: [{ id: "u-1", display_name: "Priya Shah" }],
-            page: { next_cursor: null, has_more: false },
           });
         }
         return jsonResponse({}, 404);
@@ -413,24 +408,67 @@ describe("EntityRef", () => {
 
     expect(await screen.findByText("Priya Shah")).toBeTruthy();
   });
+
+  it("names an invited colleague without walking the roster", async () => {
+    // openapi-fetch always hands the mock a Request, but `fetch` itself also
+    // takes a bare string or URL, and `mockImplementation` checks the
+    // replacement against that whole signature.
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const request = input instanceof Request ? input : new Request(input);
+      return new URL(request.url).pathname.endsWith("/users/names")
+        ? jsonResponse({ data: [{ id: "u-7", display_name: "Dana Kessler" }] })
+        : jsonResponse({ data: [], page: { has_more: false } });
+    });
+    vi.spyOn(globalThis, "fetch").mockImplementation(fetchMock);
+
+    render(<EntityRef kind="user" id="u-7" />);
+
+    expect(await screen.findByText("Dana Kessler")).toBeTruthy();
+    // The walk is the picker's read; naming never arms it.
+    expect(
+      fetchMock.mock.calls.every(([input]) => {
+        const request = input instanceof Request ? input : new Request(input);
+        return new URL(request.url).pathname.endsWith("/users/names");
+      }),
+    ).toBe(true);
+  });
+
+  it("names a deactivated colleague, whom the walk never carried", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
+      jsonResponse({ data: [{ id: "u-9", display_name: "Departed Seat" }] }),
+    );
+
+    render(<EntityRef kind="user" id="u-9" />);
+
+    expect(await screen.findByText("Departed Seat")).toBeTruthy();
+  });
+
+  it("renders the id when the naming read omits it", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
+      jsonResponse({ data: [] }),
+    );
+
+    render(<EntityRef kind="user" id="u-gone" />);
+
+    expect(await screen.findByText(/u-gone/)).toBeTruthy();
+  });
 });
 
 // The roster walk: `/users` and `/teams` are keyset-paged, so ONE page is not
-// the roster. Every consumer of `useRoster` inherits what the walk sees — a
-// name resolution, an owner column, a subject picker — which is why the walk
-// carries whether it reached the end. Three facts are asserted here: the walk
-// follows the cursor it was given, it stops at a bound rather than trusting a
-// cursor forever, and neither the stop nor a failed page is allowed to read as
-// a complete roster.
+// the roster. Every picker built on `useRoster` inherits what the walk sees —
+// which is why the walk carries whether it reached the end. A team reference
+// is named off this same walk (`RosterRef`'s team arm); a user reference is
+// named by id and never walks, so these three facts are proven against a
+// team: the walk follows the cursor it was given, it stops at a bound rather
+// than trusting a cursor forever, and neither the stop nor a failed page is
+// allowed to read as a complete roster.
 
 // Pages of a workspace roster, served the way the contract serves them: each
 // response hands back the cursor of the NEXT page, and the last hands back
 // none. The cursor is the page's index, so a request that forgot to echo it
 // would read page one forever and the walk would never terminate.
 function stubPagedRoster(
-  pages: ReadonlyArray<
-    ReadonlyArray<{ id: string; display_name: string; status?: string }>
-  >,
+  pages: ReadonlyArray<ReadonlyArray<{ id: string; display_name: string }>>,
 ) {
   const cursors: Array<string | null> = [];
   vi.stubGlobal(
@@ -488,19 +526,72 @@ function stubEndlessRoster() {
   return cursors;
 }
 
+// The `/teams` counterparts of the two stubs above: a team reference walks
+// to name itself, and a user reference is named by id instead.
+function stubPagedTeamRoster(
+  pages: ReadonlyArray<ReadonlyArray<{ id: string; name: string }>>,
+) {
+  const cursors: Array<string | null> = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (request: Request) => {
+      const url = new URL(request.url);
+      if (!url.pathname.endsWith("/teams")) {
+        return jsonResponse({
+          data: [],
+          page: { next_cursor: null, has_more: false },
+        });
+      }
+      const cursor = url.searchParams.get("cursor");
+      cursors.push(cursor);
+      const index = cursor ? Number(cursor) : 0;
+      const last = index === pages.length - 1;
+      return jsonResponse({
+        data: pages[index],
+        page: {
+          next_cursor: last ? null : String(index + 1),
+          has_more: !last,
+        },
+      });
+    }),
+  );
+  return cursors;
+}
+
+function stubEndlessTeamRoster() {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (request: Request) => {
+      const url = new URL(request.url);
+      if (!url.pathname.endsWith("/teams")) {
+        return jsonResponse({
+          data: [],
+          page: { next_cursor: null, has_more: false },
+        });
+      }
+      const cursor = url.searchParams.get("cursor");
+      const index = cursor ? Number(cursor) : 0;
+      return jsonResponse({
+        data: [{ id: `t-${index}`, name: `Team ${index}` }],
+        page: { next_cursor: String(index + 1), has_more: true },
+      });
+    }),
+  );
+}
+
 describe("the roster walk", () => {
-  it("follows the cursor to the last page, so a user beyond the first still resolves to a name", async () => {
-    const cursors = stubPagedRoster([
-      [{ id: "u-1", display_name: "Priya Shah" }],
-      [{ id: "u-2", display_name: "Mor Adler" }],
-      [{ id: "u-3", display_name: "Dana Fischer" }],
+  it("follows the cursor to the last page, so a team beyond the first still resolves to a name", async () => {
+    const cursors = stubPagedTeamRoster([
+      [{ id: "t-1", name: "Sales" }],
+      [{ id: "t-2", name: "Success" }],
+      [{ id: "t-3", name: "Platform" }],
     ]);
-    render(<EntityRef kind="user" id="u-3" />);
+    render(<EntityRef kind="team" id="t-3" />);
 
     // The reference the reader is looking at is on the third page. Read one
     // page deep it rendered a raw uuid — the same non-answer the id fallback
     // exists to avoid handing anyone.
-    expect(await screen.findByText("Dana Fischer")).toBeTruthy();
+    expect(await screen.findByText("Platform")).toBeTruthy();
     // Each page asked with the cursor the previous one minted, first page with
     // none.
     expect(cursors).toEqual([null, "1", "2"]);
@@ -534,19 +625,19 @@ describe("the roster walk", () => {
           return jsonResponse({ title: "Server error" }, 500);
         }
         return jsonResponse({
-          data: [{ id: "u-1", display_name: "Priya Shah" }],
+          data: [{ id: "t-1", name: "Sales" }],
           page: { next_cursor: "1", has_more: true },
         });
       }),
     );
-    render(<EntityRef kind="user" id="u-2" />);
+    render(<EntityRef kind="team" id="t-2" />);
 
     // The first page arrived and the second did not. Kept as the entries that
-    // did load, this reads as a roster that simply does not carry `u-2` — and
+    // did load, this reads as a roster that simply does not carry `t-2` — and
     // the id would be printed as the settled answer for a read that never
     // finished.
     expect(await screen.findByText("Name did not load")).toBeTruthy();
-    expect(screen.queryByText("u-2")).toBeNull();
+    expect(screen.queryByText("t-2")).toBeNull();
   });
 
   it("stops at its page budget and tells a picker the list is only part of one", async () => {
@@ -563,48 +654,25 @@ describe("the roster walk", () => {
   });
 
   it("says a name did not load, rather than printing the id, when the roster it stopped short of might hold it", async () => {
-    stubEndlessRoster();
-    render(<EntityRef kind="user" id="u-far" />);
+    stubEndlessTeamRoster();
+    render(<EntityRef kind="team" id="t-far" />);
 
     // A roster walked to its end answers about this id: nobody the reader may
     // list holds it, and the id is what is left to trace. A roster that ran out
     // of pages has answered nothing about it, and printing the id would state
     // that non-answer as settled fact.
     expect(await screen.findByText("Name did not load")).toBeTruthy();
-    expect(screen.queryByText("u-far")).toBeNull();
+    expect(screen.queryByText("t-far")).toBeNull();
   });
 });
 
 // An imported record is often owned by a colleague who has not signed in yet.
-// The roster NAMES them, so their owner column reads a name rather than an id;
-// the pickers still leave them out, so nobody is offered work they cannot open.
+// `useMemberName` (see "names an invited colleague…" above) names them from
+// the by-id read; the picker's walk asks for offerable seats alone, so nobody
+// is offered work they cannot open.
 describe("invited seats", () => {
-  it("names an invited owner, and asks the roster for invited seats to do it", async () => {
-    stubPagedRoster([
-      [
-        { id: "u-1", display_name: "Priya Shah", status: "active" },
-        { id: "u-2", display_name: "Rainer Schuller", status: "invited" },
-      ],
-    ]);
-    render(<EntityRef kind="user" id="u-2" />);
-
-    await waitFor(() =>
-      expect(screen.getByText("Rainer Schuller")).toBeTruthy(),
-    );
-    const asked = vi
-      .mocked(fetch)
-      .mock.calls.map(([request]) => new URL((request as Request).url))
-      .find((url) => url.pathname.endsWith("/users"));
-    expect(asked?.searchParams.get("include_invited")).toBe("true");
-  });
-
-  it("does not offer an invited seat in an owner picker", async () => {
-    stubPagedRoster([
-      [
-        { id: "u-1", display_name: "Priya Shah", status: "active" },
-        { id: "u-2", display_name: "Rainer Schuller", status: "invited" },
-      ],
-    ]);
+  it("does not ask the picker's walk for invited seats", async () => {
+    stubPagedRoster([[{ id: "u-1", display_name: "Priya Shah" }]]);
     const user = userEvent.setup();
     renderRosterHost();
 
@@ -614,8 +682,13 @@ describe("invited seats", () => {
     expect(
       await screen.findByRole("option", { name: "Priya Shah" }),
     ).toBeTruthy();
-    expect(
-      screen.queryByRole("option", { name: "Rainer Schuller" }),
-    ).toBeNull();
+    const asked = vi
+      .mocked(fetch)
+      .mock.calls.map(([input]) => {
+        const request = input instanceof Request ? input : new Request(input);
+        return new URL(request.url);
+      })
+      .find((url) => url.pathname.endsWith("/users"));
+    expect(asked?.searchParams.has("include_invited")).toBe(false);
   });
 });

@@ -1586,14 +1586,12 @@ export function ComposeModal({
   const stopOfferingRecipient = useCallback(() => {
     offered.current = true;
   }, []);
-  // A reader who picks a DIFFERENT conversation is owed its address: the offer
-  // is once per anchor, not once per composer. Without this the field kept the
-  // first thread's counterparty while the pane showed another's messages. The
+  // A reader who picks a DIFFERENT conversation is owed its address, so the
   // previous offer leaves the field HERE, on the change itself, rather than
-  // when the new address resolves — a lookup still out, or a conversation with
-  // no address on record, must not leave the old counterparty standing as the
-  // recipient of a reply to somebody else. What the reader added beside it is
-  // theirs and stays.
+  // when the new address resolves — a lookup still out, or a conversation
+  // with no address on record, must not leave the old counterparty standing
+  // as the recipient of a reply to somebody else. What the reader added
+  // beside it is theirs and stays.
   // biome-ignore lint/correctness/useExhaustiveDependencies: keyed on the anchor alone — this re-arms the offer when the conversation changes, not when its address resolves.
   useEffect(() => {
     if (restoringRecipient.current) {
@@ -1639,7 +1637,9 @@ export function ComposeModal({
   // sources, because a thread has two sides: colleagues come from the workspace
   // roster, the account's own contacts from the record behind this drawer — whose
   // read is already in cache there, so this costs the composer nothing on the
-  // page it opens over.
+  // page it opens over. Still walks rather than reading useMemberNames by id:
+  // `nameOf` is handed to useRecentConversations, called per value as ITS rows
+  // render.
   const roster = useRoster("user", open);
   const namesCompany = useCompany360(entityType === "company" ? entityId : "");
   const colleagues = new Map(

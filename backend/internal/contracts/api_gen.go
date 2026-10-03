@@ -41430,6 +41430,17 @@ type SearchResultTrustTier string
 // SearchResultType defines model for SearchResult.Type.
 type SearchResultType string
 
+// SeatName A colleague's id and the name a human would recognise them by. Deliberately nothing else: this answers what an id is CALLED, for a caller that already holds the id off a record they can read. Email, status and seat type are the roster's answers, and a naming read has no business disclosing them.
+type SeatName struct {
+	DisplayName string             `json:"display_name"`
+	Id          openapi_types.UUID `json:"id"`
+}
+
+// SeatNameListResponse defines model for SeatNameListResponse.
+type SeatNameListResponse struct {
+	Data []SeatName `json:"data"`
+}
+
 // SeatUsage How many full seats the installation is using, without what it is entitled to.
 //
 // Deliberately NOT a subset of LicenseEntitlement: it carries no cap and no posture,
@@ -52301,8 +52312,9 @@ type ListUsersParams struct {
 	// IncludeInactive Admin management view — include deactivated/suspended members. Honored only for an admin caller.
 	IncludeInactive *bool `form:"include_inactive,omitempty" json:"include_inactive,omitempty"`
 
-	// IncludeInvited Also list invited seats — members who have not signed in yet. For NAMING the colleagues records
-	// already point at (an imported record's owner is often an invited colleague); any member may ask.
+	// IncludeInvited Also list invited seats — members who have not signed in yet. Naming the colleagues a record
+	// already points at is `GET /users/names`, which answers id and display name alone; a roster row
+	// carries the member's email and seat status with it.
 	// Pickers leave it off, so nobody is offered work they cannot open.
 	IncludeInvited *bool `form:"include_invited,omitempty" json:"include_invited,omitempty"`
 }
@@ -52312,6 +52324,12 @@ type PreviewAccessParams struct {
 	// Role A live role's key — a seeded one or one made with `createRole`.
 	Role    string                `form:"role" json:"role"`
 	TeamIds *[]openapi_types.UUID `form:"team_ids,omitempty" json:"team_ids,omitempty"`
+}
+
+// NameSeatsParams defines parameters for NameSeats.
+type NameSeatsParams struct {
+	// Id The seats to name. Repeat the parameter for several, up to 100; more is `422`.
+	Id []openapi_types.UUID `form:"id" json:"id"`
 }
 
 // ListSavedViewsParams defines parameters for ListSavedViews.
@@ -66354,6 +66372,9 @@ type ServerInterface interface {
 	// Record a colleague who has already left. Admin-only, human-only.
 	// (POST /users/former)
 	CreateFormerMember(w http.ResponseWriter, r *http.Request)
+	// Name the colleagues behind a set of ids. Read-only.
+	// (GET /users/names)
+	NameSeats(w http.ResponseWriter, r *http.Request, params NameSeatsParams)
 	// What this member sees and may do today, from their roles and teams.
 	// (GET /users/{id}/access)
 	GetUserAccess(w http.ResponseWriter, r *http.Request, id Id)
@@ -70824,6 +70845,12 @@ func (_ Unimplemented) ListAssignableRoles(w http.ResponseWriter, r *http.Reques
 // Record a colleague who has already left. Admin-only, human-only.
 // (POST /users/former)
 func (_ Unimplemented) CreateFormerMember(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Name the colleagues behind a set of ids. Read-only.
+// (GET /users/names)
+func (_ Unimplemented) NameSeats(w http.ResponseWriter, r *http.Request, params NameSeatsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -101878,6 +101905,47 @@ func (siw *ServerInterfaceWrapper) CreateFormerMember(w http.ResponseWriter, r *
 	handler.ServeHTTP(w, r)
 }
 
+// NameSeats operation middleware
+func (siw *ServerInterfaceWrapper) NameSeats(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params NameSeatsParams
+
+	// ------------- Required query parameter "id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "id", r.URL.Query(), &params.Id, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.NameSeats(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetUserAccess operation middleware
 func (siw *ServerInterfaceWrapper) GetUserAccess(w http.ResponseWriter, r *http.Request) {
 
@@ -106690,6 +106758,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/users/former", wrapper.CreateFormerMember)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/users/names", wrapper.NameSeats)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/users/{id}/access", wrapper.GetUserAccess)

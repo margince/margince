@@ -9,7 +9,7 @@ import { formatDate, formatNumber } from "../format/format";
 import { daysPast } from "../format/lateness";
 import { type Locale, useLocale, useT } from "../i18n";
 import { contactTabRoute } from "./contacttab";
-import { useRoster } from "./entityref";
+import { useMemberNames } from "./membernames";
 import { MoveButton } from "./movebutton";
 import {
   basisAddsARecord,
@@ -262,21 +262,17 @@ function useOpenTaskRows(
   const tasks = (view.next_steps?.data ?? []).filter(
     (task) => !task.is_done && !named.has(task.id),
   );
-  // The assignee's name off the workspace roster, so the row's mark is the
-  // colleague it sits with rather than an id. Asked for only when a task names
-  // one.
-  const roster = useRoster(
-    "user",
-    tasks.some((task) => Boolean(task.assignee_id)),
+  // The assignee's name by id, one request for every task on the row at
+  // once, so the row's mark is the colleague it sits with rather than an id.
+  const assigneeNames = useMemberNames(
+    tasks.flatMap((task) => (task.assignee_id ? [task.assignee_id] : [])),
   );
   const assigneeOf = (userId: string | null | undefined) => {
     if (!userId) {
       return undefined;
     }
-    const entry = roster.data?.find((candidate) => candidate.id === userId);
-    return entry && "display_name" in entry
-      ? { name: entry.display_name, identity: userId }
-      : undefined;
+    const name = assigneeNames.get(userId);
+    return name ? { name, identity: userId } : undefined;
   };
   const asOf = Date.parse(view.as_of);
   return {

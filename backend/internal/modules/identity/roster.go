@@ -42,11 +42,12 @@ type ListUsersInput struct {
 	// place, because two ways to spell one authorization decision is how the
 	// two come to disagree.
 	IncludeInactive bool
-	// IncludeInvited widens the roster to invited seats for ANY member. It is
-	// for naming the owners records already point at — an import assigns the
-	// portal to colleagues before anyone is let in, and an owner left off the
-	// roster showed as a raw id. The pickers leave it off, so the default stays
-	// the list of members who can open what they are given.
+	// IncludeInvited widens the roster to invited seats for ANY member.
+	//
+	// Deprecated: naming the owners a record points at is SeatNames, which
+	// answers id and display name alone; a roster row carries the member's
+	// email and seat status with it. The pickers leave it off, so the default
+	// stays the list of members who can open what they are given.
 	IncludeInvited bool
 	// Actor is the human asking, when one is. The management view carries each
 	// member's allowed actions for a human caller only, because every member
@@ -125,9 +126,9 @@ var listUsersFilteredQuery = `
 	ORDER BY created_at, id
 	LIMIT $5`
 
-// The naming roster: the live members plus the invited ones. See
-// ListUsersInput.IncludeInvited.
-var listUsersNamingQuery = `
+// The live members plus the invited seats, for the deprecated include_invited.
+// Naming an id is SeatNames. See ListUsersInput.IncludeInvited.
+var listUsersInvitedQuery = `
 	SELECT ` + userColumns + `
 	FROM app_user
 	WHERE ` + ActivatableMemberSQL("") + `
@@ -135,7 +136,7 @@ var listUsersNamingQuery = `
 	ORDER BY created_at, id
 	LIMIT $4`
 
-var listUsersNamingFilteredQuery = `
+var listUsersInvitedFilteredQuery = `
 	SELECT ` + userColumns + `
 	FROM app_user
 	WHERE ` + ActivatableMemberSQL("") + `
@@ -232,7 +233,7 @@ func (s *Service) ListUsers(ctx context.Context, in ListUsersInput) (RosterPage,
 	case mayManage && in.IncludeInactive:
 		plain, filtered = listUsersAllQuery, listUsersAllFilteredQuery
 	case in.IncludeInvited:
-		plain, filtered = listUsersNamingQuery, listUsersNamingFilteredQuery
+		plain, filtered = listUsersInvitedQuery, listUsersInvitedFilteredQuery
 	}
 	rows, page, err := listRosterPage(ctx, s.db, in.Q, in.Cursor, in.Limit, rosterQuery[userRow]{
 		plain:     plain,

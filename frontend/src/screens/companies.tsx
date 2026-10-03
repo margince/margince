@@ -914,9 +914,9 @@ function useChronologySlots({
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
-  // The workspace roster, for the ids a change row stores. Read here rather
-  // than inside the adapter: the roster is a workspace query and the adapter
-  // is a pure mapping, which is what lets it be tested without one.
+  // The workspace roster, for the ids a change row stores. Still walks rather
+  // than reading useMemberNames by id: `colleagueName` becomes useRecordChronology's
+  // `values.nameOf`, called per row as it renders — ids unknown here.
   const roster = useRoster("user", true);
   const colleagues = new Map(
     (roster.data ?? []).flatMap((entry) =>
@@ -1814,10 +1814,10 @@ function CompanyOverviewStack({
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
-  // The names the reading resolves ids against: the account's own records, and
-  // the workspace roster for the colleague who held a meeting. Read here rather
-  // than inside the thread, because the roster is a workspace read and the
-  // thread is a presentational component that holds none of its own.
+  // The names the reading resolves ids against: the account's own records, and the
+  // workspace roster for the colleague who held a meeting. Still walks rather than
+  // reading useMemberNames by id, for the same reason useChronologySlots above does:
+  // `nameOf` is handed down and called per value as the reading's own rows render.
   const roster = useRoster("user", true);
   const colleagues = new Map(
     (roster.data ?? []).flatMap((entry) =>
