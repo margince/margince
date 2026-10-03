@@ -416,12 +416,8 @@ func TestASettlementPassJudgesTheNewestRequestFirst(t *testing.T) {
 	current := seedEmailRequest(t, e, "Current ask", "commitment", OwedVerdictAsksUs)
 	replyTo(t, e, current, "Sent you the slots.", requestInstant.Add(time.Hour))
 
-	rows, err := storeKnowing(e).RepliedRequests(asClassifier(e), requestInstant.Add(48*time.Hour), 1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(rows) != 1 || rows[0].RequestID != current {
-		t.Fatalf("a pass with room for one judged %v, want the current request %v", rows, current)
+	if before := settledBefore(t, e, current, old); !before {
+		t.Fatalf("the pass would judge %v after %v", current, old)
 	}
 }
 
@@ -436,11 +432,26 @@ func TestAFreshReplyToAnOldRequestIsJudgedFirst(t *testing.T) {
 	replyTo(t, e, current, "Sent you the slots.", requestInstant.Add(time.Hour))
 	replyTo(t, e, old, "Finally, here it is.", requestInstant.Add(2*time.Hour))
 
-	rows, err := storeKnowing(e).RepliedRequests(asClassifier(e), requestInstant.Add(48*time.Hour), 1)
+	if before := settledBefore(t, e, old, current); !before {
+		t.Fatalf("the pass would judge %v after %v", old, current)
+	}
+}
+
+// settledBefore reports whether the pass reads first before second. Positions
+// within one read rather than a budget of one: the package's tests share a
+// template, so another test's requests are in the read too.
+func settledBefore(t *testing.T, e *loadEnv, first, second ids.UUID) bool {
+	t.Helper()
+	rows, err := storeKnowing(e).RepliedRequests(asClassifier(e), requestInstant.Add(48*time.Hour), 500)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(rows) != 1 || rows[0].RequestID != old {
-		t.Fatalf("a pass with room for one judged %v, want the request answered last %v", rows, old)
+	at := map[ids.UUID]int{}
+	for i, row := range rows {
+		at[row.RequestID] = i + 1
 	}
+	if at[first] == 0 || at[second] == 0 {
+		t.Fatalf("the read did not offer both requests (positions %d, %d)", at[first], at[second])
+	}
+	return at[first] < at[second]
 }
