@@ -163,7 +163,7 @@ func (s *Service) runPrecheck(ctx context.Context, id ids.ApprovalID, approve bo
 }
 
 // countIfAContactDecided records the track record, and records nothing for an
-// automatic apply.
+// automatic apply or for a release an agent carried, which the human never saw.
 //
 // The counters are one contact's experience of one kind, and the clean-approval
 // column is the one a promotion offer is read from — so a pass running every
@@ -171,13 +171,13 @@ func (s *Service) runPrecheck(ctx context.Context, id ids.ApprovalID, approve bo
 // evidence that they keep agreeing, about proposals they never saw. The ladder
 // is climbed by decisions, not by the automation a previous rung enabled.
 func countIfAContactDecided(
-	ctx context.Context, tx pgx.Tx, userID ids.UUID, kind string,
+	ctx context.Context, tx pgx.Tx, p principal.Principal, kind string,
 	approve bool, edited json.RawMessage, by decider,
 ) error {
-	if by != decidedByContact {
+	if by != decidedByContact || p.Type == principal.PrincipalAgent {
 		return nil
 	}
-	return countDecisionTx(ctx, tx, userID, kind, decisionOutcomeOf(approve, edited))
+	return countDecisionTx(ctx, tx, p.UserID, kind, decisionOutcomeOf(approve, edited))
 }
 
 // landEditedPayload writes a modify-then-approve edit, and refuses the one kind
@@ -283,7 +283,7 @@ func (s *Service) decideInTx(ctx context.Context, tx pgx.Tx, p principal.Princip
 	// transaction as the decision it counts. A counter that could outlive a
 	// rolled-back approval would offer a rep autonomy on evidence of a decision
 	// they never made.
-	if err := countIfAContactDecided(ctx, tx, p.UserID, a.Kind, approve, edited, by); err != nil {
+	if err := countIfAContactDecided(ctx, tx, p, a.Kind, approve, edited, by); err != nil {
 		return row{}, err
 	}
 	// An approval's whole content is a state transition, so the images are the

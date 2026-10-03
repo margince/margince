@@ -426,6 +426,29 @@ func TestACredentialReleasesTheUndoableChangeItStaged(t *testing.T) {
 	if _, err := e.svc.Decide(after, staged, true, nil); err != nil {
 		t.Fatalf("the connection could not release the undoable change it staged for its human: %v", err)
 	}
+	// The human never looked, so the release is no evidence for their track
+	// record: the autonomy ladder counts only a decision a person made.
+	var counted int
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT count(*) FROM approval_autonomy_policy WHERE user_id = $1 AND kind = $2`,
+		e.rep, rename.Kind).Scan(&counted); err != nil {
+		t.Fatalf("reading the track record: %v", err)
+	}
+	if counted != 0 {
+		t.Errorf("an agent's release was counted on its human's track record")
+	}
+	// The decision event says an agent carried it on the envelope's actor,
+	// which the public webhook envelope keeps.
+	var actorType string
+	if err := e.owner.QueryRow(context.Background(), `
+		SELECT envelope->'actor'->>'type' FROM event_outbox
+		 WHERE envelope->>'type' = 'approval.decided' AND envelope->'entity'->>'id' = $1`,
+		staged.String()).Scan(&actorType); err != nil {
+		t.Fatalf("reading the decision event: %v", err)
+	}
+	if actorType != "agent" {
+		t.Errorf("the decision event names actor %q, want the agent that carried the release", actorType)
+	}
 	if _, _, err := e.svc.Redeem(after, staged, rename.Kind, rename.DiffHash); err != nil {
 		t.Errorf("the connection could not redeem the change it released: %v", err)
 	}
