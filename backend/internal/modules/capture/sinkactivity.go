@@ -169,6 +169,11 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 			// advances the watermark and no later pass retries it.
 			return s.fileUnderOwnReplayKey(ctx, tx, rec, fields, birth, memberBound)
 		}
+		// Before this seat's own import and participant rows: the claim asks who
+		// the STORED row names as sender, and this capture is about to add itself.
+		if err := s.claimOwnSentMailTx(ctx, tx, id, rec); err != nil {
+			return datasource.EntityRef{}, false, counterpartyDecision{}, err
+		}
 		if err := s.recordThisImport(ctx, tx, id, rec, fields, birth, memberBound); err != nil {
 			return datasource.EntityRef{}, false, counterpartyDecision{}, err
 		}

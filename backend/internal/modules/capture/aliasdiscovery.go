@@ -19,6 +19,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -51,6 +52,9 @@ const aliasSightingsBeforeClaiming = 2
 func (s *Sink) noteAliasSightingTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, deliveredTo, source string) error {
 	if seat == ids.Nil || deliveredTo == "" || source == "" {
 		return nil
+	}
+	if err := retireMachineAliasesTx(ctx, tx, seat); err != nil {
+		return err
 	}
 	value, storable := storableAddress(deliveredTo)
 	if !storable {
@@ -168,5 +172,48 @@ func (s *Sink) claimDiscoveredAliasTx(ctx context.Context, tx pgx.Tx, seat ids.U
 // a caller the chance to fail a capture over a header nobody reads.
 func storableAddress(deliveredTo string) (string, bool) {
 	value, err := ValidExclusionValue(IdentityKindAddress, deliveredTo)
-	return value, err == nil
+	return value, err == nil && !IsMachineAddress(value)
+}
+
+// discoveredMachineAddress is a delivery-discovered claim that names a machine
+// sender. Every reader of the seat's addresses skips one, so a claim adopted
+// before discovery refused them is inert before retireMachineAliasesTx removes
+// it. A claim a human declared is theirs to make and is never second-guessed.
+func discoveredMachineAddress(source, value string) bool {
+	return source == IdentitySourceDeliveredTo && IsMachineAddress(bareAddress(value))
+}
+
+// retireMachineAliasesTx withdraws the delivery-discovered claims that name a
+// machine sender. Some provider notifications carry the service address on a
+// Delivered-To line, and two sightings used to adopt it as the seat's own,
+// which then read the service's mail as the seat's and its recipients as the
+// seat's correspondents. Withdrawn as Remove does, value kept out of the trail.
+func retireMachineAliasesTx(ctx context.Context, tx pgx.Tx, seat ids.UUID) error {
+	rows, err := tx.Query(ctx, `
+		SELECT id, user_id, kind, value, source FROM capture_owner_identity
+		 WHERE user_id = $1 AND source = $2`, seat, IdentitySourceDeliveredTo)
+	if err != nil {
+		return fmt.Errorf("capture: reading the seat's discovered addresses: %w", err)
+	}
+	claims, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (OwnerIdentity, error) {
+		var identity OwnerIdentity
+		err := row.Scan(&identity.ID, &identity.UserID, &identity.Kind, &identity.Value, &identity.Source)
+		return identity, err
+	})
+	if err != nil {
+		return fmt.Errorf("capture: reading the seat's discovered addresses: %w", err)
+	}
+	for _, identity := range claims {
+		if !discoveredMachineAddress(identity.Source, identity.Value) {
+			continue
+		}
+		if _, err := tx.Exec(ctx, `DELETE FROM capture_owner_identity WHERE id = $1`, identity.ID); err != nil {
+			return fmt.Errorf("capture: withdrawing a machine address claimed as the seat's own: %w", err)
+		}
+		if _, err := storekit.Audit(ctx, tx, "archive", captureSettingsObject,
+			storekit.MustWorkspace(ctx), ownerIdentityAuditImage(identity), nil); err != nil {
+			return err
+		}
+	}
+	return nil
 }

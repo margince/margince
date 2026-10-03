@@ -91,3 +91,98 @@ func TestMailFiledAsSentFromAnUnclaimedAddressStaysInbound(t *testing.T) {
 		t.Errorf("sent-filed mail from an unclaimed address was captured as %+v, want inbound and unattested", got)
 	}
 }
+
+// A declared address proves nothing a sent copy can rest on: a seat may claim
+// any address and plant a sent copy through the provider's API. So a colleague's
+// copy received from a merely declared address of the seat keeps its reading.
+func TestADeclaredAddressCannotRewriteAColleaguesCopy(t *testing.T) {
+	env := newCaptureEnv(t)
+	declareIdentity(t, env.e, env.e.Rep1, capturemod.IdentityKindAddress, formerAddress)
+	colleague := secondMailbox(t, env.e, env.e.Rep3)
+	const msgID = "sent-colleague-first@previous-employer.example"
+	raw := emailCC(formerAddress, "Founder", "buyer@customer.example", secondSeatAddress, msgID)
+
+	colleague(t, raw)
+	before := endsOf(t, env, msgID)
+	env.syncSent(t, map[string]bool{msgID: true}, raw)
+
+	if got := endsOf(t, env, msgID); got != before {
+		t.Errorf("a sent copy from a declared, unproven address rewrote the colleague's copy from %+v to %+v",
+			before, got)
+	}
+}
+
+// The correction needs the provider's sent filing. A colleague's received copy
+// replayed by the seat's mailbox WITHOUT it stays as first read.
+func TestAColleaguesCopyStaysInboundWithoutTheSentFiling(t *testing.T) {
+	env := newCaptureEnv(t)
+	declareIdentity(t, env.e, env.e.Rep1, capturemod.IdentityKindAddress, formerAddress)
+	colleague := secondMailbox(t, env.e, env.e.Rep3)
+	const msgID = "unfiled-colleague-first@previous-employer.example"
+	raw := emailCC(formerAddress, "Founder", "buyer@customer.example", secondSeatAddress, msgID)
+
+	colleague(t, raw)
+	env.sync(t, raw)
+
+	if got := endsOf(t, env, msgID); got.direction != "inbound" || got.attested {
+		t.Errorf("an unfiled replay rewrote the colleague's copy to %+v", got)
+	}
+}
+
+// Mail the seat sent, stored before the provider's sent filing reached it, is
+// their outbound mail without the attestation. The filing arriving later
+// attests it, which is what lets a reply count as an answer off its thread.
+func TestALaterSentFilingAttestsTheSeatsOwnMail(t *testing.T) {
+	env := newCaptureEnv(t)
+	const msgID = "sent-unfiled-first@myco.example"
+	raw := emailCC(captureOwner, "Owner", "buyer@customer.example", "other@customer.example", msgID)
+
+	env.sync(t, raw)
+	if got := endsOf(t, env, msgID); got.direction != "outbound" || got.attested {
+		t.Fatalf("the unfiled copy was captured as %+v; this test needs it outbound and unattested first", got)
+	}
+	env.syncSent(t, map[string]bool{msgID: true}, raw)
+
+	want := capturedEnds{direction: "outbound", counterparty: "buyer@customer.example", attested: true}
+	if got := endsOf(t, env, msgID); got != want {
+		t.Errorf("after the sent filing, the message reads %+v, want %+v", got, want)
+	}
+}
+
+// Attesting needs authorship, not a matching recipient. A seat that declares a
+// colleague's address and plants the colleague's message as sent reaches the
+// attestation branch with a proven replay, and must still change nothing.
+//
+// The colleague's copy is set to what their own mailbox stores for mail they
+// sent (TestALaterSentFilingAttestsTheSeatsOwnMail reaches the same shape
+// through the writer): outbound to the buyer, sent by them, unattested.
+// The fake connector reads every mailbox as the workspace owner's, so it
+// cannot deliver that shape through a second seat.
+func TestAPlantedSentCopyDoesNotAttestAColleaguesMail(t *testing.T) {
+	env := newCaptureEnv(t)
+	colleague := secondMailbox(t, env.e, env.e.Rep3)
+	declareIdentity(t, env.e, env.e.Rep1, capturemod.IdentityKindAddress, secondSeatAddress)
+	const msgID = "colleagues-own@myco.example"
+	raw := emailCC(secondSeatAddress, "Colleague", "buyer@customer.example", "other@customer.example", msgID)
+	colleague(t, raw)
+	err := database.WithWorkspaceTx(env.e.Admin(), env.e.Pool, func(tx pgx.Tx) error {
+		ctx := context.Background()
+		if _, err := tx.Exec(ctx, `UPDATE activity SET direction = 'outbound', counterparty_email = 'buyer@customer.example'
+			WHERE source_id = $1`, msgID); err != nil {
+			return err
+		}
+		_, err := tx.Exec(ctx, `INSERT INTO activity_participant (activity_id, role, user_id)
+			SELECT id, 'from', $2 FROM activity WHERE source_id = $1`, msgID, env.e.Rep3)
+		return err
+	})
+	if err != nil {
+		t.Fatalf("setting the colleague's copy to their own sent mail: %v", err)
+	}
+	before := endsOf(t, env, msgID)
+
+	env.syncSent(t, map[string]bool{msgID: true}, raw)
+
+	if got := endsOf(t, env, msgID); got != before {
+		t.Errorf("a planted sent copy changed the colleague's mail from %+v to %+v", before, got)
+	}
+}

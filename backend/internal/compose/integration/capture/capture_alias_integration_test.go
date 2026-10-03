@@ -176,3 +176,33 @@ func TestAnAddressTheSeatAlreadyHoldsIsNotRediscovered(t *testing.T) {
 		t.Errorf("the seat's declared address now reads as source %q", got)
 	}
 }
+
+// A service's no-reply address on a Delivered-To line is never the seat's own,
+// however often it appears, and one already claimed that way is withdrawn.
+func TestAMachineAddressIsNeverClaimedAsTheSeatsOwn(t *testing.T) {
+	env := newCaptureEnv(t)
+	const service = "drive-shares-noreply@google.com"
+	err := database.WithWorkspaceTx(env.e.Admin(), env.e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `
+			INSERT INTO capture_owner_identity (user_id, kind, value, source, created_by)
+			VALUES ($1, $2, 'esignature-noreply@google.com', $3, 'system:alias_discovery')`,
+			env.e.Rep1, capturemod.IdentityKindAddress, capturemod.IdentitySourceDeliveredTo)
+		return err
+	})
+	if err != nil {
+		t.Fatalf("seeding a machine address claimed before this rule: %v", err)
+	}
+
+	env.sync(t,
+		deliveredMail(service, "", "shares@google.com", "machine-1@google.com"),
+		deliveredMail(service, "", "shares@google.com", "machine-2@google.com"),
+		deliveredMail(service, "", "shares@google.com", "machine-3@google.com"))
+
+	own := ownAddresses(t, env, env.e.Rep1)
+	if _, claimed := own[service]; claimed {
+		t.Errorf("%s was claimed as the seat's own address", service)
+	}
+	if _, kept := own["esignature-noreply@google.com"]; kept {
+		t.Error("a machine address claimed before this rule is still the seat's own")
+	}
+}

@@ -284,9 +284,9 @@ func ownerIdentitiesTx(ctx context.Context, tx pgx.Tx) (SelfSet, error) {
 	// It is read rather than declared because nobody should have to declare who
 	// they are to the product they are signed in to.
 	rows, err := tx.Query(ctx, `
-		SELECT kind, value FROM capture_owner_identity WHERE user_id = $1
+		SELECT kind, value, source FROM capture_owner_identity WHERE user_id = $1
 		 UNION ALL
-		SELECT 'address', account_label FROM capture_connection
+		SELECT 'address', account_label, '' FROM capture_connection
 		 WHERE user_id = $1 AND coalesce(account_label, '') <> '' AND archived_at IS NULL
 `, user)
 	if err != nil {
@@ -295,9 +295,12 @@ func ownerIdentitiesTx(ctx context.Context, tx pgx.Tx) (SelfSet, error) {
 	defer rows.Close()
 	var addresses, domains []string
 	for rows.Next() {
-		var kind, value string
-		if err := rows.Scan(&kind, &value); err != nil {
+		var kind, value, source string
+		if err := rows.Scan(&kind, &value, &source); err != nil {
 			return SelfSet{}, fmt.Errorf("capture: reading the mailbox owner's identities: %w", err)
+		}
+		if discoveredMachineAddress(source, value) {
+			continue
 		}
 		if kind == IdentityKindDomain {
 			domains = append(domains, value)

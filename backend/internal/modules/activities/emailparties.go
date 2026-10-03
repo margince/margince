@@ -11,6 +11,8 @@ package activities
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -138,7 +140,37 @@ func readEmailParties(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (emailP
 			out.bcc = append(out.bcc, party)
 		}
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return emailParties{}, err
+	}
+	if len(out.from) == 0 {
+		sender, err := receivedFromTx(ctx, tx, id)
+		if err != nil {
+			return emailParties{}, err
+		}
+		if sender != "" {
+			out.from = append(out.from, crmcontracts.EmailParty{Address: sender})
+		}
+	}
+	return out, nil
+}
+
+// receivedFromTx is the sender of a received message whose capture recorded
+// no sender participant: older captures dropped an address the seat held,
+// which left the drawer with no From line at all. On a received message the
+// counterparty IS the sender, so it answers rather than a gap.
+func receivedFromTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (string, error) {
+	var sender string
+	err := tx.QueryRow(ctx, `
+		SELECT coalesce(counterparty_email, '') FROM activity
+		 WHERE id = $1 AND archived_at IS NULL AND direction = 'inbound'`, id).Scan(&sender)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("activities: reading who sent %s: %w", id, err)
+	}
+	return sender, nil
 }
 
 // counterpartyOf names the other side for a row: the first party the caller
