@@ -198,7 +198,7 @@ func Parse(raw []byte, owner string) (Message, error) {
 		calendarNotice:   calendarNotice,
 		hasCalendarPart:  hasCalendarPart,
 		deliveryReport:   deliveryReport,
-		listUnsubscribe:  hasListUnsubscribe(header.Get("List-Unsubscribe"), viaGroup),
+		listUnsubscribe:  hasListUnsubscribe(header.Values("List-Unsubscribe"), viaGroup),
 		participants:     otherParties(toList, ccList, bccList, ownerLower, participantExclusion(counterparty, calendarNotice)),
 		addresses:        allAddresses(fromList, toList, ccList, bccList),
 		parts:            parts,

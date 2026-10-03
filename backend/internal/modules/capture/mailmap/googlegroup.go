@@ -4,6 +4,7 @@
 package mailmap
 
 import (
+	"net/url"
 	"strings"
 
 	"github.com/emersion/go-message/mail"
@@ -18,8 +19,16 @@ import (
 // counterparty. The group keeps the author in X-Original-From. Both headers are
 // the sender's text when the mail did not pass through a group, exactly as From
 // is, so trusting them claims no more than reading From already does.
+//
+// The rewrite is honoured only where the message agrees with itself about the
+// group: From is the address the List-ID names, which is how a group spells
+// itself on every post.
 func googleGroupSender(header mail.Header) ([]*mail.Address, bool) {
 	if strings.TrimSpace(header.Get("X-Google-Group-Id")) == "" {
+		return nil, false
+	}
+	from, err := header.AddressList("From")
+	if err != nil || len(from) != 1 || !groupNamesItself(from[0].Address, header.Get("List-ID")) {
 		return nil, false
 	}
 	original, err := header.AddressList("X-Original-From")
@@ -35,22 +44,53 @@ func googleGroupSender(header mail.Header) ([]*mail.Address, bool) {
 // a link to somewhere else marks the post itself as bulk mail.
 func groupListUnsubscribe(value string) bool {
 	for _, link := range strings.Split(value, ",") {
-		link = strings.ToLower(strings.TrimSpace(link))
+		link = strings.Trim(strings.TrimSpace(link), "<>")
 		if link == "" {
 			continue
 		}
-		if !strings.Contains(link, "googlegroups.com") && !strings.Contains(link, "groups.google.com") {
+		if !isGoogleGroupsLink(link) {
 			return true
 		}
 	}
 	return false
 }
 
-// hasListUnsubscribe is the List-Unsubscribe reading for one message: present
-// at all for ordinary mail, and one of the author's own for a group post.
-func hasListUnsubscribe(value string, viaGroup bool) bool {
-	if strings.TrimSpace(value) == "" {
+// isGoogleGroupsLink reports a mailto to googlegroups.com or an https link to
+// groups.google.com, judged by the address's or URL's own host — never by the
+// text appearing somewhere in the link, which a sender could put in a query.
+func isGoogleGroupsLink(link string) bool {
+	if address, ok := strings.CutPrefix(strings.ToLower(link), "mailto:"); ok {
+		address, _, _ = strings.Cut(address, "?")
+		at := strings.LastIndex(address, "@")
+		return at >= 0 && address[at+1:] == "googlegroups.com"
+	}
+	parsed, err := url.Parse(link)
+	if err != nil {
 		return false
 	}
-	return !viaGroup || groupListUnsubscribe(value)
+	return strings.EqualFold(parsed.Scheme, "https") && strings.EqualFold(parsed.Hostname(), "groups.google.com")
+}
+
+// groupNamesItself reports whether address is the group the List-ID names:
+// Google writes the group's address with its @ turned into a dot, so
+// `asia.sales@ourco.example` is `<asia.sales.ourco.example>`.
+func groupNamesItself(address, listID string) bool {
+	id := strings.ToLower(strings.Trim(strings.TrimSpace(listID), "<>"))
+	address = strings.ToLower(strings.TrimSpace(address))
+	return id != "" && strings.Contains(address, "@") && id == strings.Replace(address, "@", ".", 1)
+}
+
+// hasListUnsubscribe is the List-Unsubscribe reading for one message, over
+// every occurrence of the header: present at all for ordinary mail, and one of
+// the author's own for a group post.
+func hasListUnsubscribe(values []string, viaGroup bool) bool {
+	for _, value := range values {
+		if strings.TrimSpace(value) == "" {
+			continue
+		}
+		if !viaGroup || groupListUnsubscribe(value) {
+			return true
+		}
+	}
+	return false
 }

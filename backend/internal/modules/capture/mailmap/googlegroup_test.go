@@ -50,7 +50,7 @@ func TestAGroupPostIsTheAuthorsMailNotTheGroups(t *testing.T) {
 	// The group's own unsubscribe links make the GROUP a list, not the author's
 	// mail a newsletter.
 	if cp.ListUnsubscribe {
-		t.Error("a person's post through a group was attested as bulk mail by the group's own unsubscribe links")
+		t.Error("an author's post through a group was attested as bulk mail by the group's own unsubscribe links")
 	}
 	if !slices.Contains(rec.Addresses, "henry@shop.example") {
 		t.Errorf("the author is missing from the message's parties %v, so it would read as internal", rec.Addresses)
@@ -87,5 +87,43 @@ func TestAnOriginalFromWithoutAGroupChangesNothing(t *testing.T) {
 	}
 	if got := msg.ToRecord("gmail", nil).Counterparty.Email; got != "sender@elsewhere.example" {
 		t.Errorf("an X-Original-From outside a group moved the counterparty to %q", got)
+	}
+}
+
+// A link that only mentions Google Groups somewhere in its text is the
+// sender's own, and keeps the message bulk.
+func TestALinkThatOnlyMentionsGoogleGroupsIsStillTheSenders(t *testing.T) {
+	msg, err := Parse(groupPost("List-Unsubscribe: <https://esp.example/u?r=groups.google.com>"), groupOwner)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !msg.ToRecord("gmail", nil).Counterparty.ListUnsubscribe {
+		t.Error("an unsubscribe link naming groups.google.com only in its query was taken for the group's own")
+	}
+}
+
+// A group id on a message whose From is not the group the List-ID names is not
+// a group rewrite, and its X-Original-From is ignored.
+func TestAGroupIdOnMailFromSomewhereElseChangesNothing(t *testing.T) {
+	raw := strings.Replace(string(groupPost()),
+		`From: "'Henry Example' via Ourco Info" <info@ourco.example>`, "From: sender@elsewhere.example", 1)
+	msg, err := Parse([]byte(raw), groupOwner)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := msg.ToRecord("gmail", nil).Counterparty.Email; got != "sender@elsewhere.example" {
+		t.Errorf("a group id on mail from elsewhere moved the counterparty to %q", got)
+	}
+}
+
+// A second List-Unsubscribe the sender's own mail carried counts, whichever
+// occurrence a reader happens to see first.
+func TestEveryUnsubscribeHeaderOnAGroupPostIsRead(t *testing.T) {
+	msg, err := Parse(groupPost(googleUnsubscribe, "List-Unsubscribe: <https://esp.example/u/123>"), groupOwner)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !msg.ToRecord("gmail", nil).Counterparty.ListUnsubscribe {
+		t.Error("the sender's own unsubscribe header was missed behind the group's")
 	}
 }
