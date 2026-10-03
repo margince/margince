@@ -11042,6 +11042,7 @@ export const en = {
     "{urgent} urgent · {due} due · {inPlay} in play · {lower} routine · {total} total",
   "worklist.summary.noMiddle":
     "{urgent} urgent · {due} due · {lower} routine · {total} total",
+  "worklist.summary.wholeDay": "Whole day: {sentence}",
   "worklist.summary.split": "{today} today · {review} to review",
   "worklist.completeness": "{shown} of {considered} shown",
   "worklist.review.partial":
@@ -11123,6 +11124,9 @@ export const en = {
   "worklist.scope.all": "All",
   "worklist.owner.visibleLabel": "Viewing",
   "worklist.manager.cancel": "Cancel",
+  "worklist.owner.wholeTeam": "The whole team",
+  "worklist.owner.everyone": "Everyone",
+  "worklist.owner.nobodyYet": "Nobody yet",
   "worklist.owner.mine": "My Worklist",
   "worklist.owner.backToMine": "Back to your Worklist",
   "worklist.manager.reassign": "Reassign",
@@ -11199,8 +11203,8 @@ export const en = {
     "{name} has {count} customer commitment due",
   "worklist.coaching.promises_other":
     "{name} has {count} customer commitments due",
-  "worklist.coaching.waiting_one": "{count} customer is waiting on {name}",
-  "worklist.coaching.waiting_other": "{count} customers are waiting on {name}",
+  "worklist.coaching.waiting_one": "{count} conversation is waiting on {name}",
+  "worklist.coaching.waiting_other": "{count} conversations are waiting on {name}",
   "worklist.coaching.overdue_one": "{name} has {count} overdue task",
   "worklist.coaching.overdue_other": "{name} has {count} overdue tasks",
   "worklist.board.promises": "Commitments due",
@@ -11224,7 +11228,8 @@ export const en = {
   "worklist.hidden.clear":
     "Nothing is hidden. Every waiting customer reaches a Worklist.",
   "worklist.hidden.truncated":
-    "Counts are incomplete. Each figure is a minimum.",
+    "The Worklist is at its reading limit, so these figures are minimums and a rule reading “Not counted” may still hold messages. Open a rule to see them.",
+  "worklist.hidden.notCounted": "Not counted",
   "worklist.hidden.count": "{count} waiting",
   "worklist.hidden.pastHorizon": "Too old for the Worklist",
   "worklist.hidden.pastHorizon.detail":

@@ -251,10 +251,7 @@ func (s *Service) nameTheOwners(ctx context.Context, queue []crmcontracts.Workli
 	if err != nil {
 		return fmt.Errorf("attention: naming the owners on the queue: %w", err)
 	}
-	names := make(map[ids.UUID]string, len(roster))
-	for _, member := range roster {
-		names[member.UserID] = member.DisplayName
-	}
+	names := rosterNames(roster)
 	for i := range queue {
 		owner := queue[i].Owner
 		if owner == nil || owner.Id == nil {
@@ -265,6 +262,15 @@ func (s *Service) nameTheOwners(ctx context.Context, queue []crmcontracts.Workli
 		}
 	}
 	return nil
+}
+
+// rosterNames is the display name each live teammate is known by.
+func rosterNames(roster []TeamMember) map[ids.UUID]string {
+	names := make(map[ids.UUID]string, len(roster))
+	for _, member := range roster {
+		names[member.UserID] = member.DisplayName
+	}
+	return names
 }
 
 // anyOwnerNeedsAName reports whether the roster read is worth making.

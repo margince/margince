@@ -10884,6 +10884,7 @@ export const de = {
     "{urgent} dringend · {due} fällig · {inPlay} in Arbeit · {lower} Routine · {total} gesamt",
   "worklist.summary.noMiddle":
     "{urgent} dringend · {due} fällig · {lower} Routine · {total} gesamt",
+  "worklist.summary.wholeDay": "Ganzer Tag: {sentence}",
   "worklist.summary.split": "{today} heute · {review} zu prüfen",
   "worklist.completeness": "{shown} von {considered} angezeigt",
   "worklist.review.partial":
@@ -10966,6 +10967,9 @@ export const de = {
   "worklist.scope.all": "Alle",
   "worklist.owner.visibleLabel": "Ansicht",
   "worklist.manager.cancel": "Abbrechen",
+  "worklist.owner.wholeTeam": "Das ganze Team",
+  "worklist.owner.everyone": "Alle",
+  "worklist.owner.nobodyYet": "Noch niemand",
   "worklist.owner.mine": "Meine Worklist",
   "worklist.owner.backToMine": "Zurück zu deiner Worklist",
   "worklist.manager.reassign": "Neu zuweisen",
@@ -11045,8 +11049,8 @@ export const de = {
   "worklist.coaching.promises_one": "{name} hat {count} fällige Kundenzusage",
   "worklist.coaching.promises_other":
     "{name} hat {count} fällige Kundenzusagen",
-  "worklist.coaching.waiting_one": "{count} Kontakt wartet auf {name}",
-  "worklist.coaching.waiting_other": "{count} Kontakte warten auf {name}",
+  "worklist.coaching.waiting_one": "{count} Unterhaltung wartet auf {name}",
+  "worklist.coaching.waiting_other": "{count} Unterhaltungen warten auf {name}",
   "worklist.coaching.overdue_one": "{name} hat {count} überfällige Aufgabe",
   "worklist.coaching.overdue_other": "{name} hat {count} überfällige Aufgaben",
   "worklist.board.promises": "Fällige Zusagen",
@@ -11070,7 +11074,8 @@ export const de = {
   "worklist.hidden.clear":
     "Nichts ist ausgeblendet. Jeder wartende Kontakt erreicht eine Worklist.",
   "worklist.hidden.truncated":
-    "Die Zählung ist unvollständig. Jede Zahl ist ein Mindestwert.",
+    "Die Worklist ist an ihrer Lesegrenze. Die Zahlen sind Mindestwerte, und eine Regel mit „Nicht gezählt“ kann trotzdem Nachrichten zurückhalten. Öffne eine Regel, um sie zu sehen.",
+  "worklist.hidden.notCounted": "Nicht gezählt",
   "worklist.hidden.count": "{count} wartend",
   "worklist.hidden.pastHorizon": "Zu alt für die Worklist",
   "worklist.hidden.pastHorizon.detail":
