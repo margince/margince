@@ -222,6 +222,80 @@ func TestOneMeetingWithTwoDistinctCompaniesRaisesASuggestionForEach(t *testing.T
 			t.Fatalf("the suggestion for %v = %v, %v; want each business raised", company, raised, err)
 		}
 	}
+	bought, partnered := e.onlySuggestion(e.Admin(), t, buyer).ID, e.onlySuggestion(e.Admin(), t, partner).ID
+	// A duplicate pair elsewhere in the workspace, so the pass has pairs to
+	// withdraw against and must tell this one apart from them.
+	e.SeedCompany(t, "Fabrikam Inc", nil)
+	e.SeedCompany(t, "FABRIKAM INC", nil)
+
+	e.pass(t)
+	for _, id := range []ids.UUID{bought, partnered} {
+		if state := e.suggestionState(t, id); state != deals.SuggestionOpen {
+			t.Errorf("suggestion %v is %q after a scout pass, want each business's left open", id, state)
+		}
+	}
+}
+
+// suggestionState reads one suggestion's lifecycle state, whoever may see it.
+func (e *scoutEnv) suggestionState(t *testing.T, id ids.UUID) string {
+	t.Helper()
+	return e.WsScalar(t, `SELECT state FROM deal_suggestion WHERE id = $1`, id)
+}
+
+// recordUnpaired records a suggestion as a scout that had not yet seen the
+// duplicate pair would, and answers its id.
+func (e *scoutEnv) recordUnpaired(t *testing.T, company, meeting ids.UUID) ids.UUID {
+	t.Helper()
+	draft := e.meetingDraft(t, company, meeting)
+	draft.DuplicateOf = nil
+	if raised, err := e.record(e.system(), t, draft); err != nil || !raised {
+		t.Fatalf("recording the suggestion on %v = %v, %v; want it raised", company, raised, err)
+	}
+	return e.onlySuggestion(e.Admin(), t, company).ID
+}
+
+// A business filed twice and offered one meeting twice, before the pair was
+// known, is left with the first suggestion after one scout pass.
+func TestAScoutPassWithdrawsTheNewerSuggestionRaisedTwiceForOneBusiness(t *testing.T) {
+	e := setupScout(t)
+	named := e.SeedCompany(t, "Northwind Traders", nil)
+	twin := e.SeedCompany(t, "NORTHWIND TRADERS", nil)
+	dana := e.employee(t, "Dana Buyer", named)
+	meeting := e.meeting(e.Admin(), t, "Scoping workshop", &dana, e.daysAgo(3))
+	older := e.recordUnpaired(t, named, meeting)
+	newer := e.recordUnpaired(t, twin, meeting)
+
+	e.pass(t)
+
+	if state := e.suggestionState(t, older); state != deals.SuggestionOpen {
+		t.Errorf("the first suggestion is %q, want it left open", state)
+	}
+	if state := e.suggestionState(t, newer); state != deals.SuggestionSuperseded {
+		t.Fatalf("the second suggestion on the duplicate is %q, want it superseded", state)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'deal_suggestion' AND entity_id = $1
+		AND action = 'update' AND after->>'state' = 'superseded'`, newer); n != 1 {
+		t.Fatalf("%d audit rows record the withdrawal, want 1", n)
+	}
+}
+
+// Two meetings are two pieces of evidence: a duplicate pair offered one each
+// keeps both until a human merges the records.
+func TestDuplicateCompaniesCitingDifferentMeetingsKeepBothSuggestions(t *testing.T) {
+	e := setupScout(t)
+	named := e.SeedCompany(t, "Northwind Traders", nil)
+	twin := e.SeedCompany(t, "NORTHWIND TRADERS", nil)
+	dana := e.employee(t, "Dana Buyer", named)
+	first := e.recordUnpaired(t, named, e.meeting(e.Admin(), t, "Scoping workshop", &dana, e.daysAgo(3)))
+	second := e.recordUnpaired(t, twin, e.meeting(e.Admin(), t, "Pricing call", &dana, e.daysAgo(2)))
+
+	e.pass(t)
+
+	for _, id := range []ids.UUID{first, second} {
+		if state := e.suggestionState(t, id); state != deals.SuggestionOpen {
+			t.Errorf("suggestion %v is %q, want it left open: it cites its own meeting", id, state)
+		}
+	}
 }
 
 // A user who dismissed the suggestion on one record dismissed the business:

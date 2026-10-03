@@ -338,6 +338,54 @@ func SupersedeStaleSuggestionsTx(ctx context.Context, tx pgx.Tx) (int, error) {
 	return len(retired), nil
 }
 
+// SupersedeDuplicateSuggestionsTx retires the newer of two open suggestions
+// that cite the same evidence on the two ends of an open duplicate pair, and
+// reports how many. Pairs are company ids from the dedupe queue, which deals
+// does not read. RecordSuggestionTx refuses the second suggestion of a pair it
+// is told about; this retires one recorded while the pair was not yet known,
+// so the business is offered the evidence once. System-only, for the same
+// reason recording is.
+func SupersedeDuplicateSuggestionsTx(ctx context.Context, tx pgx.Tx, pairs [][2]ids.UUID) (int, error) {
+	if err := auth.RequireSystem(ctx); err != nil {
+		return 0, err
+	}
+	if len(pairs) == 0 {
+		return 0, nil
+	}
+	lefts, rights := make([]ids.UUID, 0, len(pairs)), make([]ids.UUID, 0, len(pairs))
+	for _, pair := range pairs {
+		lefts, rights = append(lefts, pair[0]), append(rights, pair[1])
+	}
+	rows, err := tx.Query(ctx, `
+		UPDATE deal_suggestion AS newer SET state = 'superseded', decided_at = now()
+		 WHERE newer.state = 'open'
+		   AND EXISTS (
+		     SELECT 1 FROM unnest($1::uuid[], $2::uuid[]) AS pair(a, b)
+		       JOIN deal_suggestion older ON older.state = 'open'
+		        AND (older.company_id, newer.company_id) IN ((pair.a, pair.b), (pair.b, pair.a))
+		      WHERE (older.created_at, older.id) < (newer.created_at, newer.id)
+		        AND EXISTS (
+		          SELECT 1 FROM deal_suggestion_evidence oe
+		            JOIN deal_suggestion_evidence ne ON ne.kind = oe.kind
+		             AND (ne.activity_id = oe.activity_id OR ne.signal_id = oe.signal_id
+		                  OR ne.attachment_id = oe.attachment_id)
+		           WHERE oe.suggestion_id = older.id AND ne.suggestion_id = newer.id))
+		RETURNING newer.id`, lefts, rights)
+	if err != nil {
+		return 0, fmt.Errorf("deals: superseding suggestions raised twice for one business: %w", err)
+	}
+	retired, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		return 0, fmt.Errorf("deals: reading suggestions superseded as raised twice: %w", err)
+	}
+	for _, id := range retired {
+		if err := recordSuperseded(ctx, tx, id); err != nil {
+			return 0, err
+		}
+	}
+	return len(retired), nil
+}
+
 // columnState is the audited name of the lifecycle column.
 const columnState = "state"
 

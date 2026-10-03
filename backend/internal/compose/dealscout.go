@@ -74,6 +74,15 @@ func scoutPass(ctx context.Context, tx pgx.Tx, now time.Time, companyCap int) (D
 	if pass.Superseded, err = deals.SupersedeStaleSuggestionsTx(ctx, tx); err != nil {
 		return pass, err
 	}
+	pairs, err := contacts.OpenDuplicateCompanyPairsTx(ctx, tx)
+	if err != nil {
+		return pass, err
+	}
+	raisedTwice, err := deals.SupersedeDuplicateSuggestionsTx(ctx, tx, pairs)
+	if err != nil {
+		return pass, err
+	}
+	pass.Superseded += raisedTwice
 	items, err := readScoutEvidence(ctx, tx, now.Add(-dealScoutWindow), now, companyCap)
 	if err != nil {
 		return pass, err
