@@ -36,6 +36,7 @@ export const KNOWN_REASONS = {
   legal_deadline: true,
   earlier_requests: true,
   first_asked: true,
+  no_next_step: true,
   opened_overdue: true,
   meeting_soon: true,
   meeting_unprepared: true,

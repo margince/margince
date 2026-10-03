@@ -92,10 +92,10 @@ func TestMailFiledAsSentFromAnUnclaimedAddressStaysInbound(t *testing.T) {
 	}
 }
 
-// A declared address proves nothing a sent copy can rest on: a seat may claim
-// any address and plant a sent copy through the provider's API. So a colleague's
-// copy received from a merely declared address of the seat keeps its reading.
-func TestADeclaredAddressCannotRewriteAColleaguesCopy(t *testing.T) {
+// The seat's own alias is theirs. A colleague's copy received from it, which the
+// seat's mailbox then delivers from its sent filing, is the seat's outbound mail
+// to the customer.
+func TestTheSeatsOwnAliasTurnsAColleaguesCopyRound(t *testing.T) {
 	env := newCaptureEnv(t)
 	declareIdentity(t, env.e, env.e.Rep1, capturemod.IdentityKindAddress, formerAddress)
 	colleague := secondMailbox(t, env.e, env.e.Rep3)
@@ -103,12 +103,30 @@ func TestADeclaredAddressCannotRewriteAColleaguesCopy(t *testing.T) {
 	raw := emailCC(formerAddress, "Founder", "buyer@customer.example", secondSeatAddress, msgID)
 
 	colleague(t, raw)
+	env.syncSent(t, map[string]bool{msgID: true}, raw)
+
+	want := capturedEnds{direction: "outbound", counterparty: "buyer@customer.example", attested: true}
+	if got := endsOf(t, env, msgID); got != want {
+		t.Errorf("the seat's sent copy from its own alias left the colleague's copy as %+v, want %+v", got, want)
+	}
+}
+
+// An address two seats hold is nobody's to claim: whichever mailbox synced
+// first would otherwise decide whose mail it is.
+func TestAnAddressAnotherSeatAlsoHoldsDoesNotTurnACopyRound(t *testing.T) {
+	env := newCaptureEnv(t)
+	declareIdentity(t, env.e, env.e.Rep1, capturemod.IdentityKindAddress, formerAddress)
+	declareIdentity(t, env.e, env.e.Rep3, capturemod.IdentityKindAddress, formerAddress)
+	colleague := secondMailbox(t, env.e, env.e.Rep3)
+	const msgID = "shared-alias@previous-employer.example"
+	raw := emailCC(formerAddress, "Founder", "buyer@customer.example", secondSeatAddress, msgID)
+
+	colleague(t, raw)
 	before := endsOf(t, env, msgID)
 	env.syncSent(t, map[string]bool{msgID: true}, raw)
 
 	if got := endsOf(t, env, msgID); got != before {
-		t.Errorf("a sent copy from a declared, unproven address rewrote the colleague's copy from %+v to %+v",
-			before, got)
+		t.Errorf("an address two seats hold rewrote the colleague's copy from %+v to %+v", before, got)
 	}
 }
 
@@ -184,5 +202,26 @@ func TestAPlantedSentCopyDoesNotAttestAColleaguesMail(t *testing.T) {
 
 	if got := endsOf(t, env, msgID); got != before {
 		t.Errorf("a planted sent copy changed the colleague's mail from %+v to %+v", before, got)
+	}
+}
+
+// One address in two spellings is one address: a Unicode domain and its
+// punycode are the same mailbox, and a second seat holding either spelling
+// keeps the alias nobody's to claim.
+func TestAnAliasAnotherSeatHoldsInAnotherSpellingDoesNotTurnACopyRound(t *testing.T) {
+	env := newCaptureEnv(t)
+	const punycode = "founder@xn--bcher-kva.example"
+	declareIdentity(t, env.e, env.e.Rep1, capturemod.IdentityKindAddress, punycode)
+	declareIdentity(t, env.e, env.e.Rep3, capturemod.IdentityKindAddress, "founder@bücher.example")
+	colleague := secondMailbox(t, env.e, env.e.Rep3)
+	const msgID = "spelled-twice@xn--bcher-kva.example"
+	raw := emailCC(punycode, "Founder", "buyer@customer.example", secondSeatAddress, msgID)
+
+	colleague(t, raw)
+	before := endsOf(t, env, msgID)
+	env.syncSent(t, map[string]bool{msgID: true}, raw)
+
+	if got := endsOf(t, env, msgID); got != before {
+		t.Errorf("an alias the colleague holds in its Unicode spelling rewrote their copy from %+v to %+v", before, got)
 	}
 }

@@ -16,6 +16,7 @@ rewrites and is idempotent: running it again changes nothing.
 | `2026-10-03-2_mail_delivered_to_a_seat_is_their_import.up.sql` | the installation captured list, group or Bcc mail before capture read `Delivered-To` | writes the `capture_import` row such mail never got, where the original's trusted `Delivered-To` names the seat; run `1790871111` again afterwards to stamp their arrival times |
 | `2026-10-03-3_a_contact_capture_withdrew_owes_no_notice.up.sql` | a verdict withdrew capture-made contacts before retraction ended their duties | closes the open notice cases of contacts a capture verdict archived |
 | `2026-10-03-4_open_duties_the_captured_mail_already_answers.up.sql` | capture-made duties opened before the counterparty verdict's contacts were settled by their own mail, and before sent mail's To and Cc counted | settles open capture-made duties whose contact wrote to us, or was on To or Cc of mail the seat sent before connecting |
+| `2026-10-03-5_a_group_post_is_its_authors_mail.up.sql` | the installation captured Google Group posts before capture read their author | names the X-Original-From author as counterparty and sender of each stored group post, and clears the bulk flag the group's own unsubscribe links set |
 
 Where several are needed, run them in the order of this table: each later one
 reads what an earlier one wrote, and `1790871111` comes again after the

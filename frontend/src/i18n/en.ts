@@ -5422,6 +5422,7 @@ export const en = {
   "agent.fact.sources": "Sources",
   "agent.fact.offline": "offline",
   // The two reasons there is no model to name, in the value's own slot.
+  "agent.fact.searchIndex": "Search index: {model}",
   "agent.fact.noCalls": "No model calls yet",
   "agent.fact.hidden": "Hidden for your role",
   // The fault a badge carries, above the facts it invalidates.
@@ -11303,6 +11304,7 @@ export const en = {
   "worklist.because.quiet_days": "gone quiet",
   "worklist.because.quiet_days.value_one": "quiet for {value} day",
   "worklist.because.quiet_days.value_other": "quiet for {value} days",
+  "worklist.because.no_next_step": "no next step planned",
   "worklist.because.no_champion": "no champion",
   "worklist.because.promised": "committed by you",
   "worklist.because.approved_and_failed": "approved but did not run",
@@ -11925,6 +11927,8 @@ export const en = {
   "magic.clear.needsYou": "Nothing waiting on you",
   "magic.clear.couldNotComplete": "Nothing failed",
   "magic.clear.watching": "Every source healthy",
+  "magic.count.keptInSync_one": "{count} kept in sync",
+  "magic.count.keptInSync_other": "{count} kept in sync",
   "magic.count.done_one": "{count} done for you",
   "magic.count.done_other": "{count} done for you",
   "magic.count.needsYou_one": "{count} waiting on you",

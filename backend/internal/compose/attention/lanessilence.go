@@ -60,6 +60,8 @@ type RiskyDeal struct {
 	// seat, or there is no committee: both would render as "nobody is carrying
 	// this", and a champion the reader may not read is still a champion.
 	NoChampion *bool
+	// NoNextStep says the deal carries no open task of its own.
+	NoNextStep bool
 }
 
 // Decay is the reader's own relationships that have gone silent. It derives the

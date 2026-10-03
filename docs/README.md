@@ -81,6 +81,7 @@ a 24-hour deadline is not a thing to work out under pressure.
 - [getting-started.md](tutorials/getting-started.md) — clone → running instance with a bootstrapped workspace.
 
 ### How-to — accomplish a task
+- [Inventory what history left in the Worklist](how-to/inventory-home-attention.md) — a read-only count of imported mail, old requests, privacy duties and proposals before a repair.
 - [Operate sales reporting](how-to/operate-reporting.md) — setup, captures, schedules, privacy and durable schedule pause.
 - [add-an-endpoint.md](how-to/add-an-endpoint.md) — add or change an API operation (contract → gen → handler).
 - [add-a-module.md](how-to/add-a-module.md) — add a new capability (module) or a cross-module edge, wired into compose.

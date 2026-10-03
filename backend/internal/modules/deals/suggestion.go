@@ -75,6 +75,9 @@ type SuggestionDraft struct {
 	Currency    *string
 	Confidence  float64
 	Evidence    []SuggestionEvidence
+	// DuplicateOf lists the companies an open duplicate candidate pairs with
+	// CompanyID: the same business filed twice, not yet merged.
+	DuplicateOf []ids.UUID
 }
 
 // The name hints, which the deal_suggestion_name_hint_check CHECK repeats.
@@ -168,8 +171,9 @@ func suggestionFloorTx(ctx context.Context, tx pgx.Tx, companyID ids.UUID) (*tim
 // seat able to plant one could put a card on every colleague's board.
 //
 // It writes nothing, without error, when the company already has an open deal
-// or an open suggestion, when this exact evidence already raised one, or when
-// any item is not newer than the company's floor.
+// or an open suggestion, when this exact evidence already raised one, when an
+// open, dismissed or accepted suggestion on a company in DuplicateOf already
+// cites any of it, or when any item is not newer than the company's floor.
 func RecordSuggestionTx(ctx context.Context, tx pgx.Tx, d SuggestionDraft) (bool, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return false, err
@@ -193,6 +197,10 @@ func RecordSuggestionTx(ctx context.Context, tx pgx.Tx, d SuggestionDraft) (bool
 		if e.OccurredAt.After(through) {
 			through = e.OccurredAt
 		}
+	}
+	cited, err := evidenceRaisedOnDuplicateTx(ctx, tx, d)
+	if err != nil || cited {
+		return false, err
 	}
 	pipelineID, stageID, err := BirthStageTx(ctx, tx, nil, nil)
 	if err != nil {
@@ -231,6 +239,54 @@ func RecordSuggestionTx(ctx context.Context, tx pgx.Tx, d SuggestionDraft) (bool
 		return false, fmt.Errorf("deals: emitting deal_suggestion.created: %w", err)
 	}
 	return true, nil
+}
+
+// evidenceRaisedOnDuplicateTx reports whether a duplicate of this company
+// already has an open, dismissed or accepted suggestion citing any of this
+// evidence. A business filed twice, under its name and its mail domain, would
+// otherwise be offered one meeting as two opportunities, or offered again what
+// a user already dismissed or turned into a deal on the other record. A
+// superseded suggestion no longer stands, so it claims nothing. Two distinct businesses at one meeting each
+// keep their own suggestion: shared evidence alone does not make them one.
+//
+// Each evidence id is locked first, in sorted order, so two transactions
+// recording twins at once cannot both find the other absent.
+func evidenceRaisedOnDuplicateTx(ctx context.Context, tx pgx.Tx, d SuggestionDraft) (bool, error) {
+	if len(d.DuplicateOf) == 0 {
+		return false, nil
+	}
+	var activities, signals, attachments []ids.UUID
+	var keys []string
+	for _, e := range d.Evidence {
+		switch {
+		case e.ActivityID != nil:
+			activities = append(activities, *e.ActivityID)
+			keys = append(keys, "activity:"+e.ActivityID.String())
+		case e.SignalID != nil:
+			signals = append(signals, *e.SignalID)
+			keys = append(keys, "signal:"+e.SignalID.String())
+		case e.AttachmentID != nil:
+			attachments = append(attachments, *e.AttachmentID)
+			keys = append(keys, "attachment:"+e.AttachmentID.String())
+		}
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		if err := storekit.LockWriteIdentity(ctx, tx, "deal_suggestion_evidence", key); err != nil {
+			return false, err
+		}
+	}
+	var cited bool
+	err := tx.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM deal_suggestion_evidence ev
+		  JOIN deal_suggestion s ON s.id = ev.suggestion_id
+		   AND s.state IN ('open', 'dismissed', 'accepted') AND s.company_id = ANY($4)
+		 WHERE ev.activity_id = ANY($1) OR ev.signal_id = ANY($2) OR ev.attachment_id = ANY($3))`,
+		activities, signals, attachments, d.DuplicateOf).Scan(&cited)
+	if err != nil {
+		return false, fmt.Errorf("deals: reading whether a duplicate company already cites this evidence: %w", err)
+	}
+	return cited, nil
 }
 
 func insertSuggestionEvidence(ctx context.Context, tx pgx.Tx, suggestion ids.UUID, evidence []SuggestionEvidence) error {

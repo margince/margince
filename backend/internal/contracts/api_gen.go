@@ -18379,6 +18379,7 @@ const (
 	WorklistReasonKindMeetingSoon        WorklistReasonKind = "meeting_soon"
 	WorklistReasonKindMeetingUnprepared  WorklistReasonKind = "meeting_unprepared"
 	WorklistReasonKindNoChampion         WorklistReasonKind = "no_champion"
+	WorklistReasonKindNoNextStep         WorklistReasonKind = "no_next_step"
 	WorklistReasonKindNoReplyHistory     WorklistReasonKind = "no_reply_history"
 	WorklistReasonKindOpenedOverdue      WorklistReasonKind = "opened_overdue"
 	WorklistReasonKindOutcomeUnrecorded  WorklistReasonKind = "outcome_unrecorded"
@@ -18429,6 +18430,8 @@ func (e WorklistReasonKind) Valid() bool {
 	case WorklistReasonKindMeetingUnprepared:
 		return true
 	case WorklistReasonKindNoChampion:
+		return true
+	case WorklistReasonKindNoNextStep:
 		return true
 	case WorklistReasonKindNoReplyHistory:
 		return true
@@ -23957,7 +23960,10 @@ type AttentionDealFacts struct {
 	// So absence does not mean "covered". It means this endpoint is making no claim,
 	// and a client MUST NOT read it as one. See `WorklistDealFacts.no_champion`,
 	// which carries the same fact out under the same rule.
-	NoChampion *bool               `json:"no_champion,omitempty"`
+	NoChampion *bool `json:"no_champion,omitempty"`
+
+	// NoNextStep `true` when the deal carries no open task of its own, so nothing is planned to move it. Never `false`: absent means a step is planned or the server did not check.
+	NoNextStep *bool               `json:"no_next_step,omitempty"`
 	OwnerId    *openapi_types.UUID `json:"owner_id,omitempty"`
 
 	// StageId The deal's current stage.

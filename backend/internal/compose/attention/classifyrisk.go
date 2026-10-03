@@ -43,6 +43,10 @@ func classifyRisk(item crmcontracts.AttentionItem, asOf time.Time, bar materialB
 	if item.Deal != nil && item.Deal.NoChampion != nil && *item.Deal.NoChampion {
 		row.Because = append(row.Because, reason("no_champion", nil))
 	}
+	// Nothing planned to move it: the intervention is to agree the next step.
+	if item.Deal != nil && item.Deal.NoNextStep != nil && *item.Deal.NoNextStep {
+		row.Because = append(row.Because, reason("no_next_step", nil))
+	}
 	quiet := quietDaysOf(item)
 	if quiet > 0 {
 		row.Because = append(row.Because, reason("quiet_days", daysValue(quiet)))
