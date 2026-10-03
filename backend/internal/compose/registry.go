@@ -80,7 +80,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	opts = append(opts, withContractTierFloor(),
 		agents.WithIdempotency(toolIdempotency(pool)), agents.WithReplayReader(provider),
 		agents.WithBaseLanguage(installationLanguage(pool)),
-		agents.WithSeatNamer(seatNamer(identity.NewService(pool))))
+		agents.WithSeatNamer(seatNamer(identity.NewServiceFor(db))))
 	// Approval decisions need the same registered effects as the HTTP path.
 	approvalsSvc := decidingApprovalsService(pool, send, log)
 	registry := agents.NewRegistry(approvalsAdapter{svc: approvalsSvc}, gate, opts...)

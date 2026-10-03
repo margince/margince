@@ -38,9 +38,9 @@ import (
 // reps is one call, not twenty.
 type SeatNamer func(ctx context.Context, seats []ids.UUID) (map[ids.UUID]string, error)
 
-// WithSeatNamer injects the namer search_records, list_records, read_record
-// and query_workspace all name owners through, so the four give one answer to
-// whose a record is.
+// WithSeatNamer injects the SeatNamer that search_records, list_records,
+// read_record and query_workspace resolve owners through, so the four tools give
+// one answer to whose a record is.
 func WithSeatNamer(name SeatNamer) RegistryOption {
 	return func(r *Registry) { r.seats = name }
 }
