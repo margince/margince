@@ -99,13 +99,7 @@ func (s *Service) teamExceptionsIn(ctx context.Context) (crmcontracts.TeamExcept
 // "Hidden", which is the word it keeps for an owner this reader may not resolve.
 func nameExceptionOwners(found []crmcontracts.TeamException, names map[ids.UUID]string) {
 	for i := range found {
-		owner := &found[i].Owner
-		if owner.Id == nil {
-			continue
-		}
-		if name := names[ids.UUID(*owner.Id)]; name != "" {
-			owner.Label = &name
-		}
+		nameAnOwner(&found[i].Owner, names)
 	}
 }
 

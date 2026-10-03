@@ -253,15 +253,22 @@ func (s *Service) nameTheOwners(ctx context.Context, queue []crmcontracts.Workli
 	}
 	names := rosterNames(roster)
 	for i := range queue {
-		owner := queue[i].Owner
-		if owner == nil || owner.Id == nil {
-			continue
-		}
-		if name, known := names[ids.UUID(*owner.Id)]; known && name != "" {
-			owner.Label = &name
+		if queue[i].Owner != nil {
+			nameAnOwner(queue[i].Owner, names)
 		}
 	}
 	return nil
+}
+
+// nameAnOwner labels one owner with their roster name. One rule for every
+// surface that names an owner: an id the roster knows, with a non-empty name.
+func nameAnOwner(owner *crmcontracts.WorklistOwner, names map[ids.UUID]string) {
+	if owner.Id == nil {
+		return
+	}
+	if name := names[ids.UUID(*owner.Id)]; name != "" {
+		owner.Label = &name
+	}
 }
 
 // rosterNames is the display name each live teammate is known by.
