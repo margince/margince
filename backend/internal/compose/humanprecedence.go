@@ -72,19 +72,24 @@ func unauditedHolder(table string) string {
 const accessFields = `'visibility', 'owner_id'`
 
 // constantColumnDefault reads, as text, the catalog default of column p.key on
-// row t when that default is a constant: a quoted literal ('unknown'::text) or
-// a bare number or boolean. Any other default (now(), a quoted array) reads as
-// NULL, so a value there still counts as possibly typed and the tie goes to
-// asking the human.
-const constantColumnDefault = `SELECT CASE
-			        WHEN d.expr ~ '^''.*''::[a-z_][a-z_0-9 (),]*$'
-			          THEN replace(substring(d.expr FROM '^''(.*)''::'), '''''', '''')
-			        WHEN d.expr ~ '^(-?[0-9]+|true|false)$' THEN d.expr
-			      END
+// row t when that default is a quoted text or enum literal; any other reads as
+// NULL, so the tie goes to asking the human.
+const constantColumnDefault = `SELECT ` + literalOfDefault + `
 			      FROM pg_attribute att
 			      JOIN pg_attrdef def ON def.adrelid = att.attrelid AND def.adnum = att.attnum
 			      CROSS JOIN LATERAL (SELECT pg_get_expr(def.adbin, def.adrelid) AS expr) d
 			      WHERE att.attrelid = t.tableoid AND att.attname = p.key`
+
+// literalOfDefault unquotes a default expression d.expr shaped like
+// 'unknown'::company_lifecycle, schema-qualified or not. A number or boolean,
+// bare or quoted, is a value somebody chose — product.active = true is a
+// decision to sell it — so it reads as NULL, as do now() and an array.
+const literalOfDefault = `CASE
+			        WHEN d.expr ~ '::(pg_catalog\.)?(numeric|integer|bigint|smallint|boolean|real|double precision)(\(.*\))?$'
+			          THEN NULL
+			        WHEN d.expr ~ '^''.*''::[a-z_][a-z_0-9 (),.]*$'
+			          THEN replace(substring(d.expr FROM '^''(.*)''::'), '''''', '''')
+			      END`
 
 // This is NOT superseded.go's question, and the two must not share a reader.
 // SupersededFields asks whether ANYONE wrote a key after a given audit row;

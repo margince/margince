@@ -63,6 +63,25 @@ func TestAgentAsksBeforeNarrowingWhoSeesAHumanCreatedRecord(t *testing.T) {
 	}
 }
 
+// A boolean default is not nobody's edit: a product a human added is on sale
+// because it is active, so taking it off sale is theirs to approve.
+func TestAgentAsksBeforeMovingABooleanDefaultOnAHumanCreatedRecord(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	productID := createdID(t, e, "/v1/products", AnyMap{
+		"name": "Defaulted Active Day", "unit_price_minor": 1000, "currency": "EUR", "source": "manual",
+	})
+	bearer := companyAgentBearer(t, e)
+
+	var problem struct {
+		Code string `json:"code"`
+	}
+	status := e.Call(t, "PATCH", "/v1/products/"+productID, AnyMap{"active": false}, bearer, &problem)
+	if status != http.StatusForbidden || problem.Code != "approval_required" {
+		t.Errorf("agent took a human's product off sale → %d %q; want it staged for approval", status, problem.Code)
+	}
+}
+
 func companyAgentBearer(t *testing.T, e *apptest.AppEnv) map[string]string {
 	t.Helper()
 	var minted struct {
