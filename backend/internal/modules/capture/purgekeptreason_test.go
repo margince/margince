@@ -47,7 +47,7 @@ func TestAnUnknownReasonIsFiledNowhere(t *testing.T) {
 // about THIS record first. A pinned Handelsbrief named by an open request is
 // all three, and reporting a list would answer none of them.
 func TestTheReasonClauseRanksTheMostSpecificActFirst(t *testing.T) {
-	clause := withheldReason("SHIELD", withheldByStatute, true)
+	clause := withheldReason("SHIELD", withheldByStatute)
 	hold := strings.Index(clause, withheldByHold)
 	statute := strings.Index(clause, withheldByStatute)
 	request := strings.Index(clause, withheldByRequest)
@@ -59,16 +59,19 @@ func TestTheReasonClauseRanksTheMostSpecificActFirst(t *testing.T) {
 	}
 }
 
-// The workspace purge asks no question about open requests, so its clause
-// carries no arm for one — a selector that reported a reason it never tested
-// would put words in the query's mouth.
-func TestAClauseWithoutTheRequestArmDoesNotNameIt(t *testing.T) {
-	clause := withheldReason("SHIELD", withheldByStatute, false)
-	if strings.Contains(clause, withheldByRequest) {
-		t.Fatalf("clause names a reason it never tests: %s", clause)
-	}
-	if !strings.Contains(clause, withheldByHold) || !strings.Contains(clause, withheldByStatute) {
-		t.Fatalf("clause dropped a reason it does test: %s", clause)
+// Every selector asks every question, so none can report a count that is clean
+// because it never looked.
+//
+// The clause took a flag for the request arm, and the two purges that passed false
+// were the WIDER pair: a workspace purge destroys every seat's copy on one
+// decision, and the personal sweep destroys on a timer with nobody confirming.
+// Nothing downstream keeps a row that falls out of the selection.
+func TestTheReasonClauseAsksEveryQuestionItCanReport(t *testing.T) {
+	clause := withheldReason("SHIELD", withheldByStatute)
+	for _, reason := range []string{withheldByHold, withheldByStatute, withheldByRequest} {
+		if !strings.Contains(clause, "'"+reason+"'") {
+			t.Errorf("the clause cannot report %q, so a selector using it keeps nothing for that reason: %s", reason, clause)
+		}
 	}
 }
 
@@ -93,7 +96,7 @@ func TestAnUndeterminedFloorShieldsWithoutClaimingAStatute(t *testing.T) {
 		t.Fatalf("an undetermined floor shields %q, want every row — the safe answer is to keep", shield)
 	}
 
-	clause := withheldReason(shield, absent.shieldedAs(), true)
+	clause := withheldReason(shield, absent.shieldedAs())
 	if strings.Contains(clause, "'"+withheldByStatute+"'") {
 		t.Errorf("an undetermined floor still labels rows %q: %s — the receipt names a basis "+
 			"nobody established", withheldByStatute, clause)
@@ -107,7 +110,7 @@ func TestAnUndeterminedFloorShieldsWithoutClaimingAStatute(t *testing.T) {
 	if measured.shieldedAs() != withheldByStatute {
 		t.Fatal("a floor with a clause reported itself undetermined")
 	}
-	if got := withheldReason("SHIELD", measured.shieldedAs(), true); !strings.Contains(got, "'"+withheldByStatute+"'") {
+	if got := withheldReason("SHIELD", measured.shieldedAs()); !strings.Contains(got, "'"+withheldByStatute+"'") {
 		t.Errorf("a measured floor stopped reporting a statute: %s", got)
 	}
 }

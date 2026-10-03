@@ -13692,9 +13692,12 @@ paths:
         actually captured: an activity somebody logged by hand was never governed by a capture
         rule and is left alone.
 
-        An erasure request that has been EXECUTED leaves such a hold and is therefore covered. One
-        still open is not: nothing marks the messages it will be about until somebody acts on it,
-        so a purge can destroy correspondence a pending request was going to assemble.
+        A data-subject request still OPEN is covered too, and of every kind: an access request
+        needs the messages to build the package and a rectification needs them to correct against.
+        Nothing is marked on the messages while a request waits — they are found through the
+        subject's own addresses — so the mail survives and is reported as skipped rather than
+        destroyed and counted as a success. An erasure request already EXECUTED leaves a hold and
+        was always covered.
 
         Contacts go too on your own rule, but only the ones your mail is the sole reason this CRM
         knows them. A contact with an address outside the rule, a deal against their name, or mail

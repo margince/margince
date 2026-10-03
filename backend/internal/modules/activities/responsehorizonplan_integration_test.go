@@ -63,7 +63,7 @@ func seedMailbox(ctx context.Context, t *testing.T, tx pgx.Tx) {
 	  SELECT id, 'c'||n||'@customers.example', true, 'manual', 'human:seed' FROM mailbox_customer;
 	CREATE TEMP TABLE mailbox_inbound AS
 	  SELECT gen_random_uuid() id, g, (1 + floor(random() * 400))::int n,
-	         now() - (random() * 364 || ' days')::interval - interval '1 hour' at_time
+	         now() - random() * 364 * interval '1 day' - interval '1 hour' at_time
 	    FROM generate_series(1, 1500) g;
 	INSERT INTO activity (id, kind, subject, occurred_at, direction, source, captured_by, thread_key, counterparty_email)
 	  SELECT id, 'email', 'Topic '||g, at_time, 'inbound', 'manual', 'human:seed', 'in'||g, 'c'||n||'@customers.example'
@@ -76,7 +76,7 @@ func seedMailbox(ctx context.Context, t *testing.T, tx pgx.Tx) {
 	  SELECT 'email', 'Re: Topic '||g, at_time + interval '2 days', 'outbound', 'manual', 'human:seed', 'reply'||g, 'c'||n||'@customers.example', true
 	    FROM mailbox_inbound WHERE random() < 0.75;
 	INSERT INTO activity (kind, subject, occurred_at, direction, source, captured_by, thread_key, counterparty_email, counterparty_outbound_attested)
-	  SELECT 'email', 'Update '||g, now() - (random() * 364 || ' days')::interval, 'outbound', 'manual', 'human:seed', 'out'||g,
+	  SELECT 'email', 'Update '||g, now() - random() * 364 * interval '1 day', 'outbound', 'manual', 'human:seed', 'out'||g,
 	         'c'||(1 + floor(random() * 400))::int||'@customers.example', true
 	    FROM generate_series(1, 5000) g;
 	ANALYZE activity`); err != nil {
