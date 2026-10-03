@@ -342,12 +342,12 @@ cases:
     2:
       name: The sign-off given up front is used, not handed back
       statement: >-
-        The contact approved in advance, and a record change can be undone, so
+        The user approved in advance, and a record change can be undone, so
         the held proposal is approved and then redeemed from the conversation
-        rather than returned to the contact to release in the app.
+        rather than returned to the user to release in the app.
     3:
       name: The company that needed sign-off is the one a human had set
       statement: >-
         Only the company whose lifecycle a human had already chosen was held,
-        and the answer names that one, because the contact asked which needed
+        and the answer names that one, because the user asked which needed
         them and a wrong name sends them to check the wrong record.

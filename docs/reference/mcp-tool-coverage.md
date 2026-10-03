@@ -87,7 +87,7 @@ This page does not grade single steps or name a best model per site — that is
 | … some case requires as one of a set | 1 |
 | … **no case requires** | 44 |
 | … of those, permitted somewhere but never required | 20 |
-| Prompt tokens spent on tools no case requires | 15999 |
+| Prompt tokens spent on tools no case requires | 16026 |
 | Use cases | 22 |
 | Acceptance criteria the cases declare, each with a statement | 52 |
 
@@ -313,8 +313,8 @@ The numbers in the table above, in words. Source: [`e2e/llm/criteria.yaml`](../.
 | `case42_can_i_answer_on_whatsapp` | 1 | **The transport is named as the installation names it** | The conversation is filed as a message on the transport that carried it, carrying the provider value this installation registered rather than a spelling that happens to look right. |
 | `case42_can_i_answer_on_whatsapp` | 2 | **Not being able to send is not the same as not being supported** | A transport that can carry no reply still captures, files and reads, and reporting the first as the second tells the reader the product cannot do what it has just done. |
 | `case43_the_fair_leads_are_prospects` | 1 | **A default nobody set changes without asking** | Three of the four companies still hold the lifecycle the database gave them, so moving it overwrites nobody's edit and goes straight through; an answer that says they needed sign-off reports a gate the product did not raise. |
-| `case43_the_fair_leads_are_prospects` | 2 | **The sign-off given up front is used, not handed back** | The contact approved in advance, and a record change can be undone, so the held proposal is approved and then redeemed from the conversation rather than returned to the contact to release in the app. |
-| `case43_the_fair_leads_are_prospects` | 3 | **The company that needed sign-off is the one a human had set** | Only the company whose lifecycle a human had already chosen was held, and the answer names that one, because the contact asked which needed them and a wrong name sends them to check the wrong record. |
+| `case43_the_fair_leads_are_prospects` | 2 | **The sign-off given up front is used, not handed back** | The user approved in advance, and a record change can be undone, so the held proposal is approved and then redeemed from the conversation rather than returned to the user to release in the app. |
+| `case43_the_fair_leads_are_prospects` | 3 | **The company that needed sign-off is the one a human had set** | Only the company whose lifecycle a human had already chosen was held, and the answer names that one, because the user asked which needed them and a wrong name sends them to check the wrong record. |
 | `case4_use_the_moment` | 1 | **Nearby is worked out to be a distance search** | The request names no company, no address and no tool, and the assistant has to find that the workspace can be searched by proximity rather than reporting that it cannot. |
 | `case4_use_the_moment` | 6 | **Check with the owner before turning up** | The assistant tells the rep to confirm with the account owner rather than acting on a proximity answer alone. |
 | `case5_before_the_meeting` | 1 | **A briefing arrives without naming a record** | The request names the account the way a contact says it out loud, "Vietnam partner", and not the way the record carries it — so an answer that only repeats the question has found nothing, and what the record holds beyond it is the evidence that it was opened. |
@@ -358,8 +358,8 @@ Every run of every case requiring this tool passed, for the model named.
 | Tool | Reliability | Runs | Required by |
 |---|---:|---:|---|
 | `compose_analytics_report` | 1.00 | 3 | `case20_put_it_in_the_board_pack` |
-| `update_record` | 1.00 | 3 | `case33_two_cards_for_one_company`, `case43_the_fair_leads_are_prospects` |
 | `create_record` | 1.00 | 6 | `case1_log_it`, `case2_business_card` |
+| `update_record` | 1.00 | 3 | `case33_two_cards_for_one_company`, `case43_the_fair_leads_are_prospects` |
 | `query_workspace` | 1.00 | 3 | `case4_use_the_moment` |
 | `forecast_readings` | 1.00 | 3 | `case21_what_are_we_closing` |
 | `run_analytics_query` | 1.00 | 3 | `case20_put_it_in_the_board_pack` |
@@ -487,8 +487,8 @@ Driven, and not every run passed. Open the case to see what was asked.
 | `compose_analytics_report` | 0.00 | 0/3 | `case20_put_it_in_the_board_pack` | `case20_put_it_in_the_board_pack` |
 | `preview_import` | 0.33 | 2/6 | `case10_finish_the_import` | `case10_finish_the_import`, `case3_spreadsheet` |
 | `log_activity` | 0.33 | 2/6 | `case1_log_it`, `case42_can_i_answer_on_whatsapp` | `case1_log_it`, `case42_can_i_answer_on_whatsapp` |
-| `update_record` | 0.67 | 2/3 | — | `case33_two_cards_for_one_company`, `case43_the_fair_leads_are_prospects` |
 | `create_record` | 0.50 | 3/6 | `case1_log_it` | `case1_log_it`, `case2_business_card` |
+| `update_record` | 0.67 | 2/3 | — | `case33_two_cards_for_one_company`, `case43_the_fair_leads_are_prospects` |
 | `query_workspace` | 0.00 | 0/3 | `case4_use_the_moment` | `case4_use_the_moment` |
 | `forecast_readings` | 0.33 | 1/3 | `case21_what_are_we_closing` | `case21_what_are_we_closing` |
 | `run_analytics_query` | 0.00 | 0/3 | `case20_put_it_in_the_board_pack` | `case20_put_it_in_the_board_pack` |
@@ -555,8 +555,8 @@ Driven, and not every run passed. Open the case to see what was asked.
 |---|---:|---:|---|---|
 | `compose_analytics_report` | 0.33 | 1/3 | `case20_put_it_in_the_board_pack` | `case20_put_it_in_the_board_pack` |
 | `preview_import` | 0.17 | 1/6 | `case10_finish_the_import`, `case3_spreadsheet` | `case10_finish_the_import`, `case3_spreadsheet` |
-| `update_record` | 0.67 | 2/3 | — | `case33_two_cards_for_one_company`, `case43_the_fair_leads_are_prospects` |
 | `create_record` | 0.67 | 4/6 | `case2_business_card` | `case1_log_it`, `case2_business_card` |
+| `update_record` | 0.67 | 2/3 | — | `case33_two_cards_for_one_company`, `case43_the_fair_leads_are_prospects` |
 | `query_workspace` | 0.00 | 0/3 | `case4_use_the_moment` | `case4_use_the_moment` |
 | `forecast_readings` | 0.67 | 2/3 | — | `case21_what_are_we_closing` |
 | `run_analytics_query` | 0.33 | 1/3 | `case20_put_it_in_the_board_pack` | `case20_put_it_in_the_board_pack` |
@@ -617,7 +617,7 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 | Tool | Tokens | Graded by | Permitted in | Attached to |
 |---|---:|---|---|---|
 | `send_company_email` | 823 | — | — | — |
-| `list_records` | 781 | `agent_loop` | `case10_finish_the_import`, `case21_what_are_we_closing`, `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case41_close_the_project`, `case43_the_fair_leads_are_prospects`, `case7_ask_for_a_number`, `case9_filed_in_the_wrong_place` | `morning_brief`, `overnight_at_risk_sweep` |
+| `list_records` | 794 | `agent_loop` | `case10_finish_the_import`, `case21_what_are_we_closing`, `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case41_close_the_project`, `case43_the_fair_leads_are_prospects`, `case7_ask_for_a_number`, `case9_filed_in_the_wrong_place` | `morning_brief`, `overnight_at_risk_sweep` |
 | `send_email` | 754 | — | — | — |
 | `bulk_update_records` | 720 | — | — | — |
 | `read_lists` | 699 | — | — | — |
@@ -639,9 +639,9 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 | `search_report_evidence` | 335 | — | — | — |
 | `forecast_input_checks` | 324 | — | `case21_what_are_we_closing`, `case22_can_i_trust_the_numbers` | — |
 | `demote_lead` | 317 | — | — | — |
+| `read_record` | 292 | `agent_loop` | `case10_finish_the_import`, `case1_log_it`, `case21_what_are_we_closing`, `case23_find_us_a_slot`, `case2_business_card`, `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case41_close_the_project`, `case42_can_i_answer_on_whatsapp`, `case43_the_fair_leads_are_prospects`, `case4_use_the_moment`, `case5_before_the_meeting`, `case6_ask_the_company`, `case7_ask_for_a_number`, `case8_whats_waiting`, `case9_filed_in_the_wrong_place` | `morning_brief`, `overnight_at_risk_sweep` |
 | `describe_analytics_vocabulary` | 286 | — | `case7_ask_for_a_number` | — |
 | `draft_email` | 278 | `draft_reply` | — | — |
-| `read_record` | 278 | `agent_loop` | `case10_finish_the_import`, `case1_log_it`, `case21_what_are_we_closing`, `case23_find_us_a_slot`, `case2_business_card`, `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case41_close_the_project`, `case42_can_i_answer_on_whatsapp`, `case43_the_fair_leads_are_prospects`, `case4_use_the_moment`, `case5_before_the_meeting`, `case6_ask_the_company`, `case7_ask_for_a_number`, `case8_whats_waiting`, `case9_filed_in_the_wrong_place` | `morning_brief`, `overnight_at_risk_sweep` |
 | `draft_follow_ups_for` | 273 | — | — | — |
 | `prepare_handoff` | 267 | — | `case41_close_the_project` | — |
 | `describe_query_vocabulary` | 266 | — | `case4_use_the_moment` | — |

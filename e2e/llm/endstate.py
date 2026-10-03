@@ -17,8 +17,9 @@ with fixed calls, never a model.
 
     endstate.py --scenario S --transcript T --mcp-url URL --token-env NAME
 
-Exit 0 when every entry holds, 1 when one does not, 3 when the world could not
-be read. The outcome is appended to the transcript as an `end_state` event, so
+Exit 0 when every entry holds, 4 when one does not, 3 when the world could not
+be read. A scored failure is not 1, because 1 is what Python itself exits with
+when this file cannot even be imported, and that world was never read. The outcome is appended to the transcript as an `end_state` event, so
 a reader of the kept records sees what the world said beside what the model did.
 """
 
@@ -36,6 +37,7 @@ import mcpclient  # noqa: E402
 import transcript  # noqa: E402
 
 HARNESS = 3
+FAILED = 4
 
 Expectation = collections.namedtuple("Expectation", "record_type name field value")
 
@@ -168,7 +170,7 @@ def main():
     transcript.append_end_state(check.checked_path(args.transcript), held=held, failed=problems)
     for problem in problems:
         print(f"  {problem}")
-    return 1 if problems else 0
+    return FAILED if problems else 0
 
 
 if __name__ == "__main__":

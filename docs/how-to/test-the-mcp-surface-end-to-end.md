@@ -114,7 +114,7 @@ figures were measured on the seeded test world, over 21 of them, through the
 routes above. The judge's calls (Haiku, through the claude CLI by default) are
 not included.
 
-| Candidate · route | Tokens per sweep | Cost per sweep | Wall time |
+| Candidate · route | Tokens per 21-case sweep | Cost per 21-case sweep | Wall time |
 |---|---|---|---|
 | `claude-sonnet-5-5` · `cli` | ~19M, 95% of it cache reads | ~$8 API-equivalent, drawn from a Claude subscription | ~1 h 10 |
 | `claude-opus-5` · `cli` | ~20M | ~$22 API-equivalent | — |
@@ -195,10 +195,11 @@ must_end_with:
 After each run, and before the lane restores the snapshot, `e2e/llm/endstate.py`
 finds the record by its type and whole display name (every page of
 `list_records`), reads the field with `read_record` through the lane's own
-passport, and compares. A wrong value or a missing record fails the run, e.g.
+passport, and compares. A wrong value, a missing record or two records of one
+name fails the run, e.g.
 `ended with company "Emsland Ventilbau GmbH" lifecycle=target, wanted prospect`.
-A read that cannot be made — a refusal, two records of one name, a field the
-read does not carry — is a harness stop. The outcome is appended to the
+A read that cannot be made — a refusal, a field the read does not carry, a
+reader that crashes — is a harness stop. The outcome is appended to the
 transcript as an `end_state` event. Only `company` is readable by name today;
 another type is one line in `endstate.py`.
 

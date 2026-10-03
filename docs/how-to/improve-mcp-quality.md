@@ -37,8 +37,9 @@ judge draws on it too. Use the scenario-at-a-time loop in
 [test-the-mcp-surface-end-to-end.md §4](test-the-mcp-surface-end-to-end.md#sweeping-through-a-subscription-limit)
 so a subscription limit pauses the sweep instead of ending it.
 
-`e2e/llm/records/` holds only the LAST run of each scenario, whichever candidate
-made it. Copy the transcripts aside after each scenario, per candidate, or the
+`e2e/llm/records/` holds one transcript per run of each scenario (`run1`,
+`run2`, …) from the LAST sweep of it, whichever candidate made it. Copy every
+run's transcript aside after each scenario, per candidate, or the
 second sweep erases the evidence for the first:
 
 ```bash
@@ -49,7 +50,7 @@ Keep each scenario's lane log too: its failure lines name what did not hold.
 
 ## 2. Triage: which layer failed
 
-Every red case has exactly one of four causes, and each needs a different fix.
+Every red case has exactly one of five causes, and each needs a different fix.
 Decide which before changing anything.
 
 | Cause | What you see | Fixed in |

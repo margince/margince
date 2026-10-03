@@ -52,6 +52,12 @@ class BusinessCardTest(GuardCase):
     def test_an_answer_silent_on_the_match_still_fails(self):
         self.assertMissed("Lucy Vo has been added to the CRM at Terralogic.", "possible match")
 
+    def test_flagged_about_something_else_is_not_the_match(self):
+        self.assertMissed(
+            "Lucy Vo has been added to the CRM at Terralogic. I flagged her as a priority follow-up.",
+            "possible match",
+        )
+
 
 class UseTheMomentTest(GuardCase):
     scenario = "case4-use-the-moment.yaml"
@@ -105,6 +111,9 @@ class FinishTheImportTest(GuardCase):
             with self.subTest(said=said):
                 self.assertGreen(self.report + said)
 
+    def test_a_negation_after_the_field_is_still_the_mapping(self):
+        self.assertGreen(self.report + "I mapped size to size_band, not to the description.")
+
     def test_the_mapping_as_a_table_row(self):
         self.assertGreen(self.report + "\n\n| Column | Field |\n|---|---|\n| size | size_band |\n")
 
@@ -123,6 +132,8 @@ class FinishTheImportTest(GuardCase):
             "I didn't map size to size_band.",
             "Nothing went into size_band.",
             "size_band wasn't mapped from your size column.",
+            "I mapped size to description, not size_band.",
+            "Size went into the notes, never size_band.",
         ):
             with self.subTest(said=said):
                 self.assertMissed(self.report + said, self.mapping)

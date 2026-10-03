@@ -6,6 +6,7 @@ import contextlib
 import io
 import json
 import os
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -152,11 +153,11 @@ class MainTest(unittest.TestCase):
             events = [json.loads(line) for line in handle]
         return code, out.getvalue(), events
 
-    def test_a_scored_failure_exits_1_and_is_recorded_in_the_transcript(self):
+    def test_a_scored_failure_exits_failed_and_is_recorded_in_the_transcript(self):
         changed = SEEDED[:3] + [("Emsland Ventilbau GmbH", "target")]
         with FakeMcp(TOOLS, replies=world(changed)) as server:
             code, out, events = self.run_main(server.url)
-        self.assertEqual(code, 1)
+        self.assertEqual(code, endstate.FAILED)
         self.assertIn("lifecycle=target, wanted prospect", out)
         self.assertEqual(events[-1]["type"], "end_state")
         self.assertEqual(events[-1]["failed"], ['ended with company "Emsland Ventilbau GmbH" lifecycle=target, wanted prospect'])
@@ -167,6 +168,16 @@ class MainTest(unittest.TestCase):
         with FakeMcp(TOOLS, replies=world(SEEDED)) as server:
             code, _, events = self.run_main(server.url)
         self.assertEqual((code, events[-1]["held"]), (0, [EMSLAND]))
+
+    def test_a_reader_that_cannot_import_is_not_a_scored_failure(self):
+        here = os.path.dirname(os.path.abspath(endstate.__file__))
+        crash = subprocess.run(
+            [sys.executable, "-c",
+             "import runpy, sys; sys.modules['mcpclient'] = None; "
+             f"runpy.run_path({os.path.join(here, 'endstate.py')!r}, run_name='__main__')"],
+            capture_output=True, check=False)
+        self.assertNotEqual(crash.returncode, 0)
+        self.assertNotEqual(crash.returncode, endstate.FAILED, crash.stderr)
 
     def test_an_unreachable_server_exits_3_and_names_the_fault(self):
         code, out, events = self.run_main("http://127.0.0.1:9/mcp")

@@ -6,7 +6,7 @@
     "required_only_as_one_of_a_set": 1,
     "never_driven": 44,
     "permitted_but_never_required": 20,
-    "tokens_served_but_never_driven": 15999,
+    "tokens_served_but_never_driven": 16026,
     "use_case_cases": 22,
     "acceptance_criteria_named": 52,
     "tools_added_by_shipped_units": 0,
@@ -1538,13 +1538,13 @@
       "case": "case43_the_fair_leads_are_prospects",
       "number": 2,
       "name": "The sign-off given up front is used, not handed back",
-      "statement": "The contact approved in advance, and a record change can be undone, so the held proposal is approved and then redeemed from the conversation rather than returned to the contact to release in the app."
+      "statement": "The user approved in advance, and a record change can be undone, so the held proposal is approved and then redeemed from the conversation rather than returned to the user to release in the app."
     },
     {
       "case": "case43_the_fair_leads_are_prospects",
       "number": 3,
       "name": "The company that needed sign-off is the one a human had set",
-      "statement": "Only the company whose lifecycle a human had already chosen was held, and the answer names that one, because the contact asked which needed them and a wrong name sends them to check the wrong record."
+      "statement": "Only the company whose lifecycle a human had already chosen was held, and the answer names that one, because the user asked which needed them and a wrong name sends them to check the wrong record."
     },
     {
       "case": "case4_use_the_moment",
@@ -1664,7 +1664,7 @@
     },
     {
       "name": "list_records",
-      "tokens": 781,
+      "tokens": 794,
       "agents": [
         "morning_brief",
         "overnight_at_risk_sweep"
@@ -1986,36 +1986,8 @@
       "measured_by_model": {}
     },
     {
-      "name": "describe_analytics_vocabulary",
-      "tokens": 286,
-      "agents": [],
-      "required_by_cases": [],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [
-        "case7_ask_for_a_number"
-      ],
-      "driven": false,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {}
-    },
-    {
-      "name": "draft_email",
-      "tokens": 278,
-      "agents": [],
-      "required_by_cases": [],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [],
-      "driven": false,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": [
-        "draft_reply"
-      ],
-      "measured_by_model": {}
-    },
-    {
       "name": "read_record",
-      "tokens": 278,
+      "tokens": 292,
       "agents": [
         "morning_brief",
         "overnight_at_risk_sweep"
@@ -2047,6 +2019,34 @@
       "required_only_as_one_of_a_set": false,
       "graded_by_certification_tasks": [
         "agent_loop"
+      ],
+      "measured_by_model": {}
+    },
+    {
+      "name": "describe_analytics_vocabulary",
+      "tokens": 286,
+      "agents": [],
+      "required_by_cases": [],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [
+        "case7_ask_for_a_number"
+      ],
+      "driven": false,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {}
+    },
+    {
+      "name": "draft_email",
+      "tokens": 278,
+      "agents": [],
+      "required_by_cases": [],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [],
+      "driven": false,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": [
+        "draft_reply"
       ],
       "measured_by_model": {}
     },
@@ -2328,7 +2328,7 @@
     },
     {
       "name": "compose_analytics_report",
-      "tokens": 770,
+      "tokens": 772,
       "agents": [],
       "required_by_cases": [
         "case20_put_it_in_the_board_pack"
@@ -2484,54 +2484,8 @@
       }
     },
     {
-      "name": "update_record",
-      "tokens": 581,
-      "agents": [],
-      "required_by_cases": [
-        "case33_two_cards_for_one_company",
-        "case43_the_fair_leads_are_prospects"
-      ],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [],
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {
-        "claude-haiku-4-5-20251001": {
-          "runs": 3,
-          "passed": 2,
-          "reliability": 0.6666666666666666,
-          "cases_below_their_bar": []
-        },
-        "claude-opus-5": {
-          "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "claude-sonnet-5": {
-          "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "claude-sonnet-5-5@claude-cli": {
-          "runs": 6,
-          "passed": 6,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "gpt-5.6-sol@codex-cli": {
-          "runs": 3,
-          "passed": 2,
-          "reliability": 0.6666666666666666,
-          "cases_below_their_bar": []
-        }
-      }
-    },
-    {
       "name": "create_record",
-      "tokens": 573,
+      "tokens": 586,
       "agents": [],
       "required_by_cases": [
         "case1_log_it",
@@ -2580,8 +2534,54 @@
       }
     },
     {
+      "name": "update_record",
+      "tokens": 581,
+      "agents": [],
+      "required_by_cases": [
+        "case33_two_cards_for_one_company",
+        "case43_the_fair_leads_are_prospects"
+      ],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [],
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {
+        "claude-haiku-4-5-20251001": {
+          "runs": 3,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
+          "cases_below_their_bar": []
+        },
+        "claude-opus-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "claude-sonnet-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "claude-sonnet-5-5@claude-cli": {
+          "runs": 6,
+          "passed": 6,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "gpt-5.6-sol@codex-cli": {
+          "runs": 3,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
+          "cases_below_their_bar": []
+        }
+      }
+    },
+    {
       "name": "query_workspace",
-      "tokens": 513,
+      "tokens": 530,
       "agents": [],
       "required_by_cases": [
         "case4_use_the_moment"
@@ -2703,7 +2703,7 @@
     },
     {
       "name": "run_analytics_query",
-      "tokens": 501,
+      "tokens": 505,
       "agents": [],
       "required_by_cases": [
         "case20_put_it_in_the_board_pack"
@@ -2756,7 +2756,7 @@
     },
     {
       "name": "search_records",
-      "tokens": 443,
+      "tokens": 456,
       "agents": [],
       "required_by_cases": [
         "case5_before_the_meeting"

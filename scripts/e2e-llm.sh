@@ -593,16 +593,17 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
     fi
     # THE WORLD IS READ BEFORE IT IS RESTORED. An answer can report a write
     # that never landed, and nothing above reads the database, so a case's
-    # must_end_with is read back here through the same passport. Exit 3 is a
-    # world the reader could not read, a harness stop like the bridge's.
+    # must_end_with is read back here through the same passport. Exit 4 is a
+    # world that did not hold; any other failure is a world the reader could
+    # not read, a harness stop like the bridge's.
     ended=0
     MARGINCE_E2E_TOKEN="$PASSPORT" python3 "$ROOT/e2e/llm/endstate.py" \
       --scenario "$scenario" --transcript "$transcript" \
       --mcp-url "$APP_BASE/mcp" --token-env MARGINCE_E2E_TOKEN >> "$results" 2>&1 || ended=$?
-    if [[ "$ended" -ne 0 && "$ended" -ne 1 ]]; then
+    if [[ "$ended" -ne 0 && "$ended" -ne 4 ]]; then
       echo
       echo "HARNESS: $name run $i left a world that could not be read:"
-      tail -3 "$results" | sed 's/^/  /'
+      tail -3 "$results" | sed 's/^/  /' || :
       echo "  This is not a use-case failure. Nothing was scored."
       cp "$transcript" "$RECORD_DIR/" 2>/dev/null && echo "  the transcript is at $RECORD_DIR/$(basename "$transcript")"
       exit 2
@@ -630,7 +631,7 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
       *)
         echo
         echo "HARNESS: $name run $i could not be scored:"
-        tail -3 "$results" | sed 's/^/  /'
+        tail -3 "$results" | sed 's/^/  /' || :
         echo "  This is not a use-case failure. Nothing was scored."
         exit 2
         ;;

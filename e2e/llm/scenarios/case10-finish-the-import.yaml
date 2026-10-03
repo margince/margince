@@ -143,8 +143,9 @@ must_mention:
   # A NEGATED PLACING IS NOT ONE. "I did not map size to size_band" and
   # "Nothing went into size_band" name the field and say it got nothing, so
   # each order is held to one clause and may not cross a negation on its way to
-  # the verb — the same refusal criterion 1 makes, and for the same reason.
-  - "(?:^|[.;!?\n|])(?:(?!\b(?:not|nothing|no|never|none)\b|n['’]t\b)[^.;!?\n|])*?(?:map\w*|→|->|=>|placed|put|assigned|matched|treated|filed|went|\b(?:landed|stored|saved|became|set|into|as)\b)[^.;!?\n|]{0,60}(?:size[_ ]band|address\.(?:city|country)|display[_ ]name)|(?:size[_ ]band|address\.(?:city|country)|display[_ ]name)(?:(?!\b(?:not|never|no)\b|n['’]t\b)[^.;!?\n|]){0,60}(?:map\w*|→|->|=>|from (?:your |the )?(?:size|country|city|name)\b)|\|\s*`?(?:name|city|size|country)`?\s*\|\s*`?(?:size[_ ]band|address\.(?:city|country)|display[_ ]name)`?\s*\|"
+  # the verb, nor between the verb and the field: "I mapped size to description,
+  # not size_band" names the field only to say it got nothing.
+  - "(?:^|[.;!?\n|])(?:(?!\b(?:not|nothing|no|never|none)\b|n['’]t\b)[^.;!?\n|])*?(?:map\w*|→|->|=>|placed|put|assigned|matched|treated|filed|went|\b(?:landed|stored|saved|became|set|into|as)\b)(?:(?!\b(?:not|nothing|no|never|none)\b|n['’]t\b)[^.;!?\n|]){0,60}(?:size[_ ]band|address\.(?:city|country)|display[_ ]name)|(?:size[_ ]band|address\.(?:city|country)|display[_ ]name)(?:(?!\b(?:not|never|no)\b|n['’]t\b)[^.;!?\n|]){0,60}(?:map\w*|→|->|=>|from (?:your |the )?(?:size|country|city|name)\b)|\|\s*`?(?:name|city|size|country)`?\s*\|\s*`?(?:size[_ ]band|address\.(?:city|country)|display[_ ]name)`?\s*\|"
 
 must_not_mention:
   # THE FAILURE THIS CASE EXISTS FOR. The asker pre-authorized the write in the
