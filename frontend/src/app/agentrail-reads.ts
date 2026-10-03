@@ -162,10 +162,9 @@ function captureLine(
  * The model the agent last actually ran on — the SERVED one, not the configured
  * one, because a fallback ladder makes those two differ exactly when it matters.
  *
- * ONE row, because the runtime facts show one model and nothing else there
- * reads the trace: the recap beside them is drawn from the AI-activity feed,
- * which is the projection that knows what each occurrence was ABOUT. Asking for
- * five would be four rows nothing renders.
+ * A short window, not one row: the newest call is often an embedding or a
+ * failure, and the panel names the newest call that answered (modelText). The
+ * recap beside it is drawn from the AI-activity feed, not from this trace.
  *
  * Operator-only, because `/ai/calls` sits behind `ai_diagnostics:read`. A seat
  * without it is told the model is not readable rather than shown one nobody on
@@ -183,7 +182,7 @@ export function useLastCall(): Readonly<{
     staleTime: 30_000,
     queryFn: async () => {
       const { data, error } = await api.GET("/ai/calls", {
-        params: { query: { limit: 1 } },
+        params: { query: { limit: 10 } },
       });
       if (error) {
         // Chrome must not take a page down over telemetry: an unreadable log is
