@@ -310,6 +310,13 @@
             "integer",
             "null"
           ]
+        },
+        "skip_reserved_domain_proposals": {
+          "description": "SkipReservedDomainProposalsSetting keeps a sender on an RFC 2606 reserved name (example.com, *.test, ...) out of the contact review queue. Their mail is still captured; only the \"is this a contact worth keeping?\" question is not asked, because no real correspondent lives under those names.",
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       }
     },

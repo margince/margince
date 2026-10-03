@@ -72,6 +72,15 @@ type Capture struct {
 	// a colleague's history this installation takes is not a per-seat choice,
 	// and today it is made again by whoever connects next.
 	MaxBackfillMonths *int `yaml:"max_backfill_months"`
+	// SkipReservedDomainProposalsSetting keeps a sender on an RFC 2606 reserved
+	// name (example.com, *.test, ...) out of the contact review queue. Their mail
+	// is still captured; only the "is this a contact worth keeping?" question is
+	// not asked, because no real correspondent lives under those names.
+	//
+	// ON unless the file says otherwise, a pointer for the same reason as
+	// TracePayloadsSetting. Turn it off for an installation that deliberately
+	// runs a test mailbox and wants its senders proposed like anyone else.
+	SkipReservedDomainProposalsSetting *bool `yaml:"skip_reserved_domain_proposals"`
 }
 
 // BackfillCeiling answers the three-state field: an operator who said nothing
@@ -97,6 +106,14 @@ func (c Capture) BackfillCeiling() int {
 // Held by: TestOnlyTheResolverReadsTheTracePayloadsField (capture_test.go)
 func (c Capture) TracesPayloads() bool {
 	return c.TracePayloadsSetting == nil || *c.TracePayloadsSetting
+}
+
+// SkipsReservedDomainProposals answers the three-state field: an operator who
+// said nothing gets the default, which is on.
+//
+// Held by: TestOnlyTheResolverReadsTheReservedDomainField (capture_test.go)
+func (c Capture) SkipsReservedDomainProposals() bool {
+	return c.SkipReservedDomainProposalsSetting == nil || *c.SkipReservedDomainProposalsSetting
 }
 
 // Warnings names the settings this block still accepts but no longer acts on,

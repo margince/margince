@@ -133,6 +133,20 @@ func ptr(b bool) *bool { return &b }
 // a syntax-only scan can tell the two apart exactly, which is the reason the
 // rename came with this gate.
 func TestOnlyTheResolverReadsTheTracePayloadsField(t *testing.T) {
+	assertOnlyTheResolverNames(t, "TracePayloadsSetting", "TracesPayloads")
+}
+
+// The same census for the reserved-domain rule: a second reader of the pointer
+// would answer false for the silent file and raise proposals the default
+// exists to keep out.
+func TestOnlyTheResolverReadsTheReservedDomainField(t *testing.T) {
+	assertOnlyTheResolverNames(t, "SkipReservedDomainProposalsSetting", "SkipsReservedDomainProposals")
+}
+
+// assertOnlyTheResolverNames fails for every reference to deployconfig.Capture's
+// pointer field outside the resolver's file and this one.
+func assertOnlyTheResolverNames(t *testing.T, field, resolver string) {
+	t.Helper()
 	root, err := filepath.Abs("../../..")
 	if err != nil {
 		t.Fatalf("resolving the backend root: %v", err)
@@ -167,7 +181,7 @@ func TestOnlyTheResolverReadsTheTracePayloadsField(t *testing.T) {
 		walked++
 		ast.Inspect(file, func(n ast.Node) bool {
 			sel, ok := n.(*ast.SelectorExpr)
-			if !ok || sel.Sel == nil || sel.Sel.Name != "TracePayloadsSetting" {
+			if !ok || sel.Sel == nil || sel.Sel.Name != field {
 				return true
 			}
 			rel, relErr := filepath.Rel(root, path)
@@ -188,10 +202,31 @@ func TestOnlyTheResolverReadsTheTracePayloadsField(t *testing.T) {
 		t.Fatalf("the walk parsed %d Go files, which is too few to have covered the tree", walked)
 	}
 	for _, o := range offenders {
-		t.Errorf("%s names deployconfig.Capture.TracePayloadsSetting. Call TracesPayloads() instead: "+
+		t.Errorf("%s names deployconfig.Capture.%s. Call %s() instead: "+
 			"the field is a pointer whose nil means the operator said nothing, and every reader "+
 			"that resolves it for itself is a second place the default lives — one of which will "+
-			"answer false for a file that never set the key", o)
+			"answer false for a file that never set the key", o, field, resolver)
+	}
+}
+
+// The reserved-domain rule is on for a file that says nothing, and an explicit
+// false is the only way to turn it off.
+func TestReservedDomainProposalsAreSkippedUnlessTheFileSaysOtherwise(t *testing.T) {
+	for _, tc := range []struct {
+		file string
+		want bool
+	}{
+		{"version: 1\n", true},
+		{"version: 1\ncapture:\n  skip_reserved_domain_proposals: true\n", true},
+		{"version: 1\ncapture:\n  skip_reserved_domain_proposals: false\n", false},
+	} {
+		cfg, err := Load(writeTemp(t, tc.file), runtimeenv.Production)
+		if err != nil {
+			t.Fatalf("Load(%q): %v", tc.file, err)
+		}
+		if got := cfg.Capture.SkipsReservedDomainProposals(); got != tc.want {
+			t.Errorf("SkipsReservedDomainProposals() = %v for %q, want %v", got, tc.file, tc.want)
+		}
 	}
 }
 

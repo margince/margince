@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // ReconcileLedgerWorkspace runs the two housekeeping transitions that keep the ledger
@@ -68,6 +69,12 @@ func (e *CounterpartyVerdictEngine) StageReviewsWorkspace(ctx context.Context, m
 		}
 		said := approvalSummaryCopyOver(wsCtx, e.pool)
 		for _, row := range rows {
+			if e.skipReservedDomains && values.IsReservedAddress(row.Email) {
+				if err := e.closeReservedDomainReview(wsCtx, row); err != nil {
+					return err
+				}
+				continue
+			}
 			proposalID, err := stageCounterpartyReview(wsCtx, e.approvals, said, row)
 			if err != nil {
 				e.log.WarnContext(wsCtx, "counterparty verdict: staging a review offer failed",
@@ -82,6 +89,20 @@ func (e *CounterpartyVerdictEngine) StageReviewsWorkspace(ctx context.Context, m
 			}
 		}
 		return nil
+	})
+}
+
+// reservedDomainReason is the ledger's record of why a reserved-name sender
+// was never put to a human.
+const reservedDomainReason = "reserved domain (RFC 2606): no contact proposed"
+
+// closeReservedDomainReview closes the question instead of asking it. Left
+// `unsure`, the row would come back on every pass and hold a slot in the
+// staging backlog ahead of real senders. `rejected` creates nothing and
+// touches no mail, as an aged-out review does.
+func (e *CounterpartyVerdictEngine) closeReservedDomainReview(ctx context.Context, row capture.PendingCounterparty) error {
+	return database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+		return e.pending.ResolveReviewed(ctx, tx, row.ID, capture.PendingStatusRejected, reservedDomainReason)
 	})
 }
 
