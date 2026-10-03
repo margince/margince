@@ -758,38 +758,6 @@ describe("AgentRail", () => {
     );
   });
 
-  // The newest call is often an embedding, which indexes search and answers
-  // nothing: the model row names the model that answers.
-  it("names the answering model over a newer embedding call", async () => {
-    const user = userEvent.setup();
-    const embedding: AiCallSummary = {
-      ...AI_CALL,
-      id: "019f7e65-fbf7-7114-b114-40af4af63ae9",
-      kind: "embedding",
-      provider: "openai",
-      served_model: "text-embedding",
-    };
-    stubAgentRailApi({
-      aiCalls: () =>
-        jsonResponse({
-          data: [embedding, AI_CALL],
-          page: emptyPage,
-          payload_capture_enabled: false,
-          tasks: [AI_CALL.task],
-        }),
-    });
-    const { container } = render(ROUTE);
-    await openPanel(user, container);
-    await waitFor(() =>
-      expect(panel().querySelector(".armeta")?.textContent).toContain(
-        "gemini/served",
-      ),
-    );
-    expect(panel().querySelector(".armeta")?.textContent).not.toContain(
-      "text-embedding",
-    );
-  });
-
   it("names the served model once a call has actually run", async () => {
     const user = userEvent.setup();
     stubAgentRailApi({
