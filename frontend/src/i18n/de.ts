@@ -11367,7 +11367,7 @@ export const de = {
   // nicht braucht.
   "worklist.verb.open_meeting_brief": "Termin vorbereiten",
   "worklist.deal.closes": "Abschluss {date}",
-  "worklist.when.held": "stattgefunden {when}",
+  "worklist.when.held": "Fand statt: {when}",
   "worklist.when.starts": "Beginn: {when}",
   "worklist.when.due": "Fällig: {when}",
   "worklist.batch.system_incident_one":

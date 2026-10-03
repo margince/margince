@@ -33,6 +33,6 @@ func appendCustomerMeetingClause(ctx context.Context, in ListActivitiesInput, ar
 	if visible == "" {
 		visible = scopeUnbounded
 	}
-	return append(where, `EXISTS (SELECT 1 FROM activity_link al WHERE al.activity_id = a.id
+	return append(where, `a.kind = 'meeting' AND EXISTS (SELECT 1 FROM activity_link al WHERE al.activity_id = a.id
 	   AND `+customerLinkSQL+` AND (`+visible+`))`), nil
 }

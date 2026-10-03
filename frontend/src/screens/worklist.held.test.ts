@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { viewerZone } from "../format/timezone";
+import { formatDateTime } from "../format/format";
 import { translate } from "../i18n";
 import { heldText } from "./worklist.held";
 import { row } from "./worklist.testkit";
@@ -13,11 +13,13 @@ describe("heldText — when a meeting owing an outcome took place", () => {
       source: "meeting_outcome",
       occurred_at: "2026-09-22T09:00:00Z",
     });
-    expect(heldText(item, t, "en", viewerZone())).toMatch(/^held .*2026/);
+    expect(heldText(item, t, "en", "Europe/Madrid")).toBe(
+      `held ${formatDateTime("2026-09-22T09:00:00Z", "en", "Europe/Madrid")}`,
+    );
   });
 
   it("says nothing for any other row", () => {
     const item = row({ source: "task", occurred_at: "2026-09-22T09:00:00Z" });
-    expect(heldText(item, t, "en", viewerZone())).toBeNull();
+    expect(heldText(item, t, "en", "Europe/Madrid")).toBeNull();
   });
 });
