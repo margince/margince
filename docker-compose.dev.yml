@@ -50,7 +50,7 @@ services:
   postgres:
     # pgvector ships inside the Postgres image: the search module's hybrid
     # retrieval needs the extension available at migrate time.
-    image: pgvector/pgvector:pg16@sha256:1d533553fefe4f12e5d80c7b80622ba0c382abb5758856f52983d8789179f0fb
+    image: pgvector/pgvector:pg16@sha256:ccc6e83d6e35e931dc7c5def2022729d5a6c370318d099181995567ff1fb4d6b
     # max_locks_per_transaction sizes the CLUSTER-WIDE lock table, not a
     # per-transaction budget: the instance gets
     # max_locks_per_transaction × (max_connections + max_prepared_transactions)
