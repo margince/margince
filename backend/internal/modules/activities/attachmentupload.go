@@ -107,7 +107,7 @@ func (s *Store) UploadAttachment(ctx context.Context, in AttachmentInput) (crmco
 	}
 
 	id := ids.NewV7()
-	key := blobstore.WorkspaceKey(workspaceID(ctx), "attachment", id.String())
+	key := blobstore.WorkspaceKey(workspaceID(ctx), attachmentKind, id.String())
 	// The name a stranger or a rep TYPED, made safe before it reaches the column
 	// — the same function the capture path runs every sender-supplied name
 	// through, for the same reasons: a name is presentational only (nothing opens
