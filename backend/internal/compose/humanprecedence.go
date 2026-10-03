@@ -48,9 +48,10 @@ func newRecordTypeSet(names ...string) map[string]bool {
 
 // unauditedHolder renders the predicate deciding whether an UNAUDITED patch
 // key is human-owned. With a table to read, the answer is "only if the row
-// already holds a value there" — filling an empty field undoes nobody, so it
-// stays auto-execute. Without one, every unaudited key on a human-created
-// record is treated as theirs.
+// holds a value there that is not the column's own default" — filling an
+// empty field undoes nobody, and neither does moving a value the database
+// supplied. Without a table, every unaudited key on a human-created record is
+// treated as theirs.
 func unauditedHolder(table string) string {
 	if table == "" {
 		return "true"
@@ -60,8 +61,24 @@ func unauditedHolder(table string) string {
 			    WHERE t.id = $2 AND to_jsonb(t) -> p.key IS NOT NULL
 			      AND to_jsonb(t) -> p.key <> 'null'::jsonb
 			      AND to_jsonb(t) -> p.key <> '""'::jsonb
+			      AND (to_jsonb(t) ->> p.key) IS DISTINCT FROM (` + constantColumnDefault + `)
 			  )`
 }
+
+// constantColumnDefault reads, as text, the catalog default of column p.key on
+// row t when that default is a constant: a quoted literal ('unknown'::text) or
+// a bare number or boolean. Any other default (now(), a quoted array) reads as
+// NULL, so a value there still counts as possibly typed and the tie goes to
+// asking the human.
+const constantColumnDefault = `SELECT CASE
+			        WHEN d.expr ~ '^''.*''::[a-z_][a-z_0-9 (),]*$'
+			          THEN replace(substring(d.expr FROM '^''(.*)''::'), '''''', '''')
+			        WHEN d.expr ~ '^(-?[0-9]+|true|false)$' THEN d.expr
+			      END
+			      FROM pg_attribute att
+			      JOIN pg_attrdef def ON def.adrelid = att.attrelid AND def.adnum = att.attnum
+			      CROSS JOIN LATERAL (SELECT pg_get_expr(def.adbin, def.adrelid) AS expr) d
+			      WHERE att.attrelid = t.tableoid AND att.attname = p.key`
 
 // This is NOT superseded.go's question, and the two must not share a reader.
 // SupersededFields asks whether ANYONE wrote a key after a given audit row;
@@ -88,10 +105,11 @@ func unauditedHolder(table string) string {
 // and the forecast date at the auto-execute tier with no approval staged.
 //
 // The unaudited half is narrowed by the record's CURRENT value, read from
-// the row itself: a field that is still empty has nothing a human could
-// have typed and nothing an agent could undo, so filling it stays 🟢. A
-// field that already holds a value on a human-created record might be that
-// human's, the trail cannot say, and the tie goes to asking them.
+// the row itself: a field that is still empty, or still holds its column
+// default, has nothing a human could have typed and nothing an agent could
+// undo, so writing it stays 🟢. Any other value on a human-created record
+// might be that human's, the trail cannot say, and the tie goes to asking
+// them. A human who typed exactly the default reads as one who left it.
 func (f fieldOwnership) HumanOwnedConflicts(ctx context.Context, entityType string, id ids.UUID, patch json.RawMessage) ([]string, error) {
 	if len(patch) == 0 {
 		return nil, nil
