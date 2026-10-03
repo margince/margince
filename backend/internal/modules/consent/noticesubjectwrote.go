@@ -18,11 +18,11 @@ import (
 // the duty ended without copying anything about them into it.
 const subjectWroteNote = "They wrote to us: a captured mail from their own address shows the data came from them (Art. 13, not Art. 14), so no separate notice is owed."
 
-// settleableWhenSubjectWrote are the states a case may be closed FROM when the
-// contact turns out to have written to us. A queued case is left alone: a
-// disclosure is already on its way, and closing the case under it would leave
-// a delivery nobody tracks. Every terminal state is left alone as well.
-var settleableWhenSubjectWrote = []string{
+// settleableOwedStates are the states a case may be closed FROM when it ends
+// without a notice. A queued case is left alone: a disclosure is already on its
+// way, and closing the case under it would leave a delivery nobody tracks.
+// Every terminal state is left alone as well.
+var settleableOwedStates = []string{
 	string(NoticeOpen), string(NoticeAssigned), string(NoticeBlocked), string(NoticeDeliveryFailed),
 }
 
@@ -51,7 +51,7 @@ func SettleWhenSubjectWroteTx(ctx context.Context, tx pgx.Tx, acquisitions []ids
 	rows, err := tx.Query(ctx, `
 		SELECT id FROM privacy_notice_case
 		 WHERE acquisition_id = ANY($1) AND state = ANY($2)
-		 ORDER BY id`, acquisitions, settleableWhenSubjectWrote)
+		 ORDER BY id`, acquisitions, settleableOwedStates)
 	if err != nil {
 		return 0, fmt.Errorf("read the duties owed for these acquisitions: %w", err)
 	}
@@ -59,14 +59,23 @@ func SettleWhenSubjectWroteTx(ctx context.Context, tx pgx.Tx, acquisitions []ids
 	if err != nil {
 		return 0, fmt.Errorf("read the duties owed for these acquisitions: %w", err)
 	}
+	return closeOwedCasesTx(ctx, tx, caseIDs, subjectWroteNote, now)
+}
+
+// closeOwedCasesTx ends each named case as exempt_with_reason on one ground,
+// with one audit entry each. Every reason a case ends without a disclosure
+// closes it here, so the lock, the re-check and the audit cannot drift apart.
+//
+// Re-checked under the lock: an officer may have closed one between the
+// caller's read and here, and their ground must not be overwritten. A queued
+// case keeps the disclosure already on its way.
+func closeOwedCasesTx(ctx context.Context, tx pgx.Tx, caseIDs []ids.UUID, note string, now time.Time) (int, error) {
 	closed := 0
 	for _, id := range caseIDs {
 		current, err := lockNoticeCase(ctx, tx, id)
 		if err != nil {
 			return closed, err
 		}
-		// Re-checked under the lock: an officer may have closed it between the
-		// read above and here, and their ground must not be overwritten.
 		if terminalNoticeStates()[current.State] || current.State == NoticeQueued {
 			continue
 		}
@@ -76,9 +85,9 @@ func SettleWhenSubjectWroteTx(ctx context.Context, tx pgx.Tx, acquisitions []ids
 			       blocked_reason = NULL, updated_at = now()
 			 WHERE id = $1
 			RETURNING`+noticeCaseColumns,
-			id, string(NoticeExemptWithReason), subjectWroteNote, now))
+			id, string(NoticeExemptWithReason), note, now))
 		if err != nil {
-			return closed, fmt.Errorf("close a duty the contact's own mail settled: %w", err)
+			return closed, fmt.Errorf("close a duty that ended without a notice: %w", err)
 		}
 		if err := auditNoticeCase(ctx, tx, current, out, map[string]any{fieldResolutionNote: true}); err != nil {
 			return closed, err
