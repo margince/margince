@@ -58,7 +58,7 @@ SELECT 'system', 'migration', 'update', 'privacy_notice_case', owed.id,
        jsonb_strip_nulls(jsonb_build_object('state', owed.state, 'owner_user_id', owed.owner_user_id,
                                             'blocked_reason', owed.blocked_reason)),
        jsonb_build_object('state', 'exempt_with_reason', 'rule', owed.rule, 'resolution_note', true,
-                          'datafix', '2026-10-03_open_duties_the_captured_mail_already_answers')
+                          'datafix', '2026-10-03-4_open_duties_the_captured_mail_already_answers')
   FROM owed JOIN settled ON settled.id = owed.id;
 
 -- 2. We wrote to them before connecting (contacts.writtenToBeforeConnectedTx),
@@ -90,7 +90,7 @@ reclassified AS (
     SELECT 'system', 'migration', 'update', 'contact_acquisition_evidence', history.id,
            jsonb_build_object('kind', 'unknown_legacy'),
            jsonb_build_object('kind', 'mailbox_history',
-                              'datafix', '2026-10-03_open_duties_the_captured_mail_already_answers')
+                              'datafix', '2026-10-03-4_open_duties_the_captured_mail_already_answers')
       FROM history
 ),
 owed AS (
@@ -114,5 +114,5 @@ SELECT 'system', 'migration', 'update', 'privacy_notice_case', owed.id,
        jsonb_strip_nulls(jsonb_build_object('state', owed.state, 'owner_user_id', owed.owner_user_id,
                                             'blocked_reason', owed.blocked_reason)),
        jsonb_build_object('state', 'exempt_with_reason', 'rule', owed.rule, 'resolution_note', true,
-                          'datafix', '2026-10-03_open_duties_the_captured_mail_already_answers')
+                          'datafix', '2026-10-03-4_open_duties_the_captured_mail_already_answers')
   FROM owed JOIN settled ON settled.id = owed.id;

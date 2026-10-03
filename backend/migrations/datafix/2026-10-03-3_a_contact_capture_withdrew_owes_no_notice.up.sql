@@ -41,5 +41,5 @@ SELECT 'system', 'migration', 'update', 'privacy_notice_case', owed.id,
        jsonb_strip_nulls(jsonb_build_object('state', owed.state, 'owner_user_id', owed.owner_user_id,
                                             'blocked_reason', owed.blocked_reason)),
        jsonb_build_object('state', 'exempt_with_reason', 'rule', owed.rule, 'resolution_note', true,
-                          'datafix', '2026-10-03_a_contact_capture_withdrew_owes_no_notice')
+                          'datafix', '2026-10-03-3_a_contact_capture_withdrew_owes_no_notice')
   FROM owed JOIN settled ON settled.id = owed.id;

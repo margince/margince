@@ -12,7 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-const captureWithdrewUp = "datafix/2026-10-03_a_contact_capture_withdrew_owes_no_notice.up.sql"
+const captureWithdrewUp = "datafix/2026-10-03-3_a_contact_capture_withdrew_owes_no_notice.up.sql"
 
 // archivedWithDuty seeds a capture-made contact archived by `archiver`, with an
 // open Art. 14 case on it, and answers the case id.

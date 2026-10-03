@@ -13,7 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-const capturedMailAnswersUp = "datafix/2026-10-03_open_duties_the_captured_mail_already_answers.up.sql"
+const capturedMailAnswersUp = "datafix/2026-10-03-4_open_duties_the_captured_mail_already_answers.up.sql"
 
 // owedContact seeds a contact at `email` whose acquisition `capturedBy` wrote
 // as unknown_legacy, with an open Art. 14 case, and answers the case id.

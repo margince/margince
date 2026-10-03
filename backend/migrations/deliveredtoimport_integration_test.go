@@ -12,7 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-const deliveredToImportUp = "datafix/2026-10-03_mail_delivered_to_a_seat_is_their_import.up.sql"
+const deliveredToImportUp = "datafix/2026-10-03-2_mail_delivered_to_a_seat_is_their_import.up.sql"
 
 // capturedListMail seeds one message the seat's Gmail connection captured with
 // no import row, its stored original carrying `head` above a list's headers,
