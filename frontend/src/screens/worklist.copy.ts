@@ -405,7 +405,7 @@ export function dealFactsText(
 }
 
 // Notices retain the original change date even when delivery happens later.
-// Meetings use the reader's clock; tasks use the agreed deadline's record zone.
+// A meeting's start uses the reader's clock; a held meeting and a task, the record's.
 //
 // Today's meeting shows the CLOCK TIME and nothing else — a rep reads this at
 // their desk on the morning it matters, and "today" is the frame they are
