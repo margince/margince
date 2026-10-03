@@ -50,7 +50,8 @@ func newRecordTypeSet(names ...string) map[string]bool {
 // key is human-owned. With a table to read, the answer is "only if the row
 // holds a value there that is not the column's own default" — filling an
 // empty field undoes nobody, and neither does moving a value the database
-// supplied. Without a table, every unaudited key on a human-created record is
+// supplied — unless the key is an access field, whose every value is the
+// human's. Without a table, every unaudited key on a human-created record is
 // treated as theirs.
 func unauditedHolder(table string) string {
 	if table == "" {
@@ -61,9 +62,14 @@ func unauditedHolder(table string) string {
 			    WHERE t.id = $2 AND to_jsonb(t) -> p.key IS NOT NULL
 			      AND to_jsonb(t) -> p.key <> 'null'::jsonb
 			      AND to_jsonb(t) -> p.key <> '""'::jsonb
-			      AND (to_jsonb(t) ->> p.key) IS DISTINCT FROM (` + constantColumnDefault + `)
+			      AND (p.key IN (` + accessFields + `)
+			        OR (to_jsonb(t) ->> p.key) IS DISTINCT FROM (` + constantColumnDefault + `))
 			  )`
 }
+
+// accessFields are the pair platform/auth's row scope reads to decide who
+// sees a record. Moving one off its default hides the record from colleagues.
+const accessFields = `'visibility', 'owner_id'`
 
 // constantColumnDefault reads, as text, the catalog default of column p.key on
 // row t when that default is a constant: a quoted literal ('unknown'::text) or
@@ -107,9 +113,11 @@ const constantColumnDefault = `SELECT CASE
 // The unaudited half is narrowed by the record's CURRENT value, read from
 // the row itself: a field that is still empty, or still holds its column
 // default, has nothing a human could have typed and nothing an agent could
-// undo, so writing it stays 🟢. Any other value on a human-created record
-// might be that human's, the trail cannot say, and the tie goes to asking
-// them. A human who typed exactly the default reads as one who left it.
+// undo, so writing it stays 🟢 — except an access field, whose default is
+// still a choice about who sees the record. Any other value on a
+// human-created record might be that human's, the trail cannot say, and the
+// tie goes to asking them. A human who typed exactly the default reads as one
+// who left it.
 func (f fieldOwnership) HumanOwnedConflicts(ctx context.Context, entityType string, id ids.UUID, patch json.RawMessage) ([]string, error) {
 	if len(patch) == 0 {
 		return nil, nil

@@ -49,6 +49,20 @@ func TestAgentStillAsksBeforeOverwritingAValueTypedAtCreate(t *testing.T) {
 	}
 }
 
+// Who can see a record is never a default an agent moves unasked: narrowing a
+// human's company to its owner hides it from every colleague.
+func TestAgentAsksBeforeNarrowingWhoSeesAHumanCreatedRecord(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	companyID := createdID(t, e, "/v1/companies", AnyMap{"display_name": "Defaulted Visibility GmbH"})
+	bearer := companyAgentBearer(t, e)
+
+	if visibility, approval := agentPatchCompany(t, e, bearer, companyID, "visibility", "owner"); approval == "" || visibility != "workspace" {
+		t.Errorf("agent narrowed a defaulted visibility → visibility %q, approval %q; want it staged for approval",
+			visibility, approval)
+	}
+}
+
 func companyAgentBearer(t *testing.T, e *apptest.AppEnv) map[string]string {
 	t.Helper()
 	var minted struct {
