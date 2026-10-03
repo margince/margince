@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"strings"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
@@ -37,6 +38,8 @@ var settleVerdicts = map[string]bool{
 
 const settleSystem = `You judge whether OUR OWN reply settled what THEIR message asked of us.
 You are given one email conversation per id, oldest first. The first message is the request. Messages are marked "from them" (the customer) or "from us" (this workspace).
+Some entries are our answers from outside the email thread, marked as such: "from us, separate email" is our own mail to them with the same subject; "from us, call logged" is a call we logged with them, and its text is our notes; "from us, meeting held" is a meeting that took place with them, and its text is our notes. Judge them as you judge a reply: by what they show we did.
+A held meeting settles a request to meet or talk: the meeting is the answer. For any other ask, a call or meeting settles it only when its notes show the ask was answered or delivered; notes that promise a next step are still_owed; a call or meeting whose notes say nothing about the ask is unsure.
 
 For EACH conversation emit exactly one verdict:
 "settled" — our words answered the question, declined it, delivered what was asked, agreed a time, or handed it to a named colleague. Nothing is left for us to do.
@@ -105,7 +108,7 @@ func settleRequest(batch []settleCandidate) model.Request {
 		var conversation strings.Builder
 		for _, message := range candidate.Messages {
 			fmt.Fprintf(&conversation, "%s | %s\n%s\n\n",
-				directionWord(message.Direction), message.Subject, message.Body)
+				settleSourceWord(message), message.Subject, message.Body)
 		}
 		prompt.WriteString(fence.WrapAttr("source_id",
 			candidate.Request.RequestID.String(), conversation.String()) + "\n")
@@ -119,6 +122,21 @@ func settleRequest(batch []settleCandidate) model.Request {
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		ResponseSchema: settleSchema(settleIDs(batch)),
 		SecretStripper: ai.NewSecretStripper(),
+	}
+}
+
+// settleSourceWord says who a message is from and, for an answer from outside
+// the thread, what kind of answer it is, in the words the system prompt names.
+func settleSourceWord(message threadMessage) string {
+	switch message.OffThread {
+	case "":
+		return directionWord(message.Direction)
+	case string(crmcontracts.ActivityKindCall):
+		return "from us, call logged"
+	case string(crmcontracts.ActivityKindMeeting):
+		return "from us, meeting held"
+	default:
+		return "from us, separate email"
 	}
 }
 

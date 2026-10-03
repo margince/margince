@@ -30,6 +30,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"sort"
 	"strings"
 	"time"
 
@@ -177,8 +178,7 @@ func (s *RequestSettler) candidates(ctx context.Context, limit int) ([]settleCan
 			if request.CounterpartyEmail == "" {
 				continue
 			}
-			messages, err := requestConversation(ctx, tx, request.RequestID,
-				request.CounterpartyEmail, asOf)
+			messages, err := settleEvidence(ctx, tx, request, asOf)
 			if err != nil {
 				return err
 			}
@@ -196,6 +196,37 @@ func (s *RequestSettler) candidates(ctx context.Context, limit int) ([]settleCan
 		return nil, err
 	}
 	return out, nil
+}
+
+// settleEvidence is what the model judges a request on: the request and the
+// messages of its thread that followed, and our answers from outside the
+// thread, oldest first and capped at settleThreadMessages. Every answer is
+// strictly later than the request, so the request stays first.
+func settleEvidence(ctx context.Context, tx pgx.Tx, request activities.RepliedRequest,
+	asOf time.Time,
+) ([]threadMessage, error) {
+	messages, err := requestConversation(ctx, tx, request.RequestID, request.CounterpartyEmail, asOf)
+	if err != nil || len(messages) == 0 {
+		return messages, err
+	}
+	answers, err := activities.OffThreadAnswersTx(ctx, tx, request.RequestID, asOf,
+		extractBodyLimit, settleThreadMessages)
+	if err != nil {
+		return nil, fmt.Errorf("request settle: reading the answers off the thread: %w", err)
+	}
+	for _, answer := range answers {
+		messages = append(messages, threadMessage{
+			ID: answer.ID, Direction: "outbound", Subject: answer.Subject,
+			Body: answer.Body, At: answer.At, OffThread: answer.Kind,
+		})
+	}
+	sort.SliceStable(messages[1:], func(i, j int) bool {
+		return messages[i+1].At.Before(messages[j+1].At)
+	})
+	if len(messages) > settleThreadMessages {
+		messages = messages[:settleThreadMessages]
+	}
+	return messages, nil
 }
 
 // requestConversation reads the request and the messages that followed it.

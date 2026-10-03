@@ -1,0 +1,57 @@
+name: an_answer_off_the_thread_can_leave_the_request_owed
+task: request_settlement
+site: request_settle
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+# The counterweight to the off-thread settle case. A call or a meeting with the
+# customer is not an answer to every ask they made: the notes decide. A call
+# whose notes promise a next step leaves it owed, and a meeting about something
+# else says nothing about the ask at all.
+fixture:
+  - messages:
+      - direction: inbound
+        subject: 'Pricing for 50 seats'
+        body: |
+          Could you send us pricing for 50 seats? We need it for the budget
+          round at the end of the month.
+      - direction: outbound
+        off_thread: call
+        subject: 'Call with Jan'
+        body: |
+          Spoke with Jan about the 50-seat pricing. I will send the quote by
+          Friday once finance confirms the volume discount.
+  - messages:
+      - direction: inbound
+        subject: 'Onboarding checklist'
+        body: |
+          Hello, please send the onboarding checklist so our admins can
+          prepare the accounts.
+      - direction: outbound
+        off_thread: meeting
+        subject: 'Quarterly review'
+        body: |
+          Quarterly review with the customer. Discussed renewal timing and the
+          new team lead on their side.
+expect:
+  outcome: accepted
+  answer:
+    - verdict: still_owed
+      remaining_names: quote|pricing|price
+    - verdict: unsure
+  rubric: >
+    The first is still_owed. The call notes say we will send the quote by
+    Friday: the ask was discussed, and our own words name a next move we have
+    not made. The remaining phrase must name the quote or the pricing, from our
+    own seat.
+    The second is unsure. A meeting took place, but its notes are about renewal
+    timing and a new team lead and say nothing about the onboarding checklist.
+    The words neither show it delivered nor name a next move, so they do not
+    decide it.
+    Score high only if both are right. A model that settles either because a
+    call or meeting happened is treating contact as an answer, which closes
+    work nobody did, and should score at the floor. Answering still_owed to the
+    second errs toward keeping work visible and should score in the middle.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

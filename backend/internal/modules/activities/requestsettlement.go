@@ -84,9 +84,11 @@ const OwedVerdictCapturedBy = "system:owed_verdict"
 // settlement pass consumes it.
 type RepliedRequest struct {
 	RequestID ids.UUID
-	// NewestOutboundID is the reply the judgement is reached over, and the
-	// watermark written beside the verdict. A later one re-arms the question.
-	NewestOutboundID ids.UUID
+	// NewestAnswerID is the newest answer the judgement is reached over: our
+	// reply, our same-subject mail off the thread, or a call or meeting with
+	// the sender. It is the watermark written beside the verdict, and a later
+	// answer re-arms the question.
+	NewestAnswerID ids.UUID
 	// TaskID is the email_request reminder minted from this request, when one
 	// exists. A request outside the assignment horizon has none, and then a
 	// verdict is recorded and nothing is completed.
@@ -108,64 +110,62 @@ type RepliedRequest struct {
 
 // repliedRequestsSQL selects requests the workspace has answered since.
 //
-// The reply test is the ordinary thread comparison — same key, same kind, same
-// provider — bounded at asOf so a SCHEDULED send cannot settle a request before
-// it has left the building.
+// An answer is our attested reply in this conversation, or an answer off the
+// thread as answered.go recognises one: our attested mail to the sender with
+// the same subject, or a logged call or held meeting with their contact. All
+// are bounded at asOf, so a SCHEDULED send cannot settle a request before it
+// has left the building.
 //
-// It is ALSO bound to one correspondent, and the thread triple is not enough to
-// do that. thread_key can be the RFC822 References root, which the SENDER types:
-// a stranger who has seen one of our Message-IDs can forge a thread onto an
-// unrelated customer's conversation. Matching outbound on the key alone then
-// reads our reply to THEM as a reply to the stranger. counterparty_email names
-// who the message was actually with, and counterparty_outbound_attested is the
-// provider's own filing of it as sent there — a header cannot forge either. That bound is the one waitingengagement's own tests
-// hold, and for the same reason: a future-dated row is not something the
-// customer has received.
+// The thread reply is bound to one correspondent, because the thread triple is
+// not enough. thread_key can be the RFC822 References root, which the SENDER
+// types: a stranger who has seen one of our Message-IDs can forge a thread onto
+// an unrelated customer's conversation. counterparty_email names who the
+// message was actually with, and counterparty_outbound_attested is the
+// provider's own filing of it as sent there; a header cannot forge either. The
+// off-thread arms walk from the request's own sender and carry the same
+// attestation, plus the workspace audience, since their text reaches the model.
 //
 // The watermark arm is what makes the pass idempotent and re-armable at once. A
-// thread already judged through its newest outbound is skipped; one that has
-// since been written on again comes back, because the newest outbound is no
-// longer the one the row names.
+// request already judged through its newest answer is skipped; one answered
+// again since comes back, because the newest answer is no longer the one the
+// row names.
 var repliedRequestsSQL = outstandingRequestSQL + `
  AND a.audience = 'workspace'
  AND a.counterparty_email IS NOT NULL
- AND EXISTS (SELECT 1 FROM activity reply
-   WHERE ` + ourOutboundInThisThread("reply", "a") + `
-     AND reply.occurred_at <= $1
-     AND (reply.occurred_at, reply.id) > (a.occurred_at, a.id))
+ AND EXISTS (` + settlementAnswersSQL() + `)
  AND NOT EXISTS (SELECT 1 FROM activity_request_settlement judged
    WHERE judged.request_activity_id = a.id
-     AND judged.judged_through_activity_id = (` + newestOutboundSince + `))`
+     AND judged.judged_through_activity_id = (` + newestAnswerSince + `))`
 
-// newestOutboundSince names OUR latest message on this conversation after the
-// request, as of the pass's own instant ($1).
+// settlementAnswersSQL selects, as (id, occurred_at), every answer to request a
+// as of the pass's own instant ($1): our attested reply in the conversation and
+// the answers off its thread.
+func settlementAnswersSQL() string {
+	return `SELECT reply.id, reply.occurred_at FROM activity reply
+   WHERE ` + ourOutboundInThisThread("reply", "a") + `
+     AND reply.occurred_at <= $1
+     AND (reply.occurred_at, reply.id) > (a.occurred_at, a.id)
+ UNION ` + offThreadAnswersSQL("a", "$1")
+}
+
+// newestAnswerSince names the newest answer to the request.
 //
-// Spelled once for the two statements that need it — the watermark arm above,
-// which skips a thread already judged through it, and the candidate read, which
-// hands the same id back so the judgement records what it was judged through.
-// Two spellings of "the newest" would let a thread be skipped against one
-// message and judged against another.
+// Spelled once for the two statements that need it: the watermark arm above,
+// which skips a request already judged through it, and the candidate read,
+// which hands the same id back so the judgement records what it was judged
+// through. Two spellings of "the newest" would let a request be skipped against
+// one answer and judged against another.
 //
 // Held by: TestOurOwnOutboundIsAskedTheSameWayEverywhere
 // (backend/internal/modules/activities/ourownoutbound_test.go)
-//
-// It adds no audience or restriction clause to the matched row, where the
-// owed-verdict pass's own use of ourOutboundInThisThread adds both. Nothing of
-// this row's TEXT leaves here: it resolves an ID, to decide whether a request
-// has been answered and to stamp what it was answered through. That pass ships
-// the prior message's body to a model. The clauses that bound an exposure
-// belong where the exposure is.
-var newestOutboundSince = newestOutbound("newest.id")
+var newestAnswerSince = newestAnswer("newest.id")
 
-// newestOutboundRow is that newest reply's id and send time, read by the same
-// walk, for the candidate read to select and order by without walking twice.
-var newestOutboundRow = newestOutbound("newest.id, newest.occurred_at")
+// newestAnswerRow is that newest answer's id and time, read by the same walk,
+// for the candidate read to select and order by without walking twice.
+var newestAnswerRow = newestAnswer("newest.id, newest.occurred_at")
 
-func newestOutbound(column string) string {
-	return `SELECT ` + column + ` FROM activity newest
-        WHERE ` + ourOutboundInThisThread("newest", "a") + `
-          AND newest.occurred_at <= $1
-          AND (newest.occurred_at, newest.id) > (a.occurred_at, a.id)
+func newestAnswer(column string) string {
+	return `SELECT ` + column + ` FROM (` + settlementAnswersSQL() + `) newest
         ORDER BY newest.occurred_at DESC, newest.id DESC LIMIT 1`
 }
 
@@ -201,7 +201,7 @@ func (s *Store) RepliedRequests(ctx context.Context, asOf time.Time, limit int) 
 			       coalesce(task.captured_by = $2 AND task.due_at IS NULL
 			                AND task.subject IS NOT DISTINCT FROM a.subject, false)
 			  FROM activity a
-			  CROSS JOIN LATERAL (`+newestOutboundRow+`) latest
+			  CROSS JOIN LATERAL (`+newestAnswerRow+`) latest
 			  LEFT JOIN activity task
 			    ON task.source_system = '%s' AND task.source_activity_id = a.id
 			   AND task.archived_at IS NULL AND task.is_done = false
@@ -215,7 +215,7 @@ func (s *Store) RepliedRequests(ctx context.Context, asOf time.Time, limit int) 
 		defer rows.Close()
 		for rows.Next() {
 			var r RepliedRequest
-			if err := rows.Scan(&r.RequestID, &r.CounterpartyEmail, &r.NewestOutboundID,
+			if err := rows.Scan(&r.RequestID, &r.CounterpartyEmail, &r.NewestAnswerID,
 				&r.TaskID, &r.TaskVersion, &r.TaskMachineMinted); err != nil {
 				return err
 			}
@@ -328,7 +328,7 @@ func recordSettlement(ctx context.Context, tx pgx.Tx, in RequestSettlementInput)
 	remaining, dueAt := settlementProse(in)
 	after := map[string]any{
 		settlementVerdictCol:   in.Verdict,
-		settlementThroughCol:   in.Request.NewestOutboundID.String(),
+		settlementThroughCol:   in.Request.NewestAnswerID.String(),
 		settlementRemainingCol: remaining,
 		settlementDueCol:       dueAt,
 		settlementConfidence:   in.Confidence,
@@ -343,7 +343,7 @@ func recordSettlement(ctx context.Context, tx pgx.Tx, in RequestSettlementInput)
 		       verdict = EXCLUDED.verdict, remaining = EXCLUDED.remaining,
 		       due_at = EXCLUDED.due_at, confidence = EXCLUDED.confidence,
 		       decided_by = EXCLUDED.decided_by, decided_at = now()`,
-		in.Request.RequestID, in.Request.NewestOutboundID, in.Verdict,
+		in.Request.RequestID, in.Request.NewestAnswerID, in.Verdict,
 		remaining, dueAt, in.Confidence, in.DecidedBy); err != nil {
 		return fmt.Errorf("activities: recording the request settlement: %w", err)
 	}
