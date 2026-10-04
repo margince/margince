@@ -30,8 +30,11 @@ func settleEvidence(ctx context.Context, tx pgx.Tx, request activities.RepliedRe
 ) ([]threadMessage, error) {
 	messages, err := conversationRows(ctx, tx, request.RequestID, request.CounterpartyEmail, asOf,
 		nil, settleEvidenceFetch)
-	if err != nil || len(messages) == 0 {
-		return messages, err
+	// The request leads the evidence or nothing is judged: narrowed since the
+	// candidate read, it is gone from the window, and the first reply would be
+	// read as the ask.
+	if err != nil || len(messages) == 0 || messages[0].ID != request.RequestID {
+		return nil, err
 	}
 	answers, err := activities.OffThreadAnswersTx(ctx, tx, request.RequestID, asOf,
 		extractBodyLimit, settleEvidenceFetch)

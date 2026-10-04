@@ -229,9 +229,17 @@ func TestAReplyOnTheThreadFoundBySubjectIsNotCalledASeparateEmail(t *testing.T) 
 	if !ok {
 		t.Fatal("the request was never offered")
 	}
+	var seen int
 	for _, message := range o.evidence(t, candidate) {
-		if message.ID == reply && message.OffThread != "" {
+		if message.ID != reply {
+			continue
+		}
+		seen++
+		if message.OffThread != "" {
 			t.Fatalf("a reply on the request's own thread reaches the model as %q", message.OffThread)
 		}
+	}
+	if seen != 1 {
+		t.Fatalf("the reply reaches the model %d times, want once", seen)
 	}
 }

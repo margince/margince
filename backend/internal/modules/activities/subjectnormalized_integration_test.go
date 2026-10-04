@@ -19,6 +19,7 @@ func TestNormalizedMatchesTheAnswerCheck(t *testing.T) {
 	for _, subject := range []string{
 		"Invoice", "Re: Invoice", "AW: RE:  Invoice", "antw:Invoice", "Fwd: Invoice",
 		"WG: Re: Invoice", "  Signed   NDA  ", "RE:re: Unterlagen", "", "Rechnung Re: Invoice",
+		"Re:\u2003Signed\u2003NDA", "\u00a0Invoice\u00a0", "Re:\u202fNDA\u2007", "\tRe:\nNDA ",
 	} {
 		var sql string
 		if err := e.owner.QueryRow(e.as(), `SELECT `+normalisedSubject("$1::text"), subject).Scan(&sql); err != nil {
