@@ -49,7 +49,8 @@ func ownSeat(masked bool) principal.Permissions {
 	}
 	if masked {
 		perms.FieldMasks = []principal.FieldMask{
-			{Object: "deal", Field: "amount_minor", Condition: principal.MaskAlways}}
+			{Object: "deal", Field: "amount_minor", Condition: principal.MaskAlways},
+		}
 	}
 	return perms
 }
@@ -79,7 +80,8 @@ func TestForecastMovementShowsACallerOnlyWhatTheLiveForecastWould(t *testing.T) 
 	at := time.Date(2038, 2, 1, 9, 0, 0, 0, time.UTC)
 	opening := freezeScope(admin, t, e, at, owner, []forecasting.Contribution{frozenDeal(mine, e.Rep1, 100_000)})
 	closing := freezeScope(admin, t, e, at.Add(time.Hour), owner, []forecasting.Contribution{
-		frozenDeal(mine, e.Rep1, 140_000), frozenDeal(theirs, e.Rep3, 70_000)})
+		frozenDeal(mine, e.Rep1, 140_000), frozenDeal(theirs, e.Rep3, 70_000),
+	})
 	workspace := forecasting.Scope{Kind: forecasting.ScopeWorkspace}
 	wsOpening := freezeScope(admin, t, e, at.Add(2*time.Hour), workspace, nil)
 	wsClosing := freezeScope(admin, t, e, at.Add(3*time.Hour), workspace, nil)
