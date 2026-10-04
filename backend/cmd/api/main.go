@@ -19,6 +19,7 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 	// Embedded tzdata: workspace timezones must resolve on scratch
 	// containers that ship no zoneinfo.
 	_ "time/tzdata"
@@ -157,6 +158,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	opts = append(opts, modelOpts...)
 	opts = append(opts, compose.WithCompanyContextRollout(string(deployCfg.CompanyContext.EffectiveRollout())))
 	opts = append(opts, compose.WithListsEnabled(deployCfg.Lists.Enabled))
+	opts = append(opts, compose.SecurityTxtOption(deployCfg.Web, time.Now(), logger))
 
 	viewOpts, stopViewRefresh, err := mcpAppViewsLane(ctx, cfg, deployCfg, logger)
 	if err != nil {

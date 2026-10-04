@@ -352,3 +352,21 @@ lists:
 #   # real deployment — a fake send that reads as a real one to a customer is
 #   # a worse failure than the capability merely existing.
 #   allow_test_mailbox: false
+
+# The RFC 9116 security.txt this installation publishes (optional).
+#
+# The contact belongs to whoever OPERATES this installation, the party a finder
+# should tell about a hole in it, so nothing is compiled in. With the block absent,
+# /.well-known/security.txt is a 404. With it set, the api serves the file, so
+# the ingress must route that exact path to the api (docs/deployment.md,
+# Routing). Every contact is a mailto:, https: or tel: URI; expires is required,
+# in RFC 3339. The api warns at boot when expires has passed or is more than a
+# year out, and keeps serving the file either way.
+# web:
+#   security_txt:
+#     contact:
+#       - mailto:security@example.org
+#       - https://example.org/report-a-vulnerability
+#     expires: "2030-01-01T00:00:00Z"
+#     policy: https://example.org/disclosure-policy   # optional, https: only
+#     preferred_languages: [en, de]                   # optional

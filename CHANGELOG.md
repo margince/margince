@@ -21,6 +21,9 @@ when it has content.
   listed chat and embedding models the catalogue prices are added, and a price you set
   by hand is kept. The new **Model prices** card under Settings → AI shows when it
   last ran and what changed, and can turn the daily sync off.
+- `web.security_txt` in `margince.yaml` publishes an RFC 9116
+  `/.well-known/security.txt` naming the operator's security contact. Unset, the
+  path is a 404. Route it to the api by its exact path.
 - `GET /v1/status`: an anonymous, fixed-body reachability probe for external
   uptime monitors. It does no dependency work; `/healthz` and `/readyz` stay
   internal.
@@ -72,6 +75,15 @@ when it has content.
   annotation and cannot carry one sets `--metrics-access=open`, where the port is
   already contained. An installation that scraped the api's `/metrics` without a
   token must set one of the two on upgrade, or its scrapes answer 401.
+
+- **The web tier answers 404 for a file it does not have.** A path with a dot in
+  its last segment, or a dot-segment such as `/.env`, gets a plain-text 404
+  instead of the app shell under a 200. Extensionless app routes are unchanged.
+- The api and the web tier add `Permissions-Policy` (every powerful feature
+  denied except `clipboard-write` for the app's own origin),
+  `Cross-Origin-Opener-Policy: same-origin` and
+  `Cross-Origin-Resource-Policy: same-origin`, and nginx no longer sends its
+  version. `robots.txt` refuses the common AI crawlers by name.
 
 ### Fixed
 
