@@ -37,6 +37,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -216,7 +217,7 @@ func settleEvidence(ctx context.Context, tx pgx.Tx, request activities.RepliedRe
 	}
 	for _, answer := range answers {
 		messages = append(messages, threadMessage{
-			ID: answer.ID, Direction: "outbound", Subject: answer.Subject,
+			ID: answer.ID, Direction: string(crmcontracts.ActivityDirectionOutbound), Subject: answer.Subject,
 			Body: answer.Body, At: answer.At, OffThread: answer.Kind,
 		})
 	}

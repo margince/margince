@@ -45,6 +45,7 @@ func OffThreadAnswersTx(ctx context.Context, tx pgx.Tx, request ids.UUID, asOf t
 		  JOIN activity answer ON answer.id = found.id
 		 WHERE a.id = $1
 		   AND answer.archived_at IS NULL AND answer.restricted_at IS NULL
+		   AND answer.audience = 'workspace'
 		 ORDER BY answer.occurred_at, answer.id
 		 LIMIT $4`, request, asOf, bodyLimit, limit)
 	if err != nil {
