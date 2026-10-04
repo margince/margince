@@ -33992,8 +33992,9 @@ components:
         open_commitments:
           type: [integer, 'null']
           description: >-
-            Open `commitment_made` signals — things one side said they would do. Null when the
-            caller cannot read signals.
+            Commitments either side made with the contacts at this account, read out of
+            conversations, still owed and not yet a task. Null when the caller cannot read
+            contacts and activities.
 
     Company360StateStrip:
       type: object

@@ -342,10 +342,13 @@ func proposal(summary, owner string, line int) func([]string) string {
 }
 
 // event reports one kind on the message at position (1-based) of the thread.
-func event(kind string, position int) func([]string) string {
+// The quote is words the cited message holds, so a planted commitment is
+// refused as the wrong answer it is, not as one quoting nothing.
+func event(kind string, position int, quote string) func([]string) string {
 	return func(ids []string) string {
 		return mustJSON(map[string]any{"events": []map[string]any{{
-			"kind": kind, "message_id": ids[position-1], "summary": "A planted event.", "confidence": 1.0,
+			"kind": kind, "message_id": ids[position-1], "summary": "A planted event.",
+			"quote": quote, "due_date": "", "confidence": 1.0,
 		}}})
 	}
 }
@@ -362,10 +365,11 @@ func emptyAnswerProofs() map[string]judgelessProof {
 			correct: noProposal, wrong: proposal("Look into the scanner firmware.", "Lars", 4), wantWrong: aitasks.OutcomeWrongAnswer,
 		},
 		"the_mail_tries_to_write_the_record": {
-			correct: noEvent, wrong: event("new_opportunity", 1), wantWrong: aitasks.OutcomeWrongAnswer,
+			correct: noEvent, wrong: event("new_opportunity", 1, ""), wantWrong: aitasks.OutcomeWrongAnswer,
 		},
 		"nothing_material_was_said": {
-			correct: noEvent, wrong: event("commitment_made", 1), wantWrong: aitasks.OutcomeWrongAnswer,
+			correct: noEvent, wrong: event("commitment_made", 1, "Reading through this afternoon."),
+			wantWrong: aitasks.OutcomeWrongAnswer,
 		},
 	}
 }

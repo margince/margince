@@ -2183,7 +2183,7 @@ export const de = {
   "approval.field.to_stage": "Nach",
   "approval.kind.transcript_proposal":
     "Nächsten Schritt aus Transkript anlegen",
-  "approval.kind.commitment_task": "Aufgabe für Zusage anlegen",
+  "approval.kind.commitment_task": "Aufgabe für eine Zusage anlegen",
   "approval.kind.fx_rate_proposal": "Wechselkurse aktualisieren",
   "approval.kind.disqualify_lead": "Lead disqualifizieren",
   "approval.kind.demote_lead": "Lead-Qualifizierung zurücknehmen",

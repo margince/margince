@@ -91,7 +91,7 @@ func TestAConversationIsNotReReadAfterOneOfItsMessagesIsLimited(t *testing.T) {
 	brain := &recordingBrain{reply: `{"events": []}`}
 	extractor := compose.NewSignalExtractor(e.Pool, brain,
 		func() time.Time { return extractClock }, slog.Default())
-	if _, err := extractor.RunWorkspace(e.Admin(), ids.From[ids.WorkspaceKind](e.WS)); err != nil {
+	if _, err := extractor.RunWorkspace(signalScanCtx(e), ids.From[ids.WorkspaceKind](e.WS)); err != nil {
 		t.Fatalf("signal extract: %v", err)
 	}
 	if len(brain.prompts) != 1 {
@@ -112,7 +112,7 @@ func TestAConversationIsNotReReadAfterOneOfItsMessagesIsLimited(t *testing.T) {
 		t.Fatal(err)
 	}
 	before := len(brain.prompts)
-	if _, err := extractor.RunWorkspace(e.Admin(), ids.From[ids.WorkspaceKind](e.WS)); err != nil {
+	if _, err := extractor.RunWorkspace(signalScanCtx(e), ids.From[ids.WorkspaceKind](e.WS)); err != nil {
 		t.Fatalf("signal extract, second pass: %v", err)
 	}
 	if len(brain.prompts) != before {

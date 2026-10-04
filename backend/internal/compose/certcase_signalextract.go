@@ -28,6 +28,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
@@ -47,7 +48,14 @@ type signalExtractMessage struct {
 	Direction string `json:"direction"`
 	Subject   string `json:"subject"`
 	Body      string `json:"body"`
+	// Sent is the day the message went, YYYY-MM-DD. A relative deadline is
+	// resolved against it, so a scenario that dates a promise names its day.
+	Sent string `json:"sent,omitempty"`
 }
+
+// certSentDefault dates a message whose scenario does not, so every prompt
+// carries a real day the way production's does.
+const certSentDefault = "2026-09-07"
 
 // signalExtractExpectation is one event the scenario says the conversation
 // states: its kind, and the 1-based position of the message stating it.
@@ -95,12 +103,22 @@ func (signalExtractCases) Prepare(fixture, expected json.RawMessage) (aitasks.Pr
 		return nil, err
 	}
 	thread := settledThread{Key: "cert-thread", CompanyID: ids.NewV7()}
-	for _, message := range messages {
+	for i, message := range messages {
+		sent := message.Sent
+		if sent == "" {
+			sent = certSentDefault
+		}
+		at, err := time.Parse(time.DateOnly, sent)
+		if err != nil {
+			return nil, fmt.Errorf("signal_extract/thread_events: message %d is sent on %q, which is not a day: %w",
+				i+1, sent, err)
+		}
 		thread.Messages = append(thread.Messages, threadMessage{
 			ID:        ids.NewV7(),
 			Direction: message.Direction,
 			Subject:   message.Subject,
 			Body:      message.Body,
+			At:        at,
 		})
 	}
 	return &signalExtractCase{thread: thread, expected: want}, nil

@@ -77,6 +77,10 @@ type Commitment struct {
 	DueDate    string
 	Confidence float64
 	Links      []activities.ActivityLinkInput
+	// PrivateTo is the one member the conversation answers to, when it is
+	// private mail. The task is theirs alone to read, and nobody else's to
+	// hold: a promise in mail only they may read is proposed to them.
+	PrivateTo *ids.UUID
 	// Locator identifies the promise across readings; see commitmentLocator.
 	Locator string
 	// Body says where the task came from, in words a rep can go and check.
@@ -134,12 +138,11 @@ func (d *CommitmentDispatcher) DispatchTx(
 ) (CommitmentOutcome, ids.UUID, error) {
 	filing := extractorContext(ctx, c.Extractor)
 	if c.Theirs != nil {
-		claim, err := d.fileClaim(filing, tx, c, *c.Theirs, claimKindTheirs)
-		if err != nil {
-			return 0, ids.UUID{}, err
-		}
-		if claim.Status == crmcontracts.ConversationClaimStatusDismissed {
-			return CommitmentRemembered, ids.UUID{}, nil
+		// Watched only when this reading filed it: one already on their record,
+		// open or dismissed, is remembered.
+		_, created, err := d.fileClaim(filing, tx, c, *c.Theirs, claimKindTheirs)
+		if err != nil || !created {
+			return CommitmentRemembered, ids.UUID{}, err
 		}
 		return CommitmentWatched, ids.UUID{}, nil
 	}
@@ -149,7 +152,7 @@ func (d *CommitmentDispatcher) DispatchTx(
 	}
 	var claimID *ids.UUID
 	if c.PromisedTo != nil {
-		claim, err := d.fileClaim(filing, tx, c, *c.PromisedTo, claimKindOurs)
+		claim, _, err := d.fileClaim(filing, tx, c, *c.PromisedTo, claimKindOurs)
 		if err != nil {
 			return 0, ids.UUID{}, err
 		}
@@ -163,11 +166,11 @@ func (d *CommitmentDispatcher) DispatchTx(
 	if err != nil || offered {
 		return CommitmentRemembered, ids.UUID{}, err
 	}
-	if c.Seat != nil && c.Confidence >= CommitmentTaskConfidence {
+	if c.Seat != nil && c.Confidence >= CommitmentTaskConfidence && mayHoldPrivateTask(c.PrivateTo, *c.Seat) {
 		task, err := writeCommitmentTask(ctx, tx, d.tasks, d.claims, commitmentTask{
 			Extractor: c.Extractor, Locator: c.Locator, Summary: c.Summary, Body: c.Body,
 			SourceActivityID: c.SourceActivityID, Links: c.Links, DueDate: c.DueDate,
-			Assignee: *c.Seat, ClaimID: claimID,
+			Assignee: *c.Seat, ClaimID: claimID, PrivateTo: c.PrivateTo,
 		})
 		return CommitmentTaskWritten, task, err
 	}
@@ -200,10 +203,11 @@ func (d *CommitmentDispatcher) offeredBefore(ctx context.Context, tx pgx.Tx, c C
 	return false, nil
 }
 
-// fileClaim records the promise on a contact's record, keyed on its locator.
+// fileClaim records the promise on a contact's record, keyed on its locator,
+// and reports whether this call created it.
 func (d *CommitmentDispatcher) fileClaim(
 	ctx context.Context, tx pgx.Tx, c Commitment, contact ids.ContactID, kind string,
-) (crmcontracts.ConversationClaim, error) {
+) (crmcontracts.ConversationClaim, bool, error) {
 	in := contacts.ClaimInput{
 		ContactID: contact, Kind: kind, Body: c.Summary, ActivityID: c.SourceActivityID,
 		Quote: c.Quote, Source: c.Extractor, Locator: c.Locator,
@@ -211,12 +215,11 @@ func (d *CommitmentDispatcher) fileClaim(
 	if c.DueDate != "" {
 		due, err := commitmentDueInstant(ctx, tx, c.DueDate)
 		if err != nil {
-			return crmcontracts.ConversationClaim{}, err
+			return crmcontracts.ConversationClaim{}, false, err
 		}
 		in.DueAt = &due
 	}
-	claim, _, err := d.claims.RecordConversationClaimTx(ctx, tx, in)
-	return claim, err
+	return d.claims.RecordConversationClaimTx(ctx, tx, in)
 }
 
 // propose stages the promise for a human. A proposal refused before, or one
@@ -224,13 +227,17 @@ func (d *CommitmentDispatcher) fileClaim(
 func (d *CommitmentDispatcher) propose(
 	ctx context.Context, tx pgx.Tx, c Commitment, claimID *ids.UUID, bundleID ids.UUID,
 ) (CommitmentOutcome, ids.UUID, error) {
-	if c.Seat != nil {
-		ctx = onBehalfOf(ctx, *c.Seat)
+	seat := c.Seat
+	if c.PrivateTo != nil && !mayHoldPrivateTask(c.PrivateTo, derefSeat(seat)) {
+		seat = c.PrivateTo
+	}
+	if seat != nil {
+		ctx = onBehalfOf(ctx, *seat)
 	}
 	raw, err := json.Marshal(CommitmentTaskProposal{
 		SourceActivityID: c.SourceActivityID, Summary: c.Summary, Party: c.Party,
-		SeatID: c.Seat, DueDate: c.DueDate, Links: c.Links, Quote: c.Quote,
-		Locator: c.Locator, ClaimID: claimID, Body: c.Body,
+		SeatID: seat, DueDate: c.DueDate, Links: c.Links, Quote: c.Quote,
+		Locator: c.Locator, ClaimID: claimID, Body: c.Body, PrivateTo: c.PrivateTo,
 	})
 	if err != nil {
 		return 0, ids.UUID{}, fmt.Errorf("compose: marshal commitment proposal: %w", err)
@@ -259,6 +266,20 @@ func (d *CommitmentDispatcher) propose(
 		return CommitmentRemembered, ids.UUID{}, err
 	}
 	return CommitmentProposed, approvalID.UUID, nil
+}
+
+// mayHoldPrivateTask reports whether a member may hold a task about this
+// conversation: any member when it is shared, only its owner when it is private.
+func mayHoldPrivateTask(privateTo *ids.UUID, seat ids.UUID) bool {
+	return privateTo == nil || *privateTo == seat
+}
+
+// derefSeat is the seat or the zero id, which no private conversation names.
+func derefSeat(seat *ids.UUID) ids.UUID {
+	if seat == nil {
+		return ids.UUID{}
+	}
+	return *seat
 }
 
 // extractorContext files under the extractor's own name, so the claim and the

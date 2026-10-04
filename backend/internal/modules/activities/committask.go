@@ -9,7 +9,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
@@ -34,4 +36,77 @@ func (s *Store) CommitmentTaskWritten(ctx context.Context, tx pgx.Tx, locator st
 		return false, fmt.Errorf("activities: reading whether the commitment's task exists: %w", err)
 	}
 	return written, nil
+}
+
+// VisibleOnlyTo narrows a new activity's audience to one member. A task read
+// out of mail only one member may read must not be readable by anybody else
+// through the records it is filed against.
+func (in *LogActivityInput) VisibleOnlyTo(user ids.UUID) {
+	in.audienceMembers = []AudienceMember{{
+		SubjectType: string(crmcontracts.AudienceMemberSubjectTypeUser), SubjectID: user,
+	}}
+}
+
+// MessageParties is who wrote one message and who it went to, as capture
+// recorded them.
+type MessageParties struct {
+	// SenderSeats are the members recorded as its sender. Capture binds a seat
+	// only from a party list the mailbox's own connection attested.
+	SenderSeats []ids.UUID
+	// SenderContacts and RecipientContacts are the contacts on either side.
+	SenderContacts    []ids.UUID
+	RecipientContacts []ids.UUID
+}
+
+// PartiesOf reads who wrote one message and who it went to.
+func (s *Store) PartiesOf(ctx context.Context, tx pgx.Tx, message ids.UUID) (MessageParties, error) {
+	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
+		return MessageParties{}, err
+	}
+	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
+		return MessageParties{}, err
+	}
+	// The parties of a message are part of what the message says: a caller who
+	// may not open it, or a message since archived, names nobody.
+	if err := auth.EnsureActivityContentVisibleLive(ctx, tx, message); err != nil {
+		return MessageParties{}, err
+	}
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	messagePos := arg(message)
+	// A contact the caller may not see is not named back to them.
+	scope, err := auth.ScopeClauseFor(ctx, "contact", "c", arg)
+	if err != nil {
+		return MessageParties{}, err
+	}
+	if scope == "" {
+		scope = scopeUnbounded
+	}
+	rows, err := tx.Query(ctx, fmt.Sprintf(`
+		SELECT p.role = 'from', p.user_id, CASE WHEN c.archived_at IS NULL THEN p.contact_id END FROM activity_participant p
+		  LEFT JOIN contact c ON c.id = p.contact_id
+		 WHERE p.activity_id = $%d AND p.role IN ('from', 'to', 'cc')
+		   AND (p.user_id IS NOT NULL OR (p.contact_id IS NOT NULL AND (%s)))
+		 ORDER BY p.id`, messagePos, scope), args...)
+	if err != nil {
+		return MessageParties{}, fmt.Errorf("activities: reading a message's parties: %w", err)
+	}
+	defer rows.Close()
+	var out MessageParties
+	for rows.Next() {
+		var sender bool
+		var seat, contact *ids.UUID
+		if err := rows.Scan(&sender, &seat, &contact); err != nil {
+			return MessageParties{}, fmt.Errorf("activities: reading a message's parties: %w", err)
+		}
+		switch {
+		case sender && seat != nil:
+			out.SenderSeats = append(out.SenderSeats, *seat)
+		case sender && contact != nil:
+			out.SenderContacts = append(out.SenderContacts, *contact)
+		case contact != nil:
+			out.RecipientContacts = append(out.RecipientContacts, *contact)
+		}
+	}
+	return out, rows.Err()
 }

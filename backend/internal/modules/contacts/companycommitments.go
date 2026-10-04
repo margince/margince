@@ -30,6 +30,27 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// employedAtAccount is the clause that makes a claim this account's, as the
+// caller may see it: its contact is currently employed there, through an
+// employment edge the caller may read. companyArg is the company's
+// placeholder. Both scoped reads in this file ask it; the unscoped count
+// below spells its own, because it deliberately reads past the edge gate.
+func employedAtAccount(ctx context.Context, companyArg string, arg func(any) int) (string, error) {
+	edgeScope, err := auth.EdgeReadScope(ctx, "r", arg)
+	if err != nil {
+		return "", err
+	}
+	if edgeScope == "" {
+		edgeScope = sqlAlwaysVisible
+	}
+	return `EXISTS (
+		         SELECT 1 FROM relationship r
+		          WHERE r.contact_id = pr.id AND r.kind = 'employment'
+		            AND r.company_id = ` + companyArg + `
+		            AND ` + employment.IsCurrentSQL("r.ended_at") + ` AND r.archived_at IS NULL
+		            AND (` + edgeScope + `))`, nil
+}
+
 // companyCommitmentsCap bounds one account's sweep. A card names one promise and
 // the rung ranks over the set, so the cap has to be wide enough that the
 // ranking is not decided by where the read stopped.
@@ -102,12 +123,9 @@ func (s *Store) OpenCommitmentsForCompany(
 	// row it yields NAMES the contact it was promised to. That is an endpoint
 	// pair — this contact works here — which relationship.read governs on its
 	// own; the contact and activity grants above do not cover it.
-	edgeScope, err := auth.EdgeReadScope(ctx, "r", arg)
+	employed, err := employedAtAccount(ctx, fmt.Sprintf("$%d", companyPos), arg)
 	if err != nil {
 		return nil, false, err
-	}
-	if edgeScope == "" {
-		edgeScope = sqlAlwaysVisible
 	}
 	// Contact scope FILTERS here rather than being projected beside each row.
 	// The edge gate above already excludes a promise whose contact this caller
@@ -143,18 +161,13 @@ func (s *Store) OpenCommitmentsForCompany(
 		  JOIN contact pr ON pr.id = c.contact_id AND pr.archived_at IS NULL
 		 WHERE `+ourPromiseNotYetATask+`
 		   AND c.archived_at IS NULL
-		   AND EXISTS (
-		         SELECT 1 FROM relationship r
-		          WHERE r.contact_id = pr.id AND r.kind = 'employment'
-		            AND r.company_id = $%[1]d
-		            AND `+employment.IsCurrentSQL("r.ended_at")+` AND r.archived_at IS NULL
-		            AND (%[4]s))
+		   AND (%[4]s)
 		   AND (%[3]s) AND (%[2]s)
 		 ORDER BY (c.due_at IS NOT NULL AND c.due_at < now()) DESC,
 		          CASE WHEN c.due_at < now() THEN c.due_at END DESC,
 		          c.due_at ASC NULLS LAST, a.occurred_at ASC, c.id
 		 LIMIT %[5]d`,
-		companyPos, contactScope, activityScope, edgeScope, companyCommitmentsLimit(limit)), args...)
+		companyPos, contactScope, activityScope, employed, companyCommitmentsLimit(limit)), args...)
 	if err != nil {
 		return nil, false, fmt.Errorf("read the account's open commitments: %w", err)
 	}
@@ -314,4 +327,56 @@ func (s *Store) OpenCommitmentsAcrossWorkspace(
 		return out[:capped], true, nil
 	}
 	return out, false, nil
+}
+
+// openCommitmentEitherSide is an open commitment either side made that no task
+// holds yet: ours not yet a task, or the customer's still owed.
+const openCommitmentEitherSide = `((` + ourPromiseNotYetATask + `)
+		    OR (c.kind = 'commitment_theirs' AND c.status = 'open' AND NOT c.needs_review))`
+
+// CountAccountCommitments is how many open commitments either side made with
+// the contacts currently employed at one account, as far as this caller may see
+// them. It answers readable=false rather than zero for a caller who may not
+// read contacts or activities: zero would say the account owes nothing, which
+// is a claim about the account rather than about the reader.
+func (s *Store) CountAccountCommitments(ctx context.Context, tx pgx.Tx, companyID ids.UUID) (int, bool, error) {
+	if !auth.ReadGranted(ctx, "contact") || !auth.ReadGranted(ctx, "activity") {
+		return 0, false, nil
+	}
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	companyPos := arg(companyID)
+	activityScope, err := auth.ActivityContentClause(ctx, "a", arg)
+	if err != nil {
+		return 0, false, err
+	}
+	if activityScope == "" {
+		activityScope = sqlAlwaysVisible
+	}
+	contactScope, err := auth.ScopeClauseFor(ctx, "contact", "pr", arg)
+	if err != nil {
+		return 0, false, err
+	}
+	if contactScope == "" {
+		contactScope = sqlAlwaysVisible
+	}
+	// The employment edge decides which commitments are this account's, so it
+	// is read under relationship.read like the sibling reads above.
+	employed, err := employedAtAccount(ctx, fmt.Sprintf("$%d", companyPos), arg)
+	if err != nil {
+		return 0, false, err
+	}
+	var total int
+	if err := tx.QueryRow(ctx, fmt.Sprintf(`
+		SELECT count(*)
+		  FROM conversation_claim c
+		  JOIN activity a ON a.id = c.source_activity_id AND a.archived_at IS NULL
+		  JOIN contact pr ON pr.id = c.contact_id AND pr.archived_at IS NULL
+		 WHERE `+openCommitmentEitherSide+`
+		   AND c.archived_at IS NULL
+		   AND (%[4]s)
+		   AND (%[2]s) AND (%[3]s)`, companyPos, activityScope, contactScope, employed), args...).Scan(&total); err != nil {
+		return 0, false, fmt.Errorf("count the account's open commitments: %w", err)
+	}
+	return total, true, nil
 }

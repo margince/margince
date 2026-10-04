@@ -4504,6 +4504,9 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
           "confidence": {
             "type": "number"
           },
+          "due_date": {
+            "type": "string"
+          },
           "kind": {
             "enum": [
               "contract_ended",
@@ -4515,6 +4518,9 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
           "message_id": {
             "type": "string"
           },
+          "quote": {
+            "type": "string"
+          },
           "summary": {
             "type": "string"
           }
@@ -4523,6 +4529,8 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
           "kind",
           "message_id",
           "summary",
+          "quote",
+          "due_date",
           "confidence"
         ],
         "type": "object"

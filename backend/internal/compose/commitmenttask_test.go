@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -86,6 +87,15 @@ func TestAcceptingACommitmentRefusesWhatItCannotWrite(t *testing.T) {
 	payload := mustJSON(t, CommitmentTaskProposal{Summary: "Send pricing", Locator: "abc"})
 	if err := effect(context.Background(), ids.From[ids.ApprovalKind](ids.NewV7()), payload, "h"); err == nil {
 		t.Error("a proposal was accepted with nobody deciding it")
+	}
+	// A promise in private mail lands on its owner or nobody.
+	owner, other := ids.NewV7(), ids.NewV7()
+	private := mustJSON(t, CommitmentTaskProposal{Summary: "Send pricing", Locator: "abc", PrivateTo: &owner})
+	decider := principal.WithActor(context.Background(), principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + other.String(), UserID: other,
+	})
+	if err := effect(decider, ids.From[ids.ApprovalKind](ids.NewV7()), private, "h"); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("a colleague accepting a promise from another member's private mail: err = %v, want permission denied", err)
 	}
 }
 
