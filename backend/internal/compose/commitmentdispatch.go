@@ -134,8 +134,12 @@ func (d *CommitmentDispatcher) DispatchTx(
 ) (CommitmentOutcome, ids.UUID, error) {
 	filing := extractorContext(ctx, c.Extractor)
 	if c.Theirs != nil {
-		if _, err := d.fileClaim(filing, tx, c, *c.Theirs, claimKindTheirs); err != nil {
+		claim, err := d.fileClaim(filing, tx, c, *c.Theirs, claimKindTheirs)
+		if err != nil {
 			return 0, ids.UUID{}, err
+		}
+		if claim.Status == crmcontracts.ConversationClaimStatusDismissed {
+			return CommitmentRemembered, ids.UUID{}, nil
 		}
 		return CommitmentWatched, ids.UUID{}, nil
 	}
@@ -155,8 +159,8 @@ func (d *CommitmentDispatcher) DispatchTx(
 		id := ids.UUID(claim.Id)
 		claimID = &id
 	}
-	refused, err := d.refusedBefore(ctx, tx, c)
-	if err != nil || refused {
+	offered, err := d.offeredBefore(ctx, tx, c)
+	if err != nil || offered {
 		return CommitmentRemembered, ids.UUID{}, err
 	}
 	if c.Seat != nil && c.Confidence >= CommitmentTaskConfidence {
@@ -170,19 +174,24 @@ func (d *CommitmentDispatcher) DispatchTx(
 	return d.propose(ctx, tx, c, claimID, bundleID)
 }
 
-// refusedBefore reports whether a human already turned this promise down as a
-// proposal. A later, surer reading of the same words must not write the task
-// that human refused. The read locks every offer on the source, so a refusal
-// landing while this runs is either seen here or waits for this to commit.
-func (d *CommitmentDispatcher) refusedBefore(ctx context.Context, tx pgx.Tx, c Commitment) (bool, error) {
-	rejected, err := d.approval.RejectedChangesForTx(ctx, tx, CommitmentTaskKind, c.SourceActivityID)
+// offeredBefore reports whether this promise was already put to a human, who
+// refused it or has not answered yet. A later, surer reading of the same words
+// must not write the task that human refused, nor write it around a proposal
+// they may still refuse. The read locks every offer on the source, so a
+// decision landing while this runs is either seen here or waits for this to
+// commit.
+func (d *CommitmentDispatcher) offeredBefore(ctx context.Context, tx pgx.Tx, c Commitment) (bool, error) {
+	offers, err := d.approval.OffersForTx(ctx, tx, CommitmentTaskKind, c.SourceActivityID)
 	if err != nil {
 		return false, err
 	}
-	for _, raw := range rejected {
+	for _, held := range offers {
+		if !held.Pending() && !held.Rejected() {
+			continue
+		}
 		var offer CommitmentTaskProposal
-		if err := json.Unmarshal(raw, &offer); err != nil {
-			return false, fmt.Errorf("compose: unmarshal a refused commitment proposal: %w", err)
+		if err := json.Unmarshal(held.Change, &offer); err != nil {
+			return false, fmt.Errorf("compose: unmarshal a commitment proposal: %w", err)
 		}
 		if offer.Locator == c.Locator {
 			return true, nil

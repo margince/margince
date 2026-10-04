@@ -8,6 +8,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -19,15 +20,18 @@ func TestAnExtractedClaimIsRefusedWithoutItsGround(t *testing.T) {
 	grounded := ClaimInput{Body: "Send pricing", ActivityID: ids.NewV7(), Quote: "I'll send pricing."}
 	for _, c := range []struct {
 		name  string
+		field string
 		input func(ClaimInput) ClaimInput
 	}{
-		{"no body", func(in ClaimInput) ClaimInput { in.Body = ""; return in }},
-		{"no source message", func(in ClaimInput) ClaimInput { in.ActivityID = ids.UUID{}; return in }},
-		{"no quote", func(in ClaimInput) ClaimInput { in.Quote = ""; return in }},
+		{"no body", "body", func(in ClaimInput) ClaimInput { in.Body = ""; return in }},
+		{"no source message", "source_activity_id", func(in ClaimInput) ClaimInput { in.ActivityID = ids.UUID{}; return in }},
+		{"no quote", "source_quote", func(in ClaimInput) ClaimInput { in.Quote = ""; return in }},
 	} {
 		t.Run(c.name, func(t *testing.T) {
-			if _, _, err := (&Store{}).RecordConversationClaimTx(context.Background(), nil, c.input(grounded)); err == nil {
-				t.Errorf("a claim with %s was accepted", c.name)
+			_, _, err := (&Store{}).RecordConversationClaimTx(context.Background(), nil, c.input(grounded))
+			var refusal *httperr.DetailedError
+			if !errors.As(err, &refusal) || len(refusal.Fields) != 1 || refusal.Fields[0].Field != c.field {
+				t.Errorf("a claim with %s: err = %v, want a validation refusal naming %s", c.name, err, c.field)
 			}
 		})
 	}

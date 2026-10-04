@@ -23161,7 +23161,7 @@ type Approval struct {
 	ExpiresAt *time.Time         `json:"expires_at,omitempty"`
 	Id        openapi_types.UUID `json:"id"`
 
-	// Kind coldstart | send_email | advance_deal | promote_lead | overnight | transcript_proposal | commitment_task.
+	// Kind Examples: coldstart | send_email | advance_deal | promote_lead | overnight | deal_follow_up | transcript_proposal | commitment_task.
 	Kind       string              `json:"kind"`
 	OnBehalfOf *openapi_types.UUID `json:"on_behalf_of,omitempty"`
 

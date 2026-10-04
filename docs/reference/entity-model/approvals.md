@@ -25,7 +25,7 @@ The 3 tables owned by `approvals`, as the migrations build them. [Back to the en
 | `effect_failure` | `text` |  | The sentence a reader is shown about that failure — written for them, never copied from the executor's error. |
 | `evidence` | `jsonb` |  | Per-claim evidence (snippet + source id) backing the proposal. |
 | `expires_at` | `timestamp with time zone` | yes | When the staged action expires unactioned (mirrors approval.requested.expires_at). |
-| `kind` | `text` | yes | coldstart \| send_email \| advance_deal \| promote_lead \| overnight \| transcript_proposal \| commitment_task. |
+| `kind` | `text` | yes | Examples: coldstart \| send_email \| advance_deal \| promote_lead \| overnight \| deal_follow_up \| transcript_proposal \| commitment_task. |
 | `on_behalf_of` | `uuid` |  | Points at `app_user.id` — deleting the parent keeps this row and clears the link. |
 | `passport_id` | `uuid` |  | Points at `passport.id` — deleting the parent keeps this row and clears the link. |
 | `proposed_by` | `text` | yes | agent:<id> / connector:<n> that staged this. |

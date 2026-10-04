@@ -63,13 +63,20 @@ func (p *TranscriptProposer) commitmentFrom(
 	case named && !found:
 		c.Theirs, kind, party = &contact, claimKindTheirs, "contact:"+contact.String()
 	}
-	// One of our promises is filed on the customer's record too, when the
+	// A colleague's promise is filed on the customer's record too, when the
 	// meeting names exactly one; with several, nothing says which was promised.
-	if c.Theirs == nil && len(linked) == 1 {
+	// An unnamed one is filed nowhere until a human says whose it is.
+	if c.Seat != nil && len(linked) == 1 {
 		promisedTo := ids.From[ids.ContactKind](linked[0])
 		c.PromisedTo = &promisedTo
 	}
-	c.Locator = commitmentLocator(activityID.UUID, kind, party, cited)
+	// The first cited line is part of the span: the same words said twice in
+	// one meeting are two promises.
+	span := cited
+	if len(step.SourceLines) > 0 {
+		span = strconv.Itoa(step.SourceLines[0]) + ":" + cited
+	}
+	c.Locator = commitmentLocator(activityID.UUID, kind, party, span)
 	return c, nil
 }
 
@@ -99,19 +106,28 @@ func transcriptCommitmentBody(owner string, sourceLines []int) string {
 	return fmt.Sprintf("%s committed to this in the meeting transcript (%s).", owner, where)
 }
 
-// transcriptReadDetail says what a reading produced when it raised no
-// question. A run that finishes with nothing and no reason reads exactly like
-// a broken one, which FinishTranscriptRead refuses to let collapse.
+// transcriptReadDetail says what a reading produced besides its questions. A
+// run that finishes with nothing and no reason reads exactly like a broken
+// one, which FinishTranscriptRead refuses to let collapse, and a task written
+// without asking is said here because no question shows it.
 func transcriptReadDetail(found int, staged transcriptStaging) string {
 	switch {
 	case found == 0:
 		return "this transcript states no next steps clearly enough to propose one"
+	case staged.tasks > 0 || staged.watched > 0:
+		return "added " + counted(staged.tasks, "task for a colleague", "tasks for colleagues") +
+			" and noted " + counted(staged.watched, "commitment the customer made", "commitments the customer made")
 	case len(staged.proposals) > 0:
 		return ""
-	case staged.tasks > 0 || staged.watched > 0:
-		return fmt.Sprintf("added %d task(s) for colleagues and noted %d promise(s) the customer made",
-			staged.tasks, staged.watched)
 	default:
 		return "every next step this transcript states has already been put to you"
 	}
+}
+
+// counted spells a count with the noun in the right number.
+func counted(n int, one, many string) string {
+	if n == 1 {
+		return "1 " + one
+	}
+	return strconv.Itoa(n) + " " + many
 }

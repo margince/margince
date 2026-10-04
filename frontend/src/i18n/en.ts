@@ -2246,7 +2246,7 @@ export const en = {
   "approval.field.from_stage": "From",
   "approval.field.to_stage": "To",
   "approval.kind.transcript_proposal": "Add next step from transcript",
-  "approval.kind.commitment_task": "Add a task for a commitment",
+  "approval.kind.commitment_task": "Add commitment task",
   "approval.kind.fx_rate_proposal": "Update exchange rates",
   "approval.kind.disqualify_lead": "Disqualify lead",
   "approval.kind.demote_lead": "Reverse lead qualification",

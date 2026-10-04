@@ -10,7 +10,9 @@ package compose
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -94,9 +96,25 @@ func TestARefusedPromiseIsNotWrittenWhenAReadingIsSurer(t *testing.T) {
 		t.Fatalf("refusing the proposal: %v", err)
 	}
 
-	e.read(t, cannedBrain{reply: ownedReply(t, "Priya Raman", 0.95)})
-	if n := e.taskCount(t); n != 0 {
-		t.Errorf("a refused promise became %d task(s) on a surer reading", n)
+	again := e.read(t, cannedBrain{reply: ownedReply(t, "Priya Raman", 0.95)})
+	if n := e.taskCount(t); n != 0 || len(again.ProposalIDs) != 0 {
+		t.Errorf("a refused promise became %d task(s) and %d proposal(s) on a surer reading",
+			n, len(again.ProposalIDs))
+	}
+}
+
+// A promise still waiting on a human is not written around them when a later
+// reading of the same words is surer of it.
+func TestAWaitingPromiseIsNotWrittenWhenAReadingIsSurer(t *testing.T) {
+	e := setupTranscript(t)
+	e.WsExec(t, `UPDATE app_user SET display_name = 'Priya Raman' WHERE id = $1`, e.Rep2)
+	if read := e.read(t, cannedBrain{reply: ownedReply(t, "Priya Raman", 0.75)}); len(read.ProposalIDs) != 1 {
+		t.Fatalf("want the unsure promise proposed, got %d proposals", len(read.ProposalIDs))
+	}
+	again := e.read(t, cannedBrain{reply: ownedReply(t, "Priya Raman", 0.95)})
+	if n := e.taskCount(t); n != 0 || len(again.ProposalIDs) != 0 {
+		t.Errorf("a waiting promise became %d task(s) and %d new proposal(s) on a surer reading",
+			n, len(again.ProposalIDs))
 	}
 }
 
@@ -147,10 +165,14 @@ func TestOurPromiseIsFiledOnTheCustomerItWasMadeTo(t *testing.T) {
 	}
 	e.read(t, cannedBrain{reply: string(raw)})
 
-	got := e.wsString(t, `SELECT (c.task_activity_id = t.id)::text || ' ' || (c.due_at IS NOT NULL)::text
+	zone, err := installationZone(e.Admin(), e.Pool)
+	if err != nil {
+		t.Fatalf("reading the installation's zone: %v", err)
+	}
+	got := e.wsString(t, `SELECT (c.task_activity_id = t.id)::text || ' ' || extract(epoch FROM c.due_at)::bigint::text
 		FROM conversation_claim c, activity t
 		WHERE c.kind = 'commitment_ours' AND c.contact_id = $1 AND t.kind = 'task'`, customer)
-	if got != "true true" {
+	if want := fmt.Sprintf("true %d", time.Date(2026, 9, 8, 23, 59, 59, 0, zone).Unix()); got != want {
 		t.Errorf("the claim on the customer reads %q, want it dated and pointing at the task", got)
 	}
 }

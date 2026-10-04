@@ -31,6 +31,7 @@ func TestACommitmentEditReachesOnlyTheWordingAndTheDay(t *testing.T) {
 		{"the wording", func(p *CommitmentTaskProposal) { p.Summary = "Send pricing v2" }, false},
 		{"the day", func(p *CommitmentTaskProposal) { p.DueDate = "2026-09-09" }, false},
 		{"clearing the day", func(p *CommitmentTaskProposal) { p.DueDate = "" }, false},
+		{"clearing the wording", func(p *CommitmentTaskProposal) { p.Summary = "  " }, true},
 		{"a day that is not a date", func(p *CommitmentTaskProposal) { p.DueDate = "Friday" }, true},
 		{"the locator", func(p *CommitmentTaskProposal) { p.Locator = "xyz" }, true},
 		{"the party", func(p *CommitmentTaskProposal) { p.Party = "Dana" }, true},
@@ -41,8 +42,11 @@ func TestACommitmentEditReachesOnlyTheWordingAndTheDay(t *testing.T) {
 			c.edit(&edited)
 			err := commitmentTaskPrecheck()(context.Background(), mustJSON(t, staged), mustJSON(t, edited))
 			var invalid *approvals.InvalidEditError
-			if refused := errors.As(err, &invalid); refused != c.refuse {
-				t.Errorf("editing %s: refused=%v (err %v), want refused=%v", c.name, refused, err, c.refuse)
+			if c.refuse && !errors.As(err, &invalid) {
+				t.Errorf("editing %s: err = %v, want an invalid edit", c.name, err)
+			}
+			if !c.refuse && err != nil {
+				t.Errorf("editing %s was refused: %v", c.name, err)
 			}
 		})
 	}
@@ -94,11 +98,11 @@ func TestTheExtractorNameNeverWidensACaller(t *testing.T) {
 	human := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:x",
 	})
-	if actor, _ := principal.Actor(extractorContext(human, "agent:reader")); actor.Type != principal.PrincipalHuman {
-		t.Errorf("a human came back as %s", actor.Type)
+	if actor, _ := principal.Actor(extractorContext(human, "agent:reader")); actor.Type != principal.PrincipalHuman || actor.ID != "human:x" {
+		t.Errorf("a human came back as %s %q", actor.Type, actor.ID)
 	}
 	pass := principal.SystemActing(context.Background(), "agent:pass")
-	if actor, _ := principal.Actor(extractorContext(pass, "agent:reader")); actor.ID != "agent:reader" {
-		t.Errorf("the product's pass is filed as %q, want the reader's name", actor.ID)
+	if actor, _ := principal.Actor(extractorContext(pass, "agent:reader")); actor.Type != principal.PrincipalSystem || actor.ID != "agent:reader" {
+		t.Errorf("the product's pass is filed as %s %q, want the system under the reader's name", actor.Type, actor.ID)
 	}
 }
