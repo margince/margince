@@ -304,16 +304,14 @@ func TestTheSinglePurposeGuardsRefuseWhatExecutionWouldRefuse(t *testing.T) {
 			// redemption, so the rows a human released would not be the rows
 			// moved. The refusal sends the caller to relink_activities.
 			"a thread relink onto a destination that needs a human",
-			NewRelinkThreadCall(oneRecord(datasource.EntityProject, other, `{}`, 1),
-				nil, RelinkThreadCommand{ThreadKey: "thread:x", EntityType: "project", EntityID: other}),
+			NewRelinkThreadCall(RelinkThreadCommand{ThreadKey: "thread:x", EntityType: "project", EntityID: other}),
 			"relink_activities",
 		},
 		{
 			// A thread cannot pin a version, so the gate raises a company move
 			// as well, and it is the same unapprovable key.
 			"a thread relink onto a company",
-			NewRelinkThreadCall(oneRecord(datasource.EntityCompany, other, `{}`, 1),
-				nil, RelinkThreadCommand{ThreadKey: "thread:x", EntityType: "company", EntityID: other}),
+			NewRelinkThreadCall(RelinkThreadCommand{ThreadKey: "thread:x", EntityType: "company", EntityID: other}),
 			"relink_activities",
 		},
 	}

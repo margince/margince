@@ -118,7 +118,7 @@ func relinkThreadCommand(_ agentPolicy, deps restCommandDeps, _ *http.Request, b
 	if err != nil {
 		return nil, err
 	}
-	return agents.NewRelinkThreadCall(deps.records, deps.language, agents.RelinkThreadCommand{
+	return agents.NewRelinkThreadCall(agents.RelinkThreadCommand{
 		ThreadKey: in.ThreadKey, EntityType: in.EntityType, EntityID: in.EntityID,
 	}), nil
 }

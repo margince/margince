@@ -114,13 +114,24 @@ func TestEveryUndoablePairIsAStraightThroughTool(t *testing.T) {
 	}
 }
 
+// A thread's approval binds a key, not rows, so it is never undoable whatever
+// the destination: a proposal staged before thread moves stopped staging stays
+// the contact's to release.
+func TestAThreadRelinkIsNeverAnUndoableRelease(t *testing.T) {
+	for _, target := range []string{"activity", "company", ""} {
+		if undoableAgentRelease("relink_thread", target, json.RawMessage(`{"entity_type":"company"}`)) {
+			t.Errorf("relink_thread onto a company, staged under %q, reads as undoable", target)
+		}
+	}
+}
+
 // A relink is judged by where the staged call files its activities, not by the
 // policy's static "dynamic": every destination but a project is an association
 // a member relinks back, and whatever the target type the approval was staged
 // under (the batch doors stage under the destination, the single one under the
 // activity).
 func TestARelinkIsUndoableByItsDestination(t *testing.T) {
-	for _, tool := range []string{"relink_activity", "relink_activities", "relink_thread"} {
+	for _, tool := range []string{"relink_activity", "relink_activities"} {
 		for _, tc := range []struct {
 			change string
 			want   bool
@@ -147,10 +158,10 @@ func TestARelinkIsUndoableByItsDestination(t *testing.T) {
 // destination or named here as one whose staged call stays the human's, so a
 // new dynamic tool cannot arrive classified by its static label unnoticed.
 func TestEveryDynamicToolIsJudgedByItsCallOrStaysHumanReleased(t *testing.T) {
-	// A won or lost deal move is the one dynamic tier that turns on the
-	// pipeline's semantics rather than a destination; closing a deal is a
-	// decision a contact keeps.
-	humanReleased := map[string]bool{"advance_deal": true, "progress_deal": true}
+	// A won or lost deal move turns on the pipeline's semantics rather than a
+	// destination; closing a deal is a decision a contact keeps.
+	// A thread's approval binds a key that the conversation may outgrow, not rows.
+	humanReleased := map[string]bool{"advance_deal": true, "progress_deal": true, "relink_thread": true}
 	dynamic := 0
 	for _, spec := range NewRegistry(nil, SendPath{}).Specs() {
 		if spec.Tier != mcp.TierDynamic {

@@ -11,6 +11,8 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
@@ -62,7 +64,7 @@ func TestReleaseUndoableByDestination(t *testing.T) {
 	}{
 		{"relink_activities", `{"entity_type":"company"}`, true, true},
 		{"relink_activity", `{"entity_type":"lead","activity_id":"x"}`, true, true},
-		{"relink_thread", `{"entity_type":"project"}`, false, true},
+		{"relink_thread", `{"entity_type":"company"}`, false, false},
 		{"relink_activities", ``, false, true},
 		{"advance_deal", `{"entity_type":"company"}`, false, false},
 		{"update_record", `{}`, false, false},
@@ -72,5 +74,49 @@ func TestReleaseUndoableByDestination(t *testing.T) {
 			t.Errorf("%s %s = (undoable %v, decided %v), want (%v, %v)",
 				tc.tool, tc.call, undoable, decided, tc.undoable, tc.isDecided)
 		}
+	}
+}
+
+// The set the classifier judges by destination is derived from the tools
+// themselves: each name is registered and its tier resolver answers what the
+// classifier does for a project and for a company, so a change to either shows up here.
+func TestEveryDestinationToolIsClassifiedByItsOwnTierResolver(t *testing.T) {
+	registry := NewRegistry(&recordingApprovals{}, nil)
+	registerEveryStageableFamily(registry, localProvider{}, &recordingComms{})
+	if len(relinkDestinationTools) == 0 {
+		t.Fatal("no destination tool is named — this compared nothing")
+	}
+	for name := range relinkDestinationTools {
+		spec, registered := registry.Spec(name)
+		if !registered || spec.TierResolver == nil {
+			t.Errorf("%s is judged by destination but is not a registered dynamic tool", name)
+			continue
+		}
+		for _, entity := range []string{"project", "company"} {
+			call := json.RawMessage(`{"entity_type":"` + entity + `"}`)
+			undoable, decided := ReleaseUndoableByDestination(name, call)
+			if want := spec.TierResolver(mcp.TierResolverInput{Args: call}) == mcp.TierAutoExecute; !decided || undoable != want {
+				t.Errorf("%s onto a %s: classified undoable=%v decided=%v, its tier says undoable=%v", name, entity, undoable, decided, want)
+			}
+		}
+	}
+}
+
+// A released approval for a thread names a key, so the tool never runs one —
+// including a proposal staged before thread moves stopped staging.
+func TestARedeemedThreadRelinkIsRefusedBeforeItMovesAnything(t *testing.T) {
+	relinker := &recordingRelinker{}
+	ctx := withApprovalRedeemed(context.Background(), 0, false)
+
+	_, err := relinkThread{relinker: relinker}.Handle(ctx, json.RawMessage(
+		`{"thread_key":"thread:x","entity_type":"company","entity_id":"`+ids.NewV7().String()+`"}`,
+	))
+
+	var bad *BadArgsError
+	if !errors.As(err, &bad) || !strings.Contains(bad.Guidance, "relink_activities") {
+		t.Fatalf("a redeemed thread move → %v, want the thread-key refusal", err)
+	}
+	if relinker.entityType != "" {
+		t.Error("the thread was moved under a released approval")
 	}
 }

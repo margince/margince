@@ -236,6 +236,12 @@ func (s *Service) decideInTx(ctx context.Context, tx pgx.Tx, p principal.Princip
 	if err := agentMayDecide(p, a, approve, s.ownReleaseFor(ctx, a)); err != nil {
 		return row{}, err
 	}
+	// Own-release was judged on the staged payload, so an edit would release
+	// something that was never classified. The contact edits in the CRM.
+	if p.Type == principal.PrincipalAgent && edited != nil {
+		return row{}, fmt.Errorf("a credential releases a proposal as it was staged and does not edit it; "+
+			"the contact edits and releases it in the CRM: %w", apperrors.ErrPermissionDenied)
+	}
 	if st := a.effectiveStatus(s.now()); st != "pending" {
 		// The ROW travels with the refusal. recordDecision has to tell an
 		// approved row whose effect never ran from one that is genuinely

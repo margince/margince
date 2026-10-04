@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -57,8 +58,22 @@ func (s *Service) ownReleaseFor(ctx context.Context, a row) ownRelease {
 }
 
 // ReleasableByCaller says whether the calling credential could approve the
-// proposal it is about to stage, so the answer it is handed names a move that
-// works rather than one decideApproval will refuse.
+// proposal it is about to stage. It builds the row the stager would write and
+// asks the same two questions decide does, so the answer an agent is handed can
+// never offer a release the decision would refuse.
 func (s *Service) ReleasableByCaller(ctx context.Context, kind, targetType string, change json.RawMessage) bool {
-	return s.ownReleaseFor(ctx, row{Kind: kind, TargetType: &targetType, ProposedChange: change}) == ownReleaseAllowed
+	p, ok := principal.Actor(ctx)
+	if !ok {
+		return false
+	}
+	staged := row{Kind: kind, TargetType: &targetType, ProposedChange: change}
+	if onBehalfOf := nullUUID(p.OnBehalfOf); onBehalfOf != nil {
+		user := ids.From[ids.UserKind](*onBehalfOf)
+		staged.OnBehalfOf = &user
+	}
+	if passport := nullUUID(p.PassportID); passport != nil {
+		id := ids.From[ids.PassportKind](*passport)
+		staged.PassportID = &id
+	}
+	return agentMayDecide(p, staged, true, s.ownReleaseFor(ctx, staged)) == nil
 }

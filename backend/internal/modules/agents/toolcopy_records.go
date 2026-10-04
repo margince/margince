@@ -117,8 +117,8 @@ var relinkActivityCopy = toolCopy{
 		"the wrong record or on none.",
 	Limits: "Changes only the association; content is untouched. By default the new link is " +
 		"ADDED beside existing ones.",
-	Instead: "log_activity records an event not recorded yet; relink_thread moves a whole " +
-		"conversation; relink_activities a picked set.",
+	Instead: "log_activity records an event not recorded yet; relink_activities moves a " +
+		"picked set, such as a whole thread's activities.",
 	Retain: "Set replace_existing_of_type to move rather than associate.",
 }
 

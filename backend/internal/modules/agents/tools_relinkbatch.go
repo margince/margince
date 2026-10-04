@@ -39,8 +39,6 @@ type relinkThreadArgs struct {
 
 type relinkThread struct {
 	relinker ActivityRelinker
-	p        datasource.SystemOfRecordProvider
-	language baselanguage.Resolver
 }
 
 func (t relinkThread) Spec() mcp.ToolSpec {
@@ -60,7 +58,7 @@ func (t relinkThread) Spec() mcp.ToolSpec {
 			"entity_type":{"type":"string","enum":["contact","company","deal","lead","project"]},
 			"entity_id":{"type":"string","format":"uuid"},
 			"replace_existing_of_type":{"type":"boolean","default":false,"description":"Move rather than associate"},
-			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
+			"approval_id":{"type":"string","format":"uuid","description":"Never redeems a thread move; use relink_activities"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[RelinkBatchResult](),
 	}
@@ -74,7 +72,7 @@ func (t relinkThread) StageInfo(ctx context.Context, in json.RawMessage) (StageI
 	if err := decodeArgs(in, &args); err != nil {
 		return StageInfo{}, err
 	}
-	return StageSubject(ctx, NewRelinkThreadCall(t.p, t.language, RelinkThreadCommand{
+	return StageSubject(ctx, NewRelinkThreadCall(RelinkThreadCommand{
 		ThreadKey: args.ThreadKey, EntityType: args.EntityType, EntityID: args.EntityID,
 	}))
 }
@@ -86,6 +84,12 @@ func (t relinkThread) Handle(ctx context.Context, in json.RawMessage) (json.RawM
 	}
 	if err := requireLinkTarget(args.EntityType); err != nil {
 		return nil, err
+	}
+	// A released approval for a thread names a key, which the conversation may
+	// have outgrown since; nothing may redeem one, including a proposal staged
+	// before thread moves stopped staging.
+	if ApprovalRedeemed(ctx) {
+		return nil, threadKeyRefusal(args.EntityType)
 	}
 	noteEvidence(ctx, datasource.EntityType(args.EntityType), args.EntityID)
 	return t.relinker.RelinkThread(ctx, args.ThreadKey, args.EntityType, args.EntityID, args.ReplaceExistingOfType)

@@ -285,11 +285,12 @@ func ReleaseUndoableByDestination(tool string, call json.RawMessage) (undoable, 
 	return relinkActivityTier(mcp.TierResolverInput{Args: call}) == mcp.TierAutoExecute, true
 }
 
-// relinkDestinationTools are the tools whose tier is relinkActivityTier.
+// relinkDestinationTools are the tools whose staged call is judged by
+// relinkActivityTier. relink_thread is absent on purpose: its approval binds a
+// key, not rows, so one is never undoable.
 var relinkDestinationTools = map[string]bool{
 	"relink_activity":   true,
 	"relink_activities": true,
-	"relink_thread":     true,
 }
 
 type relinkActivityResolver struct {
