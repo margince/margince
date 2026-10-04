@@ -88,14 +88,14 @@ type Commitment struct {
 type CommitmentOutcome int
 
 const (
-	// CommitmentRemembered: already a task, already proposed or refused, or
-	// dismissed by a human. Nothing new was written.
+	// CommitmentRemembered means it was already a task, already proposed or
+	// refused, or dismissed by a human. Nothing new was written.
 	CommitmentRemembered CommitmentOutcome = iota
-	// CommitmentWatched: the customer's promise, filed on their record.
+	// CommitmentWatched is the customer's promise, filed on their record.
 	CommitmentWatched
-	// CommitmentTaskWritten: the colleague's task, written directly.
+	// CommitmentTaskWritten is the colleague's task, written directly.
 	CommitmentTaskWritten
-	// CommitmentProposed: staged for a human to accept.
+	// CommitmentProposed is staged for a human to accept.
 	CommitmentProposed
 )
 
@@ -134,7 +134,7 @@ func (d *CommitmentDispatcher) DispatchTx(
 ) (CommitmentOutcome, ids.UUID, error) {
 	filing := extractorContext(ctx, c.Extractor)
 	if c.Theirs != nil {
-		if _, _, err := d.fileClaim(filing, tx, c, *c.Theirs, claimKindTheirs); err != nil {
+		if _, err := d.fileClaim(filing, tx, c, *c.Theirs, claimKindTheirs); err != nil {
 			return 0, ids.UUID{}, err
 		}
 		return CommitmentWatched, ids.UUID{}, nil
@@ -145,7 +145,7 @@ func (d *CommitmentDispatcher) DispatchTx(
 	}
 	var claimID *ids.UUID
 	if c.PromisedTo != nil {
-		claim, _, err := d.fileClaim(filing, tx, c, *c.PromisedTo, claimKindOurs)
+		claim, err := d.fileClaim(filing, tx, c, *c.PromisedTo, claimKindOurs)
 		if err != nil {
 			return 0, ids.UUID{}, err
 		}
@@ -169,15 +169,20 @@ func (d *CommitmentDispatcher) DispatchTx(
 // fileClaim records the promise on a contact's record, keyed on its locator.
 func (d *CommitmentDispatcher) fileClaim(
 	ctx context.Context, tx pgx.Tx, c Commitment, contact ids.ContactID, kind string,
-) (crmcontracts.ConversationClaim, bool, error) {
-	due, err := commitmentDueInstant(ctx, tx, c.DueDate)
-	if err != nil {
-		return crmcontracts.ConversationClaim{}, false, err
-	}
-	return d.claims.RecordConversationClaimTx(ctx, tx, contacts.ClaimInput{
+) (crmcontracts.ConversationClaim, error) {
+	in := contacts.ClaimInput{
 		ContactID: contact, Kind: kind, Body: c.Summary, ActivityID: c.SourceActivityID,
-		Quote: c.Quote, DueAt: due, Source: c.Extractor, Locator: c.Locator,
-	})
+		Quote: c.Quote, Source: c.Extractor, Locator: c.Locator,
+	}
+	if c.DueDate != "" {
+		due, err := commitmentDueInstant(ctx, tx, c.DueDate)
+		if err != nil {
+			return crmcontracts.ConversationClaim{}, err
+		}
+		in.DueAt = &due
+	}
+	claim, _, err := d.claims.RecordConversationClaimTx(ctx, tx, in)
+	return claim, err
 }
 
 // propose stages the promise for a human. A proposal refused before, or one

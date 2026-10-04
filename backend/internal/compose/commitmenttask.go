@@ -15,6 +15,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -71,7 +72,7 @@ func writeCommitmentTask(
 	assignee := ids.From[ids.UserKind](t.Assignee)
 	sourceActivity := t.SourceActivityID
 	in := activities.LogActivityInput{
-		Kind:             "task",
+		Kind:             string(crmcontracts.ActivityKindTask),
 		Subject:          &t.Summary,
 		Body:             &t.Body,
 		SourceSystem:     &sourceSystem,
@@ -82,11 +83,13 @@ func writeCommitmentTask(
 		AssigneeID:       &assignee,
 		Origin:           activities.OriginAgent,
 	}
-	due, err := commitmentDueInstant(ctx, tx, t.DueDate)
-	if err != nil {
-		return ids.UUID{}, err
+	if t.DueDate != "" {
+		due, err := commitmentDueInstant(ctx, tx, t.DueDate)
+		if err != nil {
+			return ids.UUID{}, err
+		}
+		in.DueAt = &due
 	}
-	in.DueAt = due
 	task, _, err := tasks.LogActivityTx(execCtx, tx, in)
 	if err != nil {
 		return ids.UUID{}, err
@@ -101,7 +104,7 @@ func writeCommitmentTask(
 }
 
 // commitmentDueInstant turns the day a source stated into the moment that day
-// ENDS in the installation's own zone, or nil when it stated none.
+// ENDS in the installation's own zone. Callers ask it only for a stated day.
 //
 // End of day, because a deadline is the last moment the thing is still on
 // time. The installation's zone rather than a reader's, because a due day is a
@@ -112,25 +115,21 @@ func writeCommitmentTask(
 // A day that will not parse is an error rather than a silent skip: a reviewer
 // edited the payload into something acceptance cannot read, and an undated
 // task would hide that from them.
-func commitmentDueInstant(ctx context.Context, tx pgx.Tx, day string) (*time.Time, error) {
-	if day == "" {
-		return nil, nil
-	}
+func commitmentDueInstant(ctx context.Context, tx pgx.Tx, day string) (time.Time, error) {
 	zone, err := identity.TimezoneOf(ctx, tx)
 	if err != nil {
-		return nil, err
+		return time.Time{}, err
 	}
 	loc, err := time.LoadLocation(zone)
 	if err != nil {
-		return nil, fmt.Errorf("compose: installation timezone %q: %w", zone, err)
+		return time.Time{}, fmt.Errorf("compose: installation timezone %q: %w", zone, err)
 	}
 	parsed, err := time.ParseInLocation(time.DateOnly, day, loc)
 	if err != nil {
-		return nil, fmt.Errorf(
+		return time.Time{}, fmt.Errorf(
 			"compose: commitment due date %q is not a date — write it as YYYY-MM-DD: %w", day, err)
 	}
-	due := time.Date(parsed.Year(), parsed.Month(), parsed.Day(), 23, 59, 59, 0, loc).UTC()
-	return &due, nil
+	return time.Date(parsed.Year(), parsed.Month(), parsed.Day(), 23, 59, 59, 0, loc).UTC(), nil
 }
 
 // commitmentTaskEffect executes an accepted commitment: redeem and write in ONE
