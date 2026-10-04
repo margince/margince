@@ -18369,6 +18369,7 @@ const (
 	WorklistReasonKindBelowMaterial      WorklistReasonKind = "below_material"
 	WorklistReasonKindBlocksCustomerWork WorklistReasonKind = "blocks_customer_work"
 	WorklistReasonKindBuyerWroteLast     WorklistReasonKind = "buyer_wrote_last"
+	WorklistReasonKindChampionUnknown    WorklistReasonKind = "champion_unknown"
 	WorklistReasonKindClosingSoon        WorklistReasonKind = "closing_soon"
 	WorklistReasonKindDueToday           WorklistReasonKind = "due_today"
 	WorklistReasonKindEarlierRequests    WorklistReasonKind = "earlier_requests"
@@ -18410,6 +18411,8 @@ func (e WorklistReasonKind) Valid() bool {
 	case WorklistReasonKindBlocksCustomerWork:
 		return true
 	case WorklistReasonKindBuyerWroteLast:
+		return true
+	case WorklistReasonKindChampionUnknown:
 		return true
 	case WorklistReasonKindClosingSoon:
 		return true
@@ -23944,6 +23947,16 @@ type AttentionCounts struct {
 type AttentionDealFacts struct {
 	AmountMinor *int64 `json:"amount_minor,omitempty"`
 
+	// ChampionUnknown `true` when an imported deal leaves its champion unsaid: no seat the caller
+	// can read holds the champion role, whether no seat was recorded, a seat is
+	// withheld from the caller, or the seats carry other roles. The source system
+	// may have had no such role, so this is not a finding that nobody is carrying
+	// the deal. Never sent beside `no_champion`, and `false` is never sent.
+	//
+	// Absent on a deal created here, on a deal whose champion is named, and when
+	// the server did not assess coverage.
+	ChampionUnknown *bool `json:"champion_unknown,omitempty"`
+
 	// CloseDateProvisional True when the close date has not been confirmed by a colleague.
 	CloseDateProvisional *bool   `json:"close_date_provisional,omitempty"`
 	Currency             *string `json:"currency,omitempty"`
@@ -24167,9 +24180,10 @@ type AttentionItem struct {
 	// acting on one task each overwrite the other and neither is told.
 	Version *RowVersion `json:"version,omitempty"`
 
-	// WithContact Whose record a `meeting` row's brief is read on. Sent only for
-	// `source: meeting`, and only where the meeting names a contact this caller may
-	// see.
+	// WithContact Who a meeting is with: the first attendee by name who holds no seat here, is not
+	// employed by the installation's own company, and is a contact this caller may
+	// see. Sent by `source: meeting` and `source: meeting_outcome`. On a `meeting`
+	// row it is also whose record the brief is read on.
 	//
 	// It is not the row's SUBJECT, which is the meeting itself — the row is about
 	// the appointment, and the brief happens to be reached through somebody's page:
@@ -45777,7 +45791,14 @@ type WorklistComparisonComparator string
 // moments are the READER's, filled under their own grants; each is absent
 // where the reader may not have it, which is not the same as unnamed or never.
 type WorklistContactFacts struct {
-	Id openapi_types.UUID `json:"id"`
+	// Employer Where the contact works today, so a meeting row says which account the
+	// meeting was with. Sent on `meeting` and `meeting_outcome` rows only: every
+	// other row's title already names its record.
+	//
+	// Absent where the contact has no current employer, or where this caller may
+	// not read the employment or the company. Absent never means "works nowhere".
+	Employer *ContactEmployer   `json:"employer,omitempty"`
+	Id       openapi_types.UUID `json:"id"`
 
 	// Label The contact's display name. Absent when the caller may not read the contact.
 	Label *string `json:"label,omitempty"`
@@ -45880,7 +45901,9 @@ type WorklistDealFacts struct {
 	//
 	// Absence therefore says nothing either way. A client MUST NOT render it as
 	// "nobody is carrying this", and MUST NOT render it as "somebody is": the four
-	// cases are indistinguishable on the wire by design.
+	// cases are indistinguishable in this field by design. An imported deal whose
+	// readable committee names no champion carries `champion_unknown` in the item's
+	// `because` instead, which says so without telling those cases apart.
 	NoChampion     *bool               `json:"no_champion,omitempty"`
 	OwnerId        *openapi_types.UUID `json:"owner_id,omitempty"`
 	QuietDays      *int                `json:"quiet_days,omitempty"`
@@ -46158,6 +46181,14 @@ type WorklistItem struct {
 	// EmailSummary The canonical email row, on a `customer_waiting` row whose message is an EMAIL this reader may read. The waiting lane spans email and channel messages, and only an email has an email's shape — a chat drawn as one would carry a mail icon and an email's access badge over a message that never travelled on one. Null on a channel message, null on every other source, and null when the message's content is not this reader's, though such a message produces no waiting row at all. A client renders the canonical row when this is present and falls back to `title` when it is not.
 	EmailSummary *EmailSummary `json:"email_summary,omitempty"`
 
+	// Host Who hosted the meeting a `meeting` or `meeting_outcome` row is about: the
+	// seat whose calendar it came off. `kind` is always `user`.
+	//
+	// A fact about the meeting, kept apart from `owner`, which says who answers
+	// for the row. Absent where no calendar claims the meeting. `label` follows
+	// `WorklistOwner.label`: absent where this caller may not resolve the name.
+	Host *WorklistOwner `json:"host,omitempty"`
+
 	// Id The owning record's id, as its own endpoint spells it.
 	Id string `json:"id"`
 
@@ -46294,8 +46325,10 @@ type WorklistItem struct {
 	// WithContact Whose record a `meeting` row's brief is read on, carried out from
 	// `AttentionItem.with_contact`.
 	//
-	// Sent only for `source: meeting`, and only where the meeting names a contact
-	// this caller may see. It is not the row's SUBJECT — the row is about the
+	// Sent for `source: meeting` and `source: meeting_outcome`, and only where the
+	// meeting names a contact this caller may see. On a `meeting_outcome` row no
+	// move opens a brief, so the field only says who the meeting was with, as
+	// `contact` does. It is not the row's SUBJECT — the row is about the
 	// appointment — and it exists because the brief is not a page of its own: it
 	// opens as `?prep=<activity>` on a contact's record, so the address needs both
 	// ids and the subject carries only one.

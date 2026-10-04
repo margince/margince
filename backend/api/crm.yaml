@@ -53227,9 +53227,10 @@ components:
           type: string
           format: uuid
           description: |
-            Whose record a `meeting` row's brief is read on. Sent only for
-            `source: meeting`, and only where the meeting names a contact this caller may
-            see.
+            Who a meeting is with: the first attendee by name who holds no seat here, is not
+            employed by the installation's own company, and is a contact this caller may
+            see. Sent by `source: meeting` and `source: meeting_outcome`. On a `meeting`
+            row it is also whose record the brief is read on.
 
             It is not the row's SUBJECT, which is the meeting itself — the row is about
             the appointment, and the brief happens to be reached through somebody's page:
@@ -53435,6 +53436,17 @@ components:
             So absence does not mean "covered". It means this endpoint is making no claim,
             and a client MUST NOT read it as one. See `WorklistDealFacts.no_champion`,
             which carries the same fact out under the same rule.
+        champion_unknown:
+          type: [boolean, 'null']
+          description: |
+            `true` when an imported deal leaves its champion unsaid: no seat the caller
+            can read holds the champion role, whether no seat was recorded, a seat is
+            withheld from the caller, or the seats carry other roles. The source system
+            may have had no such role, so this is not a finding that nobody is carrying
+            the deal. Never sent beside `no_champion`, and `false` is never sent.
+
+            Absent on a deal created here, on a deal whose champion is named, and when
+            the server did not assess coverage.
         no_next_step:
           type: [boolean, 'null']
           description: >-
@@ -54696,8 +54708,10 @@ components:
             Whose record a `meeting` row's brief is read on, carried out from
             `AttentionItem.with_contact`.
 
-            Sent only for `source: meeting`, and only where the meeting names a contact
-            this caller may see. It is not the row's SUBJECT — the row is about the
+            Sent for `source: meeting` and `source: meeting_outcome`, and only where the
+            meeting names a contact this caller may see. On a `meeting_outcome` row no
+            move opens a brief, so the field only says who the meeting was with, as
+            `contact` does. It is not the row's SUBJECT — the row is about the
             appointment — and it exists because the brief is not a page of its own: it
             opens as `?prep=<activity>` on a contact's record, so the address needs both
             ids and the subject carries only one.
@@ -54707,6 +54721,16 @@ components:
             attendees are all withheld both produce, and both mean the same thing here.
         contact:
           $ref: '#/components/schemas/WorklistContactFacts'
+        host:
+          allOf:
+            - $ref: '#/components/schemas/WorklistOwner'
+          description: |
+            Who hosted the meeting a `meeting` or `meeting_outcome` row is about: the
+            seat whose calendar it came off. `kind` is always `user`.
+
+            A fact about the meeting, kept apart from `owner`, which says who answers
+            for the row. Absent where no calendar claims the meeting. `label` follows
+            `WorklistOwner.label`: absent where this caller may not resolve the name.
         due_at: { type: string, format: date-time, description: 'When this is due, or when the meeting starts.' }
         overdue: { type: boolean, description: 'Past due at the read instant, resolved server-side so every surface agrees.' }
         due_group:
@@ -55239,7 +55263,7 @@ components:
       properties:
         kind:
           type: string
-          enum: [pinned, buyer_wrote_last, waiting_days, overdue, due_today, closing_soon, expected_revenue, material, below_material, quiet_days, no_champion, promised, approved_and_failed, blocks_customer_work, routine, repeated_failure, legal_deadline, opened_overdue, earlier_requests, first_asked, no_next_step, meeting_soon, meeting_unprepared, response_overdue, response_due_soon, unassigned, stale, no_reply_history, asks_nothing, addressed_elsewhere, outcome_unrecorded]
+          enum: [pinned, buyer_wrote_last, waiting_days, overdue, due_today, closing_soon, expected_revenue, material, below_material, quiet_days, no_champion, champion_unknown, promised, approved_and_failed, blocks_customer_work, routine, repeated_failure, legal_deadline, opened_overdue, earlier_requests, first_asked, no_next_step, meeting_soon, meeting_unprepared, response_overdue, response_due_soon, unassigned, stale, no_reply_history, asks_nothing, addressed_elsewhere, outcome_unrecorded]
           description: 'Which fact this is. The client writes the phrase.'
         value: { $ref: '#/components/schemas/WorklistValue' }
 
@@ -55450,6 +55474,16 @@ components:
         label: { type: string, description: "The contact's display name. Absent when the caller may not read the contact." }
         touch:
           $ref: '#/components/schemas/WorklistContactTouch'
+        employer:
+          allOf:
+            - $ref: '#/components/schemas/ContactEmployer'
+          description: |
+            Where the contact works today, so a meeting row says which account the
+            meeting was with. Sent on `meeting` and `meeting_outcome` rows only: every
+            other row's title already names its record.
+
+            Absent where the contact has no current employer, or where this caller may
+            not read the employment or the company. Absent never means "works nowhere".
 
     WorklistContactTouch:
       type: object
@@ -55513,7 +55547,9 @@ components:
 
             Absence therefore says nothing either way. A client MUST NOT render it as
             "nobody is carrying this", and MUST NOT render it as "somebody is": the four
-            cases are indistinguishable on the wire by design.
+            cases are indistinguishable in this field by design. An imported deal whose
+            readable committee names no champion carries `champion_unknown` in the item's
+            `because` instead, which says so without telling those cases apart.
 
     WorklistSourceUnavailable:
       type: object

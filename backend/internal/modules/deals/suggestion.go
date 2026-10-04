@@ -338,6 +338,117 @@ func SupersedeStaleSuggestionsTx(ctx context.Context, tx pgx.Tx) (int, error) {
 	return len(retired), nil
 }
 
+// SupersedeDuplicateSuggestionsTx retires an open suggestion whose evidence a
+// suggestion on the other end of an open duplicate pair already claims, and
+// reports how many. A claim is an older open suggestion that itself survives
+// this pass, or one a user dismissed or accepted. Pairs are company ids from
+// the dedupe queue, which deals does not read. RecordSuggestionTx refuses the
+// second suggestion of a pair it is told about; this retires one recorded
+// while the pair was not yet known, so the business is offered the evidence
+// once. System-only, for the same reason recording is.
+func SupersedeDuplicateSuggestionsTx(ctx context.Context, tx pgx.Tx, pairs [][2]ids.UUID) (int, error) {
+	if err := auth.RequireSystem(ctx); err != nil {
+		return 0, err
+	}
+	if len(pairs) == 0 {
+		return 0, nil
+	}
+	claims, err := duplicateClaimsTx(ctx, tx, pairs)
+	if err != nil {
+		return 0, err
+	}
+	retire := claimsRetired(claims)
+	if len(retire) == 0 {
+		return 0, nil
+	}
+	rows, err := tx.Query(ctx, `
+		UPDATE deal_suggestion SET state = 'superseded', decided_at = now()
+		 WHERE id = ANY($1) AND state = 'open'
+		RETURNING id`, retire)
+	if err != nil {
+		return 0, fmt.Errorf("deals: superseding suggestions raised twice for one business: %w", err)
+	}
+	retired, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		return 0, fmt.Errorf("deals: reading suggestions superseded as raised twice: %w", err)
+	}
+	for _, id := range retired {
+		if err := recordSuperseded(ctx, tx, id); err != nil {
+			return 0, err
+		}
+	}
+	return len(retired), nil
+}
+
+// duplicateClaim says an open suggestion cites evidence that claimant, on the
+// other end of an open duplicate pair, also cites. Claimants that are open are
+// older than the suggestion; dismissed and accepted ones claim at any age.
+type duplicateClaim struct {
+	suggestion, claimant ids.UUID
+	claimantOpen         bool
+}
+
+// duplicateClaimsTx reads every claim on the open suggestions of these pairs,
+// oldest suggestion first. It locks the suggestions it may retire and shares
+// the claimants, so no claimant changes state between this read and the
+// retirement that trusts it. A suggestion claimed twice is listed twice.
+func duplicateClaimsTx(ctx context.Context, tx pgx.Tx, pairs [][2]ids.UUID) ([]duplicateClaim, error) {
+	lefts, rights := make([]ids.UUID, 0, len(pairs)), make([]ids.UUID, 0, len(pairs))
+	for _, pair := range pairs {
+		lefts, rights = append(lefts, pair[0]), append(rights, pair[1])
+	}
+	rows, err := tx.Query(ctx, `
+		SELECT newer.id, newer.created_at, older.id, older.state = 'open'
+		  FROM unnest($1::uuid[], $2::uuid[]) AS pair(a, b)
+		  JOIN deal_suggestion newer ON newer.state = 'open'
+		  JOIN deal_suggestion older ON older.id <> newer.id
+		   AND older.state IN ('open', 'dismissed', 'accepted')
+		   AND (older.company_id, newer.company_id) IN ((pair.a, pair.b), (pair.b, pair.a))
+		 WHERE (older.state <> 'open' OR (older.created_at, older.id) < (newer.created_at, newer.id))
+		   AND EXISTS (
+		     SELECT 1 FROM deal_suggestion_evidence oe
+		       JOIN deal_suggestion_evidence ne ON ne.kind = oe.kind
+		        AND (ne.activity_id = oe.activity_id OR ne.signal_id = oe.signal_id
+		             OR ne.attachment_id = oe.attachment_id)
+		      WHERE oe.suggestion_id = older.id AND ne.suggestion_id = newer.id)
+		 ORDER BY newer.created_at, newer.id
+		   FOR UPDATE OF newer FOR SHARE OF older`, lefts, rights)
+	if err != nil {
+		return nil, fmt.Errorf("deals: reading suggestions raised twice for one business: %w", err)
+	}
+	claims, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (duplicateClaim, error) {
+		var claim duplicateClaim
+		var at time.Time
+		err := row.Scan(&claim.suggestion, &at, &claim.claimant, &claim.claimantOpen)
+		return claim, err
+	})
+	if err != nil {
+		return nil, fmt.Errorf("deals: reading suggestions raised twice for one business: %w", err)
+	}
+	return claims, nil
+}
+
+// claimsRetired walks the claims oldest suggestion first and answers which to
+// retire: one claimed by a dismissed or accepted suggestion, or by an open one
+// that survives. An open claimant retired earlier in the walk claims nothing,
+// so of a chain of three linked pair by pair only the first survives through
+// its own pair, and no suggestion is retired against one that is itself gone.
+func claimsRetired(claims []duplicateClaim) []ids.UUID {
+	retired := map[ids.UUID]bool{}
+	var out []ids.UUID
+	for _, claim := range claims {
+		if retired[claim.suggestion] {
+			continue
+		}
+		if claim.claimantOpen && retired[claim.claimant] {
+			continue
+		}
+		retired[claim.suggestion] = true
+		out = append(out, claim.suggestion)
+	}
+	return out
+}
+
 // columnState is the audited name of the lifecycle column.
 const columnState = "state"
 

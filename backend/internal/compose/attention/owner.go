@@ -253,8 +253,12 @@ func (s *Service) nameTheOwners(ctx context.Context, queue []crmcontracts.Workli
 	}
 	names := rosterNames(roster)
 	for i := range queue {
-		if queue[i].Owner != nil {
-			nameAnOwner(queue[i].Owner, names)
+		// A meeting's host is named by the owner's rule: the same roster, the
+		// same absence for a name the reader may not resolve.
+		for _, named := range []*crmcontracts.WorklistOwner{queue[i].Owner, queue[i].Host} {
+			if named != nil {
+				nameAnOwner(named, names)
+			}
 		}
 	}
 	return nil
@@ -286,7 +290,7 @@ func rosterNames(roster []TeamMember) map[ids.UUID]string {
 // label nothing is a query per page for no reader's benefit.
 func anyOwnerNeedsAName(queue []crmcontracts.WorklistItem) bool {
 	for _, item := range queue {
-		if item.Owner != nil && item.Owner.Id != nil {
+		if (item.Owner != nil && item.Owner.Id != nil) || item.Host != nil {
 			return true
 		}
 	}

@@ -81,7 +81,10 @@ type CounterpartyVerdictEngine struct {
 	// once; a verdict lane that read no allowlist would turn that declaration
 	// into a suppression at the one door that creates records.
 	transactional *capture.TransactionalList
-	log           *slog.Logger
+	// skipReservedDomains closes a review row for a sender on a reserved name
+	// instead of staging its proposal (captureverdictsweeps.go).
+	skipReservedDomains bool
+	log                 *slog.Logger
 }
 
 // NewCounterpartyVerdictEngine builds the engine over the pool and the verdict
@@ -105,7 +108,8 @@ func NewCounterpartyVerdictEngine(
 		tagFiler:   newConnectorTagFiler(pool),
 		transactional: capture.NewTransactionalList(
 			lists.TransactionalExtra, lists.TransactionalNever),
-		log: log,
+		skipReservedDomains: lists.SkipReservedDomainProposals,
+		log:                 log,
 	}
 }
 

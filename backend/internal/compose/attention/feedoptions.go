@@ -82,6 +82,13 @@ func (s *Service) WithContactTouch(r ContactTouch) *Service {
 	return s
 }
 
+// WithContactEmployers binds the reader that says which account a meeting
+// row's contact works for. Unbound, the row names the contact and no account.
+func (s *Service) WithContactEmployers(e ContactEmployers) *Service {
+	s.employers = e
+	return s
+}
+
 // WithDealMoves binds the reader that puts a deal's already-decided next step
 // on its queue row. An option for the reason WithDealFacts is one.
 //

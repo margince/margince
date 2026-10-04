@@ -11152,6 +11152,7 @@ export const de = {
   "worklist.because.quiet_days.value_other": "seit {value} Tagen still",
   "worklist.because.no_next_step": "kein nächster Schritt geplant",
   "worklist.because.no_champion": "kein Champion",
+  "worklist.because.champion_unknown": "Champion unbekannt",
   "worklist.because.promised": "von dir zugesagt",
   "worklist.because.approved_and_failed": "freigegeben, aber nicht ausgeführt",
   "worklist.because.blocks_customer_work": "Kontakt wartet darauf",
@@ -11370,6 +11371,8 @@ export const de = {
   "worklist.verb.open_meeting_brief": "Termin vorbereiten",
   "worklist.deal.closes": "Abschluss {date}",
   "worklist.when.held": "Fand statt: {when}",
+  "worklist.meeting.hostedBy": "Organisiert von {name}",
+  "worklist.meeting.hostedByYou": "Von dir organisiert",
   "worklist.when.starts": "Beginn: {when}",
   "worklist.when.due": "Fällig: {when}",
   "worklist.batch.system_incident_one":
