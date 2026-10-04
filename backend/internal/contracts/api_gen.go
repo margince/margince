@@ -31980,6 +31980,9 @@ type DealCommitment struct {
 	// SourceActivityId The meeting or message it was read from.
 	SourceActivityId openapi_types.UUID `json:"source_activity_id"`
 
+	// SourceKind The kind of activity it was read from (`email`, `meeting`, …), so a client opens it in the reader that kind needs.
+	SourceKind string `json:"source_kind"`
+
 	// SourceQuote The words it was read from, verbatim.
 	SourceQuote string `json:"source_quote"`
 }

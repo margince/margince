@@ -22,6 +22,7 @@ const ONE: DealCommitments = {
       body: "Send the purchase order",
       source_quote: "We will send the purchase order by Friday.",
       source_activity_id: MESSAGE,
+      source_kind: "email",
       due_at: null,
       occurred_at: "2026-09-01T08:00:00Z",
     },
@@ -52,6 +53,14 @@ describe("the deal's watch card", () => {
     screen.getByRole("button", { name: "Open message" }).click();
     expect(open).toHaveBeenCalledWith(MESSAGE);
     expect(screen.getByRole("button", { name: "Dismiss" })).toBeTruthy();
+  });
+
+  it("offers no message to open for a commitment made in a meeting", () => {
+    renderList({
+      complete: true,
+      data: [{ ...ONE.data[0], source_kind: "meeting" }],
+    });
+    expect(screen.queryByRole("button", { name: "Open message" })).toBeNull();
   });
 
   it("draws nothing when the customer owes nothing", () => {

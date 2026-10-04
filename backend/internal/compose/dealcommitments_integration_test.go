@@ -77,8 +77,8 @@ func TestADealWatchesWhatItsCustomerCommittedTo(t *testing.T) {
 		t.Fatalf("want one commitment and a complete list, got %d (complete=%v)", len(got.Data), got.Complete)
 	}
 	if row := got.Data[0]; ids.UUID(row.Id) != w.claim || row.ContactName != "Ines Huber" ||
-		row.SourceQuote != "We will send the purchase order by Friday." {
-		t.Errorf("the row reads %+v, want the claim, its contact and its words", row)
+		row.SourceQuote != "We will send the purchase order by Friday." || row.SourceKind != "note" {
+		t.Errorf("the row reads %+v, want the claim, its contact, its words and the kind of its source", row)
 	}
 }
 

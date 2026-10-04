@@ -45,6 +45,7 @@ export const Watched: Story = {
           body: "Send the purchase order",
           source_quote: "We will send the purchase order by Friday.",
           source_activity_id: "01a02e25-a5ac-7099-8099-581cbf001a01",
+          source_kind: "email",
           due_at: "2026-09-04T21:59:59Z",
         },
         {
@@ -53,6 +54,7 @@ export const Watched: Story = {
           body: "Confirm the rollout date with IT",
           source_quote: "I'll check the rollout date with our IT team.",
           source_activity_id: "01a02e25-a5ac-7099-8099-581cbf001a04",
+          source_kind: "meeting",
           due_at: null,
         },
       ],

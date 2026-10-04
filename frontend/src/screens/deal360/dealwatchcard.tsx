@@ -93,7 +93,9 @@ export function DealWatchList({
                   when: formatDate(row.due_at, locale, recordZone),
                 })
               : t("co.next.undated")}
-            {onOpenEmail && (
+            {/* Only a message opens here: the page's drawer reads mail, and
+                a meeting's words are already quoted above. */}
+            {onOpenEmail && row.source_kind === "email" && (
               <Button
                 variant="link"
                 onClick={() => onOpenEmail(row.source_activity_id)}

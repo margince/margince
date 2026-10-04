@@ -36882,7 +36882,7 @@ components:
           description: False when a commitment was left out because its contact or its message is outside what the caller may read.
     DealCommitment:
       type: object
-      required: [id, contact_id, contact_name, body, source_quote, source_activity_id, occurred_at]
+      required: [id, contact_id, contact_name, body, source_quote, source_activity_id, source_kind, occurred_at]
       properties:
         id: { type: string, format: uuid, description: 'The id of the claim, which `POST /claims/{id}/settle` takes.' }
         contact_id: { type: string, format: uuid }
@@ -36890,6 +36890,7 @@ components:
         body: { type: string, description: 'What was committed to, in the language of the reader.' }
         source_quote: { type: string, description: 'The words it was read from, verbatim.' }
         source_activity_id: { type: string, format: uuid, description: 'The meeting or message it was read from.' }
+        source_kind: { type: string, description: 'The kind of activity it was read from (`email`, `meeting`, …), so a client opens it in the reader that kind needs.' }
         due_at: { type: string, format: date-time, nullable: true, description: 'Absent when the conversation named no day.' }
         occurred_at: { type: string, format: date-time, description: 'When it was said.' }
     DealCoverage:

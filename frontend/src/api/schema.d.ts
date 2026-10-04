@@ -26025,6 +26025,8 @@ export interface components {
              * @description The meeting or message it was read from.
              */
             source_activity_id: string;
+            /** @description The kind of activity it was read from (`email`, `meeting`, …), so a client opens it in the reader that kind needs. */
+            source_kind: string;
             /**
              * Format: date-time
              * @description Absent when the conversation named no day.

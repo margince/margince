@@ -85,6 +85,7 @@ func (h dealCommitmentHandlers) read(ctx context.Context, dealID ids.DealID) (cr
 			Body:             row.Body,
 			SourceQuote:      row.SourceQuote,
 			SourceActivityId: openapi_types.UUID(row.ActivityID),
+			SourceKind:       row.SourceKind,
 			DueAt:            row.DueAt,
 			OccurredAt:       row.OccurredAt,
 		})

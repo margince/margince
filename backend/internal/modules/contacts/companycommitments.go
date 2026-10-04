@@ -71,6 +71,9 @@ type CompanyCommitment struct {
 	Body        string
 	SourceQuote string
 	ActivityID  ids.UUID
+	// SourceKind is the activity kind it was read from, which decides how a
+	// reader opens it.
+	SourceKind string
 	// DueAt is nil where the promise carries no date. Undated work is real and
 	// is not yet late, which is the ranking's business rather than this read's.
 	DueAt *time.Time
@@ -176,7 +179,7 @@ func openCompanyClaims(
 	// edge is existence-tested rather than joined.
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT c.id, c.contact_id, coalesce(pr.full_name, ''), c.body, c.source_quote,
-		       c.source_activity_id, c.due_at, a.occurred_at,
+		       c.source_activity_id, a.kind, c.due_at, a.occurred_at,
 		       count(*) OVER () AS admitted
 		  FROM conversation_claim c
 		  JOIN activity a ON a.id = c.source_activity_id AND a.archived_at IS NULL
@@ -200,7 +203,7 @@ func openCompanyClaims(
 	for rows.Next() {
 		var row CompanyCommitment
 		if err := rows.Scan(&row.ID, &row.ContactID, &row.ContactName, &row.Body, &row.SourceQuote,
-			&row.ActivityID, &row.DueAt, &row.OccurredAt, &admitted); err != nil {
+			&row.ActivityID, &row.SourceKind, &row.DueAt, &row.OccurredAt, &admitted); err != nil {
 			return nil, false, fmt.Errorf("scan an account commitment: %w", err)
 		}
 		out = append(out, row)
