@@ -66,6 +66,11 @@ func (s *Store) PartiesOf(ctx context.Context, tx pgx.Tx, message ids.UUID) (Mes
 	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
 		return MessageParties{}, err
 	}
+	// The parties of a message are part of what the message says: a caller who
+	// may not open it, or a message since archived, names nobody.
+	if err := auth.EnsureActivityContentVisibleLive(ctx, tx, message); err != nil {
+		return MessageParties{}, err
+	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	messagePos := arg(message)
@@ -75,7 +80,7 @@ func (s *Store) PartiesOf(ctx context.Context, tx pgx.Tx, message ids.UUID) (Mes
 		return MessageParties{}, err
 	}
 	if scope == "" {
-		scope = "TRUE"
+		scope = scopeUnbounded
 	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT p.role = 'from', p.user_id, p.contact_id FROM activity_participant p

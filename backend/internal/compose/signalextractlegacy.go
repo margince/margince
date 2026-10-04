@@ -92,6 +92,12 @@ func (x *SignalExtractor) convertLegacyCommitment(ctx context.Context, legacy le
 		}
 	}
 	return database.WithWorkspaceTx(ctx, x.pool, func(tx pgx.Tx) error {
+		// Settled FIRST: a human who dismissed the signal while the model was
+		// reading has answered it, and what the reading found is not filed.
+		moved, err := signals.AcknowledgeTx(ctx, tx, legacy.signal, signals.ResolutionSourceCommitmentRule)
+		if err != nil || !moved {
+			return err
+		}
 		for _, event := range events {
 			if event.Kind != extractKindCommitment || event.MessageID != legacy.cited.String() ||
 				event.Confidence < extractConfidenceFloor {
@@ -101,8 +107,7 @@ func (x *SignalExtractor) convertLegacyCommitment(ctx context.Context, legacy le
 				return err
 			}
 		}
-		_, err := signals.AcknowledgeTx(ctx, tx, legacy.signal, signals.ResolutionSourceCommitmentRule)
-		return err
+		return nil
 	})
 }
 
@@ -140,12 +145,9 @@ func legacyCommitmentsOwed(ctx context.Context, tx pgx.Tx) ([]legacyCommitment, 
 	return out, rows.Err()
 }
 
-// legacyThreadRuleQuery asks the extractor's own rule about one conversation
-// as it stands NOW: the account it reaches, and whether it is private to a
-// member.
-// The old signal's account and audience were true when it was written; the
-// rule is what decides who may read a summary of the conversation today.
-var legacyThreadRuleQuery = conversationCTE(" AND a.thread_key = $1") + `
+// threadReaderQuery asks the extractor's own rule about one conversation as it
+// stands NOW: the account it reaches, and whether it is private to a member.
+var threadReaderQuery = conversationCTE(" AND a.thread_key = $1") + `
 		SELECT c.one_company::uuid, CASE WHEN c.shared THEN NULL ELSE c.private_owner::uuid END
 		  FROM conversation c
 		 WHERE ` + threadReachesOneAccount + `
@@ -171,22 +173,36 @@ func legacyThread(ctx context.Context, tx pgx.Tx, legacy legacyCommitment) (sett
 	if err != nil {
 		return settledThread{}, fmt.Errorf("signal extract: reading a commitment signal's message: %w", err)
 	}
-	var privateTo *ids.UUID
-	err = tx.QueryRow(ctx, legacyThreadRuleQuery, *key).Scan(&thread.CompanyID, &privateTo)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return settledThread{}, nil
+	company, privateTo, offered, err := threadReaderNow(ctx, tx, *key)
+	if err != nil || !offered {
+		return settledThread{}, err
 	}
-	if err != nil {
-		return settledThread{}, fmt.Errorf("signal extract: asking the rule about a commitment signal's thread: %w", err)
-	}
-	if privateTo != nil {
-		thread.PrivateTo = *privateTo
-	}
-	thread.Key = *key
+	thread.CompanyID, thread.PrivateTo, thread.Key = company, privateTo, *key
 	messages, err := threadWindow(ctx, tx, *key, &at, &legacy.cited, &legacy.cited)
 	if err != nil {
 		return settledThread{}, err
 	}
 	thread.Messages = messages
 	return thread, nil
+}
+
+// threadReaderNow is the account a conversation reaches and the one member it
+// is private to, if any, as the rule reads it at this moment — and false when
+// the rule would not read the conversation at all. The commitment dispatch
+// asks it inside the transaction that files, because a conversation can be
+// made private, or reach another account, while the model is reading it.
+func threadReaderNow(ctx context.Context, tx pgx.Tx, key string) (ids.UUID, ids.UUID, bool, error) {
+	var company ids.UUID
+	var privateTo *ids.UUID
+	err := tx.QueryRow(ctx, threadReaderQuery, key).Scan(&company, &privateTo)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ids.UUID{}, ids.UUID{}, false, nil
+	}
+	if err != nil {
+		return ids.UUID{}, ids.UUID{}, false, fmt.Errorf("signal extract: asking the rule about a conversation: %w", err)
+	}
+	if privateTo == nil {
+		return company, ids.UUID{}, true, nil
+	}
+	return company, *privateTo, true, nil
 }

@@ -258,15 +258,17 @@ func (x *SignalExtractor) recordExtractedEvent(
 		// the ids we sent are unparseable, which is our own bug.
 		return false, fmt.Errorf("cited message id: %w", err)
 	}
-	if event.Kind == extractKindCommitment {
-		dispatched, err := x.dispatchCommitment(ctx, tx, thread, event, cited)
-		if err != nil {
-			return false, err
-		}
-		raised, err := recordEventSignal(ctx, tx, thread, event, cited, now)
-		return raised || dispatched, err
+	raised, err := recordEventSignal(ctx, tx, thread, event, cited, now)
+	if err != nil || event.Kind != extractKindCommitment {
+		return raised, err
 	}
-	return recordEventSignal(ctx, tx, thread, event, cited, now)
+	// A commitment a human dismissed as a signal is not acted on again.
+	dismissed, err := signals.DismissedTx(ctx, tx, signalFingerprint(event.Kind, thread.CompanyID, cited))
+	if err != nil || dismissed {
+		return raised, err
+	}
+	dispatched, err := x.dispatchCommitment(ctx, tx, thread, event, cited)
+	return raised || dispatched, err
 }
 
 // recordEventSignal files one event as a signal on the account.

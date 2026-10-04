@@ -240,6 +240,20 @@ const (
 	ResolutionSourceCommitmentRule = "commitment_rule"
 )
 
+// DismissedTx reports whether a human dismissed the live signal a fingerprint
+// names. A producer that does more than file a signal asks it, so a finding a
+// human threw away is not acted on again under another name.
+func DismissedTx(ctx context.Context, tx pgx.Tx, fingerprint string) (bool, error) {
+	var dismissed bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM signal
+		                WHERE fingerprint = $1 AND archived_at IS NULL AND status = 'dismissed')`,
+		fingerprint).Scan(&dismissed); err != nil {
+		return false, fmt.Errorf("read whether the signal was dismissed: %w", err)
+	}
+	return dismissed, nil
+}
+
 // AcknowledgeTx marks one open signal acknowledged inside the caller's
 // transaction, and reports whether it moved.
 //

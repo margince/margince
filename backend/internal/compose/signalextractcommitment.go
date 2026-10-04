@@ -105,6 +105,14 @@ func (x *SignalExtractor) emailCommitment(
 	if !found || !spanned {
 		return Commitment{}, false, nil
 	}
+	// Who may read the conversation is asked again here, in the transaction
+	// that files: the reading ran outside it, and a conversation made private
+	// in between must not be filed as a shared one.
+	company, privateTo, offered, err := threadReaderNow(ctx, tx, thread.Key)
+	if err != nil || !offered {
+		return Commitment{}, false, err
+	}
+	thread.CompanyID, thread.PrivateTo = company, privateTo
 	parties, err := x.messages.PartiesOf(extractorContext(ctx, signalScanActor), tx, cited)
 	if err != nil {
 		return Commitment{}, false, err
