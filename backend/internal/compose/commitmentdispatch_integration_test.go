@@ -9,6 +9,7 @@ package compose
 // a task a rep put away, and a customer's promise a rep said was never one.
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
@@ -114,5 +115,85 @@ func TestACustomerSharingAColleaguesNameIsNotTakenForThem(t *testing.T) {
 	if e.taskCount(t) != 0 || len(read.ProposalIDs) != 1 {
 		t.Errorf("a name both sides answer to became %d task(s) and %d proposal(s); want one proposal",
 			e.taskCount(t), len(read.ProposalIDs))
+	}
+}
+
+// linkOneContact files the meeting under exactly one customer, which is who a
+// promise of ours in it was made to.
+func linkOneContact(t *testing.T, e *transcriptEnv, name string) ids.UUID {
+	t.Helper()
+	contact, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: name})
+	if err != nil {
+		t.Fatalf("creating the customer: %v", err)
+	}
+	integration.LinkActivity(t, e.owner, e.activity.UUID, "contact", ids.UUID(contact.Id))
+	return ids.UUID(contact.Id)
+}
+
+// A promise of ours in a meeting with one customer is filed on that customer
+// as well, dated as the meeting said, and the claim points at the task it
+// became — so their record shows the promise and opens the task.
+func TestOurPromiseIsFiledOnTheCustomerItWasMadeTo(t *testing.T) {
+	e := setupTranscript(t)
+	e.WsExec(t, `UPDATE app_user SET display_name = 'Priya Raman' WHERE id = $1`, e.Rep2)
+	customer := linkOneContact(t, e, "Ines Huber")
+
+	raw, err := json.Marshal(map[string]any{"proposals": []map[string]any{{
+		"summary": "Send the revised pricing", "owner": "Priya Raman",
+		"due_date": "2026-09-08", "source_lines": []int{3}, "confidence": 0.9,
+	}}})
+	if err != nil {
+		t.Fatalf("building the model reply: %v", err)
+	}
+	e.read(t, cannedBrain{reply: string(raw)})
+
+	got := e.wsString(t, `SELECT (c.task_activity_id = t.id)::text || ' ' || (c.due_at IS NOT NULL)::text
+		FROM conversation_claim c, activity t
+		WHERE c.kind = 'commitment_ours' AND c.contact_id = $1 AND t.kind = 'task'`, customer)
+	if got != "true true" {
+		t.Errorf("the claim on the customer reads %q, want it dated and pointing at the task", got)
+	}
+}
+
+// A promise of ours a rep dismissed from the customer's record is not proposed
+// again when the meeting is read again.
+func TestADismissedPromiseOfOursIsNotProposedAgain(t *testing.T) {
+	e := setupTranscript(t)
+	e.WsExec(t, `UPDATE app_user SET display_name = 'Priya Raman' WHERE id = $1`, e.Rep2)
+	linkOneContact(t, e, "Ines Huber")
+	read := e.read(t, cannedBrain{reply: ownedReply(t, "Priya Raman", 0.75)})
+	if len(read.ProposalIDs) != 1 {
+		t.Fatalf("want the unsure promise proposed, got %d", len(read.ProposalIDs))
+	}
+	claim, err := ids.Parse(e.wsString(t, `SELECT id::text FROM conversation_claim`))
+	if err != nil {
+		t.Fatalf("reading the claim: %v", err)
+	}
+	if err := e.Contacts.SettleConversationClaim(e.Admin(), claim, "dismissed"); err != nil {
+		t.Fatalf("dismissing the claim: %v", err)
+	}
+	priya := e.As(e.Rep2, []ids.UUID{e.Team1}, transcriptPerms)
+	reason := "never said that"
+	if _, err := e.svc.Decide(priya, ids.From[ids.ApprovalKind](read.ProposalIDs[0]), false, &reason); err != nil {
+		t.Fatalf("refusing the proposal: %v", err)
+	}
+
+	again := e.read(t, cannedBrain{reply: ownedReply(t, "Priya Raman", 0.95)})
+	if len(again.ProposalIDs) != 0 || e.taskCount(t) != 0 {
+		t.Errorf("a dismissed promise came back as %d proposal(s) and %d task(s)", len(again.ProposalIDs), e.taskCount(t))
+	}
+}
+
+// Two customers of one name tie a promise to neither: it is put to a human.
+func TestTwoCustomersOfOneNameTieThePromiseToNeither(t *testing.T) {
+	e := setupTranscript(t)
+	linkOneContact(t, e, "Ines Huber")
+	linkOneContact(t, e, "Ines Huber")
+	read := e.read(t, cannedBrain{reply: ownedReply(t, "Ines Huber", 0.95)})
+	if len(read.ProposalIDs) != 1 {
+		t.Errorf("a name two customers answer to became %d proposals, want one put to a human", len(read.ProposalIDs))
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM conversation_claim WHERE kind = 'commitment_theirs'`); n != 0 {
+		t.Errorf("the promise was filed on %d customers who share the name", n)
 	}
 }

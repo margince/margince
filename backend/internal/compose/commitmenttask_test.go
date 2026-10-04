@@ -55,3 +55,31 @@ func mustJSON(t *testing.T, v CommitmentTaskProposal) json.RawMessage {
 	}
 	return raw
 }
+
+// A payload that will not decode is refused, not read as an empty edit.
+func TestACommitmentEditThatIsNotAProposalIsRefused(t *testing.T) {
+	staged := mustJSON(t, CommitmentTaskProposal{Summary: "Send pricing", Locator: "abc"})
+	var invalid *approvals.InvalidEditError
+	if err := commitmentTaskPrecheck()(context.Background(), staged, json.RawMessage(`{"summary":`)); !errors.As(err, &invalid) {
+		t.Errorf("an edit that is not JSON: err = %v, want an invalid edit", err)
+	}
+	if err := commitmentTaskPrecheck()(context.Background(), json.RawMessage(`[`), staged); err == nil {
+		t.Error("a staged payload that is not JSON was compared as if it were")
+	}
+	if err := commitmentTaskPrecheck()(context.Background(), staged, nil); err != nil {
+		t.Errorf("accepting with no edit: %v", err)
+	}
+}
+
+// Accepting a commitment refuses before it spends the approval: a payload it
+// cannot read, and a decision nobody made.
+func TestAcceptingACommitmentRefusesWhatItCannotWrite(t *testing.T) {
+	effect := commitmentTaskEffect(nil, nil, nil)
+	if err := effect(context.Background(), ids.From[ids.ApprovalKind](ids.NewV7()), json.RawMessage(`{`), "h"); err == nil {
+		t.Error("an unreadable proposal was accepted")
+	}
+	payload := mustJSON(t, CommitmentTaskProposal{Summary: "Send pricing", Locator: "abc"})
+	if err := effect(context.Background(), ids.From[ids.ApprovalKind](ids.NewV7()), payload, "h"); err == nil {
+		t.Error("a proposal was accepted with nobody deciding it")
+	}
+}
