@@ -61,6 +61,7 @@ describe("the deal's watch card", () => {
   it("offers no message to open for a commitment made in a meeting", () => {
     renderList({
       complete: true,
+      has_more: false,
       data: [{ ...ONE.data[0], source_kind: "meeting" }],
     });
     expect(screen.queryByRole("button", { name: "Open message" })).toBeNull();
