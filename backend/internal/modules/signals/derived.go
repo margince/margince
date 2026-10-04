@@ -235,6 +235,9 @@ const (
 const (
 	ResolutionSourceApproval  = "approval"
 	ResolutionSourceDealScout = "deal_scout"
+	// ResolutionSourceCommitmentRule settles a commitment signal written before
+	// commitments had a rule, once its message has been read through the rule.
+	ResolutionSourceCommitmentRule = "commitment_rule"
 )
 
 // AcknowledgeTx marks one open signal acknowledged inside the caller's

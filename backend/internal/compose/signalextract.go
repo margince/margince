@@ -292,6 +292,7 @@ func recordEventSignal(
 			paramKind:               event.Kind,
 			"thread_key":            thread.Key,
 			extractionConfidenceKey: float64(event.Confidence),
+			commitmentDispatchedKey: event.Kind == extractKindCommitment,
 		},
 	}, now)
 }

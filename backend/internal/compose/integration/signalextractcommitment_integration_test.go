@@ -14,6 +14,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/modules/signals"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -119,5 +123,65 @@ func TestAPromiseInPrivateMailStaysWithItsOwner(t *testing.T) {
 	staged := e.WsScalar(t, `SELECT coalesce(on_behalf_of::text, '') FROM approval WHERE kind = 'commitment_task'`)
 	if staged != e.Rep1.String() {
 		t.Errorf("the proposal is staged for %q, want the private mail's owner", staged)
+	}
+}
+
+// A commitment signal written before commitments had a rule is read again
+// through it — around ITS message, however far back in the thread that is —
+// and settled, once.
+func TestAnOldCommitmentSignalIsReadThroughTheRuleOnce(t *testing.T) {
+	e := Setup(t)
+	company := e.SeedCompany(t, "Acme", &e.Rep1)
+	ines := employeeOf(t, e, company, "Ines Huber")
+	start := extractClock.Add(-30 * 24 * time.Hour)
+	var cited ids.UUID
+	for i := range 9 {
+		body, direction := "Status update.", "inbound"
+		if i == 1 {
+			body, direction = "Hi Ines, "+pricingPromise, "outbound"
+		}
+		id := seedMessage(t, e, ines, "thread-old", "Pricing", body, direction, start.Add(time.Duration(i)*time.Hour))
+		if i == 1 {
+			cited = id
+			party(t, id, "from", &e.Rep1, nil)
+			party(t, id, "to", nil, &ines)
+		}
+	}
+	var signal ids.UUID
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if _, err := signals.RecordDerived(e.Admin(), tx, signals.DerivedSignal{
+			Kind: "commitment_made", CompanyID: company, Summary: "They promised pricing.",
+			Severity: "info", Fingerprint: "legacy-" + cited.String(),
+			Evidence: []signals.DerivedEvidence{{Snippet: "They promised pricing.", ActivityID: cited}},
+		}, start); err != nil {
+			return err
+		}
+		return tx.QueryRow(e.Admin(), `SELECT id FROM signal WHERE kind = 'commitment_made'`).Scan(&signal)
+	}); err != nil {
+		t.Fatalf("seed the old signal: %v", err)
+	}
+
+	brain := &scriptedBrain{reply: commitmentReply(t, cited, pricingPromise, "", 0.95)}
+	if pass := extractPassStats(t, e, brain); pass.Converted != 1 {
+		t.Fatalf("the pass converted %d old commitment signals, want 1", pass.Converted)
+	}
+	task := e.WsScalar(t, `SELECT coalesce(assignee_id::text, '') FROM activity
+		WHERE kind = 'task' AND source_activity_id = $1`, cited)
+	if task != e.Rep1.String() {
+		t.Errorf("the old commitment became a task held by %q, want the colleague who sent it", task)
+	}
+	if got := e.WsScalar(t, `SELECT s.status || ' ' || r.source FROM signal s
+		JOIN signal_resolution r ON r.signal_id = s.id WHERE s.id = $1`, signal); got != "acknowledged commitment_rule" {
+		t.Errorf("the old signal reads %q, want it settled by the commitment rule", got)
+	}
+
+	// The ordinary read of the thread may be asked again — its newest window
+	// does not hold the cited message, so that reading is refused and retried —
+	// but the old signal is not read a second time.
+	if pass := extractPassStats(t, e, brain); pass.Converted != 0 {
+		t.Errorf("a second pass converted %d old signals; the one there was is done", pass.Converted)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE kind = 'task'`); n != 1 {
+		t.Errorf("after a second pass there are %d tasks, want the one", n)
 	}
 }
