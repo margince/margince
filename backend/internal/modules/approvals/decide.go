@@ -144,12 +144,11 @@ func (s *Service) runPrecheck(ctx context.Context, id ids.ApprovalID, approve bo
 	}
 	a, err := s.Get(ctx, id)
 	if err != nil {
-		// Not this function's refusal to make. The decision below re-reads the
-		// row under its own authority gate and answers about scope, existence
-		// and status there; answering here would decide the same question from
-		// the place with less context, and would turn a 404 into whatever this
-		// path happened to return.
-		return nil //nolint:nilerr // the decision re-reads and refuses properly
+		// Refused here too, with Get's own gated answer. Passing on would let a
+		// card that becomes decidable between this read and the decision be
+		// approved with its precheck never run, and an edit the precheck would
+		// refuse would land.
+		return err
 	}
 	check, ok := s.prechecks[a.Kind]
 	if !ok || !serverProposed(a) {
