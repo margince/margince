@@ -81,9 +81,7 @@ export function DealWatchList({
       )}
       {commitments.data.map((row) => (
         <PanelRow key={row.id} className="deal-watch-row">
-          <span className="t-body">
-            {`${row.contact_name}: ${row.body}`}
-          </span>
+          <span className="t-body">{`${row.contact_name}: ${row.body}`}</span>
           <span className="t-caption deal-watch-quote">
             {t("commitment.quote", { quote: row.source_quote })}
           </span>

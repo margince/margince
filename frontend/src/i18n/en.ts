@@ -2152,7 +2152,8 @@ export const en = {
   "commitment.dismiss": "Dismiss",
   "commitment.quote": "“{quote}”",
   "deal.watch.title": "Customer commitments",
-  "deal.watch.incomplete": "Some commitments on this account are hidden from you.",
+  "deal.watch.incomplete":
+    "Some commitments on this account are hidden from you.",
   "deal.watch.source": "Open message",
   "co.work.closes": "closes {date}",
   "co.brief.by.model": "Written by Margince",

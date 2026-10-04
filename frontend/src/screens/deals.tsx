@@ -114,12 +114,12 @@ import {
   PRIORITY_OPTIONS,
 } from "./deal360/dealcommercialfields";
 import { DealCommitteeCard } from "./deal360/dealcommitteecard";
-import { DealWatchCard } from "./deal360/dealwatchcard";
 import { dealSurfaceChips } from "./deal360/dealfilterchips";
 import { DealIdentityFacts, DealSubtitle } from "./deal360/dealheaderfacts";
 import { DealHistoryTab } from "./deal360/dealhistorytab";
 import { DealPulse } from "./deal360/dealpulse";
 import { DealRoomTab } from "./deal360/dealroomtab";
+import { DealWatchCard } from "./deal360/dealwatchcard";
 import { OutcomeReviewPanel } from "./deal360/outcomereview";
 import { useDealCoverage } from "./deal360/usedealcoverage";
 import { DealBulkBar } from "./dealbulk";

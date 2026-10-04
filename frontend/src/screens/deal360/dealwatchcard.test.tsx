@@ -43,7 +43,9 @@ function renderList(commitments: DealCommitments, onOpenEmail = vi.fn()) {
 describe("the deal's watch card", () => {
   it("names who committed, to what, in which words", () => {
     const open = renderList(ONE);
-    expect(screen.getByText("Ines Huber: Send the purchase order")).toBeTruthy();
+    expect(
+      screen.getByText("Ines Huber: Send the purchase order"),
+    ).toBeTruthy();
     expect(
       screen.getByText("“We will send the purchase order by Friday.”"),
     ).toBeTruthy();

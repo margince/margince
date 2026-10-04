@@ -2070,7 +2070,8 @@ export const vi = {
   "commitment.dismiss": "Bỏ qua",
   "commitment.quote": "“{quote}”",
   "deal.watch.title": "Cam kết của khách hàng",
-  "deal.watch.incomplete": "Một số cam kết của tài khoản này bạn không xem được.",
+  "deal.watch.incomplete":
+    "Một số cam kết của tài khoản này bạn không xem được.",
   "deal.watch.source": "Mở tin nhắn",
   "co.work.closes": "ch\u1ed1t {date}",
   "co.brief.by.model": "Do Margince viết",
