@@ -67,7 +67,7 @@ func (h dealCommitmentHandlers) read(ctx context.Context, dealID ids.DealID) (cr
 	}
 	// The grants the rows need are asked first, so a caller without them is
 	// refused on every deal, not only on one whose company they may see.
-	for _, object := range []string{"contact", "activity", "relationship"} {
+	for _, object := range []string{string(recordTypeContact), string(recordTypeActivity), string(recordTypeRelationship)} {
 		if err := auth.Require(ctx, object, principal.ActionRead); err != nil {
 			return out, err
 		}
