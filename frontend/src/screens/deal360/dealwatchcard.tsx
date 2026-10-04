@@ -52,7 +52,9 @@ export function DealWatchCard({
   onOpenEmail?: (activityId: string) => void;
 }>) {
   const query = useDealCommitments(dealId);
-  if (!query.data) {
+  // A server older than this card answers without the list, and a card
+  // guessing at it would claim what nobody read.
+  if (!query.data?.data) {
     return null;
   }
   return <DealWatchList commitments={query.data} onOpenEmail={onOpenEmail} />;
