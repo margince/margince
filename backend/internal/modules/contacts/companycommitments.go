@@ -353,8 +353,7 @@ func (s *Store) OpenCommitmentsAcrossWorkspace(
 
 // openCommitmentEitherSide is an open commitment either side made that no task
 // holds yet: ours not yet a task, or the customer's still owed.
-const openCommitmentEitherSide = `((` + ourPromiseNotYetATask + `)
-		    OR (c.kind = 'commitment_theirs' AND c.status = 'open' AND NOT c.needs_review))`
+const openCommitmentEitherSide = `((` + ourPromiseNotYetATask + `) OR (` + theirPromiseOpen + `))`
 
 // CountAccountCommitments is how many open commitments either side made with
 // the contacts currently employed at one account, as far as this caller may see
