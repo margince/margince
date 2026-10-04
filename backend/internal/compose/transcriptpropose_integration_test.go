@@ -683,7 +683,7 @@ func TestADeadlineOnADaylightSavingBoundaryStaysOnItsOwnDay(t *testing.T) {
 //
 // The owner arrived as prose and went into the task's BODY and nowhere else, so
 // the task said whose promise it was and belonged to nobody. Now it is theirs,
-// and it says the reader wrote it rather than a person.
+// and it says the reader wrote it rather than a human.
 func TestAConfidentPromiseByANamedColleagueIsTheirTaskWithoutAsking(t *testing.T) {
 	e := setupTranscript(t)
 	// One seat with a name a transcript could state. The harness gives all

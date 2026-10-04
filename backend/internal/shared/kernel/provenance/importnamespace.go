@@ -45,7 +45,8 @@ const (
 
 // CommitmentTaskSource names a task written for a commitment one of our users
 // made in a captured conversation. Its source_id is the commitment's evidence
-// locator, so a dismissed task is found again and never written twice.
+// locator, so a task a rep dismissed is found again instead of being
+// written anew.
 const CommitmentTaskSource = "commitment"
 
 // internalSourceSystems are the exact identities only an internal writer may

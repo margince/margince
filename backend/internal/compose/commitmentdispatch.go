@@ -58,7 +58,7 @@ const commitmentIdentityLocator = "locator"
 // Commitment is one promise as an extractor hands it to the rule.
 type Commitment struct {
 	// Extractor is the principal id the claim and the task are captured by,
-	// which is what marks the task as the extractor's rather than a person's.
+	// which is what marks the task as the extractor's rather than a human's.
 	Extractor        string
 	SourceActivityID ids.UUID
 	Summary          string
@@ -71,7 +71,7 @@ type Commitment struct {
 	// Theirs is the customer who made it. Set means the promise is theirs.
 	Theirs *ids.ContactID
 	// PromisedTo is who one of our promises was made to, so it is filed on
-	// their record as well. Nil when the source does not name one person.
+	// their record as well. Nil when the source does not name exactly one.
 	PromisedTo *ids.ContactID
 	// DueDate is the day the source stated, YYYY-MM-DD, or empty.
 	DueDate    string

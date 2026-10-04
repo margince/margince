@@ -169,11 +169,14 @@ func (s *Store) SetClaimTaskTx(ctx context.Context, tx pgx.Tx, claimID, taskID i
 	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {
 		return err
 	}
+	if _, err := storekit.LockRow(ctx, tx, "conversation_claim", claimID, storekit.LiveOnly); err != nil {
+		return err
+	}
 	var contactID ids.UUID
 	var status string
 	err := tx.QueryRow(ctx, `
-		UPDATE conversation_claim SET task_activity_id = $2, updated_at = now(), version = version + 1
-		 WHERE id = $1 AND task_activity_id IS NULL AND archived_at IS NULL
+		UPDATE conversation_claim SET task_activity_id = $2
+		 WHERE id = $1 AND task_activity_id IS NULL
 		RETURNING contact_id, status`, claimID, taskID).Scan(&contactID, &status)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil
@@ -181,7 +184,8 @@ func (s *Store) SetClaimTaskTx(ctx context.Context, tx pgx.Tx, claimID, taskID i
 	if err != nil {
 		return fmt.Errorf("link the claim to its task: %w", err)
 	}
-	auditID, err := storekit.Audit(ctx, tx, "update", "contact", contactID, nil,
+	auditID, err := storekit.Audit(ctx, tx, "update", "contact", contactID,
+		map[string]any{claimIDKey: claimID.String(), "task_activity_id": nil},
 		map[string]any{claimIDKey: claimID.String(), "task_activity_id": taskID.String()})
 	if err != nil {
 		return fmt.Errorf("audit the claim's task: %w", err)
