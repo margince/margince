@@ -2091,7 +2091,7 @@ export const de = {
   "commitment.quote": "„{quote}“",
   "deal.watch.title": "Zusagen des Kunden",
   "deal.watch.incomplete":
-    "Einige Zusagen dieses Kontos sind für Sie nicht sichtbar.",
+    "Einige Zusagen dieses Kontos sind für dich nicht sichtbar.",
   "deal.watch.source": "Nachricht öffnen",
   "co.work.closes": "Abschluss {date}",
   "co.brief.by.model": "Von Margince geschrieben",
