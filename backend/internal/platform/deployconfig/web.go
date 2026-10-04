@@ -19,6 +19,8 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"golang.org/x/text/language"
 )
 
 // Web is the operator's published-documents section.
@@ -30,19 +32,26 @@ type Web struct {
 // SecurityTxt is the RFC 9116 contact file, field by field.
 type SecurityTxt struct {
 	// Contact is one or more URIs a finder reports to: mailto:, https: or tel:.
-	Contact []string `yaml:"contact"`
+	Contact []string `yaml:"contact" schema:"required"`
 	// Expires is the RFC 3339 instant after which a reader treats the file as stale.
-	Expires string `yaml:"expires"`
+	Expires string `yaml:"expires" schema:"required,date-time"`
 	// Policy is an optional https: link to the disclosure policy.
 	Policy string `yaml:"policy"`
 	// PreferredLanguages is an optional list of language tags (en, de) a report may be written in.
 	PreferredLanguages []string `yaml:"preferred_languages"`
 }
 
-// languageTag is the BCP 47 shape at the precision a header line needs: letters
-// first, then hyphen-joined alphanumeric subtags. It refuses the comma and the
-// line break a value would otherwise smuggle into the rendered file.
+// languageTag is the character set of a BCP 47 tag: letters first, then
+// hyphen-joined alphanumeric subtags. It refuses the comma and the line break a
+// value would otherwise smuggle into the rendered file, and the underscore
+// language.Parse forgives; language.Parse then holds the tag to the grammar
+// (en-a, a singleton with nothing after it, is refused).
 var languageTag = regexp.MustCompile(`^[A-Za-z]{1,8}(-[A-Za-z0-9]{1,8})*$`)
+
+// rfc3339 is the date-time production of RFC 3339 §5.6. time.Parse alone is
+// looser: it takes a comma before the fraction, which the served file would
+// then restate as something the operator never wrote.
+var rfc3339 = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$`)
 
 // securityTxtHorizon is RFC 9116's advice for how far ahead Expires should sit:
 // less than a year, so the file is looked at again.
@@ -73,7 +82,7 @@ func (s SecurityTxt) validate() error {
 		}
 	}
 	for _, lang := range s.PreferredLanguages {
-		if !languageTag.MatchString(lang) {
+		if _, err := language.Parse(lang); err != nil || !languageTag.MatchString(lang) {
 			return fmt.Errorf("deployconfig: web.security_txt.preferred_languages %q is not a language tag such as en or de-CH", lang)
 		}
 	}
@@ -86,7 +95,7 @@ func (s SecurityTxt) expiry() (time.Time, error) {
 		return time.Time{}, errors.New("deployconfig: web.security_txt.expires is required (RFC 3339, e.g. 2030-01-01T00:00:00Z)")
 	}
 	at, err := time.Parse(time.RFC3339, s.Expires)
-	if err != nil {
+	if err != nil || !rfc3339.MatchString(s.Expires) {
 		return time.Time{}, fmt.Errorf("deployconfig: web.security_txt.expires %q is not an RFC 3339 date-time such as 2030-01-01T00:00:00Z", s.Expires)
 	}
 	return at, nil
@@ -110,6 +119,9 @@ func checkURI(raw string, schemes ...string) error {
 		}
 		if scheme != "https" && u.Opaque == "" {
 			return errors.New("names no address")
+		}
+		if scheme == "mailto" && !strings.Contains(u.Opaque, "@") {
+			return errors.New("names no mailbox")
 		}
 		return nil
 	}

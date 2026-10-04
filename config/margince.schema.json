@@ -412,17 +412,23 @@
             "null"
           ],
           "additionalProperties": false,
+          "required": [
+            "contact",
+            "expires"
+          ],
           "properties": {
             "contact": {
               "description": "Contact is one or more URIs a finder reports to: mailto:, https: or tel:.",
               "type": "array",
               "items": {
                 "type": "string"
-              }
+              },
+              "minItems": 1
             },
             "expires": {
               "description": "Expires is the RFC 3339 instant after which a reader treats the file as stale.",
-              "type": "string"
+              "type": "string",
+              "format": "date-time"
             },
             "policy": {
               "description": "Policy is an optional https: link to the disclosure policy.",

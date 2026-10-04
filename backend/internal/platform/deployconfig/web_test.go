@@ -64,17 +64,22 @@ func TestAnUnsetSecurityTxtRendersNothing(t *testing.T) {
 func TestSecurityTxtRefusesWhatRFC9116OrTheFileFormatCannotCarry(t *testing.T) {
 	const expires = `expires: "2030-01-01T00:00:00Z"`
 	cases := map[string]string{
-		"no contact":           `{ ` + expires + ` }`,
-		"no expires":           `{ contact: ["mailto:a@example.org"] }`,
-		"expires not rfc3339":  `{ contact: ["mailto:a@example.org"], expires: "next year" }`,
-		"bare address":         `{ contact: ["a@example.org"], ` + expires + ` }`,
-		"plain http contact":   `{ contact: ["http://example.org"], ` + expires + ` }`,
-		"https without a host": `{ contact: ["https:///report"], ` + expires + ` }`,
-		"empty mailto":         `{ contact: ["mailto:"], ` + expires + ` }`,
-		"line break injected":  `{ contact: ["mailto:a@example.org\nPolicy: https://evil.example"], ` + expires + ` }`,
-		"space in contact":     `{ contact: ["mailto:a@example.org x"], ` + expires + ` }`,
-		"mailto policy":        `{ contact: ["mailto:a@example.org"], policy: "mailto:a@example.org", ` + expires + ` }`,
-		"language list joined": `{ contact: ["mailto:a@example.org"], preferred_languages: ["en, de"], ` + expires + ` }`,
+		"no contact":              `{ ` + expires + ` }`,
+		"no expires":              `{ contact: ["mailto:a@example.org"] }`,
+		"expires not rfc3339":     `{ contact: ["mailto:a@example.org"], expires: "next year" }`,
+		"bare address":            `{ contact: ["a@example.org"], ` + expires + ` }`,
+		"plain http contact":      `{ contact: ["http://example.org"], ` + expires + ` }`,
+		"https without a host":    `{ contact: ["https:///report"], ` + expires + ` }`,
+		"empty mailto":            `{ contact: ["mailto:"], ` + expires + ` }`,
+		"line break injected":     `{ contact: ["mailto:a@example.org\nPolicy: https://evil.example"], ` + expires + ` }`,
+		"space in contact":        `{ contact: ["mailto:a@example.org x"], ` + expires + ` }`,
+		"mailto policy":           `{ contact: ["mailto:a@example.org"], policy: "mailto:a@example.org", ` + expires + ` }`,
+		"language list joined":    `{ contact: ["mailto:a@example.org"], preferred_languages: ["en, de"], ` + expires + ` }`,
+		"mailto with no mailbox":  `{ contact: ["mailto:?subject=report"], ` + expires + ` }`,
+		"mailto not an address":   `{ contact: ["mailto:security"], ` + expires + ` }`,
+		"expires comma fraction":  `{ contact: ["mailto:a@example.org"], expires: "2030-01-01T00:00:00,5Z" }`,
+		"language bare singleton": `{ contact: ["mailto:a@example.org"], preferred_languages: ["en-a"], ` + expires + ` }`,
+		"language underscore":     `{ contact: ["mailto:a@example.org"], preferred_languages: ["en_US"], ` + expires + ` }`,
 	}
 	for name, block := range cases {
 		_, err := Parse([]byte("version: 1\nweb: { security_txt: " + block + " }\n"))

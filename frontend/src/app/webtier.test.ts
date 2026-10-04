@@ -80,7 +80,8 @@ function answer(path: string): Answer {
   if (where.modifier === "=") return "file";
   const tries = /try_files\s+([^;]+);/.exec(where.body)?.[1].split(/\s+/);
   if (!tries) throw new Error(`the location for ${path} has no try_files`);
-  if (BUILD.has(path)) return "file";
+  // A built file is served only where nginx tries the path itself first.
+  if (BUILD.has(path) && tries[0] === "$uri") return "file";
   const last = tries.at(-1);
   if (last === "=404") return 404;
   if (last === "/index.html") return "shell";
@@ -105,6 +106,9 @@ describe("the web tier answers a file it does not have with 404, never the app s
     "/.well-known/security.txt",
     "/.env",
     "/.git/config",
+    "/backup.zip/",
+    "/wp-login.php/",
+    "/.env/",
     "/apple-touch-icon-precomposed.png",
     "/assets/index-0000.js",
     "/mcp-apps/missing.html",
@@ -146,13 +150,27 @@ describe("the web tier answers a file it does not have with 404, never the app s
 describe("every response the web tier sends carries the whole security set", () => {
   const server = headers(conf.slice(0, conf.search(/^\s*location\s/m)));
 
-  it("declares the hardening headers on the server block", () => {
+  it("declares the whole set on the server block", () => {
     for (const name of [
+      "Content-Security-Policy",
+      "X-Frame-Options",
+      "X-Content-Type-Options",
+      "X-Robots-Tag",
+      "Referrer-Policy",
+      "Strict-Transport-Security",
       "Permissions-Policy",
       "Cross-Origin-Opener-Policy",
       "Cross-Origin-Resource-Policy",
     ]) {
       expect(server.has(name), name).toBe(true);
+    }
+  });
+
+  // The shell and the file-or-404 location inherit the set; one add_header of
+  // their own would replace it, and every page load would ship with none.
+  it("adds no header of its own where the shell and the 404s are answered", () => {
+    for (const path of ["/", "/contacts", "/backup.zip"]) {
+      expect(locate(path).body, path).not.toMatch(/add_header/);
     }
   });
 

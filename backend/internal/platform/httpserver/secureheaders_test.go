@@ -17,6 +17,8 @@ func TestSecureHeadersSetsTheWholeBrowserFacingSet(t *testing.T) {
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/v1/me", nil))
 	for header, want := range map[string]string{
+		"Content-Security-Policy": "default-src 'self'; script-src 'self'; connect-src 'self'; img-src 'self' data:; " +
+			"style-src 'self' 'unsafe-inline'; frame-ancestors 'none'",
 		"X-Content-Type-Options":       "nosniff",
 		"X-Frame-Options":              "DENY",
 		"Referrer-Policy":              "no-referrer",
@@ -29,14 +31,12 @@ func TestSecureHeadersSetsTheWholeBrowserFacingSet(t *testing.T) {
 			t.Errorf("%s = %q, want %q", header, got, want)
 		}
 	}
-	if rec.Header().Get("Content-Security-Policy") == "" {
-		t.Error("no Content-Security-Policy")
-	}
 }
 
 // The policy denies what the app never asks for and allows only what it uses,
 // for this origin only.
 func TestPermissionsPolicyAllowsOnlyTheClipboardWriteTheAppUses(t *testing.T) {
+	clipboardWrites := 0
 	for _, directive := range strings.Split(PermissionsPolicy, ", ") {
 		feature, allow, ok := strings.Cut(directive, "=")
 		if !ok {
@@ -45,10 +45,15 @@ func TestPermissionsPolicyAllowsOnlyTheClipboardWriteTheAppUses(t *testing.T) {
 		want := "()"
 		if feature == "clipboard-write" {
 			want = "(self)"
+			clipboardWrites++
 		}
 		if allow != want {
 			t.Errorf("%s=%s, want %s", feature, allow, want)
 		}
+	}
+	// The copy buttons use it, so the one allowance must stay.
+	if clipboardWrites != 1 {
+		t.Errorf("clipboard-write appears %d times, want exactly once", clipboardWrites)
 	}
 	for _, denied := range []string{"camera", "microphone", "geolocation", "payment", "usb"} {
 		if !strings.Contains(PermissionsPolicy, denied+"=()") {
