@@ -31,6 +31,9 @@ import (
 // finds the decisions on one activity by it.
 const causeProjectFilingUndone = "project_filing_undone"
 
+// sqlTrue is the visibility clause of a caller whose read scope is unnarrowed.
+const sqlTrue = "true"
+
 // ProjectFilingRefusedError is a refusal the caller can act on: the code says
 // which rule stands in the way, and it answers 409 because the request is fine
 // and the record is in a state that forbids it.
@@ -176,7 +179,7 @@ func hiddenProjects(ctx context.Context, tx pgx.Tx, projects []ids.UUID) (map[id
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	listPos := arg(projects)
-	visible := "true"
+	visible := sqlTrue
 	if !auth.ReadGranted(ctx, linkEntityProject) {
 		visible = "false"
 	} else if clause, err := auth.ScopeClauseFor(ctx, linkEntityProject, "t", arg); err != nil {

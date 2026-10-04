@@ -83,7 +83,7 @@ func filingsStayUndoable(ctx context.Context, guard filingGuard, change json.Raw
 	if err := json.Unmarshal(change, &call); err != nil {
 		return false
 	}
-	if call.EntityType != "project" {
+	if call.EntityType != string(recordTypeProject) {
 		return true
 	}
 	if guard == nil {

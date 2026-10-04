@@ -10,9 +10,9 @@ package privacy
 
 import (
 	"fmt"
-	"github.com/margince/margince/backend/internal/shared/kernel/retentionscope"
 	"time"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/retentionscope"
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 )
 
