@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"unicode"
 	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
@@ -93,18 +94,18 @@ func evidenceSpan(body, quote string) (string, bool) {
 }
 
 // sentenceEnds reports whether the byte at i ends a sentence. A point between
-// two digits is a decimal ("2.5 days"), not the end of one.
+// two digits, in any script, is a decimal ("2.5 days"), not the end of one.
 func sentenceEnds(text string, i int) bool {
 	switch text[i] {
 	case '!', '?':
 		return true
 	case '.':
-		return i == 0 || i == len(text)-1 || !isDigit(text[i-1]) || !isDigit(text[i+1])
+		before, _ := utf8.DecodeLastRuneInString(text[:i])
+		after, _ := utf8.DecodeRuneInString(text[i+1:])
+		return !unicode.IsDigit(before) || !unicode.IsDigit(after)
 	}
 	return false
 }
-
-func isDigit(b byte) bool { return b >= '0' && b <= '9' }
 
 // dispatchCommitment files one commitment from a conversation through the
 // commitment rule, and reports whether anything new came of it.

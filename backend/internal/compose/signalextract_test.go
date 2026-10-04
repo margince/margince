@@ -314,4 +314,8 @@ func TestAQuoteIsKnownByTheSentenceItSitsIn(t *testing.T) {
 	if before != after || before != "We can do it in 2.5 days at 1.200 EUR." {
 		t.Errorf("a sentence with decimals was split into %q and %q", before, after)
 	}
+	devanagari := "हम २.५ दिन में भेजेंगे. धन्यवाद."
+	if a, _ := evidenceSpan(devanagari, "हम २"); a != "हम २.५ दिन में भेजेंगे." {
+		t.Errorf("a decimal in another script ended the sentence: %q", a)
+	}
 }
