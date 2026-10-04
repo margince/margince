@@ -71,7 +71,8 @@ func (e *CounterpartyVerdictEngine) StageReviewsWorkspace(ctx context.Context, m
 		for _, row := range rows {
 			if e.skipReservedDomains && values.IsReservedAddress(row.Email) {
 				if err := e.closeReservedDomainReview(wsCtx, row); err != nil {
-					return err
+					e.log.WarnContext(wsCtx, "counterparty verdict: closing a reserved-domain review failed",
+						"disposition", row.ID.String(), "err", err)
 				}
 				continue
 			}

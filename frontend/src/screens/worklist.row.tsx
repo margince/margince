@@ -203,7 +203,7 @@ export function WorklistRow({
     ? undefined
     : aboutRecord(item, emailOpener !== undefined);
   const touch = lastTouch(touchOf(item, framed), t, locale, zone);
-  const host = framed ? null : hostText(item, viewer?.id, t);
+  const host = hostText(item, viewer?.id, t);
   // Whether the day put a state on this row — overdue, or a meeting with
   // nothing prepared. They ride on the title line, which is why it is drawn on
   // a row that has no title of its own to draw.

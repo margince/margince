@@ -145,8 +145,11 @@ func TestChampionUnknownIsSaidOnlyOfAnImportedDeal(t *testing.T) {
 			if !found {
 				t.Fatal("the deal is not on the at-risk lane")
 			}
-			if got := row.NoChampion != nil && *row.NoChampion; got != tc.noChampion {
-				t.Errorf("no champion = %v, want %v", got, tc.noChampion)
+			switch {
+			case tc.noChampion && (row.NoChampion == nil || !*row.NoChampion):
+				t.Errorf("no champion = %v, want a no-champion claim", derefOrNil(row.NoChampion))
+			case !tc.noChampion && row.NoChampion != nil:
+				t.Errorf("no champion = %v, want no claim at all", *row.NoChampion)
 			}
 			if row.ChampionUnknown != tc.unknown {
 				t.Errorf("champion unknown = %v, want %v", row.ChampionUnknown, tc.unknown)

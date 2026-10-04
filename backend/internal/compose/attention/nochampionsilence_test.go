@@ -11,7 +11,7 @@ package attention
 // with none, because telling them apart IS the disclosure.
 //
 // That rule lives in two places — the field's description in crm.yaml and
-// noChampionOf, which maps Covered to nil — and a description enforces nothing.
+// championAnswer.noChampion, which maps Covered to nil — and a description enforces nothing.
 // This is the half that fails.
 
 import (
@@ -23,7 +23,7 @@ import (
 // Both answers the seam can give, and neither may reach the wire as a false.
 //
 // The loop is the point: a covered committee (false) and an uncovered one (true)
-// take different routes through noChampionOf, and only the second may surface.
+// take different routes through championAnswer.noChampion, and only the second may surface.
 // Asserting the covered case alone would leave a projection free to invert the
 // finding, which is the same defect wearing the other sign.
 func TestTheCoverageSeamMintsNoStatedFalse(t *testing.T) {

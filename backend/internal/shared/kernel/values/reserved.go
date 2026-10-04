@@ -31,10 +31,11 @@ func IsReservedHost(host string) bool {
 	return false
 }
 
-// IsReservedAddress reports whether addr's domain is a reserved host. The
-// domain is read through ParseEmail, after the LAST "@", so a quoted local
-// part cannot smuggle a reserved name in front of a real domain. A malformed
-// address is not reserved: nothing here can tell where it would go.
+// IsReservedAddress reports whether addr's domain is a reserved host, read
+// through ParseEmail. ParseEmail refuses a quoted local part, so a reserved
+// name typed in front of the "@" never makes an address reserved, and a real
+// domain behind one never hides it. A malformed address is not reserved:
+// nothing here can tell where it would go.
 func IsReservedAddress(addr string) bool {
 	email, err := ParseEmail(addr)
 	if err != nil {

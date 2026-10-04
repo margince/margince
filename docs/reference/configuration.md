@@ -1219,8 +1219,10 @@ RFC 2606 reserved name out of the contact review queue: `example.com`,
 and stays on the timeline. Only the `capture_counterparty` proposal ("is this a
 contact worth keeping?") is not raised, so no approval and no notification
 appear for it. The review sweep closes such a sender's open question as
-`rejected` instead of asking it. Set it to `false` only for an installation that
-deliberately runs a test mailbox and wants those senders proposed.
+`rejected` instead of asking it. Proposals raised before the setting took
+effect stay open; reject them in the decision queue as usual. Set it to `false`
+only for an installation that deliberately runs a test mailbox and wants those
+senders proposed.
 
 `company_context.rollout` is the ordered server-side company-context capability:
 `off` disables context reads, injection, and the new onboarding surface; `read`

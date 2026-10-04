@@ -75,7 +75,8 @@ type Capture struct {
 	// SkipReservedDomainProposalsSetting keeps a sender on an RFC 2606 reserved
 	// name (example.com, *.test, ...) out of the contact review queue. Their mail
 	// is still captured; only the "is this a contact worth keeping?" question is
-	// not asked, because no real correspondent lives under those names.
+	// not asked, because no real correspondent lives under those names. Absent
+	// means true. Proposals raised before it took effect stay open.
 	//
 	// ON unless the file says otherwise, a pointer for the same reason as
 	// TracePayloadsSetting. Turn it off for an installation that deliberately

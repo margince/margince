@@ -8,6 +8,7 @@ package attention
 
 import (
 	"context"
+	"slices"
 	"testing"
 	"time"
 
@@ -28,7 +29,13 @@ type employersSaying struct {
 
 func (e employersSaying) CurrentEmployers(_ context.Context, contactIDs []ids.UUID) (map[ids.UUID]crmcontracts.ContactEmployer, error) {
 	*e.asked = append(*e.asked, contactIDs...)
-	return e.known, nil
+	out := make(map[ids.UUID]crmcontracts.ContactEmployer, len(contactIDs))
+	for _, id := range contactIDs {
+		if employer, ok := e.known[id]; ok {
+			out[id] = employer
+		}
+	}
+	return out, nil
 }
 
 func TestAnUnansweredMeetingNamesItsCustomerAndItsHost(t *testing.T) {
@@ -127,9 +134,10 @@ func TestOnlyAMeetingRowSaysWhereItsContactWorks(t *testing.T) {
 	if rows[2].Contact.Employer != nil {
 		t.Errorf("a waiting row carries employer %+v, want none", rows[2].Contact.Employer)
 	}
-	for _, id := range asked {
-		if id == sender {
-			t.Error("the employer read was asked about a row that is not a meeting")
-		}
+	if !slices.Contains(asked, known) || !slices.Contains(asked, withheld) {
+		t.Errorf("the employer read was asked about %v, want both meeting contacts", asked)
+	}
+	if slices.Contains(asked, sender) {
+		t.Error("the employer read was asked about a row that is not a meeting")
 	}
 }

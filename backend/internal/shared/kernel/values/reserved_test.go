@@ -39,7 +39,7 @@ func TestIsReservedHostRefusesLookAlikes(t *testing.T) {
 	}
 }
 
-func TestIsReservedAddressReadsTheDomainAfterTheLastAt(t *testing.T) {
+func TestIsReservedAddressReadsOnlyTheDomain(t *testing.T) {
 	cases := map[string]bool{
 		"buyer@example.com":      true,
 		"Buyer@Mail.Example.COM": true,
@@ -50,6 +50,10 @@ func TestIsReservedAddressReadsTheDomainAfterTheLastAt(t *testing.T) {
 		"not an address":         false,
 		"":                       false,
 		"buyer@.example.com":     false,
+		// A quoted local part is no plain address, whichever side names a
+		// reserved host.
+		`"qa@example.com"@acme.de`: false,
+		`"qa@acme.de"@example.com`: false,
 	}
 	for addr, want := range cases {
 		if got := IsReservedAddress(addr); got != want {

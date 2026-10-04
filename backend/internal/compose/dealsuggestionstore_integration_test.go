@@ -480,3 +480,25 @@ func TestAReviewerAnsweringAPairWaitsForTheScoutActingOnIt(t *testing.T) {
 		t.Fatalf("the review, once the scout let go: %v", err)
 	}
 }
+
+// A suggestion a user dismissed on one record claims its evidence for the
+// business: the twin raised before the pair was known is withdrawn on the next
+// pass, though no older open suggestion claims it.
+func TestAScoutPassWithdrawsATwinOfADismissedSuggestion(t *testing.T) {
+	e := setupScout(t)
+	named := e.SeedCompany(t, "Northwind Traders", nil)
+	twin := e.SeedCompany(t, "NORTHWIND TRADERS", nil)
+	dana := e.employee(t, "Dana Buyer", named)
+	meeting := e.meeting(e.Admin(), t, "Scoping workshop", &dana, e.daysAgo(3))
+	dismissed := e.recordUnpaired(t, named, meeting)
+	raisedTwice := e.recordUnpaired(t, twin, meeting)
+	if _, err := e.decider().DismissSuggestion(e.Admin(), dismissed); err != nil {
+		t.Fatalf("dismissing: %v", err)
+	}
+
+	e.pass(t)
+
+	if state := e.suggestionState(t, raisedTwice); state != deals.SuggestionSuperseded {
+		t.Fatalf("the twin of a dismissed suggestion is %q, want it superseded", state)
+	}
+}

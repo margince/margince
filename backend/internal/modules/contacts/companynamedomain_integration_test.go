@@ -161,3 +161,45 @@ func TestADomainEditWaitsOnTheNameLockBeforeTheCompanyRow(t *testing.T) {
 		t.Fatal("the domain edit never finished after the lock was released")
 	}
 }
+
+// A company merge takes the name lock before it marks the pair, the order a
+// domain claim filing that same pair keeps. Taken the other way round, the
+// merge held the pair row while it waited on the name lock, and the claim held
+// the name lock while it waited on the row.
+func TestACompanyMergeWaitsOnTheNameLockBeforeThePairRow(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := asArchiver(e)
+	first, _ := seedCompanyPair(ctx, t, e)
+	open := openCandidates(ctx, t, e, entityCompany)
+	if len(open) != 1 {
+		t.Fatalf("the seed left %d open candidates, want 1", len(open))
+	}
+	pair := open[0].ID
+
+	holder, pid := e.holdCompanyNameLock(ctx, t)
+	done := make(chan error, 1)
+	go func() {
+		_, err := e.store.DisposeDedupeCandidate(ctx, pair, "merge", &first)
+		done <- err
+	}()
+	if waited, finished := waitUntilBlockedBy(t, holder, pid, done); !waited {
+		t.Fatalf("the merge never waited on the name lock (err=%v)", finished)
+	}
+	// The pair row is still free while the merge waits: it was not taken first.
+	var free bool
+	if err := holder.QueryRow(ctx, `SELECT true FROM dedupe_candidate WHERE id = $1 FOR UPDATE NOWAIT`,
+		pair).Scan(&free); err != nil {
+		t.Fatalf("the parked merge already holds the pair row: %v", err)
+	}
+	if err := holder.Rollback(ctx); err != nil {
+		t.Fatalf("releasing the lock holder: %v", err)
+	}
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatalf("the merge failed once the lock was free: %v", err)
+		}
+	case <-time.After(30 * time.Second):
+		t.Fatal("the merge never finished after the lock was released")
+	}
+}

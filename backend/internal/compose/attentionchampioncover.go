@@ -7,7 +7,7 @@ package compose
 // deals that reached the morning queue.
 //
 // Its own file because this lane fact costs a second database read after the
-// candidate sweep, and because the judgement in noChampionOf is a privacy rule
+// candidate sweep, and because the judgement in championAnswer.noChampion is a privacy rule
 // rather than a rendering detail: three inputs arrive and only one of them may
 // become a sentence a rep acts on.
 
