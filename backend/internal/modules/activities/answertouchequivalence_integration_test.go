@@ -29,7 +29,7 @@ import (
 // the walk's table and alias, the touch predicate, and the asker predicate.
 var contactFirstTouchArm = regexp.MustCompile(`(?s)CROSS JOIN LATERAL \(SELECT (\w+)\.activity_id FROM (\w+) \w+\s+` +
 	`WHERE \w+\.contact_id = answer_asker\.contact_id OFFSET 0\) answer_walk\s+` +
-	`CROSS JOIN LATERAL \(SELECT answer_touch\.occurred_at FROM activity answer_touch\s+` +
+	`CROSS JOIN LATERAL \(SELECT answer_touch\.id, answer_touch\.occurred_at FROM activity answer_touch\s+` +
 	`WHERE answer_touch\.id = answer_walk\.activity_id\s+AND (.*?) OFFSET 0\) answer_touch\s+` +
 	`WHERE (answer_asker\.activity_id = \w+\.id AND answer_asker\.role = 'from')`)
 
