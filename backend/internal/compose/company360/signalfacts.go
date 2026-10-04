@@ -3,10 +3,10 @@
 
 package company360
 
-// What the account's open signals say, read once for the three surfaces that
-// ask: the strip states the worst, the health section counts the commitments,
-// and the contradiction rule asks whether the contract ended. Three reads
-// would let them describe three different instants of the same account.
+// What the account's open signals say, read once for the two surfaces that
+// ask: the strip states the worst, and the contradiction rule asks whether the
+// contract ended. Two reads would let them describe two different instants of
+// the same account.
 
 import (
 	"context"
@@ -47,12 +47,8 @@ type signalHeadline struct {
 }
 
 // readSignalFacts reads what the account's open signals say: the worst one
-// standing, and whether the contract ended.
-//
-// It reports counted=false rather than zero when the caller cannot read
-// signals, following pendingApprovals' shape in this package: zero would say
-// the account owes nothing, which is a claim about the account rather than
-// about what this reader was allowed to see.
+// standing, and whether the contract ended. A caller who may not read signals
+// gets Readable false rather than an account with nothing standing.
 func readSignalFacts(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) (signalFacts, error) {
 	if !auth.ReadGranted(ctx, "signal") {
 		return signalFacts{}, nil

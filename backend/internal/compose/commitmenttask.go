@@ -10,6 +10,7 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -163,6 +164,9 @@ func commitmentTaskEffect(
 		if proposal.SeatID != nil {
 			assignee = *proposal.SeatID
 		}
+		// Refused before the approval is touched when what was staged already
+		// says so; asked again inside the transaction for a thread made private
+		// since.
 		if !mayHoldPrivateTask(proposal.PrivateTo, assignee) {
 			return fmt.Errorf("compose: a commitment read out of private mail is its owner's to accept: %w",
 				apperrors.ErrPermissionDenied)
@@ -176,16 +180,44 @@ func commitmentTaskEffect(
 			Type: principal.PrincipalSystem, ID: commitmentAcceptActor,
 		})
 		return svc.RedeemAndApply(ctx, approvalID, CommitmentTaskKind, diffHash, func(tx pgx.Tx) error {
-			_, err := writeCommitmentTask(execCtx, tx, tasks, claims, commitmentTask{
+			privateTo, err := sourcePrivateToNow(ctx, tx, proposal.SourceActivityID, proposal.PrivateTo)
+			if err != nil {
+				return err
+			}
+			if !mayHoldPrivateTask(privateTo, assignee) {
+				return fmt.Errorf("compose: a commitment read out of private mail is its owner's to accept: %w",
+					apperrors.ErrPermissionDenied)
+			}
+			_, err = writeCommitmentTask(execCtx, tx, tasks, claims, commitmentTask{
 				Extractor: commitmentAcceptActor, Locator: proposal.Locator,
 				Summary: proposal.Summary, Body: proposal.Body,
 				SourceActivityID: proposal.SourceActivityID, Links: proposal.Links,
 				DueDate: proposal.DueDate, Assignee: assignee, ClaimID: proposal.ClaimID,
-				PrivateTo: proposal.PrivateTo,
+				PrivateTo: privateTo,
 			})
 			return err
 		})
 	}
+}
+
+// sourcePrivateToNow is the member the proposal's source mail is private to as
+// the extractor's rule reads it at acceptance. A thread made private after the
+// proposal was staged narrows the task to its owner; a thread the rule no
+// longer reads at all keeps what was staged.
+func sourcePrivateToNow(ctx context.Context, tx pgx.Tx, source ids.UUID, staged *ids.UUID) (*ids.UUID, error) {
+	var key *string
+	err := tx.QueryRow(ctx, `SELECT thread_key FROM activity WHERE id = $1 AND kind = 'email'`, source).Scan(&key)
+	if errors.Is(err, pgx.ErrNoRows) || (err == nil && key == nil) {
+		return staged, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("compose: reading a commitment's source thread: %w", err)
+	}
+	_, owner, offered, err := threadReaderNow(ctx, tx, *key)
+	if err != nil || !offered || owner.IsZero() {
+		return staged, err
+	}
+	return &owner, nil
 }
 
 // commitmentTaskPrecheck refuses an edit that reaches past the promise's

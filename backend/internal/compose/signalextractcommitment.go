@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // extractKindCommitment is the event kind that goes to the commitment rule.
@@ -101,7 +102,9 @@ func (x *SignalExtractor) emailCommitment(
 	ctx context.Context, tx pgx.Tx, thread settledThread, event extractedEvent, cited ids.UUID,
 ) (Commitment, bool, error) {
 	message, found := citedMessage(thread, cited)
-	span, spanned := evidenceSpan(message.Body, event.Quote)
+	// Only the words the sender wrote: a reply quoting our own promise back to
+	// us must not file that promise as theirs.
+	span, spanned := evidenceSpan(textlang.CurrentMessage(message.Body), event.Quote)
 	if !found || !spanned {
 		return Commitment{}, false, nil
 	}

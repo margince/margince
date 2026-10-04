@@ -58,7 +58,10 @@ func (x *SignalExtractor) convertLegacyCommitments(ctx context.Context) (int, er
 	}
 	settled := 0
 	for _, legacy := range owed {
-		if stop, _ := outOfTime(ctx); stop {
+		if stop, cancelled := outOfTime(ctx); stop {
+			if cancelled {
+				return settled, fmt.Errorf("signal extract: converting old commitment signals: %w", ctx.Err())
+			}
 			break
 		}
 		if err := x.convertLegacyCommitment(ctx, legacy); err != nil {
@@ -83,7 +86,9 @@ func (x *SignalExtractor) convertLegacyCommitment(ctx context.Context, legacy le
 	var events []extractedEvent
 	if len(thread.Messages) > 0 {
 		var err error
-		events, err = x.ask(ctx, thread)
+		readCtx, cancelRead := readDeadline(ctx)
+		events, err = x.ask(readCtx, thread)
+		cancelRead()
 		// A refused reading settles the signal like an empty one: the old card
 		// held nothing a reader could act on, and asking again every hour for a
 		// message the model will not read would cost more than it could find.
@@ -111,8 +116,9 @@ func (x *SignalExtractor) convertLegacyCommitment(ctx context.Context, legacy le
 	})
 }
 
-// legacyCommitmentsOwed lists the open commitment signals written without the
-// rule, oldest first.
+// legacyCommitmentsOwed lists the open commitment signals the extractor wrote
+// without the rule, oldest first. A signal a human filed is theirs and is left
+// alone.
 func legacyCommitmentsOwed(ctx context.Context, tx pgx.Tx) ([]legacyCommitment, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT s.id, cite.activity
@@ -123,6 +129,7 @@ func legacyCommitmentsOwed(ctx context.Context, tx pgx.Tx) ([]legacyCommitment, 
 		        WHERE item->>'source_type' = 'activity'
 		        LIMIT 1) cite ON true
 		 WHERE s.kind = $1 AND s.status = 'open' AND s.archived_at IS NULL
+		   AND s.source = 'signal-scan'
 		   AND s.resolved_company_id IS NOT NULL
 		   AND NOT EXISTS (
 		         SELECT 1 FROM audit_log al

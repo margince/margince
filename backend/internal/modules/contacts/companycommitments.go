@@ -30,6 +30,19 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// employedAtAccount is the clause that makes a claim this account's: its
+// contact is currently employed there. companyArg is the company's
+// placeholder; edgeScope narrows the edge for the caller, or is the literal
+// true for the unscoped count. Every read in this file asks it the same way.
+func employedAtAccount(companyArg, edgeScope string) string {
+	return `EXISTS (
+		         SELECT 1 FROM relationship r
+		          WHERE r.contact_id = pr.id AND r.kind = 'employment'
+		            AND r.company_id = ` + companyArg + `
+		            AND ` + employment.IsCurrentSQL("r.ended_at") + ` AND r.archived_at IS NULL
+		            AND (` + edgeScope + `))`
+}
+
 // companyCommitmentsCap bounds one account's sweep. A card names one promise and
 // the rung ranks over the set, so the cap has to be wide enough that the
 // ranking is not decided by where the read stopped.
@@ -143,12 +156,7 @@ func (s *Store) OpenCommitmentsForCompany(
 		  JOIN contact pr ON pr.id = c.contact_id AND pr.archived_at IS NULL
 		 WHERE `+ourPromiseNotYetATask+`
 		   AND c.archived_at IS NULL
-		   AND EXISTS (
-		         SELECT 1 FROM relationship r
-		          WHERE r.contact_id = pr.id AND r.kind = 'employment'
-		            AND r.company_id = $%[1]d
-		            AND `+employment.IsCurrentSQL("r.ended_at")+` AND r.archived_at IS NULL
-		            AND (%[4]s))
+		   AND `+employedAtAccount("$%[1]d", "%[4]s")+`
 		   AND (%[3]s) AND (%[2]s)
 		 ORDER BY (c.due_at IS NOT NULL AND c.due_at < now()) DESC,
 		          CASE WHEN c.due_at < now() THEN c.due_at END DESC,
@@ -209,11 +217,7 @@ func countCompanyCommitments(ctx context.Context, tx pgx.Tx, companyID ids.UUID)
 		  JOIN contact pr ON pr.id = c.contact_id AND pr.archived_at IS NULL
 		 WHERE `+ourPromiseNotYetATask+`
 		   AND c.archived_at IS NULL
-		   AND EXISTS (
-		         SELECT 1 FROM relationship r
-		          WHERE r.contact_id = pr.id AND r.kind = 'employment'
-		            AND r.company_id = $1
-		            AND `+employment.IsCurrentSQL("r.ended_at")+` AND r.archived_at IS NULL)`,
+		   AND `+employedAtAccount("$1", sqlAlwaysVisible),
 		companyID).Scan(&total)
 	if err != nil {
 		return 0, fmt.Errorf("count the account's open commitments: %w", err)
@@ -364,12 +368,7 @@ func (s *Store) CountAccountCommitments(ctx context.Context, tx pgx.Tx, companyI
 		  JOIN contact pr ON pr.id = c.contact_id AND pr.archived_at IS NULL
 		 WHERE `+openCommitmentEitherSide+`
 		   AND c.archived_at IS NULL
-		   AND EXISTS (
-		         SELECT 1 FROM relationship r
-		          WHERE r.contact_id = pr.id AND r.kind = 'employment'
-		            AND r.company_id = $%[1]d
-		            AND `+employment.IsCurrentSQL("r.ended_at")+` AND r.archived_at IS NULL
-		            AND (%[4]s))
+		   AND `+employedAtAccount("$%[1]d", "%[4]s")+`
 		   AND (%[2]s) AND (%[3]s)`, companyPos, activityScope, contactScope, edgeScope), args...).Scan(&total); err != nil {
 		return 0, false, fmt.Errorf("count the account's open commitments: %w", err)
 	}

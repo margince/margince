@@ -242,12 +242,15 @@ const (
 
 // DismissedTx reports whether a human dismissed the live signal a fingerprint
 // names. A producer that does more than file a signal asks it, so a finding a
-// human threw away is not acted on again under another name.
+// human threw away is not acted on again under another name. The live rows are
+// share-locked, so a dismissal racing the producer waits for it to commit.
 func DismissedTx(ctx context.Context, tx pgx.Tx, fingerprint string) (bool, error) {
 	var dismissed bool
 	if err := tx.QueryRow(ctx, `
-		SELECT EXISTS (SELECT 1 FROM signal
-		                WHERE fingerprint = $1 AND archived_at IS NULL AND status = 'dismissed')`,
+		SELECT coalesce(bool_or(status = 'dismissed'), false)
+		  FROM (SELECT status FROM signal
+		         WHERE fingerprint = $1 AND archived_at IS NULL
+		         FOR SHARE) live`,
 		fingerprint).Scan(&dismissed); err != nil {
 		return false, fmt.Errorf("read whether the signal was dismissed: %w", err)
 	}

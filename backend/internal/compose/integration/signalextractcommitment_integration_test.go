@@ -136,6 +136,45 @@ func TestAPromiseInPrivateMailStaysWithItsOwner(t *testing.T) {
 	}
 }
 
+// A customer's reply quoting our promise back to us is not their promise.
+func TestAQuotedPromiseIsNotTheRepliersPromise(t *testing.T) {
+	e := Setup(t)
+	company := e.SeedCompany(t, "Acme", &e.Rep1)
+	ines := employeeOf(t, e, company, "Ines Huber")
+	message := seedMessage(t, e, ines, "thread-quoted", "Re: Pricing",
+		"Thanks, sounds good.\n\nOn Monday, Rep wrote:\n> "+pricingPromise, "inbound",
+		extractClock.Add(-48*time.Hour))
+	party(t, message, "from", nil, &ines)
+
+	extractPass(t, e, &scriptedBrain{reply: commitmentReply(t, message, pricingPromise, "")})
+
+	if n := e.WsCount(t, `SELECT count(*) FROM conversation_claim`); n != 0 {
+		t.Errorf("a promise the customer only quoted was filed as %d claim(s) of theirs", n)
+	}
+}
+
+// A commitment signal a human filed is theirs, and the conversion leaves it.
+func TestAHumanFiledCommitmentSignalIsNotConverted(t *testing.T) {
+	e := Setup(t)
+	company := e.SeedCompany(t, "Acme", &e.Rep1)
+	ines := employeeOf(t, e, company, "Ines Huber")
+	cited := seedMessage(t, e, ines, "thread-filed", "Pricing", "Hi Ines, "+pricingPromise, "outbound",
+		extractClock.Add(-72*time.Hour))
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := signals.RecordDerived(e.Admin(), tx, signals.DerivedSignal{
+			Kind: "commitment_made", CompanyID: company, Summary: "Pricing promised.",
+			Severity: "info", Fingerprint: "filed-" + cited.String(), Source: "manual",
+			Evidence: []signals.DerivedEvidence{{Snippet: "Pricing promised.", ActivityID: cited}},
+		}, extractClock.Add(-72*time.Hour))
+		return err
+	}); err != nil {
+		t.Fatalf("seed the filed signal: %v", err)
+	}
+	if pass := extractPassStats(t, e, &scriptedBrain{reply: `{"events":[]}`}); pass.Converted != 0 {
+		t.Errorf("the pass converted %d signal(s) a human filed", pass.Converted)
+	}
+}
+
 // A promise its owner made in their own private mail is their task, and the
 // task is visible to them alone.
 func TestAPromiseInPrivateMailByItsOwnerIsTheirPrivateTask(t *testing.T) {

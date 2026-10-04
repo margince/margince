@@ -138,12 +138,11 @@ func (d *CommitmentDispatcher) DispatchTx(
 ) (CommitmentOutcome, ids.UUID, error) {
 	filing := extractorContext(ctx, c.Extractor)
 	if c.Theirs != nil {
-		claim, err := d.fileClaim(filing, tx, c, *c.Theirs, claimKindTheirs)
-		if err != nil {
-			return 0, ids.UUID{}, err
-		}
-		if claim.Status == crmcontracts.ConversationClaimStatusDismissed {
-			return CommitmentRemembered, ids.UUID{}, nil
+		// Watched only when this reading filed it: one already on their record,
+		// open or dismissed, is remembered.
+		_, created, err := d.fileClaim(filing, tx, c, *c.Theirs, claimKindTheirs)
+		if err != nil || !created {
+			return CommitmentRemembered, ids.UUID{}, err
 		}
 		return CommitmentWatched, ids.UUID{}, nil
 	}
@@ -153,7 +152,7 @@ func (d *CommitmentDispatcher) DispatchTx(
 	}
 	var claimID *ids.UUID
 	if c.PromisedTo != nil {
-		claim, err := d.fileClaim(filing, tx, c, *c.PromisedTo, claimKindOurs)
+		claim, _, err := d.fileClaim(filing, tx, c, *c.PromisedTo, claimKindOurs)
 		if err != nil {
 			return 0, ids.UUID{}, err
 		}
@@ -204,10 +203,11 @@ func (d *CommitmentDispatcher) offeredBefore(ctx context.Context, tx pgx.Tx, c C
 	return false, nil
 }
 
-// fileClaim records the promise on a contact's record, keyed on its locator.
+// fileClaim records the promise on a contact's record, keyed on its locator,
+// and reports whether this call created it.
 func (d *CommitmentDispatcher) fileClaim(
 	ctx context.Context, tx pgx.Tx, c Commitment, contact ids.ContactID, kind string,
-) (crmcontracts.ConversationClaim, error) {
+) (crmcontracts.ConversationClaim, bool, error) {
 	in := contacts.ClaimInput{
 		ContactID: contact, Kind: kind, Body: c.Summary, ActivityID: c.SourceActivityID,
 		Quote: c.Quote, Source: c.Extractor, Locator: c.Locator,
@@ -215,12 +215,11 @@ func (d *CommitmentDispatcher) fileClaim(
 	if c.DueDate != "" {
 		due, err := commitmentDueInstant(ctx, tx, c.DueDate)
 		if err != nil {
-			return crmcontracts.ConversationClaim{}, err
+			return crmcontracts.ConversationClaim{}, false, err
 		}
 		in.DueAt = &due
 	}
-	claim, _, err := d.claims.RecordConversationClaimTx(ctx, tx, in)
-	return claim, err
+	return d.claims.RecordConversationClaimTx(ctx, tx, in)
 }
 
 // propose stages the promise for a human. A proposal refused before, or one

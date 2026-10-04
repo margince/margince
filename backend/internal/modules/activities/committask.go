@@ -83,7 +83,7 @@ func (s *Store) PartiesOf(ctx context.Context, tx pgx.Tx, message ids.UUID) (Mes
 		scope = scopeUnbounded
 	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT p.role = 'from', p.user_id, p.contact_id FROM activity_participant p
+		SELECT p.role = 'from', p.user_id, CASE WHEN c.archived_at IS NULL THEN p.contact_id END FROM activity_participant p
 		  LEFT JOIN contact c ON c.id = p.contact_id
 		 WHERE p.activity_id = $%d AND p.role IN ('from', 'to', 'cc')
 		   AND (p.user_id IS NOT NULL OR (p.contact_id IS NOT NULL AND (%s)))

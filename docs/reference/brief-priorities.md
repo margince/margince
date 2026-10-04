@@ -84,6 +84,8 @@ One rule turns a promise read out of a meeting transcript or an email into work 
 - A promise the customer made is filed on their contact as something to watch. It never becomes a task.
 - A promise a named colleague made becomes their task. Read at or above `CommitmentTaskConfidence`, it is written directly and captured by the reader (`agent:…`); below it, it is proposed to them as a `commitment_task` card and written when they accept.
 - A promise nobody can be named for is proposed to whoever the reading belongs to, and accepting it makes it theirs.
+- A promise in mail only one member may read stays with that member. Made by a colleague in it, it is proposed to the owner instead of becoming the colleague's task, and the task it becomes is visible to its holder alone.
+- In mail, only what the sender wrote counts: words they quote from earlier in the thread are not filed as theirs.
 - A task carries a due date only when the conversation stated a day. An undated promise sits in today's queue with undated request reminders.
 - The task is keyed on the promise's evidence (source, side, party and the words it was said in), archived tasks included. A task a rep archived, a proposal a rep refused and a customer promise a rep dismissed are not raised again when the conversation is read again.
 
