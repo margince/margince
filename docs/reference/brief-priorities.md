@@ -79,7 +79,7 @@ New stage-change notifications carry the original event actor and occurrence tim
 
 Task responsibility comes from the assigned user ID. Recognized reader-prefixed task wording is presented as “You need to …”, without rewriting the stored promise. Details retain the original wording and evidence. Similar tasks from distinct transcripts or deadlines remain separate obligations; text similarity alone cannot establish supersession.
 
-One rule turns a promise read out of a meeting transcript into work (`compose/commitmentdispatch.go`):
+One rule turns a promise read out of a meeting transcript or an email into work (`compose/commitmentdispatch.go`):
 
 - A promise the customer made is filed on their contact as something to watch. It never becomes a task.
 - A promise a named colleague made becomes their task. Read at or above `CommitmentTaskConfidence`, it is written directly and captured by the reader (`agent:…`); below it, it is proposed to them as a `commitment_task` card and written when they accept.
