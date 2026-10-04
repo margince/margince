@@ -90,7 +90,7 @@ This page does not grade single steps or name a best model per site — that is
 | … some case requires as one of a set | 4 |
 | … **no case requires** | 28 |
 | … of those, permitted somewhere but never required | 23 |
-| Prompt tokens spent on tools no case requires | 8588 |
+| Prompt tokens spent on tools no case requires | 8578 |
 | Use cases | 28 |
 | Acceptance criteria the cases declare, each with a statement | 70 |
 
@@ -296,8 +296,8 @@ Every run of every case requiring this tool passed, for the model named.
 | `preview_import` | 1.00 | 6 | `case10_finish_the_import`, `case3_spreadsheet` |
 | `send_message` | 1.00 | 3 | `case44_chase_what_is_slipping` |
 | `update_record` | 1.00 | 6 | `case33_two_cards_for_one_company`, `case43_the_fair_leads_are_prospects` |
-| `query_workspace` | 1.00 | 3 | `case4_use_the_moment` |
 | `forecast_readings` | 1.00 | 3 | `case21_what_are_we_closing` |
+| `query_workspace` | 1.00 | 3 | `case4_use_the_moment` |
 | `read_reporting` | 1.00 | 3 | `case49_who_can_introduce_us` |
 | `run_analytics_query` | 1.00 | 3 | `case20_put_it_in_the_board_pack` |
 | `search_records` | 1.00 | 3 | `case5_before_the_meeting` |
@@ -449,7 +449,7 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 |---|---:|---|---|---|
 | `list_records` | 794 | `agent_loop` | `case10_finish_the_import`, `case21_what_are_we_closing`, `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case41_close_the_project`, `case43_the_fair_leads_are_prospects`, `case45_move_the_deal_on`, `case47_tidy_the_fair_list`, `case48_that_whole_thread_is_filed_wrong`, `case49_who_can_introduce_us`, `case7_ask_for_a_number`, `case9_filed_in_the_wrong_place` | `morning_brief`, `overnight_at_risk_sweep` |
 | `resolve_entities` | 493 | — | `case1_log_it`, `case23_find_us_a_slot`, `case2_business_card`, `case30_a_word_for_it`, `case33_two_cards_for_one_company`, `case42_can_i_answer_on_whatsapp`, `case43_the_fair_leads_are_prospects`, `case44_chase_what_is_slipping`, `case45_move_the_deal_on`, `case46_get_us_in_a_room`, `case47_tidy_the_fair_list`, `case48_that_whole_thread_is_filed_wrong`, `case49_who_can_introduce_us` | — |
-| `forecast_movement` | 453 | — | `case45_move_the_deal_on` | — |
+| `forecast_movement` | 443 | — | `case45_move_the_deal_on` | — |
 | `annotate_brief` | 417 | `agent_loop` | — | `morning_brief` |
 | `review_commitments` | 401 | — | `case41_close_the_project` | `overnight_at_risk_sweep` |
 | `prep_for_meeting` | 394 | — | `case23_find_us_a_slot`, `case5_before_the_meeting` | — |
