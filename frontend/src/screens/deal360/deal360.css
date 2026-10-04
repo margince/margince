@@ -74,3 +74,20 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+/* A watched commitment: who and what, the words, then when and the verbs. */
+.deal-watch-row {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.deal-watch-quote {
+  color: var(--textSecondary);
+}
+
+.deal-watch-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}

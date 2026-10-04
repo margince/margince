@@ -114,6 +114,7 @@ import {
   PRIORITY_OPTIONS,
 } from "./deal360/dealcommercialfields";
 import { DealCommitteeCard } from "./deal360/dealcommitteecard";
+import { DealWatchCard } from "./deal360/dealwatchcard";
 import { dealSurfaceChips } from "./deal360/dealfilterchips";
 import { DealIdentityFacts, DealSubtitle } from "./deal360/dealheaderfacts";
 import { DealHistoryTab } from "./deal360/dealhistorytab";
@@ -2752,6 +2753,7 @@ function DealOverviewPane({
             refusedReasonId={refusedReasonId}
           />
         </RecordReadingPair>
+        <DealWatchCard dealId={deal.id} onOpenEmail={onOpenEmail} />
       </RecordReading>
       <DealBrief
         brief={deal.description}

@@ -14,6 +14,7 @@ import { daysPast } from "../format/lateness";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useViewerId } from "./common";
+import { DismissClaimButton } from "./taskactions";
 
 // The overview's four cards (concept §5.6–5.9). Each one is a read of what the
 // 360 already assembled — none of them fetches, so a card can never show a
@@ -259,10 +260,16 @@ function openLoops(
       theirs: false,
     }),
   );
+  // A commitment that became a task is drawn once, as the task, when the task
+  // is on this card; otherwise the claim stands for it.
+  const listed = new Set(tasks.map((task) => task.key));
   const fromClaims = LOOPS.flatMap((loop) =>
     claims
       .filter(
-        (claim) => claim.kind === loop.kind && claim.status !== "dismissed",
+        (claim) =>
+          claim.kind === loop.kind &&
+          claim.status !== "dismissed" &&
+          !(claim.task_activity_id && listed.has(claim.task_activity_id)),
       )
       .map(
         (claim): OpenLoop => ({
@@ -272,6 +279,10 @@ function openLoops(
           dueAt: claim.due_at ?? null,
           done: claim.status === "done",
           theirs: loop.kind === "commitment_theirs",
+          quote: claim.source_quote,
+          // Only a claim still open and not yet a task is the reader's to
+          // dismiss; a task is put away as a task.
+          dismissible: claim.status === "open" && !claim.task_activity_id,
         }),
       ),
   );
@@ -290,6 +301,10 @@ type OpenLoop = {
   done: boolean;
   // Whether the OTHER side owes it, which decides the badge when no date is set.
   theirs: boolean;
+  // The words a claim was read from, for the reader to check it against.
+  quote?: string;
+  // Whether the reader may dismiss it as never made.
+  dismissible?: boolean;
 };
 
 // Whether this task is the reader's to deliver. Unassigned work is the
@@ -339,6 +354,12 @@ export function ContactCommitmentsCard({
           <span className="pe-loop-body">
             {loopPrefix(loop, firstName, t)}
             {loop.body}
+            {loop.quote && (
+              <span className="pe-loop-quote t-caption">
+                {t("commitment.quote", { quote: loop.quote })}
+              </span>
+            )}
+            {loop.dismissible && <DismissClaimButton id={loop.key} />}
           </span>
           <LoopStatus loop={loop} />
         </PanelRow>
