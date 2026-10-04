@@ -111,7 +111,7 @@ func atRiskByDeal(t *testing.T, e *integration.Env) map[ids.UUID]attention.Risky
 
 // "Champion unknown" is said only of an imported deal, where the source may not
 // have recorded a champion. A deal created here with nobody recorded says
-// nothing about its champion, and one with people recorded and none of them
+// nothing about its champion, and one with contacts recorded and none of them
 // champion still says nobody is carrying it.
 func TestChampionUnknownIsSaidOnlyOfAnImportedDeal(t *testing.T) {
 	e := integration.Setup(t)
