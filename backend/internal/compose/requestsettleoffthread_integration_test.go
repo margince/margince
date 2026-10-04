@@ -24,10 +24,10 @@ func (o *owedEnv) judge() context.Context {
 	return principal.WithActor(o.e.Admin(), o.classifier())
 }
 
-// askOf captures a mail from the address and judges it a request.
-func (o *owedEnv) askOf(t *testing.T, from, subject string, at time.Time) ids.UUID {
+// askOf captures a mail from the customer and judges it a request.
+func (o *owedEnv) askOf(t *testing.T, subject string, at time.Time) ids.UUID {
 	t.Helper()
-	request := o.customerWrites(t, from, subject, at)
+	request := o.customerWrites(t, "pat@customer.example", subject, at)
 	if applied, err := o.e.Activities.SetOwedVerdict(o.judge(), request, activities.OwedVerdictAsksUs,
 		"prompts-test", time.Now()); err != nil || !applied {
 		t.Fatalf("judging the request: applied=%v err=%v", applied, err)
@@ -69,7 +69,7 @@ func (o *owedEnv) evidence(t *testing.T, candidate activities.RepliedRequest) []
 func TestARequestAnsweredOffItsThreadSettlesOnThatAnswer(t *testing.T) {
 	o := setupOwed(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")
-	request := o.askOf(t, "pat@customer.example", "Signed NDA", o.now.Add(-3*time.Hour))
+	request := o.askOf(t, "Signed NDA", o.now.Add(-3*time.Hour))
 	reply := o.weWrite(t, owedMail{
 		to: "pat@customer.example", subject: "Re: Signed NDA", at: o.now.Add(-2 * time.Hour),
 	})
@@ -107,7 +107,7 @@ func TestARequestAnsweredOffItsThreadSettlesOnThatAnswer(t *testing.T) {
 func TestAHeldMeetingWithTheSenderIsSettlementEvidence(t *testing.T) {
 	o := setupOwed(t)
 	pat := o.contact(t, "Pat Buyer", "pat@customer.example")
-	request := o.askOf(t, "pat@customer.example", "Can we talk next week", o.now.Add(-5*time.Hour))
+	request := o.askOf(t, "Can we talk next week", o.now.Add(-5*time.Hour))
 	o.weLog(t, string(crmcontracts.ActivityKindMeeting), pat, o.now.Add(-time.Hour))
 
 	candidate, ok := o.offered(t, request)
@@ -125,10 +125,73 @@ func TestAMeetingWithSomebodyElseOffersNothing(t *testing.T) {
 	o := setupOwed(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")
 	robin := o.contact(t, "Robin Buyer", "robin@other.example")
-	request := o.askOf(t, "pat@customer.example", "Can we talk next week", o.now.Add(-5*time.Hour))
+	request := o.askOf(t, "Can we talk next week", o.now.Add(-5*time.Hour))
 	o.weLog(t, string(crmcontracts.ActivityKindMeeting), robin, o.now.Add(-time.Hour))
 
 	if _, ok := o.offered(t, request); ok {
 		t.Fatal("a meeting with another contact offered this sender's request for judgement")
+	}
+}
+
+// A reply on the thread also matches the off-thread rule (our mail to the
+// sender with the same subject). The model reads it once, as thread mail.
+func TestAReplyOnTheThreadReachesTheModelOnce(t *testing.T) {
+	o := setupOwed(t)
+	o.contact(t, "Pat Buyer", "pat@customer.example")
+	request := o.capture(t, owedMail{
+		from: "pat@customer.example", to: o.seat, subject: "Signed NDA",
+		messageID: "nda@customer.example", at: o.now.Add(-3 * time.Hour),
+	})
+	if applied, err := o.e.Activities.SetOwedVerdict(o.judge(), request, activities.OwedVerdictAsksUs,
+		"prompts-test", time.Now()); err != nil || !applied {
+		t.Fatalf("judging the request: applied=%v err=%v", applied, err)
+	}
+	reply := o.weWrite(t, owedMail{
+		to: "pat@customer.example", subject: "Re: Signed NDA", inReplyTo: "nda@customer.example",
+		at: o.now.Add(-2 * time.Hour),
+	})
+
+	candidate, ok := o.offered(t, request)
+	if !ok {
+		t.Fatal("a request with a reply on its thread was never offered")
+	}
+	var seen int
+	for _, message := range o.evidence(t, candidate) {
+		if message.ID == reply {
+			seen++
+			if message.OffThread != "" {
+				t.Errorf("the thread reply reaches the model marked as %q", message.OffThread)
+			}
+		}
+	}
+	if seen != 1 {
+		t.Fatalf("the reply reaches the model %d times, want once", seen)
+	}
+}
+
+// Past the window's size the newest answer is still in it, because the verdict
+// is recorded through it.
+func TestTheNewestAnswerIsInTheWindowPastItsSize(t *testing.T) {
+	o := setupOwed(t)
+	o.contact(t, "Pat Buyer", "pat@customer.example")
+	request := o.askOf(t, "Signed NDA", o.now.Add(-20*time.Hour))
+	for i := range settleThreadMessages + 2 {
+		o.weWrite(t, owedMail{
+			to: "pat@customer.example", subject: "Re: Signed NDA",
+			at: o.now.Add(time.Duration(i-19) * time.Hour),
+		})
+	}
+
+	candidate, ok := o.offered(t, request)
+	if !ok {
+		t.Fatal("the request was never offered")
+	}
+	messages := o.evidence(t, candidate)
+	if len(messages) > settleThreadMessages {
+		t.Fatalf("the window holds %d messages, past its size %d", len(messages), settleThreadMessages)
+	}
+	if messages[0].ID != request || messages[len(messages)-1].ID != candidate.NewestAnswerID {
+		t.Fatalf("the window runs %v .. %v, want the request first and the newest answer %v last",
+			messages[0].ID, messages[len(messages)-1].ID, candidate.NewestAnswerID)
 	}
 }

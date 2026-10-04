@@ -201,8 +201,13 @@ func (s *RequestSettler) candidates(ctx context.Context, limit int) ([]settleCan
 
 // settleEvidence is what the model judges a request on: the request and the
 // messages of its thread that followed, and our answers from outside the
-// thread, oldest first and capped at settleThreadMessages. Every answer is
-// strictly later than the request, so the request stays first.
+// thread, each once, oldest first and capped at settleThreadMessages. Every
+// answer is strictly later than the request, so the request stays first.
+//
+// The newest answer is always in the window: the verdict is recorded through
+// it, so a prompt that left it out would close the question over words the
+// model never read. A request whose newest answer can no longer be read under
+// these filters is not judged (nil).
 func settleEvidence(ctx context.Context, tx pgx.Tx, request activities.RepliedRequest,
 	asOf time.Time,
 ) ([]threadMessage, error) {
@@ -215,19 +220,59 @@ func settleEvidence(ctx context.Context, tx pgx.Tx, request activities.RepliedRe
 	if err != nil {
 		return nil, fmt.Errorf("request settle: reading the answers off the thread: %w", err)
 	}
+	seen := make(map[ids.UUID]bool, len(messages)+len(answers))
+	for _, message := range messages {
+		seen[message.ID] = true
+	}
 	for _, answer := range answers {
+		if seen[answer.ID] {
+			continue
+		}
+		seen[answer.ID] = true
 		messages = append(messages, threadMessage{
 			ID: answer.ID, Direction: string(crmcontracts.ActivityDirectionOutbound), Subject: answer.Subject,
 			Body: answer.Body, At: answer.At, OffThread: answer.Kind,
 		})
 	}
+	if !seen[request.NewestAnswerID] {
+		newest, err := conversationRows(ctx, tx, request.RequestID, request.CounterpartyEmail, asOf,
+			&request.NewestAnswerID)
+		if err != nil || len(newest) == 0 {
+			return nil, err
+		}
+		messages = append(messages, newest[0])
+	}
 	sort.SliceStable(messages[1:], func(i, j int) bool {
 		return messages[i+1].At.Before(messages[j+1].At)
 	})
-	if len(messages) > settleThreadMessages {
-		messages = messages[:settleThreadMessages]
+	return windowKeeping(messages, request.NewestAnswerID, settleThreadMessages), nil
+}
+
+// windowKeeping cuts messages, request first and the rest oldest first, to
+// size: the request, the message keep names, and the oldest of the others.
+// The order is kept.
+func windowKeeping(messages []threadMessage, keep ids.UUID, size int) []threadMessage {
+	if len(messages) <= size {
+		return messages
 	}
-	return messages, nil
+	out := make([]threadMessage, 0, size)
+	room := size - 1
+	for _, message := range messages[1:] {
+		if message.ID == keep {
+			room--
+		}
+	}
+	out = append(out, messages[0])
+	for _, message := range messages[1:] {
+		switch {
+		case message.ID == keep:
+			out = append(out, message)
+		case room > 0:
+			out = append(out, message)
+			room--
+		}
+	}
+	return out
 }
 
 // requestConversation reads the request and the messages that followed it.
@@ -252,6 +297,14 @@ func settleEvidence(ctx context.Context, tx pgx.Tx, request activities.RepliedRe
 // bound in the candidate query is that such a message has settled nothing.
 func requestConversation(ctx context.Context, tx pgx.Tx, requestID ids.UUID,
 	counterparty string, asOf time.Time,
+) ([]threadMessage, error) {
+	return conversationRows(ctx, tx, requestID, counterparty, asOf, nil)
+}
+
+// conversationRows is requestConversation's read, narrowed to the one message
+// only names when it is set.
+func conversationRows(ctx context.Context, tx pgx.Tx, requestID ids.UUID,
+	counterparty string, asOf time.Time, only *ids.UUID,
 ) ([]threadMessage, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT id, coalesce(direction, ''), coalesce(subject, ''),
@@ -280,8 +333,9 @@ func requestConversation(ctx context.Context, tx pgx.Tx, requestID ids.UUID,
 		   AND audience = 'workspace' AND restricted_at IS NULL
 		   AND occurred_at <= $3
 		   AND (occurred_at, id) >= ((SELECT occurred_at FROM activity WHERE id = $2), $2)
+		   AND ($6::uuid IS NULL OR id = $6)
 		 ORDER BY occurred_at, id
-		 LIMIT $4`, extractBodyLimit, requestID, asOf, settleThreadMessages, counterparty)
+		 LIMIT $4`, extractBodyLimit, requestID, asOf, settleThreadMessages, counterparty, only)
 	if err != nil {
 		return nil, fmt.Errorf("request settle: reading the conversation: %w", err)
 	}

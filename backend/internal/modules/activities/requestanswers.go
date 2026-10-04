@@ -26,7 +26,7 @@ type OffThreadAnswer struct {
 }
 
 // OffThreadAnswersTx reads the answers to a request that sit outside its
-// thread, oldest first, as of asOf, with each body cut to bodyLimit runes.
+// thread, newest first, as of asOf, with each body cut to bodyLimit runes.
 // They are the answers answered.go recognises off the thread, so a request the
 // waiting lane counts as answered is judged on the same evidence.
 //
@@ -46,7 +46,7 @@ func OffThreadAnswersTx(ctx context.Context, tx pgx.Tx, request ids.UUID, asOf t
 		 WHERE a.id = $1
 		   AND answer.archived_at IS NULL AND answer.restricted_at IS NULL
 		   AND answer.audience = 'workspace'
-		 ORDER BY answer.occurred_at, answer.id
+		 ORDER BY answer.occurred_at DESC, answer.id DESC
 		 LIMIT $4`, request, asOf, bodyLimit, limit)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading the answers off the request's thread: %w", err)
