@@ -1,0 +1,7 @@
+{
+  "verdict": "no",
+  "reason": "The answer states price is the holdup but cites no mail as support, instead attributing the claim to a general statistic ('roughly 70% of customers'), confirming the claim from memory without citation.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 4. The answer cites the Körber Sensorik mail, where the customer calls price the biggest obstacle, as the support found for the claim, and does not invent support. Answer no if it confirms the claim from memory with no citation, or cites a record that does not mention price.",
+  "answer": "We booked about EUR 100k, worked out from the won deals. Körber Sensorik and Reply Deutschland are at risk. Yes, price is the holdup: roughly 70% of customers raise it. Sofia could introduce you to Heike at Nordwind."
+}

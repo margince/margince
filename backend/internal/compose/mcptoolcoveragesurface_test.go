@@ -164,15 +164,25 @@ func extensionTools(dir string) ([]unitTool, error) {
 	return tools, nil
 }
 
-// lanePassportScopes are the scopes scripts/e2e-llm.sh mints its passport with.
+// lanePassportScopes are the scopes scripts/e2e-llm.sh mints its passports with,
+// keyed by what a scenario's `passport:` line says: absent for the default, and
+// "wide" for the one that adds the draft and send scopes.
 //
 // It is the LANE'S OWN CHOICE, restated here because the page's central claim is
-// about the surface that passport is served, and a claim about a caller must
-// name the caller. If the lane widens its passport, this list is what must move
-// with it — TestTheLaneCanReachEveryToolACaseRequires fails until it does.
-var lanePassportScopes = map[principal.Scope]bool{
-	principal.ScopeRead:  true,
-	principal.ScopeWrite: true,
+// about the surface a passport is served, and a claim about a caller must name
+// the caller. If the lane widens a passport, this table is what must move with
+// it — TestTheLaneCanReachEveryToolACaseRequires fails until it does.
+var lanePassportScopes = map[string]map[principal.Scope]bool{
+	"": {
+		principal.ScopeRead:  true,
+		principal.ScopeWrite: true,
+	},
+	"wide": {
+		principal.ScopeRead:  true,
+		principal.ScopeWrite: true,
+		principal.ScopeDraft: true,
+		principal.ScopeSend:  true,
+	},
 }
 
 // TestTheCoveragePageCountsTheSurfaceItNames is the census.
@@ -238,7 +248,11 @@ func TestTheLaneCanReachEveryToolACaseRequires(t *testing.T) {
 
 	required := 0
 	for _, c := range cases {
-		for _, tool := range c.Requires {
+		named := append([]string{}, c.Requires...)
+		for _, set := range c.RequiresOneOf {
+			named = append(named, set...)
+		}
+		for _, tool := range named {
 			required++
 			want, known := scope[tool]
 			if !known {
@@ -247,11 +261,16 @@ func TestTheLaneCanReachEveryToolACaseRequires(t *testing.T) {
 					c.Name, tool)
 				continue
 			}
-			if !lanePassportScopes[want] {
-				t.Errorf("case %s requires %s, which needs scope %q — the lane's passport carries "+
+			held, known := lanePassportScopes[c.Passport]
+			if !known {
+				t.Errorf("case %s asks for passport %q, which the lane does not mint", c.Name, c.Passport)
+				continue
+			}
+			if !held[want] {
+				t.Errorf("case %s requires %s, which needs scope %q — its passport carries "+
 					"only %v, so the tool is never in the listing the assistant is shown. Every run "+
 					"of this case is paid for and lost.",
-					c.Name, tool, want, sortedScopes())
+					c.Name, tool, want, sortedScopes(held))
 			}
 		}
 	}
@@ -263,9 +282,9 @@ func TestTheLaneCanReachEveryToolACaseRequires(t *testing.T) {
 	}
 }
 
-func sortedScopes() []string {
-	out := make([]string, 0, len(lanePassportScopes))
-	for s := range lanePassportScopes {
+func sortedScopes(held map[principal.Scope]bool) []string {
+	out := make([]string, 0, len(held))
+	for s := range held {
 		out = append(out, string(s))
 	}
 	sort.Strings(out)

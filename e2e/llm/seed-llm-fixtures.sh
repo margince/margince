@@ -1265,6 +1265,182 @@ code="$(status_of PATCH "/companies/$emsland" '{"lifecycle":"target"}')"
 [[ "$code" = "200" ]] || {
   echo "setting Emsland Ventilbau's lifecycle as a human answered HTTP $code" >&2; exit 1; }
 
+# --- CASES 44-49: the untried action tools ------------------------------------
+#
+# ONE WORLD STILL. Nothing below adds a deal or a lead to anybody's queue: the
+# deal-shaped fixtures are AGED ACTIVITY on two deals the pipeline already holds
+# (case 21's seven open ones), because a deal is "slipping" or "going cold" by
+# what its timeline does not say, and a new deal would move case 21's counts.
+#
+# The two the pipeline holds are named in case 44 and case 49's prompts, and the
+# other cases never name them.
+deal_id_by_name() {
+  api GET "/deals?limit=100" | python3 -c 'import json,sys
+want = sys.argv[1]
+for row in json.load(sys.stdin).get("data", []):
+    if row.get("name") == want:
+        print(row["id"]); break
+else:
+    print("")' "$1"
+}
+
+seed_contact() {
+  local name="$1" email="$2" owner="$3" id body
+  id="$(contact_id_by_email "$name" "$email")"
+  if [[ -n "$id" ]]; then printf '%s' "$id"; return 0; fi
+  body="$(printf '{"full_name":"%s","owner_id":"%s","emails":[{"email":"%s","is_primary":true}]}' "$name" "$owner" "$email")"
+  create_or_die "/contacts" "$body" "$name"
+}
+
+# THE SLIPPING DEAL (case 44, 49). Only a 75-day-old mail, so the product's own
+# sixty-day rule names it and nothing else does: 45 days is under the line, and a
+# deal with a recent touch is not slipping however old its first one is. The
+# mail is linked to the contact too, which is who a chaser is addressed to.
+jonas="$(seed_contact "Jonas Reinhard" "jonas.reinhard@replydeutschland.test" "$me")"
+reply_deal="$(deal_id_by_name "Reply Deutschland Verlängerung")"
+[[ -n "$reply_deal" ]] || { echo "the pipeline has no Reply Deutschland Verlängerung deal" >&2; exit 1; }
+if [[ "$(api GET "/activities?entity_type=deal&entity_id=$reply_deal&limit=5" | python3 -c 'import json,sys
+print(len(json.load(sys.stdin).get("data", [])))')" = "0" ]]; then
+  body="$(printf '{"kind":"email","direction":"outbound","occurred_at":"%s","subject":"Nachfrage Verlängerung","body":"Haben Sie unser Verlängerungsangebot gesehen? Wir halten das Angebot bis Monatsende.","links":[{"entity_type":"deal","entity_id":"%s"},{"entity_type":"contact","entity_id":"%s"}]}' \
+    "$(days_ago 75)" "$reply_deal" "$jonas")"
+  create_or_die "/activities" "$body" "the quiet Reply deal's last mail" >/dev/null
+fi
+
+# THE COLD DEAL (case 49). 45 days quiet: cold by the relationship sweep's own
+# measure, and below the sixty-day line, so case 44's slipping set stays one deal.
+# The body carries the word case 49's evidence question searches for.
+koerber_deal="$(deal_id_by_name "Körber Sensorik Rollout")"
+[[ -n "$koerber_deal" ]] || { echo "the pipeline has no Körber Sensorik Rollout deal" >&2; exit 1; }
+if [[ "$(api GET "/activities?entity_type=deal&entity_id=$koerber_deal&limit=5" | python3 -c 'import json,sys
+print(len(json.load(sys.stdin).get("data", [])))')" = "0" ]]; then
+  body="$(printf '{"kind":"email","direction":"inbound","occurred_at":"%s","subject":"Re: Angebot Sensorik","body":"Der Preis ist für uns derzeit das größte Hindernis, technisch passt alles.","links":[{"entity_type":"deal","entity_id":"%s"}]}' \
+    "$(days_ago 45)" "$koerber_deal")"
+  create_or_die "/activities" "$body" "the cold Körber deal's last mail" >/dev/null
+fi
+
+# A CHAT NOBODY CAN ANSWER FROM HERE (case 44). Telegram is the one core
+# transport a reply can leave on, and this installation has no bot connected, so
+# send_message is refused with channel_not_send_capable — which is what the case
+# measures: the right tool reached for, and "sent" not claimed.
+lena="$(seed_contact "Lena Bauer" "lena.bauer@bauer-ventile.test" "$me")"
+if [[ "$(api GET "/activities?entity_type=contact&entity_id=$lena&limit=5" | python3 -c 'import json,sys
+print(len(json.load(sys.stdin).get("data", [])))')" = "0" ]]; then
+  body="$(printf '{"kind":"message","direction":"inbound","channel_provider":"telegram","occurred_at":"%s","body":"Kannst du mir die aktuelle Preisliste für die Ventile schicken?","links":[{"entity_type":"contact","entity_id":"%s"}]}' \
+    "$(days_ago 1)" "$lena")"
+  create_or_die "/activities" "$body" "Lena Bauer's Telegram question" >/dev/null
+fi
+
+# --- CASE 46: two guests for one room ------------------------------------------
+# Greta's purchasing head, so one meeting with both is a meeting at ONE customer.
+lindqvist="$(company_id_by_name "Lindqvist Anlagenbau GmbH")"
+if [[ -z "$lindqvist" ]]; then
+  body="$(printf '{"display_name":"Lindqvist Anlagenbau GmbH","owner_id":"%s","industry":"Anlagenbau"}' "$me")"
+  lindqvist="$(create_or_die "/companies" "$body" "Lindqvist Anlagenbau GmbH")"
+fi
+for entry in "Greta Lindqvist|greta.lindqvist@lindqvist-anlagen.test" "Omar Haddad|omar.haddad@lindqvist-anlagen.test"; do
+  member="$(seed_contact "${entry%%|*}" "${entry##*|}" "$me")"
+  link_employment "$member" "$lindqvist" "${entry%%|*} at Lindqvist Anlagenbau"
+done
+
+# --- CASE 47: the fair's shortlist, one member of which was promoted wrongly ----
+#
+# Mara Voigt is a lead nobody ever heard from, promoted through the human_qualify
+# trigger — the one a human can hand a cold lead, which is exactly the mistake
+# demote_lead exists to undo. Her contact is on the shortlist; the lead is what
+# demotion names.
+messe_id() {
+  api GET "/lists?q=Messe%20Hannover&limit=10" | python3 -c 'import json,sys
+for row in json.load(sys.stdin).get("data", []):
+    if row.get("name") == "Messe Hannover 2026":
+        print(row["id"]); break
+else:
+    print("")'
+}
+messe="$(messe_id)"
+if [[ -z "$messe" ]]; then
+  messe="$(create_or_die "/lists" '{"name":"Messe Hannover 2026","entity_type":"contact","list_type":"static","sharing":"workspace","purpose":"Everyone we spoke to at the Hannover fair"}' "the Messe Hannover shortlist")"
+  mara_lead="$(lead_id_by_email "Mara Voigt" "mara.voigt@voigt-antriebe.test")"
+  if [[ -z "$mara_lead" ]]; then
+    body="$(printf '{"full_name":"Mara Voigt","email":"mara.voigt@voigt-antriebe.test","company_name":"Voigt Antriebstechnik","status":"new","source":"fair","owner_id":"%s"}' "$me")"
+    mara_lead="$(create_or_die "/leads" "$body" "Mara Voigt's lead")"
+  fi
+  code="$(status_of POST "/leads/$mara_lead/promote" '{"trigger":"human_qualify","evidence":{"note":"Promoted at the fair stand"}}')"
+  [[ "$code" = "200" ]] || { echo "promoting Mara Voigt answered HTTP $code" >&2; exit 1; }
+  mara="$(contact_id_by_email "Mara Voigt" "mara.voigt@voigt-antriebe.test")"
+  [[ -n "$mara" ]] || { echo "Mara Voigt's promotion left no contact" >&2; exit 1; }
+  # Twelve in all with Mara: past the ten rows the bulk tool's own description
+  # names as the point where changing records one by one stops being sensible, so
+  # "everyone left on it goes to Sofia" is a bulk change and not a loop.
+  for entry in "Ralf Thiel|ralf.thiel@thiel-getriebe.test" "Sabine Ott|sabine.ott@ott-pneumatik.test" \
+    "Dirk Hallmann|dirk.hallmann@hallmann-fluidtechnik.test" "Inge Rohde|inge.rohde@rohde-dichtungen.test" \
+    "Tobias Kruse|tobias.kruse@kruse-antriebe.test" "Wiebke Lange|wiebke.lange@lange-filter.test" \
+    "Hartmut Seidel|hartmut.seidel@seidel-pumpen.test" "Ute Brandl|ute.brandl@brandl-sensorik.test" \
+    "Florian Eck|florian.eck@eck-schweisstechnik.test" "Marlene Pohl|marlene.pohl@pohl-lager.test" \
+    "Gernot Vahl|gernot.vahl@vahl-motoren.test"; do
+    member="$(seed_contact "${entry%%|*}" "${entry##*|}" "$me")"
+    body="$(printf '{"entity_type":"contact","entity_id":"%s","note":"Met at the stand"}' "$member")"
+    create_or_die "/lists/$messe/members" "$body" "${entry%%|*} on the shortlist" >/dev/null
+  done
+  body="$(printf '{"entity_type":"contact","entity_id":"%s","note":"Met at the stand"}' "$mara")"
+  create_or_die "/lists/$messe/members" "$body" "Mara Voigt on the shortlist" >/dev/null
+fi
+seed_contact "Jens Falk" "jens.falk@falk-schaltanlagen.test" "$me" >/dev/null
+
+# --- CASE 48: one conversation, three messages, filed on the wrong account -----
+#
+# THE THREAD KEY IS SQL, because capture stamps it and the create endpoint
+# refuses it on purpose — a client naming its own thread could silence an
+# unrelated conversation (scripts/seed-dev.sql carries the same fixture for the
+# same reason). Everything else is the API; only the column the API will not
+# take is written here, and only on these three rows, found by subject.
+kiel="$(company_id_by_name "Kieler Pumpenwerk GmbH")"
+rhoen="$(company_id_by_name "Rhön Hydraulik AG")"
+[[ -n "$kiel" && -n "$rhoen" ]] || { echo "case 48 files between the fair companies and they are not both seeded" >&2; exit 1; }
+if [[ "$(api GET "/activities?entity_type=company&entity_id=$kiel&limit=20" | python3 -c 'import json,sys
+print(sum(1 for a in json.load(sys.stdin).get("data", []) if a.get("subject","").startswith("Lieferverzug")))')" = "0" ]]; then
+  n=0
+  for line in "inbound|Lieferverzug Kolbenpumpe KP-300|Die Kolbenpumpe KP-300 ist nicht wie zugesagt angekommen." \
+              "outbound|Re: Lieferverzug Kolbenpumpe KP-300|Wir klären den Verbleib mit der Spedition und melden uns morgen." \
+              "inbound|Re: Lieferverzug Kolbenpumpe KP-300|Danke, bitte bis Freitag einen neuen Liefertermin nennen."; do
+    n=$((n + 1))
+    IFS='|' read -r direction subject said <<<"$line"
+    body="$(printf '{"kind":"email","direction":"%s","occurred_at":"%s","subject":"%s","body":"%s","links":[{"entity_type":"company","entity_id":"%s"}]}' \
+      "$direction" "$(days_ago $((4 - n)))" "$subject" "$said" "$kiel")"
+    create_or_die "/activities" "$body" "$subject" >/dev/null
+  done
+  bash "$(git rev-parse --show-toplevel)/scripts/dev-psql.sh" "${PG_PORT:-15432}" "$(dev_database_name)" \
+    -v ON_ERROR_STOP=1 -q -c "UPDATE activity SET thread_key = 'seed-kp300-delay' WHERE subject LIKE '%Lieferverzug Kolbenpumpe KP-300'" >/dev/null
+fi
+
+# --- CASE 49: a colleague who knows somebody at an account we want -------------
+#
+# The route is Sofia's, not the caller's: intro_path_to names the colleague who
+# could make the introduction, and a route through the caller themself is no
+# introduction. The activities are written in HER session, since the interaction
+# projection that routes are read from is stamped from who captured the message.
+nordwind="$(company_id_by_name "Nordwind Armaturen AG")"
+if [[ -z "$nordwind" ]]; then
+  body="$(printf '{"display_name":"Nordwind Armaturen AG","owner_id":"%s","industry":"Armaturen"}' "$colleague")"
+  nordwind="$(create_or_die "/companies" "$body" "Nordwind Armaturen AG")"
+fi
+heike="$(contact_id_by_email "Heike Brandt" "heike.brandt@nordwind-armaturen.test")"
+if [[ -z "$heike" ]]; then
+  body="$(printf '{"full_name":"Heike Brandt","owner_id":"%s","emails":[{"email":"heike.brandt@nordwind-armaturen.test","is_primary":true}]}' "$colleague")"
+  heike="$(create_or_die "/contacts" "$body" "Heike Brandt")"
+  link_employment "$heike" "$nordwind" "Heike Brandt at Nordwind Armaturen"
+  sofia_cookies="$(mktemp)"
+  curl -sS -c "$sofia_cookies" -o /dev/null -X POST -H 'Content-Type: application/json' \
+    -d '{"email":"sofia.meier@demo.test","password":"colleague-password-123"}' "$API_BASE/v1/auth/login"
+  for n in 1 2 3; do
+    body="$(printf '{"kind":"email","direction":"outbound","occurred_at":"%s","subject":"Austausch Armaturen","body":"Danke für das Gespräch, ich schicke die Unterlagen.","links":[{"entity_type":"contact","entity_id":"%s"}]}' \
+      "$(days_ago $((n * 6)))" "$heike")"
+    code="$(curl -sS -b "$sofia_cookies" -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' \
+      -d "$body" "$API_BASE/v1/activities")"
+    [[ "$code" = "201" ]] || { echo "Sofia's mail to Heike Brandt answered HTTP $code" >&2; exit 1; }
+  done
+  rm -f "$sofia_cookies"
+fi
+
 # --- THE ROSTER IS VERIFIED, not assumed ---------------------------------
 #
 # The seats above are the fixture's most silent failure mode. A seat that stays

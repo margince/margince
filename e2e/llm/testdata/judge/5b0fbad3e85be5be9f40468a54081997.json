@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer cites the Körber Sensorik mail ('Re: Angebot Sensorik') as logged support, states that the customer calls price the biggest obstacle in it, and uses it as the basis for the claim without inventing support.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 4. The answer cites the Körber Sensorik mail, where the customer calls price the biggest obstacle, as the support found for the claim, and does not invent support. Answer no if it confirms the claim from memory with no citation, or cites a record that does not mention price.",
+  "answer": "Booked this quarter: EUR 97,600 per the standard bookings reading (coverage: 11 of 12 deals priced). Thin or cold open deals: Körber Sensorik Rollout and Reply Deutschland Verlängerung. On price: one logged inbound mail supports it — Körber's 'Re: Angebot Sensorik', where the customer calls price the biggest obstacle; the tool states no share, so I will not quote one. Nordwind Armaturen: Sofia Meier knows Heike Brandt there and could make the introduction."
+}

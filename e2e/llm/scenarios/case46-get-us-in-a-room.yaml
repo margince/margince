@@ -1,0 +1,68 @@
+# CASE 46 — Get us in a room.
+#
+# book_meeting and invite_meeting sound like one errand and are two different
+# acts. Booking records a meeting against the CRM and tells nobody; inviting puts
+# a real calendar invitation in somebody's mailbox, which is why it is held for a
+# human's word before it runs. The failure this case exists for is the answer
+# that treats them as one: "the meeting is booked and Omar has been invited" when
+# only the first happened.
+#
+# The prompt asks for BOTH, aimed at two different people. Greta's is the
+# record-only booking ("just so it is on record"); Omar's is the invitation. A
+# run that invites Greta, or books Omar, or reports the held invitation as sent,
+# is wrong in a way the tool names alone would not show.
+#
+# invite_meeting is staged here for a reason the lane's stack makes honest: the
+# approval is the first thing the call meets, before any calendar is consulted,
+# so the answer to read is whether the model says "waiting on you" and keeps the
+# approval id, not whether a calendar is connected.
+#
+# Needs the wide passport: both tools are send-scoped.
+name: case46_get_us_in_a_room
+criteria: [1, 2, 3]
+passport: wide
+
+# WRITES: the author's own statement that this case changes the world. It is not
+# what decides the reset — the runner rebuilds whenever the LAST run dirtied the
+# world, because the assistant is offered the whole server and any run can write
+# regardless of what its file says. TestEveryWritingScenarioDeclaresThatItWrites
+# holds this line against the tools the case names.
+writes: true
+
+prompt: |
+  Just agreed with Greta Lindqvist on the phone: pricing walkthrough at our Köln
+  office, Thursday next week, 10 o'clock, 45 minutes. She has put it in her own
+  calendar, so just log it in the CRM. Her purchasing head Omar Haddad should be
+  there too — send him a proper calendar invite for the same slot.
+
+  Where does each one stand?
+
+must_call:
+  - book_meeting
+  - invite_meeting
+may_call:
+  - resolve_entities
+  - search_records
+  - read_record
+  - check_availability
+  - whoami
+  - list_approvals
+  - query_workspace
+
+# Omar is the one invited and Greta the one recorded. Pinning the invitation's
+# address makes "invited Greta" a structural failure instead of something the
+# judge has to catch in prose.
+must_call_with:
+  - invite_meeting.attendee_email=omar.haddad@lindqvist-anlagen.test
+
+must_mention:
+  - "Greta"
+  - "Omar"
+
+judge:
+  - "Criterion 1. The answer says the meeting with Greta Lindqvist is recorded in the CRM, and says that recording it sent nobody an invitation. Answer no if it says Greta was invited, or never says the booking is a record only."
+  - "Criterion 2. The answer says Omar Haddad's calendar invitation has NOT gone out yet: it is waiting for the user's approval (or was refused), and nobody has been notified. Answer no if it says Omar was invited, that the invitation was sent, or that the meeting with Omar is booked."
+  - "Criterion 3. The answer keeps the two apart — the record for Greta, the invitation for Omar — and does not merge them into one statement such as 'the meeting is booked and invitations are out'. Answer no if it describes both as one sent or confirmed booking."
+
+runs: 3
+pass_at: 2

@@ -177,7 +177,7 @@ echo "==> judge $E2E_LLM_JUDGE via $E2E_LLM_JUDGE_VIA"
 seed_everything() {
   local trail="$ROOT/e2e/llm/records/seed.log"
   mkdir -p "$(dirname "$trail")"
-  if ! (cd "$ROOT" && API_BASE="$APP_BASE" bash e2e/llm/seed-llm-fixtures.sh >"$trail"); then
+  if ! (cd "$ROOT" && DEV_SLUG="$SLUG" API_BASE="$APP_BASE" bash e2e/llm/seed-llm-fixtures.sh >"$trail"); then
     echo "==> the seed stopped; its trail to that point:" >&2
     cat "$trail" >&2
     return 1
@@ -238,6 +238,19 @@ open(sys.argv[3], "w").write(json.dumps(cfg))' \
     "$APP_BASE" "$PASSPORT" "$MCP_CONFIG" "$MCP_SERVER"
 }
 
+# use_passport points the assistant at the narrow credential (read, write) or the
+# wide one (adds draft and send). A scenario asks for the wide one with
+# `passport: wide`; every other case is measured exactly as before, because a
+# send tool offered to a case that never asked for one is a different
+# experiment.
+use_passport() {
+  case "$1" in
+    wide) PASSPORT="$PASSPORT_WIDE" ;;
+    *) PASSPORT="$PASSPORT_NARROW" ;;
+  esac
+  write_mcp_config
+}
+
 # restart_stack stops and starts this slug's stack and re-reads its address.
 restart_stack() {
   (cd "$ROOT" && make dev-stop DEV_SLUG="$SLUG" >/dev/null 2>&1) || true
@@ -258,6 +271,14 @@ mint_passport() {
 try: print(json.load(sys.stdin).get("token",""))
 except Exception: print("")')"
   [[ -n "$PASSPORT" ]] || { echo "could not mint a passport" >&2; exit 1; }
+
+  PASSPORT_NARROW="$PASSPORT"
+  PASSPORT_WIDE="$(curl -sS -b "$COOKIES" -X POST -H 'Content-Type: application/json' \
+    -d '{"label":"e2e-llm-send","scopes":["read","write","draft","send"]}' \
+    "$APP_BASE/v1/passports" | python3 -c 'import json,sys
+try: print(json.load(sys.stdin).get("token",""))
+except Exception: print("")')"
+  [[ -n "$PASSPORT_WIDE" ]] || { echo "could not mint the draft+send passport" >&2; exit 1; }
 
   write_mcp_config
 
@@ -486,6 +507,20 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
   esac
 done
 
+# `passport:` is absent (the narrow credential) or `wide`. Anything else would be
+# read as narrow by use_passport and measure a case on a surface its author did
+# not mean, so a misspelling stops the lane here, before the first token.
+for scenario in "$SCENARIO_DIR"/*.yaml; do
+  declared="$(python3 "$ROOT/e2e/llm/check.py" --field passport "$scenario")"
+  case "$declared" in
+    ""|wide) ;;
+    *)
+      echo "$(basename "$scenario") declares passport=$declared; it must be absent or wide" >&2
+      exit 1
+      ;;
+  esac
+done
+
 PASSED=0
 FAILED=0
 # The runs the lane INTENDED, summed as it goes. The sweep total's denominator
@@ -502,6 +537,7 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
 
   runs="$(python3 "$ROOT/e2e/llm/check.py" --field runs "$scenario")"
   pass_at="$(python3 "$ROOT/e2e/llm/check.py" --field pass_at "$scenario")"
+  use_passport "$(python3 "$ROOT/e2e/llm/check.py" --field passport "$scenario")"
   # `writes:` is validated once, over the whole corpus, in the pre-flight above —
   # not again here. It does not decide the reset: WORLD_DIRTY does, because the
   # assistant is offered the whole server and can write whatever it likes

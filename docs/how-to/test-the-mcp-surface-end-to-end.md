@@ -43,6 +43,16 @@ result cap. A CLI brings its vendor's own system prompt and agent loop, so its
 number is filed apart and never sits in the comparison column. The CLI routes
 are the cheap way to run a big sweep on a subscription.
 
+**Two credentials.** Every scenario runs on a passport holding `read` and
+`write`, which is what most jobs need. A scenario that sends, drafts or books
+declares `passport: wide`, and the lane presents a second passport that adds the
+`draft` and `send` scopes; without it those tools are never in the listing the
+model is shown. The lane's stack has no connected mailbox and no Telegram bot, so
+a send is refused after the model has chosen it and before anything leaves — the
+scenario grades whether the answer says "not sent, and why". The Go census
+`TestTheLaneCanReachEveryToolACaseRequires` holds each scenario's required tools
+against the scopes its passport carries.
+
 The judge — the model that decides each scenario's `judge:` criteria — is Haiku
 4.5 whatever the candidate. `E2E_LLM_JUDGE_VIA=cli|api|openrouter` picks how it
 is reached; `cli` (the default) needs the `claude` CLI and a Claude credential.

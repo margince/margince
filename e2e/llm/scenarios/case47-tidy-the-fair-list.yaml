@@ -1,0 +1,72 @@
+# CASE 47 — Tidy the fair list.
+#
+# A Shortlist is a hand-chosen set, and four tools touch one from four angles:
+# read_lists says who is on it, change_lists adds and removes a member,
+# bulk_update_records changes many records at once behind a preview, and
+# demote_lead undoes a promotion that should never have happened. Each is the
+# only door for its job — update_record changes one record, and a promotion has
+# no other reverse.
+#
+# MARA VOIGT is the trap: her CONTACT is on the list, and what has to be undone is
+# her LEAD's promotion. A run that takes her off the list and stops has tidied
+# the list and left the mistake. Demotion itself retires the contact the
+# promotion made, and a retired contact leaves every list it was on — so no
+# separate remove_member is owed, and none is required here. change_lists is
+# still required, for the member the prompt asks to ADD.
+#
+# bulk_update_records is preview-then-execute by its own contract, and the list
+# is twelve people because the tool's own description sends anything over ten
+# rows there: handing three people over is a loop of update_record, and a
+# case that allowed that would measure nothing about the bulk door. The prompt
+# gives the go-ahead in advance ("show me what it would change, then do it"), so a
+# run that previews and hands the question back has refused authority it was
+# given, and one that executes with no preview has skipped the half that makes the
+# change reviewable.
+name: case47_tidy_the_fair_list
+criteria: [1, 2, 3]
+
+# WRITES: the author's own statement that this case changes the world. It is not
+# what decides the reset — the runner rebuilds whenever the LAST run dirtied the
+# world, because the assistant is offered the whole server and any run can write
+# regardless of what its file says. TestEveryWritingScenarioDeclaresThatItWrites
+# holds this line against the tools the case names.
+writes: true
+
+prompt: |
+  Sorting the Messe Hannover 2026 list from the car park. Who is on it? Mara
+  Voigt I converted by mistake — we never actually spoke, undo that and make sure
+  she is off the list. Add Jens Falk, met him at the stand. Then everyone left
+  on it goes to Sofia Meier — tell me what that changes and just do it.
+
+must_call:
+  - read_lists
+  - demote_lead
+  - change_lists
+  - bulk_update_records
+may_call:
+  - search_records
+  - read_record
+  - list_records
+  - resolve_entities
+  - list_colleagues
+  - query_workspace
+  - whoami
+
+must_call_with:
+  - change_lists.mode=add_member|bulk_update_records.verb=add_to_list
+  - bulk_update_records.mode=preview
+  - bulk_update_records.mode=execute
+  - bulk_update_records.verb=reassign_owner
+
+must_mention:
+  - "Mara"
+  - "Jens"
+  - "Sofia"
+
+judge:
+  - "Criterion 1. The answer shows it read the list: it says Mara Voigt was on the Messe Hannover list, and says who else was or how many were. Answer no if it gives no account of what was on the list, or never mentions that Mara was on it."
+  - "Criterion 2. The answer says Mara Voigt's conversion was undone — she is a lead again — and that she is no longer on the list, and says Jens Falk was added. Answer no if it says she was deleted or disqualified, says she is still a contact, or does not report Jens as added."
+  - "Criterion 3. The answer reports the hand-over to Sofia Meier as covering everybody who stayed on the list plus Jens Falk, and not Mara Voigt. Answer no if it hands Mara to Sofia, hands over only some of the people, or says nothing about who was handed over."
+
+runs: 3
+pass_at: 2

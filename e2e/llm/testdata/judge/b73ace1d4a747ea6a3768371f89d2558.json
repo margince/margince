@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer states Mara's conversion is undone, she is a lead again, she is no longer on the list, and Jens Falk is added, meeting all criterion requirements without disqualifying claims.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 2. The answer says Mara Voigt's conversion was undone — she is a lead again — and that she is no longer on the list, and says Jens Falk was added. Answer no if it says she was deleted or disqualified, says she is still a contact, or does not report Jens as added.",
+  "answer": "Mara Voigt and eleven others were on the Messe Hannover 2026 list. Mara's conversion is undone: she is a lead again and she is no longer on the list. Jens Falk is added. After a preview I handed the eleven who stayed plus Jens Falk — not Mara — to Sofia Meier."
+}

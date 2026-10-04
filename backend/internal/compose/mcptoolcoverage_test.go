@@ -159,8 +159,13 @@ type coverageTotals struct {
 type caseRow struct {
 	Name string `json:"name"`
 	// Title is the scenario's own first line, the job in a contact's words.
-	Title    string   `json:"title"`
-	File     string   `json:"file"`
+	Title string `json:"title"`
+	File  string `json:"file"`
+	// Passport is the credential the scenario asks the lane to present: empty for
+	// the read+write one, "wide" for the one that adds draft and send. Not
+	// published; the surface census reads it to know which scopes a case's
+	// required tools are served under.
+	Passport string   `json:"-"`
 	Criteria []int    `json:"criteria"`
 	Requires []string `json:"requires"`
 	// RequiresOneOf are the any-of groups: one must_call entry whose
@@ -550,6 +555,7 @@ func coverageRank(row toolCoverageRow) int {
 var (
 	e2eScenarioName = regexp.MustCompile(`(?m)^name:\s*(\S+)\s*$`)
 	e2eCriteria     = regexp.MustCompile(`(?m)^criteria:\s*\[([^\]]*)\]`)
+	e2ePassport     = regexp.MustCompile(`(?m)^passport:\s*(\S+)\s*$`)
 	// A LIST ITEM IS NOT THE ONLY LINE A BLOCK HOLDS. These scenarios carry their
 	// reasoning inline — a comment above the tool it explains — and a pattern that
 	// admits only item lines stops at the first one. That is not a partial read:
@@ -627,6 +633,9 @@ func readE2ELLMCases(scenarioDir, recordDir string) ([]caseRow, error) {
 		}
 		if got := e2eScenarioName.FindStringSubmatch(text); len(got) == 2 {
 			row.Name = got[1]
+		}
+		if got := e2ePassport.FindStringSubmatch(text); len(got) == 2 {
+			row.Passport = got[1]
 		}
 		if got := e2eCriteria.FindStringSubmatch(text); len(got) == 2 {
 			for _, n := range e2eCriterion.FindAllString(got[1], -1) {

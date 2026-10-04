@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer specifies that all three Kolbenpumpe KP-300 messages (1-3 Oct) would move from Kieler Pumpenwerk to Rhön Hydraulik, replacing the old filing, making clear it is the whole thread and not one message.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 2. The answer says what is waiting precisely enough for the user to decide: the whole thread — all three Kolbenpumpe KP-300 messages — would move from Kieler Pumpenwerk to Rhön Hydraulik, replacing the old filing. Answer no if it leaves out which messages, which company they would leave, or which they would join, or describes it as one message.",
+  "answer": "Not moved yet. The re-filing is staged and waiting for your approval: all three Kolbenpumpe KP-300 messages (1-3 Oct) would move from Kieler Pumpenwerk to Rhön Hydraulik, replacing the old filing. Nothing has moved yet; release approval 01a1 and the thread moves."
+}

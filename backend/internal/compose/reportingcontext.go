@@ -82,7 +82,7 @@ func reportingContext(ctx context.Context, tx pgx.Tx, selection crmcontracts.Rep
 		}
 		out.CloseInterval = &closeWindow
 	default:
-		return out, fmt.Errorf("choose a supported expected-close window: %w", apperrors.ErrInvalidArgument)
+		return out, fmt.Errorf("choose a supported expected-close window, all_open or fiscal_quarter: %w", apperrors.ErrInvalidArgument)
 	}
 	members, memberErr := reportingMembers(ctx, tx, out.Scope)
 	err = memberErr
