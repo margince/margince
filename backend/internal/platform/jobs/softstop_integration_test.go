@@ -117,12 +117,16 @@ func TestASignalLetsARunningJobFinishAndFetchesNothingNew(t *testing.T) {
 	case <-time.After(500 * time.Millisecond):
 	}
 	// Inserted once the stop has had that half second to take hold, so a poll
-	// already in flight at the signal cannot claim it; then a further second,
-	// several fetch intervals, for a client still fetching to pick it up.
+	// already in flight at the signal cannot claim it. A client still fetching
+	// would start it within a second, several fetch intervals.
 	if err := inserter.Enqueue(t.Context(), heldArgs{}, nil); err != nil {
 		t.Fatalf("Enqueue after the signal: %v", err)
 	}
-	time.Sleep(time.Second)
+	select {
+	case <-held.started:
+		t.Fatal("the job inserted after the signal was fetched by a client that was stopping")
+	case <-time.After(time.Second):
+	}
 	close(held.release)
 
 	select {
