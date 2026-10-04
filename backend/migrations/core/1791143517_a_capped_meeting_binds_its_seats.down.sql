@@ -6,4 +6,4 @@ ALTER TABLE activity_meeting_attendee_repair
     DROP CONSTRAINT activity_meeting_attendee_repair_outcome_check;
 ALTER TABLE activity_meeting_attendee_repair
     ADD CONSTRAINT activity_meeting_attendee_repair_outcome_check
-    CHECK (outcome IN ('attendees', 'none', 'capped', 'unreadable'));
+    CHECK (outcome IN ('attendees', 'none', 'capped', 'unreadable')) NOT VALID;

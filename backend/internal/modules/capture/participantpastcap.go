@@ -53,7 +53,7 @@ func StampSeatsPastTheCap(
 		names = append(names, strings.TrimSpace(p.DisplayName))
 	}
 	// DISTINCT ON the seat: a colleague listed as organizer and attendee is
-	// still one person in the room, and the first role stated stands.
+	// still one colleague in the room, and the first role stated stands.
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO activity_participant (activity_id, user_id, address, role, display_name)
 		SELECT DISTINCT ON (u.id) $1, u.id, inp.address, inp.role, inp.display_name
