@@ -9,8 +9,8 @@ package integration
 // credential may release the move it staged for its own human. What it releases
 // is the exact set of activities it named: a thread key is refused, and a mail
 // that joins the conversation afterwards is not moved under an approval that
-// never described it. A project is the opposite case — its retention mark is
-// write-once — and stays the contact's to release.
+// never described it. A project relink is released the same way: a member can
+// undo the filing, so only the undo stays out of the credential's hands.
 
 import (
 	"context"
@@ -132,10 +132,10 @@ func TestACredentialReleasesTheCompanyRelinkItStagedAndMovesExactlyTheNamedActiv
 	}
 }
 
-// A project relink writes a retention mark nothing removes, so the credential
-// that staged it is refused with the reason, and the staged answer says it is
-// not this credential's to release.
-func TestACredentialDoesNotReleaseAProjectRelinkItStaged(t *testing.T) {
+// A project relink is released by the credential that staged it, because a
+// member can take the filing back: the retry files exactly the named activity and
+// stamps it, and the undo is a named member's decision the credential cannot make.
+func TestACredentialReleasesTheProjectRelinkItStagedAndOnlyAMemberUndoesTheFiling(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
 	f := seedThreadFixture(t, e, owner)
@@ -143,23 +143,56 @@ func TestACredentialDoesNotReleaseAProjectRelinkItStaged(t *testing.T) {
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
 	agent := relinkAgentCtx(e, e.SeedPassport(t, owner, "relink project"))
 
-	_, err := registry.Invoke(agent, "relink_activities", json.RawMessage(
-		`{"activity_ids":["`+f.mine[0].String()+`"],"entity_type":"project","entity_id":"`+f.project.String()+`"}`))
+	args := `{"activity_ids":["` + f.mine[0].String() + `"],"entity_type":"project","entity_id":"` + f.project.String() + `"}`
+	_, err := registry.Invoke(agent, "relink_activities", json.RawMessage(args))
 	var staged *workflow.StagedApprovalError
 	if !errors.As(err, &staged) {
 		t.Fatalf("relink_activities onto a project → %v, want a staged approval", err)
 	}
-	if staged.ReleasableByCaller {
-		t.Error("the staged answer says this credential can release a project relink, which it would be refused")
-	}
-
-	_, err = registry.Invoke(agent, "decide_approval", json.RawMessage(
-		`{"staged_action_id":"`+staged.ApprovalID.String()+`","decision":"approve"}`))
-	if !errors.Is(err, apperrors.ErrPermissionDenied) || !strings.Contains(err.Error(), "retention mark is write-once") {
-		t.Fatalf("self-release of a project relink → %v, want a denial naming the write-once retention mark", err)
+	if !staged.ReleasableByCaller {
+		t.Fatal("the staged answer does not say this credential can release a project relink; the filing is undoable")
 	}
 	if projectLinks(t, e, f.mine[0], f.project) != 0 {
-		t.Error("the refused release still filed the activity under the project")
+		t.Fatal("staging filed the activity before anybody said yes")
+	}
+
+	if _, err := registry.Invoke(agent, "decide_approval", json.RawMessage(
+		`{"staged_action_id":"`+staged.ApprovalID.String()+`","decision":"approve"}`)); err != nil {
+		t.Fatalf("the credential could not release the project relink it staged: %v", err)
+	}
+	var decidedByLender bool
+	if err := owner.QueryRow(context.Background(), `
+		SELECT a.decided_by = p.on_behalf_of FROM approval a JOIN passport p ON p.id = a.passport_id WHERE a.id = $1`,
+		staged.ApprovalID.UUID).Scan(&decidedByLender); err != nil || !decidedByLender {
+		t.Fatalf("decision recorded as the lender = %v (err %v), want the lender through the agent", decidedByLender, err)
+	}
+
+	out, err := registry.Invoke(agent, "relink_activities", json.RawMessage(
+		args[:len(args)-1]+`,"approval_id":"`+staged.ApprovalID.String()+`"}`))
+	if err != nil {
+		t.Fatalf("the released retry → %v", err)
+	}
+	if got := relinkedCount(t, out); got != 1 {
+		t.Errorf("relinked = %d, want the one named activity", got)
+	}
+	if projectLinks(t, e, f.mine[0], f.project) != 1 || projectLinks(t, e, f.mine[1], f.project) != 0 {
+		t.Error("the released relink did not file exactly the named activity")
+	}
+	filed := ids.ActivityID{UUID: f.mine[0]}
+	if readProjectStamp(t, e, filed.UUID).class == nil {
+		t.Fatal("the filing the credential released was not stamped")
+	}
+
+	// The credential can stage and release the filing, never withdraw the class.
+	if _, err := e.Activities.UndoProjectFiling(agent, filed, undoReason); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("an agent undoing the filing → %v, want a permission denial", err)
+	}
+	member := e.As(e.Rep1, []ids.UUID{e.Team1}, AdminPerms)
+	if _, err := e.Activities.UndoProjectFiling(member, filed, undoReason); err != nil {
+		t.Fatalf("the member undoing the filing → %v", err)
+	}
+	if readProjectStamp(t, e, filed.UUID).class != nil || projectLinks(t, e, filed.UUID, f.project) != 0 {
+		t.Error("the member's undo left the class or the project link behind")
 	}
 }
 

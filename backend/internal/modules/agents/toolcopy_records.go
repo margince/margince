@@ -116,7 +116,8 @@ var relinkActivityCopy = toolCopy{
 	Purpose: "Fix what a recorded activity is about, when a captured mail or meeting landed on " +
 		"the wrong record or on none.",
 	Limits: "Changes only the association; content is untouched. By default the new link is " +
-		"ADDED beside existing ones.",
+		"ADDED beside existing ones. Onto a project it waits for the user's yes, which you can " +
+		"relay with decide_approval.",
 	Instead: "log_activity records an event not recorded yet; relink_activities moves a " +
 		"picked set, such as a whole thread's activities.",
 	Retain: "Set replace_existing_of_type to move rather than associate.",
@@ -133,9 +134,9 @@ var relinkThreadCopy = toolCopy{
 var relinkActivitiesCopy = toolCopy{
 	Purpose: "Move up to 500 named activities onto one record, all or nothing.",
 	Limits: "Each id must be visible and writable to you. It is staged for confirmation, and the " +
-		"retry moves exactly these ids. Onto a company, deal, contact or lead the user's yes can " +
-		"be relayed with decide_approval, since relinking moves it back; a project destination is " +
-		"released by a human in the CRM.",
+		"retry moves exactly these ids. Once the user says yes, relay it with decide_approval: " +
+		"every destination can be put back, and a filing under a project can be undone by a " +
+		"member from the activity.",
 	Instead: "relink_activity moves one message.",
 	Retain:  "The answer is the count moved.",
 }

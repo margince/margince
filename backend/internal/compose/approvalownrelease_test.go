@@ -126,8 +126,8 @@ func TestAThreadRelinkIsNeverAnUndoableRelease(t *testing.T) {
 }
 
 // A relink is judged by where the staged call files its activities, not by the
-// policy's static "dynamic": every destination but a project is an association
-// a member relinks back, and whatever the target type the approval was staged
+// policy's static "dynamic": every link target is something a member can put
+// back — a project filing through its undo — and whatever the target type the approval was staged
 // under (the batch doors stage under the destination, the single one under the
 // activity).
 func TestARelinkIsUndoableByItsDestination(t *testing.T) {
@@ -140,7 +140,7 @@ func TestARelinkIsUndoableByItsDestination(t *testing.T) {
 			{`{"entity_type":"deal"}`, true},
 			{`{"entity_type":"contact"}`, true},
 			{`{"entity_type":"lead"}`, true},
-			{`{"entity_type":"project"}`, false},
+			{`{"entity_type":"project"}`, true},
 			{`{"entity_type":"webhook_subscription"}`, false},
 			{`{}`, false},
 			{`not json`, false},

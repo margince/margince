@@ -153,14 +153,14 @@ func NewRelinkActivityCall(records datasource.SystemOfRecordProvider, language b
 // named set — plus the one question this family's tier turns on: WHICH KIND
 // of record it files the activities under.
 //
-// Every destination but one is an ordinary association a member can undo by
-// relinking again. Filing under a PROJECT is not: it classifies the activity as
-// commercial correspondence, and that classification is write-once in the
-// database and monotonic in the product — relinking away does not lift it, and
-// removing it takes a named contact giving a written reason through the
-// controller's release path. An agent that could do that unattended could put a
-// six-year retention floor across a mailbox with nothing to undo it, which is a
-// denial of the subject's Art. 17 right that the controller cannot reverse.
+// Every destination is an association a member can undo. Filing under a PROJECT
+// is the heavier one: it classifies the activity as commercial correspondence,
+// so a contact still answers it first, but a member can take it back with the
+// undo of a project filing (a named member's written reason; the class goes
+// only when the filing is the sole thing qualifying the activity). That undo is
+// why the credential that staged a project relink may release it, and why the
+// tier stays confirm-first anyway: an agent that filed unattended could put a
+// six-year retention floor across a mailbox before anybody looked.
 // The batch doors are the same decision at scale, so they share this wrapper
 // rather than each spelling the question again.
 type destinationTieredCall struct {
@@ -277,12 +277,19 @@ func relinkActivityTier(in mcp.TierResolverInput) mcp.RiskTier {
 //
 // The destination is read off the staged arguments, so a relink staged for any
 // reason — a batch that cannot pin a version, a record that could not be read —
-// is judged by where it files, not by the policy's "dynamic" label.
+// is judged by where it files, not by the policy's "dynamic" label. Every link
+// target is undoable, a project included: a member relinks to move one, and
+// undoes the project filing to take that one back. An unreadable destination is
+// not undoable, the stricter answer.
 func ReleaseUndoableByDestination(tool string, call json.RawMessage) (undoable, decided bool) {
 	if !relinkDestinationTools[tool] {
 		return false, false
 	}
-	return relinkActivityTier(mcp.TierResolverInput{Args: call}) == mcp.TierAutoExecute, true
+	var args relinkTierArgs
+	if err := json.Unmarshal(call, &args); err != nil {
+		return false, true
+	}
+	return relinkTargets[args.EntityType], true
 }
 
 // relinkDestinationTools are the tools whose staged call is judged by

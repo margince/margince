@@ -127,8 +127,8 @@ func (t relinkActivity) Spec() mcp.ToolSpec {
 		Description: relinkActivityCopy.render(),
 		Instead:     relinkActivityCopy.Instead,
 		// Dynamic because filing under a PROJECT classifies the activity as
-		// commercial correspondence — write-once and monotonic — while every
-		// other destination is an association a member can undo. See
+		// commercial correspondence, which a contact confirms first; every
+		// other destination is an association that runs at once. See
 		// relinkActivityTier.
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierDynamic,
 		TierResolver: relinkActivityTier,

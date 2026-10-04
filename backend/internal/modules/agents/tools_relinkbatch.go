@@ -47,8 +47,8 @@ func (t relinkThread) Spec() mcp.ToolSpec {
 		Description: relinkThreadCopy.render(),
 		Instead:     relinkThreadCopy.Instead,
 		// Dynamic for the reason relink_activity is: a PROJECT destination is
-		// a write-once retention classification, here over every message in
-		// the thread. relinkActivityTier reads `entity_type` off these
+		// a retention classification a contact confirms, here over every
+		// message in the thread. relinkActivityTier reads `entity_type` off these
 		// arguments exactly as it does off the single form's.
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierDynamic,
 		TierResolver: relinkActivityTier,

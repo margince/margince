@@ -4632,6 +4632,64 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/activities/{id}/project-filing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * What filing this activity under a project did to its retention, and whether it can be undone.
+         * @description Answers from the same judgement the undo applies, so the screen offering the undo and the
+         *     write refusing it cannot disagree: `undoable` is true only when the project filing is the
+         *     SOLE reason the correspondence is kept, no statutory hold has started, and no qualifying deal
+         *     is linked. When it is not, `refusal` says which rule stands in the way. `undone` lists the
+         *     decisions already taken on this activity — who, when and the written reason — newest first,
+         *     which is how the audit entry is shown where the activity is.
+         */
+        get: operations["getActivityProjectFiling"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/activities/{id}/project-filing/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Undo filing this activity under a project. Requires a stated reason; audited.
+         * @description Removes the activity from its project and withdraws the retention class that filing gave it,
+         *     so the correspondence is treated as ordinary again. Allowed only when the project filing is
+         *     the sole basis for the class: another qualifying basis (a won deal, a sent offer, a
+         *     controller's pin, a second project) keeps it and the call answers `409
+         *     other_basis_remains`. An activity already restricted by a statutory hold answers `409
+         *     restricted` — a hold that has started never shortens. The decision is recorded with the
+         *     deciding member's name and the written reason, in one transaction with the audit entry and
+         *     the `activity.updated` event.
+         */
+        post: operations["undoActivityProjectFiling"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/activities/relink-thread": {
         parameters: {
             query?: never;
@@ -36173,6 +36231,36 @@ export interface components {
             lawful_basis?: string | null;
             enabled?: boolean;
         };
+        /** @description What filing one activity under a project did to its retention, and whether the filing can be undone. Names projects by the name frozen when the filing qualified the correspondence, so a renamed or deleted project still reads as what it was. */
+        ProjectFiling: {
+            /** @description Whether the activity carries evidence that filing it under a project qualified it. */
+            filed: boolean;
+            /** @description The project filings on record, oldest first. */
+            projects: components["schemas"]["ProjectFilingEntry"][];
+            undoable: boolean;
+            /** @description Why a filed activity cannot be undone. Absent when it can, or when it is not filed. */
+            refusal?: components["schemas"]["ProjectFilingRefusal"];
+            /** @description Undo decisions already taken on this activity, newest first. */
+            undone: components["schemas"]["ProjectFilingUndoDecision"][];
+        };
+        ProjectFilingEntry: {
+            /** @description The project's name when the filing qualified the activity. */
+            name: string;
+            /** Format: date-time */
+            qualified_at: string;
+        };
+        ProjectFilingRefusal: {
+            /** @enum {string} */
+            code: "not_filed" | "other_basis_remains" | "restricted" | "qualifying_deal";
+            message: string;
+        };
+        ProjectFilingUndoDecision: {
+            /** Format: date-time */
+            at: string;
+            by_name: string;
+            reason: string;
+            projects: string[];
+        };
         RetentionOverrideRequest: {
             reason: string;
         };
@@ -49576,6 +49664,88 @@ export interface operations {
             };
             404: components["responses"]["NotFound"];
             409: components["responses"]["VersionConflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getActivityProjectFiling: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The filing's state. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectFiling"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    undoActivityProjectFiling: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RetentionOverrideRequest"];
+            };
+        };
+        responses: {
+            /** @description The filing's state after the undo. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectFiling"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description The filing cannot be undone; the problem's `code` is one of `not_filed`, `other_basis_remains`, `restricted` or `qualifying_deal`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             422: components["responses"]["ValidationError"];
         };
     };

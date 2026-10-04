@@ -94,9 +94,10 @@ been reported. If the stage's meaning cannot be read with certainty, it waits â€
 the doubt falls toward the approval, not past it.
 
 **Filing an activity under a project.** Relinking is normally immediate, but
-filing under a project marks the message as commercial correspondence, which is
-write-once and cannot be undone by relinking away. See
-[Capture](capture.md#filing-under-a-project-is-permanent).
+filing under a project marks the message as commercial correspondence, which
+relinking away does not remove. A member can take the filing back with **Undo
+filing**; an agent cannot. See
+[Capture](capture.md#filing-under-a-project-starts-a-retention-clock).
 
 **Any field a human last wrote.** See the section below â€” this one catches more
 in practice than all the others together.

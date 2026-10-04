@@ -176,7 +176,8 @@ var calleeGatedDealReads = gatekit.Waive(map[string]string{
 
 // ruledDealReads: a DISCLOSING read the product has ruled needs no deal grant.
 var ruledDealReads = gatekit.Waive(map[string]string{
-	"internal/modules/privacy/legalholdlist.go": "the litigation-hold census: one UNION over the five holdable tables, selecting an id and a display name for rows where legal_hold is set. Gated on the retention-policy authority and refused to a non-human principal at its own entry, which is the posture the sibling restricted-records list already takes — a controller asked what a hold is preserving has to be told which records those are, and the grant that governs the retention ladder is the one that governs seeing what overrides it. No field of the record is read beyond its name",
+	"internal/modules/activities/projectfiling.go": "the undo of a project filing asks one boolean of the deals an activity is linked to: does any of them qualify it as commercial correspondence (won, or carrying an offer past draft), the rule the erasure's fallback applies to an unstamped row. No field of the deal is read or returned. It guards a retention class from being withdrawn, so bounding it by the caller's deal grant would let a member without that grant withdraw a shield a won deal still holds",
+	"internal/modules/privacy/legalholdlist.go":    "the litigation-hold census: one UNION over the five holdable tables, selecting an id and a display name for rows where legal_hold is set. Gated on the retention-policy authority and refused to a non-human principal at its own entry, which is the posture the sibling restricted-records list already takes — a controller asked what a hold is preserving has to be told which records those are, and the grant that governs the retention ladder is the one that governs seeing what overrides it. No field of the record is read beyond its name",
 })
 
 // deferredDealReads: a DISCLOSING read that is still ungated, each naming

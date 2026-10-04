@@ -200,10 +200,10 @@ var decisionGrants = map[string][]grantRequirement{
 	// A relink moves an activity onto another record, which the store gates on
 	// activity.UPDATE — an association change, not a re-capture. It reaches a
 	// human at all only for one destination: filing under a PROJECT classifies
-	// the correspondence as a Handelsbrief, and that classification is
-	// write-once in the database and is not lifted by relinking away. Every
-	// other destination auto-executes, so a card here is always the six-year
-	// decision rather than an ordinary move.
+	// the correspondence as a Handelsbrief, and only the undo of a project
+	// filing lifts that classification — relinking away does not. A card for a
+	// single relink is therefore the six-year decision rather than an ordinary
+	// move.
 	//
 	// The grant is the one PERFORMING it takes, for the reason disqualify_lead
 	// states: anything less puts the control point with somebody who could not

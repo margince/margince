@@ -169,10 +169,7 @@ exact, or confirmed by a human.
 A message that arrives before its project exists is not re-filed later on its
 own. Relink it, or let the next message in the thread carry the filing.
 
-### Filing under a project is permanent
-
-Filing an email under a project starts a retention clock. Read this before you
-file anything.
+### Filing under a project starts a retention clock
 
 Under the German rules pack, an email linked to a project is business
 correspondence and must be kept **six years from the end of the calendar year in
@@ -181,7 +178,10 @@ which it was sent or received** — its own date, not the day you filed it.
 The mark is written the moment the link is made, by any route. **Moving the
 email off the project does not remove it.** An erasure request will then hold
 that message under a restriction rather than deleting it, and it appears on the
-Restricted records page with the project's name as the reason.
+Restricted records page with the project's name as the reason. A mistaken filing
+is taken back with **Undo filing** on the project's timeline: you write why, the
+message leaves the project and the mark is withdrawn, unless a won deal, a sent
+offer or a statutory hold still holds it. An assistant cannot undo a filing.
 
 ## Fixing a mistake: Relink
 

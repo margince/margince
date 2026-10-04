@@ -858,7 +858,7 @@ export interface components {
              */
             entity_id: string;
         };
-        /** @description activity.updated's BOUNDED delta: UpdateActivity's known mutable fields (subject, body, occurred_at, due_at, remind_at, assignee_id, is_done, meeting_status) each carried only when this update touched them, plus RelinkActivity's relinked target and SetActivityAudience's audience, plus explicit request-reminder restoration's restored flag and capture's own-sent-mail direction correction — a fixed, KNOWN key set (unlike contact/company/deal/lead.updated's genuinely open patch), so it is typed rather than an open map. */
+        /** @description activity.updated's BOUNDED delta: UpdateActivity's known mutable fields (subject, body, occurred_at, due_at, remind_at, assignee_id, is_done, meeting_status) each carried only when this update touched them, plus RelinkActivity's relinked target and SetActivityAudience's audience, plus the undo of a project filing, explicit request-reminder restoration's restored flag and capture's own-sent-mail direction correction — a fixed, KNOWN key set (unlike contact/company/deal/lead.updated's genuinely open patch), so it is typed rather than an open map. */
         PublicEventActivityChangedFields: {
             /** @description True when explicit request acceptance restores an archived unfinished reminder. */
             restored?: boolean;
@@ -899,6 +899,8 @@ export interface components {
              * @enum {string}
              */
             direction?: "outbound";
+            /** @description True when a member undid the activity's filing under a project: the project link and the retention class that filing gave it are gone (absent otherwise). Who decided and why is audit-log material, not published. */
+            project_filing_undone?: boolean;
             /** @description True when the sender's own provider filing attested the message as their outbound mail, whether it was stored as received or as unattested outbound (absent otherwise). */
             outbound_attested?: boolean;
             /**

@@ -45,14 +45,14 @@ const BasisProjectLinked = "project_linked"
 //
 // IDEMPOTENT. An activity may be filed, unfiled and filed again under the same
 // project, and it may already carry a class from a deal that also qualified it.
-// The class is write-once in the database (activity_refuse_restricted_mutation),
+// The class is monotonic in the database (activity_refuse_restricted_mutation),
 // so this only stamps a row carrying no class yet, and the evidence insert
 // tolerates the row it already wrote.
 //
-// PERMANENT. Relinking the activity away from the project does not unstamp it,
-// and neither does archiving or closing the project. The class is monotonic and
-// the evidence is frozen: over-retention is an argument to have with a
-// supervisory authority, destruction is irreversible.
+// Relinking the activity away from the project does not unstamp it, and neither
+// does archiving or closing the project. Only UndoProjectFiling does, and only
+// when this filing is the sole basis: over-retention is an argument to have with
+// a supervisory authority, destruction is irreversible.
 func StampCorrespondenceForProject(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, projectID ids.UUID) error {
 	// The project's name is frozen into the evidence at the moment it
 	// qualifies, because a rename or a delete must not take the proof with it.

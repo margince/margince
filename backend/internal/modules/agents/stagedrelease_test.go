@@ -65,6 +65,8 @@ func TestReleaseUndoableByDestination(t *testing.T) {
 		{"relink_activities", `{"entity_type":"company"}`, true, true},
 		{"relink_activity", `{"entity_type":"lead","activity_id":"x"}`, true, true},
 		{"relink_thread", `{"entity_type":"company"}`, false, false},
+		{"relink_activities", `{"entity_type":"project"}`, true, true},
+		{"relink_activities", `{"entity_type":"workspace"}`, false, true},
 		{"relink_activities", ``, false, true},
 		{"advance_deal", `{"entity_type":"company"}`, false, false},
 		{"update_record", `{}`, false, false},

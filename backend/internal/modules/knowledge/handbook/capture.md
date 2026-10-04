@@ -169,7 +169,7 @@ exact, or confirmed by a human.
 A message that arrives before its project exists is not re-filed later on its
 own. Relink it, or let the next message in the thread carry the filing.
 
-### Filing under a project is permanent
+### Filing under a project starts a retention clock
 
 Filing an email under a project starts a retention clock. Read this before you
 file anything.
@@ -182,6 +182,14 @@ The mark is written the moment the link is made, by any route. **Moving the
 email off the project does not remove it.** An erasure request will then hold
 that message under a restriction rather than deleting it, and it appears on the
 Restricted records page with the project's name as the reason.
+
+If the filing was a mistake, open the project, choose **Undo filing** on the
+message, and write why. The message leaves the project and the mark is
+withdrawn, and the dialog keeps your name and reason as a decision on record. It
+works only while the filing is the one thing keeping the message: a won deal, a
+sent offer or a controller's pin still holds it, and a message already under a
+statutory hold stays held. An assistant cannot undo a filing, though it can file
+one once you say yes.
 
 ## Fixing a mistake: Relink
 
