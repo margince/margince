@@ -206,7 +206,7 @@ func commitmentTaskEffect(
 // longer reads at all keeps what was staged.
 func sourcePrivateToNow(ctx context.Context, tx pgx.Tx, source ids.UUID, staged *ids.UUID) (*ids.UUID, error) {
 	var key *string
-	err := tx.QueryRow(ctx, `SELECT thread_key FROM activity WHERE id = $1 AND kind = 'email'`, source).Scan(&key)
+	err := tx.QueryRow(ctx, `SELECT thread_key FROM activity WHERE id = $1 AND kind = 'email' AND archived_at IS NULL AND restricted_at IS NULL`, source).Scan(&key)
 	if errors.Is(err, pgx.ErrNoRows) || (err == nil && key == nil) {
 		return staged, nil
 	}
