@@ -136,6 +136,10 @@ describe("ProjectFilingAction", () => {
     // The audit entry is shown where the activity is: who, and in their words.
     expect(within(dialog).getByText(/Ada Admin/)).toBeTruthy();
     expect(within(dialog).getByText("wrong thread")).toBeTruthy();
+
+    const closers = within(dialog).getAllByRole("button", { name: "Close" });
+    await user.click(closers[closers.length - 1]);
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 
   it("offers no undo, and says which rule stands in the way, when something else keeps the activity", async () => {

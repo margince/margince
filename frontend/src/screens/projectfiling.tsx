@@ -96,19 +96,23 @@ export function ProjectFilingModal({
       if (error) throwProblem(error, t);
       return data;
     },
-    onSuccess: (state) => {
-      setUndone(state ?? null);
-      // The activity leaves the project, so the project's timeline and the
-      // activity's own reads are stale from this moment.
-      for (const key of entityTimelineKeys("project", projectId)) {
-        queryClient.invalidateQueries({ queryKey: key });
-      }
-      queryClient.invalidateQueries({ queryKey: ["activity", activityId] });
-    },
+    onSuccess: (state) => setUndone(state ?? null),
   });
+
+  // The timeline is refreshed when the dialog closes, not when the undo lands:
+  // the activity leaves the project's timeline, and with it the row this dialog
+  // is mounted in, so refreshing first would take the audit entry off screen
+  // before anybody read it.
+  const refreshReads = () => {
+    for (const key of entityTimelineKeys("project", projectId)) {
+      queryClient.invalidateQueries({ queryKey: key });
+    }
+    queryClient.invalidateQueries({ queryKey: ["activity", activityId] });
+  };
 
   const close = () => {
     if (undo.isPending) return;
+    if (undone) refreshReads();
     undo.reset();
     setUndone(null);
     setReason("");
