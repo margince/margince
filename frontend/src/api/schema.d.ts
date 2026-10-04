@@ -17360,6 +17360,35 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/greeting-name": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Change the name colleagues greet you by.
+         * @description Always the CALLER's own, never anybody else's: there is no id to pass.
+         *
+         *     A greeting opens with one name, and the first word of the display name
+         *     is often the wrong one ("Dr. Sofia Meier", "Nguyễn Thị Lan"). This is the
+         *     word a colleague's greeting uses instead. Empty or null clears it, and
+         *     the greeting falls back to the first word of the display name.
+         *
+         *     The first sign-in through a login provider fills it from the provider's
+         *     given name, but only while it is empty, so a value saved here is never
+         *     overwritten.
+         */
+        put: operations["saveMyGreetingName"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/ai-activity": {
         parameters: {
             query?: never;
@@ -26093,6 +26122,13 @@ export interface components {
              */
             display_name: string;
         };
+        SaveMyGreetingNameRequest: {
+            /**
+             * @description The name a colleague's greeting uses. Surrounding whitespace is
+             *     trimmed; empty or null clears it.
+             */
+            greeting_name: string | null;
+        };
         /**
          * @description When one contact is bookable, on their own clock.
          *
@@ -32551,6 +32587,8 @@ export interface components {
             /** Format: email */
             email: string;
             display_name: string;
+            /** @description The name a colleague's greeting uses ("Hi Sofia,"), null when nobody has said. Read through one rule on both sides: this when set, else the first word of `display_name`. Present on the caller's own seat; absent on the roster. */
+            greeting_name?: string | null;
             /**
              * @description IANA name.
              * @default UTC
@@ -32613,6 +32651,8 @@ export interface components {
             /** Format: email */
             email: string;
             display_name: string;
+            /** @description The name the member's greetings use, when the first word of `display_name` is not it. Optional; absent, empty or null leaves it unset. */
+            greeting_name?: string | null;
             /** @description A live role's key: one of the seeded system roles or one made with `createRole`. Seeded keys are wire vocabulary and diverge from the product names on purpose — `manager` displays as "Team Lead", `rep` as "User"; `management` is the whole-company seat that holds no admin power. A caller who is not an admin may only produce an account whose whole access their own contains — every grant, row scope, team and readable field — because the set-password link goes to an address the caller chooses. `listAssignableRoles` names the roles this caller may hand out. */
             role: string;
             /** @description The teams the member joins on arrival, in the same transaction as the seat and the role. A team-scoped role (`manager`, `rep`) with no team sees and edits only its own records; the access preview says what a given role + teams will see before the invite is sent. */
@@ -68356,6 +68396,34 @@ export interface operations {
         };
         responses: {
             /** @description The caller's seat, with the new name. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    saveMyGreetingName: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveMyGreetingNameRequest"];
+            };
+        };
+        responses: {
+            /** @description The caller's seat, with the new greeting name. */
             200: {
                 headers: {
                     [name: string]: unknown;

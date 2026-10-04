@@ -24,7 +24,10 @@ import (
 type InviteUserInput struct {
 	Email       string
 	DisplayName string
-	Role        string
+	// GreetingName is the name the member's greetings use; nil leaves it
+	// unset, and their first federated sign-in may then fill it.
+	GreetingName *string
+	Role         string
 	// TeamIDs are the teams the member joins on arrival, in the same
 	// transaction as the seat and the role.
 	TeamIDs []ids.UUID
@@ -57,6 +60,11 @@ func (s *Service) InviteUser(ctx context.Context, actor Identity, in InviteUserI
 		return ids.UserID{}, "", err
 	}
 	in.TeamIDs = teams
+	greeting, err := greetingNameOf(in.GreetingName)
+	if err != nil {
+		return ids.UserID{}, "", err
+	}
+	in.GreetingName = greetingNameColumn(greeting)
 	raw, tokenHash, err := mintSessionToken()
 	if err != nil {
 		return ids.UserID{}, "", err
@@ -89,9 +97,9 @@ func (s *Service) InviteUser(ctx context.Context, actor Identity, in InviteUserI
 			return err
 		}
 		insErr := tx.QueryRow(ctx,
-			`INSERT INTO app_user (email, password_hash, display_name, status)
-			 VALUES (lower($1), NULL, $2, 'invited') RETURNING id`,
-			in.Email, in.DisplayName).Scan(&newUserID)
+			`INSERT INTO app_user (email, password_hash, display_name, greeting_name, status)
+			 VALUES (lower($1), NULL, $2, $3, 'invited') RETURNING id`,
+			in.Email, in.DisplayName, in.GreetingName).Scan(&newUserID)
 		if storekit.IsUniqueViolation(insErr) {
 			return errEmailTaken
 		}
@@ -113,7 +121,10 @@ func (s *Service) InviteUser(ctx context.Context, actor Identity, in InviteUserI
 			return err
 		}
 		auditID, err := storekit.Audit(ctx, tx, "create", "user", newUserID.UUID,
-			nil, map[string]any{"email": in.Email, "role": in.Role, fieldTeamIDs: in.TeamIDs, userAuditKeyStatus: userStatusInvited})
+			nil, map[string]any{
+				"email": in.Email, "role": in.Role, fieldTeamIDs: in.TeamIDs,
+				userAuditKeyStatus: userStatusInvited, greetingNameField: in.GreetingName,
+			})
 		if err != nil {
 			return err
 		}

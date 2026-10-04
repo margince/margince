@@ -6,7 +6,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## app_user
 
-22 columns · primary key `(id)` · referenced by 126 foreign keys
+23 columns · primary key `(id)` · referenced by 126 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -15,6 +15,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 | `display_name` | `text` | yes | Required `text`. |
 | `email` | `text` | yes | Required `text`. |
 | `failed_login_count` | `integer` | yes | Required `integer`, defaulting to `0`. |
+| `greeting_name` | `text` |  | Optional `text`, at most 100 characters. |
 | `is_agent` | `boolean` | yes | Required `boolean`, defaulting to `false`. |
 | `locale` | `text` |  | One of `en`, `de`, `vi`. |
 | `locked_until` | `timestamp with time zone` |  | Optional `timestamp with time zone`. |
@@ -40,6 +41,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 - `app_user_delivery_hour_check` — `CHECK (((delivery_hour_local IS NULL) OR ((delivery_hour_local >= 0) AND (delivery_hour_local <= 23))))`
 - `app_user_failed_login_count_check` — `CHECK ((failed_login_count >= 0))`
 - `app_user_forced_rotation_needs_a_password` — `CHECK ((NOT (must_change_password AND (password_hash IS NULL))))`
+- `app_user_greeting_name_length` — `CHECK (((greeting_name IS NULL) OR ((char_length(greeting_name) >= 1) AND (char_length(greeting_name) <= 100))))`
 - `app_user_locale_shipped` — `CHECK ((locale = ANY (ARRAY['en', 'de', 'vi'])))`
 - `app_user_morning_brief_delivery_check` — `CHECK (((morning_brief_delivery IS NULL) OR (morning_brief_delivery = ANY (ARRAY['none', 'email']))))`
 - `app_user_seat_type_check` — `CHECK ((seat_type = ANY (ARRAY['read', 'full'])))`

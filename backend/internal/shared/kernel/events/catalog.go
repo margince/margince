@@ -54,12 +54,14 @@ var catalog = map[string]struct {
 	// governs is how a member is represented on every message they send, which
 	// is a fact about that contact rather than about any one mail.
 	"email_signature.changed": {contactStreamEntity, 1},
-	// The language a member reads their interface in, and the name colleagues
-	// see them by. Both ride the contact stream for the same reason the sign-off
-	// does: they are facts about that contact, not about the installation, which
-	// names its own language in a setting and publishes nothing per reader.
-	"user_locale.changed":       {contactStreamEntity, 1},
-	"user_display_name.changed": {contactStreamEntity, 1},
+	// The language a member reads their interface in, the name colleagues see
+	// them by, and the name they are greeted by. All ride the contact stream for
+	// the same reason the sign-off does: they are facts about that contact, not
+	// about the installation, which names its own language in a setting and
+	// publishes nothing per reader.
+	"user_locale.changed":        {contactStreamEntity, 1},
+	"user_display_name.changed":  {contactStreamEntity, 1},
+	"user_greeting_name.changed": {contactStreamEntity, 1},
 	// What a member wants DELIVERED rides the identity stream rather than the
 	// contact one its neighbour above uses. A display language is something a
 	// subscriber rendering for this contact needs; what lands in their inbox is
