@@ -254,7 +254,7 @@ func (d *CommitmentDispatcher) propose(
 
 // extractorContext files under the extractor's own name, so the claim and the
 // task say a reader wrote them. It renames the product's own pass and nothing
-// else: a person stays who they are, and a context with no principal stays
+// else: a human stays who they are, and a context with no principal stays
 // without one, so every gate below answers for the caller that is really
 // there rather than for a principal this function made up.
 func extractorContext(ctx context.Context, extractor string) context.Context {
