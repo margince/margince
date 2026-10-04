@@ -1,0 +1,61 @@
+# CASE 45 — Move the deal on.
+#
+# advance_deal and progress_deal: one bare, one with a note explaining the move.
+# Both are honest answers to "move it on", and the case holds either one — the
+# tool description itself says progress_deal is what a human almost always means,
+# and a model that reaches for the bare move and leaves no note has still moved
+# the deal. That makes advance_deal a tool this lane can only ever cover as one
+# of a set: bare, it is progress_deal with the note left off, and failing a
+# correct answer for taking the shorter door would grade taste, not the product.
+#
+# THE MOVE IS OPEN TO OPEN (Qualified to Negotiation), so it runs without anyone's
+# sign-off. A move onto Won or Lost is staged for a human, which is a different
+# case; this one keeps the stage a rep reads off the call, so a run that
+# closes the deal as Won has done more than it was told.
+#
+# forecast_movement IS DELIBERATELY NOT REQUIRED, and this is the written ruling
+# the lane owes it. It takes two forecast snapshot ids and nothing on the MCP
+# surface hands one out — no tool lists snapshots and no resource publishes them —
+# so a model asked "what changed in the forecast" can only call forecast_readings
+# or invent an id. Requiring the tool here would grade a route nobody can walk.
+# What IS graded is the honest half: figures come from readings the model took,
+# and a reason is one those readings support — the stage's probability against
+# the deal's amount — never causes it has no data for.
+name: case45_move_the_deal_on
+criteria: [1, 2, 3]
+
+# WRITES: the author's own statement that this case changes the world. It is not
+# what decides the reset — the runner rebuilds whenever the LAST run dirtied the
+# world, because the assistant is offered the whole server and any run can write
+# regardless of what its file says. TestEveryWritingScenarioDeclaresThatItWrites
+# holds this line against the tools the case names.
+writes: true
+
+prompt: |
+  Just out of Rheinufer — their purchasing joined the call and we are talking
+  terms now. Put the Netzmodernisierung deal in Negotiation and note that
+  purchasing is at the table. What does that do to my quarter?
+
+must_call:
+  - progress_deal|advance_deal
+may_call:
+  - list_pipelines
+  - search_records
+  - read_record
+  - list_records
+  - resolve_entities
+  - query_workspace
+  - forecast_readings
+  - forecast_movement
+  - forecast_input_checks
+
+must_mention:
+  - "Negotiation"
+
+judge:
+  - "Criterion 1. The answer reports the Rheinufer Netzmodernisierung deal as moved to the Negotiation stage, and says nothing that puts it on Won, Lost or any other stage. Answer no if it reports a different stage, says the move is waiting for approval, or does not report a move."
+  - "Criterion 2. The answer says a note was left on the deal explaining the move — purchasing joined the call and terms are being negotiated. Answer no if it says no note was written, or never mentions one."
+  - "Criterion 3. The answer gives the forecast figures from readings it took — before and after the move, or the reading as it stands — and any reason it offers for the change follows from what it read, such as the deal's stage probability and amount. Answer no if it names causes it never read and cannot derive (a re-score, a slipped date, a definition change, other deals moving), says the forecast was unaffected without having looked, or quotes figures no tool gave it."
+
+runs: 3
+pass_at: 2

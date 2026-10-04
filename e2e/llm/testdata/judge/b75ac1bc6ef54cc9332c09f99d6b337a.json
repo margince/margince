@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer precisely identifies which messages (the whole Kolbenpumpe KP-300 thread), which company they leave (Kieler Pumpenwerk), and which they join (Rhön Hydraulik), without describing it as one message.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 2. The answer says what is waiting precisely enough for the user to decide: the whole thread — all three Kolbenpumpe KP-300 messages — would move from Kieler Pumpenwerk to Rhön Hydraulik, replacing the old filing. Answer no if it leaves out which messages, which company they would leave, or which they would join, or describes it as one message.",
+  "answer": "Done — the whole Kolbenpumpe KP-300 thread is now filed under Rhön Hydraulik and no longer on Kieler Pumpenwerk's timeline."
+}

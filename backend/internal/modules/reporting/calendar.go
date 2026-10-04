@@ -49,7 +49,7 @@ func Interval(selection crmcontracts.ReportingSelection, calendar Calendar, at t
 		}
 		start, end = selection.Interval.StartAt.In(zone), selection.Interval.EndAt.In(zone)
 	default:
-		return crmcontracts.ReportingWindow{}, invalid("choose a supported reporting period")
+		return crmcontracts.ReportingWindow{}, invalid("choose a supported reporting period: this_month, last_month, last_week, this_quarter or custom")
 	}
 	if !end.After(start) {
 		return crmcontracts.ReportingWindow{}, intervalError("choose an end date after the start date")
@@ -86,7 +86,7 @@ func TargetWindow(interval crmcontracts.ReportingWindow, basis string, calendar 
 		start = quarterStart(day, calendar.FiscalStartMonth)
 		months = 3
 	default:
-		return crmcontracts.ReportingWindow{}, invalid("choose month or fiscal quarter for targets")
+		return crmcontracts.ReportingWindow{}, invalid("choose target_basis month or fiscal_quarter; it is required even when you read no target")
 	}
 	return crmcontracts.ReportingWindow{StartAt: start, EndAt: start.AddDate(0, months, 0)}, nil
 }

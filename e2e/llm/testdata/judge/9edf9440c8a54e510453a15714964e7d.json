@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer identifies Sofia as the colleague who could introduce you and Heike as the contact at Nordwind, correctly establishing the introduction path requested.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 1. The answer names Sofia Meier as the colleague who could make the introduction and Heike Brandt as the person she knows at Nordwind Armaturen. Answer no if it names the user themself as the route, names someone else, or says nobody here knows anyone there.",
+  "answer": "We booked about EUR 100k, worked out from the won deals. Körber Sensorik and Reply Deutschland are at risk. Yes, price is the holdup: roughly 70% of customers raise it. Sofia could introduce you to Heike at Nordwind."
+}

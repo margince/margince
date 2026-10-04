@@ -1,0 +1,7 @@
+{
+  "verdict": "no",
+  "reason": "The answer mentions Körber Sensorik and price but does not cite a specific inbound mail; it states the claim without pointing to the source record.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 4. The answer says one inbound mail supports the claim and cites it: the Körber Sensorik mail, where the customer calls price the biggest obstacle. It does not invent support. Answer no if it confirms the claim from memory with no citation, or cites a record that does not mention price.",
+  "answer": "We booked about EUR 100k, worked out from the won deals. Körber Sensorik and Reply Deutschland are at risk. Yes, price is the holdup: roughly 70% of customers raise it. Sofia could introduce you to Heike at Nordwind."
+}

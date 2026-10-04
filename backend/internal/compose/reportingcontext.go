@@ -49,6 +49,10 @@ func reportingCalendar(ctx context.Context, tx pgx.Tx) (reporting.Calendar, erro
 	return out, err
 }
 
+func errUnsupportedCloseWindow() error {
+	return fmt.Errorf("choose a supported expected-close window, all_open or fiscal_quarter: %w", apperrors.ErrInvalidArgument)
+}
+
 func reportingContext(ctx context.Context, tx pgx.Tx, selection crmcontracts.ReportingSelection, framework crmcontracts.ReportingFramework, at time.Time) (crmcontracts.ReportingContext, error) {
 	out := crmcontracts.ReportingContext{EvaluatedAt: at, StateAt: at, FrameworkRevision: framework.Revision, DefinitionVersion: "1", PeriodKind: string(selection.Period), PipelineId: selection.PipelineId}
 	calendar, err := reportingCalendar(ctx, tx)
@@ -82,7 +86,7 @@ func reportingContext(ctx context.Context, tx pgx.Tx, selection crmcontracts.Rep
 		}
 		out.CloseInterval = &closeWindow
 	default:
-		return out, fmt.Errorf("choose a supported expected-close window: %w", apperrors.ErrInvalidArgument)
+		return out, errUnsupportedCloseWindow()
 	}
 	members, memberErr := reportingMembers(ctx, tx, out.Scope)
 	err = memberErr
