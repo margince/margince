@@ -31961,6 +31961,42 @@ type DealStatus string
 // DealWonWithoutContractReason Why this deal was won with no contract behind it (ADR-0109 §6). NULL on a won deal that HAS one — the two are distinguishable, which is what makes "how many won deals have no paper, and why" answerable. Cleared on reopen and on any transition away from won.
 type DealWonWithoutContractReason string
 
+// DealCommitment defines model for DealCommitment.
+type DealCommitment struct {
+	// Body What was committed to, in the language of the reader.
+	Body        string             `json:"body"`
+	ContactId   openapi_types.UUID `json:"contact_id"`
+	ContactName string             `json:"contact_name"`
+
+	// DueAt Absent when the conversation named no day.
+	DueAt *time.Time `json:"due_at,omitempty"`
+
+	// Id The id of the claim, which `POST /claims/{id}/settle` takes.
+	Id openapi_types.UUID `json:"id"`
+
+	// OccurredAt When it was said.
+	OccurredAt time.Time `json:"occurred_at"`
+
+	// SourceActivityId The captured activity it was read from.
+	SourceActivityId openapi_types.UUID `json:"source_activity_id"`
+
+	// SourceKind The kind of activity it was read from (`email`, `meeting`, …), so a client opens it in the reader that kind needs.
+	SourceKind string `json:"source_kind"`
+
+	// SourceQuote The words it was read from, verbatim.
+	SourceQuote string `json:"source_quote"`
+}
+
+// DealCommitments defines model for DealCommitments.
+type DealCommitments struct {
+	// Complete False when a commitment was left out because its contact or its message is outside what the caller may read.
+	Complete bool             `json:"complete"`
+	Data     []DealCommitment `json:"data"`
+
+	// HasMore True when more open commitments exist than the most urgent ones returned.
+	HasMore bool `json:"has_more"`
+}
+
 // DealCoverage defines model for DealCoverage.
 type DealCoverage struct {
 	DealId  openapi_types.UUID        `json:"deal_id"`
@@ -65394,6 +65430,9 @@ type ServerInterface interface {
 	// Accept a recorded automatic deal change.
 	// (POST /deals/{id}/applied-changes/{changeId}/accept)
 	AcceptAppliedDealChange(w http.ResponseWriter, r *http.Request, id Id, changeId openapi_types.UUID, params AcceptAppliedDealChangeParams)
+	// What the customer committed to that this deal waits on.
+	// (GET /deals/{id}/commitments)
+	GetDealCommitments(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Who covers this deal, and what is wrong with how it is covered.
 	// (GET /deals/{id}/coverage)
 	GetDealCoverage(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
@@ -68862,6 +68901,12 @@ func (_ Unimplemented) AdvanceDeal(w http.ResponseWriter, r *http.Request, id Id
 // Accept a recorded automatic deal change.
 // (POST /deals/{id}/applied-changes/{changeId}/accept)
 func (_ Unimplemented) AcceptAppliedDealChange(w http.ResponseWriter, r *http.Request, id Id, changeId openapi_types.UUID, params AcceptAppliedDealChangeParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What the customer committed to that this deal waits on.
+// (GET /deals/{id}/commitments)
+func (_ Unimplemented) GetDealCommitments(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -88001,6 +88046,40 @@ func (siw *ServerInterfaceWrapper) AcceptAppliedDealChange(w http.ResponseWriter
 	handler.ServeHTTP(w, r)
 }
 
+// GetDealCommitments operation middleware
+func (siw *ServerInterfaceWrapper) GetDealCommitments(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetDealCommitments(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetDealCoverage operation middleware
 func (siw *ServerInterfaceWrapper) GetDealCoverage(w http.ResponseWriter, r *http.Request) {
 
@@ -105730,6 +105809,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/deals/{id}/applied-changes/{changeId}/accept", wrapper.AcceptAppliedDealChange)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/deals/{id}/commitments", wrapper.GetDealCommitments)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/deals/{id}/coverage", wrapper.GetDealCoverage)

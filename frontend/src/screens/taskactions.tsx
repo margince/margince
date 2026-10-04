@@ -22,7 +22,8 @@ import { SourceEvidence } from "../design-system/sourceevidence";
 import { calendarDay, dueInstant } from "../format/calendarday";
 import { formatDate, formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { throwProblem } from "./common";
+import { DEAL_COMMITMENTS_KEY } from "./activitykeys";
+import { provenanceOf, throwProblem } from "./common";
 import { EntityRef } from "./entityref";
 import "./taskactions.css";
 import { ErrorLine } from "../design-system/errorline";
@@ -356,6 +357,11 @@ export function TaskDetailModal({
               {task.assignee_id && (
                 <EntityRef kind="user" id={task.assignee_id} />
               )}
+              {/* A task an agent wrote says so, so a reader knows it was
+                  read out of a conversation rather than typed by a colleague. */}
+              {provenanceOf(task.captured_by).kind === "agent" && (
+                <Badge tone="ai">{t("co.assistant.aiTag")}</Badge>
+              )}
             </div>
             {!task.is_done && !readOnly && (
               <div className="form-actions task-detail-actions">
@@ -559,9 +565,11 @@ export function useClaimSettle(invalidateKeys: readonly QueryKey[]) {
       for (const queryKey of invalidateKeys) {
         queryClient.invalidateQueries({ queryKey });
       }
-      // The contact's own card lists the same open claims, so a drawer standing
-      // on them would keep showing a promise that has just been settled.
+      // The contact's own page and a deal's watch card list the same open
+      // claims, so either would keep showing a commitment just settled.
       queryClient.invalidateQueries({ queryKey: ["contact"] });
+      queryClient.invalidateQueries({ queryKey: ["contact360"] });
+      queryClient.invalidateQueries({ queryKey: DEAL_COMMITMENTS_KEY });
     },
   });
 }

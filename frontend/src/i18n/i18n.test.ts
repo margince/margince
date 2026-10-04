@@ -29,6 +29,9 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // "LinkedIn" is the brand and is written the same in every catalog; the other
   // six field labels beside it are translated normally.
   "contact.research.field.linkedin",
+  // Quoted words between quotation marks, which Vietnamese writes as English
+  // does; only the words inside change, and they are the speaker's own.
+  "commitment.quote",
   // The product name of the buyer surface, on the card that names it and on
   // the tab that opens it.
   "room.card.title",

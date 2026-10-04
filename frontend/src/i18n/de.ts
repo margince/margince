@@ -2087,6 +2087,13 @@ export const de = {
   "co.next.overdue": "\u00dcberfällig",
   "co.next.due": "Fällig {when}",
   "co.next.undated": "Kein Fälligkeitsdatum",
+  "commitment.dismiss": "Verwerfen",
+  "commitment.quote": "„{quote}“",
+  "deal.watch.title": "Zusagen des Kunden",
+  "deal.watch.incomplete":
+    "Einige Zusagen dieses Unternehmens sind für dich nicht sichtbar.",
+  "deal.watch.more": "Die 25 dringendsten Zusagen; weitere sind offen.",
+  "deal.watch.source": "Nachricht öffnen",
   "co.work.closes": "Abschluss {date}",
   "co.brief.by.model": "Von Margince geschrieben",
   "co.brief.by.deterministic": "Aus CRM-Datensätzen zusammengestellt",

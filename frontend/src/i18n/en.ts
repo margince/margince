@@ -2149,6 +2149,13 @@ export const en = {
   "co.next.overdue": "Overdue",
   "co.next.due": "Due {when}",
   "co.next.undated": "No due date",
+  "commitment.dismiss": "Dismiss",
+  "commitment.quote": "“{quote}”",
+  "deal.watch.title": "Customer commitments",
+  "deal.watch.incomplete":
+    "Some commitments at this company are hidden from you.",
+  "deal.watch.more": "Showing the 25 most urgent commitments; more are open.",
+  "deal.watch.source": "Open message",
   "co.work.closes": "closes {date}",
   "co.brief.by.model": "Written by Margince",
   "co.brief.by.deterministic": "Compiled from CRM records",

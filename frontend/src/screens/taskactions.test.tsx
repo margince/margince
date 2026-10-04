@@ -18,7 +18,7 @@ afterEach(cleanup);
 // search for its exact subject. These hold the link, and hold that a task
 // nobody read out of anything does not offer one.
 
-function stubTask(sourceActivityId: string | null) {
+function stubTask(sourceActivityId: string | null, capturedBy = "human:u-1") {
   installFetchStub({
     "GET /activities/task-1": () =>
       jsonResponse({
@@ -30,6 +30,7 @@ function stubTask(sourceActivityId: string | null) {
         occurred_at: "2026-09-08T09:00:00Z",
         is_done: false,
         source_activity_id: sourceActivityId,
+        captured_by: capturedBy,
       }),
     // The PLAIN activity read, which is what the reader calls. Stubbing the
     // email presentation instead is what let a 404 ship: that endpoint refuses
@@ -236,4 +237,17 @@ test("an email request is read in the task, with no click to open it", async () 
   expect(
     moveTo.compareDocumentPosition(message) & Node.DOCUMENT_POSITION_FOLLOWING,
   ).toBeTruthy();
+});
+
+test("a task an agent wrote is marked as AI-assisted", async () => {
+  stubTask(null, "agent:commitment-reader");
+  openTask();
+  expect(await screen.findByText("AI-assisted")).not.toBeNull();
+});
+
+test("a task a colleague typed carries no AI mark", async () => {
+  stubTask(null);
+  openTask();
+  await screen.findByText(/committed to this in the meeting transcript/);
+  expect(screen.queryByText("AI-assisted")).toBeNull();
 });

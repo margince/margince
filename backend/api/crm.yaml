@@ -24716,6 +24716,38 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /deals/{id}/commitments:
+    get:
+      tags: [Deals]
+      operationId: getDealCommitments
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      summary: What the customer committed to that this deal waits on.
+      description: |
+        The open commitments the contacts employed at the deal's company made to us, read
+        out of captured activities: overdue first, then by nearest due date, at most 25.
+        Each carries the quoted words and the activity they came from, so a reader can check
+        it, and its claim id, so a reader with `contact:update` can dismiss it
+        (`POST /claims/{id}/settle`).
+
+        Needs `contact:read`, `activity:read` and `relationship:read` on top of the deal
+        grant: each row names a contact, quotes a captured activity, and is this account's
+        through the contact's employment edge. A commitment whose contact or activity the
+        caller may not see is left out, and `complete` is then false, so the card can say it
+        speaks about less than the account rather than that nothing is owed. `has_more`
+        says more commitments exist past the 25 returned. A deal with no company has
+        nothing to read and answers an empty, complete list.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: The customer's open commitments on this deal's account.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DealCommitments' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   /deals/{id}/role-proposals:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -36843,6 +36875,30 @@ components:
             carries no words, absence proves nothing, never stored.
       additionalProperties: false
 
+    DealCommitments:
+      type: object
+      required: [data, complete, has_more]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/DealCommitment' } }
+        has_more:
+          type: boolean
+          description: True when more open commitments exist than the most urgent ones returned.
+        complete:
+          type: boolean
+          description: False when a commitment was left out because its contact or its message is outside what the caller may read.
+    DealCommitment:
+      type: object
+      required: [id, contact_id, contact_name, body, source_quote, source_activity_id, source_kind, occurred_at]
+      properties:
+        id: { type: string, format: uuid, description: 'The id of the claim, which `POST /claims/{id}/settle` takes.' }
+        contact_id: { type: string, format: uuid }
+        contact_name: { type: string }
+        body: { type: string, description: 'What was committed to, in the language of the reader.' }
+        source_quote: { type: string, description: 'The words it was read from, verbatim.' }
+        source_activity_id: { type: string, format: uuid, description: 'The captured activity it was read from.' }
+        source_kind: { type: string, description: 'The kind of activity it was read from (`email`, `meeting`, …), so a client opens it in the reader that kind needs.' }
+        due_at: { type: string, format: date-time, nullable: true, description: 'Absent when the conversation named no day.' }
+        occurred_at: { type: string, format: date-time, description: 'When it was said.' }
     DealCoverage:
       type: object
       required: [deal_id, stakeholders, our_side, risks, sections_omitted]

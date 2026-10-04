@@ -13,6 +13,7 @@ import {
 import { daysPast } from "../format/lateness";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { DismissClaimButton } from "./claimdismiss";
 import { useViewerId } from "./common";
 
 // The overview's four cards (concept §5.6–5.9). Each one is a read of what the
@@ -259,10 +260,15 @@ function openLoops(
       theirs: false,
     }),
   );
+  // A commitment that became a task is the task's: the page lists the task,
+  // on this card or beside it, and the claim would say the same thing twice.
   const fromClaims = LOOPS.flatMap((loop) =>
     claims
       .filter(
-        (claim) => claim.kind === loop.kind && claim.status !== "dismissed",
+        (claim) =>
+          claim.kind === loop.kind &&
+          claim.status !== "dismissed" &&
+          !claim.task_activity_id,
       )
       .map(
         (claim): OpenLoop => ({
@@ -272,6 +278,8 @@ function openLoops(
           dueAt: claim.due_at ?? null,
           done: claim.status === "done",
           theirs: loop.kind === "commitment_theirs",
+          quote: claim.source_quote,
+          dismissible: claim.status === "open",
         }),
       ),
   );
@@ -290,6 +298,10 @@ type OpenLoop = {
   done: boolean;
   // Whether the OTHER side owes it, which decides the badge when no date is set.
   theirs: boolean;
+  // The words a claim was read from, for the reader to check it against.
+  quote?: string;
+  // Whether the reader may dismiss it as never made.
+  dismissible?: boolean;
 };
 
 // Whether this task is the reader's to deliver. Unassigned work is the
@@ -339,6 +351,12 @@ export function ContactCommitmentsCard({
           <span className="pe-loop-body">
             {loopPrefix(loop, firstName, t)}
             {loop.body}
+            {loop.quote && (
+              <span className="pe-loop-quote t-caption">
+                {t("commitment.quote", { quote: loop.quote })}
+              </span>
+            )}
+            {loop.dismissible && <DismissClaimButton id={loop.key} />}
           </span>
           <LoopStatus loop={loop} />
         </PanelRow>

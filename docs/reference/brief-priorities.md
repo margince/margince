@@ -81,7 +81,7 @@ Task responsibility comes from the assigned user ID. Recognized reader-prefixed 
 
 One rule turns a promise read out of a meeting transcript or an email into work (`compose/commitmentdispatch.go`):
 
-- A promise the customer made is filed on their contact as something to watch. It never becomes a task.
+- A promise the customer made is filed on their contact as something to watch. It never becomes a task. The deal page lists the open ones for its account (`GET /deals/{id}/commitments`), with the quoted words and, for a reader allowed to update contacts, a way to dismiss a wrong reading.
 - A promise a named colleague made becomes their task. Read at or above `CommitmentTaskConfidence`, it is written directly and captured by the reader (`agent:…`); below it, it is proposed to them as a `commitment_task` card and written when they accept.
 - A promise nobody can be named for is proposed to whoever the reading belongs to, and accepting it makes it theirs.
 - A promise in mail only one member may read stays with that member. Made by a colleague in it, it is proposed to the owner instead of becoming the colleague's task, and the task it becomes is visible to its holder alone.
