@@ -51,7 +51,7 @@ const (
 // is it now", and a second clock argument would be a knob nobody turns.
 func forecastToolReader(pool *pgxpool.Pool) agents.ForecastReader {
 	now := func() time.Time { return time.Now().UTC() }
-	store := forecasting.NewStore(InstallationDB(pool))
+	store := newForecastStoreFor(pool)
 	return func(ctx context.Context, req agents.ForecastRequest) (json.RawMessage, error) {
 		at, err := forecastAsOf(req, now)
 		if err != nil {
@@ -80,12 +80,12 @@ func forecastToolReader(pool *pgxpool.Pool) agents.ForecastReader {
 			// The RESOLVED scope, so an agent is told which population the
 			// number covers rather than the blank it asked with.
 			out = forecastToolResult(period, resolved, readings, baseCurrency, at, limited)
-			refs, err := store.SnapshotRefsTx(ctx, tx, period, resolved)
+			refs, err := store.SnapshotRefsTx(ctx, tx, period, resolved, baseCurrency)
 			if err != nil {
 				return err
 			}
 			out.Snapshots = forecastSnapshotRefsToTool(refs)
-			call, err := store.CurrentCallTx(ctx, tx, period, scope)
+			call, err := store.CurrentCallTx(ctx, tx, period, resolved)
 			switch {
 			case err == nil:
 				encoded, err := json.Marshal(forecastCallToTool(call))
@@ -210,7 +210,7 @@ func forecastCallToTool(call forecasting.Call) map[string]any {
 // movementToolReader answers forecast_movement, through the same store the
 // endpoint reads. One classifier, two transports.
 func movementToolReader(pool *pgxpool.Pool) agents.MovementReader {
-	store := forecasting.NewStore(InstallationDB(pool))
+	store := newForecastStoreFor(pool)
 	return func(ctx context.Context, req agents.MovementRequest) (json.RawMessage, error) {
 		reading := forecasting.ReadingOpen
 		if req.Reading != "" {

@@ -62,7 +62,23 @@ const (
 
 // Store owns the forecast tables.
 type Store struct {
-	db *database.DB
+	db   *database.DB
+	lens SnapshotLens
+}
+
+// SnapshotLens narrows a frozen snapshot to what the caller may see: it refuses
+// a population they may not measure with ErrNotFound, drops the deals they
+// cannot read and nulls the amounts a field mask withholds. Injected because
+// both decisions read the deal table and the caller's lens, which this module
+// owns neither of.
+type SnapshotLens func(ctx context.Context, tx pgx.Tx, scope Scope, rows []Contribution) ([]Contribution, error)
+
+// WithSnapshotLens binds the lens every snapshot read passes through. A store
+// without one refuses to read a snapshot's rows: handing out per-deal figures
+// unfiltered is the failure, so the absence of a lens must not mean "allow".
+func (s *Store) WithSnapshotLens(lens SnapshotLens) *Store {
+	s.lens = lens
+	return s
 }
 
 // NewStore wires the store to its pool.

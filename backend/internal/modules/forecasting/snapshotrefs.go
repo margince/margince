@@ -28,16 +28,19 @@ type SnapshotRef struct {
 }
 
 // SnapshotRefsTx lists the frozen states of one period and population, newest
-// first: the most recent few plus the period's first, the "since it opened"
-// anchor a movement read needs.
+// first: the latest few plus the period's first, the "since it opened" anchor a
+// movement read starts from.
 //
-// The caller passes the scope its reading RESOLVED, so a wider one was already
-// refused and this adds no population rule of its own. Whole-pipeline snapshots
-// only: one captured for a single pipeline, or for a fixed population (it has a
-// fingerprint), covers a different population, and differencing it against a
-// workspace one would report the population change as movement. managed_teams has nothing frozen against it, so it answers empty
-// without a query. Empty is never nil: nothing frozen is a real answer.
-func (s *Store) SnapshotRefsTx(ctx context.Context, tx pgx.Tx, period Period, scope Scope) ([]SnapshotRef, error) {
+// Only snapshots of the reading's own population are comparable: another
+// pipeline or a different currency would turn that difference into reported
+// movement. The population fingerprint is deliberately not a filter: the
+// nightly whole-pipeline capture carries one, so requiring it empty would list
+// nothing. The scope is the one the reading resolved,
+// so a wider one was already refused. managed_teams has nothing frozen against
+// it and answers without a query.
+func (s *Store) SnapshotRefsTx(
+	ctx context.Context, tx pgx.Tx, period Period, scope Scope, baseCurrency string,
+) ([]SnapshotRef, error) {
 	if err := auth.Require(ctx, "forecast", principal.ActionRead); err != nil {
 		return nil, err
 	}
@@ -45,20 +48,20 @@ func (s *Store) SnapshotRefsTx(ctx context.Context, tx pgx.Tx, period Period, sc
 	if scope.Kind == ScopeManagedTeams {
 		return refs, nil
 	}
-	// UNION, not UNION ALL: the first snapshot is also among the newest ones
-	// when a period holds few, and must be listed once.
+	// UNION, not UNION ALL: with few snapshots the first is also among the
+	// newest and is listed once.
 	rows, err := tx.Query(ctx, `
-		(SELECT id, taken_at, trigger FROM forecast_snapshot
-		 WHERE period_start = $1 AND period_end = $2 AND scope_kind = $3
-		   AND scope_id IS NOT DISTINCT FROM $4 AND pipeline_id IS NULL AND population_fingerprint = ''
-		 ORDER BY taken_at DESC, id DESC LIMIT $5)
+		WITH comparable AS (
+			SELECT id, taken_at, trigger FROM forecast_snapshot
+			WHERE period_start = $1 AND period_end = $2 AND scope_kind = $3
+			  AND scope_id IS NOT DISTINCT FROM $4 AND base_currency = $5
+			  AND pipeline_id IS NULL
+		)
+		(SELECT * FROM comparable ORDER BY taken_at DESC, id DESC LIMIT $6)
 		UNION
-		(SELECT id, taken_at, trigger FROM forecast_snapshot
-		 WHERE period_start = $1 AND period_end = $2 AND scope_kind = $3
-		   AND scope_id IS NOT DISTINCT FROM $4 AND pipeline_id IS NULL AND population_fingerprint = ''
-		 ORDER BY taken_at ASC, id ASC LIMIT 1)
+		(SELECT * FROM comparable ORDER BY taken_at ASC, id ASC LIMIT 1)
 		ORDER BY taken_at DESC, id DESC`,
-		period.StartDate, period.EndDate, scope.Kind, scope.ID, recentSnapshotRefs)
+		period.StartDate, period.EndDate, scope.Kind, scope.ID, baseCurrency, recentSnapshotRefs)
 	if err != nil {
 		return nil, fmt.Errorf("forecasting: listing the period's snapshots: %w", err)
 	}

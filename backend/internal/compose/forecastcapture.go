@@ -26,7 +26,7 @@ func (w *forecastSnapshotSweepWorker) freeze(ctx context.Context, ws ids.UUID) e
 	if len(contexts) > 21 {
 		return fmt.Errorf("forecast capture context limit exceeded")
 	}
-	store := forecasting.NewStore(InstallationDB(w.pool))
+	store := newForecastStoreFor(w.pool)
 	attempts, err := reportingCaptureAttempts(ctx, store, contexts)
 	if err != nil {
 		return err
@@ -71,7 +71,7 @@ func reportingCaptureKey(capture crmcontracts.ReportingCaptureContext) string {
 }
 
 func (w *forecastSnapshotSweepWorker) freezeContext(ctx context.Context, capture crmcontracts.ReportingCaptureContext) error {
-	store := forecasting.NewStore(InstallationDB(w.pool))
+	store := newForecastStoreFor(w.pool)
 	at := w.now()
 	return store.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
 		scope, err := (reportingAuthority{}).Scope(ctx, tx, capture.Scope, false)

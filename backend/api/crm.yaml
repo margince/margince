@@ -44869,7 +44869,6 @@ components:
         sufficiency: { $ref: '#/components/schemas/ForecastSufficiency' }
         snapshots:
           type: array
-          maxItems: 11
           items: { $ref: '#/components/schemas/ForecastSnapshotRef' }
           description: >-
             The frozen states of this period and population, newest first: the ten most recent

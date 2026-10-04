@@ -37,8 +37,16 @@ type readingSnapshots struct {
 	} `json:"data"`
 }
 
-// freezeWorkspace takes one workspace snapshot of the quarter holding `at`.
 func freezeWorkspace(ctx context.Context, t *testing.T, e *Env, at time.Time) ids.UUID {
+	t.Helper()
+	return freezeScope(ctx, t, e, at, forecasting.Scope{Kind: forecasting.ScopeWorkspace}, nil)
+}
+
+// freezeScope takes one snapshot of the quarter holding `at`, for one scope.
+func freezeScope(
+	ctx context.Context, t *testing.T, e *Env, at time.Time, scope forecasting.Scope,
+	rows []forecasting.Contribution,
+) ids.UUID {
 	t.Helper()
 	store := forecasting.NewStore(compose.InstallationDB(e.Pool))
 	var id ids.UUID
@@ -48,13 +56,13 @@ func freezeWorkspace(ctx context.Context, t *testing.T, e *Env, at time.Time) id
 			return err
 		}
 		id, err = store.TakeSnapshot(ctx, tx, forecasting.NewSnapshot{
-			Period: period, Scope: forecasting.Scope{Kind: forecasting.ScopeWorkspace},
+			Period: period, Scope: scope,
 			Trigger: forecasting.TriggerRecheck, BaseCurrency: base,
-			Readings: forecasting.Readings{}, TakenAt: at,
+			Readings: forecasting.Readings{Contributions: rows}, TakenAt: at,
 		})
 		return err
 	}); err != nil {
-		t.Fatalf("freezing a workspace forecast: %v", err)
+		t.Fatalf("freezing a forecast: %v", err)
 	}
 	return id
 }
@@ -110,53 +118,44 @@ func TestForecastReadingsListsTheSnapshotsForecastMovementTakes(t *testing.T) {
 	}
 }
 
-func TestForecastReadingsListsNoSnapshotsToASeatThatCannotReadTheScope(t *testing.T) {
+// The default read resolves to the caller's own population, and the listing has
+// to follow the RESOLVED scope: listing under the requested (blank) one would
+// find nothing, and listing the workspace's would hand a rep ids they cannot
+// open.
+func TestForecastReadingsListsTheResolvedScopesSnapshotsAndRefusesAWiderOne(t *testing.T) {
 	e := Setup(t)
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
-	freezeWorkspace(e.Admin(), t, e, time.Date(2037, 2, 1, 9, 0, 0, 0, time.UTC))
+	admin := e.Admin()
+	at := time.Date(2037, 2, 1, 9, 0, 0, 0, time.UTC)
+	freezeWorkspace(admin, t, e, at)
+	mine := freezeScope(admin, t, e, at.Add(time.Hour),
+		forecasting.Scope{Kind: forecasting.ScopeOwner, ID: &e.Rep1}, nil)
+	freezeScope(admin, t, e, at.Add(2*time.Hour),
+		forecasting.Scope{Kind: forecasting.ScopeOwner, ID: &e.Rep3}, nil)
 
 	rep := RepPerms
+	rep.RowScope = principal.RowScopeOwn
 	rep.Objects = map[string]principal.ObjectGrant{
 		"forecast": {Read: true}, "deal": {Read: true}, "pipeline": {Read: true},
 		"installation_settings": {Read: true},
 	}
-	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, rep)
+	ctx := e.As(e.Rep1, nil, rep)
 
-	// The rep's own default population is answered, and the workspace freeze is
-	// not theirs: it must not be listed under it.
-	own, err := registry.Invoke(ctx, "forecast_readings", json.RawMessage(`{"as_of":"2037-02-14"}`))
+	out, err := registry.Invoke(ctx, "forecast_readings", json.RawMessage(`{"as_of":"2037-02-14"}`))
 	if err != nil {
 		t.Fatalf("a rep's own default forecast was refused: %v", err)
 	}
 	var body readingSnapshots
-	if err := json.Unmarshal(own, &body); err != nil {
+	if err := json.Unmarshal(out, &body); err != nil {
 		t.Fatal(err)
 	}
-	if len(body.Data.Snapshots) != 0 {
-		t.Errorf("a rep's default population listed the workspace's snapshots: %+v", body.Data.Snapshots)
+	if got := body.Data.Snapshots; len(got) != 1 || got[0].ID != mine.String() {
+		t.Fatalf("the default read listed %+v, want exactly the rep's own snapshot %s", got, mine)
 	}
 
-	// Naming the workspace is a wider population than the seat may measure: the
-	// reading is refused before anything is listed.
-	out, err := registry.Invoke(ctx, "forecast_readings",
+	_, err = registry.Invoke(ctx, "forecast_readings",
 		json.RawMessage(`{"as_of":"2037-02-14","scope_kind":"workspace"}`))
-	if !errors.Is(err, apperrors.ErrPermissionDenied) && !errors.Is(err, apperrors.ErrNotFound) {
-		t.Fatalf("a rep naming the workspace got (%s, %v), want a scope refusal", out, err)
-	}
-}
-
-func TestForecastReadingsRefusesASeatWithoutTheForecastGrant(t *testing.T) {
-	e := Setup(t)
-	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
-	freezeWorkspace(e.Admin(), t, e, time.Date(2038, 2, 1, 9, 0, 0, 0, time.UTC))
-
-	noForecast := ReadOnlyPerms
-	noForecast.Objects = map[string]principal.ObjectGrant{
-		"deal": {Read: true}, "pipeline": {Read: true}, "installation_settings": {Read: true},
-	}
-	out, err := registry.Invoke(e.As(e.Rep1, []ids.UUID{e.Team1}, noForecast), "forecast_readings",
-		json.RawMessage(`{"as_of":"2038-02-14"}`))
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Fatalf("a seat without forecast.read got (%s, %v), want ErrPermissionDenied", out, err)
+		t.Fatalf("a rep naming the workspace got %v, want ErrPermissionDenied", err)
 	}
 }

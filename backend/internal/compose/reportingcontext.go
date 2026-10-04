@@ -16,7 +16,6 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -123,5 +122,5 @@ func reportingMemberStrings(frame crmcontracts.ReportingContext) []string {
 
 func newReportingService(pool *pgxpool.Pool, now func() time.Time) *reporting.Service {
 	db := InstallationDB(pool)
-	return reporting.NewService(db, metricEvaluator{forecast: forecasting.NewStore(db)}, reportingAuthority{users: identity.NewService(pool)}, reportingCalendar, now)
+	return reporting.NewService(db, metricEvaluator{forecast: newForecastStore(db)}, reportingAuthority{users: identity.NewService(pool)}, reportingCalendar, now)
 }

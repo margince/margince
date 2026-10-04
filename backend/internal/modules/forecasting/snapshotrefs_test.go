@@ -30,7 +30,7 @@ func readerOf(grant principal.ObjectGrant) context.Context {
 func TestManagedTeamsHasNoSnapshotsToList(t *testing.T) {
 	t.Parallel()
 	refs, err := NewStore(nil).SnapshotRefsTx(
-		readerOf(principal.ObjectGrant{Read: true}), nil, Period{}, Scope{Kind: ScopeManagedTeams})
+		readerOf(principal.ObjectGrant{Read: true}), nil, Period{}, Scope{Kind: ScopeManagedTeams}, "EUR")
 	if err != nil {
 		t.Fatalf("listing snapshots under managed_teams: %v", err)
 	}
@@ -42,7 +42,7 @@ func TestManagedTeamsHasNoSnapshotsToList(t *testing.T) {
 func TestListingSnapshotsNeedsTheForecastReadGrant(t *testing.T) {
 	t.Parallel()
 	_, err := NewStore(nil).SnapshotRefsTx(
-		readerOf(principal.ObjectGrant{Create: true}), nil, Period{}, Scope{Kind: ScopeWorkspace})
+		readerOf(principal.ObjectGrant{Create: true}), nil, Period{}, Scope{Kind: ScopeWorkspace}, "EUR")
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("a seat without forecast.read listed snapshots: err = %v, want ErrPermissionDenied", err)
 	}
@@ -50,11 +50,11 @@ func TestListingSnapshotsNeedsTheForecastReadGrant(t *testing.T) {
 
 func TestSnapshotRefsRenderAsAnEmptyListNotAbsent(t *testing.T) {
 	t.Parallel()
-	if wire := SnapshotRefsToWire(nil); wire == nil || len(*wire) != 0 {
+	if wire := snapshotRefsToWire(nil); wire == nil || len(*wire) != 0 {
 		t.Fatalf("no snapshots rendered as %v, want a present empty list", wire)
 	}
 	id, at := ids.NewV7(), time.Date(2026, 2, 1, 9, 0, 0, 0, time.UTC)
-	wire := SnapshotRefsToWire([]SnapshotRef{{ID: id, TakenAt: at, Trigger: TriggerCall}})
+	wire := snapshotRefsToWire([]SnapshotRef{{ID: id, TakenAt: at, Trigger: TriggerCall}})
 	got := (*wire)[0]
 	if ids.UUID(got.Id) != id || !got.TakenAt.Equal(at) || string(got.Trigger) != TriggerCall {
 		t.Fatalf("the reference came out as %+v", got)

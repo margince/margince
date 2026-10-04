@@ -83,7 +83,12 @@ func setupSnapshot(t *testing.T) *snapshotEnv {
 	}
 	testdb.AssertPoolsQuiesced(t)
 	e.pool = pool
-	e.store = NewStore(database.BindTo(pool, e.wsTyped))
+	// The module's own tests exercise the classifier and the window rule; the
+	// caller-visibility lens is held where it is implemented, in compose.
+	e.store = NewStore(database.BindTo(pool, e.wsTyped)).WithSnapshotLens(
+		func(_ context.Context, _ pgx.Tx, _ Scope, rows []Contribution) ([]Contribution, error) {
+			return rows, nil
+		})
 	return e
 }
 

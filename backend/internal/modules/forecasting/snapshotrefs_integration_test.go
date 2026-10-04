@@ -38,7 +38,10 @@ func yearQuarter(t *testing.T, year int) Period {
 // unconstrained, so a test can take as many as it needs.
 func (e *snapshotEnv) freeze(t *testing.T, in NewSnapshot) ids.UUID {
 	t.Helper()
-	in.Trigger, in.BaseCurrency = TriggerRecheck, "EUR"
+	in.Trigger = TriggerRecheck
+	if in.BaseCurrency == "" {
+		in.BaseCurrency = "EUR"
+	}
 	in.Readings = Readings{Contributions: []Contribution{}}
 	var id ids.UUID
 	if err := e.store.InTx(e.as(), func(ctx context.Context, tx pgx.Tx) error {
@@ -56,7 +59,7 @@ func (e *snapshotEnv) refs(t *testing.T, period Period, scope Scope) []SnapshotR
 	var out []SnapshotRef
 	if err := e.store.InTx(e.as(), func(ctx context.Context, tx pgx.Tx) error {
 		var err error
-		out, err = e.store.SnapshotRefsTx(ctx, tx, period, scope)
+		out, err = e.store.SnapshotRefsTx(ctx, tx, period, scope, "EUR")
 		return err
 	}); err != nil {
 		t.Fatalf("listing the snapshots: %v", err)
@@ -140,9 +143,7 @@ func TestSnapshotsOfAnotherPopulationAreNotListed(t *testing.T) {
 	}
 	whole := e.freeze(t, NewSnapshot{Period: period, Scope: scope, TakenAt: at})
 	e.freeze(t, NewSnapshot{Period: period, Scope: scope, TakenAt: at.Add(time.Hour), PipelineID: &pipeline})
-	e.freeze(t, NewSnapshot{
-		Period: period, Scope: scope, TakenAt: at.Add(2 * time.Hour), PopulationFingerprint: "fixed-population",
-	})
+	e.freeze(t, NewSnapshot{Period: period, Scope: scope, TakenAt: at.Add(5 * time.Hour), BaseCurrency: "USD"})
 	owner := e.rep
 	e.freeze(t, NewSnapshot{
 		Period: period, Scope: Scope{Kind: ScopeOwner, ID: &owner}, TakenAt: at.Add(3 * time.Hour),
