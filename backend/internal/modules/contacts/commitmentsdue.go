@@ -136,7 +136,7 @@ const openCommitmentsDueFrom = `
 		  FROM conversation_claim c
 		  JOIN activity a ON a.id = c.source_activity_id AND a.archived_at IS NULL
 		  JOIN contact pr ON pr.id = c.contact_id AND pr.archived_at IS NULL
-		 WHERE c.kind = 'commitment_ours' AND c.status = 'open' AND NOT c.needs_review
+		 WHERE ` + ourPromiseNotYetATask + `
 		   AND c.archived_at IS NULL
 		   -- STRICTLY before, which is what the caller's bound means: it is the
 		   -- END of the day, so an inclusive test put a promise due at exactly

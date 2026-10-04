@@ -1,0 +1,173 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package compose
+
+// The one writer of a commitment's task, and the effect that runs it when a
+// human accepts a proposed one. The direct path and the accept path both end
+// here, so a task written either way is the same row.
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"time"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+)
+
+// CommitmentTaskProposal is the staged payload of a commitment_task.
+//
+// The links are frozen at staging time: a rep confirms the proposal they were
+// shown, and a relink between the two moments must not move the task.
+type CommitmentTaskProposal struct {
+	SourceActivityID ids.UUID `json:"source_activity_id"`
+	Summary          string   `json:"summary"`
+	// Party is who made the promise, as the source names them.
+	Party string `json:"party"`
+	// SeatID is the colleague the task is for. Nil when nobody could be named,
+	// and then accepting it makes it the decider's.
+	SeatID *ids.UUID `json:"seat_id,omitempty"`
+	// DueDate is a day, YYYY-MM-DD, or empty. Text rather than an instant, so a
+	// reviewer edits a day and acceptance decides when that day ends.
+	DueDate string                         `json:"due_date,omitempty"`
+	Links   []activities.ActivityLinkInput `json:"links"`
+	Quote   string                         `json:"quote"`
+	Locator string                         `json:"locator"`
+	ClaimID *ids.UUID                      `json:"claim_id,omitempty"`
+	Body    string                         `json:"body"`
+}
+
+// commitmentTask is what the writer needs to know about one promise.
+type commitmentTask struct {
+	Extractor        string
+	Locator          string
+	Summary          string
+	Body             string
+	SourceActivityID ids.UUID
+	Links            []activities.ActivityLinkInput
+	DueDate          string
+	Assignee         ids.UUID
+	ClaimID          *ids.UUID
+}
+
+// writeCommitmentTask writes the task for a promise, keyed on its locator, and
+// points its claim at it.
+//
+// A task already written under the locator — archived by a rep included — is
+// handed back rather than written again (activities.replayedActivity).
+func writeCommitmentTask(
+	ctx context.Context, tx pgx.Tx, tasks *activities.Store, claims *contacts.Store, t commitmentTask,
+) (ids.UUID, error) {
+	execCtx := extractorContext(onBehalfOf(ctx, t.Assignee), t.Extractor)
+	sourceSystem, sourceID := activities.CommitmentTaskSource, t.Locator
+	assignee := ids.From[ids.UserKind](t.Assignee)
+	sourceActivity := t.SourceActivityID
+	in := activities.LogActivityInput{
+		Kind:             "task",
+		Subject:          &t.Summary,
+		Body:             &t.Body,
+		SourceSystem:     &sourceSystem,
+		SourceID:         &sourceID,
+		Source:           activities.CommitmentTaskSource,
+		Links:            t.Links,
+		SourceActivityID: &sourceActivity,
+		AssigneeID:       &assignee,
+		Origin:           activities.OriginAgent,
+	}
+	due, err := commitmentDueInstant(ctx, tx, t.DueDate)
+	if err != nil {
+		return ids.UUID{}, err
+	}
+	in.DueAt = due
+	task, _, err := tasks.LogActivityTx(execCtx, tx, in)
+	if err != nil {
+		return ids.UUID{}, err
+	}
+	taskID := ids.UUID(task.Id)
+	if t.ClaimID != nil {
+		if err := claims.SetClaimTaskTx(execCtx, tx, *t.ClaimID, taskID); err != nil {
+			return ids.UUID{}, err
+		}
+	}
+	return taskID, nil
+}
+
+// commitmentDueInstant turns the day a source stated into the moment that day
+// ENDS in the installation's own zone, or nil when it stated none.
+//
+// End of day, because a deadline is the last moment the thing is still on
+// time. The installation's zone rather than a reader's, because a due day is a
+// fact about the record and colleagues elsewhere read the same one. Built from
+// the day's own parts: on a daylight-saving day, adding 24 hours lands on the
+// wrong day.
+//
+// A day that will not parse is an error rather than a silent skip: a reviewer
+// edited the payload into something acceptance cannot read, and an undated
+// task would hide that from them.
+func commitmentDueInstant(ctx context.Context, tx pgx.Tx, day string) (*time.Time, error) {
+	if day == "" {
+		return nil, nil
+	}
+	zone, err := identity.TimezoneOf(ctx, tx)
+	if err != nil {
+		return nil, err
+	}
+	loc, err := time.LoadLocation(zone)
+	if err != nil {
+		return nil, fmt.Errorf("compose: installation timezone %q: %w", zone, err)
+	}
+	parsed, err := time.ParseInLocation(time.DateOnly, day, loc)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"compose: commitment due date %q is not a date — write it as YYYY-MM-DD: %w", day, err)
+	}
+	due := time.Date(parsed.Year(), parsed.Month(), parsed.Day(), 23, 59, 59, 0, loc).UTC()
+	return &due, nil
+}
+
+// commitmentTaskEffect executes an accepted commitment: redeem and write in ONE
+// transaction, so the approval is spent if and only if the task exists.
+//
+// The task goes to the colleague the proposal named. A proposal that named
+// nobody goes to the human who accepted it: it was staged for them, and a task
+// nobody holds reminds nobody. They can hand it on like any task.
+func commitmentTaskEffect(
+	svc *approvals.Service, tasks *activities.Store, claims *contacts.Store,
+) approvals.ApprovedEffect {
+	return func(ctx context.Context, approvalID ids.ApprovalID, proposedChange json.RawMessage, diffHash string) error {
+		var proposal CommitmentTaskProposal
+		if err := json.Unmarshal(proposedChange, &proposal); err != nil {
+			return fmt.Errorf("compose: unmarshal commitment proposal: %w", err)
+		}
+		decider, ok := principal.Actor(ctx)
+		if !ok {
+			return fmt.Errorf("compose: commitment proposal effect without a deciding principal")
+		}
+		assignee := decider.UserID
+		if proposal.SeatID != nil {
+			assignee = *proposal.SeatID
+		}
+		return svc.RedeemAndApply(ctx, approvalID, CommitmentTaskKind, diffHash, func(tx pgx.Tx) error {
+			_, err := writeCommitmentTask(ctx, tx, tasks, claims, commitmentTask{
+				Extractor: commitmentAcceptActor, Locator: proposal.Locator,
+				Summary: proposal.Summary, Body: proposal.Body,
+				SourceActivityID: proposal.SourceActivityID, Links: proposal.Links,
+				DueDate: proposal.DueDate, Assignee: assignee, ClaimID: proposal.ClaimID,
+			})
+			return err
+		})
+	}
+}
+
+// commitmentAcceptActor captures a task a human accepted from a proposal. The
+// promise is still the reader's suggestion; the human is on the decision's
+// audit row, which is where "who approved this" belongs.
+const commitmentAcceptActor = "agent:commitment-reader"

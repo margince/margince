@@ -141,7 +141,7 @@ func (s *Store) OpenCommitmentsForCompany(
 		  FROM conversation_claim c
 		  JOIN activity a ON a.id = c.source_activity_id AND a.archived_at IS NULL
 		  JOIN contact pr ON pr.id = c.contact_id AND pr.archived_at IS NULL
-		 WHERE c.kind = 'commitment_ours' AND c.status = 'open' AND NOT c.needs_review
+		 WHERE `+ourPromiseNotYetATask+`
 		   AND c.archived_at IS NULL
 		   AND EXISTS (
 		         SELECT 1 FROM relationship r
@@ -207,7 +207,7 @@ func countCompanyCommitments(ctx context.Context, tx pgx.Tx, companyID ids.UUID)
 		  FROM conversation_claim c
 		  JOIN activity a ON a.id = c.source_activity_id AND a.archived_at IS NULL
 		  JOIN contact pr ON pr.id = c.contact_id AND pr.archived_at IS NULL
-		 WHERE c.kind = 'commitment_ours' AND c.status = 'open' AND NOT c.needs_review
+		 WHERE `+ourPromiseNotYetATask+`
 		   AND c.archived_at IS NULL
 		   AND EXISTS (
 		         SELECT 1 FROM relationship r
@@ -281,7 +281,7 @@ func (s *Store) OpenCommitmentsAcrossWorkspace(
 		  FROM conversation_claim c
 		  JOIN activity a ON a.id = c.source_activity_id AND a.archived_at IS NULL
 		  JOIN contact pr ON pr.id = c.contact_id AND pr.archived_at IS NULL
-		 WHERE c.kind = 'commitment_ours' AND c.status = 'open' AND NOT c.needs_review
+		 WHERE `+ourPromiseNotYetATask+`
 		   AND c.archived_at IS NULL
 		   AND (%[1]s) AND (%[2]s)
 		 ORDER BY (c.due_at IS NOT NULL AND c.due_at < now()) DESC,

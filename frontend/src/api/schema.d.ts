@@ -35698,7 +35698,7 @@ export interface components {
         Approval: {
             /** Format: uuid */
             id: string;
-            /** @description coldstart | send_email | advance_deal | promote_lead | overnight | transcript_proposal. */
+            /** @description coldstart | send_email | advance_deal | promote_lead | overnight | transcript_proposal | commitment_task. */
             kind: string;
             /** @enum {string} */
             status: "pending" | "approved" | "rejected" | "expired";

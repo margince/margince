@@ -122,6 +122,13 @@ export const EDITABLE_FIELDS: Readonly<
   // the deal's uuid as a text box to retype, the server's own reason sentence
   // as if it were the reader's to rewrite, and the previous date beside the
   // proposed one with nothing saying which was which.
+  // The promise's wording and its day are the reader's to correct. The rest —
+  // who made it, the quoted words, the key that remembers it — is what the
+  // reader is agreeing to, not something to retype.
+  commitment_task: [
+    { field: "summary", as: "text", label: "approval.field.step" },
+    { field: "due_date", as: "date", label: "approval.field.due_date" },
+  ],
   close_date_correction: [
     {
       field: "expected_close_date",

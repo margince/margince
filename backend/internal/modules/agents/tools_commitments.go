@@ -56,12 +56,10 @@ type CommitmentAbout struct {
 // OpenCommitment is one outstanding promise as the seam read it, from either
 // of the two places a promise gets written down.
 //
-// EXACTLY ONE OF TaskID AND ClaimID. A promise somebody typed is a task row; a
-// promise an extractor read out of a conversation is a claim row, and the two
-// are unlinked — nothing writes conversation_claim.task_activity_id — so one
-// promise recorded both ways arrives here as two. That is the honest answer
-// until the link is written; guessing which pairs mean one promise would be
-// this surface inventing a fact.
+// EXACTLY ONE OF TaskID AND ClaimID. A promise that became a task arrives as
+// its task; a claim arrives only while no task holds it. A task a rep typed
+// beside an extracted promise is still a second row — guessing which pairs
+// mean one promise would be this surface inventing a fact.
 type OpenCommitment struct {
 	// Source is `task` or `conversation`, and says which of the two ids below
 	// is set.

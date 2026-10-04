@@ -14,7 +14,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
@@ -197,18 +196,8 @@ func stampTranscriptAssignee(
 	return nil
 }
 
-// transcriptTaskBody says where the task came from, in the terms the rep can
-// go and check: whose commitment it was, and which lines of which transcript
-// said so. The task outlives the approval it came from, so the provenance is
-// written into it rather than left as a link to a row that may be swept.
+// transcriptTaskBody is the provenance sentence for a proposal staged under the
+// old transcript_proposal kind.
 func transcriptTaskBody(proposal TranscriptStepProposal) string {
-	lines := make([]string, 0, len(proposal.SourceLines))
-	for _, line := range proposal.SourceLines {
-		lines = append(lines, strconv.Itoa(line))
-	}
-	where := "line " + strings.Join(lines, ", ")
-	if len(lines) > 1 {
-		where = "lines " + strings.Join(lines, ", ")
-	}
-	return fmt.Sprintf("%s committed to this in the meeting transcript (%s).", proposal.Owner, where)
+	return transcriptCommitmentBody(proposal.Owner, proposal.SourceLines)
 }

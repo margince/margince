@@ -79,6 +79,9 @@ const kindHeldDraft = "held_draft"
 const (
 	kindDealFollowUp       = "deal_follow_up"
 	kindTranscriptProposal = "transcript_proposal"
+	// kindCommitmentTask is a promise one of our users made in a captured
+	// conversation, read too unsurely to become their task without asking.
+	kindCommitmentTask = "commitment_task"
 )
 
 // KindScheduledSendHeld is the card a stopped scheduled message raises for the
@@ -288,6 +291,9 @@ var decisionGrants = map[string][]grantRequirement{
 	// somebody who may read the transcript but not add to the timeline could
 	// otherwise release a task they could not have logged themselves.
 	kindTranscriptProposal: {{objectActivity, principal.ActionCreate}},
+	// Confirming a promise read out of a conversation creates the task it
+	// proposed, the same write and the same grant as a transcript's next step.
+	kindCommitmentTask: {{objectActivity, principal.ActionCreate}},
 	// A proposed stage move is decided by whoever may MOVE the deal. Approving
 	// it performs the advance, so read is not enough: somebody who can see a
 	// deal but not steer it must not be able to release a move they could not

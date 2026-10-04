@@ -43,6 +43,11 @@ const (
 	CheckInCadenceSource     = "check_in_cadence"
 )
 
+// CommitmentTaskSource names a task written for a commitment one of our users
+// made in a captured conversation. Its source_id is the commitment's evidence
+// locator, so a dismissed task is found again and never written twice.
+const CommitmentTaskSource = "commitment"
+
 // internalSourceSystems are the exact identities only an internal writer may
 // spell. Exact names rather than a second prefix: these are already written
 // into rows, and renaming them to fit a namespace would strand every row that
@@ -51,6 +56,7 @@ var internalSourceSystems = map[string]bool{
 	EmailRequestSource:       true,
 	NoActivityReminderSource: true,
 	CheckInCadenceSource:     true,
+	CommitmentTaskSource:     true,
 }
 
 // ReservedSourceSystem reports whether a client-supplied source system
