@@ -4572,30 +4572,6 @@ export const vi = {
     "Thư mang liên kết huỷ đăng ký chỉ đến được một người nhận mỗi lần, vì liên kết đó chính là hồ sơ chấp thuận của riêng người nhận. Hãy gửi riêng cho từng người, không dùng Cc.",
   "compose.multiRecipientWarning":
     "Mục đích này mang liên kết huỷ đăng ký, nên lượt gửi cho nhiều hơn một người nhận sẽ bị từ chối. Hãy gửi riêng cho từng người, không dùng Cc.",
-  "projectFiling.action": "Hoàn tác lưu hồ sơ",
-  "projectFiling.title": "Hoàn tác việc lưu vào dự án",
-  "projectFiling.loading": "Đang kiểm tra điều gì đang giữ hoạt động này…",
-  "projectFiling.explain":
-    "Việc lưu hoạt động này vào {projects} đã đánh dấu nó là thư từ thương mại, thứ mà việc xóa dữ liệu và các đợt lưu giữ phải giữ lại. Hoàn tác sẽ gỡ nó khỏi dự án và thu hồi dấu đánh dấu đó.",
-  "projectFiling.reason": "Vì sao việc lưu này sai?",
-  "projectFiling.reasonHint":
-    "Được lưu trong nhật ký kiểm toán cùng tên của bạn.",
-  "projectFiling.reasonRequired":
-    "Hãy ghi vì sao việc lưu này sai. Lý do được lưu trong nhật ký kiểm toán.",
-  "projectFiling.confirm": "Hoàn tác lưu hồ sơ",
-  "projectFiling.doneTitle": "Đã hoàn tác việc lưu",
-  "projectFiling.done":
-    "Hoạt động không còn được lưu trong dự án và dấu đánh dấu lưu giữ của nó đã được thu hồi.",
-  "projectFiling.decisions": "Các quyết định đã ghi nhận",
-  "projectFiling.decision": "{name}, lúc {when}",
-  "projectFiling.refusal.not_filed":
-    "Hoạt động này không được giữ bởi việc lưu vào dự án, nên không có gì để hoàn tác.",
-  "projectFiling.refusal.other_basis_remains":
-    "Vẫn còn căn cứ khác xác định hoạt động này là thư từ thương mại, chẳng hạn deal đã thắng, báo giá đã gửi hoặc ghim của bên kiểm soát dữ liệu, nên nó giữ dấu đánh dấu lưu giữ.",
-  "projectFiling.refusal.restricted":
-    "Một lệnh giữ theo luật đã bắt đầu với hoạt động này. Lệnh giữ đã bắt đầu thì không bao giờ rút ngắn.",
-  "projectFiling.refusal.qualifying_deal":
-    "Hoạt động này được lưu trong một deal xác định nó là thư từ thương mại, nên nó giữ dấu đánh dấu lưu giữ.",
   "compose.relinkTitle": "Liên kết lại hoạt động này",
   "compose.relinkTarget": "Tìm một liên hệ, tổ chức, deal, lead hay dự án",
   "compose.relinkNoVersion":
@@ -12095,4 +12071,36 @@ export const vi = {
   "aiServing.notObject": "phải là một đối tượng: phần văn bản giữa { và }.",
   "aiServing.previewFailed":
     "Máy chủ không kiểm tra được giá trị này: {reason} Chưa thể lưu cho tới khi kiểm tra được.",
+  "projectFiling.action": "Hoàn tác lưu hồ sơ",
+  "projectFiling.title": "Hoàn tác việc lưu vào dự án",
+  "projectFiling.loading": "Đang kiểm tra điều gì đang giữ hoạt động này…",
+  "projectFiling.explain":
+    "Việc lưu hoạt động này vào {projects} đã đánh dấu nó là thư từ thương mại, thứ mà việc xóa dữ liệu và các đợt lưu giữ phải giữ lại. Hoàn tác sẽ gỡ nó khỏi dự án và thu hồi dấu đánh dấu đó.",
+  "projectFiling.reason": "Vì sao việc lưu này sai?",
+  "projectFiling.reasonHint":
+    "Được lưu trong nhật ký kiểm toán cùng tên của bạn.",
+  "projectFiling.reasonRequired":
+    "Hãy ghi vì sao việc lưu này sai. Lý do được lưu trong nhật ký kiểm toán.",
+  "projectFiling.confirm": "Hoàn tác lưu hồ sơ",
+  "projectFiling.doneTitle": "Đã hoàn tác việc lưu",
+  "projectFiling.done":
+    "Hoạt động không còn được lưu trong dự án và dấu đánh dấu lưu giữ của nó đã được thu hồi.",
+  "projectFiling.decisions": "Các quyết định đã ghi nhận",
+  "projectFiling.decision": "{name}, lúc {when}",
+  "projectFiling.refusal.not_filed":
+    "Hoạt động này không được giữ bởi việc lưu vào dự án, nên không có gì để hoàn tác.",
+  "projectFiling.refusal.other_basis_remains":
+    "Vẫn còn căn cứ khác xác định hoạt động này là thư từ thương mại, chẳng hạn deal đã thắng, báo giá đã gửi hoặc ghim của bên kiểm soát dữ liệu, nên nó giữ dấu đánh dấu lưu giữ.",
+  "projectFiling.refusal.restricted":
+    "Một lệnh giữ theo luật đã bắt đầu với hoạt động này. Lệnh giữ đã bắt đầu thì không bao giờ rút ngắn.",
+  "projectFiling.refusal.qualifying_deal":
+    "Hoạt động này được lưu trong một deal xác định nó là thư từ thương mại, nên nó giữ dấu đánh dấu lưu giữ.",
+  "projectFiling.actionFor": "Hoàn tác lưu hồ sơ: {subject}",
+  "projectFiling.hiddenProject": "một dự án bạn không xem được",
+  "projectFiling.decisionRedacted":
+    "Một quyết định đã được ghi nhận lúc {when}",
+  "projectFiling.refusal.legal_hold":
+    "Một lệnh giữ pháp lý đang áp dụng cho bản ghi mà hoạt động này liên kết tới, nên dấu đánh dấu lưu giữ được giữ cho tới khi lệnh được gỡ.",
+  "projectFiling.refusal.hidden_project":
+    "Một dự án bạn không xem được vẫn đang giữ hoạt động này. Hãy nhờ bên có quyền xem dự án hoàn tác việc lưu.",
 } as const satisfies Record<MessageKey, string>;

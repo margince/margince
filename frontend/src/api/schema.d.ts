@@ -36244,19 +36244,28 @@ export interface components {
             undone: components["schemas"]["ProjectFilingUndoDecision"][];
         };
         ProjectFilingEntry: {
-            /** @description The project's name when the filing qualified the activity. */
+            /** @description The project's name when the filing qualified the activity. Empty when the project is hidden from the caller. */
             name: string;
+            /** @description True when the project exists and the caller cannot see it; its name is withheld. */
+            hidden?: boolean;
             /** Format: date-time */
             qualified_at: string;
         };
         ProjectFilingRefusal: {
             /** @enum {string} */
-            code: "not_filed" | "other_basis_remains" | "restricted" | "qualifying_deal";
+            code: "not_filed" | "other_basis_remains" | "restricted" | "legal_hold" | "hidden_project" | "qualifying_deal";
             message: string;
         };
         ProjectFilingUndoDecision: {
+            /**
+             * Format: uuid
+             * @description The audit entry that recorded the decision.
+             */
+            id: string;
             /** Format: date-time */
             at: string;
+            /** @description True when the decision touched a project the caller cannot see; only its moment is shown. */
+            redacted?: boolean;
             by_name: string;
             reason: string;
             projects: string[];
@@ -49739,7 +49748,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description The filing cannot be undone; the problem's `code` is one of `not_filed`, `other_basis_remains`, `restricted` or `qualifying_deal`. */
+            /** @description The filing cannot be undone; the problem's `code` is one of `not_filed`, `other_basis_remains`, `restricted`, `legal_hold`, `hidden_project` or `qualifying_deal`. */
             409: {
                 headers: {
                     [name: string]: unknown;

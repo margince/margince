@@ -32,6 +32,7 @@ const UNFILED: ProjectFiling = {
   undoable: false,
   undone: [
     {
+      id: "d1d1d1d1-0000-4000-8000-000000000001",
       at: "2026-09-02T10:30:00Z",
       by_name: "Ada Admin",
       reason: "the assistant filed the wrong thread",
@@ -83,11 +84,14 @@ function render(ui: ReactNode) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  return rtlRender(
-    <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">{ui}</LocaleProvider>
-    </QueryClientProvider>,
-  );
+  return {
+    ...rtlRender(
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">{ui}</LocaleProvider>
+      </QueryClientProvider>,
+    ),
+    queryClient: client,
+  };
 }
 
 async function openDialog() {
@@ -199,7 +203,7 @@ describe("ProjectFilingAction", () => {
     expect(within(dialog).getByRole("textbox")).toBeTruthy();
   });
 
-  it("reports a filing that could not be read", async () => {
+  it("reports a filing that could not be read, as an alert with no form", async () => {
     stubRoutes({
       "GET /activities/act-1/project-filing": () =>
         jsonResponse({ title: "Forbidden", detail: "Not yours." }, 403),
@@ -207,9 +211,145 @@ describe("ProjectFilingAction", () => {
     render(<ProjectFilingAction activityId="act-1" projectId="p-1" />);
     const { dialog } = await openDialog();
 
-    await waitFor(() =>
-      expect(within(dialog).queryByText(/Checking what keeps/)).toBeNull(),
+    const alert = await within(dialog).findByRole("alert");
+    expect(alert.textContent).toContain("Not yours.");
+    expect(within(dialog).queryByRole("textbox")).toBeNull();
+  });
+
+  it("announces the wait while the verdict is read", async () => {
+    stubRoutes({
+      "GET /activities/act-1/project-filing": () =>
+        new Promise<Response>(() => {}) as never,
+    });
+    render(<ProjectFilingAction activityId="act-1" projectId="p-1" />);
+    const { dialog } = await openDialog();
+
+    expect((await within(dialog).findByRole("status")).textContent).toMatch(
+      /Checking what keeps/,
     );
+  });
+
+  it("keeps the confirm refused for a reason of whitespace, by the one mechanism the button has", async () => {
+    stubRoutes({
+      "GET /activities/act-1/project-filing": () => jsonResponse(FILED),
+    });
+    render(<ProjectFilingAction activityId="act-1" projectId="p-1" />);
+    const { user, dialog } = await openDialog();
+
+    await user.type(await within(dialog).findByRole("textbox"), "   ");
+    const confirm = within(dialog).getByRole("button", { name: "Undo filing" });
+    // One mechanism: the native attribute, with the sentence it is described by.
+    expect(confirm.hasAttribute("disabled")).toBe(true);
+    const sentence = within(dialog).getByText(/Write why the filing is wrong/);
+    expect(confirm.getAttribute("aria-describedby")).toBe(sentence.id);
+
+    await user.type(within(dialog).getByRole("textbox"), "x");
+    expect(
+      within(dialog)
+        .getByRole("button", { name: "Undo filing" })
+        .hasAttribute("disabled"),
+    ).toBe(false);
+  });
+
+  it("sends one undo however often the confirm is pressed, and cannot be dismissed mid-flight", async () => {
+    let release: (response: Response) => void = () => {};
+    const sent = stubRoutes({
+      "GET /activities/act-1/project-filing": () => jsonResponse(FILED),
+      "POST /activities/act-1/project-filing/undo": () =>
+        new Promise<Response>((resolve) => {
+          release = resolve;
+        }) as never,
+    });
+    render(<ProjectFilingAction activityId="act-1" projectId="p-1" />);
+    const { user, dialog } = await openDialog();
+    await user.type(await within(dialog).findByRole("textbox"), "mistake");
+
+    const confirm = within(dialog).getByRole("button", { name: "Undo filing" });
+    await user.click(confirm);
+    await user.click(confirm);
+    await waitFor(() =>
+      expect(sent.filter((r) => r.key.startsWith("POST"))).toHaveLength(1),
+    );
+
+    await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).not.toBeNull();
+
+    release(jsonResponse(UNFILED));
+    await within(dialog).findByText(/no longer filed under the project/);
+    expect(sent.filter((r) => r.key.startsWith("POST"))).toHaveLength(1);
+  });
+
+  it("refreshes the timeline when the dialog closes, not when the undo lands", async () => {
+    stubRoutes({
+      "GET /activities/act-1/project-filing": () => jsonResponse(FILED),
+      "POST /activities/act-1/project-filing/undo": () => jsonResponse(UNFILED),
+    });
+    const { queryClient } = render(
+      <ProjectFilingAction activityId="act-1" projectId="p-1" />,
+    );
+    const invalidate = vi.spyOn(queryClient, "invalidateQueries");
+    const { user, dialog } = await openDialog();
+    await user.type(await within(dialog).findByRole("textbox"), "mistake");
+    await user.click(
+      within(dialog).getByRole("button", { name: "Undo filing" }),
+    );
+    await within(dialog).findByText(/no longer filed under the project/);
+    expect(invalidate).not.toHaveBeenCalled();
+
+    const closers = within(dialog).getAllByRole("button", { name: "Close" });
+    await user.click(closers[closers.length - 1]);
+    await waitFor(() => expect(invalidate).toHaveBeenCalled());
+    for (const [filters] of invalidate.mock.calls) {
+      expect(filters?.exact).toBe(true);
+    }
+  });
+
+  it("names a hidden project as unnamed and shows a redacted decision as its moment alone", async () => {
+    stubRoutes({
+      "GET /activities/act-1/project-filing": () =>
+        jsonResponse({
+          ...FILED,
+          projects: [
+            { name: "", hidden: true, qualified_at: "2026-09-01T09:00:00Z" },
+          ],
+          undoable: false,
+          refusal: { code: "hidden_project", message: "" },
+          undone: [
+            {
+              id: "d2d2d2d2-0000-4000-8000-000000000002",
+              at: "2026-09-02T10:30:00Z",
+              redacted: true,
+              by_name: "",
+              reason: "",
+              projects: [],
+            },
+          ],
+        }),
+    });
+    render(<ProjectFilingAction activityId="act-1" projectId="p-1" />);
+    const { dialog } = await openDialog();
+
+    await within(dialog).findByText(
+      /A project you cannot see still holds this activity/,
+    );
+    expect(within(dialog).getByText(/A decision was recorded on/)).toBeTruthy();
+    expect(within(dialog).queryByText(/Ada Admin/)).toBeNull();
+  });
+
+  it("names the legal hold when one stands in the way", async () => {
+    stubRoutes({
+      "GET /activities/act-1/project-filing": () =>
+        jsonResponse({
+          ...FILED,
+          undoable: false,
+          refusal: { code: "legal_hold", message: "" },
+        }),
+    });
+    render(<ProjectFilingAction activityId="act-1" projectId="p-1" />);
+    const { dialog } = await openDialog();
+
+    await within(dialog).findByText(/A legal hold sits on a record/);
     expect(within(dialog).queryByRole("textbox")).toBeNull();
   });
 });
@@ -236,11 +376,14 @@ describe("TimelineActions", () => {
         entityId="p-1"
       />,
     );
-    expect(screen.getByRole("button", { name: "Undo filing" })).toBeTruthy();
+    // Named by the row it acts on, so a column of them is not a column of one label.
+    expect(
+      screen.getByRole("button", { name: "Undo filing: Milestone" }),
+    ).toBeTruthy();
     cleanup();
     render(
       <TimelineActions activity={activity} entityType="deal" entityId="d-1" />,
     );
-    expect(screen.queryByRole("button", { name: "Undo filing" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Undo filing/ })).toBeNull();
   });
 });

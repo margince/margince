@@ -101,7 +101,11 @@ export function TimelineActions({
       {/* Every row on a project's timeline is filed under that project, so this
           is the one surface where taking the filing back is always meaningful. */}
       {entityType === "project" && (
-        <ProjectFilingAction activityId={activity.id} projectId={entityId} />
+        <ProjectFilingAction
+          activityId={activity.id}
+          projectId={entityId}
+          subject={activity.subject ?? undefined}
+        />
       )}
       {/* An EMAIL's audience is changed from the message, in the drawer, where
           the server states which write it would accept as `change_mode` and the

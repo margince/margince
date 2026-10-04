@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { type RefObject, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
@@ -25,6 +25,8 @@ const REFUSAL_COPY: Record<RefusalCode, MessageKey> = {
   not_filed: "projectFiling.refusal.not_filed",
   other_basis_remains: "projectFiling.refusal.other_basis_remains",
   restricted: "projectFiling.refusal.restricted",
+  legal_hold: "projectFiling.refusal.legal_hold",
+  hidden_project: "projectFiling.refusal.hidden_project",
   qualifying_deal: "projectFiling.refusal.qualifying_deal",
 };
 
@@ -34,12 +36,23 @@ const filingKey = (activityId: string) =>
 export function ProjectFilingAction({
   activityId,
   projectId,
-}: Readonly<{ activityId: string; projectId: string }>) {
+  subject,
+}: Readonly<{ activityId: string; projectId: string; subject?: string }>) {
   const t = useT();
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Button onClick={() => setOpen(true)}>{t("projectFiling.action")}</Button>
+      {/* Named by the activity it acts on: a timeline repeats this button on
+          every row, and a screen reader's list of buttons is otherwise a column
+          of identical labels. */}
+      <Button
+        aria-label={
+          subject ? t("projectFiling.actionFor", { subject }) : undefined
+        }
+        onClick={() => setOpen(true)}
+      >
+        {t("projectFiling.action")}
+      </Button>
       <ProjectFilingModal
         activityId={activityId}
         projectId={projectId}
@@ -65,6 +78,7 @@ export function ProjectFilingModal({
   const queryClient = useQueryClient();
   const [reason, setReason] = useState("");
   const [undone, setUndone] = useState<ProjectFiling | null>(null);
+  const reasonBox = useRef<HTMLTextAreaElement>(null);
 
   const filing = useQuery({
     queryKey: filingKey(activityId),
@@ -105,9 +119,12 @@ export function ProjectFilingModal({
   // before anybody read it.
   const refreshReads = () => {
     for (const key of entityTimelineKeys("project", projectId)) {
-      queryClient.invalidateQueries({ queryKey: key });
+      queryClient.invalidateQueries({ queryKey: key, exact: true });
     }
-    queryClient.invalidateQueries({ queryKey: ["activity", activityId] });
+    queryClient.invalidateQueries({
+      queryKey: ["activity", activityId],
+      exact: true,
+    });
   };
 
   const close = () => {
@@ -125,6 +142,9 @@ export function ProjectFilingModal({
     <ConfirmModal
       open={open}
       onClose={close}
+      // Null until the form has rendered: the verdict arrives after the dialog
+      // opens, and a refusal has no field to focus.
+      initialFocusTo={() => reasonBox.current}
       title={t(undone ? "projectFiling.doneTitle" : "projectFiling.title")}
       confirmLabel={t(undone ? "common.close" : "projectFiling.confirm")}
       confirmVariant={undone ? "primary" : "danger"}
@@ -150,6 +170,7 @@ export function ProjectFilingModal({
           done={Boolean(undone)}
           reason={reason}
           onReason={setReason}
+          reasonBox={reasonBox}
         />
       )}
     </ConfirmModal>
@@ -161,17 +182,27 @@ function FilingBody({
   done,
   reason,
   onReason,
+  reasonBox,
 }: Readonly<{
   state: ProjectFiling | undefined;
   done: boolean;
   reason: string;
   onReason: (reason: string) => void;
+  reasonBox: RefObject<HTMLTextAreaElement | null>;
 }>) {
   const t = useT();
   if (!state) {
-    return <p className="t-caption">{t("projectFiling.loading")}</p>;
+    return (
+      <p className="t-caption" role="status">
+        {t("projectFiling.loading")}
+      </p>
+    );
   }
-  const projects = state.projects.map((project) => project.name).join(", ");
+  const projects = state.projects
+    .map((project) =>
+      project.hidden ? t("projectFiling.hiddenProject") : project.name,
+    )
+    .join(", ");
   return (
     <div className="compose-fields">
       {done && (
@@ -206,6 +237,7 @@ function FilingBody({
             {(control) => (
               <Textarea
                 {...control}
+                ref={reasonBox}
                 value={reason}
                 onChange={(event) => onReason(event.target.value)}
               />
@@ -233,14 +265,20 @@ function Decisions({
       <p className="t-label">{t("projectFiling.decisions")}</p>
       <ul>
         {decisions.map((decision) => (
-          <li key={`${decision.at}-${decision.by_name}`}>
+          <li key={decision.id}>
             <span className="t-body">
-              {t("projectFiling.decision", {
-                name: decision.by_name,
-                when: formatDateTime(decision.at, locale, zone),
-              })}
+              {decision.redacted
+                ? t("projectFiling.decisionRedacted", {
+                    when: formatDateTime(decision.at, locale, zone),
+                  })
+                : t("projectFiling.decision", {
+                    name: decision.by_name,
+                    when: formatDateTime(decision.at, locale, zone),
+                  })}
             </span>
-            <p className="t-caption">{decision.reason}</p>
+            {!decision.redacted && (
+              <p className="t-caption">{decision.reason}</p>
+            )}
           </li>
         ))}
       </ul>

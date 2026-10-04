@@ -75,11 +75,34 @@ export const AlreadyUndone: Story = {
     undoable: false,
     undone: [
       {
+        id: "d1d1d1d1-0000-4000-8000-000000000001",
         at: "2026-09-02T10:30:00Z",
         by_name: "Ada Admin",
         reason: "The assistant filed the wrong thread.",
         projects: ["ERP rollout"],
       },
     ],
+  }),
+};
+
+/** A legal hold sits on a linked record; the retention mark stays until it lifts. */
+export const LegalHold: Story = {
+  render: dialog({
+    ...FILED,
+    undoable: false,
+    refusal: { code: "legal_hold", message: "" },
+  }),
+};
+
+/** The project is out of this member's sight: it is unnamed, and the undo is
+ *  left to somebody who can see it. */
+export const HiddenProject: Story = {
+  render: dialog({
+    ...FILED,
+    projects: [
+      { name: "", hidden: true, qualified_at: "2026-09-01T09:00:00Z" },
+    ],
+    undoable: false,
+    refusal: { code: "hidden_project", message: "" },
   }),
 };
