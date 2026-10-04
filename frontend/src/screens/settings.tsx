@@ -135,6 +135,10 @@ import { RolesSettings } from "./roles-settings";
 import { PipelinesCard } from "./settings.pipelines";
 import { PrivacyLanes } from "./settings.privacy";
 import { StageAutomationCard } from "./settings.stageautomation";
+import {
+  DisplayNameSettingRow,
+  GreetingNameSettingRow,
+} from "./settings-names";
 import { SignInMethodsCard } from "./sign-in-methods";
 import { TagVocabularyCard } from "./tagadmin";
 import { ThisDevicePanel } from "./thisdevice";
@@ -679,6 +683,7 @@ function AccountCard() {
               three-field form live in passwordcard.tsx, exported as a ROW
               precisely so this page can place it among its own. */}
           <DisplayNameSettingRow toast={toast} />
+          <GreetingNameSettingRow toast={toast} />
           <PasswordSettingRow />
           <SignatureSettingRow toast={toast} />
           <LanguageSettingRow />
@@ -887,83 +892,6 @@ function AppearanceSettingRow() {
             label: t(THEME_LABEL_KEYS[option]),
           }))}
         />
-      )}
-    />
-  );
-}
-
-/**
- * The name colleagues see you by.
- *
- * The saved answer is read back from `/me` rather than kept here, so the shell's
- * account chip and the roster agree with this row the moment it lands.
- */
-function DisplayNameSettingRow({ toast }: Readonly<{ toast: Toast }>) {
-  const t = useT();
-  const me = useMe();
-  const queryClient = useQueryClient();
-  const stored = me.data?.user.display_name ?? "";
-  // null means "not editing" — the row shows the stored name until the reader
-  // types, so a `/me` refetch cannot overwrite what they are in the middle of.
-  const [draft, setDraft] = useState<string | null>(null);
-  const shown = draft ?? stored;
-  const save = useMutation({
-    mutationFn: async (next: string) => {
-      const { data, error } = await api.PUT("/me/display-name", {
-        body: { display_name: next },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
-    },
-    onSuccess: (saved) => {
-      // Keep the saved name visible if the account refetch is delayed or fails.
-      setDraft(saved?.display_name ?? null);
-      void queryClient.invalidateQueries({ queryKey: ["scheduling-profile"] });
-      toast.show(t("settings.saved"));
-      void queryClient.invalidateQueries({ queryKey: ["me"] });
-    },
-  });
-  // Trimmed for the comparison as well as for the send, or a name with a
-  // trailing space reads as a change and the server answers that it is not one.
-  const trimmed = shown.trim();
-  const dirty = trimmed !== stored;
-  // Counted in CHARACTERS, which is what the contract's `maxLength` means and
-  // what the server checks with `utf8.RuneCountInString`. `String.length` would
-  // count UTF-16 units and refuse a name the server admits.
-  const tooLong = [...trimmed].length > 255;
-  const refusal = save.error ? problemMessageOf(save.error, t) : undefined;
-  return (
-    <SettingRow
-      label={t("settings.displayName")}
-      description={t("settings.displayNameHelp")}
-      layout="stack"
-      control={(row) => (
-        // The catalogued pairing of field and verb, as the pipeline rows use.
-        <div className="form-stack settingrow-measure">
-          <Field label={t("settings.displayName")} labelHidden error={refusal}>
-            {(field) => (
-              <TextInput
-                {...field}
-                aria-labelledby={row["aria-labelledby"]}
-                aria-describedby={[field, row]
-                  .map((owner) => owner["aria-describedby"])
-                  .filter(Boolean)
-                  .join(" ")}
-                value={shown}
-                // No `maxLength`: UTF-16 units, not the runes `tooLong` counts.
-                onChange={(event) => setDraft(event.target.value)}
-              />
-            )}
-          </Field>
-          <Button
-            disabled={!dirty || trimmed === "" || tooLong || save.isPending}
-            onClick={() => save.mutate(trimmed)}
-          >
-            {t("settings.displayNameSave")}
-          </Button>
-        </div>
       )}
     />
   );

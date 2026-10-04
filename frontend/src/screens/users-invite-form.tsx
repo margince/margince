@@ -68,6 +68,7 @@ export function InviteUserForm({
   const t = useT();
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
+  const [greeting, setGreeting] = useState("");
   const assignable = useAssignableRoles(true);
   const offered = assignable.data ?? [];
   // The ordinary seat most colleagues hold, as the starting choice. A member
@@ -88,6 +89,9 @@ export function InviteUserForm({
   // so a click in that window would otherwise invite with the PREVIOUS
   // selection — granting or omitting authority the admin did not choose.
   const displayName = askName ? name.trim() : nameFromEmail(email);
+  // Asked only beside the name: the setup journey derives the name from the
+  // address, and the member's first sign-in can fill this instead.
+  const greetingName = askName ? greeting.trim() : "";
   const invite = useMutation({
     mutationFn: async (
       choice: Readonly<{ role: Role; teams: string[] }>,
@@ -96,6 +100,7 @@ export function InviteUserForm({
         body: {
           email: email.trim(),
           display_name: displayName,
+          ...(greetingName === "" ? {} : { greeting_name: greetingName }),
           role: choice.role,
           team_ids: choice.teams,
         },
@@ -109,6 +114,7 @@ export function InviteUserForm({
       const invitedName = displayName;
       setEmail("");
       setName("");
+      setGreeting("");
       setRole("rep");
       setTeamIds([]);
       setError(null);
@@ -162,6 +168,17 @@ export function InviteUserForm({
               placeholder={t("users.namePlaceholder")}
               value={name}
               onChange={(e) => setName(e.target.value)}
+            />
+          )}
+        </Field>
+      )}
+      {askName && (
+        <Field label={t("users.greetingLabel")} hint={t("users.greetingHint")}>
+          {(control) => (
+            <TextInput
+              {...control}
+              value={greeting}
+              onChange={(e) => setGreeting(e.target.value)}
             />
           )}
         </Field>

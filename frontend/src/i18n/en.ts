@@ -5173,6 +5173,10 @@ export const en = {
   "settings.displayNameHelp":
     "Shown to colleagues on records you edit, in pickers and in the audit log.",
   "settings.displayNameSave": "Save",
+  "settings.greetingName": "Greeting name",
+  "settings.greetingNameHelp":
+    "The name colleagues greet you by in drafted messages. Empty uses the first word of your display name.",
+  "settings.greetingNameSave": "Save",
   "settings.languageHelp": "Applies to this session.",
   "settings.deviceCard": "This device",
   "settings.installApp": "Margince app",
@@ -8796,6 +8800,9 @@ export const en = {
   "users.nameLabel": "Full name",
   "users.emailPlaceholder": "name@company.com",
   "users.namePlaceholder": "Full name",
+  "users.greetingLabel": "Greeting name",
+  "users.greetingHint":
+    "Optional. The name greetings use, when it is not the first word of the full name.",
   "users.deactivateConfirmTitle": "Deactivate {name}?",
   "users.deactivateConfirmBody":
     "They are signed out everywhere and their agent passports are revoked immediately. They can be reactivated later and must then sign in again.",

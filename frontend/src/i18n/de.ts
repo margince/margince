@@ -5071,6 +5071,10 @@ export const de = {
   "settings.displayNameHelp":
     "Wird im Team an Datensätzen, die du bearbeitest, in Auswahllisten und im Audit-Log angezeigt.",
   "settings.displayNameSave": "Speichern",
+  "settings.greetingName": "Rufname",
+  "settings.greetingNameHelp":
+    "Mit diesem Namen begrüßt dich dein Team in entworfenen Nachrichten. Leer gilt das erste Wort deines Anzeigenamens.",
+  "settings.greetingNameSave": "Speichern",
   "settings.languageHelp": "Gilt für diese Sitzung.",
   "settings.deviceCard": "Dieses Gerät",
   "settings.installApp": "Margince-App",
@@ -8642,6 +8646,9 @@ export const de = {
   "users.nameLabel": "Vollständiger Name",
   "users.emailPlaceholder": "name@company.com",
   "users.namePlaceholder": "Vollständiger Name",
+  "users.greetingLabel": "Rufname",
+  "users.greetingHint":
+    "Optional. Der Name für Begrüßungen, wenn es nicht das erste Wort des vollständigen Namens ist.",
   "users.deactivateConfirmTitle": "{name} deaktivieren?",
   "users.deactivateConfirmBody":
     "Die Person wird überall abgemeldet, und ihre Agenten-Passports werden sofort widerrufen. Eine spätere Reaktivierung ist möglich; danach muss sich die Person erneut anmelden.",
