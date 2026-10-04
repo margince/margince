@@ -68,6 +68,16 @@ func TestACustomersEmailedPromiseIsWatchedNotTasked(t *testing.T) {
 	if n := e.WsCount(t, `SELECT count(*) FROM signal WHERE kind = 'commitment_made'`); n != 1 {
 		t.Errorf("want the account's commitment signal kept for Deal Scout, got %d", n)
 	}
+	// The company page counts it, for a reader whose scope reaches everything.
+	var open int
+	var complete bool
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		var err error
+		open, complete, err = e.Contacts.CountAccountCommitments(e.Admin(), tx, company)
+		return err
+	}); err != nil || open != 1 || !complete {
+		t.Errorf("the account counts %d open commitment(s), complete=%v, err=%v; want 1 and complete", open, complete, err)
+	}
 }
 
 // A colleague's confident promise in their own mail is their task, dated as
@@ -123,6 +133,59 @@ func TestAPromiseInPrivateMailStaysWithItsOwner(t *testing.T) {
 	staged := e.WsScalar(t, `SELECT coalesce(on_behalf_of::text, '') FROM approval WHERE kind = 'commitment_task'`)
 	if staged != e.Rep1.String() {
 		t.Errorf("the proposal is staged for %q, want the private mail's owner", staged)
+	}
+}
+
+// A promise its owner made in their own private mail is their task, and the
+// task is visible to them alone.
+func TestAPromiseInPrivateMailByItsOwnerIsTheirPrivateTask(t *testing.T) {
+	e := Setup(t)
+	company := e.SeedCompany(t, "Acme", &e.Rep1)
+	ines := employeeOf(t, e, company, "Ines Huber")
+	e.WsExec(t, `UPDATE contact SET visibility = 'owner', owner_id = $2 WHERE id = $1`, ines, e.Rep1)
+	message := seedMessage(t, e, ines, "thread-own", "Pricing", "Hi Ines, "+pricingPromise, "outbound",
+		extractClock.Add(-48*time.Hour))
+	party(t, message, "from", &e.Rep1, nil)
+	party(t, message, "to", nil, &ines)
+
+	extractPass(t, e, &scriptedBrain{reply: commitmentReply(t, message, pricingPromise, "")})
+
+	got := e.WsScalar(t, `SELECT coalesce(t.assignee_id::text, '') || ' ' || count(m.*)::text
+		FROM activity t LEFT JOIN activity_audience_member m ON m.activity_id = t.id
+		WHERE t.kind = 'task' GROUP BY t.id, t.assignee_id`)
+	if want := e.Rep1.String() + " 1"; got != want {
+		t.Errorf("the task reads %q, want it held by the owner with an audience of one (%q)", got, want)
+	}
+}
+
+// An old signal whose message has since been archived is settled with
+// nothing filed: there are no words left to file a claim on.
+func TestAnOldSignalWhoseMessageIsGoneIsSettledEmpty(t *testing.T) {
+	e := Setup(t)
+	company := e.SeedCompany(t, "Acme", &e.Rep1)
+	ines := employeeOf(t, e, company, "Ines Huber")
+	cited := seedMessage(t, e, ines, "thread-gone", "Pricing", "Hi Ines, "+pricingPromise, "outbound",
+		extractClock.Add(-72*time.Hour))
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := signals.RecordDerived(e.Admin(), tx, signals.DerivedSignal{
+			Kind: "commitment_made", CompanyID: company, Summary: "They promised pricing.",
+			Severity: "info", Fingerprint: "legacy-" + cited.String(),
+			Evidence: []signals.DerivedEvidence{{Snippet: "They promised pricing.", ActivityID: cited}},
+		}, extractClock.Add(-72*time.Hour))
+		return err
+	}); err != nil {
+		t.Fatalf("seed the old signal: %v", err)
+	}
+	e.WsExec(t, `UPDATE activity SET archived_at = now() WHERE id = $1`, cited)
+
+	if pass := extractPassStats(t, e, &scriptedBrain{reply: commitmentReply(t, cited, pricingPromise, "")}); pass.Converted != 1 {
+		t.Fatalf("the pass converted %d old signals, want the one", pass.Converted)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM conversation_claim`) + e.WsCount(t, `SELECT count(*) FROM activity WHERE kind = 'task'`); n != 0 {
+		t.Errorf("a signal with no message left filed %d claim(s) and task(s)", n)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM signal WHERE status = 'open'`); n != 0 {
+		t.Errorf("%d old signal(s) still open", n)
 	}
 }
 
