@@ -2175,7 +2175,7 @@
     },
     {
       "name": "log_activity",
-      "tokens": 677,
+      "tokens": 680,
       "agents": [
         "overnight_at_risk_sweep"
       ],
@@ -2723,6 +2723,33 @@
       }
     },
     {
+      "name": "relink_activity",
+      "tokens": 298,
+      "agents": [],
+      "required_by_cases": [
+        "case9_filed_in_the_wrong_place"
+      ],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [],
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {
+        "claude-sonnet-5-5@claude-cli": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "gpt-5.6-sol@codex-cli": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        }
+      }
+    },
+    {
       "name": "merge_records",
       "tokens": 293,
       "agents": [],
@@ -2755,33 +2782,6 @@
       "agents": [],
       "required_by_cases": [
         "case33_two_cards_for_one_company"
-      ],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [],
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {
-        "claude-sonnet-5-5@claude-cli": {
-          "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "gpt-5.6-sol@codex-cli": {
-          "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        }
-      }
-    },
-    {
-      "name": "relink_activity",
-      "tokens": 276,
-      "agents": [],
-      "required_by_cases": [
-        "case9_filed_in_the_wrong_place"
       ],
       "required_as_one_of_a_set_by_cases": [],
       "permitted_in_cases": [],
@@ -2885,6 +2885,33 @@
       }
     },
     {
+      "name": "relink_activities",
+      "tokens": 253,
+      "agents": [],
+      "required_by_cases": [
+        "case9_filed_in_the_wrong_place"
+      ],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [],
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {
+        "claude-sonnet-5-5@claude-cli": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "gpt-5.6-sol@codex-cli": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        }
+      }
+    },
+    {
       "name": "commit_import",
       "tokens": 236,
       "agents": [],
@@ -2904,6 +2931,27 @@
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        }
+      }
+    },
+    {
+      "name": "relink_thread",
+      "tokens": 233,
+      "agents": [],
+      "required_by_cases": [
+        "case48_that_whole_thread_is_filed_wrong"
+      ],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [],
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {
+        "claude-sonnet-5-5@claude-cli": {
           "runs": 3,
           "passed": 3,
           "reliability": 1,
@@ -3018,33 +3066,6 @@
       }
     },
     {
-      "name": "relink_activities",
-      "tokens": 205,
-      "agents": [],
-      "required_by_cases": [
-        "case9_filed_in_the_wrong_place"
-      ],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [],
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {
-        "claude-sonnet-5-5@claude-cli": {
-          "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "gpt-5.6-sol@codex-cli": {
-          "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        }
-      }
-    },
-    {
       "name": "update_tag",
       "tokens": 205,
       "agents": [],
@@ -3091,27 +3112,6 @@
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
-          "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        }
-      }
-    },
-    {
-      "name": "relink_thread",
-      "tokens": 196,
-      "agents": [],
-      "required_by_cases": [
-        "case48_that_whole_thread_is_filed_wrong"
-      ],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [],
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {
-        "claude-sonnet-5-5@claude-cli": {
           "runs": 3,
           "passed": 3,
           "reliability": 1,

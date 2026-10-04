@@ -82,6 +82,8 @@ func TestReleaseUndoableByDestination(t *testing.T) {
 // The set the classifier judges by destination is derived from the tools
 // themselves: each name is registered and its tier resolver answers what the
 // classifier does for a project and for a company, so a change to either shows up here.
+// A project is the deliberate difference: its tier waits for a contact, and the
+// filing is still undoable because a member can take it back.
 func TestEveryDestinationToolIsClassifiedByItsOwnTierResolver(t *testing.T) {
 	registry := NewRegistry(&recordingApprovals{}, nil)
 	registerEveryStageableFamily(registry, localProvider{}, &recordingComms{})
@@ -97,8 +99,12 @@ func TestEveryDestinationToolIsClassifiedByItsOwnTierResolver(t *testing.T) {
 		for _, entity := range []string{"project", "company"} {
 			call := json.RawMessage(`{"entity_type":"` + entity + `"}`)
 			undoable, decided := ReleaseUndoableByDestination(name, call)
-			if want := spec.TierResolver(mcp.TierResolverInput{Args: call}) == mcp.TierAutoExecute; !decided || undoable != want {
-				t.Errorf("%s onto a %s: classified undoable=%v decided=%v, its tier says undoable=%v", name, entity, undoable, decided, want)
+			tier := spec.TierResolver(mcp.TierResolverInput{Args: call})
+			if wantTier := map[string]mcp.RiskTier{"project": mcp.TierConfirmationRequired, "company": mcp.TierAutoExecute}[entity]; tier != wantTier {
+				t.Errorf("%s onto a %s resolves tier %v, want %v", name, entity, tier, wantTier)
+			}
+			if !decided || !undoable {
+				t.Errorf("%s onto a %s: classified undoable=%v decided=%v, want both true", name, entity, undoable, decided)
 			}
 		}
 	}

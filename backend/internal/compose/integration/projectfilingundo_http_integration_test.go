@@ -74,6 +74,15 @@ func TestAMemberUndoesAProjectFilingOverHTTPAndAnAgentCannot(t *testing.T) {
 		t.Errorf("after the undo: %+v, want unfiled with the member's decision on record", after)
 	}
 
+	// An activity nobody can see answers like one that does not exist.
+	gone := "/v1/activities/00000000-0000-4000-8000-000000000000/project-filing"
+	if status := e.Call(t, "GET", gone, nil, nil, nil); status != http.StatusNotFound {
+		t.Errorf("reading the filing of an unknown activity → %d, want 404", status)
+	}
+	if status := e.Call(t, "POST", gone+"/undo", AnyMap{"reason": "no such activity"}, nil, nil); status != http.StatusNotFound {
+		t.Errorf("undoing the filing of an unknown activity → %d, want 404", status)
+	}
+
 	if status := e.Call(t, "POST", path+"/undo", AnyMap{"reason": "again"}, nil, &problem); status != http.StatusConflict || problem.Code != "not_filed" {
 		t.Errorf("a second undo → %d %q, want 409 not_filed", status, problem.Code)
 	}

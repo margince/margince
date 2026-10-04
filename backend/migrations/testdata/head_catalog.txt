@@ -318,9 +318,24 @@ BEGIN
   -- when it was earned. Leaving the timestamp mutable would let a writer keep
   -- the class and move the date: the same rewriting of history with an extra
   -- step, on the field a supervisory authority would be shown.
+  --
+  -- The one exception is the undo of a project filing: the class goes away
+  -- WHOLE (both columns to null), from a row no statutory hold has touched,
+  -- once nothing is left that qualifies it — no evidence row and no project
+  -- link — and only inside the transaction that declared it. The declaration
+  -- names this activity, so one undo cannot be carried onto another row, and
+  -- the evidence trigger below refuses to let the declaration delete anything
+  -- but a project filing.
   IF OLD.retention_class IS NOT NULL
      AND (NEW.retention_class IS DISTINCT FROM OLD.retention_class
-          OR NEW.retention_class_at IS DISTINCT FROM OLD.retention_class_at) THEN
+          OR NEW.retention_class_at IS DISTINCT FROM OLD.retention_class_at)
+     AND NOT (current_setting('margince.project_filing_undo', true) = OLD.id::text
+              AND NEW.retention_class IS NULL AND NEW.retention_class_at IS NULL
+              AND OLD.restricted_at IS NULL AND NEW.restricted_at IS NULL
+              AND NOT EXISTS (SELECT 1 FROM activity_retention_evidence e
+                               WHERE e.activity_id = OLD.id)
+              AND NOT EXISTS (SELECT 1 FROM activity_link l
+                               WHERE l.activity_id = OLD.id AND l.entity_type = 'project')) THEN
     RAISE EXCEPTION 'activity % carries retention class % earned at %, which is stamped once and never re-derived', OLD.id, OLD.retention_class, OLD.retention_class_at
       USING ERRCODE = 'check_violation',
             CONSTRAINT = 'activity_retention_class_monotonic';
@@ -470,6 +485,15 @@ BEGIN
   -- activity is gone exactly when the delete is legitimate.
   IF TG_OP = 'DELETE' THEN
     IF EXISTS (SELECT 1 FROM activity a WHERE a.id = OLD.activity_id) THEN
+      -- The undo of a project filing removes the filing's own evidence and
+      -- nothing else: another basis is what keeps the class, and an activity a
+      -- statutory hold has reached keeps every row it rests on.
+      IF OLD.basis = 'project_linked'
+         AND current_setting('margince.project_filing_undo', true) = OLD.activity_id::text
+         AND NOT EXISTS (SELECT 1 FROM activity a
+                          WHERE a.id = OLD.activity_id AND a.restricted_at IS NOT NULL) THEN
+        RETURN OLD;
+      END IF;
       RAISE EXCEPTION 'retention evidence % is frozen and is removed only with the activity it substantiates', OLD.id
         USING ERRCODE = 'check_violation',
               CONSTRAINT = 'activity_retention_evidence_frozen';

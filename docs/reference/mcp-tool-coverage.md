@@ -313,21 +313,21 @@ Every run of every case requiring this tool passed, for the model named.
 | `check_availability` | 1.00 | 3 | `case23_find_us_a_slot` |
 | `decide_approval` | 1.00 | 6 | `case43_the_fair_leads_are_prospects`, `case8_whats_waiting` |
 | `promote_lead` | 1.00 | 3 | `case40_sort_the_queue` |
+| `relink_activity` | 1.00 | 3 | `case9_filed_in_the_wrong_place` |
 | `merge_records` | 1.00 | 3 | `case33_two_cards_for_one_company` |
 | `archive_record` | 1.00 | 3 | `case33_two_cards_for_one_company` |
-| `relink_activity` | 1.00 | 3 | `case9_filed_in_the_wrong_place` |
 | `draft_follow_ups_for` | 1.00 | 3 | `case44_chase_what_is_slipping` |
 | `list_approvals` | 1.00 | 3 | `case8_whats_waiting` |
 | `invite_meeting` | 1.00 | 3 | `case46_get_us_in_a_room` |
+| `relink_activities` | 1.00 | 3 | `case9_filed_in_the_wrong_place` |
 | `commit_import` | 1.00 | 3 | `case10_finish_the_import` |
+| `relink_thread` | 1.00 | 3 | `case48_that_whole_thread_is_filed_wrong` |
 | `qualify_lead` | 1.00 | 3 | `case40_sort_the_queue` |
 | `apply_tag` | 1.00 | 3 | `case30_a_word_for_it` |
 | `at_risk_relationships` | 1.00 | 3 | `case49_who_can_introduce_us` |
 | `disqualify_lead` | 1.00 | 3 | `case40_sort_the_queue` |
-| `relink_activities` | 1.00 | 3 | `case9_filed_in_the_wrong_place` |
 | `update_tag` | 1.00 | 3 | `case32_two_words_for_one_thing` |
 | `merge_tags` | 1.00 | 3 | `case32_two_words_for_one_thing` |
-| `relink_thread` | 1.00 | 3 | `case48_that_whole_thread_is_filed_wrong` |
 | `data_coverage` | 1.00 | 3 | `case22_can_i_trust_the_numbers` |
 | `list_colleagues` | 1.00 | 3 | `case33_two_cards_for_one_company` |
 | `intro_path_to` | 1.00 | 3 | `case49_who_can_introduce_us` |
@@ -355,14 +355,14 @@ Every run of every case requiring this tool passed, for the model named.
 | `advance_project_phase` | 1.00 | 3 | `case41_close_the_project` |
 | `check_availability` | 1.00 | 3 | `case23_find_us_a_slot` |
 | `decide_approval` | 1.00 | 6 | `case43_the_fair_leads_are_prospects`, `case8_whats_waiting` |
+| `relink_activity` | 1.00 | 3 | `case9_filed_in_the_wrong_place` |
 | `merge_records` | 1.00 | 3 | `case33_two_cards_for_one_company` |
 | `archive_record` | 1.00 | 3 | `case33_two_cards_for_one_company` |
-| `relink_activity` | 1.00 | 3 | `case9_filed_in_the_wrong_place` |
 | `draft_follow_ups_for` | 1.00 | 3 | `case44_chase_what_is_slipping` |
 | `list_approvals` | 1.00 | 3 | `case8_whats_waiting` |
+| `relink_activities` | 1.00 | 3 | `case9_filed_in_the_wrong_place` |
 | `commit_import` | 1.00 | 3 | `case10_finish_the_import` |
 | `apply_tag` | 1.00 | 3 | `case30_a_word_for_it` |
-| `relink_activities` | 1.00 | 3 | `case9_filed_in_the_wrong_place` |
 | `update_tag` | 1.00 | 3 | `case32_two_words_for_one_thing` |
 | `merge_tags` | 1.00 | 3 | `case32_two_words_for_one_thing` |
 | `data_coverage` | 1.00 | 3 | `case22_can_i_trust_the_numbers` |
