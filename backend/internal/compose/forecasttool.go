@@ -80,6 +80,11 @@ func forecastToolReader(pool *pgxpool.Pool) agents.ForecastReader {
 			// The RESOLVED scope, so an agent is told which population the
 			// number covers rather than the blank it asked with.
 			out = forecastToolResult(period, resolved, readings, baseCurrency, at, limited)
+			refs, err := store.SnapshotRefsTx(ctx, tx, period, resolved)
+			if err != nil {
+				return err
+			}
+			out.Snapshots = forecastSnapshotRefsToTool(refs)
 			call, err := store.CurrentCallTx(ctx, tx, period, scope)
 			switch {
 			case err == nil:
@@ -165,6 +170,18 @@ func forecastToolResult(
 	if scope.ID != nil {
 		id := scope.ID.String()
 		out.ScopeID = &id
+	}
+	return out
+}
+
+// forecastSnapshotRefsToTool renders the period's snapshot handles. Empty, never
+// nil: null reads as "unknown" to a model, and nothing frozen is a real answer.
+func forecastSnapshotRefsToTool(refs []forecasting.SnapshotRef) []agents.ForecastSnapshotRefResult {
+	out := make([]agents.ForecastSnapshotRefResult, 0, len(refs))
+	for _, ref := range refs {
+		out = append(out, agents.ForecastSnapshotRefResult{
+			ID: ref.ID.String(), TakenAt: ref.TakenAt.UTC().Format(time.RFC3339), Trigger: ref.Trigger,
+		})
 	}
 	return out
 }

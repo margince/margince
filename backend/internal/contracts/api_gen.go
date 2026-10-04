@@ -9781,6 +9781,30 @@ func (e ForecastShareScopeKind) Valid() bool {
 	}
 }
 
+// Defines values for ForecastSnapshotRefTrigger.
+const (
+	ForecastSnapshotRefTriggerCall        ForecastSnapshotRefTrigger = "call"
+	ForecastSnapshotRefTriggerDaily       ForecastSnapshotRefTrigger = "daily"
+	ForecastSnapshotRefTriggerPeriodClose ForecastSnapshotRefTrigger = "period_close"
+	ForecastSnapshotRefTriggerRecheck     ForecastSnapshotRefTrigger = "recheck"
+)
+
+// Valid indicates whether the value is a known member of the ForecastSnapshotRefTrigger enum.
+func (e ForecastSnapshotRefTrigger) Valid() bool {
+	switch e {
+	case ForecastSnapshotRefTriggerCall:
+		return true
+	case ForecastSnapshotRefTriggerDaily:
+		return true
+	case ForecastSnapshotRefTriggerPeriodClose:
+		return true
+	case ForecastSnapshotRefTriggerRecheck:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ForecastSufficiencyAbsent.
 const (
 	ForecastSufficiencyAbsentSufficiencyAbsenceInsufficientBasis   ForecastSufficiencyAbsent = "insufficient_basis"
@@ -33899,6 +33923,9 @@ type ForecastReadings struct {
 	// ScopeLimited True when deals the caller cannot read were left out. A BOOLEAN and never a count: a count of what somebody may not read is itself a statement about how much of it there is, so the reader is told the figure is partial and not by how much.
 	ScopeLimited *bool `json:"scope_limited,omitempty"`
 
+	// Snapshots The frozen states of this period and population, newest first: the ten most recent plus the period's first, so a reader has both the latest and the "since the period opened" anchor. These are the ids `getForecastMovement` takes in `from` and `to`. Only whole-pipeline snapshots are listed; one restricted to a single pipeline covers a different population. Empty when nothing was frozen, and always empty for `managed_teams`, which nothing is frozen against.
+	Snapshots *[]ForecastSnapshotRef `json:"snapshots,omitempty"`
+
 	// Sufficiency Whether the open pipeline supports the reference landing, and what the reference is.
 	// NOT a target. Margince has no target model: `basis` names where the reference came from so a reader can disagree with the basis rather than with the arithmetic, and the reference is always from OUTSIDE the current projection — a coverage figure divided by a target derived from the same pipeline is always fine and says nothing.
 	Sufficiency *ForecastSufficiency `json:"sufficiency,omitempty"`
@@ -33937,6 +33964,18 @@ type ForecastShareKind string
 
 // ForecastShareScopeKind defines model for ForecastShare.ScopeKind.
 type ForecastShareScopeKind string
+
+// ForecastSnapshotRef One frozen forecast, by the handle a movement read takes.
+type ForecastSnapshotRef struct {
+	Id      openapi_types.UUID `json:"id"`
+	TakenAt time.Time          `json:"taken_at"`
+
+	// Trigger Why it was taken.
+	Trigger ForecastSnapshotRefTrigger `json:"trigger"`
+}
+
+// ForecastSnapshotRefTrigger Why it was taken.
+type ForecastSnapshotRefTrigger string
 
 // ForecastSufficiency Whether the open pipeline supports the reference landing, and what the reference is.
 // NOT a target. Margince has no target model: `basis` names where the reference came from so a reader can disagree with the basis rather than with the arithmetic, and the reference is always from OUTSIDE the current projection — a coverage figure divided by a target derived from the same pipeline is always fine and says nothing.

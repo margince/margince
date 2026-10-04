@@ -125,6 +125,11 @@ func (h Handlers) GetForecast(
 		}
 		out = ReadingsToWire(period, scope, readings, baseCurrency, at)
 		out.ScopeLimited = &limited
+		refs, err := h.store.SnapshotRefsTx(ctx, tx, period, scope)
+		if err != nil {
+			return err
+		}
+		out.Snapshots = SnapshotRefsToWire(refs)
 
 		// A standing call is an assertion about ONE named population. The
 		// managed-teams reading covers several, so there is no call to look up
@@ -153,6 +158,21 @@ func (h Handlers) GetForecast(
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+// SnapshotRefsToWire maps the period's snapshots onto the wire shape. Never
+// nil: an empty list is the answer "nothing frozen", and an absent field would
+// read as "not asked".
+func SnapshotRefsToWire(refs []SnapshotRef) *[]crmcontracts.ForecastSnapshotRef {
+	wire := make([]crmcontracts.ForecastSnapshotRef, 0, len(refs))
+	for _, ref := range refs {
+		wire = append(wire, crmcontracts.ForecastSnapshotRef{
+			Id:      openapi_types.UUID(ref.ID),
+			TakenAt: ref.TakenAt,
+			Trigger: crmcontracts.ForecastSnapshotRefTrigger(ref.Trigger),
+		})
+	}
+	return &wire
 }
 
 // project adds where the period lands and whether the pipeline supports it.
