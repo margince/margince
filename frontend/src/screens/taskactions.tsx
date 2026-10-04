@@ -7,6 +7,7 @@ import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
+import { useCanWrite } from "../app/capability";
 import { useRecordZone } from "../app/recordzone";
 import {
   Badge,
@@ -554,6 +555,12 @@ export const DEAL_COMMITMENTS_KEY = ["deal-commitments"] as const;
 export function DismissClaimButton({ id }: Readonly<{ id: string }>) {
   const t = useT();
   const settle = useClaimSettle([]);
+  // Settling writes the contact's record, so a reader who may not update
+  // contacts is not offered a verb the server would refuse.
+  const canSettle = useCanWrite("contact", "update");
+  if (!canSettle) {
+    return null;
+  }
   return (
     <>
       <Button

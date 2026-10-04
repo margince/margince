@@ -262,7 +262,7 @@ describe("a commitment read from a conversation", () => {
   it("shows its words and offers to dismiss it", async () => {
     const settled: unknown[] = [];
     installFetchStub({
-      "GET /me": meRoute({ activity: ["read"] }),
+      "GET /me": meRoute({ activity: ["read"], contact: ["read", "update"] }),
       "POST /claims/c-1/settle": (body) => {
         settled.push(body);
         return new Response(null, { status: 204 });
@@ -274,8 +274,18 @@ describe("a commitment read from a conversation", () => {
       </StoryProviders>,
     );
     expect(screen.getByText("“I'll send the quote on Monday.”")).toBeTruthy();
-    screen.getByRole("button", { name: "Dismiss" }).click();
+    (await screen.findByRole("button", { name: "Dismiss" })).click();
     await waitFor(() => expect(settled).toEqual([{ outcome: "dismissed" }]));
+  });
+
+  it("offers no dismissal to a reader who may not update the contact", async () => {
+    render(
+      <StoryProviders>
+        <ContactCommitmentsCard view={viewWithDue(null)} firstName="Dana" />
+      </StoryProviders>,
+    );
+    await screen.findByText("“I'll send the quote on Monday.”");
+    expect(screen.queryByRole("button", { name: "Dismiss" })).toBeNull();
   });
 
   it("is drawn once, as its task, when it became one", () => {

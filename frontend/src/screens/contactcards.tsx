@@ -260,16 +260,15 @@ function openLoops(
       theirs: false,
     }),
   );
-  // A commitment that became a task is drawn once, as the task, when the task
-  // is on this card; otherwise the claim stands for it.
-  const listed = new Set(tasks.map((task) => task.key));
+  // A commitment that became a task is the task's: the page lists the task,
+  // on this card or beside it, and the claim would say the same thing twice.
   const fromClaims = LOOPS.flatMap((loop) =>
     claims
       .filter(
         (claim) =>
           claim.kind === loop.kind &&
           claim.status !== "dismissed" &&
-          !(claim.task_activity_id && listed.has(claim.task_activity_id)),
+          !claim.task_activity_id,
       )
       .map(
         (claim): OpenLoop => ({
@@ -280,9 +279,7 @@ function openLoops(
           done: claim.status === "done",
           theirs: loop.kind === "commitment_theirs",
           quote: claim.source_quote,
-          // Only a claim still open and not yet a task is the reader's to
-          // dismiss; a task is put away as a task.
-          dismissible: claim.status === "open" && !claim.task_activity_id,
+          dismissible: claim.status === "open",
         }),
       ),
   );

@@ -13,6 +13,7 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { useRecordZone } from "../../app/recordzone";
 import { Button } from "../../design-system/atoms";
+import { ErrorLine } from "../../design-system/errorline";
 import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
 import { formatDate } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
@@ -51,7 +52,19 @@ export function DealWatchCard({
   dealId: string;
   onOpenEmail?: (activityId: string) => void;
 }>) {
+  const t = useT();
   const query = useDealCommitments(dealId);
+  // A read that failed — refused, or broken — is said, never drawn as an
+  // account that owes nothing.
+  if (query.isError) {
+    return (
+      <Panel title={t("deal.watch.title")}>
+        <PanelBody>
+          <ErrorLine error={query.error} />
+        </PanelBody>
+      </Panel>
+    );
+  }
   // A server older than this card answers without the list, and a card
   // guessing at it would claim what nobody read.
   if (!query.data?.data) {

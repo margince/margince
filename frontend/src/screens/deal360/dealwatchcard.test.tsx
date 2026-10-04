@@ -6,7 +6,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { installFetchStub, meRoute, StoryProviders } from "../story-utils";
-import { DealWatchList } from "./dealwatchcard";
+import { DealWatchCard, DealWatchList } from "./dealwatchcard";
 
 type DealCommitments = components["schemas"]["DealCommitments"];
 
@@ -32,7 +32,9 @@ const ONE: DealCommitments = {
 afterEach(cleanup);
 
 function renderList(commitments: DealCommitments, onOpenEmail = vi.fn()) {
-  installFetchStub({ "GET /me": meRoute({ activity: ["read"] }) });
+  installFetchStub({
+    "GET /me": meRoute({ activity: ["read"], contact: ["read", "update"] }),
+  });
   render(
     <StoryProviders>
       <DealWatchList commitments={commitments} onOpenEmail={onOpenEmail} />
@@ -42,7 +44,7 @@ function renderList(commitments: DealCommitments, onOpenEmail = vi.fn()) {
 }
 
 describe("the deal's watch card", () => {
-  it("names who committed, to what, in which words", () => {
+  it("names who committed, to what, in which words", async () => {
     const open = renderList(ONE);
     expect(
       screen.getByText("Ines Huber: Send the purchase order"),
@@ -52,7 +54,7 @@ describe("the deal's watch card", () => {
     ).toBeTruthy();
     screen.getByRole("button", { name: "Open message" }).click();
     expect(open).toHaveBeenCalledWith(MESSAGE);
-    expect(screen.getByRole("button", { name: "Dismiss" })).toBeTruthy();
+    expect(await screen.findByRole("button", { name: "Dismiss" })).toBeTruthy();
   });
 
   it("offers no message to open for a commitment made in a meeting", () => {
@@ -73,5 +75,31 @@ describe("the deal's watch card", () => {
     expect(
       screen.getByText("Some commitments on this account are hidden from you."),
     ).toBeTruthy();
+  });
+});
+
+describe("the deal's watch card, read from the server", () => {
+  it("says a refused read rather than drawing nothing", async () => {
+    installFetchStub({
+      "GET /me": meRoute({ activity: ["read"] }),
+      "GET /deals/d-1/commitments": () =>
+        new Response(
+          JSON.stringify({
+            title: "Forbidden",
+            status: 403,
+            detail: "no contact grant",
+          }),
+          {
+            status: 403,
+            headers: { "content-type": "application/problem+json" },
+          },
+        ),
+    });
+    render(
+      <StoryProviders>
+        <DealWatchCard dealId="d-1" />
+      </StoryProviders>,
+    );
+    expect(await screen.findByText("Customer commitments")).toBeTruthy();
   });
 });
