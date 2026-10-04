@@ -2719,10 +2719,8 @@ function DealOverviewPane({
           project, is offered that project once. Nothing else here asks. */}
       <StartDeliveryPrompt deal={deal} />
       {/* ONE READING, IN PARTS: the call with the deal's thread, the move the
-          briefing names, the brief itself, and under them the two sections a
-          reader consults rather than reads — what is on the table, and who is
-          in the room. The buying committee sits beside the offers rather than
-          at the foot of the page, because the two are the deal's two sides. */}
+          briefing names, then what is on the table beside who is in the room
+          (the deal's two sides), then what the customer committed to. */}
       <RecordReading>
         <DealStatusCardPanel
           dealId={deal.id}
