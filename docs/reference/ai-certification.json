@@ -5,7 +5,7 @@
     "sites_best_partial": 0,
     "sites_best_stale": 2,
     "sites_absent": 0,
-    "scenarios": 167,
+    "scenarios": 169,
     "records": 251,
     "bindings": 13,
     "self_judged_records": 0
@@ -544,12 +544,12 @@
               "env": "cloud_frontier"
             },
             "same_model": false,
-            "band": "supported_degraded",
+            "band": "not_supported",
             "state": "current"
           },
           "abandoned": 0,
-          "runs": 24,
-          "passed": 14,
+          "runs": 18,
+          "passed": 15,
           "cases_failing_often": 1,
           "cases_below_quality_bar": 0
         },
@@ -1384,8 +1384,8 @@
             "state": "current"
           },
           "abandoned": 0,
-          "runs": 12,
-          "passed": 12,
+          "runs": 18,
+          "passed": 18,
           "cases_failing_often": 0,
           "cases_below_quality_bar": 0
         },
@@ -2420,8 +2420,8 @@
             }
           },
           "abandoned": 0,
-          "runs": 12,
-          "passed": 12,
+          "runs": 18,
+          "passed": 18,
           "cases_failing_often": 0,
           "cases_below_quality_bar": 0,
           "measured_on": {
@@ -3348,7 +3348,7 @@
             "env": "sovereign"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "cheap_cloud",
             "model": {
@@ -3358,7 +3358,7 @@
             },
             "same_model": true,
             "band": "certified",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 24,
@@ -4182,8 +4182,8 @@
             "state": "current"
           },
           "abandoned": 0,
-          "runs": 12,
-          "passed": 12,
+          "runs": 18,
+          "passed": 18,
           "cases_failing_often": 0,
           "cases_below_quality_bar": 0
         },
@@ -5003,8 +5003,8 @@
             "state": "current"
           },
           "abandoned": 0,
-          "runs": 24,
-          "passed": 23,
+          "runs": 18,
+          "passed": 18,
           "cases_failing_often": 0,
           "cases_below_quality_bar": 0
         },
@@ -5811,7 +5811,7 @@
             "env": "sovereign"
           },
           "band": "not_supported",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "cheap_cloud",
             "model": {
@@ -5821,7 +5821,7 @@
             },
             "same_model": true,
             "band": "not_supported",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 12,
@@ -6130,10 +6130,10 @@
           "sites_current": 42,
           "sites_partial": 0,
           "sites_stale": 2,
-          "runs": 624,
-          "passed": 616,
-          "reliability": 0.9871794871794872,
-          "slowest_p95_ms": 26137,
+          "runs": 630,
+          "passed": 622,
+          "reliability": 0.9873015873015873,
+          "slowest_p95_ms": 24754,
           "bands": {
             "certified": 26,
             "supported_degraded": 16,
@@ -6575,8 +6575,8 @@
           },
           "band": "certified",
           "state": "current",
-          "runs": 12,
-          "passed": 12,
+          "runs": 18,
+          "passed": 18,
           "records": 1
         },
         {
@@ -6863,9 +6863,9 @@
           "sites_current": 40,
           "sites_partial": 0,
           "sites_stale": 2,
-          "runs": 567,
-          "passed": 457,
-          "reliability": 0.8059964726631393,
+          "runs": 573,
+          "passed": 463,
+          "reliability": 0.8080279232111692,
           "slowest_p95_ms": 83052,
           "bands": {
             "certified": 12,
@@ -6883,9 +6883,9 @@
           "sites_current": 6,
           "sites_partial": 0,
           "sites_stale": 0,
-          "runs": 177,
-          "passed": 153,
-          "reliability": 0.864406779661017,
+          "runs": 171,
+          "passed": 148,
+          "reliability": 0.8654970760233918,
           "slowest_p95_ms": 6454,
           "bands": {
             "certified": 4,
@@ -7318,13 +7318,13 @@
           "task": "request_settlement",
           "best": {
             "provider": "openai_compatible",
-            "model": "mistralai/ministral-14b-2512",
+            "model": "mistralai/ministral-8b-2512",
             "env": "eu_hosted"
           },
           "band": "certified",
           "state": "current",
-          "runs": 12,
-          "passed": 12,
+          "runs": 18,
+          "passed": 18,
           "records": 2
         },
         {
@@ -7589,7 +7589,7 @@
       "ready": 28,
       "usable_with_care": 14,
       "not_reliable_yet": 3,
-      "recheck_pending": 2,
+      "recheck_pending": 3,
       "models": [
         {
           "binding": {
@@ -7598,9 +7598,9 @@
             "env": "sovereign"
           },
           "sites": 45,
-          "sites_current": 40,
+          "sites_current": 39,
           "sites_partial": 0,
-          "sites_stale": 5,
+          "sites_stale": 6,
           "runs": 777,
           "passed": 629,
           "reliability": 0.8095238095238095,
@@ -7621,10 +7621,10 @@
           "sites_current": 6,
           "sites_partial": 0,
           "sites_stale": 0,
-          "runs": 204,
-          "passed": 170,
-          "reliability": 0.8333333333333334,
-          "slowest_p95_ms": 93955,
+          "runs": 198,
+          "passed": 171,
+          "reliability": 0.8636363636363636,
+          "slowest_p95_ms": 63054,
           "bands": {
             "certified": 1,
             "supported_degraded": 2,
@@ -7641,14 +7641,14 @@
           "sites_current": 41,
           "sites_partial": 0,
           "sites_stale": 2,
-          "runs": 531,
-          "passed": 508,
-          "reliability": 0.9566854990583804,
+          "runs": 528,
+          "passed": 499,
+          "reliability": 0.9450757575757576,
           "slowest_p95_ms": 139188,
           "bands": {
             "certified": 22,
-            "supported_degraded": 17,
-            "not_supported": 4
+            "supported_degraded": 16,
+            "not_supported": 5
           }
         }
       ],
@@ -8026,7 +8026,7 @@
             "env": "sovereign"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 24,
           "passed": 23,
           "records": 3
@@ -8293,7 +8293,7 @@
       "ready": 9,
       "usable_with_care": 8,
       "not_reliable_yet": 28,
-      "recheck_pending": 9,
+      "recheck_pending": 10,
       "models": [
         {
           "binding": {
@@ -8302,9 +8302,9 @@
             "env": "sovereign"
           },
           "sites": 45,
-          "sites_current": 36,
+          "sites_current": 35,
           "sites_partial": 0,
-          "sites_stale": 9,
+          "sites_stale": 10,
           "runs": 750,
           "passed": 591,
           "reliability": 0.788,
@@ -8690,7 +8690,7 @@
             "env": "sovereign"
           },
           "band": "not_supported",
-          "state": "current",
+          "state": "stale",
           "runs": 12,
           "passed": 6,
           "records": 1
@@ -8969,9 +8969,9 @@
           "sites_current": 42,
           "sites_partial": 0,
           "sites_stale": 2,
-          "runs": 810,
-          "passed": 728,
-          "reliability": 0.8987654320987655,
+          "runs": 816,
+          "passed": 734,
+          "reliability": 0.8995098039215687,
           "slowest_p95_ms": 6569,
           "bands": {
             "certified": 14,
@@ -9355,8 +9355,8 @@
           },
           "band": "certified",
           "state": "current",
-          "runs": 12,
-          "passed": 12,
+          "runs": 18,
+          "passed": 18,
           "records": 1
         },
         {
@@ -9611,10 +9611,10 @@
       "sites_current": 43,
       "sites_partial": 0,
       "sites_stale": 2,
-      "runs": 639,
-      "passed": 631,
-      "reliability": 0.9874804381846636,
-      "slowest_p95_ms": 26137,
+      "runs": 645,
+      "passed": 637,
+      "reliability": 0.9875968992248062,
+      "slowest_p95_ms": 24754,
       "bands": {
         "certified": 27,
         "supported_degraded": 16,
@@ -9669,9 +9669,9 @@
         "env": "sovereign"
       },
       "sites": 45,
-      "sites_current": 40,
+      "sites_current": 39,
       "sites_partial": 0,
-      "sites_stale": 5,
+      "sites_stale": 6,
       "runs": 777,
       "passed": 629,
       "reliability": 0.8095238095238095,
@@ -9692,10 +9692,10 @@
       "sites_current": 6,
       "sites_partial": 0,
       "sites_stale": 0,
-      "runs": 204,
-      "passed": 170,
-      "reliability": 0.8333333333333334,
-      "slowest_p95_ms": 93955,
+      "runs": 198,
+      "passed": 171,
+      "reliability": 0.8636363636363636,
+      "slowest_p95_ms": 63054,
       "bands": {
         "certified": 1,
         "supported_degraded": 2,
@@ -9712,14 +9712,14 @@
       "sites_current": 41,
       "sites_partial": 0,
       "sites_stale": 2,
-      "runs": 531,
-      "passed": 508,
-      "reliability": 0.9566854990583804,
+      "runs": 528,
+      "passed": 499,
+      "reliability": 0.9450757575757576,
       "slowest_p95_ms": 139188,
       "bands": {
         "certified": 22,
-        "supported_degraded": 17,
-        "not_supported": 4
+        "supported_degraded": 16,
+        "not_supported": 5
       }
     },
     {
@@ -9732,9 +9732,9 @@
       "sites_current": 40,
       "sites_partial": 0,
       "sites_stale": 2,
-      "runs": 567,
-      "passed": 457,
-      "reliability": 0.8059964726631393,
+      "runs": 573,
+      "passed": 463,
+      "reliability": 0.8080279232111692,
       "slowest_p95_ms": 83052,
       "bands": {
         "certified": 12,
@@ -9752,9 +9752,9 @@
       "sites_current": 6,
       "sites_partial": 0,
       "sites_stale": 0,
-      "runs": 177,
-      "passed": 153,
-      "reliability": 0.864406779661017,
+      "runs": 171,
+      "passed": 148,
+      "reliability": 0.8654970760233918,
       "slowest_p95_ms": 6454,
       "bands": {
         "certified": 4,
@@ -9832,9 +9832,9 @@
       "sites_current": 42,
       "sites_partial": 0,
       "sites_stale": 2,
-      "runs": 810,
-      "passed": 728,
-      "reliability": 0.8987654320987655,
+      "runs": 816,
+      "passed": 734,
+      "reliability": 0.8995098039215687,
       "slowest_p95_ms": 6569,
       "bands": {
         "certified": 14,
@@ -9849,9 +9849,9 @@
         "env": "sovereign"
       },
       "sites": 45,
-      "sites_current": 36,
+      "sites_current": 35,
       "sites_partial": 0,
-      "sites_stale": 9,
+      "sites_stale": 10,
       "runs": 750,
       "passed": 591,
       "reliability": 0.788,
@@ -16939,8 +16939,8 @@
       "recommended": {
         "binding": {
           "provider": "openai_compatible",
-          "model": "mistralai/ministral-14b-2512",
-          "env": "eu_hosted"
+          "model": "openai/gpt-oss-120b",
+          "env": "cloud_frontier"
         },
         "band": "certified",
         "reliability": 1,
@@ -16952,6 +16952,18 @@
           "expects": "accepted",
           "graded_by": "judge",
           "file": "backend/internal/compose/aicert/corpus/request_settlement/unsure_when_the_words_do_not_say_01.yaml"
+        },
+        {
+          "name": "an_answer_off_the_thread_can_leave_the_request_owed",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/request_settlement/off_the_thread_but_not_answered_01.yaml"
+        },
+        {
+          "name": "an_answer_off_the_thread_settles_a_request",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/request_settlement/answered_off_the_thread_01.yaml"
         },
         {
           "name": "an_answer_settles_a_request_and_an_acknowledgement_does_not",
@@ -16981,15 +16993,15 @@
           },
           "state": "current",
           "band": "certified",
-          "scenarios_measured": 4,
-          "scenarios_total": 4,
-          "runs": 12,
-          "passed": 12,
+          "scenarios_measured": 6,
+          "scenarios_total": 6,
+          "runs": 18,
+          "passed": 18,
           "reliability": 1,
-          "latency_p50_ms": 1563,
-          "latency_p95_ms": 26137,
+          "latency_p50_ms": 1112,
+          "latency_p95_ms": 2475,
           "reported": {
-            "accepted": 12,
+            "accepted": 18,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
@@ -17002,10 +17014,10 @@
             "model": "gemma4:12b",
             "env": "sovereign"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 4,
-          "scenarios_total": 4,
+          "scenarios_measured": 0,
+          "scenarios_total": 6,
           "runs": 24,
           "passed": 23,
           "reliability": 0.9583333333333334,
@@ -17017,7 +17029,21 @@
             "invalid": 1,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
+          "stale_cause": {
+            "prompt_changed": [
+              "a_reply_that_says_nothing_either_way_is_answered_unsure",
+              "an_answer_settles_a_request_and_an_acknowledgement_does_not",
+              "answering_one_of_two_asks_leaves_the_other_owed",
+              "declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague"
+            ],
+            "grader_changed": [
+              "a_reply_that_says_nothing_either_way_is_answered_unsure",
+              "an_answer_settles_a_request_and_an_acknowledgement_does_not",
+              "answering_one_of_two_asks_leaves_the_other_owed",
+              "declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague"
+            ]
+          }
         },
         {
           "binding": {
@@ -17027,17 +17053,17 @@
           },
           "state": "current",
           "band": "not_supported",
-          "scenarios_measured": 4,
-          "scenarios_total": 4,
-          "runs": 24,
-          "passed": 14,
-          "reliability": 0.5833333333333334,
-          "latency_p50_ms": 2702,
-          "latency_p95_ms": 93955,
+          "scenarios_measured": 6,
+          "scenarios_total": 6,
+          "runs": 18,
+          "passed": 15,
+          "reliability": 0.8333333333333334,
+          "latency_p50_ms": 3898,
+          "latency_p95_ms": 9221,
           "reported": {
-            "accepted": 14,
+            "accepted": 15,
             "wrong_answer": 0,
-            "invalid": 10,
+            "invalid": 3,
             "abstained": 0
           },
           "stale_reason": ""
@@ -17049,18 +17075,18 @@
             "env": "cloud_frontier"
           },
           "state": "current",
-          "band": "supported_degraded",
-          "scenarios_measured": 4,
-          "scenarios_total": 4,
-          "runs": 27,
-          "passed": 24,
-          "reliability": 0.8888888888888888,
-          "latency_p50_ms": 5999,
-          "latency_p95_ms": 12130,
+          "band": "not_supported",
+          "scenarios_measured": 6,
+          "scenarios_total": 6,
+          "runs": 24,
+          "passed": 15,
+          "reliability": 0.625,
+          "latency_p50_ms": 3975,
+          "latency_p95_ms": 5487,
           "reported": {
-            "accepted": 24,
+            "accepted": 15,
             "wrong_answer": 0,
-            "invalid": 3,
+            "invalid": 9,
             "abstained": 0
           },
           "stale_reason": ""
@@ -17073,15 +17099,15 @@
           },
           "state": "current",
           "band": "certified",
-          "scenarios_measured": 4,
-          "scenarios_total": 4,
-          "runs": 12,
-          "passed": 12,
+          "scenarios_measured": 6,
+          "scenarios_total": 6,
+          "runs": 18,
+          "passed": 18,
           "reliability": 1,
-          "latency_p50_ms": 1997,
-          "latency_p95_ms": 3587,
+          "latency_p50_ms": 2234,
+          "latency_p95_ms": 10541,
           "reported": {
-            "accepted": 12,
+            "accepted": 18,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
@@ -17096,17 +17122,17 @@
           },
           "state": "current",
           "band": "certified",
-          "scenarios_measured": 4,
-          "scenarios_total": 4,
-          "runs": 24,
-          "passed": 23,
-          "reliability": 0.9583333333333334,
-          "latency_p50_ms": 2564,
-          "latency_p95_ms": 3415,
+          "scenarios_measured": 6,
+          "scenarios_total": 6,
+          "runs": 18,
+          "passed": 18,
+          "reliability": 1,
+          "latency_p50_ms": 1638,
+          "latency_p95_ms": 3180,
           "reported": {
-            "accepted": 23,
+            "accepted": 18,
             "wrong_answer": 0,
-            "invalid": 1,
+            "invalid": 0,
             "abstained": 0
           },
           "stale_reason": ""
@@ -17119,15 +17145,15 @@
           },
           "state": "current",
           "band": "certified",
-          "scenarios_measured": 4,
-          "scenarios_total": 4,
-          "runs": 12,
-          "passed": 12,
+          "scenarios_measured": 6,
+          "scenarios_total": 6,
+          "runs": 18,
+          "passed": 18,
           "reliability": 1,
-          "latency_p50_ms": 1413,
-          "latency_p95_ms": 5368,
+          "latency_p50_ms": 711,
+          "latency_p95_ms": 1214,
           "reported": {
-            "accepted": 12,
+            "accepted": 18,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
@@ -17140,10 +17166,10 @@
             "model": "mlx-community/Qwen3-14B-4bit",
             "env": "sovereign"
           },
-          "state": "current",
+          "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 4,
-          "scenarios_total": 4,
+          "scenarios_measured": 0,
+          "scenarios_total": 6,
           "runs": 12,
           "passed": 6,
           "reliability": 0.5,
@@ -17155,7 +17181,21 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
+          "stale_cause": {
+            "prompt_changed": [
+              "a_reply_that_says_nothing_either_way_is_answered_unsure",
+              "an_answer_settles_a_request_and_an_acknowledgement_does_not",
+              "answering_one_of_two_asks_leaves_the_other_owed",
+              "declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague"
+            ],
+            "grader_changed": [
+              "a_reply_that_says_nothing_either_way_is_answered_unsure",
+              "an_answer_settles_a_request_and_an_acknowledgement_does_not",
+              "answering_one_of_two_asks_leaves_the_other_owed",
+              "declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague"
+            ]
+          }
         }
       ]
     },
