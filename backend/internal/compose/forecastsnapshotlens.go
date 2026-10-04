@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // newForecastStore is the one way compose builds a forecasting store, so every
@@ -72,6 +73,9 @@ func forecastSnapshotLens(
 func readableDeals(
 	ctx context.Context, tx pgx.Tx, rows []forecasting.Contribution,
 ) (map[string]bool, error) {
+	if err := auth.Require(ctx, tableDeal, principal.ActionRead); err != nil {
+		return nil, err
+	}
 	dealIDs := make([]ids.UUID, 0, len(rows))
 	for _, row := range rows {
 		id, err := ids.Parse(row.DealID)
