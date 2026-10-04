@@ -154,8 +154,18 @@ func commitmentTaskEffect(
 		if proposal.SeatID != nil {
 			assignee = *proposal.SeatID
 		}
+		// The human decided; the write is the reader's, done for them. The
+		// decision grants of this kind (activity:create, contact:update) are
+		// what admitted the human, and RedeemAndApply spends the approval in the
+		// same transaction, so this principal exists only inside that act.
+		execCtx := principal.WithActor(ctx, principal.Principal{
+			Type:       principal.PrincipalSystem,
+			ID:         commitmentAcceptActor,
+			UserID:     decider.UserID,
+			OnBehalfOf: decider.UserID,
+		})
 		return svc.RedeemAndApply(ctx, approvalID, CommitmentTaskKind, diffHash, func(tx pgx.Tx) error {
-			_, err := writeCommitmentTask(ctx, tx, tasks, claims, commitmentTask{
+			_, err := writeCommitmentTask(execCtx, tx, tasks, claims, commitmentTask{
 				Extractor: commitmentAcceptActor, Locator: proposal.Locator,
 				Summary: proposal.Summary, Body: proposal.Body,
 				SourceActivityID: proposal.SourceActivityID, Links: proposal.Links,

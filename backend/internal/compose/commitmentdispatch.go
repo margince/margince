@@ -252,15 +252,16 @@ func (d *CommitmentDispatcher) propose(
 	return CommitmentProposed, approvalID.UUID, nil
 }
 
-// extractorContext files under the extractor's own name, keeping the human the
-// reading was for, so the claim and the task say a reader wrote them.
+// extractorContext files under the extractor's own name, so the claim and the
+// task say a reader wrote them. It renames the product's own pass and nothing
+// else: a person stays who they are, and a context with no principal stays
+// without one, so every gate below answers for the caller that is really
+// there rather than for a principal this function made up.
 func extractorContext(ctx context.Context, extractor string) context.Context {
-	actor, _ := principal.Actor(ctx)
-	return principal.WithActor(ctx, principal.Principal{
-		Type:        principal.PrincipalSystem,
-		ID:          extractor,
-		UserID:      actor.UserID,
-		OnBehalfOf:  actor.OnBehalfOf,
-		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},
-	})
+	actor, ok := principal.Actor(ctx)
+	if !ok || actor.Type != principal.PrincipalSystem {
+		return ctx
+	}
+	actor.ID = extractor
+	return principal.WithActor(ctx, actor)
 }

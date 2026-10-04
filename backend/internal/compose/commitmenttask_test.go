@@ -11,6 +11,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // A reviewer corrects a promise's wording and its day, and nothing else: the
@@ -81,5 +82,23 @@ func TestAcceptingACommitmentRefusesWhatItCannotWrite(t *testing.T) {
 	payload := mustJSON(t, CommitmentTaskProposal{Summary: "Send pricing", Locator: "abc"})
 	if err := effect(context.Background(), ids.From[ids.ApprovalKind](ids.NewV7()), payload, "h"); err == nil {
 		t.Error("a proposal was accepted with nobody deciding it")
+	}
+}
+
+// The extractor's name is put on the product's own pass, and nothing else is
+// turned into one: a person stays a person, and no principal stays none.
+func TestTheExtractorNameNeverWidensACaller(t *testing.T) {
+	if _, ok := principal.Actor(extractorContext(context.Background(), "agent:reader")); ok {
+		t.Error("a context with no principal came back with one")
+	}
+	human := principal.WithActor(context.Background(), principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:x",
+	})
+	if actor, _ := principal.Actor(extractorContext(human, "agent:reader")); actor.Type != principal.PrincipalHuman {
+		t.Errorf("a person came back as %s", actor.Type)
+	}
+	pass := principal.SystemActing(context.Background(), "agent:pass")
+	if actor, _ := principal.Actor(extractorContext(pass, "agent:reader")); actor.ID != "agent:reader" {
+		t.Errorf("the product's pass is filed as %q, want the reader's name", actor.ID)
 	}
 }

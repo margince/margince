@@ -126,7 +126,12 @@ func (e *transcriptEnv) read(t *testing.T, brain completer) activities.Transcrip
 	}
 	quiet := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	proposer := NewTranscriptProposer(e.Pool, brain, e.svc, time.Now, quiet)
-	if err := proposer.Read(e.ctx, e.Activities, started.ID, e.activity); err != nil {
+	// The worker's own principal, as production binds it: the reader acting
+	// for the rep who asked. A test reading as the rep would pass gates the
+	// worker never faces and fail ones it always passes.
+	worker := withTranscriptReader(principal.WithWorkspaceID(context.Background(), e.WS),
+		"human:"+e.Rep1.String(), started.ID)
+	if err := proposer.Read(worker, e.Activities, started.ID, e.activity); err != nil {
 		t.Fatalf("reading the transcript: %v", err)
 	}
 	done, err := e.Activities.GetTranscriptRead(e.ctx, e.activity, started.ID)
