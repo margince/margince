@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -45,6 +46,9 @@ type CommitmentTaskProposal struct {
 	Locator string                         `json:"locator"`
 	ClaimID *ids.UUID                      `json:"claim_id,omitempty"`
 	Body    string                         `json:"body"`
+	// PrivateTo is the one member the source mail answers to, whose alone the
+	// task is to read. Nil for a shared conversation.
+	PrivateTo *ids.UUID `json:"private_to,omitempty"`
 }
 
 // commitmentTask is what the writer needs to know about one promise.
@@ -58,6 +62,7 @@ type commitmentTask struct {
 	DueDate          string
 	Assignee         ids.UUID
 	ClaimID          *ids.UUID
+	PrivateTo        *ids.UUID
 }
 
 // writeCommitmentTask writes the task for a promise, keyed on its locator, and
@@ -83,6 +88,9 @@ func writeCommitmentTask(
 		SourceActivityID: &sourceActivity,
 		AssigneeID:       &assignee,
 		Origin:           activities.OriginAgent,
+	}
+	if t.PrivateTo != nil {
+		in.VisibleOnlyTo(*t.PrivateTo)
 	}
 	if t.DueDate != "" {
 		due, err := commitmentDueInstant(ctx, tx, t.DueDate)
@@ -155,6 +163,10 @@ func commitmentTaskEffect(
 		if proposal.SeatID != nil {
 			assignee = *proposal.SeatID
 		}
+		if !mayHoldPrivateTask(proposal.PrivateTo, assignee) {
+			return fmt.Errorf("compose: a commitment read out of private mail is its owner's to accept: %w",
+				apperrors.ErrPermissionDenied)
+		}
 		// The human decided; the write is the reader's, done for them, and the
 		// decider is on the approval's own audit row. The decision grants of
 		// this kind (activity:create, contact:update) are what admitted the
@@ -169,6 +181,7 @@ func commitmentTaskEffect(
 				Summary: proposal.Summary, Body: proposal.Body,
 				SourceActivityID: proposal.SourceActivityID, Links: proposal.Links,
 				DueDate: proposal.DueDate, Assignee: assignee, ClaimID: proposal.ClaimID,
+				PrivateTo: proposal.PrivateTo,
 			})
 			return err
 		})

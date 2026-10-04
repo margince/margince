@@ -88,12 +88,20 @@ func TestExtractRequestMintsAFreshBoundaryPerCall(t *testing.T) {
 
 func TestExtractPayloadFidelity(t *testing.T) {
 	first, second := ids.NewV7(), ids.NewV7()
-	thread := settledThread{Messages: []threadMessage{{ID: first}, {ID: second}}}
+	thread := settledThread{Messages: []threadMessage{
+		{ID: first},
+		{ID: second, Body: "Thanks for the call.\nWe send the final  invoice on Friday. Talk soon."},
+	}}
 	event := func(kind string, id ids.UUID, summary string, conf float64) extractedEvent {
 		return extractedEvent{
 			Kind: kind, MessageID: id.String(), Summary: summary,
 			Confidence: schema.Confidence(conf),
 		}
+	}
+	promise := func(quote, due string) extractedEvent {
+		e := event("commitment_made", second, "We send the final invoice on Friday.", 0.8)
+		e.Quote, e.DueDate = quote, due
+		return e
 	}
 
 	cases := []struct {
@@ -109,8 +117,23 @@ func TestExtractPayloadFidelity(t *testing.T) {
 			name: "an event on each message is accepted",
 			events: []extractedEvent{
 				event("contract_ended", first, "They will not renew.", 0.9),
-				event("commitment_made", second, "We send the final invoice on Friday.", 0.8),
+				promise("send the final invoice on Friday", "2026-09-11"),
 			},
+		},
+		{
+			name:   "a commitment that quotes nothing is refused",
+			events: []extractedEvent{promise("", "")},
+			reject: "uncheckable",
+		},
+		{
+			name:   "a commitment quoting words its message does not hold is refused",
+			events: []extractedEvent{promise("we send the contract on Monday", "")},
+			reject: "unquoted",
+		},
+		{
+			name:   "a due date that is not a day is refused",
+			events: []extractedEvent{promise("send the final invoice on Friday", "Friday")},
+			reject: "undated",
 		},
 		{
 			name:   "a kind this site never records is refused",
@@ -264,5 +287,23 @@ func TestAPassStopsWhileThereIsStillTimeToFinishTheOneInFlight(t *testing.T) {
 					"deadline that ran down are different news", cancelled, tc.cancelled)
 			}
 		})
+	}
+}
+
+// The sentence a quote sits in names the promise, so two readings that quote
+// more or less of one sentence find the same one, and runs of whitespace a
+// mail client inserted do not move it.
+func TestAQuoteIsKnownByTheSentenceItSitsIn(t *testing.T) {
+	body := "Thanks for the call.\nWe send the final  invoice on Friday, as agreed. Talk soon."
+	short, okShort := evidenceSpan(body, "the final invoice")
+	long, okLong := evidenceSpan(body, "We send the final invoice on Friday, as agreed.")
+	if !okShort || !okLong || short != long {
+		t.Errorf("two quotes of one sentence named %q and %q, want the same sentence", short, long)
+	}
+	if short != "We send the final invoice on Friday, as agreed." {
+		t.Errorf("the sentence is %q", short)
+	}
+	if _, ok := evidenceSpan(body, "on Monday"); ok {
+		t.Error("a quote the body does not contain was found in it")
 	}
 }

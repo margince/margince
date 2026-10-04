@@ -81,7 +81,7 @@ func (w *signalScanWorker) scanWorkspaceSignals(ctx context.Context, workspace i
 	wsCtx := principal.WithWorkspaceID(ctx, workspace)
 	// The producer is the acting principal: every signal it writes carries
 	// agent: provenance, and a reader can tell it from a human's own note.
-	wsCtx = principal.SystemActing(wsCtx, "agent:signal-scan")
+	wsCtx = principal.SystemActing(wsCtx, signalScanActor)
 	wsID := ids.From[ids.WorkspaceKind](workspace)
 
 	now := w.now()

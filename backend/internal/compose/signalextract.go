@@ -35,7 +35,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/promptlang"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -85,24 +87,42 @@ func extractSystemFor(fence promptfence.Fence, lang string) string {
 	return extractSystem + "\n" + promptlang.Rule(lang) + "\n" + fence.Rule("message")
 }
 
+// signalScanActor is the principal the signal pass runs as, and what the
+// claims and tasks it files are captured by.
+const signalScanActor = "agent:signal-scan"
+
 // SignalExtractor reads settled conversations and records what they say.
 type SignalExtractor struct {
-	pool  *pgxpool.Pool
-	brain completer
-	now   func() time.Time
-	log   *slog.Logger
+	pool     *pgxpool.Pool
+	brain    completer
+	dispatch *CommitmentDispatcher
+	messages *activities.Store
+	now      func() time.Time
+	log      *slog.Logger
 }
 
-// NewSignalExtractor builds the engine over the pool and one model lane.
+// NewSignalExtractor builds the engine over the pool and one model lane. A
+// commitment it reads goes to the same rule a transcript's does.
 func NewSignalExtractor(pool *pgxpool.Pool, brain completer, now func() time.Time, log *slog.Logger) *SignalExtractor {
-	return &SignalExtractor{pool: pool, brain: brain, now: now, log: log}
+	return &SignalExtractor{
+		pool: pool, brain: brain, now: now, log: log,
+		dispatch: NewCommitmentDispatcher(pool, approvals.NewService(InstallationDB(pool))),
+		messages: activities.NewStore(InstallationDB(pool)),
+	}
 }
 
 // extractedEvent is one material event as the model reports it.
 type extractedEvent struct {
-	Kind       string            `json:"kind"`
-	MessageID  string            `json:"message_id"`
-	Summary    string            `json:"summary"`
+	Kind      string `json:"kind"`
+	MessageID string `json:"message_id"`
+	Summary   string `json:"summary"`
+	// Quote is the cited message's own words the event is stated in. For a
+	// commitment it is what a reader checks the promise against, and where the
+	// server finds the sentence that identifies it across readings.
+	Quote string `json:"quote"`
+	// DueDate is the day a commitment is due, YYYY-MM-DD, or empty when the
+	// message names no day. Empty for every other kind.
+	DueDate    string            `json:"due_date"`
 	Confidence schema.Confidence `json:"confidence"`
 }
 
@@ -207,7 +227,7 @@ func (x *SignalExtractor) commitReading(
 			if event.Confidence < extractConfidenceFloor {
 				continue
 			}
-			written, err := recordExtractedEvent(ctx, tx, thread, event, now)
+			written, err := x.recordExtractedEvent(ctx, tx, thread, event, now)
 			if err != nil {
 				return err
 			}
@@ -222,9 +242,10 @@ func (x *SignalExtractor) commitReading(
 	return raised, nil
 }
 
-// recordExtractedEvent raises one event as a signal against the account,
-// citing the message it was stated in, and reports whether the card is new.
-func recordExtractedEvent(
+// recordExtractedEvent raises one event against the account, citing the
+// message it was stated in, and reports whether anything new was filed. A
+// commitment goes to the commitment rule; the other kinds are signals.
+func (x *SignalExtractor) recordExtractedEvent(
 	ctx context.Context, tx pgx.Tx, thread settledThread,
 	event extractedEvent, now time.Time,
 ) (bool, error) {
@@ -234,6 +255,9 @@ func recordExtractedEvent(
 		// supplied, so this cannot come from the model; it would mean
 		// the ids we sent are unparseable, which is our own bug.
 		return false, fmt.Errorf("cited message id: %w", err)
+	}
+	if event.Kind == extractKindCommitment {
+		return x.dispatchCommitment(ctx, tx, thread, event, cited)
 	}
 	return signals.RecordDerived(ctx, tx, signals.DerivedSignal{
 		Kind:        event.Kind,
@@ -313,15 +337,20 @@ func extractRequest(thread settledThread, lang string) model.Request {
 	var prompt strings.Builder
 	prompt.WriteString("One email conversation, oldest first (untrusted):\n")
 	for _, message := range thread.Messages {
-		body := fmt.Sprintf("Direction: %s\nSubject: %s\n%s",
-			directionWord(message.Direction), message.Subject, message.Body)
+		body := fmt.Sprintf("Direction: %s\nSent: %s\nSubject: %s\n%s",
+			directionWord(message.Direction), message.At.Format(time.DateOnly), message.Subject, message.Body)
 		prompt.WriteString(fence.WrapAttr("source_id", message.ID.String(), body) + "\n")
 	}
 	fmt.Fprintf(&prompt,
-		`Return JSON: { "events": [ { "kind", "message_id", "summary", "confidence" } ] } — `+
+		`Return JSON: { "events": [ { "kind", "message_id", "summary", "quote", "due_date", "confidence" } ] } — `+
 			`at most %d, and an empty list when the conversation states none. `+
 			`"summary" is one plain sentence a colleague could act on. `+
-			`"message_id" must be one of the ids above.`, extractMaxEvents)
+			`"message_id" must be one of the ids above. `+
+			`"quote" is the words of that message the event is stated in, copied exactly; `+
+			`for "commitment_made" it is the clause the promise is made in, one promise per event. `+
+			`"due_date" is the day a commitment is due, as YYYY-MM-DD, resolving anything relative `+
+			`against the day that message was sent — "by Friday" is the Friday after it. `+
+			`Use "" when the message names no day, and for every other kind.`, extractMaxEvents)
 
 	return model.Request{
 		System:         extractSystemFor(fence, lang),
@@ -396,6 +425,9 @@ func validateExtractPayload(payload extractPayload, thread settledThread) string
 		if event.Confidence < 0 || event.Confidence > 1 {
 			return fmt.Sprintf("confidence %v is outside [0,1]", event.Confidence)
 		}
+		if msg := validateEventEvidence(event, thread); msg != "" {
+			return msg
+		}
 	}
 	return ""
 }
@@ -409,9 +441,11 @@ func extractSchema() json.RawMessage {
 					paramKind:               schema.Enum("contract_ended", "new_opportunity", "commitment_made"),
 					"message_id":            schema.String(),
 					"summary":               schema.String(),
+					"quote":                 schema.String(),
+					"due_date":              schema.String(),
 					extractionConfidenceKey: schema.Number(),
 				},
-				paramKind, "message_id", "summary", extractionConfidenceKey,
+				paramKind, "message_id", "summary", "quote", "due_date", extractionConfidenceKey,
 			)),
 		},
 		"events",
