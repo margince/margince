@@ -503,6 +503,7 @@ api's boot line says so; `cmd/worker` is load-bearing for E10 retry. See
 | `--deepread-max-pages` | `MARGINCE_DEEPREAD_MAX_PAGES` | `0` (= built-in 60) | deep-read crawl page cap |
 | `--deepread-max-bytes` | `MARGINCE_DEEPREAD_MAX_BYTES` | `0` (= built-in 32 MiB) | deep-read crawl aggregate byte cap |
 | `--deepread-wall` | `MARGINCE_DEEPREAD_WALL` | `0` (= built-in 4m) | deep-read crawl wall clock |
+| `--job-drain-window` | `MARGINCE_JOB_DRAIN_WINDOW` | `20s` | how long a job already running at shutdown is given to finish before its context is cancelled. Must be positive. The pod's termination grace period has to cover it plus 5s and teardown — see [Stopping the worker](#stopping-the-worker) |
 | `--observe-addr` | `MARGINCE_OBSERVE_ADDR` | — (off) | address to serve this worker's `/healthz`, `/readyz` and `/metrics` on, e.g. `127.0.0.1:9101`. Empty serves nothing — see below |
 | `--observe-pprof` | `MARGINCE_OBSERVE_PPROF` | `false` | `true` also serves Go's `net/http/pprof` profiles under `/debug/pprof/` on that same listener; requires `--observe-addr`. Enable temporarily — see below |
 
@@ -653,6 +654,43 @@ embedding lane simply do not start; the relay, retention, the event-triggered
 workflow dispatch (`cg:workflows`), and the clock time-scan always run.
 Shutdown is graceful: in-flight subscriber handlers finish their ack before
 the process exits.
+
+### Stopping the worker
+
+`SIGTERM` (or `SIGINT`) stops the worker in this order, and the times add up to
+the budget a supervisor has to allow:
+
+1. **The job runner stops fetching at once.** No job is claimed after the
+   signal; anything still queued is left for the other replicas, or for this
+   one's next start.
+2. **Every job already running keeps going for `--job-drain-window`** (default
+   `20s`), with its context intact. A job that finishes inside the window
+   completes normally — it is not retried and does not run twice.
+3. **A job still running when the window ends has its context cancelled**, and
+   the worker waits up to a further **5s** for it to return. River records the
+   interrupted attempt and retries it; the failure is classed `interrupted`
+   rather than unclassified.
+4. The event lanes, the bus and the database pool are closed, and the process
+   exits.
+
+So the worker needs `--job-drain-window` + 5s, plus a few seconds of teardown,
+between `SIGTERM` and `SIGKILL`. On Kubernetes that is the pod's
+`terminationGracePeriodSeconds`: **set it at or above the drain window plus
+10s.** The default window fits the common 30s default exactly; raising the
+window means raising the grace period with it, or the pod is killed before the
+cancel step and the interrupted jobs' goroutines are cut off mid-write rather
+than returning:
+
+```yaml
+spec:
+  terminationGracePeriodSeconds: 30   # >= --job-drain-window (20s) + 10s
+```
+
+A deployment whose jobs routinely run longer than the window — a long crawl, a
+large import — sees them interrupted at every rollout and run again on another
+replica. That is safe (River retries them), but it is wasted work; size the
+window, and the grace period with it, to the jobs this installation actually
+runs.
 
 ## AI payload capture and its window (api, worker)
 

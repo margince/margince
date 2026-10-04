@@ -58,6 +58,15 @@ type technicalFault struct {
 // run first or every unresolved host would report as a refusal.
 var technicalFaults = []technicalFault{
 	{
+		// FIRST, because an interrupted lookup or dial still arrives as a
+		// *net.DNSError or *net.OpError: a job cancelled mid-request must read
+		// as interrupted, not as a host that did not resolve.
+		match:    isInterrupted,
+		class:    "interrupted",
+		sentence: "the job's work was cancelled before it finished",
+		remedy:   "At a worker shutdown, nothing to do: the attempt is retried. A job interrupted at every shutdown runs longer than the worker's drain window, and the window (with the termination grace period around it) is what to raise. A job cancelled on purpose stays cancelled.",
+	},
+	{
 		match:    isDNSFailure,
 		class:    "host_unresolved",
 		sentence: "the provider's host name did not resolve",
@@ -93,6 +102,13 @@ var technicalFaults = []technicalFault{
 		sentence: "the provider answered with a server error",
 		remedy:   "Theirs to fix. Retry is correct and the run does it; a day of these is a status page to read rather than a change to make here.",
 	},
+}
+
+// isInterrupted answers a job whose work context was cancelled under it — what
+// a worker's stop does to a job still running when its drain window ends. A
+// deadline is not this: a job that outran its own timeout is isTimeout's.
+func isInterrupted(err error) bool {
+	return errors.Is(err, context.Canceled)
 }
 
 // isDNSFailure answers the one shape that never fixes itself on retry.

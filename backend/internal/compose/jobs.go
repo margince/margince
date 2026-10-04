@@ -89,6 +89,12 @@ type JobRunnerConfig struct {
 	// what River does with it and why it keeps River's own name. Production
 	// leaves it false; TestJobRunnerConfigIsNeverSetInProduction holds that.
 	TestOnly bool
+	// DrainWindow is jobs.Config.SoftStopTimeout: how long a job already
+	// running when the runner stops keeps its work context. Zero leaves the
+	// runner's stop hard — every running job's work context is cancelled the
+	// moment the context the runner was started under is — which only a test
+	// harness wants.
+	DrainWindow time.Duration
 	// SendPacing bounds how fast one mailbox transmits and how long a
 	// delivery may be deferred before it parks; the zero value takes the
 	// documented defaults (SendPacing.withDefaults).
@@ -381,10 +387,11 @@ func NewJobRunner(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*j
 	}
 
 	return jobs.New(pool, jobs.Config{
-		Queues:       jobQueues(),
-		Workers:      reg.workers,
-		PeriodicJobs: periodic,
-		TestOnly:     cfg.TestOnly,
+		Queues:          jobQueues(),
+		Workers:         reg.workers,
+		PeriodicJobs:    periodic,
+		SoftStopTimeout: cfg.DrainWindow,
+		TestOnly:        cfg.TestOnly,
 	}, log)
 }
 

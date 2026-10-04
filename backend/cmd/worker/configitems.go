@@ -77,6 +77,10 @@ func workerUnflaggedItems() []config.Item {
 			Doc: "cap on bytes one deep read fetches; 0 takes the compiled default",
 		},
 		{
+			Name: jobDrainWindowEnv, FlagName: "job-drain-window", Kind: config.KindDuration, Default: "20s", Roles: worker,
+			Doc: "how long a job already running at shutdown is given to finish before its context is cancelled; the termination grace period must cover it plus 5s and teardown",
+		},
+		{
 			Name: deepReadWallEnv, Kind: config.KindDuration, Default: "0", Roles: worker,
 			Doc: "wall-clock ceiling on one deep read; 0 takes the compiled default",
 		},
