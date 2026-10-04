@@ -2246,7 +2246,7 @@ export const en = {
   "approval.field.from_stage": "From",
   "approval.field.to_stage": "To",
   "approval.kind.transcript_proposal": "Add next step from transcript",
-  "approval.kind.commitment_task": "Add a task for a promise",
+  "approval.kind.commitment_task": "Add a task for a commitment",
   "approval.kind.fx_rate_proposal": "Update exchange rates",
   "approval.kind.disqualify_lead": "Disqualify lead",
   "approval.kind.demote_lead": "Reverse lead qualification",
@@ -12072,7 +12072,7 @@ export const en = {
   "magic.action.approval_transcript_proposal":
     "A proposal from a recording is waiting for your word",
   "magic.action.approval_commitment_task":
-    "A promise from a conversation is waiting for your word",
+    "A commitment from a conversation is waiting for your word",
   "magic.action.approval_capture_counterparty":
     "{target} wrote to you. Keep them as a contact?",
   "magic.action.approval_pending": "A {kind} proposal is waiting for your word",
