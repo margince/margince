@@ -91,8 +91,9 @@ type JobRunnerConfig struct {
 	TestOnly bool
 	// DrainWindow is jobs.Config.SoftStopTimeout: how long a job already
 	// running when the runner stops keeps its work context. Zero leaves the
-	// runner's stop hard — every running job cancelled the moment the context
-	// it was started under is — which only a test harness wants.
+	// runner's stop hard — every running job's work context is cancelled the
+	// moment the context the runner was started under is — which only a test
+	// harness wants.
 	DrainWindow time.Duration
 	// SendPacing bounds how fast one mailbox transmits and how long a
 	// delivery may be deferred before it parks; the zero value takes the

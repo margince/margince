@@ -108,10 +108,6 @@ func TestASignalLetsARunningJobFinishAndFetchesNothingNew(t *testing.T) {
 	awaitStarted(t, held)
 
 	signal()
-	// Inserted after the signal: a client that is stopping must not fetch it.
-	if err := inserter.Enqueue(t.Context(), heldArgs{}, nil); err != nil {
-		t.Fatalf("Enqueue after the signal: %v", err)
-	}
 	// The hold is what tells soft from hard: a hard stop cancels the running
 	// job's context within milliseconds of the signal.
 	select {
@@ -120,6 +116,13 @@ func TestASignalLetsARunningJobFinishAndFetchesNothingNew(t *testing.T) {
 			"in-flight job its attempt instead of letting it finish")
 	case <-time.After(500 * time.Millisecond):
 	}
+	// Inserted once the stop has had that half second to take hold, so a poll
+	// already in flight at the signal cannot claim it; then a further second,
+	// several fetch intervals, for a client still fetching to pick it up.
+	if err := inserter.Enqueue(t.Context(), heldArgs{}, nil); err != nil {
+		t.Fatalf("Enqueue after the signal: %v", err)
+	}
+	time.Sleep(time.Second)
 	close(held.release)
 
 	select {

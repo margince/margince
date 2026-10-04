@@ -63,8 +63,8 @@ var technicalFaults = []technicalFault{
 		// as interrupted, not as a host that did not resolve.
 		match:    isInterrupted,
 		class:    "interrupted",
-		sentence: "the job was interrupted before it finished and will run again",
-		remedy:   "Nothing to do: the attempt is retried. A job interrupted at every worker shutdown runs longer than the worker's drain window, and the window (with the termination grace period around it) is what to raise.",
+		sentence: "the job's work was cancelled before it finished",
+		remedy:   "At a worker shutdown, nothing to do: the attempt is retried. A job interrupted at every shutdown runs longer than the worker's drain window, and the window (with the termination grace period around it) is what to raise. A job cancelled on purpose stays cancelled.",
 	},
 	{
 		match:    isDNSFailure,
