@@ -41,10 +41,8 @@ const legacyCommitmentsPerPass = 10
 
 // legacyCommitment is one signal still owed a reading.
 type legacyCommitment struct {
-	signal    ids.UUID
-	company   ids.UUID
-	privateTo *ids.UUID
-	cited     ids.UUID
+	signal ids.UUID
+	cited  ids.UUID
 }
 
 // convertLegacyCommitments reads the oldest commitment signals the rule has
@@ -112,9 +110,7 @@ func (x *SignalExtractor) convertLegacyCommitment(ctx context.Context, legacy le
 // rule, oldest first.
 func legacyCommitmentsOwed(ctx context.Context, tx pgx.Tx) ([]legacyCommitment, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT s.id, s.resolved_company_id,
-		       CASE WHEN s.visibility = 'owner' THEN s.owner_id END,
-		       cite.activity
+		SELECT s.id, cite.activity
 		  FROM signal s
 		  JOIN LATERAL (
 		       SELECT `+storekit.CitedActivityID("item")+` AS activity
@@ -136,7 +132,7 @@ func legacyCommitmentsOwed(ctx context.Context, tx pgx.Tx) ([]legacyCommitment, 
 	var out []legacyCommitment
 	for rows.Next() {
 		var legacy legacyCommitment
-		if err := rows.Scan(&legacy.signal, &legacy.company, &legacy.privateTo, &legacy.cited); err != nil {
+		if err := rows.Scan(&legacy.signal, &legacy.cited); err != nil {
 			return nil, err
 		}
 		out = append(out, legacy)
@@ -144,14 +140,25 @@ func legacyCommitmentsOwed(ctx context.Context, tx pgx.Tx) ([]legacyCommitment, 
 	return out, rows.Err()
 }
 
-// legacyThread is the cited message and the five before it on its thread.
-// A message since archived or held reads as an empty conversation, which
-// settles the signal with nothing filed.
+// legacyThreadRuleQuery asks the extractor's own rule about one conversation
+// as it stands NOW: the account it reaches, and whether it is private to a
+// member.
+// The old signal's account and audience were true when it was written; the
+// rule is what decides who may read a summary of the conversation today.
+var legacyThreadRuleQuery = conversationCTE(" AND a.thread_key = $1") + `
+		SELECT c.one_company::uuid, CASE WHEN c.shared THEN NULL ELSE c.private_owner::uuid END
+		  FROM conversation c
+		 WHERE ` + threadReachesOneAccount + `
+		   AND ` + threadIsOneBodyOfWork + `
+		   AND ` + threadIsFullyOpen + `
+		   AND ` + threadHasANamedReader
+
+// legacyThread is the cited message and the five before it on its thread. A
+// message since archived or held, or a thread the extractor would not read
+// today, reads as an empty conversation, which settles the signal with
+// nothing filed.
 func legacyThread(ctx context.Context, tx pgx.Tx, legacy legacyCommitment) (settledThread, error) {
-	thread := settledThread{CompanyID: legacy.company}
-	if legacy.privateTo != nil {
-		thread.PrivateTo = *legacy.privateTo
-	}
+	var thread settledThread
 	var key *string
 	var at time.Time
 	err := tx.QueryRow(ctx, `
@@ -163,6 +170,17 @@ func legacyThread(ctx context.Context, tx pgx.Tx, legacy legacyCommitment) (sett
 	}
 	if err != nil {
 		return settledThread{}, fmt.Errorf("signal extract: reading a commitment signal's message: %w", err)
+	}
+	var privateTo *ids.UUID
+	err = tx.QueryRow(ctx, legacyThreadRuleQuery, *key).Scan(&thread.CompanyID, &privateTo)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return settledThread{}, nil
+	}
+	if err != nil {
+		return settledThread{}, fmt.Errorf("signal extract: asking the rule about a commitment signal's thread: %w", err)
+	}
+	if privateTo != nil {
+		thread.PrivateTo = *privateTo
 	}
 	thread.Key = *key
 	messages, err := threadWindow(ctx, tx, *key, &at, &legacy.cited, &legacy.cited)

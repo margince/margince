@@ -33992,7 +33992,7 @@ components:
         open_commitments:
           type: [integer, 'null']
           description: >-
-            Commitments either side made with the people at this account, read out of
+            Commitments either side made with the contacts at this account, read out of
             conversations, still owed and not yet a task. Null when the caller cannot read
             contacts and activities.
 

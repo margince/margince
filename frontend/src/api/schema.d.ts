@@ -23894,7 +23894,7 @@ export interface components {
             active_contacts?: number | null;
             /** @description The whole relationship rests on one contact. Named as a fact rather than scored, because it is the one shape a rep can fix before it costs them the account. */
             single_threaded?: boolean | null;
-            /** @description Commitments either side made with the people at this account, read out of conversations, still owed and not yet a task. Null when the caller cannot read contacts and activities. */
+            /** @description Commitments either side made with the contacts at this account, read out of conversations, still owed and not yet a task. Null when the caller cannot read contacts and activities. */
             open_commitments?: number | null;
         };
         /**

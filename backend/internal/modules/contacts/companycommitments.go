@@ -322,7 +322,7 @@ const openCommitmentEitherSide = `((` + ourPromiseNotYetATask + `)
 		    OR (c.kind = 'commitment_theirs' AND c.status = 'open' AND NOT c.needs_review))`
 
 // CountAccountCommitments is how many open commitments either side made with
-// the people currently employed at one account, as far as this caller may see
+// the contacts currently employed at one account, as far as this caller may see
 // them. It answers readable=false rather than zero for a caller who may not
 // read contacts or activities: zero would say the account owes nothing, which
 // is a claim about the account rather than about the reader.

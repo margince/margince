@@ -63,11 +63,26 @@ func (s *Store) PartiesOf(ctx context.Context, tx pgx.Tx, message ids.UUID) (Mes
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return MessageParties{}, err
 	}
-	rows, err := tx.Query(ctx, `
-		SELECT role = 'from', user_id, contact_id FROM activity_participant
-		 WHERE activity_id = $1 AND role IN ('from', 'to', 'cc')
-		   AND (user_id IS NOT NULL OR contact_id IS NOT NULL)
-		 ORDER BY id`, message)
+	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
+		return MessageParties{}, err
+	}
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	messagePos := arg(message)
+	// A contact the caller may not see is not named back to them.
+	scope, err := auth.ScopeClauseFor(ctx, "contact", "c", arg)
+	if err != nil {
+		return MessageParties{}, err
+	}
+	if scope == "" {
+		scope = "TRUE"
+	}
+	rows, err := tx.Query(ctx, fmt.Sprintf(`
+		SELECT p.role = 'from', p.user_id, p.contact_id FROM activity_participant p
+		  LEFT JOIN contact c ON c.id = p.contact_id
+		 WHERE p.activity_id = $%d AND p.role IN ('from', 'to', 'cc')
+		   AND (p.user_id IS NOT NULL OR (p.contact_id IS NOT NULL AND (%s)))
+		 ORDER BY p.id`, messagePos, scope), args...)
 	if err != nil {
 		return MessageParties{}, fmt.Errorf("activities: reading a message's parties: %w", err)
 	}

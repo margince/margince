@@ -2912,6 +2912,9 @@
                 "confidence": {
                   "type": "number"
                 },
+                "due_date": {
+                  "type": "string"
+                },
                 "kind": {
                   "enum": [
                     "contract_ended",
@@ -2923,6 +2926,9 @@
                 "message_id": {
                   "type": "string"
                 },
+                "quote": {
+                  "type": "string"
+                },
                 "summary": {
                   "type": "string"
                 }
@@ -2931,6 +2937,8 @@
                 "kind",
                 "message_id",
                 "summary",
+                "quote",
+                "due_date",
                 "confidence"
               ],
               "type": "object"

@@ -17,6 +17,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -126,14 +127,14 @@ func (x *SignalExtractor) emailCommitment(
 	}
 	var kind, party string
 	switch message.Direction {
-	case "inbound":
+	case string(crmcontracts.ActivityDirectionInbound):
 		sender, one := onlyOne(parties.SenderContacts)
 		if !one {
 			return Commitment{}, false, nil
 		}
 		contact := ids.From[ids.ContactKind](sender)
 		c.Theirs, kind, party = &contact, claimKindTheirs, "contact:"+sender.String()
-	case "outbound":
+	case string(crmcontracts.ActivityDirectionOutbound):
 		kind, party = claimKindOurs, "us"
 		if seat, one := onlyOne(parties.SenderSeats); one {
 			c.Seat, party = &seat, "seat:"+seat.String()
@@ -156,7 +157,7 @@ func (x *SignalExtractor) emailCommitment(
 
 // emailParty names who made a promise in an email, as the task body says it.
 func emailParty(direction string) string {
-	if direction == "inbound" {
+	if direction == string(crmcontracts.ActivityDirectionInbound) {
 		return "The customer committed to this"
 	}
 	return "We committed to this"

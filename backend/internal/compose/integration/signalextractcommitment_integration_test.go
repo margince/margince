@@ -22,12 +22,12 @@ import (
 )
 
 // commitmentReply is the model naming one commitment on a message.
-func commitmentReply(t *testing.T, message ids.UUID, quote, due string, confidence float64) string {
+func commitmentReply(t *testing.T, message ids.UUID, quote, due string) string {
 	t.Helper()
 	body, err := json.Marshal(map[string]any{"events": []map[string]any{{
 		"kind": "commitment_made", "message_id": message.String(),
 		"summary": "Send the revised pricing", "quote": quote, "due_date": due,
-		"confidence": confidence,
+		"confidence": 0.95,
 	}}})
 	if err != nil {
 		t.Fatalf("build the scripted reply: %v", err)
@@ -56,7 +56,7 @@ func TestACustomersEmailedPromiseIsWatchedNotTasked(t *testing.T) {
 		extractClock.Add(-48*time.Hour))
 	party(t, message, "from", nil, &ines)
 
-	extractPass(t, e, &scriptedBrain{reply: commitmentReply(t, message, pricingPromise, "2026-06-05", 0.95)})
+	extractPass(t, e, &scriptedBrain{reply: commitmentReply(t, message, pricingPromise, "2026-06-05")})
 
 	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE kind = 'task'`); n != 0 {
 		t.Errorf("the customer's promise became %d task(s)", n)
@@ -81,7 +81,7 @@ func TestAColleaguesEmailedPromiseIsTheirTask(t *testing.T) {
 	party(t, message, "from", &e.Rep1, nil)
 	party(t, message, "to", nil, &ines)
 
-	extractPass(t, e, &scriptedBrain{reply: commitmentReply(t, message, "send the revised pricing over by Friday", "2026-06-05", 0.95)})
+	extractPass(t, e, &scriptedBrain{reply: commitmentReply(t, message, "send the revised pricing over by Friday", "2026-06-05")})
 
 	task := e.WsScalar(t, `SELECT coalesce(assignee_id::text, '') || ' ' || captured_by || ' ' || to_char(due_at, 'YYYY-MM-DD')
 		FROM activity WHERE kind = 'task'`)
@@ -96,7 +96,7 @@ func TestAColleaguesEmailedPromiseIsTheirTask(t *testing.T) {
 	// Reading the conversation again, quoting the whole sentence this time,
 	// finds the same promise.
 	e.WsExec(t, `DELETE FROM signal_thread_scan`)
-	extractPass(t, e, &scriptedBrain{reply: commitmentReply(t, message, pricingPromise, "2026-06-05", 0.95)})
+	extractPass(t, e, &scriptedBrain{reply: commitmentReply(t, message, pricingPromise, "2026-06-05")})
 	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE kind = 'task'`); n != 1 {
 		t.Errorf("a second reading of one promise left %d tasks", n)
 	}
@@ -115,7 +115,7 @@ func TestAPromiseInPrivateMailStaysWithItsOwner(t *testing.T) {
 	party(t, message, "from", &e.Rep2, nil)
 	party(t, message, "to", nil, &ines)
 
-	extractPass(t, e, &scriptedBrain{reply: commitmentReply(t, message, pricingPromise, "", 0.95)})
+	extractPass(t, e, &scriptedBrain{reply: commitmentReply(t, message, pricingPromise, "")})
 
 	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE kind = 'task'`); n != 0 {
 		t.Errorf("a promise in another member's private mail became %d task(s) for the colleague", n)
@@ -161,7 +161,7 @@ func TestAnOldCommitmentSignalIsReadThroughTheRuleOnce(t *testing.T) {
 		t.Fatalf("seed the old signal: %v", err)
 	}
 
-	brain := &scriptedBrain{reply: commitmentReply(t, cited, pricingPromise, "", 0.95)}
+	brain := &scriptedBrain{reply: commitmentReply(t, cited, pricingPromise, "")}
 	if pass := extractPassStats(t, e, brain); pass.Converted != 1 {
 		t.Fatalf("the pass converted %d old commitment signals, want 1", pass.Converted)
 	}
