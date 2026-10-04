@@ -64,7 +64,7 @@ func seedDealWatch(t *testing.T) dealWatch {
 	return dealWatch{Env: e, deal: deal, contact: contact, claim: ids.UUID(claim.Id)}
 }
 
-// The deal page watches what the account's people committed to, with the
+// The deal page watches what the account's contacts committed to, with the
 // words and the message to check it against.
 func TestADealWatchesWhatItsCustomerCommittedTo(t *testing.T) {
 	w := seedDealWatch(t)
