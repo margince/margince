@@ -267,6 +267,10 @@ func (s *Sink) finishNewActivity(
 		ParticipantListAttested(rec), rec.Participants); err != nil {
 		return counterpartyDecision{}, err
 	}
+	if err := StampSeatsPastTheCap(ctx, tx, id, fields.Kind,
+		ParticipantListAttested(rec), rec.WithheldParties); err != nil {
+		return counterpartyDecision{}, err
+	}
 	// And the names those rows just recorded, for an attendee who is ALREADY a
 	// contact. A calendar invitation names every attendee in full, and that is
 	// the only full name a contact minted from a bare address ever gets: the
