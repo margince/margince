@@ -306,4 +306,12 @@ func TestAQuoteIsKnownByTheSentenceItSitsIn(t *testing.T) {
 	if _, ok := evidenceSpan(body, "on Monday"); ok {
 		t.Error("a quote the body does not contain was found in it")
 	}
+	// A decimal point does not end a sentence, so either side of it names the
+	// same one.
+	priced := "We can do it in 2.5 days at 1.200 EUR. Thanks."
+	before, _ := evidenceSpan(priced, "We can do it in 2")
+	after, _ := evidenceSpan(priced, "5 days at 1.200 EUR")
+	if before != after || before != "We can do it in 2.5 days at 1.200 EUR." {
+		t.Errorf("a sentence with decimals was split into %q and %q", before, after)
+	}
 }

@@ -54,8 +54,10 @@ func validateEventEvidence(event extractedEvent, thread settledThread) string {
 		if message.ID.String() != event.MessageID {
 			continue
 		}
-		if _, ok := evidenceSpan(message.Body, event.Quote); !ok {
-			return "a commitment quotes words its message does not contain"
+		// The sender's own words, as dispatch reads them: a quote found only
+		// in the history the message quotes is not this sender's commitment.
+		if _, ok := evidenceSpan(textlang.CurrentMessage(message.Body), event.Quote); !ok {
+			return "a commitment quotes words its sender did not write in this message"
 		}
 	}
 	return ""
@@ -71,16 +73,38 @@ func evidenceSpan(body, quote string) (string, bool) {
 	if wanted == "" || at < 0 {
 		return "", false
 	}
-	start := strings.LastIndexAny(text[:at], ".!?") + 1
+	start := 0
+	for i := at - 1; i >= 0; i-- {
+		if sentenceEnds(text, i) {
+			start = i + 1
+			break
+		}
+	}
 	// From the quote's last character, so a quote that ends its sentence ends
 	// the span there rather than running into the next one.
-	last := at + len(wanted) - 1
 	end := len(text)
-	if rest := strings.IndexAny(text[last:], ".!?"); rest >= 0 {
-		end = last + rest + 1
+	for i := at + len(wanted) - 1; i < len(text); i++ {
+		if sentenceEnds(text, i) {
+			end = i + 1
+			break
+		}
 	}
 	return strings.TrimSpace(text[start:end]), true
 }
+
+// sentenceEnds reports whether the byte at i ends a sentence. A point between
+// two digits is a decimal ("2.5 days"), not the end of one.
+func sentenceEnds(text string, i int) bool {
+	switch text[i] {
+	case '!', '?':
+		return true
+	case '.':
+		return i == 0 || i == len(text)-1 || !isDigit(text[i-1]) || !isDigit(text[i+1])
+	}
+	return false
+}
+
+func isDigit(b byte) bool { return b >= '0' && b <= '9' }
 
 // dispatchCommitment files one commitment from a conversation through the
 // commitment rule, and reports whether anything new came of it.

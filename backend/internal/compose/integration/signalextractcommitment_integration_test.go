@@ -219,10 +219,11 @@ func TestAPromiseInPrivateMailByItsOwnerIsTheirPrivateTask(t *testing.T) {
 
 	extractPass(t, e, &scriptedBrain{reply: commitmentReply(t, message, pricingPromise, "")})
 
-	got := e.WsScalar(t, `SELECT coalesce(t.assignee_id::text, '') || ' ' || count(m.*)::text
+	got := e.WsScalar(t, `SELECT coalesce(t.assignee_id::text, '') || ' ' ||
+		       coalesce(string_agg(m.subject_type || ':' || m.subject_id::text, ','), '')
 		FROM activity t LEFT JOIN activity_audience_member m ON m.activity_id = t.id
 		WHERE t.kind = 'task' GROUP BY t.id, t.assignee_id`)
-	if want := e.Rep1.String() + " 1"; got != want {
+	if want := e.Rep1.String() + " user:" + e.Rep1.String(); got != want {
 		t.Errorf("the task reads %q, want it held by the owner with an audience of one (%q)", got, want)
 	}
 }
