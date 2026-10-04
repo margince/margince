@@ -1,6 +1,6 @@
 # CASE 49 — Who can introduce us, and what is going cold.
 #
-# Four read-only tools that answer questions about people and evidence rather
+# Four read-only tools that answer questions about relationships and evidence rather
 # than about one record, asked as one errand because a rep asks them together in
 # the car before a pipeline call: what was booked, which deals are thin, whether
 # the record supports a claim, and who could open a door.
@@ -40,7 +40,7 @@ prompt: |
   Pipeline call with my manager in twenty minutes, I am driving. What have we
   booked this quarter — the figure the standard sales report on the Reporting page
   gives, not your own sum?
-  Which open deals hang on one person or have gone quiet? She will say we are
+  Which open deals hang on a single contact or have gone quiet? She will say we are
   losing on price: of the inbound email we have logged, how many actually say
   that, and which? Most of it is German; cite what you find. And we want into
   Nordwind Armaturen — does anyone on the team know someone there?

@@ -15,8 +15,8 @@
 # still required, for the member the prompt asks to ADD.
 #
 # bulk_update_records is preview-then-execute by its own contract, and the list
-# is twelve people because the tool's own description sends anything over ten
-# rows there: handing three people over is a loop of update_record, and a
+# is twelve contacts because the tool's own description sends anything over ten
+# rows there: handing three contacts over is a loop of update_record, and a
 # case that allowed that would measure nothing about the bulk door. The prompt
 # gives the go-ahead in advance ("show me what it would change, then do it"), so a
 # run that previews and hands the question back has refused authority it was

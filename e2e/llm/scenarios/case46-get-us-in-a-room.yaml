@@ -7,7 +7,7 @@
 # that treats them as one: "the meeting is booked and Omar has been invited" when
 # only the first happened.
 #
-# The prompt asks for BOTH, aimed at two different people. Greta's is the
+# The prompt asks for BOTH, aimed at two different guests. Greta's is the
 # record-only booking ("just so it is on record"); Omar's is the invitation. A
 # run that invites Greta, or books Omar, or reports the held invitation as sent,
 # is wrong in a way the tool names alone would not show.

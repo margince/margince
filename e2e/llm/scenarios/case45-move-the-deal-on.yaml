@@ -2,7 +2,7 @@
 #
 # advance_deal and progress_deal: one bare, one with a note explaining the move.
 # Both are honest answers to "move it on", and the case holds either one — the
-# tool description itself says progress_deal is what a person almost always means,
+# tool description itself says progress_deal is what a human almost always means,
 # and a model that reaches for the bare move and leaves no note has still moved
 # the deal. That makes advance_deal a tool this lane can only ever cover as one
 # of a set: bare, it is progress_deal with the note left off, and failing a
@@ -10,7 +10,7 @@
 #
 # THE MOVE IS OPEN TO OPEN (Qualified to Negotiation), so it runs without anyone's
 # sign-off. A move onto Won or Lost is staged for a human, which is a different
-# case; this one keeps the stage a person reads off the call, so a run that
+# case; this one keeps the stage a rep reads off the call, so a run that
 # closes the deal as Won has done more than it was told.
 #
 # forecast_movement IS DELIBERATELY NOT REQUIRED, and this is the written ruling
