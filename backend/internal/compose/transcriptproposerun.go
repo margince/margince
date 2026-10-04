@@ -24,11 +24,9 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -84,15 +82,6 @@ type TranscriptStepProposal struct {
 	// proposed change.
 	Cited string `json:"cited"`
 }
-
-// The payload keys the staging identity is drawn from. Each must spell exactly
-// what the struct tag above spells — canonicalIdentity refuses an identity field
-// the payload does not carry, so a typo here is a staging that fails when a rep
-// reads a transcript rather than at compile time.
-const (
-	transcriptIdentityCited = "cited"
-	transcriptIdentityOwner = "owner"
-)
 
 // UnmarshalTranscriptStepProposal reads back what was staged.
 func UnmarshalTranscriptStepProposal(raw json.RawMessage) (TranscriptStepProposal, error) {
@@ -197,24 +186,12 @@ func (p *TranscriptProposer) stageAndFinish(
 			if err != nil {
 				return activities.TranscriptReadOutcome{}, err
 			}
-			outcome := activities.TranscriptReadOutcome{
+			return activities.TranscriptReadOutcome{
 				Status:      activities.TranscriptReadDone,
-				ProposalIDs: staged,
+				ProposalIDs: staged.proposals,
 				LineCount:   len(reading.Lines),
-			}
-			// A run that finishes with nothing and no reason reads exactly like
-			// a broken one, which is the distinction FinishTranscriptRead
-			// refuses to let collapse — and the two ways of finding nothing are
-			// different facts about the meeting.
-			switch {
-			case len(kept) == 0:
-				outcome.Detail = "this transcript states no next steps clearly enough to propose one"
-			case len(staged) == 0:
-				// It found commitments and raised none: every one was already
-				// answered, waiting in the queue or turned down before.
-				outcome.Detail = "every next step this transcript states has already been put to you"
-			}
-			return outcome, nil
+				Detail:      transcriptReadDetail(len(kept), staged),
+			}, nil
 		})
 }
 
@@ -307,86 +284,49 @@ func (p *TranscriptProposer) fail(
 		})
 }
 
-// stage files each next step as its own question, under one bundle id.
+// transcriptStaging is what one reading did with the promises it found.
+type transcriptStaging struct {
+	proposals []ids.UUID
+	tasks     int
+	watched   int
+}
+
+// stage hands each promise to the commitment rule, under one bundle id.
 //
 // One bundle because they were asked together: a meeting that produced three
 // commitments is one act of reading, and an inbox showing them as three
 // unrelated questions makes the rep reconstruct that themselves (0200). Each
-// still keeps its own diff hash, expiry and verdict — accepting two and
-// rejecting one is the whole point.
+// still keeps its own diff hash, expiry and verdict.
 func (p *TranscriptProposer) stage(
 	ctx context.Context, tx pgx.Tx, steps []proposedStep,
 	reading activities.TranscriptReading, activityID ids.ActivityID,
-) ([]ids.UUID, error) {
+) (transcriptStaging, error) {
 	ctx, err := transcriptSeat(ctx, tx, reading.Links)
 	if err != nil {
-		return nil, err
+		return transcriptStaging{}, err
 	}
 	bundleID := ids.NewV7()
-	staged := make([]ids.UUID, 0, len(steps))
+	var out transcriptStaging
 	for _, step := range steps {
-		proposal := TranscriptStepProposal{
-			ActivityID:  activityID.UUID,
-			Summary:     step.Summary,
-			Owner:       step.Owner,
-			DueDate:     step.DueDate,
-			SourceLines: step.SourceLines,
-			Links:       reading.Links,
-			Cited:       quotedFromTranscript(step, reading.Lines),
-		}
-		raw, err := json.Marshal(proposal)
+		commitment, err := p.commitmentFrom(ctx, tx, step, reading, activityID)
 		if err != nil {
-			return nil, fmt.Errorf("compose: marshal transcript step proposal: %w", err)
+			return transcriptStaging{}, err
 		}
-		canonical, hash, err := diffhash.Canonical(raw)
+		outcome, id, err := p.dispatch.DispatchTx(ctx, tx, commitment, bundleID)
 		if err != nil {
-			return nil, fmt.Errorf("compose: canonicalize transcript step proposal: %w", err)
+			return transcriptStaging{}, err
 		}
-		// A rep can read the same transcript again — the in-flight uniqueness
-		// index covers only a queued or running reading — so a refused step must
-		// not come straight back. The identity is what the transcript itself
-		// says: the words behind the step, and who it names as promising them.
-		// Both hold still between readings of one document, where the model's
-		// summary and its line citation do not — so a diff hash remembers
-		// nothing.
-		//
-		// The owner is here to tell two commitments in ONE sentence apart. "I'll
-		// send pricing and Dana will book the call" cites one line twice, and on
-		// the quotation alone those are one identity: the second staging would
-		// supersede the first and a rep would see one of the two, with nothing
-		// saying the other existed. The owner is safe to key on for the same
-		// reason the quotation is — it is the party AS THE TRANSCRIPT NAMES
-		// THEM, carved out of the translation rule precisely because a
-		// translated name is a different contact.
-		identity, err := json.Marshal(map[string]string{
-			transcriptIdentityCited: proposal.Cited,
-			transcriptIdentityOwner: proposal.Owner,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("compose: marshal transcript step identity: %w", err)
+		switch outcome {
+		case CommitmentProposed:
+			out.proposals = append(out.proposals, id)
+		case CommitmentTaskWritten:
+			out.tasks++
+		case CommitmentWatched:
+			out.watched++
+		case CommitmentRemembered:
+			// Already a task, already waiting, refused or dismissed: this
+			// reading adds nothing new.
 		}
-		approvalID, staged1, err := p.approval.StageUnlessDeclinedTx(ctx, tx, approvals.StageInput{
-			Kind:           TranscriptProposalKind,
-			ProposedChange: canonical,
-			DiffHash:       hash,
-			Identity:       identity,
-			TargetType:     transcriptTargetType,
-			TargetID:       activityID.UUID,
-			Summary:        step.Summary,
-			Evidence:       []approvals.Evidence{stepEvidence(step, reading.Lines, activityID)},
-			BundleID:       bundleID,
-			JoinPending:    true,
-		})
-		if err != nil {
-			return nil, err
-		}
-		if !staged1 {
-			// Already refused, or already waiting. Either way this reading adds
-			// nothing to the queue, and the run's own record says how many steps
-			// it raised — so a step that was answered before is not counted again.
-			continue
-		}
-		staged = append(staged, approvalID.UUID)
 	}
-	return staged, nil
+	return out, nil
 }

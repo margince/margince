@@ -2183,6 +2183,7 @@ export const de = {
   "approval.field.to_stage": "Nach",
   "approval.kind.transcript_proposal":
     "Nächsten Schritt aus Transkript anlegen",
+  "approval.kind.commitment_task": "Aufgabe für Zusage anlegen",
   "approval.kind.fx_rate_proposal": "Wechselkurse aktualisieren",
   "approval.kind.disqualify_lead": "Lead disqualifizieren",
   "approval.kind.demote_lead": "Lead-Qualifizierung zurücknehmen",
@@ -11914,6 +11915,8 @@ export const de = {
     "Ein Vorschlag aus der Nacht wartet auf dein Wort",
   "magic.action.approval_transcript_proposal":
     "Ein Vorschlag aus einer Aufzeichnung wartet auf dein Wort",
+  "magic.action.approval_commitment_task":
+    "Eine Zusage aus einem Gespräch wartet auf dein Wort",
   "magic.action.approval_capture_counterparty":
     "{target} hat dir geschrieben. Als Kontakt behalten?",
   "magic.action.approval_pending":

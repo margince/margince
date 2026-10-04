@@ -79,6 +79,14 @@ New stage-change notifications carry the original event actor and occurrence tim
 
 Task responsibility comes from the assigned user ID. Recognized reader-prefixed task wording is presented as “You need to …”, without rewriting the stored promise. Details retain the original wording and evidence. Similar tasks from distinct transcripts or deadlines remain separate obligations; text similarity alone cannot establish supersession.
 
+One rule turns a promise read out of a meeting transcript into work (`compose/commitmentdispatch.go`):
+
+- A promise the customer made is filed on their contact as something to watch. It never becomes a task.
+- A promise a named colleague made becomes their task. Read at or above `CommitmentTaskConfidence`, it is written directly and captured by the reader (`agent:…`); below it, it is proposed to them as a `commitment_task` card and written when they accept.
+- A promise nobody can be named for is proposed to whoever the reading belongs to, and accepting it makes it theirs.
+- A task carries a due date only when the conversation stated a day. An undated promise sits in today's queue with undated request reminders.
+- The task is keyed on the promise's evidence (source, side, party and the words it was said in), archived tasks included. A task a rep archived, a proposal a rep refused and a customer promise a rep dismissed are not raised again when the conversation is read again.
+
 ## Stable close dates
 
 The nightly repair replaces missing or overdue dates. It retains a valid future date, including a provisional estimate from an earlier sweep. Quietness may lower forecast confidence without moving the date. A replacement is today plus observed median stage days multiplied by remaining open stages, rounded up to whole weeks, with a minimum of seven days. Without sufficient history the fallback is fourteen days per stage. All generated replacement dates remain provisional; existing opt-outs, reversal memory and review controls still apply.

@@ -208,7 +208,7 @@ tasks:
     status: shipped
     sites: [next_steps]
     company_context: none
-    doc: "S-E04.3 / MEET-AC-3/4: read the next steps and commitments out of a meeting transcript, each citing the 1-based transcript lines it was read from (ADR-0058). Floor 0.7; below it the proposal is dropped, never guessed, and a transcript stating none yields no proposal at all. Every proposal is a structural claim, so it STAGES for a human (approval kind transcript_proposal) and writes nothing until confirmed."
+    doc: "the reading of next steps and commitments out of a meeting transcript, each citing the 1-based transcript lines it was read from. Floor 0.7; below it the proposal is dropped, never guessed, and a transcript stating none yields no proposal at all. Each commitment goes through the shared commitment rule: a customer's promise is filed on their contact and never becomes a task; a named colleague's promise read at or above 0.85 becomes their task directly, marked as the reader's; anything else stages for a human (approval kind commitment_task)."
 
   propose_roles:
     display_name: "Buying-role reading"

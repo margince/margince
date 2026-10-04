@@ -851,6 +851,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 **Indexes**
 
 - `conversation_claim_contact_ix` — `btree (contact_id, kind) WHERE (archived_at IS NULL)`
+- `conversation_claim_evidence_ux` — `unique, btree (contact_id, source_activity_id, evidence_fingerprint) WHERE (archived_at IS NULL)`
 - `conversation_claim_pkey` — `unique, btree (id)`
 - `idx_conversation_claim_contact` — `btree (contact_id)`
 - `idx_conversation_claim_source_activity` — `btree (source_activity_id)`

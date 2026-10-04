@@ -55,6 +55,7 @@ const READING_OF: Readonly<Record<MagicSentenceKey, MessageKey | null>> = {
   "magic.action.approval_promote_lead": null,
   "magic.action.approval_overnight": null,
   "magic.action.approval_transcript_proposal": null,
+  "magic.action.approval_commitment_task": null,
   "magic.action.approval_capture_counterparty": null,
   "magic.action.approval_pending": null,
   "magic.action.capture_reauth_required": null,

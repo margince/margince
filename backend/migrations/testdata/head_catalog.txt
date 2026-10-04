@@ -3053,6 +3053,7 @@ public.conversation_claim.trg_conversation_claim_updated CREATE TRIGGER trg_conv
 public.conversation_claim.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.conversation_claim.version bigint NOT NULL gen=- def=1
 public.conversation_claim_contact_ix CREATE INDEX conversation_claim_contact_ix ON public.conversation_claim USING btree (contact_id, kind) WHERE (archived_at IS NULL)
+public.conversation_claim_evidence_ux CREATE UNIQUE INDEX conversation_claim_evidence_ux ON public.conversation_claim USING btree (contact_id, source_activity_id, evidence_fingerprint) WHERE (archived_at IS NULL)
 public.conversation_claim_pkey CREATE UNIQUE INDEX conversation_claim_pkey ON public.conversation_claim USING btree (id)
 public.currency_minor_digits acl=margince_owner=arwdDxt/margince_owner,margince_app=r/margince_owner rls=false force=false
 public.currency_minor_digits.currency character(3) NOT NULL gen=- def=-

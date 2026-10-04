@@ -117,6 +117,13 @@ export const EDITABLE_FIELDS: Readonly<
     { field: "subject", as: "text", label: "decision.draftSubject" },
     { field: "body", as: "textarea", label: "decision.draftBody" },
   ],
+  // The promise's wording and its day are the reader's to correct. The rest —
+  // who made it, the quoted words, the key that remembers it — is what the
+  // reader is agreeing to, not something to retype.
+  commitment_task: [
+    { field: "summary", as: "text", label: "approval.field.step" },
+    { field: "due_date", as: "date", label: "approval.field.due_date" },
+  ],
   // The date is the entire question, and it is the only thing here a contact may
   // change. Undeclared, the generic editor offered every string in the payload:
   // the deal's uuid as a text box to retype, the server's own reason sentence

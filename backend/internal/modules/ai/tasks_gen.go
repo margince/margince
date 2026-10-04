@@ -59,7 +59,7 @@ const (
 	TaskSummarize Task = "summarize"
 	// TaskTranscript is Declared, not built (ADR-0074). Pasted transcript text is T2/untrusted per ai-operational-spec §1 when a site lands.
 	TaskTranscript Task = "transcript"
-	// TaskTranscriptPropose is S-E04.3 / MEET-AC-3/4: read the next steps and commitments out of a meeting transcript, each citing the 1-based transcript lines it was read from (ADR-0058). Floor 0.7; below it the proposal is dropped, never guessed, and a transcript stating none yields no proposal at all. Every proposal is a structural claim, so it STAGES for a human (approval kind transcript_proposal) and writes nothing until confirmed.
+	// TaskTranscriptPropose is the reading of next steps and commitments out of a meeting transcript, each citing the 1-based transcript lines it was read from. Floor 0.7; below it the proposal is dropped, never guessed, and a transcript stating none yields no proposal at all. Each commitment goes through the shared commitment rule: a customer's promise is filed on their contact and never becomes a task; a named colleague's promise read at or above 0.85 becomes their task directly, marked as the reader's; anything else stages for a human (approval kind commitment_task).
 	TaskTranscriptPropose Task = "transcript_propose"
 	// TaskVoiceBuild is owner-requested or automatic durable Voice DNA candidate build; own-authored corpus only, CompanyContext none (ADR-0066). Four sites: the derive pass, the two evaluation passes, and the demonstration draft the profile card shows — a built voice nobody can read a sentence of is a voice nobody can judge.
 	TaskVoiceBuild Task = "voice_build"
@@ -178,7 +178,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "9642f4d0dff60c9a1be12823ea5c9eb304b2799e15c56af5f52a9600bc0c26f5"
+const TaskContractHash = "bb16b18f9270e3f587916f05013bf4d4a17a8c64f09f30b7cd8d32b06c2025e9"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed

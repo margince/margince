@@ -85,6 +85,9 @@ var decidedByTheSeatStagedFor = map[string]bool{
 	// A next step a transcript recorded somebody committing to, staged for the
 	// rep who asked for the recording to be read.
 	kindTranscriptProposal: true,
+	// A promise read out of a conversation, staged for the colleague who made
+	// it, or for the reader of the conversation when nobody could be named.
+	kindCommitmentTask: true,
 }
 
 // withheldFromOtherSeats is the self-only narrowing of decidable, spelled once

@@ -26,7 +26,10 @@ func openTaskWindowClauses(in ListActivitiesInput, arg func(any) int) []string {
 		// today's list — a promise reported late a day early.
 		deadline := sprintf("a.due_at < $%d", arg(*in.OpenAndDueBy))
 		if in.IncludeEmailRequests && in.OpenAndDueAfter == nil {
-			deadline = "(" + deadline + sprintf(" OR (a.due_at IS NULL AND a.source_system = $%d))", arg(EmailRequestTaskSource))
+			// An undated reminder of a request and an undated promise are both
+			// owed now: nobody named a later day for either.
+			deadline = "(" + deadline + sprintf(" OR (a.due_at IS NULL AND a.source_system = ANY($%d)))",
+				arg([]string{EmailRequestTaskSource, CommitmentTaskSource}))
 		}
 		clauses = append(clauses, "a.kind = 'task' AND NOT a.is_done AND "+deadline)
 	}

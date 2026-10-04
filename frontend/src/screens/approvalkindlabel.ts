@@ -58,6 +58,7 @@ export const KIND_LABEL: Readonly<Record<string, MessageKey>> = {
   vcard_create: "approval.kind.vcard_create",
   lifecycle_change: "approval.kind.lifecycle_change",
   transcript_proposal: "approval.kind.transcript_proposal",
+  commitment_task: "approval.kind.commitment_task",
   stage_progression: "approval.kind.stage_progression",
   fx_rate_proposal: "approval.kind.fx_rate_proposal",
   disqualify_lead: "approval.kind.disqualify_lead",

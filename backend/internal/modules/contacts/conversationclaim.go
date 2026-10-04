@@ -16,15 +16,9 @@ package contacts
 // can check against what was actually written is the thing the whole mechanism
 // exists to prevent.
 //
-// The extraction task that will call this is still to come (issue #849), and
-// the demo seed does not call it either — both arrive with #849. Until then
-// the HTTP endpoint below is the only door, and no product flow feeds it.
-// That is why the attention feed's commitments lane is unbound
-// (compose/attentionseam.go): a lane no production writer can fill would show
-// every real customer an empty promise list dressed as a feature, and
-// rebinding it is a one-line change when #849 ships. The endpoint stays: it
-// is the correction surface extracted claims will need, and it is how a test
-// seeds through the real writer rather than SQL.
+// Two writers reach the table: POST /contacts/{id}/claims, the correction
+// surface a human uses, and the commitment dispatch an extractor drives
+// (RecordConversationClaimTx). Both go through recordClaimInTx.
 
 import (
 	"context"
@@ -54,6 +48,10 @@ type ClaimInput struct {
 	Quote      string
 	DueAt      *time.Time
 	Source     string
+	// Locator is the evidence identity an extractor computed, so a re-read that
+	// quotes a slightly different clause of the same promise finds the same
+	// claim. Empty for a human's claim, which is keyed on its exact quote.
+	Locator string
 }
 
 // RecordConversationClaim writes one claim through the audited write shape.
@@ -66,20 +64,8 @@ func (s *Store) RecordConversationClaim(ctx context.Context, in ClaimInput) (crm
 	// A caller who omitted a field made a mistake the server can name; making
 	// them fail an auth check instead reports their own typo as a permission
 	// problem, and nothing about the missing field discloses a record.
-	if in.Body == "" {
-		return crmcontracts.ConversationClaim{}, httperr.Validation("body", "required",
-			"a claim says something; an empty one is not a claim")
-	}
-	// Grounded or absent, and the two halves are refused separately so the
-	// caller is told which one is missing. An omitted id decodes to the zero
-	// UUID with no error, so without this probe it would reach the visibility
-	// check, match nothing, and answer not-found for a message nobody named.
-	if err := httperr.RequireBodyID("source_activity_id", in.ActivityID); err != nil {
+	if err := validateClaim(in); err != nil {
 		return crmcontracts.ConversationClaim{}, err
-	}
-	if in.Quote == "" {
-		return crmcontracts.ConversationClaim{}, httperr.Validation("source_quote", "required",
-			"a claim carries the words it was read from — an ungrounded claim is dropped, never stored")
 	}
 	// Human-only in the STORE as well as the router table. The route is
 	// declared human-only today, but a store that relies on the routing
@@ -98,56 +84,9 @@ func (s *Store) RecordConversationClaim(ctx context.Context, in ClaimInput) (crm
 
 	var out crmcontracts.ConversationClaim
 	err = s.tx(ctx, func(tx pgx.Tx) error {
-		// HELD, not merely probed. The probe reads a snapshot and the insert is
-		// a later statement, so an Art. 17 erasure committing between them
-		// would put a claim — and the verbatim sentence on it — back against a
-		// contact the operator has just been told is gone. Holding the row is
-		// what makes the probe's answer still true at the write.
-		if err := auth.HoldWritableLive(ctx, tx, "contact", in.ContactID.UUID); err != nil {
-			return err
-		}
-		// Activities are reachability-scoped rather than row-scoped, so they
-		// have their own probe. Live, not merely visible: a claim must not
-		// quote a message that has since been archived.
-		if err := auth.EnsureActivityContentVisibleLive(ctx, tx, in.ActivityID); err != nil {
-			return err
-		}
-		var id ids.UUID
-		err := tx.QueryRow(ctx, `
-			INSERT INTO conversation_claim
-				(contact_id, kind, body, source_activity_id, source_quote,
-				 due_at, evidence_fingerprint, source, captured_by)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-			RETURNING id`,
-			in.ContactID, in.Kind, in.Body,
-			in.ActivityID, in.Quote, in.DueAt,
-			claimFingerprint(in), in.Source, by).Scan(&id)
-		if err != nil {
-			return fmt.Errorf("write the conversation claim: %w", err)
-		}
-		auditID, err := storekit.Audit(ctx, tx, "create", "contact", in.ContactID.UUID, nil,
-			map[string]any{"claim_kind": in.Kind, "claim_id": id.String()})
-		if err != nil {
-			return fmt.Errorf("audit the conversation claim: %w", err)
-		}
-		if err := storekit.EmitEvent(ctx, tx, auditID, in.ContactID.UUID,
-			crmcontracts.PublicEventConversationClaimCaptured{
-				ClaimId: openapi_types.UUID(id),
-				Kind:    in.Kind,
-			}); err != nil {
-			return fmt.Errorf("emit conversation_claim.captured: %w", err)
-		}
-		out = crmcontracts.ConversationClaim{
-			Id:               openapi_types.UUID(id),
-			Kind:             crmcontracts.ConversationClaimKind(in.Kind),
-			Body:             in.Body,
-			SourceActivityId: openapi_types.UUID(in.ActivityID),
-			SourceQuote:      in.Quote,
-			Status:           crmcontracts.ConversationClaimStatusOpen,
-			DueAt:            in.DueAt,
-			NeedsReview:      false,
-		}
-		return nil
+		var err error
+		out, _, err = recordClaimInTx(ctx, tx, in, by)
+		return err
 	})
 	return out, err
 }
@@ -156,6 +95,9 @@ func (s *Store) RecordConversationClaim(ctx context.Context, in ClaimInput) (crm
 // extraction run that reads the same words from the same message produces the
 // same digest, which is what lets a human's correction hold against it.
 func claimFingerprint(in ClaimInput) string {
+	if in.Locator != "" {
+		return in.Locator
+	}
 	sum := sha256.Sum256([]byte(in.ActivityID.String() + "\x00" + in.Kind + "\x00" + in.Quote))
 	return hex.EncodeToString(sum[:])
 }
