@@ -219,3 +219,23 @@ func TestTwoCustomersOfOneNameTieThePromiseToNeither(t *testing.T) {
 		t.Errorf("the promise was filed on %d customers who share the name", n)
 	}
 }
+
+// A proposal whose source conversation is gone by the time a human accepts it
+// is refused, not written as a task nobody can check.
+func TestAProposalWhoseConversationIsGoneIsNotAccepted(t *testing.T) {
+	e := setupTranscript(t)
+	e.WsExec(t, `UPDATE app_user SET display_name = 'Priya Raman' WHERE id = $1`, e.Rep2)
+	read := e.read(t, cannedBrain{reply: ownedReply(t, "Priya Raman", 0.75)})
+	if len(read.ProposalIDs) != 1 {
+		t.Fatalf("want the unsure promise proposed, got %d proposals", len(read.ProposalIDs))
+	}
+	e.WsExec(t, `UPDATE activity SET archived_at = now() WHERE id = $1`, e.activity.UUID)
+
+	priya := e.As(e.Rep2, []ids.UUID{e.Team1}, transcriptPerms)
+	if _, err := e.svc.Decide(priya, ids.From[ids.ApprovalKind](read.ProposalIDs[0]), true, nil); err == nil {
+		t.Error("a proposal whose conversation was archived was accepted")
+	}
+	if n := e.taskCount(t); n != 0 {
+		t.Errorf("accepting it wrote %d task(s)", n)
+	}
+}
