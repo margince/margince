@@ -160,21 +160,6 @@ func (h Handlers) GetForecast(
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
-// snapshotRefsToWire maps the period's snapshots onto the wire shape. Never
-// nil: an empty list is the answer "nothing frozen", and an absent field would
-// read as "not asked".
-func snapshotRefsToWire(refs []SnapshotRef) *[]crmcontracts.ForecastSnapshotRef {
-	wire := make([]crmcontracts.ForecastSnapshotRef, 0, len(refs))
-	for _, ref := range refs {
-		wire = append(wire, crmcontracts.ForecastSnapshotRef{
-			Id:      openapi_types.UUID(ref.ID),
-			TakenAt: ref.TakenAt,
-			Trigger: crmcontracts.ForecastSnapshotRefTrigger(ref.Trigger),
-		})
-	}
-	return &wire
-}
-
 // project adds where the period lands and whether the pipeline supports it.
 //
 // Separate from GetForecast because it is a second question over the same

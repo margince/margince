@@ -9,7 +9,9 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -77,4 +79,19 @@ func (s *Store) SnapshotRefsTx(
 		return nil, fmt.Errorf("forecasting: listing the period's snapshots: %w", err)
 	}
 	return refs, nil
+}
+
+// snapshotRefsToWire maps the period's snapshots onto the wire shape. Never
+// nil: an empty list is the answer "nothing frozen", and an absent field would
+// read as "not asked".
+func snapshotRefsToWire(refs []SnapshotRef) *[]crmcontracts.ForecastSnapshotRef {
+	wire := make([]crmcontracts.ForecastSnapshotRef, 0, len(refs))
+	for _, ref := range refs {
+		wire = append(wire, crmcontracts.ForecastSnapshotRef{
+			Id:      openapi_types.UUID(ref.ID),
+			TakenAt: ref.TakenAt,
+			Trigger: crmcontracts.ForecastSnapshotRefTrigger(ref.Trigger),
+		})
+	}
+	return &wire
 }
