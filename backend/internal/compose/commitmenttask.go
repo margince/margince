@@ -220,7 +220,7 @@ func sourcePrivateToNow(ctx context.Context, tx pgx.Tx, source ids.UUID, staged 
 	if err != nil {
 		return nil, fmt.Errorf("compose: reading a commitment's source thread: %w", err)
 	}
-	if kind != "email" || key == nil {
+	if kind != string(crmcontracts.ActivityKindEmail) || key == nil {
 		return staged, nil
 	}
 	_, owner, offered, err := threadReaderNow(ctx, tx, *key)
