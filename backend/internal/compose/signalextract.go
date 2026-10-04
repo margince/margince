@@ -242,9 +242,11 @@ func (x *SignalExtractor) commitReading(
 	return raised, nil
 }
 
-// recordExtractedEvent raises one event against the account, citing the
-// message it was stated in, and reports whether anything new was filed. A
-// commitment goes to the commitment rule; the other kinds are signals.
+// recordExtractedEvent raises one event as a signal against the account,
+// citing the message it was stated in, and reports whether anything new was
+// filed. A commitment is also handed to the commitment rule, in the same
+// transaction: the signal is what Deal Scout pairs with a new opportunity, the
+// claim and the task are what a rep acts on.
 func (x *SignalExtractor) recordExtractedEvent(
 	ctx context.Context, tx pgx.Tx, thread settledThread,
 	event extractedEvent, now time.Time,
@@ -257,8 +259,21 @@ func (x *SignalExtractor) recordExtractedEvent(
 		return false, fmt.Errorf("cited message id: %w", err)
 	}
 	if event.Kind == extractKindCommitment {
-		return x.dispatchCommitment(ctx, tx, thread, event, cited)
+		dispatched, err := x.dispatchCommitment(ctx, tx, thread, event, cited)
+		if err != nil {
+			return false, err
+		}
+		raised, err := recordEventSignal(ctx, tx, thread, event, cited, now)
+		return raised || dispatched, err
 	}
+	return recordEventSignal(ctx, tx, thread, event, cited, now)
+}
+
+// recordEventSignal files one event as a signal on the account.
+func recordEventSignal(
+	ctx context.Context, tx pgx.Tx, thread settledThread,
+	event extractedEvent, cited ids.UUID, now time.Time,
+) (bool, error) {
 	return signals.RecordDerived(ctx, tx, signals.DerivedSignal{
 		Kind:        event.Kind,
 		CompanyID:   thread.CompanyID,

@@ -1,0 +1,123 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+//go:build integration
+
+package integration
+
+// A commitment read out of an email goes to the same rule a meeting's does:
+// the customer's is watched on their record, a colleague's becomes their task,
+// and mail only one member may read stays theirs.
+
+import (
+	"encoding/json"
+	"testing"
+	"time"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+)
+
+// commitmentReply is the model naming one commitment on a message.
+func commitmentReply(t *testing.T, message ids.UUID, quote, due string, confidence float64) string {
+	t.Helper()
+	body, err := json.Marshal(map[string]any{"events": []map[string]any{{
+		"kind": "commitment_made", "message_id": message.String(),
+		"summary": "Send the revised pricing", "quote": quote, "due_date": due,
+		"confidence": confidence,
+	}}})
+	if err != nil {
+		t.Fatalf("build the scripted reply: %v", err)
+	}
+	return string(body)
+}
+
+// party records who wrote or received a message, the way capture does.
+func party(t *testing.T, message ids.UUID, role string, user, contact *ids.UUID) {
+	t.Helper()
+	if _, err := OwnerConn(t).Exec(t.Context(), `
+		INSERT INTO activity_participant (activity_id, user_id, contact_id, role) VALUES ($1, $2, $3, $4)`,
+		message, user, contact, role); err != nil {
+		t.Fatalf("seed a participant: %v", err)
+	}
+}
+
+const pricingPromise = "We will send the revised pricing over by Friday."
+
+// The customer's promise is filed on them to watch, and never becomes a task.
+func TestACustomersEmailedPromiseIsWatchedNotTasked(t *testing.T) {
+	e := Setup(t)
+	company := e.SeedCompany(t, "Acme", &e.Rep1)
+	ines := employeeOf(t, e, company, "Ines Huber")
+	message := seedMessage(t, e, ines, "thread-volumes", "Volumes", "Thanks. "+pricingPromise, "inbound",
+		extractClock.Add(-48*time.Hour))
+	party(t, message, "from", nil, &ines)
+
+	extractPass(t, e, &scriptedBrain{reply: commitmentReply(t, message, pricingPromise, "2026-06-05", 0.95)})
+
+	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE kind = 'task'`); n != 0 {
+		t.Errorf("the customer's promise became %d task(s)", n)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM conversation_claim
+		WHERE kind = 'commitment_theirs' AND contact_id = $1 AND due_at IS NOT NULL`, ines); n != 1 {
+		t.Errorf("want the customer's dated promise filed once on them, got %d claims", n)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM signal WHERE kind = 'commitment_made'`); n != 1 {
+		t.Errorf("want the account's commitment signal kept for Deal Scout, got %d", n)
+	}
+}
+
+// A colleague's confident promise in their own mail is their task, dated as
+// the mail said, and tied to the claim on the customer it was made to.
+func TestAColleaguesEmailedPromiseIsTheirTask(t *testing.T) {
+	e := Setup(t)
+	company := e.SeedCompany(t, "Acme", &e.Rep1)
+	ines := employeeOf(t, e, company, "Ines Huber")
+	message := seedMessage(t, e, ines, "thread-pricing", "Pricing", "Hi Ines, "+pricingPromise, "outbound",
+		extractClock.Add(-48*time.Hour))
+	party(t, message, "from", &e.Rep1, nil)
+	party(t, message, "to", nil, &ines)
+
+	extractPass(t, e, &scriptedBrain{reply: commitmentReply(t, message, "send the revised pricing over by Friday", "2026-06-05", 0.95)})
+
+	task := e.WsScalar(t, `SELECT coalesce(assignee_id::text, '') || ' ' || captured_by || ' ' || to_char(due_at, 'YYYY-MM-DD')
+		FROM activity WHERE kind = 'task'`)
+	if want := e.Rep1.String() + " agent:signal-scan 2026-06-05"; task != want {
+		t.Errorf("the task reads %q, want it held by the sender, written by the reader and due that Friday (%q)", task, want)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM conversation_claim
+		WHERE kind = 'commitment_ours' AND contact_id = $1 AND task_activity_id IS NOT NULL`, ines); n != 1 {
+		t.Errorf("want one claim on the customer pointing at the task, got %d", n)
+	}
+
+	// Reading the conversation again, quoting the whole sentence this time,
+	// finds the same promise.
+	e.WsExec(t, `DELETE FROM signal_thread_scan`)
+	extractPass(t, e, &scriptedBrain{reply: commitmentReply(t, message, pricingPromise, "2026-06-05", 0.95)})
+	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE kind = 'task'`); n != 1 {
+		t.Errorf("a second reading of one promise left %d tasks", n)
+	}
+}
+
+// A promise in mail only one member may read is theirs alone: written by a
+// colleague, it is proposed to the owner rather than handed to the colleague,
+// and nothing about it is readable through the account.
+func TestAPromiseInPrivateMailStaysWithItsOwner(t *testing.T) {
+	e := Setup(t)
+	company := e.SeedCompany(t, "Acme", &e.Rep1)
+	ines := employeeOf(t, e, company, "Ines Huber")
+	e.WsExec(t, `UPDATE contact SET visibility = 'owner', owner_id = $2 WHERE id = $1`, ines, e.Rep1)
+	message := seedMessage(t, e, ines, "thread-private", "Pricing", "Hi Ines, "+pricingPromise, "outbound",
+		extractClock.Add(-48*time.Hour))
+	party(t, message, "from", &e.Rep2, nil)
+	party(t, message, "to", nil, &ines)
+
+	extractPass(t, e, &scriptedBrain{reply: commitmentReply(t, message, pricingPromise, "", 0.95)})
+
+	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE kind = 'task'`); n != 0 {
+		t.Errorf("a promise in another member's private mail became %d task(s) for the colleague", n)
+	}
+	staged := e.WsScalar(t, `SELECT coalesce(on_behalf_of::text, '') FROM approval WHERE kind = 'commitment_task'`)
+	if staged != e.Rep1.String() {
+		t.Errorf("the proposal is staged for %q, want the private mail's owner", staged)
+	}
+}

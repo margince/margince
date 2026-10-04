@@ -315,3 +315,63 @@ func (s *Store) OpenCommitmentsAcrossWorkspace(
 	}
 	return out, false, nil
 }
+
+// openCommitmentEitherSide is an open commitment either side made that no task
+// holds yet: ours not yet a task, or the customer's still owed.
+const openCommitmentEitherSide = `((` + ourPromiseNotYetATask + `)
+		    OR (c.kind = 'commitment_theirs' AND c.status = 'open' AND NOT c.needs_review))`
+
+// CountAccountCommitments is how many open commitments either side made with
+// the people currently employed at one account, as far as this caller may see
+// them. It answers readable=false rather than zero for a caller who may not
+// read contacts or activities: zero would say the account owes nothing, which
+// is a claim about the account rather than about the reader.
+func (s *Store) CountAccountCommitments(ctx context.Context, tx pgx.Tx, companyID ids.UUID) (int, bool, error) {
+	if !auth.ReadGranted(ctx, "contact") || !auth.ReadGranted(ctx, "activity") {
+		return 0, false, nil
+	}
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	companyPos := arg(companyID)
+	activityScope, err := auth.ActivityContentClause(ctx, "a", arg)
+	if err != nil {
+		return 0, false, err
+	}
+	if activityScope == "" {
+		activityScope = sqlAlwaysVisible
+	}
+	contactScope, err := auth.ScopeClauseFor(ctx, "contact", "pr", arg)
+	if err != nil {
+		return 0, false, err
+	}
+	if contactScope == "" {
+		contactScope = sqlAlwaysVisible
+	}
+	// The employment edge decides which commitments are this account's, so it
+	// is read under relationship.read like the sibling reads above.
+	edgeScope, err := auth.EdgeReadScope(ctx, "r", arg)
+	if err != nil {
+		return 0, false, err
+	}
+	if edgeScope == "" {
+		edgeScope = sqlAlwaysVisible
+	}
+	var total int
+	if err := tx.QueryRow(ctx, fmt.Sprintf(`
+		SELECT count(*)
+		  FROM conversation_claim c
+		  JOIN activity a ON a.id = c.source_activity_id AND a.archived_at IS NULL
+		  JOIN contact pr ON pr.id = c.contact_id AND pr.archived_at IS NULL
+		 WHERE `+openCommitmentEitherSide+`
+		   AND c.archived_at IS NULL
+		   AND EXISTS (
+		         SELECT 1 FROM relationship r
+		          WHERE r.contact_id = pr.id AND r.kind = 'employment'
+		            AND r.company_id = $%[1]d
+		            AND `+employment.IsCurrentSQL("r.ended_at")+` AND r.archived_at IS NULL
+		            AND (%[4]s))
+		   AND (%[2]s) AND (%[3]s)`, companyPos, activityScope, contactScope, edgeScope), args...).Scan(&total); err != nil {
+		return 0, false, fmt.Errorf("count the account's open commitments: %w", err)
+	}
+	return total, true, nil
+}

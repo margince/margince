@@ -248,12 +248,14 @@ func (a *assembly) readHealth() error {
 		health.SingleThreaded = &single
 	}
 
-	facts, err := a.signalFactsOnce()
+	// Commitments read out of conversations, either side's, that are still
+	// owed and not yet a task. Null for a reader who may not see them.
+	open, readable, err := a.svc.contacts.CountAccountCommitments(a.ctx, a.tx, a.companyID.UUID)
 	if err != nil {
 		return err
 	}
-	if facts.Readable {
-		health.OpenCommitments = &facts.OpenCommitments
+	if readable {
+		health.OpenCommitments = &open
 	}
 
 	lastMeeting, err := a.lastMeetingAt()
