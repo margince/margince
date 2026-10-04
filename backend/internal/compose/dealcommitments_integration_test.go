@@ -111,10 +111,12 @@ func TestAHiddenCommitmentMakesTheListIncomplete(t *testing.T) {
 // A reader without the contact grant is refused rather than told nothing is owed.
 func TestADealWatchNeedsTheContactGrant(t *testing.T) {
 	w := seedDealWatch(t)
-	perms := principal.Permissions{RoleKeys: []string{"rep"}, RowScope: principal.RowScopeTeam,
+	perms := principal.Permissions{
+		RoleKeys: []string{"rep"}, RowScope: principal.RowScopeTeam,
 		Objects: map[string]principal.ObjectGrant{
 			"deal": {Read: true}, "company": {Read: true}, "activity": {Read: true},
-		}}
+		},
+	}
 	reader := w.As(w.Rep1, []ids.UUID{w.Team1}, perms)
 	if _, err := newDealCommitmentHandlers(w.Pool).read(reader, ids.From[ids.DealKind](w.deal)); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("a reader with no contact grant: err = %v, want permission denied", err)
@@ -125,8 +127,10 @@ func TestADealWatchNeedsTheContactGrant(t *testing.T) {
 // and the list says it is incomplete rather than that nothing is owed.
 func TestAMaskedCompanyLeavesTheDealWatchIncomplete(t *testing.T) {
 	w := seedDealWatch(t)
-	perms := principal.Permissions{RoleKeys: []string{"rep"}, RowScope: principal.RowScopeTeam,
-		Objects: map[string]principal.ObjectGrant{"deal": {Read: true}}}
+	perms := principal.Permissions{
+		RoleKeys: []string{"rep"}, RowScope: principal.RowScopeTeam,
+		Objects: map[string]principal.ObjectGrant{"deal": {Read: true}},
+	}
 	reader := w.As(w.Rep1, []ids.UUID{w.Team1}, perms)
 	got, err := newDealCommitmentHandlers(w.Pool).read(reader, ids.From[ids.DealKind](w.deal))
 	if err != nil || len(got.Data) != 0 || got.Complete {
