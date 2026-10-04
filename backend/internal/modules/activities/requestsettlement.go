@@ -139,10 +139,13 @@ var repliedRequestsSQL = outstandingRequestSQL + `
 
 // settlementAnswersSQL selects, as (id, occurred_at), every answer to request a
 // as of the pass's own instant ($1): our attested reply in the conversation and
-// the answers off its thread.
+// the answers off its thread. Each is one the whole workspace may read, so the
+// newest answer, which a verdict is recorded through, is always one the
+// settlement model may be shown.
 func settlementAnswersSQL() string {
 	return `SELECT reply.id, reply.occurred_at FROM activity reply
    WHERE ` + ourOutboundInThisThread("reply", "a") + `
+     AND reply.audience = 'workspace' AND reply.restricted_at IS NULL
      AND reply.occurred_at <= $1
      AND (reply.occurred_at, reply.id) > (a.occurred_at, a.id)
  UNION ` + offThreadAnswersSQL("a", "$1")
@@ -170,9 +173,10 @@ func newestAnswer(column string) string {
 }
 
 // RepliedRequests reads the requests this workspace has answered and not yet
-// judged, latest reply first: a bounded pass spends its budget on what was just
-// answered, not on a backlog an import brought in. Ordered by the reply rather
-// than the request, so a fresh reply to an old request a human still holds is
+// judged, latest answer first: a bounded pass spends its budget on what was
+// just answered, not on a backlog an import brought in. Ordered by the answer
+// (a reply, our mail off the thread, a logged call or a held meeting) rather
+// than the request, so a fresh answer to an old request a human still holds is
 // judged at once instead of queuing behind newer asks.
 //
 // System principal only, like the pass that mints the tasks: this hands thread
