@@ -99,6 +99,38 @@ func senderIsPersonalTx(
 	return personal, nil
 }
 
+// storeOriginalTx writes the record's original to raw_capture and stamps the
+// stored row back onto the record. Raw capture is append-once, so a private
+// message's files leave the original here, before its only write.
+func storeOriginalTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) (connector.NormalizedRecord, error) {
+	rec, err := withholdPrivateOriginalTx(ctx, tx, rec)
+	if err != nil {
+		return rec, err
+	}
+	stored, err := storeRawCapture(ctx, tx, rec)
+	if err != nil {
+		return rec, err
+	}
+	rec.StoredOriginal = stored
+	return rec, nil
+}
+
+// withholdPrivateOriginalTx is the record raw_capture should store: a private
+// message's original without its attachment bytes, anything else unchanged.
+func withholdPrivateOriginalTx(
+	ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord,
+) (connector.NormalizedRecord, error) {
+	fields, ok := rec.Fields.(ActivityFields)
+	if !ok {
+		return rec, nil
+	}
+	private, _, err := messageIsPrivateTx(ctx, tx, rec, fields)
+	if err != nil || !private {
+		return rec, err
+	}
+	return withholdRawParts(rec), nil
+}
+
 // withholdRawParts takes a private message's attachment bytes out of the
 // original raw_capture is about to store. The parts themselves stay on the
 // record until finishNewActivity strips them and leaves the breadcrumb.

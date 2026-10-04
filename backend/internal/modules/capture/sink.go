@@ -237,22 +237,9 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 		// original it was read from and a purge can follow the link instead of
 		// joining on two writers' keys and hoping they agree. rec is a value
 		// copy; this settles it for every reader downstream of here.
-		// A private message's files stay out of the stored original too, decided
-		// here because raw capture is append-once and this is its only write.
-		if fields, ok := rec.Fields.(ActivityFields); ok {
-			private, _, err := messageIsPrivateTx(ctx, tx, rec, fields)
-			if err != nil {
-				return err
-			}
-			if private {
-				rec = withholdRawParts(rec)
-			}
-		}
-		storedOriginal, err := storeRawCapture(ctx, tx, rec)
-		if err != nil {
+		if rec, err = storeOriginalTx(ctx, tx, rec); err != nil {
 			return err
 		}
-		rec.StoredOriginal = storedOriginal
 
 		switch fields := rec.Fields.(type) {
 		case ActivityFields:
