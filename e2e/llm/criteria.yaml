@@ -416,6 +416,22 @@ cases:
         The hand-over to Sofia covers everybody left on the list plus the one
         added, not the one taken off; the preview before it is held by the
         scenario's tool checks.
+  case50_what_moved_my_quarter:
+    1:
+      name: A repricing is reported as one
+      statement: >-
+        The deal whose amount changed is named with its old and new figure, so
+        the answer matches the tool's amount cause.
+    2:
+      name: A slip out of the quarter is not called a loss
+      statement: >-
+        The deal whose close date moved to a later quarter is reported as having
+        left the quarter, not as lost or won.
+    3:
+      name: The movement adds up to the difference between the freezes
+      statement: >-
+        The opening and closing figures are the tool's, and the causes named are
+        the ones it returned.
   case48_that_whole_thread_is_filed_wrong:
     1:
       name: A held move is not reported as done

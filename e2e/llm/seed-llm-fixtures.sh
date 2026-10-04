@@ -1441,6 +1441,48 @@ if [[ -z "$heike" ]]; then
   rm -f "$sofia_cookies"
 fi
 
+# --- CASE 50: two forecast freezes with a real change between them -------------
+#
+# forecast_movement takes two snapshot ids, which forecast_readings now lists. The
+# nightly sweep writes at most one whole-workspace snapshot per local day, so the
+# opening freeze is the sweep's own, dated a week back, and the closing one is the
+# sweep run again after two deals change: the Vorort deal is repriced down, and the
+# valantic deal's close date slips out of the quarter. Both go through the real
+# job and the real API; only the first freeze's date is moved, in SQL, because a
+# day cannot be waited out.
+#
+# Boot has already frozen one snapshot before any deal existed, which would show
+# every deal as new, so those are cleared first.
+lane_psql() {
+  bash "$(git rev-parse --show-toplevel)/scripts/dev-psql.sh" "${PG_PORT:-15432}" "$(dev_database_name)" \
+    -v ON_ERROR_STOP=1 -q -t -A -c "$1"
+}
+freeze_forecast() {
+  local before wanted
+  before="$(lane_psql "SELECT count(*) FROM forecast_snapshot WHERE trigger = 'daily'")"
+  wanted=$((before + 1))
+  lane_psql "INSERT INTO river_job (kind, args, queue, state, max_attempts) VALUES ('forecast_snapshot_sweep', '{}', 'default', 'available', 3)" >/dev/null
+  local waited=0
+  until [[ "$(lane_psql "SELECT count(*) FROM forecast_snapshot WHERE trigger = 'daily'")" -ge "$wanted" ]]; do
+    sleep 1
+    waited=$((waited + 1))
+    [[ "$waited" -lt 90 ]] || { echo "the forecast sweep froze nothing in 90s" >&2; exit 1; }
+  done
+}
+if [[ "$(lane_psql "SELECT count(*) FROM forecast_snapshot WHERE trigger = 'daily'")" -ne 2 ]]; then
+  lane_psql "DELETE FROM forecast_snapshot WHERE trigger = 'daily'" >/dev/null
+  freeze_forecast
+  lane_psql "UPDATE forecast_snapshot SET taken_at = taken_at - interval '7 days', local_day = local_day - 7 WHERE trigger = 'daily'" >/dev/null
+  vorort_deal="$(deal_id_by_name "Vorort Systeme Ausbau")"
+  valantic_deal="$(deal_id_by_name "valantic Migrationsprojekt")"
+  [[ -n "$vorort_deal" && -n "$valantic_deal" ]] || { echo "case 50 needs the Vorort and valantic deals" >&2; exit 1; }
+  code="$(status_of PATCH "/deals/$vorort_deal" '{"amount_minor":2600000,"currency":"EUR","version":1}')"
+  [[ "$code" = "200" ]] || { echo "repricing the Vorort deal answered HTTP $code" >&2; exit 1; }
+  code="$(status_of PATCH "/deals/$valantic_deal" '{"expected_close_date":"2027-02-10","version":1}')"
+  [[ "$code" = "200" ]] || { echo "slipping the valantic deal answered HTTP $code" >&2; exit 1; }
+  freeze_forecast
+fi
+
 # --- THE ROSTER IS VERIFIED, not assumed ---------------------------------
 #
 # The seats above are the fixture's most silent failure mode. A seat that stays

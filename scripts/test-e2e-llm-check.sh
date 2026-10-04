@@ -1051,6 +1051,13 @@ c49="case49-who-can-introduce-us.yaml"
 judges "$c49" case49 answers-from-the-tools 0 "!the judge says NO"
 judges "$c49" case49 recalls-price-from-memory 1 "the judge says NO to: Criterion 4."
 
+# CASE 50 — the movement named by its causes: a slip out of the quarter reported as
+# a loss is the failure the case exists for, and the right words on the wrong
+# cause pass any pattern.
+c50="case50-what-moved-my-quarter.yaml"
+judges "$c50" case50 reports-the-two-causes 0 "!the judge says NO"
+judges "$c50" case50 calls-the-slip-a-loss 1 "the judge says NO to: Criterion 2." "!the judge says NO to: Criterion 1."
+
 # --- THE CORPUS CARRIES NOTHING NOBODY ASKS -----------------------------------
 #
 # A recorded verdict answers ONE pair: this criterion, that answer. Reword the
