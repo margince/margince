@@ -399,6 +399,51 @@
           ]
         }
       }
+    },
+    "web": {
+      "description": "Web is the operator's published-documents section.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "security_txt": {
+          "description": "SecurityTxt is served at /.well-known/security.txt when set.",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "required": [
+            "contact",
+            "expires"
+          ],
+          "properties": {
+            "contact": {
+              "description": "Contact is one or more URIs a finder reports to: mailto:, https: or tel:.",
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1
+            },
+            "expires": {
+              "description": "Expires is the RFC 3339 instant after which a reader treats the file as stale.",
+              "type": "string",
+              "format": "date-time"
+            },
+            "policy": {
+              "description": "Policy is an optional https: link to the disclosure policy.",
+              "type": "string"
+            },
+            "preferred_languages": {
+              "description": "PreferredLanguages is an optional list of language tags (en, de) a report may be written in.",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
     }
   },
   "$defs": {

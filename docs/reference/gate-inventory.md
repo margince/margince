@@ -156,6 +156,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `summarytiermarks_test.go` | H2 | A 🟢 or 🟡 in an operation's SUMMARY is a claim about that operation's autonomy tier, and it has to be the tier the operation actually declares. |
 | `teamoutlookmirror_test.go` | H3 | The team's frozen outlook and the rep's are the same fact over different books, so they are the same SHAPE or one of them is lying. |
 | `transcriptmarker_test.go` | H3 | One value, spelled in two modules, because a module never imports a sibling. |
+| `webtierheaders_test.go` | H2 | The app shell and the api send the same browser-facing headers. |
 | `wonreasondetailbound_test.go` | H2 | The paperless-win detail's length bound is ONE number, in three places that each need it. |
 | `workflowactor_test.go` | H2 | The id a workflow write is attributed to, and the id the selectors that recognise those writes look for, are ONE id. |
 | `worklistbounds_test.go` | H2 | The worklist reports a source as possibly having more work behind it when its lane came back exactly at its bound. |

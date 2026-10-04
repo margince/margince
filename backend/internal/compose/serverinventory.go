@@ -485,6 +485,10 @@ type Server struct {
 
 	// listsEnabled is the deployment's lists.enabled (WithListsEnabled).
 	listsEnabled bool
+
+	// securityTxt is the rendered web.security_txt (WithSecurityTxt); empty
+	// leaves /.well-known/security.txt unmounted.
+	securityTxt string
 }
 
 var _ crmcontracts.ServerInterface = Server{}

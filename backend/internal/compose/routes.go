@@ -262,6 +262,7 @@ func operationalMux(srv Server, pool *pgxpool.Pool, log *slog.Logger, identitySv
 	}
 	mountProviderPushWebhooks(mux, srv, log)
 	mountInbound(mux, identitySvc, log)
+	mountSecurityTxt(mux, srv.securityTxt)
 	return mux
 }
 

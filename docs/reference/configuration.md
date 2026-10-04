@@ -1307,6 +1307,43 @@ list is declared in source (`internal/compose/bodyceiling.go`) and is what keeps
 a route carrying no file from obtaining the wider bound by sending a multipart
 header; adding to it is a code change with two fitness gates over it.
 
+### security.txt
+
+The `web.security_txt` block publishes an [RFC 9116](https://www.rfc-editor.org/rfc/rfc9116)
+file at `/.well-known/security.txt`, the place a security researcher looks for
+whom to tell about a vulnerability. The contact is the **operator's**: whoever
+runs this installation, not whoever writes the software. Nothing is
+compiled in, so an installation without the block answers that path with 404.
+
+```yaml
+web:
+  security_txt:
+    contact:                      # required, one or more
+      - mailto:security@example.org
+      - https://example.org/report-a-vulnerability
+    expires: "2030-01-01T00:00:00Z"   # required, RFC 3339
+    policy: https://example.org/disclosure-policy   # optional
+    preferred_languages: [en, de]                   # optional
+```
+
+| Key | Rule | Renders as |
+|---|---|---|
+| `contact` | at least one `mailto:`, `https:` or `tel:` URI | one `Contact:` line each, in order |
+| `expires` | required; an RFC 3339 date-time | `Expires:`, in UTC |
+| `policy` | optional; an `https:` URL | `Policy:` |
+| `preferred_languages` | optional; language tags such as `en` or `de-CH` | one `Preferred-Languages:` line, comma-separated |
+
+A value that breaks a rule is a boot error naming the key. An `expires` that has
+already passed, or that is more than a year away (RFC 9116 recommends less), is
+a boot **warning**: the api keeps serving the file, because RFC 9116 leaves the
+staleness judgement to the reader, but the log says to move the date.
+
+The api serves the file, since it holds this configuration, as
+`text/plain; charset=utf-8`. Route `/.well-known/security.txt` to the api by
+that exact path (see Routing in [deployment.md](../deployment.md)). If the
+ingress leaves it on the web service instead, the web tier answers 404, the same
+as an installation with no file.
+
 ### License
 
 The `license:` block points at the installation's entitlement token. It is
