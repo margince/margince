@@ -72,6 +72,7 @@ func TestADecisionWaitingCarriesTheKindItAsksAbout(t *testing.T) {
 		"promote_lead":        "magic.action.approval_promote_lead",
 		"overnight":           "magic.action.approval_overnight",
 		"transcript_proposal": "magic.action.approval_transcript_proposal",
+		"commitment_task":     "magic.action.approval_commitment_task",
 	}
 	seen := make(map[string]string, len(want))
 	for kind, key := range want {

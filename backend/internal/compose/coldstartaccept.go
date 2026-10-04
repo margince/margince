@@ -91,6 +91,7 @@ func approvalsServiceWithEffects(pool *pgxpool.Pool) *approvals.Service {
 		activities.NewStore(InstallationDB(pool)), identity.NewService(pool)))
 	svc.WithEffect(CommitmentTaskKind, commitmentTaskEffect(svc,
 		activities.NewStore(InstallationDB(pool)), contacts.NewStore(InstallationDB(pool))))
+	svc.WithPrecheck(CommitmentTaskKind, commitmentTaskPrecheck())
 	svc.WithEffect(deals.StageProgressionKind, stageProgressionEffect(svc,
 		deals.NewStore(InstallationDB(pool), DealsInstallation())))
 	svc.WithPrecheck(deals.StageProgressionKind, stageProgressionPrecheck())

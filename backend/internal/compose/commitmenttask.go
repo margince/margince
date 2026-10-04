@@ -167,6 +167,43 @@ func commitmentTaskEffect(
 	}
 }
 
+// commitmentTaskPrecheck refuses an edit that reaches past the promise's
+// wording and its day. Everything else is what the reviewer agreed to: the
+// locator in particular is the key that remembers the promise, and an edited
+// one would let an accepted task escape that memory or block another.
+func commitmentTaskPrecheck() approvals.ReleasePrecheck {
+	return func(_ context.Context, staged, edited json.RawMessage) error {
+		if len(edited) == 0 {
+			return nil
+		}
+		var before, after CommitmentTaskProposal
+		if err := json.Unmarshal(staged, &before); err != nil {
+			return fmt.Errorf("compose: unmarshal staged commitment proposal: %w", err)
+		}
+		if err := json.Unmarshal(edited, &after); err != nil {
+			return &approvals.InvalidEditError{Cause: err}
+		}
+		if _, err := time.Parse(time.DateOnly, after.DueDate); after.DueDate != "" && err != nil {
+			return &approvals.InvalidEditError{Cause: fmt.Errorf(
+				"the due date %q is not a date — write it as YYYY-MM-DD", after.DueDate)}
+		}
+		after.Summary, after.DueDate = before.Summary, before.DueDate
+		pinned, err := json.Marshal(after)
+		if err != nil {
+			return fmt.Errorf("compose: marshal edited commitment proposal: %w", err)
+		}
+		original, err := json.Marshal(before)
+		if err != nil {
+			return fmt.Errorf("compose: marshal staged commitment proposal: %w", err)
+		}
+		if string(pinned) != string(original) {
+			return &approvals.InvalidEditError{Cause: fmt.Errorf(
+				"only the promise's wording and its due date may be edited")}
+		}
+		return nil
+	}
+}
+
 // commitmentAcceptActor captures a task a human accepted from a proposal. The
 // promise is still the reader's suggestion; the human is on the decision's
 // audit row, which is where "who approved this" belongs.
