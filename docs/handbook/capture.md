@@ -394,12 +394,6 @@ about it, including why it is held: the reason describes what the message is
 about, so it is withheld with the content. An admin is no exception, and neither
 the audit log nor an export names a held message's subject or attachments.
 
-Private mail keeps no attachment files. When the thread is held as personal, or
-your own earlier verdict judged the sender a personal correspondent, Margince
-stores neither the files nor their bytes inside the stored original. The
-message itself is kept. Mail that arrived before the verdict keeps its files
-until the personal-mail purge removes it.
-
 When a message reached two mailboxes, each owner contributes what their own
 mailbox asks for and the message ends at the strictest of those. Sharing
 releases your own hold only; if a colleague is still holding it, the response

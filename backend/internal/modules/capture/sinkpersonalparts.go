@@ -43,9 +43,8 @@ const withheldPersonalParts = "capture_personal_parts_withheld"
 // the thread, made the message private.
 const verdictPersonalSender = "personal_sender"
 
-// messageIsPrivateTx is the one answer to "does this message keep its files",
-// asked before the raw store and again before staging, so the two cannot
-// disagree about one message.
+// messageIsPrivateTx answers "does this message keep its files". The raw store
+// and staging both call it with the same record.
 func messageIsPrivateTx(
 	ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, fields ActivityFields,
 ) (bool, string, error) {
@@ -92,7 +91,8 @@ func senderIsPersonalTx(
 		     AND NOT EXISTS (
 		       SELECT 1 FROM activity c
 		        WHERE c.counterparty_email = $2
-		          AND c.direction = 'outbound' AND c.counterparty_outbound_attested))`,
+		          AND c.direction = 'outbound' AND c.counterparty_outbound_attested
+		          AND c.archived_at IS NULL))`,
 		seat, address, PendingStatusNoise, KindPersonal, OverrideBusiness).Scan(&personal); err != nil {
 		return false, fmt.Errorf("capture: reading whether this sender is a personal correspondent: %w", err)
 	}
