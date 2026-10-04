@@ -53,7 +53,7 @@ may_call:
   - whoami
 
 must_call_with:
-  - change_lists.mode=add_member|bulk_update_records.verb=add_to_list
+  - change_lists.mode=add_member
   - bulk_update_records.mode=preview
   - bulk_update_records.mode=execute
   - bulk_update_records.verb=reassign_owner

@@ -33,6 +33,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -248,29 +249,32 @@ func TestTheLaneCanReachEveryToolACaseRequires(t *testing.T) {
 
 	required := 0
 	for _, c := range cases {
-		named := append([]string{}, c.Requires...)
-		for _, set := range c.RequiresOneOf {
-			named = append(named, set...)
+		held, minted := lanePassportScopes[c.Passport]
+		if !minted {
+			t.Errorf("case %s asks for passport %q, which the lane does not mint", c.Name, c.Passport)
+			continue
 		}
-		for _, tool := range named {
-			required++
+		// A one-of group holds when ANY member can be offered: the case lets the
+		// model take either door, so a member outside the passport's scopes
+		// narrows the choice and does not make the case unpassable.
+		reachable := func(tool string) bool {
 			want, known := scope[tool]
-			if !known {
-				t.Errorf("case %s requires %s and the served catalog has no such tool — the case "+
-					"can never pass, and it fails looking like a model that chose not to call it",
-					c.Name, tool)
-				continue
+			return known && held[want]
+		}
+		for _, tool := range c.Requires {
+			required++
+			if !reachable(tool) {
+				t.Errorf("case %s requires %s, which is not in the listing its passport is shown "+
+					"(scopes %v) or not in the catalog at all — every run of this case is paid for "+
+					"and lost, and it fails looking like a model that chose not to call it",
+					c.Name, tool, sortedScopes(held))
 			}
-			held, known := lanePassportScopes[c.Passport]
-			if !known {
-				t.Errorf("case %s asks for passport %q, which the lane does not mint", c.Name, c.Passport)
-				continue
-			}
-			if !held[want] {
-				t.Errorf("case %s requires %s, which needs scope %q — its passport carries "+
-					"only %v, so the tool is never in the listing the assistant is shown. Every run "+
-					"of this case is paid for and lost.",
-					c.Name, tool, want, sortedScopes(held))
+		}
+		for _, set := range c.RequiresOneOf {
+			required++
+			if !slices.ContainsFunc(set, reachable) {
+				t.Errorf("case %s requires one of %v and none is in the listing its passport is "+
+					"shown (scopes %v)", c.Name, set, sortedScopes(held))
 			}
 		}
 	}

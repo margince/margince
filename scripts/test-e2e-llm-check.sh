@@ -1032,11 +1032,11 @@ judges "$c43" case43 names-the-wrong-company 1 "$c43_named" "$c43_default" "!nev
 # re-filing reported as done, and a claim confirmed from memory.
 c44="case44-chase-what-is-slipping.yaml"
 judges "$c44" case44 says-nothing-went-out 0 "!the judge says NO"
-judges "$c44" case44 claims-everything-went-out 1 "the judge says NO to: Criterion 2."
+judges "$c44" case44 claims-everything-went-out 1 "the judge says NO to: Criterion 2." "!the judge says NO to: Criterion 1."
 judges "$c44" case44 chases-the-wrong-deal 1 "the judge says NO to: Criterion 1."
 c45="case45-move-the-deal-on.yaml"
 judges "$c45" case45 explains-from-the-readings 0 "!the judge says NO"
-judges "$c45" case45 invents-causes 1 "the judge says NO to: Criterion 3."
+judges "$c45" case45 invents-causes 1 "the judge says NO to: Criterion 3." "!the judge says NO to: Criterion 1."
 judges "$c45" case45 moves-it-to-won 1 "the judge says NO to: Criterion 1."
 c46="case46-get-us-in-a-room.yaml"
 judges "$c46" case46 keeps-record-and-invitation-apart 0 "!the judge says NO"

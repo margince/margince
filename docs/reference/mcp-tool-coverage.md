@@ -100,7 +100,7 @@ Which model drove the lane, and how it went. The tool columns further down are t
 
 | Model | Cases run | Reached their bar | Below it | Runs passed | Reliability |
 |---|---:|---:|---:|---:|---:|
-| `claude-sonnet-5-5@claude-cli` | 28 of 28 | 28 | 0 | 81/84 | 96% |
+| `claude-sonnet-5-5@claude-cli` | 28 of 28 | 28 | 0 | 80/84 | 95% |
 | `gpt-5.6-sol@codex-cli` | 24 of 28 | 24 | 0 | 66/72 | 92% |
 
 > `gpt-5.6-sol@codex-cli` has no committed run for 4 of 28 cases.
@@ -190,7 +190,7 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case45_move_the_deal_on](../../e2e/llm/scenarios/case45-move-the-deal-on.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** The deal moves to the stage the call named<br>**2** The move leaves its reason on the deal<br>**3** The forecast change is explained from what was read | `advance_deal` or `progress_deal` |
 | [case45_move_the_deal_on](../../e2e/llm/scenarios/case45-move-the-deal-on.yaml) | `gpt-5.6-sol@codex-cli` | pass | 3/3 | 2 | **1** The deal moves to the stage the call named<br>**2** The move leaves its reason on the deal<br>**3** The forecast change is explained from what was read | `advance_deal` or `progress_deal` |
 | [case46_get_us_in_a_room](../../e2e/llm/scenarios/case46-get-us-in-a-room.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** A recorded booking is not an invitation<br>**2** The held invitation is reported as waiting<br>**3** The two are kept apart | `book_meeting`, `invite_meeting` |
-| [case47_tidy_the_fair_list](../../e2e/llm/scenarios/case47-tidy-the-fair-list.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** The list is read before it is changed<br>**2** A wrong promotion is demoted, not archived<br>**3** The bulk change covers who is left | `bulk_update_records`, `change_lists`, `demote_lead`, `read_lists` |
+| [case47_tidy_the_fair_list](../../e2e/llm/scenarios/case47-tidy-the-fair-list.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/3 | 2 | **1** The list is read before it is changed<br>**2** A wrong promotion is demoted, not archived<br>**3** The bulk change covers who is left | `bulk_update_records`, `change_lists`, `demote_lead`, `read_lists` |
 | [case48_that_whole_thread_is_filed_wrong](../../e2e/llm/scenarios/case48-that-whole-thread-is-filed-wrong.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** A held move is not reported as done<br>**2** What is waiting is named well enough to decide | `relink_thread` |
 | [case49_who_can_introduce_us](../../e2e/llm/scenarios/case49-who-can-introduce-us.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** The route is a colleague's, not the caller's<br>**2** The thin deals are the flagged ones<br>**3** The official number is the report's, not the assistant's sum<br>**4** A claim is checked against the records, not recalled | `at_risk_relationships`, `intro_path_to`, `read_reporting` |
 | [case5_before_the_meeting](../../e2e/llm/scenarios/case5-before-the-meeting.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** A briefing arrives without naming a record<br>**2** The contacts are named, not their seats<br>**3** An empty calendar answer is not an empty diary<br>**5** The unkept promise is noticed | `search_records` |
@@ -256,7 +256,7 @@ The numbers in the table above, in words. Source: [`e2e/llm/criteria.yaml`](../.
 | `case46_get_us_in_a_room` | 1 | **A recorded booking is not an invitation** | The meeting with Greta is on record and the answer says recording it notified nobody. |
 | `case46_get_us_in_a_room` | 2 | **The held invitation is reported as waiting** | Omar's calendar invitation needs a human's approval and has not gone; the answer does not call him invited or the meeting booked. |
 | `case46_get_us_in_a_room` | 3 | **The two are kept apart** | The record and the invitation are reported separately, never merged into one sent, confirmed booking. |
-| `case47_tidy_the_fair_list` | 1 | **The list is read before it is changed** | The answer shows the shortlist was read — Mara was on it, and who else — the baseline every later change is measured against. |
+| `case47_tidy_the_fair_list` | 1 | **The list is read before it is changed** | The answer shows the shortlist was read — Mara was on it, and who else was or how many — the baseline every later change is measured against. |
 | `case47_tidy_the_fair_list` | 2 | **A wrong promotion is demoted, not archived** | Mara goes back to being a lead and off the list, through the demotion that undoes her promotion rather than an archive of her contact. |
 | `case47_tidy_the_fair_list` | 3 | **The bulk change covers who is left** | The hand-over to Sofia covers everybody left on the list plus the one added, not the one taken off; the preview before it is held by the scenario's tool checks. |
 | `case48_that_whole_thread_is_filed_wrong` | 1 | **A held move is not reported as done** | Re-filing a conversation waits for a human's release, and the answer says the mails have not moved yet. |
@@ -264,7 +264,7 @@ The numbers in the table above, in words. Source: [`e2e/llm/criteria.yaml`](../.
 | `case49_who_can_introduce_us` | 1 | **The route is a colleague's, not the caller's** | The introduction runs through Sofia, who knows Heike at the account; the caller cannot introduce themself. |
 | `case49_who_can_introduce_us` | 2 | **The thin deals are the flagged ones** | The deals resting on one relationship or gone cold are named from the tool's own sweep, not from the model's reading of every deal. |
 | `case49_who_can_introduce_us` | 3 | **The official number is the report's, not the assistant's sum** | The bookings figure is read from the standard reporting reading, with its coverage, and is not recomputed and passed off as it. |
-| `case49_who_can_introduce_us` | 4 | **A claim is checked against the records, not recalled** | The price claim is tested against the logged mail and cites the mail that supports it, rather than being confirmed from memory. |
+| `case49_who_can_introduce_us` | 4 | **A claim is checked against the records, not recalled** | The price claim is tested against the logged mail: the answer says how many mails support it and cites the one that does, not memory. |
 | `case4_use_the_moment` | 1 | **Nearby is worked out to be a distance search** | The request names no company, no address and no tool, and the assistant has to find that the workspace can be searched by proximity rather than reporting that it cannot. |
 | `case4_use_the_moment` | 6 | **Check with the owner before turning up** | The assistant tells the rep to confirm with the account owner rather than acting on a proximity answer alone. |
 | `case5_before_the_meeting` | 1 | **A briefing arrives without naming a record** | The request names the account the way a contact says it out loud, "Vietnam partner", and not the way the record carries it — so an answer that only repeats the question has found nothing, and what the record holds beyond it is the evidence that it was opened. |
@@ -294,10 +294,7 @@ Every run of every case requiring this tool passed, for the model named.
 | `send_company_email` | 1.00 | 3 | `case44_chase_what_is_slipping` |
 | `compose_analytics_report` | 1.00 | 3 | `case20_put_it_in_the_board_pack` |
 | `preview_import` | 1.00 | 6 | `case10_finish_the_import`, `case3_spreadsheet` |
-| `bulk_update_records` | 1.00 | 3 | `case47_tidy_the_fair_list` |
-| `read_lists` | 1.00 | 3 | `case47_tidy_the_fair_list` |
 | `send_message` | 1.00 | 3 | `case44_chase_what_is_slipping` |
-| `change_lists` | 1.00 | 3 | `case47_tidy_the_fair_list` |
 | `update_record` | 1.00 | 6 | `case33_two_cards_for_one_company`, `case43_the_fair_leads_are_prospects` |
 | `query_workspace` | 1.00 | 3 | `case4_use_the_moment` |
 | `forecast_readings` | 1.00 | 3 | `case21_what_are_we_closing` |
@@ -308,7 +305,6 @@ Every run of every case requiring this tool passed, for the model named.
 | `book_meeting` | 1.00 | 3 | `case46_get_us_in_a_room` |
 | `check_availability` | 1.00 | 3 | `case23_find_us_a_slot` |
 | `decide_approval` | 1.00 | 6 | `case43_the_fair_leads_are_prospects`, `case8_whats_waiting` |
-| `demote_lead` | 1.00 | 3 | `case47_tidy_the_fair_list` |
 | `promote_lead` | 1.00 | 3 | `case40_sort_the_queue` |
 | `merge_records` | 1.00 | 3 | `case33_two_cards_for_one_company` |
 | `archive_record` | 1.00 | 3 | `case33_two_cards_for_one_company` |
@@ -379,9 +375,13 @@ Driven, and not every run passed. Open the case to see what was asked.
 
 | Tool | Reliability | Passed | Below its bar | Required by |
 |---|---:|---:|---|---|
+| `bulk_update_records` | 0.67 | 2/3 | — | `case47_tidy_the_fair_list` |
+| `read_lists` | 0.67 | 2/3 | — | `case47_tidy_the_fair_list` |
 | `log_activity` | 0.67 | 4/6 | — | `case1_log_it`, `case42_can_i_answer_on_whatsapp` |
+| `change_lists` | 0.67 | 2/3 | — | `case47_tidy_the_fair_list` |
 | `create_record` | 0.83 | 5/6 | — | `case1_log_it`, `case2_business_card` |
 | `search_context` | 0.67 | 2/3 | — | `case6_ask_the_company` |
+| `demote_lead` | 0.67 | 2/3 | — | `case47_tidy_the_fair_list` |
 | `list_channel_providers` | 0.67 | 2/3 | — | `case42_can_i_answer_on_whatsapp` |
 
 ### `gpt-5.6-sol@codex-cli`

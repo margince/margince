@@ -19,8 +19,8 @@
       "cases_that_reached_their_bar": 28,
       "cases_below_their_bar": 0,
       "runs": 84,
-      "passed": 81,
-      "reliability": 0.9642857142857143,
+      "passed": 80,
+      "reliability": 0.9523809523809523,
       "cases_below_their_bar_named": [],
       "route": "Claude Code CLI"
     },
@@ -791,7 +791,7 @@
         {
           "model": "claude-sonnet-5-5@claude-cli",
           "runs": 3,
-          "passed": 3,
+          "passed": 2,
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
@@ -1297,7 +1297,7 @@
       "case": "case47_tidy_the_fair_list",
       "number": 1,
       "name": "The list is read before it is changed",
-      "statement": "The answer shows the shortlist was read — Mara was on it, and who else — the baseline every later change is measured against."
+      "statement": "The answer shows the shortlist was read — Mara was on it, and who else was or how many — the baseline every later change is measured against."
     },
     {
       "case": "case47_tidy_the_fair_list",
@@ -1345,7 +1345,7 @@
       "case": "case49_who_can_introduce_us",
       "number": 4,
       "name": "A claim is checked against the records, not recalled",
-      "statement": "The price claim is tested against the logged mail and cites the mail that supports it, rather than being confirmed from memory."
+      "statement": "The price claim is tested against the logged mail: the answer says how many mails support it and cites the one that does, not memory."
     },
     {
       "case": "case4_use_the_moment",
@@ -2103,8 +2103,8 @@
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
           "runs": 3,
-          "passed": 3,
-          "reliability": 1,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
           "cases_below_their_bar": []
         }
       }
@@ -2124,8 +2124,8 @@
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
           "runs": 3,
-          "passed": 3,
-          "reliability": 1,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
           "cases_below_their_bar": []
         }
       }
@@ -2204,8 +2204,8 @@
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
           "runs": 3,
-          "passed": 3,
-          "reliability": 1,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
           "cases_below_their_bar": []
         }
       }
@@ -2614,8 +2614,8 @@
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
           "runs": 3,
-          "passed": 3,
-          "reliability": 1,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
           "cases_below_their_bar": []
         }
       }

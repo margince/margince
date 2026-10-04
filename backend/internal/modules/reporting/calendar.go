@@ -86,7 +86,7 @@ func TargetWindow(interval crmcontracts.ReportingWindow, basis string, calendar 
 		start = quarterStart(day, calendar.FiscalStartMonth)
 		months = 3
 	default:
-		return crmcontracts.ReportingWindow{}, invalid("choose target_basis month or fiscal_quarter; a reading with no target still carries one")
+		return crmcontracts.ReportingWindow{}, invalid("choose target_basis month or fiscal_quarter; it is required even when you read no target")
 	}
 	return crmcontracts.ReportingWindow{StartAt: start, EndAt: start.AddDate(0, months, 0)}, nil
 }

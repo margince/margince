@@ -71,7 +71,7 @@ judge:
   - "Criterion 1. The answer names Sofia Meier as the colleague who could make the introduction and Heike Brandt as the person she knows at Nordwind Armaturen. Answer no if it names the user themself as the route, names someone else, or says nobody here knows anyone there."
   - "Criterion 2. The answer names Körber Sensorik Rollout and Reply Deutschland Verlängerung as the open deals resting on one person or gone cold, and does not list a deal the tool did not flag. Answer no if it names neither, or names deals that are not at risk."
   - "Criterion 3. The answer quotes the bookings figure from the standard reporting reading it made, with its period or coverage, and does not present a figure it computed itself as the official one. Answer no if it gives a number with no reading behind it, or says it could not read the reporting figure without having tried."
-  - "Criterion 4. The answer cites the Körber Sensorik mail, where the customer calls price the biggest obstacle, as the support found for the claim, and does not invent support. Answer no if it confirms the claim from memory with no citation, or cites a record that does not mention price."
+  - "Criterion 4. The answer says one inbound mail supports the claim and cites it: the Körber Sensorik mail, where the customer calls price the biggest obstacle. It does not invent support. Answer no if it confirms the claim from memory with no citation, or cites a record that does not mention price."
 
 runs: 3
 pass_at: 2

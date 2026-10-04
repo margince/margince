@@ -404,7 +404,7 @@ cases:
       name: The list is read before it is changed
       statement: >-
         The answer shows the shortlist was read — Mara was on it, and who else
-        — the baseline every later change is measured against.
+        was or how many — the baseline every later change is measured against.
     2:
       name: A wrong promotion is demoted, not archived
       statement: >-
@@ -446,5 +446,5 @@ cases:
     4:
       name: A claim is checked against the records, not recalled
       statement: >-
-        The price claim is tested against the logged mail and cites the mail
-        that supports it, rather than being confirmed from memory.
+        The price claim is tested against the logged mail: the answer says how
+        many mails support it and cites the one that does, not memory.

@@ -285,15 +285,17 @@ except Exception: print("")')"
   # A config the CLI cannot connect with produces an assistant with no tools,
   # which reads downstream as a model that chose not to call anything. Fail
   # here instead, where the cause is still visible.
-  local probe
-  probe="$(curl -sS -o /dev/null -w '%{http_code}' -X POST "$APP_BASE/mcp" \
-    -H "Authorization: Bearer $PASSPORT" -H 'Content-Type: application/json' \
-    -H 'Accept: application/json, text/event-stream' \
-    -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"e2e-llm","version":"1"}}}')"
-  [[ "$probe" = "200" ]] || {
-    echo "the freshly minted passport cannot reach $APP_BASE/mcp (HTTP $probe)" >&2
-    exit 1
-  }
+  local probe token
+  for token in "$PASSPORT_NARROW" "$PASSPORT_WIDE"; do
+    probe="$(curl -sS -o /dev/null -w '%{http_code}' -X POST "$APP_BASE/mcp" \
+      -H "Authorization: Bearer $token" -H 'Content-Type: application/json' \
+      -H 'Accept: application/json, text/event-stream' \
+      -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"e2e-llm","version":"1"}}}')"
+    [[ "$probe" = "200" ]] || {
+      echo "a freshly minted passport cannot reach $APP_BASE/mcp (HTTP $probe)" >&2
+      exit 1
+    }
+  done
 }
 mint_passport
 

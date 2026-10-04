@@ -43,7 +43,7 @@ result cap. A CLI brings its vendor's own system prompt and agent loop, so its
 number is filed apart and never sits in the comparison column. The CLI routes
 are the cheap way to run a big sweep on a subscription.
 
-**Two credentials.** Every scenario runs on a passport holding `read` and
+**Two passports.** Every scenario runs on a passport holding `read` and
 `write`, which is what most jobs need. A scenario that sends, drafts or books
 declares `passport: wide`, and the lane presents a second passport that adds the
 `draft` and `send` scopes; without it those tools are never in the listing the
