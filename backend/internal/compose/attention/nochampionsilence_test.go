@@ -6,10 +6,9 @@ package attention
 // `false` is never sent, so silence is the only negative.
 //
 // `no_champion` carries a finding or it carries nothing. The contract says a
-// covered committee is absent alongside the three other non-findings, which
-// makes the four indistinguishable on the wire on purpose: a reader who cannot
-// see the seats must not be able to tell a covered committee from one they were
-// refused, because telling them apart IS the disclosure.
+// covered committee is absent alongside the other non-findings, so a reader who
+// cannot see the seats cannot tell a committee they were refused from a deal
+// with none, because telling them apart IS the disclosure.
 //
 // That rule lives in two places — the field's description in crm.yaml and
 // noChampionOf, which maps Covered to nil — and a description enforces nothing.

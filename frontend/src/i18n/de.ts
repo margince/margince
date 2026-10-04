@@ -11152,6 +11152,7 @@ export const de = {
   "worklist.because.quiet_days.value_other": "seit {value} Tagen still",
   "worklist.because.no_next_step": "kein nächster Schritt geplant",
   "worklist.because.no_champion": "kein Champion",
+  "worklist.because.champion_unknown": "Champion unbekannt",
   "worklist.because.promised": "von dir zugesagt",
   "worklist.because.approved_and_failed": "freigegeben, aber nicht ausgeführt",
   "worklist.because.blocks_customer_work": "Kontakt wartet darauf",

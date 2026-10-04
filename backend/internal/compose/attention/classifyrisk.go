@@ -42,6 +42,10 @@ func classifyRisk(item crmcontracts.AttentionItem, asOf time.Time, bar materialB
 	// nobody is arguing for, and the reason is what the rep acts on.
 	if item.Deal != nil && item.Deal.NoChampion != nil && *item.Deal.NoChampion {
 		row.Because = append(row.Because, reason("no_champion", nil))
+	} else if item.Deal != nil && item.Deal.ChampionUnknown != nil && *item.Deal.ChampionUnknown {
+		// Nobody has said who argues for it. The rep's move is to find out,
+		// which is not the same as being told nobody does.
+		row.Because = append(row.Because, reason("champion_unknown", nil))
 	}
 	// Nothing planned to move it: the intervention is to agree the next step.
 	if item.Deal != nil && item.Deal.NoNextStep != nil && *item.Deal.NoNextStep {
@@ -111,10 +115,10 @@ func dealFactsOf(item crmcontracts.AttentionItem) *crmcontracts.WorklistDealFact
 		OwnerId:              item.Deal.OwnerId,
 		AmountMinor:          item.Deal.AmountMinor,
 		Currency:             item.Deal.Currency,
-		// A finding or nothing. `false` is never sent, so a covered committee
-		// reaches the wire absent alongside the unreadable and the seatless one
-		// — a reader who cannot see the seats must not be able to tell those
-		// apart, because telling them apart is the disclosure.
+		// A finding or nothing. `false` is never sent: an unreadable committee
+		// and a seatless deal must reach the wire alike, because a reader able
+		// to tell them apart learns that seats exist they may not see. Both say
+		// `champion_unknown` in the reasons instead.
 		NoChampion: aFindingOnly(item.Deal.NoChampion),
 	}
 	// The close date rides on the lane item's own due moment, and the idle
@@ -134,9 +138,9 @@ func dealFactsOf(item crmcontracts.AttentionItem) *crmcontracts.WorklistDealFact
 // aFindingOnly drops a stated false, so absence is this field's only negative.
 //
 // Both producers of the champion answer call it, because one rule spelled twice
-// drifts: a covered committee, an unreadable one and a seatless deal must reach
-// the wire alike, and a reader able to tell them apart is the disclosure the
-// rule exists to refuse.
+// drifts: an unreadable committee and a seatless deal must reach the wire
+// alike, and a reader able to tell them apart is the disclosure the rule exists
+// to refuse.
 func aFindingOnly(answer *bool) *bool {
 	if answer == nil || !*answer {
 		return nil

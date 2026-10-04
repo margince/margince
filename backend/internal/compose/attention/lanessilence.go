@@ -60,6 +60,9 @@ type RiskyDeal struct {
 	// seat, or there is no committee: both would render as "nobody is carrying
 	// this", and a champion the reader may not read is still a champion.
 	NoChampion *bool
+	// ChampionUnknown says nobody has recorded who argues for the deal, so
+	// whether it has a champion is not known. Never set beside NoChampion.
+	ChampionUnknown bool
 	// NoNextStep says the deal carries no open task of its own.
 	NoNextStep bool
 }

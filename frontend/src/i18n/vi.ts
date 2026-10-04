@@ -11070,6 +11070,7 @@ export const vi = {
   "worklist.because.quiet_days.value_other": "im lặng {value} ngày",
   "worklist.because.no_next_step": "chưa có bước tiếp theo",
   "worklist.because.no_champion": "không có người ủng hộ",
+  "worklist.because.champion_unknown": "chưa rõ người ủng hộ",
   "worklist.because.promised": "bạn đã hứa",
   "worklist.because.approved_and_failed": "bạn đã duyệt nhưng nó không chạy",
   "worklist.because.blocks_customer_work": "một khách hàng đang bị chặn",

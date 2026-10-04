@@ -11306,6 +11306,7 @@ export const en = {
   "worklist.because.quiet_days.value_other": "quiet for {value} days",
   "worklist.because.no_next_step": "no next step planned",
   "worklist.because.no_champion": "no champion",
+  "worklist.because.champion_unknown": "champion unknown",
   "worklist.because.promised": "committed by you",
   "worklist.because.approved_and_failed": "approved but did not run",
   "worklist.because.blocks_customer_work": "customer waiting on this",

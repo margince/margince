@@ -28,6 +28,7 @@ export const KNOWN_REASONS = {
   below_material: true,
   quiet_days: true,
   no_champion: true,
+  champion_unknown: true,
   promised: true,
   approved_and_failed: true,
   blocks_customer_work: true,

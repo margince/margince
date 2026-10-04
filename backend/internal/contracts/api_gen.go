@@ -18369,6 +18369,7 @@ const (
 	WorklistReasonKindBelowMaterial      WorklistReasonKind = "below_material"
 	WorklistReasonKindBlocksCustomerWork WorklistReasonKind = "blocks_customer_work"
 	WorklistReasonKindBuyerWroteLast     WorklistReasonKind = "buyer_wrote_last"
+	WorklistReasonKindChampionUnknown    WorklistReasonKind = "champion_unknown"
 	WorklistReasonKindClosingSoon        WorklistReasonKind = "closing_soon"
 	WorklistReasonKindDueToday           WorklistReasonKind = "due_today"
 	WorklistReasonKindEarlierRequests    WorklistReasonKind = "earlier_requests"
@@ -18410,6 +18411,8 @@ func (e WorklistReasonKind) Valid() bool {
 	case WorklistReasonKindBlocksCustomerWork:
 		return true
 	case WorklistReasonKindBuyerWroteLast:
+		return true
+	case WorklistReasonKindChampionUnknown:
 		return true
 	case WorklistReasonKindClosingSoon:
 		return true
@@ -23943,6 +23946,16 @@ type AttentionCounts struct {
 // reader's own language; a label composed server-side would not be.
 type AttentionDealFacts struct {
 	AmountMinor *int64 `json:"amount_minor,omitempty"`
+
+	// ChampionUnknown `true` when an imported deal leaves its champion unsaid: no seat the caller
+	// can read holds the champion role, whether no seat was recorded, a seat is
+	// withheld from the caller, or the seats carry other roles. The source system
+	// may have had no such role, so this is not a finding that nobody is carrying
+	// the deal. Never sent beside `no_champion`, and `false` is never sent.
+	//
+	// Absent on a deal created here, on a deal whose champion is named, and when
+	// the server did not assess coverage.
+	ChampionUnknown *bool `json:"champion_unknown,omitempty"`
 
 	// CloseDateProvisional True when the close date has not been confirmed by a colleague.
 	CloseDateProvisional *bool   `json:"close_date_provisional,omitempty"`
@@ -45880,7 +45893,9 @@ type WorklistDealFacts struct {
 	//
 	// Absence therefore says nothing either way. A client MUST NOT render it as
 	// "nobody is carrying this", and MUST NOT render it as "somebody is": the four
-	// cases are indistinguishable on the wire by design.
+	// cases are indistinguishable in this field by design. An imported deal whose
+	// readable committee names no champion carries `champion_unknown` in the item's
+	// `because` instead, which says so without telling those cases apart.
 	NoChampion     *bool               `json:"no_champion,omitempty"`
 	OwnerId        *openapi_types.UUID `json:"owner_id,omitempty"`
 	QuietDays      *int                `json:"quiet_days,omitempty"`

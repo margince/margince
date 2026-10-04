@@ -39941,6 +39941,17 @@ export interface components {
              *     which carries the same fact out under the same rule.
              */
             no_champion?: boolean | null;
+            /**
+             * @description `true` when an imported deal leaves its champion unsaid: no seat the caller
+             *     can read holds the champion role, whether no seat was recorded, a seat is
+             *     withheld from the caller, or the seats carry other roles. The source system
+             *     may have had no such role, so this is not a finding that nobody is carrying
+             *     the deal. Never sent beside `no_champion`, and `false` is never sent.
+             *
+             *     Absent on a deal created here, on a deal whose champion is named, and when
+             *     the server did not assess coverage.
+             */
+            champion_unknown?: boolean | null;
             /** @description `true` when the deal carries no open task of its own, so nothing is planned to move it. Never `false`: absent means a step is planned or the server did not check. */
             no_next_step?: boolean | null;
         };
@@ -41544,7 +41555,7 @@ export interface components {
              * @description Which fact this is. The client writes the phrase.
              * @enum {string}
              */
-            kind: "pinned" | "buyer_wrote_last" | "waiting_days" | "overdue" | "due_today" | "closing_soon" | "expected_revenue" | "material" | "below_material" | "quiet_days" | "no_champion" | "promised" | "approved_and_failed" | "blocks_customer_work" | "routine" | "repeated_failure" | "legal_deadline" | "opened_overdue" | "earlier_requests" | "first_asked" | "no_next_step" | "meeting_soon" | "meeting_unprepared" | "response_overdue" | "response_due_soon" | "unassigned" | "stale" | "no_reply_history" | "asks_nothing" | "addressed_elsewhere" | "outcome_unrecorded";
+            kind: "pinned" | "buyer_wrote_last" | "waiting_days" | "overdue" | "due_today" | "closing_soon" | "expected_revenue" | "material" | "below_material" | "quiet_days" | "no_champion" | "champion_unknown" | "promised" | "approved_and_failed" | "blocks_customer_work" | "routine" | "repeated_failure" | "legal_deadline" | "opened_overdue" | "earlier_requests" | "first_asked" | "no_next_step" | "meeting_soon" | "meeting_unprepared" | "response_overdue" | "response_due_soon" | "unassigned" | "stale" | "no_reply_history" | "asks_nothing" | "addressed_elsewhere" | "outcome_unrecorded";
             value?: components["schemas"]["WorklistValue"];
         };
         /**
@@ -41826,7 +41837,9 @@ export interface components {
              *
              *     Absence therefore says nothing either way. A client MUST NOT render it as
              *     "nobody is carrying this", and MUST NOT render it as "somebody is": the four
-             *     cases are indistinguishable on the wire by design.
+             *     cases are indistinguishable in this field by design. An imported deal whose
+             *     readable committee names no champion carries `champion_unknown` in the item's
+             *     `because` instead, which says so without telling those cases apart.
              */
             no_champion?: boolean | null;
         };
