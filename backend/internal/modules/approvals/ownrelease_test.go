@@ -17,7 +17,9 @@ import (
 // carries write and acts for the human the proposal is staged for.
 func TestAStagedCallIsReleasableByTheCallerOnlyWhenDecideWouldAllowIt(t *testing.T) {
 	company := json.RawMessage(`{"entity_type":"company"}`)
-	undoableCompanyOnly := func(_, _ string, change json.RawMessage) bool { return string(change) == string(company) }
+	undoableCompanyOnly := func(_ context.Context, _, _ string, change json.RawMessage) bool {
+		return string(change) == string(company)
+	}
 	lender := ids.NewV7()
 	agent := func(scopes ...principal.Scope) principal.Principal {
 		return principal.Principal{

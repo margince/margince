@@ -10,6 +10,7 @@ package privacy
 
 import (
 	"fmt"
+	"github.com/margince/margince/backend/internal/shared/kernel/retentionscope"
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
@@ -126,14 +127,8 @@ func floorWindowEnd(intervalArg, anchorArg int) string {
 // Like the deal arm, this is the FALLBACK for rows that predate the stamp.
 // Every project link written from now on carries the class
 // (activities.StampCorrespondenceForProject), and the class decides.
-const handelsbriefArm = `a.retention_class IS NOT NULL
-		    OR (a.retention_class IS NULL AND EXISTS (
-		          SELECT 1 FROM activity_link hl
-		          JOIN deal hd ON hd.id = hl.deal_id
-		          WHERE hl.activity_id = a.id AND hl.entity_type = 'deal'
-		            AND (hd.status = 'won'
-		                 OR EXISTS (SELECT 1 FROM offer o
-		                             WHERE o.deal_id = hd.id AND o.status <> 'draft'))))
+var handelsbriefArm = `a.retention_class IS NOT NULL
+		    OR (a.retention_class IS NULL AND ` + retentionscope.QualifyingDealLink("a.id") + `)
 		    OR (a.retention_class IS NULL AND EXISTS (
 		          SELECT 1 FROM activity_link pl
 		          WHERE pl.activity_id = a.id AND pl.entity_type = 'project'))`

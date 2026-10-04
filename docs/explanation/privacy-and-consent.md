@@ -329,15 +329,20 @@ rename does not rewrite what the record says. The one way out is **Undo filing**
   `activity.updated` event carrying `project_filing_undone`.
 - It is allowed only when the project filing is the **sole** basis. A won deal, a sent offer, a
   controller's pin or a deal link that still qualifies keeps the class (`409 other_basis_remains` /
-  `qualifying_deal`), and an activity a statutory hold has already restricted never loses it
-  (`409 restricted`). `GET /activities/{id}/project-filing` answers the same judgement, plus the
+  `qualifying_deal`), an activity a statutory hold has already restricted never loses it
+  (`409 restricted`), and a legal hold on any record it is linked to, the project included, outranks
+  the undo (`409 legal_hold`). A project the member cannot see still holds the activity
+  (`409 hidden_project`); the read shows such a project unnamed and a decision about it as a bare
+  moment. `GET /activities/{id}/project-filing` answers the same judgement, plus the
   decisions already taken, so the screen and the write cannot disagree.
 - The database enforces the same rule underneath. The class may clear only inside a transaction that
   declares the undo for that one activity, from an unrestricted row with no evidence and no project link
   left, and the declaration may delete project-filing evidence and nothing else. Every other change to
   the class or its timestamp is still refused.
 - An agent never decides it, even holding an administrator's passport. It can stage and, on an attended
-  call, release the relink that files an activity under a project, because a member can take that back.
+  call, release the relink that files an activity under a project, but only while the undo could still
+  take the filing back: an activity that is restricted, held through a link or covered by an open erasure
+  request is released by a member in the CRM, because that filing would be permanent.
 
 Over-retention is an argument to have with a supervisory authority, and destruction is irreversible,
 which is why the undo is narrow and the refusals are in the data layer as well as the writer.

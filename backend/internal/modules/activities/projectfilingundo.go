@@ -28,17 +28,13 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/statedreason"
 )
 
-// undoDeclarationSetting is the transaction-local setting the two retention
+// UndoDeclarationSetting is the transaction-local setting the two retention
 // triggers read to admit an undo; migration 1791118500 spells the same name.
 // It carries the activity id, so one declaration cannot be spent on another row.
-const undoDeclarationSetting = "margince.project_filing_undo"
-
-// maxUndoReason is RetentionOverrideRequest.reason's maxLength. privacy's
-// StatedReason bounds the same field, but a module does not import a sibling, so
-// the two agree through the contract both decode.
-const maxUndoReason = 2000
+const UndoDeclarationSetting = "margince.project_filing_undo"
 
 // UndoProjectFiling takes an activity back out of the project it was filed
 // under and withdraws the retention class that filing gave it, in one
@@ -58,12 +54,28 @@ func (s *Store) UndoProjectFiling(ctx context.Context, id ids.ActivityID, reason
 	}
 	var out crmcontracts.ProjectFiling
 	err = s.tx(ctx, func(tx pgx.Tx) error {
+		// Deals and offers are locked before the activity, the order a deal's win
+		// takes (its own row, then the activity it stamps), so the two cannot
+		// wait on each other. The set is read once more under the activity lock:
+		// a deal linked in between was not locked, and the undo says so rather
+		// than judge it unprotected.
+		dealsBefore, err := shareLockQualifyingRecords(ctx, tx, id)
+		if err != nil {
+			return err
+		}
 		held, err := lockActivityForWrite(ctx, tx, id.UUID)
 		if err != nil {
 			return err
 		}
 		if err := auth.EnsureActivityWritableIn(ctx, tx, id.UUID, !held); err != nil {
 			return err
+		}
+		dealsAfter, err := linkedDealSignature(ctx, tx, id)
+		if err != nil {
+			return err
+		}
+		if dealsBefore != dealsAfter {
+			return fmt.Errorf("the activity's deals changed while the undo was being judged; retry: %w", apperrors.ErrConflict)
 		}
 		facts, err := readProjectFilingFacts(ctx, tx, id)
 		if err != nil {
@@ -95,11 +107,12 @@ func (s *Store) UndoProjectFiling(ctx context.Context, id ids.ActivityID, reason
 // whitespace passes a required-field check and says nothing, which is the
 // silent override the written reason exists to prevent.
 func parseUndoReason(reason string) (string, error) {
-	stated := strings.TrimSpace(reason)
-	if stated == "" || len([]rune(stated)) > maxUndoReason {
+	stated, ok := statedreason.Trim(reason)
+	if !ok {
 		return "", httperr.Validation("reason", "required", fmt.Sprintf(
 			"undoing a project filing withdraws a retention class, so it must state why in 1–%d characters",
-			maxUndoReason))
+			statedreason.Max,
+		))
 	}
 	return stated, nil
 }
@@ -130,17 +143,31 @@ func deciderName(ctx context.Context, tx pgx.Tx, actor principal.Principal) (str
 	var name string
 	err := tx.QueryRow(ctx, `SELECT display_name FROM app_user WHERE id = $1`, actor.UserID).Scan(&name)
 	if errors.Is(err, pgx.ErrNoRows) || (err == nil && strings.TrimSpace(name) == "") {
-		return "", fmt.Errorf("the deciding account carries no display name, and an unattributed decision "+
-			"cannot be accounted for: %w", apperrors.ErrPermissionDenied)
+		return "", &DeciderUnnamedError{}
 	}
 	return name, err
 }
+
+// DeciderUnnamedError refuses a decision by an account with no display name: the
+// audit entry has to say who decided, and the member can fix that themselves.
+type DeciderUnnamedError struct{}
+
+func (e *DeciderUnnamedError) Error() string {
+	return "the deciding account has no display name, and an unattributed decision cannot be recorded"
+}
+
+// MessageFault asks the member for the one thing that unblocks them.
+func (e *DeciderUnnamedError) MessageFault() (code, message string) {
+	return "decider_unnamed", e.Error() + ". Set your display name in your profile, then undo the filing again."
+}
+
+func (e *DeciderUnnamedError) Unwrap() error { return apperrors.ErrConflict }
 
 // withdrawProjectFiling unlinks the project, deletes the filing's evidence and
 // clears the class, under the declaration the triggers admit. The declaration is
 // cleared again before returning so nothing later in the transaction rides it.
 func withdrawProjectFiling(ctx context.Context, tx pgx.Tx, id ids.ActivityID) error {
-	if _, err := tx.Exec(ctx, `SELECT set_config($1, $2, true)`, undoDeclarationSetting, id.String()); err != nil {
+	if _, err := tx.Exec(ctx, `SELECT set_config($1, $2, true)`, UndoDeclarationSetting, id.String()); err != nil {
 		return err
 	}
 	if _, err := deleteVisibleLinksOfType(ctx, tx, id, linkEntityProject, linkColumn(linkEntityProject)); err != nil {
@@ -163,7 +190,7 @@ func withdrawProjectFiling(ctx context.Context, tx pgx.Tx, id ids.ActivityID) er
 	if cleared.RowsAffected() != 1 {
 		return fmt.Errorf("the activity carries no retention class to withdraw: %w", apperrors.ErrConflict)
 	}
-	_, err = tx.Exec(ctx, `SELECT set_config($1, '', true)`, undoDeclarationSetting)
+	_, err = tx.Exec(ctx, `SELECT set_config($1, '', true)`, UndoDeclarationSetting)
 	return err
 }
 
@@ -172,12 +199,16 @@ func withdrawProjectFiling(ctx context.Context, tx pgx.Tx, id ids.ActivityID) er
 // reversal may put back, and a before-image of it would invite one.
 func recordProjectFilingUndone(ctx context.Context, tx pgx.Tx, id ids.ActivityID, facts projectFilingFacts, name, reason string) error {
 	projects := make([]string, 0, len(facts.filings))
+	projectIDs := make([]ids.UUID, 0, len(facts.filings))
 	for _, filing := range facts.filings {
-		projects = append(projects, filing.Name)
+		projects = append(projects, filing.name)
+		if filing.projectID != nil {
+			projectIDs = append(projectIDs, *filing.projectID)
+		}
 	}
 	auditID, err := storekit.AuditEventWithEvidence(ctx, tx, "update", "activity", id.UUID, nil, map[string]any{
 		"cause": causeProjectFilingUndone, "decided_by_name": name, "reason": reason,
-		"projects": projects, "retention_class": retentionClassCorrespondence,
+		"projects": projects, "project_ids": projectIDs, "retention_class": retentionClassCorrespondence,
 	})
 	if err != nil {
 		return err

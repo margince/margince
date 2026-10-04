@@ -4,9 +4,12 @@
 package compose
 
 import (
+	"context"
 	"encoding/json"
 
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -37,15 +40,59 @@ var agentStraightThrough = func() map[releaseTarget]bool {
 	return straight
 }()
 
+// filingGuard answers whether filings under a project could still be undone by
+// a member, for the activities the call names. The activities store holds the
+// predicate the undo itself refuses by.
+type filingGuard interface {
+	FilingsStayUndoable(ctx context.Context, activityIDs []ids.UUID, project ids.UUID) (bool, error)
+}
+
 // undoableAgentRelease is approvals.UndoableRelease for agent-staged calls. A
 // tool whose tier turns on its arguments is judged by where THIS call resolves,
 // because the policy's static "dynamic" says nothing about it and its target
 // type may be the destination rather than the verb's record. A pair the
 // admission table does not name — an unknown kind, or no target type — is not
 // undoable, which keeps the stricter rule for it.
-func undoableAgentRelease(kind, targetType string, change json.RawMessage) bool {
-	if undoable, decided := agents.ReleaseUndoableByDestination(kind, change); decided {
-		return undoable
+//
+// A filing under a project is undoable by a member only while the activity is
+// not restricted, held or under an open erasure request, so that destination is
+// also judged by the state of the activities the call names; without a guard it
+// is not undoable.
+func undoableAgentRelease(guard filingGuard) approvals.UndoableRelease {
+	return func(ctx context.Context, kind, targetType string, change json.RawMessage) bool {
+		if undoable, decided := agents.ReleaseUndoableByDestination(kind, change); decided {
+			return undoable && filingsStayUndoable(ctx, guard, change)
+		}
+		return agentStraightThrough[releaseTarget{kind, agentRecordType(targetType)}]
 	}
-	return agentStraightThrough[releaseTarget{kind, agentRecordType(targetType)}]
+}
+
+// relinkedActivities is the slice of a staged relink the state check reads: the
+// destination and the activities, named singly or as a set.
+type relinkedActivities struct {
+	ActivityID  *ids.UUID  `json:"activity_id"`
+	ActivityIDs []ids.UUID `json:"activity_ids"`
+	EntityType  string     `json:"entity_type"`
+	EntityID    ids.UUID   `json:"entity_id"`
+}
+
+// filingsStayUndoable is true for every destination but a project, and for a
+// project when the guard says the undo could still take each filing back.
+func filingsStayUndoable(ctx context.Context, guard filingGuard, change json.RawMessage) bool {
+	var call relinkedActivities
+	if err := json.Unmarshal(change, &call); err != nil {
+		return false
+	}
+	if call.EntityType != "project" {
+		return true
+	}
+	if guard == nil {
+		return false
+	}
+	named := call.ActivityIDs
+	if call.ActivityID != nil {
+		named = append(named, *call.ActivityID)
+	}
+	stay, err := guard.FilingsStayUndoable(ctx, named, call.EntityID)
+	return err == nil && stay
 }

@@ -91,8 +91,10 @@ Columns:
   credential may release its own staged relink with `decide_approval` on an
   attended call, whatever the destination: relinking moves it back, and a filing
   under a project is taken back by a member with *Undo filing* (a human-only
-  decision with a written reason, never the credential's). The decision is
-  recorded as the human, given through the agent.
+  decision with a written reason, never the credential's). A project relink is
+  releasable only while that undo could still apply: an activity that is
+  restricted, held through a link or under an open erasure request is the
+  contact's to release in the CRM. The decision is recorded as the human, given through the agent.
   **🟢 / 🟡** means the tier depends on the record type the call names: 🟢 for
   the seven the tool enumerates, 🟡 for `custom_field` and
   `webhook_subscription`, which the contract still declares confirm-first.

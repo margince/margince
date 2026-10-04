@@ -6995,7 +6995,7 @@ paths:
         '409':
           description: >-
             The filing cannot be undone; the problem's `code` is one of `not_filed`,
-            `other_basis_remains`, `restricted` or `qualifying_deal`.
+            `other_basis_remains`, `restricted`, `legal_hold`, `hidden_project` or `qualifying_deal`.
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /activities/relink-thread:
@@ -49499,19 +49499,26 @@ components:
       type: object
       required: [name, qualified_at]
       properties:
-        name: { type: string, description: The project's name when the filing qualified the activity. }
+        name: { type: string, description: "The project's name when the filing qualified the activity. Empty when the project is hidden from the caller." }
+        hidden:
+          type: boolean
+          description: True when the project exists and the caller cannot see it; its name is withheld.
         qualified_at: { type: string, format: date-time }
     ProjectFilingRefusal:
       type: object
       required: [code, message]
       properties:
-        code: { type: string, enum: [not_filed, other_basis_remains, restricted, qualifying_deal] }
+        code: { type: string, enum: [not_filed, other_basis_remains, restricted, legal_hold, hidden_project, qualifying_deal] }
         message: { type: string }
     ProjectFilingUndoDecision:
       type: object
-      required: [at, by_name, reason, projects]
+      required: [id, at, by_name, reason, projects]
       properties:
+        id: { type: string, format: uuid, description: The audit entry that recorded the decision. }
         at: { type: string, format: date-time }
+        redacted:
+          type: boolean
+          description: True when the decision touched a project the caller cannot see; only its moment is shown.
         by_name: { type: string }
         reason: { type: string }
         projects:

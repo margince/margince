@@ -51,7 +51,8 @@ func approvalsHandlersWithEffects(pool *pgxpool.Pool, volume approvals.VolumeRel
 // standing up an HTTP surface. Every kind registered here must carry a
 // decision-grant mapping (TestEveryRegisteredEffectKindHasADecisionGrantMapping).
 func approvalsServiceWithEffects(pool *pgxpool.Pool) *approvals.Service {
-	svc := approvals.NewService(InstallationDB(pool)).WithUndoableRelease(undoableAgentRelease)
+	svc := approvals.NewService(InstallationDB(pool)).
+		WithUndoableRelease(undoableAgentRelease(activities.NewStore(InstallationDB(pool))))
 	store := newCounterpartyStore(pool)
 	svc.WithEffect("coldstart", coldstartAcceptEffect(svc, store))
 	svc.WithEffect(enrichProposalKind, scrapeAcceptEffect(svc, store))

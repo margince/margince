@@ -105,7 +105,7 @@ var predicateContactReads = gatekit.Waive(map[string]string{
 	"internal/modules/deals/engagement.go:Stakeholders":                               "`r.contact_id, r.role` under the contact row scope — the edge's own endpoints, which relationship.read governs. The callers render names through surfaces that ask the contact grant themselves",
 	"internal/modules/integrations/backfillselect.go:backlogInTx":                     "`count(*)` of subjects a provider backfill still owes, so the settings screen can show progress. A number about the job",
 	"internal/modules/integrations/backfillselect.go:uncoveredSubjects":               "`p.id::text` — which subjects the backfill sweep has yet to cover. Ids consumed by the sweep that runs under its own principal",
-	"internal/modules/privacy/retentionrestricted.go:notHeldThroughAnyLink":           "the legal-hold exclusion: it asks whether a linked contact holds the row and, if so, leaves it alone. Its only effect is to keep a row, never to disclose one",
+	"internal/shared/kernel/retentionscope/retentionscope.go:HeldThroughAnyLink":      "the legal-hold exclusion: it asks whether a linked contact holds the row and, if so, leaves it alone. Its only effect is to keep a row, never to disclose one",
 	"internal/modules/privacy/retentionselectors.go":                                  "the retention selectors' contact arm, which only ever narrows what a sweep may delete",
 	"internal/platform/auth/signalscope.go:SignalScopeClause":                         "the signal row-scope clause itself, which resolves a signal about a contact to the contact's own visibility. A clause rather than a read: it only ever narrows the signals a caller is shown",
 })

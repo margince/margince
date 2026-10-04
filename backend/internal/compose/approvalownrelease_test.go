@@ -4,10 +4,13 @@
 package compose
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
@@ -40,8 +43,8 @@ func TestOnlyAStraightThroughRecordChangeIsAnUndoableRelease(t *testing.T) {
 		{"update_record", "a_type_nobody_declared", false},
 		{"a_kind_nobody_declared", "company", false},
 	} {
-		if got := undoableAgentRelease(tc.kind, tc.target, nil); got != tc.want {
-			t.Errorf("undoableAgentRelease(%q, %q) = %v, want %v", tc.kind, tc.target, got, tc.want)
+		if got := undoableWithoutGuard(tc.kind, tc.target, nil); got != tc.want {
+			t.Errorf("undoableWithoutGuard(%q, %q) = %v, want %v", tc.kind, tc.target, got, tc.want)
 		}
 	}
 }
@@ -57,7 +60,7 @@ func TestNoConfirmFirstRouteIsAnUndoableRelease(t *testing.T) {
 			continue
 		}
 		checked++
-		if undoableAgentRelease(pol.Tool, string(pol.RecordType), nil) {
+		if undoableWithoutGuard(pol.Tool, string(pol.RecordType), nil) {
 			t.Errorf("%s (%s on %q) is %s and reads as undoable", route, pol.Tool, pol.RecordType, pol.Tier)
 		}
 	}
@@ -75,7 +78,7 @@ func TestNoEgressingVerbIsAnUndoableRelease(t *testing.T) {
 			continue
 		}
 		checked++
-		if undoableAgentRelease(pol.Tool, string(pol.RecordType), nil) {
+		if undoableWithoutGuard(pol.Tool, string(pol.RecordType), nil) {
 			t.Errorf("%s (%s) spends the %s cap and reads as undoable", route, pol.Tool, pol.Scope)
 		}
 	}
@@ -92,7 +95,7 @@ func TestNoFlooredPairIsAnUndoableRelease(t *testing.T) {
 		t.Fatal("the contract floors no (verb, record type) pair — this compared nothing")
 	}
 	for pair := range contractTierFloors {
-		if undoableAgentRelease(pair.tool, pair.recordType, nil) {
+		if undoableWithoutGuard(pair.tool, pair.recordType, nil) {
 			t.Errorf("%s on %q is floored confirm-first and reads as undoable", pair.tool, pair.recordType)
 		}
 	}
@@ -119,7 +122,7 @@ func TestEveryUndoablePairIsAStraightThroughTool(t *testing.T) {
 // the contact's to release.
 func TestAThreadRelinkIsNeverAnUndoableRelease(t *testing.T) {
 	for _, target := range []string{"activity", "company", ""} {
-		if undoableAgentRelease("relink_thread", target, json.RawMessage(`{"entity_type":"company"}`)) {
+		if undoableWithoutGuard("relink_thread", target, json.RawMessage(`{"entity_type":"company"}`)) {
 			t.Errorf("relink_thread onto a company, staged under %q, reads as undoable", target)
 		}
 	}
@@ -140,14 +143,17 @@ func TestARelinkIsUndoableByItsDestination(t *testing.T) {
 			{`{"entity_type":"deal"}`, true},
 			{`{"entity_type":"contact"}`, true},
 			{`{"entity_type":"lead"}`, true},
-			{`{"entity_type":"project"}`, true},
+			// A project is undoable by state, which needs the guard; without one
+			// it is the stricter answer. TestAProjectRelinkIsReleasableOnlyWhile
+			// ItsFilingsStayUndoable holds the guarded half.
+			{`{"entity_type":"project"}`, false},
 			{`{"entity_type":"webhook_subscription"}`, false},
 			{`{}`, false},
 			{`not json`, false},
 		} {
 			for _, target := range []string{"activity", "company", ""} {
-				if got := undoableAgentRelease(tool, target, json.RawMessage(tc.change)); got != tc.want {
-					t.Errorf("undoableAgentRelease(%q, %q, %s) = %v, want %v", tool, target, tc.change, got, tc.want)
+				if got := undoableWithoutGuard(tool, target, json.RawMessage(tc.change)); got != tc.want {
+					t.Errorf("undoableWithoutGuard(%q, %q, %s) = %v, want %v", tool, target, tc.change, got, tc.want)
 				}
 			}
 		}
@@ -175,11 +181,66 @@ func TestEveryDynamicToolIsJudgedByItsCallOrStaysHumanReleased(t *testing.T) {
 		case !decided && !humanReleased[spec.Name]:
 			t.Errorf("%s is dynamic, and nothing says whether its staged call is undoable", spec.Name)
 		}
-		if undoableAgentRelease(spec.Name, "", nil) {
+		if undoableWithoutGuard(spec.Name, "", nil) {
 			t.Errorf("%s reads as undoable with no call to resolve", spec.Name)
 		}
 	}
 	if dynamic == 0 {
 		t.Fatal("no dynamic tool is registered — this compared nothing")
+	}
+}
+
+// undoableWithoutGuard is the classification with no filing guard installed: a project
+// destination is then not undoable, the stricter answer.
+func undoableWithoutGuard(kind, target string, change json.RawMessage) bool {
+	return undoableAgentRelease(nil)(context.Background(), kind, target, change)
+}
+
+type fakeFilingGuard struct {
+	stay   bool
+	asked  []ids.UUID
+	failed bool
+}
+
+func (g *fakeFilingGuard) FilingsStayUndoable(_ context.Context, activities []ids.UUID, _ ids.UUID) (bool, error) {
+	g.asked = append(g.asked, activities...)
+	if g.failed {
+		return false, errors.New("the read failed")
+	}
+	return g.stay, nil
+}
+
+// A project destination is undoable by state: the named activities must still be
+// ones the undo could take back, and a guard that cannot answer, or is absent,
+// refuses. Every other destination is unaffected by the guard.
+func TestAProjectRelinkIsReleasableOnlyWhileItsFilingsStayUndoable(t *testing.T) {
+	one := ids.NewV7()
+	project := `"entity_type":"project","entity_id":"` + ids.NewV7().String() + `"`
+	single := json.RawMessage(`{"activity_id":"` + one.String() + `",` + project + `}`)
+	set := json.RawMessage(`{"activity_ids":["` + one.String() + `"],` + project + `}`)
+	company := json.RawMessage(`{"activity_ids":["` + one.String() + `"],"entity_type":"company"}`)
+
+	for _, tc := range []struct {
+		name   string
+		guard  filingGuard
+		change json.RawMessage
+		want   bool
+	}{
+		{"a single filing that stays undoable", &fakeFilingGuard{stay: true}, single, true},
+		{"a set that stays undoable", &fakeFilingGuard{stay: true}, set, true},
+		{"a restricted, held or erasure-pending activity", &fakeFilingGuard{stay: false}, set, false},
+		{"a guard that cannot answer", &fakeFilingGuard{failed: true}, set, false},
+		{"no guard installed", nil, set, false},
+		{"a company is never asked", &fakeFilingGuard{stay: false}, company, true},
+	} {
+		got := undoableAgentRelease(tc.guard)(context.Background(), "relink_activities", "company", tc.change)
+		if got != tc.want {
+			t.Errorf("%s: undoable = %v, want %v", tc.name, got, tc.want)
+		}
+	}
+	guard := &fakeFilingGuard{stay: true}
+	undoableAgentRelease(guard)(context.Background(), "relink_activity", "activity", single)
+	if len(guard.asked) != 1 || guard.asked[0] != one {
+		t.Errorf("the single form asked about %v, want the one activity it names", guard.asked)
 	}
 }

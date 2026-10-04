@@ -18,11 +18,12 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 const (
-	declareUndo       = `SELECT set_config('margince.project_filing_undo', $1, true)`
+	declareUndo       = `SELECT set_config('` + activities.UndoDeclarationSetting + `', $1, true)`
 	unlinkProject     = `DELETE FROM activity_link WHERE activity_id = $1 AND entity_type = 'project'`
 	deleteFilingProof = `DELETE FROM activity_retention_evidence WHERE activity_id = $1 AND basis = 'project_linked'`
 	clearTheClass     = `UPDATE activity SET retention_class = NULL, retention_class_at = NULL WHERE id = $1`

@@ -1,26 +1,26 @@
--- Filing under a project can be undone, by a named human with a written reason.
+-- Filing under a project can be undone, by a named member with a written reason.
 --
--- Filing an activity under a project stamps retention_class and writes a
--- project_linked evidence row, and two triggers made both permanent: the class
--- by activity_refuse_restricted_mutation (monotonic), the evidence by
--- activity_retention_evidence_is_frozen (a row leaves only with its activity).
--- That was right while nothing could undo a filing. It is the reason an agent
--- could not release its own project relink, so the undo is built and the two
--- triggers learn exactly one door.
+-- retention_class is monotonic and a retention evidence row leaves only with its
+-- activity. Exactly one door relaxes both: a transaction-local declaration naming
+-- the activity. It is not a bypass of what the triggers protect, because each
+-- still checks what the rule is FOR.
 --
--- The door is a transaction-local declaration naming the activity. It is not a
--- bypass of the rule the triggers state, because each still checks what the rule
--- is FOR: that nothing still qualifies the correspondence and no statutory hold
--- has started. The class clears only from an unrestricted row with no evidence
--- and no project link left, and the declaration deletes project_linked evidence
--- alone — a deal's evidence, a controller's pin and a restricted row's evidence
--- all stay under the freeze. Every OTHER change to retention_class or its
--- timestamp is still refused, so a clear is not a way to move the date.
+--   * The class clears whole (both columns to null) from an unrestricted row that
+--     nothing still qualifies: no evidence row, no project link, no linked deal
+--     that is won or carries an offer past draft, and no legal hold on any record
+--     it is linked to.
+--   * The declaration deletes project_linked evidence only, from an unrestricted
+--     activity, and never while the project the filing names, or any record the
+--     activity is still linked to, is under a legal hold.
+--   * Every other change to retention_class or its timestamp is refused, so a
+--     clear is not a way to move the date.
 --
--- Over-retention is an argument to have with a supervisory authority and
--- destruction is not, which is why the refusals live in the data layer as well
--- as in the writer: the writer decides whether an undo is allowed, and the
--- database refuses to let a mistake in the writer shorten what still qualifies.
+-- The deal and hold predicates are the ones backend/internal/shared/kernel/
+-- retentionscope spells for the Go writers, restated here because a trigger
+-- cannot import them; TestTheUndoTriggersAgreeWithTheGoPredicates holds the two
+-- together. Over-retention is an argument to have with a supervisory authority
+-- and destruction is not, so a mistake in the writer must not be able to shorten
+-- what still qualifies.
 SET LOCAL lock_timeout = '3s';
 
 CREATE OR REPLACE FUNCTION activity_refuse_restricted_mutation() RETURNS trigger
@@ -41,13 +41,9 @@ BEGIN
   -- the class and move the date: the same rewriting of history with an extra
   -- step, on the field a supervisory authority would be shown.
   --
-  -- The one exception is the undo of a project filing: the class goes away
-  -- WHOLE (both columns to null), from a row no statutory hold has touched,
-  -- once nothing is left that qualifies it — no evidence row and no project
-  -- link — and only inside the transaction that declared it. The declaration
-  -- names this activity, so one undo cannot be carried onto another row, and
-  -- the evidence trigger below refuses to let the declaration delete anything
-  -- but a project filing.
+  -- The one exception is the declared undo of a project filing: the class
+  -- clears whole from an unrestricted row that nothing still qualifies, and the
+  -- declaration names this one activity.
   IF OLD.retention_class IS NOT NULL
      AND (NEW.retention_class IS DISTINCT FROM OLD.retention_class
           OR NEW.retention_class_at IS DISTINCT FROM OLD.retention_class_at)
@@ -57,7 +53,23 @@ BEGIN
               AND NOT EXISTS (SELECT 1 FROM activity_retention_evidence e
                                WHERE e.activity_id = OLD.id)
               AND NOT EXISTS (SELECT 1 FROM activity_link l
-                               WHERE l.activity_id = OLD.id AND l.entity_type = 'project')) THEN
+                               WHERE l.activity_id = OLD.id AND l.entity_type = 'project')
+              AND NOT EXISTS (SELECT 1 FROM activity_link hl
+                               JOIN deal hd ON hd.id = hl.deal_id
+                               WHERE hl.activity_id = OLD.id AND hl.entity_type = 'deal'
+                                 AND (hd.status = 'won'
+                                      OR EXISTS (SELECT 1 FROM offer o
+                                                  WHERE o.deal_id = hd.id AND o.status <> 'draft')))
+              AND NOT EXISTS (SELECT 1 FROM activity_link h
+                               LEFT JOIN contact hp ON hp.id = h.contact_id
+                               LEFT JOIN company hc ON hc.id = h.company_id
+                               LEFT JOIN deal hdl ON hdl.id = h.deal_id
+                               LEFT JOIN lead hld ON hld.id = h.lead_id
+                               LEFT JOIN project hpj ON hpj.id = h.project_id
+                               WHERE h.activity_id = OLD.id
+                                 AND (coalesce(hp.legal_hold, false) OR coalesce(hc.legal_hold, false)
+                                      OR coalesce(hdl.legal_hold, false) OR coalesce(hld.legal_hold, false)
+                                      OR coalesce(hpj.legal_hold, false)))) THEN
     RAISE EXCEPTION 'activity % carries retention class % earned at %, which is stamped once and never re-derived', OLD.id, OLD.retention_class, OLD.retention_class_at
       USING ERRCODE = 'check_violation',
             CONSTRAINT = 'activity_retention_class_monotonic';
@@ -130,13 +142,24 @@ BEGIN
   -- activity is gone exactly when the delete is legitimate.
   IF TG_OP = 'DELETE' THEN
     IF EXISTS (SELECT 1 FROM activity a WHERE a.id = OLD.activity_id) THEN
-      -- The undo of a project filing removes the filing's own evidence and
-      -- nothing else: another basis is what keeps the class, and an activity a
-      -- statutory hold has reached keeps every row it rests on.
+      -- Project-filing evidence only, from an activity no statutory or legal
+      -- hold has reached: every other row stays under the freeze.
       IF OLD.basis = 'project_linked'
          AND current_setting('margince.project_filing_undo', true) = OLD.activity_id::text
          AND NOT EXISTS (SELECT 1 FROM activity a
-                          WHERE a.id = OLD.activity_id AND a.restricted_at IS NOT NULL) THEN
+                          WHERE a.id = OLD.activity_id AND a.restricted_at IS NOT NULL)
+         AND NOT EXISTS (SELECT 1 FROM project fp
+                          WHERE fp.id = OLD.project_id AND fp.legal_hold)
+         AND NOT EXISTS (SELECT 1 FROM activity_link h
+                          LEFT JOIN contact hp ON hp.id = h.contact_id
+                          LEFT JOIN company hc ON hc.id = h.company_id
+                          LEFT JOIN deal hdl ON hdl.id = h.deal_id
+                          LEFT JOIN lead hld ON hld.id = h.lead_id
+                          LEFT JOIN project hpj ON hpj.id = h.project_id
+                          WHERE h.activity_id = OLD.activity_id
+                            AND (coalesce(hp.legal_hold, false) OR coalesce(hc.legal_hold, false)
+                                 OR coalesce(hdl.legal_hold, false) OR coalesce(hld.legal_hold, false)
+                                 OR coalesce(hpj.legal_hold, false))) THEN
         RETURN OLD;
       END IF;
       RAISE EXCEPTION 'retention evidence % is frozen and is removed only with the activity it substantiates', OLD.id

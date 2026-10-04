@@ -12513,6 +12513,8 @@ func (e Project360Section) Valid() bool {
 
 // Defines values for ProjectFilingRefusalCode.
 const (
+	ProjectFilingRefusalCodeHiddenProject     ProjectFilingRefusalCode = "hidden_project"
+	ProjectFilingRefusalCodeLegalHold         ProjectFilingRefusalCode = "legal_hold"
 	ProjectFilingRefusalCodeNotFiled          ProjectFilingRefusalCode = "not_filed"
 	ProjectFilingRefusalCodeOtherBasisRemains ProjectFilingRefusalCode = "other_basis_remains"
 	ProjectFilingRefusalCodeQualifyingDeal    ProjectFilingRefusalCode = "qualifying_deal"
@@ -12522,6 +12524,10 @@ const (
 // Valid indicates whether the value is a known member of the ProjectFilingRefusalCode enum.
 func (e ProjectFilingRefusalCode) Valid() bool {
 	switch e {
+	case ProjectFilingRefusalCodeHiddenProject:
+		return true
+	case ProjectFilingRefusalCodeLegalHold:
+		return true
 	case ProjectFilingRefusalCodeNotFiled:
 		return true
 	case ProjectFilingRefusalCodeOtherBasisRemains:
@@ -38962,7 +38968,10 @@ type ProjectFiling struct {
 
 // ProjectFilingEntry defines model for ProjectFilingEntry.
 type ProjectFilingEntry struct {
-	// Name The project's name when the filing qualified the activity.
+	// Hidden True when the project exists and the caller cannot see it; its name is withheld.
+	Hidden *bool `json:"hidden,omitempty"`
+
+	// Name The project's name when the filing qualified the activity. Empty when the project is hidden from the caller.
 	Name        string    `json:"name"`
 	QualifiedAt time.Time `json:"qualified_at"`
 }
@@ -38978,10 +38987,16 @@ type ProjectFilingRefusalCode string
 
 // ProjectFilingUndoDecision defines model for ProjectFilingUndoDecision.
 type ProjectFilingUndoDecision struct {
-	At       time.Time `json:"at"`
-	ByName   string    `json:"by_name"`
-	Projects []string  `json:"projects"`
-	Reason   string    `json:"reason"`
+	At     time.Time `json:"at"`
+	ByName string    `json:"by_name"`
+
+	// Id The audit entry that recorded the decision.
+	Id       openapi_types.UUID `json:"id"`
+	Projects []string           `json:"projects"`
+	Reason   string             `json:"reason"`
+
+	// Redacted True when the decision touched a project the caller cannot see; only its moment is shown.
+	Redacted *bool `json:"redacted,omitempty"`
 }
 
 // ProjectHealthAssessment One judgement of how a project is going, on the day it applies to. Assessments are never edited: a mistake is corrected by superseding the row, so what was said and when it was said both survive the correction.

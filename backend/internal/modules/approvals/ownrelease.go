@@ -17,8 +17,9 @@ import (
 // fetched, a webhook registered — is not undoable: what left cannot be recalled.
 //
 // change is the staged call itself, because a tool whose tier is dynamic is
-// undoable or not by where the call RESOLVES, which only its arguments say.
-type UndoableRelease func(kind, targetType string, change json.RawMessage) bool
+// undoable or not by where the call RESOLVES, which only its arguments say, and
+// ctx lets the answer read the state of the records the call would touch.
+type UndoableRelease func(ctx context.Context, kind, targetType string, change json.RawMessage) bool
 
 // WithUndoableRelease installs the classification. This module cannot see which
 // staged kinds egress, because the tool specs that declare it live in another
@@ -51,7 +52,7 @@ func (s *Service) ownReleaseFor(ctx context.Context, a row) ownRelease {
 	if a.TargetType != nil {
 		target = *a.TargetType
 	}
-	if !s.undoable(a.Kind, target, a.ProposedChange) {
+	if !s.undoable(ctx, a.Kind, target, a.ProposedChange) {
 		return ownReleaseRefused
 	}
 	return ownReleaseAllowed
