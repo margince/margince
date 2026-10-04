@@ -7,7 +7,6 @@ import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
-import { useCanWrite } from "../app/capability";
 import { useRecordZone } from "../app/recordzone";
 import {
   Badge,
@@ -23,6 +22,7 @@ import { SourceEvidence } from "../design-system/sourceevidence";
 import { calendarDay, dueInstant } from "../format/calendarday";
 import { formatDate, formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import { DEAL_COMMITMENTS_KEY } from "./activitykeys";
 import { provenanceOf, throwProblem } from "./common";
 import { EntityRef } from "./entityref";
 import "./taskactions.css";
@@ -545,36 +545,6 @@ export function useMeetingOutcome(invalidateKeys: readonly QueryKey[]) {
  * commitments this workspace keeps is a fact about the team, and how many
  * extracted claims were never real is a fact about the extractor.
  */
-/** The cache prefix every deal's watch card reads under. */
-export const DEAL_COMMITMENTS_KEY = ["deal-commitments"] as const;
-
-/**
- * Dismissing a commitment the reader judges was never made. Kept beside the
- * words it was read from, so the reader can see what the reading got wrong.
- */
-export function DismissClaimButton({ id }: Readonly<{ id: string }>) {
-  const t = useT();
-  const settle = useClaimSettle([]);
-  // Settling writes the contact's record, so a reader who may not update
-  // contacts is not offered a verb the server would refuse.
-  const canSettle = useCanWrite("contact", "update");
-  if (!canSettle) {
-    return null;
-  }
-  return (
-    <>
-      <Button
-        variant="link"
-        pending={settle.isPending}
-        onClick={() => settle.mutate({ id, outcome: "dismissed" })}
-      >
-        {t("commitment.dismiss")}
-      </Button>
-      <ErrorLine error={settle.error} />
-    </>
-  );
-}
-
 export function useClaimSettle(invalidateKeys: readonly QueryKey[]) {
   const t = useT();
   const queryClient = useQueryClient();
