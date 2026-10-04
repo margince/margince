@@ -31,14 +31,16 @@ const meetingWithQuery = `
 	 WHERE ap.activity_id = ANY($%d) AND ap.user_id IS NULL AND %s
 	   AND NOT EXISTS (
 	       SELECT 1 FROM relationship emp
-	         JOIN company co ON co.id = emp.company_id AND co.is_anchor
+	         JOIN company co ON co.id = emp.company_id AND co.is_anchor AND %s
 	        WHERE emp.contact_id = c.id AND emp.kind = 'employment' AND emp.archived_at IS NULL
-	          AND %s)
+	          AND %s AND %s)
 	 ORDER BY ap.activity_id, c.full_name, c.id`
 
 // MeetingCounterparties answers who each of these meetings was with, for THIS
 // caller: the first outside participant, by name, who is a contact the caller
-// may see. A meeting with no such participant is absent from the map.
+// may see. A meeting with no such participant is absent from the map. The
+// own-company test reads only employment edges and companies the caller may
+// read, so which contact is named discloses no edge they may not see.
 //
 // Participants and not activity links: a link says what a meeting is filed
 // under, and a meeting filed under a deal or a colleague's record is still with
@@ -71,8 +73,12 @@ func (s *Store) MeetingCounterparties(ctx context.Context, meetingIDs []ids.UUID
 	if err != nil {
 		return nil, err
 	}
+	companyScope, edgeScope, err := ownCompanyTestScopes(ctx, arg)
+	if err != nil {
+		return nil, err
+	}
 	query := storekit.SQLf(meetingWithQuery, orUnbounded(activityScope), meetings, orUnbounded(contactScope),
-		employment.IsCurrentSQL("emp.ended_at"))
+		companyScope, employment.IsCurrentSQL("emp.ended_at"), edgeScope)
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, query, args...)
 		if err != nil {
@@ -92,6 +98,31 @@ func (s *Store) MeetingCounterparties(ctx context.Context, meetingIDs []ids.UUID
 		return nil, err
 	}
 	return out, nil
+}
+
+// ownCompanyTestScopes bounds the own-company test by what the caller may read:
+// the company grant and row scope, and the employment edge's own admission. A
+// caller who may read neither gets a test that finds nothing, so a meeting
+// still names its first outside participant and no hidden edge decides which.
+func ownCompanyTestScopes(ctx context.Context, arg func(any) int) (company, edge string, err error) {
+	// Both grants are asked before either clause is built: a clause registers
+	// its arguments, and one built for a test that then finds nothing would
+	// leave them unbound in the statement.
+	for _, err := range []error{auth.Require(ctx, "company", principal.ActionRead), auth.EdgeReadAdmitted(ctx)} {
+		if errors.Is(err, apperrors.ErrPermissionDenied) {
+			return scopeNothing, scopeNothing, nil
+		}
+		if err != nil {
+			return "", "", err
+		}
+	}
+	if company, err = auth.ScopeClauseFor(ctx, "company", "co", arg); err != nil {
+		return "", "", err
+	}
+	if edge, err = auth.EdgeReadScope(ctx, "emp", arg); err != nil {
+		return "", "", err
+	}
+	return orUnbounded(company), orUnbounded(edge), nil
 }
 
 // orUnbounded reads an empty scope clause as the unbounded caller it means.

@@ -13,6 +13,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// Both reads below lock the pairs they return FOR SHARE: the caller acts on
+// "these two are one business" later in its transaction, and a reviewer
+// answering "not a duplicate" in between waits for it rather than being
+// overtaken by a decision taken on the old answer.
+
 // openCompanyPairClause admits a company dedupe pair that is still open: a
 // pair already merged is one record, a pair a human answered as not a
 // duplicate is two businesses, and a pair with an archived end is closed, as
@@ -33,7 +38,8 @@ func OpenDuplicateCompaniesTx(ctx context.Context, tx pgx.Tx, company ids.UUID) 
 		SELECT CASE WHEN left_company_id = $1 THEN right_company_id ELSE left_company_id END
 		  FROM dedupe_candidate
 		 WHERE (left_company_id = $1 OR right_company_id = $1)
-		   AND `+openCompanyPairClause(),
+		   AND `+openCompanyPairClause()+`
+		   FOR SHARE OF dedupe_candidate`,
 		company)
 	if err != nil {
 		return nil, fmt.Errorf("contacts: reading a company's open duplicate candidates: %w", err)
@@ -53,7 +59,8 @@ func OpenDuplicateCompanyPairsTx(ctx context.Context, tx pgx.Tx) ([][2]ids.UUID,
 	}
 	rows, err := tx.Query(ctx, `
 		SELECT left_company_id, right_company_id FROM dedupe_candidate
-		 WHERE `+openCompanyPairClause())
+		 WHERE `+openCompanyPairClause()+`
+		   FOR SHARE OF dedupe_candidate`)
 	if err != nil {
 		return nil, fmt.Errorf("contacts: reading the open company duplicate pairs: %w", err)
 	}

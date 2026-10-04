@@ -11,6 +11,7 @@ package compose
 import (
 	"context"
 	"errors"
+	"maps"
 	"testing"
 	"time"
 
@@ -227,5 +228,41 @@ func TestAReaderWhoMayNotReadCompaniesSeesTheMeetingRowWithoutAnAccount(t *testi
 	}
 	if row.Contact.Employer != nil {
 		t.Errorf("a reader without a company grant is told the customer works at %q", row.Contact.Employer.CompanyName)
+	}
+}
+
+// The own-company test reads only employment edges the reader may see. A
+// reader who may not read edges is shown the first outside participant by
+// name, our own employee included, so a hidden edge never decides who is named.
+func TestAHiddenEmploymentEdgeDoesNotDecideWhoAMeetingWasWith(t *testing.T) {
+	e := integration.Setup(t)
+	anchor, err := e.Contacts.SaveCompany(e.Admin(), contacts.SaveCompanyInput{DisplayName: "Ourselves GmbH"})
+	if err != nil {
+		t.Fatalf("saving the installation's own company: %v", err)
+	}
+	colleague := partiesContact(t, e, "Aaron Inhouse", ids.UUID{}, &anchor.CompanyID)
+	customer := partiesContact(t, e, "Zed Customer", ids.UUID{}, nil)
+	meeting := partiesMeeting(e.Admin(), t, e, "Kickoff", colleague, customer)
+
+	withoutEdges := integration.AdminPerms
+	withoutEdges.Objects = maps.Clone(withoutEdges.Objects)
+	delete(withoutEdges.Objects, "relationship")
+	for _, tc := range []struct {
+		name   string
+		reader context.Context
+		want   ids.UUID
+	}{
+		{"a reader who may read the employment edge", e.Admin(), customer},
+		{"a reader who may not read edges", e.As(e.AdminUser, nil, withoutEdges), colleague},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			with, err := e.Activities.MeetingCounterparties(tc.reader, []ids.UUID{meeting})
+			if err != nil {
+				t.Fatalf("reading who the meeting was with: %v", err)
+			}
+			if with[meeting] != tc.want {
+				t.Errorf("the meeting was with %v, want %v", with[meeting], tc.want)
+			}
+		})
 	}
 }

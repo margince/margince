@@ -416,3 +416,67 @@ func TestTwinsRecordedAtOnceRaiseOneSuggestion(t *testing.T) {
 		t.Fatalf("the twin recorded at the same time raised a second suggestion = %v, %v", secondRaised, err)
 	}
 }
+
+// The scout reads the open pairs and acts on them later in its transaction. A
+// reviewer answering "not a duplicate" meanwhile waits for it, so no suggestion
+// is withdrawn on a pair a human has just said is two businesses.
+func TestAReviewerAnsweringAPairWaitsForTheScoutActingOnIt(t *testing.T) {
+	e := setupScout(t)
+	named := e.SeedCompany(t, "Northwind Traders", nil)
+	e.SeedCompany(t, "NORTHWIND TRADERS", nil)
+	pair, err := ids.Parse(e.WsScalar(t, `SELECT id::text FROM dedupe_candidate
+		WHERE left_company_id = $1 OR right_company_id = $1`, named))
+	if err != nil {
+		t.Fatalf("reading the pair: %v", err)
+	}
+	ctx := e.system()
+
+	scoutPID, release, scoutDone := make(chan int, 1), make(chan struct{}), make(chan error, 1)
+	var releaseOnce sync.Once
+	releaseScout := func() { releaseOnce.Do(func() { close(release) }) }
+	t.Cleanup(releaseScout)
+	go func() {
+		scoutDone <- database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+			if _, err := contacts.OpenDuplicateCompanyPairsTx(ctx, tx); err != nil {
+				return err
+			}
+			var pid int
+			if err := tx.QueryRow(ctx, `SELECT pg_backend_pid()`).Scan(&pid); err != nil {
+				return err
+			}
+			scoutPID <- pid
+			<-release
+			return nil
+		})
+	}()
+	var pid int
+	select {
+	case pid = <-scoutPID:
+	case err := <-scoutDone:
+		t.Fatalf("the scout ended before it held the pairs: %v", err)
+	}
+
+	reviewDone := make(chan error, 1)
+	go func() {
+		_, err := e.Contacts.DisposeDedupeCandidate(e.Admin(), pair, "not_a_duplicate", nil)
+		reviewDone <- err
+	}()
+	probe, err := e.Pool.Begin(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := probe.Rollback(context.Background()); err != nil {
+			t.Errorf("releasing the probe: %v", err)
+		}
+	}()
+	waitForBackendBlockedBy(t, probe, pid, reviewDone)
+	releaseScout()
+
+	if err := <-scoutDone; err != nil {
+		t.Fatalf("the scout: %v", err)
+	}
+	if err := <-reviewDone; err != nil {
+		t.Fatalf("the review, once the scout let go: %v", err)
+	}
+}
