@@ -4,9 +4,12 @@ site: request_settle
 source: hand_authored
 sanitized_by: hand_authored/claude-opus-5
 # The counterweight to the off-thread settle case. A call or a meeting with the
-# customer is not an answer to every ask they made: the notes decide. A call
-# whose notes promise a next step leaves it owed, and a meeting about something
-# else leaves the ask exactly where it was: still ours, and nameable.
+# customer is not an answer to every ask they made: the notes decide, and a call
+# whose notes promise a next step leaves it owed.
+#
+# A meeting whose notes are about other matters is deliberately not a case here.
+# Certified models split on it between still_owed and unsure whatever the prompt
+# says, and both leave the request owed, so it measured a coin flip.
 fixture:
   - messages:
       - direction: inbound
@@ -20,39 +23,21 @@ fixture:
         body: |
           Spoke with Jan about the 50-seat pricing. I will send the quote by
           Friday once finance confirms the volume discount.
-  - messages:
-      - direction: inbound
-        subject: 'Onboarding checklist'
-        body: |
-          Hello, please send the onboarding checklist so our admins can
-          prepare the accounts.
-      - direction: outbound
-        off_thread: meeting
-        subject: 'Quarterly review'
-        body: |
-          Quarterly review with the customer. Discussed renewal timing and the
-          new team lead on their side.
 expect:
   outcome: accepted
   answer:
     - verdict: still_owed
       remaining_names: quote|pricing|price
-    - verdict: still_owed
-      remaining_names: checklist|onboarding
   rubric: >
-    The first is still_owed. The call notes say we will send the quote by
+    The conversation is still_owed. The call notes say we will send the quote by
     Friday: the ask was discussed, and our own words name a next move we have
     not made. The remaining phrase must name the quote or the pricing, from our
     own seat.
-    The second is still_owed. A meeting took place, but its notes are about
-    renewal timing and a new team lead; nothing we did addressed the onboarding
-    checklist, so the ask stands as it was and the remaining phrase must name
-    the checklist.
-    Score high only if both are right. A model that settles either because a
-    call or meeting happened is treating contact as an answer, which closes
-    work nobody did, and should score at the floor. Answering unsure to the
-    second keeps the request owed but does not name it, and should score in
-    the middle.
+    Score high for still_owed naming the quote. A model that settles it because
+    a call happened is treating contact as an answer, which closes work nobody
+    did, and should score at the floor. Answering unsure keeps the request owed
+    but ignores a deferral the notes state plainly, and should score in the
+    middle.
   bands:
     certified_min: 70
     degraded_min: 50
