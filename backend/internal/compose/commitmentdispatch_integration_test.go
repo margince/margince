@@ -118,11 +118,11 @@ func TestACustomerSharingAColleaguesNameIsNotTakenForThem(t *testing.T) {
 	}
 }
 
-// linkOneContact files the meeting under exactly one customer, which is who a
-// promise of ours in it was made to.
-func linkOneContact(t *testing.T, e *transcriptEnv, name string) ids.UUID {
+// linkInes files the meeting under a customer called Ines Huber, who a promise
+// of ours in it was made to when she is its only customer.
+func linkInes(t *testing.T, e *transcriptEnv) ids.UUID {
 	t.Helper()
-	contact, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: name})
+	contact, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "Ines Huber"})
 	if err != nil {
 		t.Fatalf("creating the customer: %v", err)
 	}
@@ -136,7 +136,7 @@ func linkOneContact(t *testing.T, e *transcriptEnv, name string) ids.UUID {
 func TestOurPromiseIsFiledOnTheCustomerItWasMadeTo(t *testing.T) {
 	e := setupTranscript(t)
 	e.WsExec(t, `UPDATE app_user SET display_name = 'Priya Raman' WHERE id = $1`, e.Rep2)
-	customer := linkOneContact(t, e, "Ines Huber")
+	customer := linkInes(t, e)
 
 	raw, err := json.Marshal(map[string]any{"proposals": []map[string]any{{
 		"summary": "Send the revised pricing", "owner": "Priya Raman",
@@ -160,7 +160,7 @@ func TestOurPromiseIsFiledOnTheCustomerItWasMadeTo(t *testing.T) {
 func TestADismissedPromiseOfOursIsNotProposedAgain(t *testing.T) {
 	e := setupTranscript(t)
 	e.WsExec(t, `UPDATE app_user SET display_name = 'Priya Raman' WHERE id = $1`, e.Rep2)
-	linkOneContact(t, e, "Ines Huber")
+	linkInes(t, e)
 	read := e.read(t, cannedBrain{reply: ownedReply(t, "Priya Raman", 0.75)})
 	if len(read.ProposalIDs) != 1 {
 		t.Fatalf("want the unsure promise proposed, got %d", len(read.ProposalIDs))
@@ -187,8 +187,8 @@ func TestADismissedPromiseOfOursIsNotProposedAgain(t *testing.T) {
 // Two customers of one name tie a promise to neither: it is put to a human.
 func TestTwoCustomersOfOneNameTieThePromiseToNeither(t *testing.T) {
 	e := setupTranscript(t)
-	linkOneContact(t, e, "Ines Huber")
-	linkOneContact(t, e, "Ines Huber")
+	linkInes(t, e)
+	linkInes(t, e)
 	read := e.read(t, cannedBrain{reply: ownedReply(t, "Ines Huber", 0.95)})
 	if len(read.ProposalIDs) != 1 {
 		t.Errorf("a name two customers answer to became %d proposals, want one put to a human", len(read.ProposalIDs))
