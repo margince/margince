@@ -108,15 +108,25 @@ func TestAHeldMeetingWithTheSenderIsSettlementEvidence(t *testing.T) {
 	o := setupOwed(t)
 	pat := o.contact(t, "Pat Buyer", "pat@customer.example")
 	request := o.askOf(t, "Can we talk next week", o.now.Add(-5*time.Hour))
-	o.weLog(t, string(crmcontracts.ActivityKindMeeting), pat, o.now.Add(-time.Hour))
+	subject, notes, held := "Rollout call", "Walked Pat through the phased rollout; agreed November.",
+		string(crmcontracts.ActivityMeetingStatusHeld)
+	at := o.now.Add(-time.Hour)
+	if _, _, err := o.e.Activities.LogActivity(o.e.Admin(), activities.LogActivityInput{
+		Kind: string(crmcontracts.ActivityKindMeeting), Subject: &subject, Body: &notes,
+		OccurredAt: &at, Source: "manual", MeetingStatus: &held,
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: pat}},
+	}); err != nil {
+		t.Fatalf("logging the meeting: %v", err)
+	}
 
 	candidate, ok := o.offered(t, request)
 	if !ok {
 		t.Fatal("a request followed by a held meeting with the sender was never offered")
 	}
 	messages := o.evidence(t, candidate)
-	if last := messages[len(messages)-1]; last.OffThread != string(crmcontracts.ActivityKindMeeting) {
-		t.Fatalf("the model would read %+v; want the held meeting last, marked as a meeting", messages)
+	last := messages[len(messages)-1]
+	if last.OffThread != string(crmcontracts.ActivityKindMeeting) || last.Body != notes {
+		t.Fatalf("the model would read %+v; want the held meeting last, marked as a meeting, with its notes", last)
 	}
 }
 
@@ -193,5 +203,35 @@ func TestTheNewestAnswerIsInTheWindowPastItsSize(t *testing.T) {
 	if messages[0].ID != request || messages[len(messages)-1].ID != candidate.NewestAnswerID {
 		t.Fatalf("the window runs %v .. %v, want the request first and the newest answer %v last",
 			messages[0].ID, messages[len(messages)-1].ID, candidate.NewestAnswerID)
+	}
+}
+
+// Our reply on the request's thread, sent to a colleague of theirs with them in
+// copy, is not in the thread read (it names another correspondent) but meets
+// the same-subject rule. It still reaches the model as thread mail.
+func TestAReplyOnTheThreadFoundBySubjectIsNotCalledASeparateEmail(t *testing.T) {
+	o := setupOwed(t)
+	o.contact(t, "Pat Buyer", "pat@customer.example")
+	request := o.capture(t, owedMail{
+		from: "pat@customer.example", to: o.seat, subject: "Signed NDA",
+		messageID: "nda-cc@customer.example", at: o.now.Add(-3 * time.Hour),
+	})
+	if applied, err := o.e.Activities.SetOwedVerdict(o.judge(), request, activities.OwedVerdictAsksUs,
+		"prompts-test", time.Now()); err != nil || !applied {
+		t.Fatalf("judging the request: applied=%v err=%v", applied, err)
+	}
+	reply := o.weWrite(t, owedMail{
+		to: "legal@customer.example", cc: "pat@customer.example", subject: "Re: Signed NDA",
+		inReplyTo: "nda-cc@customer.example", at: o.now.Add(-2 * time.Hour),
+	})
+
+	candidate, ok := o.offered(t, request)
+	if !ok {
+		t.Fatal("the request was never offered")
+	}
+	for _, message := range o.evidence(t, candidate) {
+		if message.ID == reply && message.OffThread != "" {
+			t.Fatalf("a reply on the request's own thread reaches the model as %q", message.OffThread)
+		}
 	}
 }

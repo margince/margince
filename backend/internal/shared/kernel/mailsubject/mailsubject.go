@@ -12,7 +12,10 @@
 // Stdlib only, which the shared tier requires.
 package mailsubject
 
-import "strings"
+import (
+	"regexp"
+	"strings"
+)
 
 // ReplyPrefixes are the ways a client marks a subject as a reply, in the
 // languages this product writes. Lower case, colon included.
@@ -35,4 +38,19 @@ func ReplyPrefixPattern() string {
 		words = append(words, strings.TrimSuffix(prefix, ":"))
 	}
 	return `^(\s*(` + strings.Join(words, "|") + `)\s*:)+\s*`
+}
+
+var (
+	replyPrefixes = regexp.MustCompile(`(?i)` + ReplyPrefixPattern())
+	innerSpaces   = regexp.MustCompile(`\s+`)
+)
+
+// Normalized is a subject as the answer check compares it: reply prefixes and
+// outer spaces removed, inner runs of space folded, lower-cased. A forward
+// prefix stays. The SQL in activities/answered.go (normalisedSubject) spells
+// the same steps over the same pattern; TestNormalizedMatchesTheAnswerCheck
+// holds the two to one answer.
+func Normalized(subject string) string {
+	stripped := replyPrefixes.ReplaceAllString(subject, "")
+	return strings.ToLower(strings.TrimSpace(innerSpaces.ReplaceAllString(stripped, " ")))
 }

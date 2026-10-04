@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/mailsubject"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -172,6 +173,13 @@ func refuseUnreadableSettleBatch(threads settleFixture) error {
 				return fmt.Errorf(
 					"request_settlement/request_settle: conversation %d message %d is off the thread as %q; an answer off the thread is an outbound email, call or meeting after the request",
 					i+1, j+1, m.OffThread)
+			}
+			if m.OffThread == string(crmcontracts.ActivityKindEmail) &&
+				(mailsubject.Normalized(m.Subject) == "" ||
+					mailsubject.Normalized(m.Subject) != mailsubject.Normalized(thread.Messages[0].Subject)) {
+				return fmt.Errorf(
+					"request_settlement/request_settle: conversation %d message %d is an email off the thread with subject %q, but the evidence read only offers our mail whose subject is the request's (%q)",
+					i+1, j+1, m.Subject, thread.Messages[0].Subject)
 			}
 			if n := utf8.RuneCountInString(m.Body); n > extractBodyLimit {
 				return fmt.Errorf(
