@@ -5,6 +5,7 @@ package approvals
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -13,7 +14,10 @@ import (
 // aimed at this target type, changes only records a human can change back. A
 // kind whose release reaches outside the workspace — a message sent, a page
 // fetched, a webhook registered — is not undoable: what left cannot be recalled.
-type UndoableRelease func(kind, targetType string) bool
+//
+// change is the staged call itself, because a tool whose tier is dynamic is
+// undoable or not by where the call RESOLVES, which only its arguments say.
+type UndoableRelease func(kind, targetType string, change json.RawMessage) bool
 
 // WithUndoableRelease installs the classification. This module cannot see which
 // staged kinds egress, because the tool specs that declare it live in another
@@ -46,8 +50,15 @@ func (s *Service) ownReleaseFor(ctx context.Context, a row) ownRelease {
 	if a.TargetType != nil {
 		target = *a.TargetType
 	}
-	if !s.undoable(a.Kind, target) {
+	if !s.undoable(a.Kind, target, a.ProposedChange) {
 		return ownReleaseRefused
 	}
 	return ownReleaseAllowed
+}
+
+// ReleasableByCaller says whether the calling credential could approve the
+// proposal it is about to stage, so the answer it is handed names a move that
+// works rather than one decideApproval will refuse.
+func (s *Service) ReleasableByCaller(ctx context.Context, kind, targetType string, change json.RawMessage) bool {
+	return s.ownReleaseFor(ctx, row{Kind: kind, TargetType: &targetType, ProposedChange: change}) == ownReleaseAllowed
 }

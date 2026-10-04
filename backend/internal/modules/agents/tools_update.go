@@ -145,6 +145,9 @@ func (t updateRecord) Handle(ctx context.Context, in json.RawMessage) (json.RawM
 		}
 		return nil, &workflow.StagedApprovalError{
 			ApprovalID: id, AlreadyApproved: alreadyApproved, Summary: summary,
+			ReleasableByCaller: t.staging.ReleasableByCaller(ctx, StageRequest{
+				Tool: "update_record", TargetType: args.RecordType, ProposedChange: canonical,
+			}),
 		}
 	}
 	return t.applySplit(ctx, args, split)
@@ -227,7 +230,7 @@ func (t updateRecord) stageConflicts(ctx context.Context, args updateRecordArgs,
 	said := summaryIn(ctx, t.language)
 	summary := fmt.Sprintf(said.overwriteHuman,
 		said.noun(args.RecordType), recordLabel(rec), strings.Join(split.Conflicts, ", "))
-	id, alreadyApproved, err := t.staging.StageCall(ctx, StageRequest{
+	req := StageRequest{
 		Tool:           "update_record",
 		ProposedChange: canonical,
 		DiffHash:       hash,
@@ -235,7 +238,8 @@ func (t updateRecord) stageConflicts(ctx context.Context, args updateRecordArgs,
 		TargetID:       args.ID,
 		TargetVersion:  &rec.Version,
 		Summary:        summary,
-	})
+	}
+	id, alreadyApproved, err := t.staging.StageCall(ctx, req)
 	return id, alreadyApproved, summary, err
 }
 

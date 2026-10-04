@@ -22,6 +22,7 @@ package approvals
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
 
@@ -385,7 +386,7 @@ func TestASecondConnectionOfTheSameContactDoesNotReleaseWhatTheFirstStaged(t *te
 // What it still cannot release is the same change staged for somebody else.
 func TestACredentialReleasesTheUndoableChangeItStaged(t *testing.T) {
 	e := setupStaging(t)
-	e.svc.WithUndoableRelease(func(kind, _ string) bool { return kind == "company_name_promotion" })
+	e.svc.WithUndoableRelease(func(kind, _ string, _ json.RawMessage) bool { return kind == "company_name_promotion" })
 	target := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(), `
 		INSERT INTO company (id, display_name, source, captured_by)

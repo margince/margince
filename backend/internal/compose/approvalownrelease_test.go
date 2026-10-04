@@ -4,8 +4,10 @@
 package compose
 
 import (
+	"encoding/json"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
@@ -38,15 +40,16 @@ func TestOnlyAStraightThroughRecordChangeIsAnUndoableRelease(t *testing.T) {
 		{"update_record", "a_type_nobody_declared", false},
 		{"a_kind_nobody_declared", "company", false},
 	} {
-		if got := undoableAgentRelease(tc.kind, tc.target); got != tc.want {
+		if got := undoableAgentRelease(tc.kind, tc.target, nil); got != tc.want {
 			t.Errorf("undoableAgentRelease(%q, %q) = %v, want %v", tc.kind, tc.target, got, tc.want)
 		}
 	}
 }
 
 // Every route the contract itself puts before a human — confirm-first, or
-// dynamic so it may — is irreversible for this purpose, read from the
-// admission table so a new confirm-first route cannot arrive undoable.
+// dynamic so it may — is irreversible for this purpose until a call says where
+// it resolves, read from the admission table so a new confirm-first route cannot
+// arrive undoable.
 func TestNoConfirmFirstRouteIsAnUndoableRelease(t *testing.T) {
 	checked := 0
 	for route, pol := range agentPolicies {
@@ -54,7 +57,7 @@ func TestNoConfirmFirstRouteIsAnUndoableRelease(t *testing.T) {
 			continue
 		}
 		checked++
-		if undoableAgentRelease(pol.Tool, string(pol.RecordType)) {
+		if undoableAgentRelease(pol.Tool, string(pol.RecordType), nil) {
 			t.Errorf("%s (%s on %q) is %s and reads as undoable", route, pol.Tool, pol.RecordType, pol.Tier)
 		}
 	}
@@ -72,7 +75,7 @@ func TestNoEgressingVerbIsAnUndoableRelease(t *testing.T) {
 			continue
 		}
 		checked++
-		if undoableAgentRelease(pol.Tool, string(pol.RecordType)) {
+		if undoableAgentRelease(pol.Tool, string(pol.RecordType), nil) {
 			t.Errorf("%s (%s) spends the %s cap and reads as undoable", route, pol.Tool, pol.Scope)
 		}
 	}
@@ -89,7 +92,7 @@ func TestNoFlooredPairIsAnUndoableRelease(t *testing.T) {
 		t.Fatal("the contract floors no (verb, record type) pair — this compared nothing")
 	}
 	for pair := range contractTierFloors {
-		if undoableAgentRelease(pair.tool, pair.recordType) {
+		if undoableAgentRelease(pair.tool, pair.recordType, nil) {
 			t.Errorf("%s on %q is floored confirm-first and reads as undoable", pair.tool, pair.recordType)
 		}
 	}
@@ -108,5 +111,64 @@ func TestEveryUndoablePairIsAStraightThroughTool(t *testing.T) {
 		if !registered || spec.Tier != mcp.TierAutoExecute || spec.TierResolver != nil {
 			t.Errorf("%s on %q reads as undoable, but its tool is not a static auto-execute verb", pair.tool, pair.recordType)
 		}
+	}
+}
+
+// A relink is judged by where the staged call files its activities, not by the
+// policy's static "dynamic": every destination but a project is an association
+// a member relinks back, and whatever the target type the approval was staged
+// under (the batch doors stage under the destination, the single one under the
+// activity).
+func TestARelinkIsUndoableByItsDestination(t *testing.T) {
+	for _, tool := range []string{"relink_activity", "relink_activities", "relink_thread"} {
+		for _, tc := range []struct {
+			change string
+			want   bool
+		}{
+			{`{"entity_type":"company"}`, true},
+			{`{"entity_type":"deal"}`, true},
+			{`{"entity_type":"contact"}`, true},
+			{`{"entity_type":"lead"}`, true},
+			{`{"entity_type":"project"}`, false},
+			{`{"entity_type":"webhook_subscription"}`, false},
+			{`{}`, false},
+			{`not json`, false},
+		} {
+			for _, target := range []string{"activity", "company", ""} {
+				if got := undoableAgentRelease(tool, target, json.RawMessage(tc.change)); got != tc.want {
+					t.Errorf("undoableAgentRelease(%q, %q, %s) = %v, want %v", tool, target, tc.change, got, tc.want)
+				}
+			}
+		}
+	}
+}
+
+// Every dynamic tool on the surface is either judged by its resolved
+// destination or named here as one whose staged call stays the human's, so a
+// new dynamic tool cannot arrive classified by its static label unnoticed.
+func TestEveryDynamicToolIsJudgedByItsCallOrStaysHumanReleased(t *testing.T) {
+	// A won or lost deal move is the one dynamic tier that turns on the
+	// pipeline's semantics rather than a destination; closing a deal is a
+	// decision a contact keeps.
+	humanReleased := map[string]bool{"advance_deal": true, "progress_deal": true}
+	dynamic := 0
+	for _, spec := range NewRegistry(nil, SendPath{}).Specs() {
+		if spec.Tier != mcp.TierDynamic {
+			continue
+		}
+		dynamic++
+		_, decided := agents.ReleaseUndoableByDestination(spec.Name, json.RawMessage(`{"entity_type":"company"}`))
+		switch {
+		case decided && humanReleased[spec.Name]:
+			t.Errorf("%s is judged by destination and also listed as human-released", spec.Name)
+		case !decided && !humanReleased[spec.Name]:
+			t.Errorf("%s is dynamic, and nothing says whether its staged call is undoable", spec.Name)
+		}
+		if undoableAgentRelease(spec.Name, "", nil) {
+			t.Errorf("%s reads as undoable with no call to resolve", spec.Name)
+		}
+	}
+	if dynamic == 0 {
+		t.Fatal("no dynamic tool is registered — this compared nothing")
 	}
 }

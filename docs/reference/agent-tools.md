@@ -85,7 +85,13 @@ Columns:
   (`relink_activity`, `relink_thread`, `relink_activities` — the table below
   lists the first) read the destination record type (filing under a project is
   🟡 — it classifies every named activity as commercial correspondence, which is
-  write-once and cannot be undone by relinking away).
+  write-once and cannot be undone by relinking away). A thread or a named set
+  cannot pin a version, so any of them stages; `relink_thread` then refuses,
+  because a thread key is re-read at the retry, and sends the caller to
+  `relink_activities`, whose approval binds the exact ids. A credential may
+  release its own staged relink with `decide_approval` when the destination is
+  anything but a project (relinking moves it back); a project relink stays the
+  contact's to release.
   **🟢 / 🟡** means the tier depends on the record type the call names: 🟢 for
   the seven the tool enumerates, 🟡 for `custom_field` and
   `webhook_subscription`, which the contract still declares confirm-first.

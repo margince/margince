@@ -24,7 +24,9 @@ package agents
 // and a message joining the conversation in between would be filed and stamped
 // under an approval that never described it. So the thread form NEVER stages:
 // a destination that needs a human is refused with the instruction to name the
-// set through relink_activities, whose diff hash binds the ids verbatim.
+// set through relink_activities, whose diff hash binds the ids verbatim. A
+// thread cannot pin a version, so EVERY destination needs that confirmation
+// and the form refuses them all.
 
 import (
 	"context"
@@ -33,7 +35,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
-	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
 // RelinkThreadCommand is one conversation re-association, whichever door asked
@@ -62,10 +63,9 @@ type relinkThreadResolver struct {
 	language    baselanguage.Resolver
 }
 
-// Subject names the destination, for the reason the file comment gives. It is
-// reached only after Guards, and Guards refuses every destination that would
-// stage — so in practice no card is minted for a thread, and this answer is
-// what keeps the resolver whole rather than a gap a later tier change falls
+// Subject names the destination. It is reached only after Guards, which
+// refuses every thread an agent could stage, so no card is minted for one; the
+// answer keeps the resolver whole rather than a gap a later change falls
 // through.
 func (r *relinkThreadResolver) Subject(ctx context.Context, cmd RelinkThreadCommand) (StageInfo, error) {
 	said := summaryIn(ctx, r.language)
@@ -74,9 +74,12 @@ func (r *relinkThreadResolver) Subject(ctx context.Context, cmd RelinkThreadComm
 }
 
 // Guards refuses a blank key and a destination outside the vocabulary, and
-// then refuses to STAGE at all: a destination that resolves confirm-first is
-// sent to relink_activities, so the rows a human releases are the rows the
-// approved call names.
+// then refuses EVERY thread move it is asked to stage.
+//
+// A thread cannot pin a version, so the gate raises each one to approval
+// whatever its destination — and a key is no description of what a human
+// approves, because the conversation may grow before the retry. The move that
+// can be approved names its rows, so the caller is sent to relink_activities.
 func (r *relinkThreadResolver) Guards(_ context.Context, cmd RelinkThreadCommand) error {
 	if cmd.ThreadKey == "" {
 		return &BadArgsError{Cause: fmt.Errorf("thread_key names the conversation to move; it cannot be blank")}
@@ -84,15 +87,12 @@ func (r *relinkThreadResolver) Guards(_ context.Context, cmd RelinkThreadCommand
 	if err := requireLinkTarget(cmd.EntityType); err != nil {
 		return err
 	}
-	if relinkActivityTier(mcp.TierResolverInput{Args: relinkTierArgsFor(cmd.EntityType)}) != mcp.TierAutoExecute {
-		return &BadArgsError{
-			Cause: fmt.Errorf("filing a conversation under a %s needs a human, and a thread key cannot be approved: "+
-				"the conversation may grow between the approval and the retry", cmd.EntityType),
-			Guidance: "List the thread's activities (list_records with thread_key) and call relink_activities " +
-				"with exactly those ids; that call stages for approval and moves precisely the rows approved.",
-		}
+	return &BadArgsError{
+		Cause: fmt.Errorf("moving a conversation under a %s needs a confirmation, and a thread key cannot be "+
+			"confirmed: the conversation may grow between the confirmation and the retry", cmd.EntityType),
+		Guidance: "List the thread's activities (list_records with thread_key) and call relink_activities " +
+			"with exactly those ids; that call stages for confirmation and moves precisely the rows confirmed.",
 	}
-	return nil
 }
 
 // RelinkActivitiesCommand is one named-set re-association, whichever door

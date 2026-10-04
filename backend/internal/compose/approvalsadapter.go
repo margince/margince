@@ -52,6 +52,12 @@ func (a approvalsAdapter) StageCall(ctx context.Context, in agents.StageRequest)
 	})
 }
 
+// ReleasableByCaller asks the approvals engine whether the calling credential
+// could approve what it is staging.
+func (a approvalsAdapter) ReleasableByCaller(ctx context.Context, in agents.StageRequest) bool {
+	return a.svc.ReleasableByCaller(ctx, in.Tool, in.TargetType, in.ProposedChange)
+}
+
 // StageVolumeRelease puts a §2.4 step-up in front of the human who lent the
 // calling passport.
 //

@@ -124,17 +124,20 @@ var relinkActivityCopy = toolCopy{
 
 var relinkThreadCopy = toolCopy{
 	Purpose: "Move one whole conversation (by thread_key) onto a record, in one transaction.",
-	Limits: "Moves only activities you may write; the rest stay, uncounted. A project " +
-		"destination needs a human.",
-	Instead: "relink_activity moves one message.",
-	Retain:  "The answer lists the ids moved.",
+	Limits: "Refused for an assistant, for every destination: a thread key cannot be confirmed " +
+		"because the conversation may grow before the retry. List the thread's activities and " +
+		"call relink_activities with exactly those ids.",
+	Instead: "relink_activities moves a named set; relink_activity moves one message.",
 }
 
 var relinkActivitiesCopy = toolCopy{
 	Purpose: "Move up to 500 named activities onto one record, all or nothing.",
-	Limits:  "Each id must be visible and writable to you. A project destination needs a human.",
-	Instead: "relink_thread moves one conversation.",
-	Retain:  "The answer lists the ids moved.",
+	Limits: "Each id must be visible and writable to you. It is staged for confirmation, and the " +
+		"retry moves exactly these ids. Onto a company, deal, contact or lead the user's yes can " +
+		"be relayed with decide_approval, since relinking moves it back; a project destination is " +
+		"released by a human in the CRM.",
+	Instead: "relink_activity moves one message.",
+	Retain:  "The answer is the count moved.",
 }
 
 var bulkUpdateRecordsCopy = toolCopy{

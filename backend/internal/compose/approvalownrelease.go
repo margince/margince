@@ -3,7 +3,12 @@
 
 package compose
 
-import "github.com/margince/margince/backend/internal/shared/kernel/principal"
+import (
+	"encoding/json"
+
+	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+)
 
 // releaseTarget is one tool verb aimed at one record type — the pair an agent
 // call is staged under, as the approval's kind and target type.
@@ -33,8 +38,14 @@ var agentStraightThrough = func() map[releaseTarget]bool {
 }()
 
 // undoableAgentRelease is approvals.UndoableRelease for agent-staged calls. A
-// pair the admission table does not name — an unknown kind, or no target type
-// — is not undoable, which keeps the stricter rule for it.
-func undoableAgentRelease(kind, targetType string) bool {
+// tool whose tier turns on its arguments is judged by where THIS call resolves,
+// because the policy's static "dynamic" says nothing about it and its target
+// type may be the destination rather than the verb's record. A pair the
+// admission table does not name — an unknown kind, or no target type — is not
+// undoable, which keeps the stricter rule for it.
+func undoableAgentRelease(kind, targetType string, change json.RawMessage) bool {
+	if undoable, decided := agents.ReleaseUndoableByDestination(kind, change); decided {
+		return undoable
+	}
 	return agentStraightThrough[releaseTarget{kind, agentRecordType(targetType)}]
 }

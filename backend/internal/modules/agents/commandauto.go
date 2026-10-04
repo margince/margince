@@ -270,6 +270,28 @@ func relinkActivityTier(in mcp.TierResolverInput) mcp.RiskTier {
 	return mcp.TierAutoExecute
 }
 
+// ReleaseUndoableByDestination answers, for a tool whose tier turns on where a
+// call resolves, whether a call it staged would change only what a member can
+// put back. decided is false for every other tool, whose answer is its
+// route's static tier.
+//
+// The destination is read off the staged arguments, so a relink staged for any
+// reason — a batch that cannot pin a version, a record that could not be read —
+// is judged by where it files, not by the policy's "dynamic" label.
+func ReleaseUndoableByDestination(tool string, call json.RawMessage) (undoable, decided bool) {
+	if !relinkDestinationTools[tool] {
+		return false, false
+	}
+	return relinkActivityTier(mcp.TierResolverInput{Args: call}) == mcp.TierAutoExecute, true
+}
+
+// relinkDestinationTools are the tools whose tier is relinkActivityTier.
+var relinkDestinationTools = map[string]bool{
+	"relink_activity":   true,
+	"relink_activities": true,
+	"relink_thread":     true,
+}
+
 type relinkActivityResolver struct {
 	activity anchoredRecord
 	language baselanguage.Resolver
