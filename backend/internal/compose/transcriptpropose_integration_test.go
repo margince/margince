@@ -44,12 +44,14 @@ const transcriptBody = "Dana: Thanks for walking us through the rollout plan.\n"
 	"Priya: I'll send the revised pricing over by Friday.\n" +
 	"Dana: Perfect, we'll review it then."
 
-// transcriptPerms is a rep who may create activities and read the timeline —
-// exactly what confirming a next step needs and no more.
+// transcriptPerms is a rep who may create activities, read the timeline and
+// update a contact — exactly what confirming a promise needs and no more: the
+// task, and the claim on the customer's record that points at it.
 var transcriptPerms = principal.Permissions{
 	RoleKeys: []string{"rep"},
 	Objects: map[string]principal.ObjectGrant{
 		"activity":              {Create: true, Read: true, Update: true},
+		"contact":               {Read: true, Update: true},
 		"deal":                  {Read: true},
 		"pipeline":              {Read: true},
 		"installation_settings": {Read: true},

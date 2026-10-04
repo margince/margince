@@ -24,8 +24,9 @@ import (
 // because that is what a transcript states. A colleague is matched strictly
 // (identity.ResolveColleague): an exact name or email, one live seat, or
 // nobody. Failing that, a contact linked to the meeting under exactly that name
-// is the customer who promised. A name that is neither stays unnamed, and the
-// rule proposes it rather than guessing whose it is.
+// is the customer who promised. A name that is neither, or both, stays unnamed,
+// and the rule proposes it rather than guessing whose it is: a customer sharing
+// a colleague's name must not have their promise written as our task.
 func (p *TranscriptProposer) commitmentFrom(
 	ctx context.Context, tx pgx.Tx, step proposedStep,
 	reading activities.TranscriptReading, activityID ids.ActivityID,
@@ -51,17 +52,16 @@ func (p *TranscriptProposer) commitmentFrom(
 		return Commitment{}, err
 	}
 	linked := linkedContacts(reading.Links)
-	if found {
+	contact, named, err := p.contacts.ContactNamedAmong(reader, tx, linked, owner)
+	if err != nil {
+		return Commitment{}, err
+	}
+	switch {
+	case found && !named:
 		seat := colleague.UserID
 		c.Seat, party = &seat, "seat:"+seat.String()
-	} else {
-		contact, named, err := p.contacts.ContactNamedAmong(reader, tx, linked, owner)
-		if err != nil {
-			return Commitment{}, err
-		}
-		if named {
-			c.Theirs, kind, party = &contact, claimKindTheirs, "contact:"+contact.String()
-		}
+	case named && !found:
+		c.Theirs, kind, party = &contact, claimKindTheirs, "contact:"+contact.String()
 	}
 	// One of our promises is filed on the customer's record too, when the
 	// meeting names exactly one; with several, nothing says which was promised.

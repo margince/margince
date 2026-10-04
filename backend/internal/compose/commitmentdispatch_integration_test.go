@@ -77,3 +77,42 @@ func TestADismissedCustomerPromiseIsNotFiledAgain(t *testing.T) {
 		t.Errorf("after a second reading the claims read %q, want the one dismissed claim", got)
 	}
 }
+
+// A promise a human turned down as a proposal is not written as a task when a
+// later reading of the same words is surer of it.
+func TestARefusedPromiseIsNotWrittenWhenAReadingIsSurer(t *testing.T) {
+	e := setupTranscript(t)
+	e.WsExec(t, `UPDATE app_user SET display_name = 'Priya Raman' WHERE id = $1`, e.Rep2)
+	read := e.read(t, cannedBrain{reply: ownedReply(t, "Priya Raman", 0.75)})
+	if len(read.ProposalIDs) != 1 {
+		t.Fatalf("want the unsure promise proposed, got %d proposals", len(read.ProposalIDs))
+	}
+	priya := e.As(e.Rep2, []ids.UUID{e.Team1}, transcriptPerms)
+	reason := "not mine"
+	if _, err := e.svc.Decide(priya, ids.From[ids.ApprovalKind](read.ProposalIDs[0]), false, &reason); err != nil {
+		t.Fatalf("refusing the proposal: %v", err)
+	}
+
+	e.read(t, cannedBrain{reply: ownedReply(t, "Priya Raman", 0.95)})
+	if n := e.taskCount(t); n != 0 {
+		t.Errorf("a refused promise became %d task(s) on a surer reading", n)
+	}
+}
+
+// A customer who shares a colleague's exact name is not taken for the
+// colleague: the promise is put to a human rather than written as our task.
+func TestACustomerSharingAColleaguesNameIsNotTakenForThem(t *testing.T) {
+	e := setupTranscript(t)
+	e.WsExec(t, `UPDATE app_user SET display_name = 'Priya Raman' WHERE id = $1`, e.Rep2)
+	contact, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "Priya Raman"})
+	if err != nil {
+		t.Fatalf("creating the customer: %v", err)
+	}
+	integration.LinkActivity(t, e.owner, e.activity.UUID, "contact", ids.UUID(contact.Id))
+
+	read := e.read(t, cannedBrain{reply: ownedReply(t, "Priya Raman", 0.95)})
+	if e.taskCount(t) != 0 || len(read.ProposalIDs) != 1 {
+		t.Errorf("a name both sides answer to became %d task(s) and %d proposal(s); want one proposal",
+			e.taskCount(t), len(read.ProposalIDs))
+	}
+}

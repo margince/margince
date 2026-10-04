@@ -33,6 +33,10 @@ const objectActivity = "activity"
 // a module it governs.
 const objectDeal = "deal"
 
+// objectContact is the RBAC object a claim on a contact's record is governed
+// by, spelled here for objectDeal's reason.
+const objectContact = "contact"
+
 // targetImportRun is the staged target a migrate-in commit names, and the RBAC
 // object the migration module admits on (migration.ImportRunObject). One word
 // for both, spelled here rather than imported: approvals may not import a
@@ -292,8 +296,9 @@ var decisionGrants = map[string][]grantRequirement{
 	// otherwise release a task they could not have logged themselves.
 	kindTranscriptProposal: {{objectActivity, principal.ActionCreate}},
 	// Confirming a promise read out of a conversation creates the task it
-	// proposed, the same write and the same grant as a transcript's next step.
-	kindCommitmentTask: {{objectActivity, principal.ActionCreate}},
+	// proposed, and points the claim on the customer's record at that task —
+	// so the decider must be able to do both by hand.
+	kindCommitmentTask: {{objectActivity, principal.ActionCreate}, {objectContact, principal.ActionUpdate}},
 	// A proposed stage move is decided by whoever may MOVE the deal. Approving
 	// it performs the advance, so read is not enough: somebody who can see a
 	// deal but not steer it must not be able to release a move they could not
