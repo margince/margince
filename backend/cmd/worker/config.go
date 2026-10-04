@@ -98,6 +98,20 @@ type workerConfig struct {
 	unknownVars []string
 }
 
+// registerJobDrainFlag binds --job-drain-window, whose default an environment
+// variable may move.
+func registerJobDrainFlag(fs *flag.FlagSet, cfg *workerConfig) error {
+	drain, err := envDurationOr(jobDrainWindowEnv, defaultJobDrainWindow)
+	if err != nil {
+		return err
+	}
+	fs.DurationVar(&cfg.jobDrainWindow, "job-drain-window", drain,
+		"how long a job already running at shutdown is given to finish before its context is cancelled; "+
+			"shutdown then waits a further 5s for cancelled jobs to return, so the pod's termination grace "+
+			"period must cover the drain window plus that and a few seconds of teardown")
+	return nil
+}
+
 // workerFlagSet registers this role's flags and their environment bindings,
 // unparsed — the same registration that a boot reads and that describes this
 // role's configurable surface, so neither is a copy of the other.
@@ -149,14 +163,9 @@ func workerFlagSet() (*flag.FlagSet, *cliflags.Env, *workerConfig, error) {
 	if err := registerDeepReadFlags(fs, cfg); err != nil {
 		return nil, nil, nil, err
 	}
-	drain, err := envDurationOr(jobDrainWindowEnv, defaultJobDrainWindow)
-	if err != nil {
+	if err := registerJobDrainFlag(fs, cfg); err != nil {
 		return nil, nil, nil, err
 	}
-	fs.DurationVar(&cfg.jobDrainWindow, "job-drain-window", drain,
-		"how long a job already running at shutdown is given to finish before its context is cancelled; "+
-			"shutdown then waits a further 5s for cancelled jobs to return, so the pod's termination grace "+
-			"period must cover the drain window plus that and a few seconds of teardown")
 	// Outbound pacing. Zero on any of the three takes the compose default —
 	// a forgotten flag must degrade to the conservative rule, never to "no
 	// limit" or "defer forever".
