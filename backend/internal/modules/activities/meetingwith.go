@@ -49,8 +49,10 @@ func (s *Store) MeetingCounterparties(ctx context.Context, meetingIDs []ids.UUID
 	if len(meetingIDs) == 0 {
 		return out, nil
 	}
-	for _, object := range []string{"activity", "contact"} {
-		err := auth.Require(ctx, object, principal.ActionRead)
+	for _, err := range []error{
+		auth.Require(ctx, linkEntityActivity, principal.ActionRead),
+		auth.Require(ctx, "contact", principal.ActionRead),
+	} {
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
 			return out, nil
 		}

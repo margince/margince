@@ -50,7 +50,7 @@ func partiesContact(t *testing.T, e *integration.Env, name string, owner ids.UUI
 
 // partiesMeeting logs a past meeting as host, linked to the given contacts;
 // the writer records each as a participant.
-func partiesMeeting(t *testing.T, ctx context.Context, e *integration.Env, subject string, with ...ids.UUID) ids.UUID {
+func partiesMeeting(ctx context.Context, t *testing.T, e *integration.Env, subject string, with ...ids.UUID) ids.UUID {
 	t.Helper()
 	at := time.Now().Add(-2 * time.Hour)
 	in := activities.LogActivityInput{Kind: "meeting", Subject: &subject, OccurredAt: &at, Source: "manual"}
@@ -93,8 +93,8 @@ func TestAMeetingOwedAnAnswerNamesItsCustomerTheirAccountAndItsHost(t *testing.T
 
 	teammate := e.As(e.Rep2, []ids.UUID{e.Team1}, integration.AdminPerms)
 	stranger := e.As(e.Rep3, []ids.UUID{e.Team2}, integration.AdminPerms)
-	review := partiesMeeting(t, teammate, e, "Quarterly review", colleague, customer)
-	demo := partiesMeeting(t, stranger, e, "Demo", customer)
+	review := partiesMeeting(teammate, t, e, "Quarterly review", colleague, customer)
+	demo := partiesMeeting(stranger, t, e, "Demo", customer)
 
 	feed := newAttentionService(e.Pool, approvals.NewService(e.DB()), time.Now)
 	day, err := feed.Worklist(e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms), "all", "all", ids.Nil, 100, "")
@@ -142,7 +142,7 @@ func TestAMeetingNamesOnlyACustomerTheReaderMaySee(t *testing.T) {
 	}
 	visible := partiesContact(t, e, "Blair Shared", ids.UUID{}, nil)
 	owner := e.As(e.Rep3, []ids.UUID{e.Team2}, integration.AccountRepPerms)
-	joint := partiesMeeting(t, owner, e, "Joint call", hidden, visible)
+	joint := partiesMeeting(owner, t, e, "Joint call", hidden, visible)
 
 	store := activities.NewStore(InstallationDB(e.Pool))
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
@@ -202,7 +202,7 @@ func TestAReaderWhoMayNotReadCompaniesSeesTheMeetingRowWithoutAnAccount(t *testi
 	}
 	acmeID := ids.From[ids.CompanyKind](ids.UUID(acme.Id))
 	customer := partiesContact(t, e, "Customer Buyer", ids.UUID{}, &acmeID)
-	meeting := partiesMeeting(t, e.Admin(), e, "Quarterly review", customer)
+	meeting := partiesMeeting(e.Admin(), t, e, "Quarterly review", customer)
 
 	noCompany := integration.AdminPerms
 	noCompany.Objects = map[string]principal.ObjectGrant{}
