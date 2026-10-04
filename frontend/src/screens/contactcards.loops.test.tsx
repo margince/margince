@@ -1,5 +1,5 @@
 /** @vitest-environment happy-dom */
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { ContactCommitmentsCard } from "./contactcards";
@@ -279,12 +279,23 @@ describe("a commitment read from a conversation", () => {
   });
 
   it("offers no dismissal to a reader who may not update the contact", async () => {
+    let meServed = false;
+    installFetchStub({
+      "GET /me": () => {
+        meServed = true;
+        return meRoute({ activity: ["read"], contact: ["read"] })();
+      },
+    });
     render(
       <StoryProviders>
         <ContactCommitmentsCard view={viewWithDue(null)} firstName="Dana" />
       </StoryProviders>,
     );
     await screen.findByText("“I'll send the quote on Monday.”");
+    // The answer is only meaningful once the grants have arrived: before
+    // that, the button is withheld for not knowing, not for the grant.
+    await waitFor(() => expect(meServed).toBe(true));
+    await act(async () => {});
     expect(screen.queryByRole("button", { name: "Dismiss" })).toBeNull();
   });
 

@@ -338,7 +338,7 @@ func (s *Store) CommitmentsTheirsForProjects(ctx context.Context, tx pgx.Tx, pro
 		  JOIN activity a ON a.id = c.source_activity_id AND a.archived_at IS NULL
 		  JOIN activity_link l ON l.activity_id = a.id AND l.project_id = ANY($%[1]d)
 		  JOIN contact pr ON pr.id = c.contact_id AND pr.archived_at IS NULL
-		 WHERE c.kind = 'commitment_theirs' AND c.status = 'open' AND NOT c.needs_review
+		 WHERE `+theirPromiseOpen+`
 		   AND c.archived_at IS NULL
 		   AND (%[3]s)
 		 ORDER BY l.project_id,

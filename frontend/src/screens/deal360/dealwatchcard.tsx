@@ -101,7 +101,7 @@ export function DealWatchList({
           <span className="t-caption deal-watch-quote">
             {t("commitment.quote", { quote: row.source_quote })}
           </span>
-          <span className="t-caption deal-watch-meta">
+          <div className="t-caption deal-watch-meta">
             {row.due_at
               ? t("co.next.due", {
                   when: formatDate(row.due_at, locale, recordZone),
@@ -118,9 +118,14 @@ export function DealWatchList({
               </Button>
             )}
             <DismissClaimButton id={row.id} />
-          </span>
+          </div>
         </PanelRow>
       ))}
+      {commitments.has_more && (
+        <PanelBody>
+          <p className="t-caption">{t("deal.watch.more")}</p>
+        </PanelBody>
+      )}
     </Panel>
   );
 }

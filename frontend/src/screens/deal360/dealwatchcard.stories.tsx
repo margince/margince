@@ -38,6 +38,7 @@ export const Watched: Story = {
     onOpenEmail: () => {},
     commitments: {
       complete: true,
+      has_more: false,
       data: [
         {
           ...row,
@@ -62,6 +63,19 @@ export const Watched: Story = {
   },
 };
 
+export const WatchedDark: Story = { ...Watched, globals: { theme: "dark" } };
+
 export const PartlyHidden: Story = {
-  args: { commitments: { complete: false, data: [] } },
+  args: { commitments: { complete: false, has_more: false, data: [] } },
+};
+
+export const MoreThanShown: Story = {
+  args: {
+    ...Watched.args,
+    commitments: {
+      // biome-ignore lint/style/noNonNullAssertion: Watched sets it above.
+      ...Watched.args!.commitments!,
+      has_more: true,
+    },
+  },
 };

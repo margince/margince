@@ -7,6 +7,7 @@ package compose
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
@@ -108,18 +109,48 @@ func TestAHiddenCommitmentMakesTheListIncomplete(t *testing.T) {
 	}
 }
 
-// A reader without the contact grant is refused rather than told nothing is owed.
+// A reader without the contact grant is refused rather than told nothing is owed,
+// on a deal with no company as on one with a company.
 func TestADealWatchNeedsTheContactGrant(t *testing.T) {
 	w := seedDealWatch(t)
 	perms := principal.Permissions{
 		RoleKeys: []string{"rep"}, RowScope: principal.RowScopeTeam,
 		Objects: map[string]principal.ObjectGrant{
 			"deal": {Read: true}, "company": {Read: true}, "activity": {Read: true},
+			"relationship": {Read: true},
 		},
 	}
 	reader := w.As(w.Rep1, []ids.UUID{w.Team1}, perms)
 	if _, err := newDealCommitmentHandlers(w.Pool).read(reader, ids.From[ids.DealKind](w.deal)); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("a reader with no contact grant: err = %v, want permission denied", err)
+	}
+	w.WsExec(t, `UPDATE deal SET company_id = NULL WHERE id = $1`, w.deal)
+	if _, err := newDealCommitmentHandlers(w.Pool).read(reader, ids.From[ids.DealKind](w.deal)); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("a reader with no contact grant, on a deal with no company: err = %v, want permission denied", err)
+	}
+}
+
+// The card lists the most urgent commitments and says when there are more.
+func TestADealWatchSaysWhenMoreAreOwed(t *testing.T) {
+	w := seedDealWatch(t)
+	message, err := ids.Parse(w.WsScalar(t, `SELECT source_activity_id::text FROM conversation_claim`))
+	if err != nil {
+		t.Fatalf("reading the message: %v", err)
+	}
+	for i := range dealCommitmentsLimit {
+		if _, err := w.Contacts.RecordConversationClaim(w.Admin(), contacts.ClaimInput{
+			ContactID: ids.From[ids.ContactKind](w.contact), Kind: claimKindTheirs,
+			Body: fmt.Sprintf("Commitment %d", i), ActivityID: message,
+			Quote: fmt.Sprintf("We will do thing %d.", i), Source: "extraction",
+		}); err != nil {
+			t.Fatalf("filing commitment %d: %v", i, err)
+		}
+	}
+	reader := w.As(w.Rep1, []ids.UUID{w.Team1}, dealWatchPerms)
+	got, err := newDealCommitmentHandlers(w.Pool).read(reader, ids.From[ids.DealKind](w.deal))
+	if err != nil || len(got.Data) != dealCommitmentsLimit || !got.HasMore {
+		t.Errorf("an account owing %d commitments reads as %d row(s), has_more=%v, err=%v",
+			dealCommitmentsLimit+1, len(got.Data), got.HasMore, err)
 	}
 }
 
@@ -129,7 +160,10 @@ func TestAMaskedCompanyLeavesTheDealWatchIncomplete(t *testing.T) {
 	w := seedDealWatch(t)
 	perms := principal.Permissions{
 		RoleKeys: []string{"rep"}, RowScope: principal.RowScopeTeam,
-		Objects: map[string]principal.ObjectGrant{"deal": {Read: true}},
+		Objects: map[string]principal.ObjectGrant{
+			"deal": {Read: true}, "contact": {Read: true}, "activity": {Read: true},
+			"relationship": {Read: true},
+		},
 	}
 	reader := w.As(w.Rep1, []ids.UUID{w.Team1}, perms)
 	got, err := newDealCommitmentHandlers(w.Pool).read(reader, ids.From[ids.DealKind](w.deal))

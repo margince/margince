@@ -31977,7 +31977,7 @@ type DealCommitment struct {
 	// OccurredAt When it was said.
 	OccurredAt time.Time `json:"occurred_at"`
 
-	// SourceActivityId The meeting or message it was read from.
+	// SourceActivityId The captured activity it was read from.
 	SourceActivityId openapi_types.UUID `json:"source_activity_id"`
 
 	// SourceKind The kind of activity it was read from (`email`, `meeting`, …), so a client opens it in the reader that kind needs.
@@ -31992,6 +31992,9 @@ type DealCommitments struct {
 	// Complete False when a commitment was left out because its contact or its message is outside what the caller may read.
 	Complete bool             `json:"complete"`
 	Data     []DealCommitment `json:"data"`
+
+	// HasMore True when more open commitments exist than the most urgent ones returned.
+	HasMore bool `json:"has_more"`
 }
 
 // DealCoverage defines model for DealCoverage.

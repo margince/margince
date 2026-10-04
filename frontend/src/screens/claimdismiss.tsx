@@ -29,7 +29,7 @@ export function DismissClaimButton({ id }: Readonly<{ id: string }>) {
       >
         {t("commitment.dismiss")}
       </Button>
-      <ErrorLine error={settle.error} />
+      <ErrorLine error={settle.error} inline />
     </>
   );
 }

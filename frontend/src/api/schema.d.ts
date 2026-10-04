@@ -16828,15 +16828,18 @@ export interface paths {
         /**
          * What the customer committed to that this deal waits on.
          * @description The open commitments the contacts employed at the deal's company made to us, read
-         *     out of meetings and mail: overdue first, then by nearest due date. Each carries the
-         *     quoted words and the message they came from, so a reader can check it, and its claim
-         *     id, so a reader can dismiss it (`POST /claims/{id}/settle`).
+         *     out of captured activities: overdue first, then by nearest due date, at most 25.
+         *     Each carries the quoted words and the activity they came from, so a reader can check
+         *     it, and its claim id, so a reader with `contact:update` can dismiss it
+         *     (`POST /claims/{id}/settle`).
          *
-         *     Needs `contact:read` and `activity:read` on top of the deal grant: each row names a
-         *     contact and quotes a captured message. A commitment whose contact or message the
+         *     Needs `contact:read`, `activity:read` and `relationship:read` on top of the deal
+         *     grant: each row names a contact, quotes a captured activity, and is this account's
+         *     through the contact's employment edge. A commitment whose contact or activity the
          *     caller may not see is left out, and `complete` is then false, so the card can say it
-         *     speaks about less than the account rather than that nothing is owed. A deal with no
-         *     company has nothing to read and answers an empty, complete list.
+         *     speaks about less than the account rather than that nothing is owed. `has_more`
+         *     says more commitments exist past the 25 returned. A deal with no company has
+         *     nothing to read and answers an empty, complete list.
          */
         get: operations["getDealCommitments"];
         put?: never;
@@ -26004,6 +26007,8 @@ export interface components {
         };
         DealCommitments: {
             data: components["schemas"]["DealCommitment"][];
+            /** @description True when more open commitments exist than the most urgent ones returned. */
+            has_more: boolean;
             /** @description False when a commitment was left out because its contact or its message is outside what the caller may read. */
             complete: boolean;
         };
@@ -26022,7 +26027,7 @@ export interface components {
             source_quote: string;
             /**
              * Format: uuid
-             * @description The meeting or message it was read from.
+             * @description The captured activity it was read from.
              */
             source_activity_id: string;
             /** @description The kind of activity it was read from (`email`, `meeting`, …), so a client opens it in the reader that kind needs. */

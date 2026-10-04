@@ -14,6 +14,7 @@ const MESSAGE = "01a02e25-a5ac-7099-8099-581cbf001a01";
 
 const ONE: DealCommitments = {
   complete: true,
+  has_more: false,
   data: [
     {
       id: "01a02e25-a5ac-7099-8099-581cbf001a02",
@@ -65,15 +66,24 @@ describe("the deal's watch card", () => {
     expect(screen.queryByRole("button", { name: "Open message" })).toBeNull();
   });
 
+  it("says when more are open than it shows", () => {
+    renderList({ ...ONE, has_more: true });
+    expect(
+      screen.getByText(
+        "Showing the 25 most urgent commitments; more are open.",
+      ),
+    ).toBeTruthy();
+  });
+
   it("draws nothing when the customer owes nothing", () => {
-    renderList({ complete: true, data: [] });
+    renderList({ complete: true, has_more: false, data: [] });
     expect(screen.queryByText("Customer commitments")).toBeNull();
   });
 
   it("says when the list is only part of the account", () => {
-    renderList({ complete: false, data: [] });
+    renderList({ complete: false, has_more: false, data: [] });
     expect(
-      screen.getByText("Some commitments on this account are hidden from you."),
+      screen.getByText("Some commitments at this company are hidden from you."),
     ).toBeTruthy();
   });
 });
@@ -100,6 +110,6 @@ describe("the deal's watch card, read from the server", () => {
         <DealWatchCard dealId="d-1" />
       </StoryProviders>,
     );
-    expect(await screen.findByText("Customer commitments")).toBeTruthy();
+    expect(await screen.findByRole("alert")).toBeTruthy();
   });
 });

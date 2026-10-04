@@ -20,10 +20,12 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // dealCommitmentsLimit bounds the card. It lists what the deal waits on, and
@@ -63,6 +65,13 @@ func (h dealCommitmentHandlers) read(ctx context.Context, dealID ids.DealID) (cr
 	if err != nil {
 		return out, err
 	}
+	// The grants the rows need are asked first, so a caller without them is
+	// refused on every deal, not only on one whose company they may see.
+	for _, object := range []string{"contact", "activity", "relationship"} {
+		if err := auth.Require(ctx, object, principal.ActionRead); err != nil {
+			return out, err
+		}
+	}
 	if deal.CompanyId == nil {
 		out.Complete = deal.MaskedFields == nil || !slices.Contains(*deal.MaskedFields, "company_id")
 		return out, nil
@@ -70,12 +79,16 @@ func (h dealCommitmentHandlers) read(ctx context.Context, dealID ids.DealID) (cr
 	var rows []contacts.CompanyCommitment
 	err = database.WithWorkspaceTx(ctx, h.pool, func(tx pgx.Tx) error {
 		var err error
+		// One past the card's length, to know whether more exist.
 		rows, out.Complete, err = h.contacts.OpenTheirCommitmentsForCompany(
-			ctx, tx, ids.UUID(*deal.CompanyId), dealCommitmentsLimit)
+			ctx, tx, ids.UUID(*deal.CompanyId), dealCommitmentsLimit+1)
 		return err
 	})
 	if err != nil {
 		return out, err
+	}
+	if len(rows) > dealCommitmentsLimit {
+		rows, out.HasMore = rows[:dealCommitmentsLimit], true
 	}
 	for _, row := range rows {
 		out.Data = append(out.Data, crmcontracts.DealCommitment{
