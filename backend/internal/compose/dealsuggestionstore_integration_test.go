@@ -502,3 +502,65 @@ func TestAScoutPassWithdrawsATwinOfADismissedSuggestion(t *testing.T) {
 		t.Fatalf("the twin of a dismissed suggestion is %q, want it superseded", state)
 	}
 }
+
+// The withdrawal trusts its claimants until it commits: a user dismissing the
+// claimant meanwhile waits for it rather than changing the claim under it.
+func TestAClaimantWaitsForTheWithdrawalThatTrustsIt(t *testing.T) {
+	e := setupScout(t)
+	named := e.SeedCompany(t, "Northwind Traders", nil)
+	twin := e.SeedCompany(t, "NORTHWIND TRADERS", nil)
+	dana := e.employee(t, "Dana Buyer", named)
+	meeting := e.meeting(e.Admin(), t, "Scoping workshop", &dana, e.daysAgo(3))
+	claimant := e.recordUnpaired(t, named, meeting)
+	e.recordUnpaired(t, twin, meeting)
+	ctx := e.system()
+
+	scoutPID, release, scoutDone := make(chan int, 1), make(chan struct{}), make(chan error, 1)
+	var releaseOnce sync.Once
+	releaseScout := func() { releaseOnce.Do(func() { close(release) }) }
+	t.Cleanup(releaseScout)
+	go func() {
+		scoutDone <- database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+			if _, err := deals.SupersedeDuplicateSuggestionsTx(ctx, tx, [][2]ids.UUID{{named, twin}}); err != nil {
+				return err
+			}
+			var pid int
+			if err := tx.QueryRow(ctx, `SELECT pg_backend_pid()`).Scan(&pid); err != nil {
+				return err
+			}
+			scoutPID <- pid
+			<-release
+			return nil
+		})
+	}()
+	var pid int
+	select {
+	case pid = <-scoutPID:
+	case err := <-scoutDone:
+		t.Fatalf("the withdrawal ended before it held its claims: %v", err)
+	}
+
+	dismissDone := make(chan error, 1)
+	go func() {
+		_, err := e.decider().DismissSuggestion(e.Admin(), claimant)
+		dismissDone <- err
+	}()
+	probe, err := e.Pool.Begin(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := probe.Rollback(context.Background()); err != nil {
+			t.Errorf("releasing the probe: %v", err)
+		}
+	}()
+	waitForBackendBlockedBy(t, probe, pid, dismissDone)
+	releaseScout()
+
+	if err := <-scoutDone; err != nil {
+		t.Fatalf("the withdrawal: %v", err)
+	}
+	if err := <-dismissDone; err != nil {
+		t.Fatalf("the dismissal, once the withdrawal let go: %v", err)
+	}
+}

@@ -266,3 +266,19 @@ func TestAHiddenEmploymentEdgeDoesNotDecideWhoAMeetingWasWith(t *testing.T) {
 		})
 	}
 }
+
+// A reader who may not read activities is told about nobody, and the page
+// around them still stands.
+func TestAReaderWhoMayNotReadActivitiesIsToldTheMeetingWasWithNobody(t *testing.T) {
+	e := integration.Setup(t)
+	customer := partiesContact(t, e, "Zed Customer", ids.UUID{}, nil)
+	meeting := partiesMeeting(e.Admin(), t, e, "Kickoff", customer)
+
+	withoutActivities := integration.AdminPerms
+	withoutActivities.Objects = maps.Clone(withoutActivities.Objects)
+	delete(withoutActivities.Objects, "activity")
+	with, err := e.Activities.MeetingCounterparties(e.As(e.AdminUser, nil, withoutActivities), []ids.UUID{meeting})
+	if err != nil || len(with) != 0 {
+		t.Fatalf("a reader without the activity grant got %v, %v; want nobody and no error", with, err)
+	}
+}

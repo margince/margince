@@ -4,6 +4,7 @@
 package deals
 
 import (
+	"context"
 	"slices"
 	"testing"
 
@@ -32,5 +33,25 @@ func TestADismissedOrAcceptedClaimantRetiresWhateverItsAge(t *testing.T) {
 	})
 	if !slices.Equal(got, []ids.UUID{retiredFirst, open}) {
 		t.Fatalf("retired %v, want both: a dismissal claims even when an open claimant is gone", got)
+	}
+}
+
+// A suggestion two claimants claim is retired once.
+func TestASuggestionClaimedTwiceIsRetiredOnce(t *testing.T) {
+	suggestion, first, second := ids.NewV7(), ids.NewV7(), ids.NewV7()
+	got := claimsRetired([]duplicateClaim{
+		{suggestion: suggestion, claimant: first, claimantOpen: true},
+		{suggestion: suggestion, claimant: second, claimantOpen: false},
+	})
+	if !slices.Equal(got, []ids.UUID{suggestion}) {
+		t.Fatalf("retired %v, want %v once", got, suggestion)
+	}
+}
+
+// An empty list asks the database nothing: no transaction is touched.
+func TestImportedAmongAnEmptyListAsksNothing(t *testing.T) {
+	got, err := ImportedAmongTx(context.Background(), nil, nil)
+	if err != nil || len(got) != 0 {
+		t.Fatalf("an empty list answered %v, %v; want nothing", got, err)
 	}
 }

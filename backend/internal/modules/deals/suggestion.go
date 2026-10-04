@@ -389,14 +389,16 @@ type duplicateClaim struct {
 }
 
 // duplicateClaimsTx reads every claim on the open suggestions of these pairs,
-// oldest suggestion first, and locks those suggestions for the pass.
+// oldest suggestion first. It locks the suggestions it may retire and shares
+// the claimants, so no claimant changes state between this read and the
+// retirement that trusts it. A suggestion claimed twice is listed twice.
 func duplicateClaimsTx(ctx context.Context, tx pgx.Tx, pairs [][2]ids.UUID) ([]duplicateClaim, error) {
 	lefts, rights := make([]ids.UUID, 0, len(pairs)), make([]ids.UUID, 0, len(pairs))
 	for _, pair := range pairs {
 		lefts, rights = append(lefts, pair[0]), append(rights, pair[1])
 	}
 	rows, err := tx.Query(ctx, `
-		SELECT DISTINCT newer.id, newer.created_at, older.id, older.state = 'open'
+		SELECT newer.id, newer.created_at, older.id, older.state = 'open'
 		  FROM unnest($1::uuid[], $2::uuid[]) AS pair(a, b)
 		  JOIN deal_suggestion newer ON newer.state = 'open'
 		  JOIN deal_suggestion older ON older.id <> newer.id
@@ -409,7 +411,8 @@ func duplicateClaimsTx(ctx context.Context, tx pgx.Tx, pairs [][2]ids.UUID) ([]d
 		        AND (ne.activity_id = oe.activity_id OR ne.signal_id = oe.signal_id
 		             OR ne.attachment_id = oe.attachment_id)
 		      WHERE oe.suggestion_id = older.id AND ne.suggestion_id = newer.id)
-		 ORDER BY newer.created_at, newer.id`, lefts, rights)
+		 ORDER BY newer.created_at, newer.id
+		   FOR UPDATE OF newer FOR SHARE OF older`, lefts, rights)
 	if err != nil {
 		return nil, fmt.Errorf("deals: reading suggestions raised twice for one business: %w", err)
 	}
