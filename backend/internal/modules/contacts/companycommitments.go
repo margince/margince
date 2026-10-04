@@ -3,8 +3,8 @@
 
 package contacts
 
-// The promises WE made to an account's contacts, for the company page's own
-// moment card.
+// The open commitments between us and an account's contacts: ours, for the
+// company page's moment card, and theirs, for the deal page's watch card.
 //
 // WHY AN ACCOUNT READ AND NOT THE CONTACT ONE REPEATED. A claim names a CONTACT,
 // never a company, so an account's promises are its contacts' promises
@@ -96,6 +96,28 @@ type CompanyCommitment struct {
 func (s *Store) OpenCommitmentsForCompany(
 	ctx context.Context, tx pgx.Tx, companyID ids.UUID, limit int,
 ) ([]CompanyCommitment, bool, error) {
+	return openCompanyClaims(ctx, tx, companyID, limit, ourPromiseNotYetATask)
+}
+
+// theirPromiseOpen is a commitment the customer made that nobody has settled
+// yet. A disputed one (needs_review) is left out, as the project read leaves
+// it out, because stating a contested promise as owed states it as a fact.
+const theirPromiseOpen = `c.kind = 'commitment_theirs' AND c.status = 'open' AND NOT c.needs_review`
+
+// OpenTheirCommitmentsForCompany reads the open commitments the contacts
+// currently employed at one account made to us: what the deal page watches.
+// Same gates, same ranking and same completeness count as the read of ours.
+func (s *Store) OpenTheirCommitmentsForCompany(
+	ctx context.Context, tx pgx.Tx, companyID ids.UUID, limit int,
+) ([]CompanyCommitment, bool, error) {
+	return openCompanyClaims(ctx, tx, companyID, limit, theirPromiseOpen)
+}
+
+// openCompanyClaims is the read both sides share. `side` is one of this
+// file's compile-time predicates, never anything off a request.
+func openCompanyClaims(
+	ctx context.Context, tx pgx.Tx, companyID ids.UUID, limit int, side string,
+) ([]CompanyCommitment, bool, error) {
 	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
 		return nil, false, err
 	}
@@ -159,7 +181,7 @@ func (s *Store) OpenCommitmentsForCompany(
 		  FROM conversation_claim c
 		  JOIN activity a ON a.id = c.source_activity_id AND a.archived_at IS NULL
 		  JOIN contact pr ON pr.id = c.contact_id AND pr.archived_at IS NULL
-		 WHERE `+ourPromiseNotYetATask+`
+		 WHERE `+side+`
 		   AND c.archived_at IS NULL
 		   AND (%[4]s)
 		   AND (%[3]s) AND (%[2]s)
@@ -197,7 +219,7 @@ func (s *Store) OpenCommitmentsForCompany(
 	// account's open promises exist at all. Fewer admitted than exist means
 	// something was withheld, and the card can say it is speaking about less
 	// than the account rather than reporting silence as "nothing outstanding".
-	total, err := countCompanyCommitments(ctx, tx, companyID)
+	total, err := countCompanyCommitments(ctx, tx, companyID, side)
 	if err != nil {
 		return nil, false, err
 	}
@@ -213,14 +235,14 @@ func (s *Store) OpenCommitmentsForCompany(
 // owes", and those two must never render the same. The cost is that the number
 // weakly reflects that promises exist the reader cannot open, which is exactly
 // what the card has to admit to avoid claiming an account is clear.
-func countCompanyCommitments(ctx context.Context, tx pgx.Tx, companyID ids.UUID) (int, error) {
+func countCompanyCommitments(ctx context.Context, tx pgx.Tx, companyID ids.UUID, side string) (int, error) {
 	var total int
 	err := tx.QueryRow(ctx, `
 		SELECT count(*)
 		  FROM conversation_claim c
 		  JOIN activity a ON a.id = c.source_activity_id AND a.archived_at IS NULL
 		  JOIN contact pr ON pr.id = c.contact_id AND pr.archived_at IS NULL
-		 WHERE `+ourPromiseNotYetATask+`
+		 WHERE `+side+`
 		   AND c.archived_at IS NULL
 		   AND EXISTS (
 		         SELECT 1 FROM relationship r

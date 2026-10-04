@@ -16818,6 +16818,35 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/deals/{id}/commitments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What the customer committed to that this deal waits on.
+         * @description The open commitments the contacts employed at the deal's company made to us, read
+         *     out of meetings and mail: overdue first, then by nearest due date. Each carries the
+         *     quoted words and the message they came from, so a reader can check it, and its claim
+         *     id, so a reader can dismiss it (`POST /claims/{id}/settle`).
+         *
+         *     Needs `contact:read` and `activity:read` on top of the deal grant: each row names a
+         *     contact and quotes a captured message. A commitment whose contact or message the
+         *     caller may not see is left out, and `complete` is then false, so the card can say it
+         *     speaks about less than the account rather than that nothing is owed. A deal with no
+         *     company has nothing to read and answers an empty, complete list.
+         */
+        get: operations["getDealCommitments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/deals/{id}/role-proposals": {
         parameters: {
             query?: never;
@@ -25972,6 +26001,40 @@ export interface components {
              *     Carried on this shape as well as on `CompanyBriefEvidence` because the deal card's basis is its own wire type, and a reader that could open a cited message on the brief but not on the move would be the same citation behaving differently on two pages. Same rules as there: withheld carries no words, absence proves nothing, never stored.
              */
             readonly email_summary?: components["schemas"]["EmailSummary"] | null;
+        };
+        DealCommitments: {
+            data: components["schemas"]["DealCommitment"][];
+            /** @description False when a commitment was left out because its contact or its message is outside what the caller may read. */
+            complete: boolean;
+        };
+        DealCommitment: {
+            /**
+             * Format: uuid
+             * @description The id of the claim, which `POST /claims/{id}/settle` takes.
+             */
+            id: string;
+            /** Format: uuid */
+            contact_id: string;
+            contact_name: string;
+            /** @description What was committed to, in the language of the reader. */
+            body: string;
+            /** @description The words it was read from, verbatim. */
+            source_quote: string;
+            /**
+             * Format: uuid
+             * @description The meeting or message it was read from.
+             */
+            source_activity_id: string;
+            /**
+             * Format: date-time
+             * @description Absent when the conversation named no day.
+             */
+            due_at?: string | null;
+            /**
+             * Format: date-time
+             * @description When it was said.
+             */
+            occurred_at: string;
         };
         DealCoverage: {
             /** Format: uuid */
@@ -67692,6 +67755,31 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DealCoverage"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getDealCommitments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The customer's open commitments on this deal's account. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealCommitments"];
                 };
             };
             401: components["responses"]["Unauthorized"];

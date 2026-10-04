@@ -1543,6 +1543,10 @@ func (stubs) AcceptAppliedDealChange(w nethttp.ResponseWriter, r *nethttp.Reques
 	httperr.NotImplemented(w, r, "AcceptAppliedDealChange")
 }
 
+func (stubs) GetDealCommitments(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "GetDealCommitments")
+}
+
 func (stubs) GetDealCoverage(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
 	httperr.NotImplemented(w, r, "GetDealCoverage")
 }
