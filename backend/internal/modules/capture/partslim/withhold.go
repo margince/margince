@@ -1,0 +1,106 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package partslim
+
+import (
+	"bytes"
+	"encoding/base64"
+	"errors"
+	"sort"
+	"strconv"
+)
+
+// PartWithheldHeader marks a part whose bytes capture never kept. Not under
+// partFieldPrefix: a restore reads that run as a stanza to fetch, and there is
+// nothing to fetch here.
+const PartWithheldHeader = "X-Margince-Withheld-Part"
+
+// partWithheldNotice is what a withheld part's substitute body decodes to.
+const partWithheldNotice = "This part was not kept: the message is private to its " +
+	"mailbox owner, so Margince stored its name, size and type only.\r\n"
+
+// WithheldPart is one part capture will not keep: its ordinal, so the marker
+// names the part the message numbered, and its decoded bytes, so it can be
+// located in the original.
+type WithheldPart struct {
+	Ordinal int
+	Body    []byte
+}
+
+// WithholdParts removes each part's encoded bytes from a stored original, and
+// reports whether every one was found.
+//
+// When one cannot be located exactly once, the whole message is cut to its top
+// header block instead. Minimisation is the point of withholding, so a
+// part left in place because the locator gave up would defeat it; losing the
+// stored body text costs nothing the activity row does not already hold.
+func WithholdParts(raw []byte, parts []WithheldPart) ([]byte, bool) {
+	if len(parts) == 0 {
+		return raw, true
+	}
+	splices := make([]splice, 0, len(parts))
+	for _, part := range parts {
+		s, err := withholdSplice(raw, part.Ordinal, part.Body)
+		if err != nil {
+			return headersOnly(raw), false
+		}
+		splices = append(splices, s)
+	}
+	ordered, err := orderSplices(splices)
+	if err != nil {
+		return headersOnly(raw), false
+	}
+	return applySplices(raw, ordered), true
+}
+
+func withholdSplice(raw []byte, ordinal int, body []byte) (splice, error) {
+	encoded, _, eol, err := locateEncoded(raw, body)
+	if err != nil {
+		return splice{}, err
+	}
+	at := bytes.Index(raw, encoded)
+	header, err := headerBlockBefore(raw, at)
+	if err != nil {
+		return splice{}, err
+	}
+	field := concat([]byte(PartWithheldHeader+": "+PartIdentity(ordinal)+"; bytes="+
+		strconv.Itoa(len(body))), header.eol)
+	return splice{
+		start: header.fieldsEnd,
+		end:   at + len(encoded),
+		with: concat(field, header.eol,
+			wrapBase64WithEOL([]byte(base64.StdEncoding.EncodeToString([]byte(partWithheldNotice))),
+				base64WrapWidth, eol)),
+	}, nil
+}
+
+// errSplicesOverlap says two parts resolved to one region, so one was located
+// wrongly and splicing both would corrupt the message.
+var errSplicesOverlap = errors.New("partslim: two parts overlap in the original")
+
+func orderSplices(splices []splice) ([]splice, error) {
+	ordered := append([]splice(nil), splices...)
+	sort.Slice(ordered, func(i, j int) bool { return ordered[i].start < ordered[j].start })
+	for i := 1; i < len(ordered); i++ {
+		if ordered[i].start < ordered[i-1].end {
+			return nil, errSplicesOverlap
+		}
+	}
+	return ordered, nil
+}
+
+// headersOnly is the message's top header block and the blank line ending it.
+// A message with no blank line is all header, and comes back unchanged.
+func headersOnly(raw []byte) []byte {
+	end := -1
+	for _, sep := range [][]byte{[]byte("\r\n\r\n"), []byte("\n\n")} {
+		if at := bytes.Index(raw, sep); at >= 0 && (end < 0 || at+len(sep) < end) {
+			end = at + len(sep)
+		}
+	}
+	if end < 0 {
+		return raw
+	}
+	return append([]byte(nil), raw[:end]...)
+}
