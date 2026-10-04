@@ -48,18 +48,18 @@ setup instead, go to [Can I use this preset?](#can-i-use-this-preset).
 A [preset](../../config/presets/README.md) picks which AI model runs each feature, so the same
 feature can be ready under one preset and not under another.
 
-23 of the 202 grades below were measured on an older version of the product and
+30 of the 202 grades below were measured on an older version of the product and
 are waiting to be re-checked; each is marked below.
 
 | Preset | Where your data goes | ✅ Ready | ⚠️ Usable with care | ❌ Not reliable yet | ❔ Not measured | Bottom line |
 |---|---|---:|---:|---:|---:|---|
-| [`consumer_class_brokered`](#consumer_class_brokered) | global cloud | 16 | 5 | 7 | 2 | 16 of 30 features ready (2 re-checks pending) |
-| [`gemini_cloud`](#gemini_cloud) | global cloud | 23 | 7 | 0 | 0 | 23 of 30 features ready (2 re-checks pending) |
-| [`gemini_vertex_eu`](#gemini_vertex_eu) | EU-hosted cloud | 23 | 7 | 0 | 0 | 23 of 30 features ready (2 re-checks pending) |
-| [`gemma4_local_ollama`](#gemma4_local_ollama) | your own servers | 9 | 5 | 14 | 2 | 9 of 30 features ready (5 re-checks pending) |
-| [`openrouter_cloud`](#openrouter_cloud) | global cloud | 14 | 9 | 6 | 1 | 14 of 30 features ready (2 re-checks pending) |
-| [`openrouter_cloud_eu`](#openrouter_cloud_eu) | EU-hosted cloud | 13 | 2 | 14 | 1 | 13 of 30 features ready (2 re-checks pending) |
-| [`qwen3_local_vllm`](#qwen3_local_vllm) | your own servers | 8 | 1 | 19 | 2 | 8 of 30 features ready (8 re-checks pending) |
+| [`consumer_class_brokered`](#consumer_class_brokered) | global cloud | 16 | 5 | 7 | 2 | 16 of 30 features ready (3 re-checks pending) |
+| [`gemini_cloud`](#gemini_cloud) | global cloud | 23 | 7 | 0 | 0 | 23 of 30 features ready (3 re-checks pending) |
+| [`gemini_vertex_eu`](#gemini_vertex_eu) | EU-hosted cloud | 23 | 7 | 0 | 0 | 23 of 30 features ready (3 re-checks pending) |
+| [`gemma4_local_ollama`](#gemma4_local_ollama) | your own servers | 9 | 5 | 14 | 2 | 9 of 30 features ready (6 re-checks pending) |
+| [`openrouter_cloud`](#openrouter_cloud) | global cloud | 14 | 9 | 6 | 1 | 14 of 30 features ready (3 re-checks pending) |
+| [`openrouter_cloud_eu`](#openrouter_cloud_eu) | EU-hosted cloud | 13 | 2 | 14 | 1 | 13 of 30 features ready (3 re-checks pending) |
+| [`qwen3_local_vllm`](#qwen3_local_vllm) | your own servers | 8 | 1 | 19 | 2 | 8 of 30 features ready (9 re-checks pending) |
 
 **What the grades mean**
 
@@ -82,7 +82,7 @@ measured. The grade is the last one we have, and it is shown until the next test
 
 ### `consumer_class_brokered`
 
-Your data goes to: global cloud. 16 of 30 features ready (2 re-checks pending). Preset file: [`consumer_class_brokered.yaml`](../../config/presets/consumer_class_brokered.yaml).
+Your data goes to: global cloud. 16 of 30 features ready (3 re-checks pending). Preset file: [`consumer_class_brokered.yaml`](../../config/presets/consumer_class_brokered.yaml).
 
 | Feature | Can I use it? | In plain words |
 |---|---|---|
@@ -104,7 +104,7 @@ Your data goes to: global cloud. 16 of 30 features ready (2 re-checks pending). 
 | Onboarding read <sub>`cold_start`</sub> | ✅ Ready<br><sub>gemma-4-31b-it · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right every time (33 of 33) |
 | Reading what an account needs <sub>`account_scan`</sub> | ✅ Ready<br><sub>gemma-4-31b-it · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right every time (12 of 12) |
 | Record summary <sub>`summarize`</sub> | ❌ Not reliable yet<br><sub>gemma-4-31b-it · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right in 41 of 48 tries; one test case wrong too often; answer quality below the bar in 2 test cases |
-| Reply drafting <sub>`draft_reply`</sub> | ⚠️ Usable with care<br><sub>gemma-4-31b-it · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right every time (51 of 51); answer quality below the bar in one test case |
+| Reply drafting <sub>`draft_reply`</sub> | ⚠️ Usable with care<br><sub>gemma-4-31b-it · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right every time (51 of 51); answer quality below the bar in one test case · re-check pending |
 | Signal extraction <sub>`signal_extract`</sub> | ✅ Ready<br><sub>gemma-4-31b-it · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right every time (12 of 12) · re-check pending |
 | Signature enrichment <sub>`enrich`</sub> | ❌ Not reliable yet<br><sub>gemma-4-26b-a4b-it · local_small → gemma-4-31b-it, ✅ Ready</sub> | Right in 9 of 18 tries; one test case wrong too often |
 | Stage evidence extraction <sub>`stage_evidence_extract`</sub> | ✅ Ready<br><sub>gemma-4-31b-it · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right every time (27 of 27) |
@@ -143,7 +143,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 | `corpus_ask` | `premium` | `google/gemma-4-31b-it` | ✅ Ready | current |
 | `deal_health` | `cheap_cloud` | `google/gemma-4-31b-it` | ⚠️ Usable with care | current |
 | `document_extract` | `premium` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
-| `draft_reply` | `cheap_cloud` | `google/gemma-4-31b-it` | ⚠️ Usable with care | current |
+| `draft_reply` | `cheap_cloud` | `google/gemma-4-31b-it` | ⚠️ Usable with care | re-check pending |
 | `enrich` | `local_small` | `google/gemma-4-26b-a4b-it` | ❌ Not reliable yet | current |
 | `growth_fit` | `cheap_cloud` | `google/gemma-4-31b-it` | ✅ Ready | current |
 | `nl_search` | `cheap_cloud` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
@@ -167,7 +167,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 
 ### `gemini_cloud`
 
-Your data goes to: global cloud. 23 of 30 features ready (2 re-checks pending). Preset file: [`gemini_cloud.yaml`](../../config/presets/gemini_cloud.yaml).
+Your data goes to: global cloud. 23 of 30 features ready (3 re-checks pending). Preset file: [`gemini_cloud.yaml`](../../config/presets/gemini_cloud.yaml).
 
 | Feature | Can I use it? | In plain words |
 |---|---|---|
@@ -189,7 +189,7 @@ Your data goes to: global cloud. 23 of 30 features ready (2 re-checks pending). 
 | Onboarding read <sub>`cold_start`</sub> | ⚠️ Usable with care<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.5-flash, ✅ Ready</sub> | Right in 40 of 42 tries; answer quality below the bar in one test case |
 | Reading what an account needs <sub>`account_scan`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.5-flash, ✅ Ready</sub> | Right every time (12 of 12) |
 | Record summary <sub>`summarize`</sub> | ⚠️ Usable with care<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.5-flash, ✅ Ready</sub> | Right in 69 of 72 tries; answer quality below the bar in one test case |
-| Reply drafting <sub>`draft_reply`</sub> | ⚠️ Usable with care<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.5-flash, ⚠️ Usable with care</sub> | Right every time (45 of 45); answer quality below the bar in 2 test cases |
+| Reply drafting <sub>`draft_reply`</sub> | ⚠️ Usable with care<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.5-flash, ⚠️ Usable with care · re-check pending</sub> | Right every time (45 of 45); answer quality below the bar in 2 test cases · re-check pending |
 | Signal extraction <sub>`signal_extract`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.5-flash, ✅ Ready · re-check pending</sub> | Right every time (12 of 12) · re-check pending |
 | Signature enrichment <sub>`enrich`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small → cheap_cloud is the same model, so no separate fallback</sub> | Right every time (12 of 12) |
 | Stage evidence extraction <sub>`stage_evidence_extract`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.5-flash, ✅ Ready</sub> | Right every time (27 of 27) |
@@ -228,7 +228,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 | `corpus_ask` | `premium` | `gemini-3.5-flash` | ✅ Ready | current |
 | `deal_health` | `cheap_cloud` | `gemini-3.1-flash-lite` | ✅ Ready | current |
 | `document_extract` | `premium` | `gemini-3.5-flash` | ✅ Ready | current |
-| `draft_reply` | `cheap_cloud` | `gemini-3.1-flash-lite` | ⚠️ Usable with care | current |
+| `draft_reply` | `cheap_cloud` | `gemini-3.1-flash-lite` | ⚠️ Usable with care | re-check pending |
 | `enrich` | `local_small` | `gemini-3.1-flash-lite` | ✅ Ready | current |
 | `growth_fit` | `cheap_cloud` | `gemini-3.1-flash-lite` | ⚠️ Usable with care | current |
 | `nl_search` | `cheap_cloud` | `gemini-3.1-flash-lite` | ✅ Ready | current |
@@ -252,7 +252,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 
 ### `gemini_vertex_eu`
 
-Your data goes to: EU-hosted cloud. 23 of 30 features ready (2 re-checks pending). Preset file: [`gemini_vertex_eu.yaml`](../../config/presets/gemini_vertex_eu.yaml).
+Your data goes to: EU-hosted cloud. 23 of 30 features ready (3 re-checks pending). Preset file: [`gemini_vertex_eu.yaml`](../../config/presets/gemini_vertex_eu.yaml).
 
 | Feature | Can I use it? | In plain words |
 |---|---|---|
@@ -274,7 +274,7 @@ Your data goes to: EU-hosted cloud. 23 of 30 features ready (2 re-checks pending
 | Onboarding read <sub>`cold_start`</sub> | ⚠️ Usable with care<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.5-flash, ✅ Ready, measured on `gemini`</sub> | Right in 40 of 42 tries; answer quality below the bar in one test case |
 | Reading what an account needs <sub>`account_scan`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.5-flash, ✅ Ready, measured on `gemini`</sub> | Right every time (12 of 12) |
 | Record summary <sub>`summarize`</sub> | ⚠️ Usable with care<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.5-flash, ✅ Ready, measured on `gemini`</sub> | Right in 69 of 72 tries; answer quality below the bar in one test case |
-| Reply drafting <sub>`draft_reply`</sub> | ⚠️ Usable with care<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.5-flash, ⚠️ Usable with care, measured on `gemini`</sub> | Right every time (45 of 45); answer quality below the bar in 2 test cases |
+| Reply drafting <sub>`draft_reply`</sub> | ⚠️ Usable with care<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.5-flash, ⚠️ Usable with care · re-check pending, measured on `gemini`</sub> | Right every time (45 of 45); answer quality below the bar in 2 test cases · re-check pending |
 | Signal extraction <sub>`signal_extract`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.5-flash, ✅ Ready · re-check pending, measured on `gemini`</sub> | Right every time (12 of 12) · re-check pending |
 | Signature enrichment <sub>`enrich`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small → cheap_cloud is the same model, so no separate fallback</sub> | Right every time (12 of 12) |
 | Stage evidence extraction <sub>`stage_evidence_extract`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.5-flash, ✅ Ready, measured on `gemini`</sub> | Right every time (27 of 27) |
@@ -313,7 +313,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 | `corpus_ask` | `premium` | `gemini-3.5-flash` | ✅ Ready | current; measured on `gemini` |
 | `deal_health` | `cheap_cloud` | `gemini-3.1-flash-lite` | ✅ Ready | current; measured on `gemini` |
 | `document_extract` | `premium` | `gemini-3.5-flash` | ✅ Ready | current; measured on `gemini` |
-| `draft_reply` | `cheap_cloud` | `gemini-3.1-flash-lite` | ⚠️ Usable with care | current; measured on `gemini` |
+| `draft_reply` | `cheap_cloud` | `gemini-3.1-flash-lite` | ⚠️ Usable with care | re-check pending; measured on `gemini` |
 | `enrich` | `local_small` | `gemini-3.1-flash-lite` | ✅ Ready | current; measured on `gemini` |
 | `growth_fit` | `cheap_cloud` | `gemini-3.1-flash-lite` | ⚠️ Usable with care | current; measured on `gemini` |
 | `nl_search` | `cheap_cloud` | `gemini-3.1-flash-lite` | ✅ Ready | current; measured on `gemini` |
@@ -337,7 +337,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 
 ### `gemma4_local_ollama`
 
-Your data goes to: your own servers. 9 of 30 features ready (5 re-checks pending). Preset file: [`gemma4_local_ollama.yaml`](../../config/presets/gemma4_local_ollama.yaml).
+Your data goes to: your own servers. 9 of 30 features ready (6 re-checks pending). Preset file: [`gemma4_local_ollama.yaml`](../../config/presets/gemma4_local_ollama.yaml).
 
 | Feature | Can I use it? | In plain words |
 |---|---|---|
@@ -359,7 +359,7 @@ Your data goes to: your own servers. 9 of 30 features ready (5 re-checks pending
 | Onboarding read <sub>`cold_start`</sub> | ❌ Not reliable yet<br><sub>gemma4:12b · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right in 33 of 36 tries; one test case wrong too often; answer quality below the bar in one test case |
 | Reading what an account needs <sub>`account_scan`</sub> | ⚠️ Usable with care<br><sub>gemma4:12b · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right in 15 of 18 tries; answer quality below the bar in one test case |
 | Record summary <sub>`summarize`</sub> | ❌ Not reliable yet<br><sub>gemma4:12b · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right in 41 of 66 tries; 3 test cases wrong too often; answer quality below the bar in 6 test cases · re-check pending |
-| Reply drafting <sub>`draft_reply`</sub> | ❌ Not reliable yet<br><sub>gemma4:12b · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right in 98 of 108 tries; one test case wrong too often; answer quality below the bar in 3 test cases |
+| Reply drafting <sub>`draft_reply`</sub> | ❌ Not reliable yet<br><sub>gemma4:12b · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right in 98 of 108 tries; one test case wrong too often; answer quality below the bar in 3 test cases · re-check pending |
 | Signal extraction <sub>`signal_extract`</sub> | ❌ Not reliable yet<br><sub>gemma4:12b · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right in 10 of 18 tries; 2 test cases wrong too often; answer quality below the bar in one test case · re-check pending |
 | Signature enrichment <sub>`enrich`</sub> | ✅ Ready<br><sub>gemma4:12b · local_small → cheap_cloud is the same model, so no separate fallback</sub> | Right every time (12 of 12) |
 | Stage evidence extraction <sub>`stage_evidence_extract`</sub> | ❌ Not reliable yet<br><sub>gemma4:12b · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right in 26 of 36 tries; 2 test cases wrong too often |
@@ -398,7 +398,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 | `corpus_ask` | `premium` | `gemma4:12b` | ❌ Not reliable yet | current |
 | `deal_health` | `cheap_cloud` | `gemma4:12b` | ⚠️ Usable with care | current |
 | `document_extract` | `premium` | `gemma4:12b` | ❔ Not measured | not measured |
-| `draft_reply` | `cheap_cloud` | `gemma4:12b` | ❌ Not reliable yet | current |
+| `draft_reply` | `cheap_cloud` | `gemma4:12b` | ❌ Not reliable yet | re-check pending |
 | `enrich` | `local_small` | `gemma4:12b` | ✅ Ready | current |
 | `growth_fit` | `cheap_cloud` | `gemma4:12b` | ❌ Not reliable yet | current |
 | `nl_search` | `cheap_cloud` | `gemma4:12b` | ❔ Not measured | not measured |
@@ -422,7 +422,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 
 ### `openrouter_cloud`
 
-Your data goes to: global cloud. 14 of 30 features ready (2 re-checks pending). Preset file: [`openrouter_cloud.yaml`](../../config/presets/openrouter_cloud.yaml).
+Your data goes to: global cloud. 14 of 30 features ready (3 re-checks pending). Preset file: [`openrouter_cloud.yaml`](../../config/presets/openrouter_cloud.yaml).
 
 | Feature | Can I use it? | In plain words |
 |---|---|---|
@@ -444,7 +444,7 @@ Your data goes to: global cloud. 14 of 30 features ready (2 re-checks pending). 
 | Onboarding read <sub>`cold_start`</sub> | ⚠️ Usable with care<br><sub>gpt-oss-120b · cheap_cloud → mistral-medium-3-5, ✅ Ready</sub> | Right in 48 of 51 tries; answer quality below the bar in 2 test cases |
 | Reading what an account needs <sub>`account_scan`</sub> | ✅ Ready<br><sub>gpt-oss-120b · cheap_cloud → mistral-medium-3-5, ✅ Ready</sub> | Right every time (12 of 12) |
 | Record summary <sub>`summarize`</sub> | ⚠️ Usable with care<br><sub>gpt-oss-120b · cheap_cloud → mistral-medium-3-5, ⚠️ Usable with care</sub> | Right in 52 of 69 tries; one test case wrong too often; answer quality below the bar in 7 test cases |
-| Reply drafting <sub>`draft_reply`</sub> | ⚠️ Usable with care<br><sub>gpt-oss-120b · cheap_cloud → mistral-medium-3-5, ❌ Not reliable yet</sub> | Right in 79 of 84 tries; one test case wrong too often; answer quality below the bar in 3 test cases |
+| Reply drafting <sub>`draft_reply`</sub> | ⚠️ Usable with care<br><sub>gpt-oss-120b · cheap_cloud → mistral-medium-3-5, ❌ Not reliable yet · re-check pending</sub> | Right in 79 of 84 tries; one test case wrong too often; answer quality below the bar in 3 test cases · re-check pending |
 | Signal extraction <sub>`signal_extract`</sub> | ⚠️ Usable with care<br><sub>gpt-oss-120b · cheap_cloud → mistral-medium-3-5, ✅ Ready · re-check pending</sub> | Right in 18 of 21 tries · re-check pending |
 | Signature enrichment <sub>`enrich`</sub> | ✅ Ready<br><sub>gpt-oss-120b · local_small → cheap_cloud is the same model, so no separate fallback</sub> | Right every time (12 of 12) |
 | Stage evidence extraction <sub>`stage_evidence_extract`</sub> | ❌ Not reliable yet<br><sub>gpt-oss-120b · cheap_cloud → mistral-medium-3-5, ❌ Not reliable yet</sub> | Right in 65 of 81 tries; one test case wrong too often; answer quality below the bar in one test case |
@@ -483,7 +483,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 | `corpus_ask` | `premium` | `mistralai/mistral-medium-3-5` | ✅ Ready | current |
 | `deal_health` | `cheap_cloud` | `openai/gpt-oss-120b` | ⚠️ Usable with care | current |
 | `document_extract` | `premium` | `mistralai/mistral-medium-3-5` | ❔ Not measured | not measured |
-| `draft_reply` | `cheap_cloud` | `openai/gpt-oss-120b` | ⚠️ Usable with care | current |
+| `draft_reply` | `cheap_cloud` | `openai/gpt-oss-120b` | ⚠️ Usable with care | re-check pending |
 | `enrich` | `local_small` | `openai/gpt-oss-120b` | ✅ Ready | current |
 | `growth_fit` | `cheap_cloud` | `openai/gpt-oss-120b` | ❌ Not reliable yet | current |
 | `nl_search` | `cheap_cloud` | `openai/gpt-oss-120b` | ✅ Ready | current |
@@ -507,7 +507,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 
 ### `openrouter_cloud_eu`
 
-Your data goes to: EU-hosted cloud. 13 of 30 features ready (2 re-checks pending). Preset file: [`openrouter_cloud_eu.yaml`](../../config/presets/openrouter_cloud_eu.yaml).
+Your data goes to: EU-hosted cloud. 13 of 30 features ready (3 re-checks pending). Preset file: [`openrouter_cloud_eu.yaml`](../../config/presets/openrouter_cloud_eu.yaml).
 
 | Feature | Can I use it? | In plain words |
 |---|---|---|
@@ -529,7 +529,7 @@ Your data goes to: EU-hosted cloud. 13 of 30 features ready (2 re-checks pending
 | Onboarding read <sub>`cold_start`</sub> | ❌ Not reliable yet<br><sub>ministral-14b-2512 · cheap_cloud → mistral-medium-3-5, ✅ Ready</sub> | Right in 46 of 57 tries; one test case wrong too often; answer quality below the bar in 2 test cases |
 | Reading what an account needs <sub>`account_scan`</sub> | ✅ Ready<br><sub>ministral-14b-2512 · cheap_cloud → mistral-medium-3-5, ✅ Ready</sub> | Right every time (15 of 15) |
 | Record summary <sub>`summarize`</sub> | ❌ Not reliable yet<br><sub>ministral-14b-2512 · cheap_cloud → mistral-medium-3-5, ⚠️ Usable with care</sub> | Right in 36 of 54 tries; 2 test cases wrong too often; answer quality below the bar in 4 test cases |
-| Reply drafting <sub>`draft_reply`</sub> | ❌ Not reliable yet<br><sub>ministral-14b-2512 · cheap_cloud → mistral-medium-3-5, ❌ Not reliable yet; 6 of 69 runs broke off and would have gone to mistral-medium-3-5</sub> | Right in 51 of 69 tries; 4 test cases wrong too often; answer quality below the bar in 10 test cases |
+| Reply drafting <sub>`draft_reply`</sub> | ❌ Not reliable yet<br><sub>ministral-14b-2512 · cheap_cloud → mistral-medium-3-5, ❌ Not reliable yet · re-check pending; 6 of 69 runs broke off and would have gone to mistral-medium-3-5</sub> | Right in 51 of 69 tries; 4 test cases wrong too often; answer quality below the bar in 10 test cases · re-check pending |
 | Signal extraction <sub>`signal_extract`</sub> | ❌ Not reliable yet<br><sub>ministral-14b-2512 · cheap_cloud → mistral-medium-3-5, ⚠️ Usable with care · re-check pending</sub> | Right in 7 of 15 tries; 2 test cases wrong too often; answer quality below the bar in one test case · re-check pending |
 | Signature enrichment <sub>`enrich`</sub> | ✅ Ready<br><sub>ministral-8b-2512 · local_small → ministral-14b-2512, ✅ Ready</sub> | Right every time (12 of 12) |
 | Stage evidence extraction <sub>`stage_evidence_extract`</sub> | ❌ Not reliable yet<br><sub>ministral-14b-2512 · cheap_cloud → mistral-medium-3-5, ❌ Not reliable yet</sub> | Right in 27 of 45 tries; 3 test cases wrong too often; answer quality below the bar in one test case |
@@ -568,7 +568,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 | `corpus_ask` | `premium` | `mistralai/mistral-medium-3-5` | ✅ Ready | current |
 | `deal_health` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ⚠️ Usable with care | current |
 | `document_extract` | `premium` | `mistralai/mistral-medium-3-5` | ❔ Not measured | not measured |
-| `draft_reply` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ❌ Not reliable yet | current |
+| `draft_reply` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ❌ Not reliable yet | re-check pending |
 | `enrich` | `local_small` | `mistralai/ministral-8b-2512` | ✅ Ready | current |
 | `growth_fit` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ⚠️ Usable with care | current |
 | `nl_search` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ❌ Not reliable yet | current |
@@ -592,7 +592,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 
 ### `qwen3_local_vllm`
 
-Your data goes to: your own servers. 8 of 30 features ready (8 re-checks pending). Preset file: [`qwen3_local_vllm.yaml`](../../config/presets/qwen3_local_vllm.yaml).
+Your data goes to: your own servers. 8 of 30 features ready (9 re-checks pending). Preset file: [`qwen3_local_vllm.yaml`](../../config/presets/qwen3_local_vllm.yaml).
 
 | Feature | Can I use it? | In plain words |
 |---|---|---|
@@ -614,7 +614,7 @@ Your data goes to: your own servers. 8 of 30 features ready (8 re-checks pending
 | Onboarding read <sub>`cold_start`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right in 63 of 72 tries; one test case wrong too often; answer quality below the bar in 2 test cases · re-check pending |
 | Reading what an account needs <sub>`account_scan`</sub> | ✅ Ready<br><sub>Qwen3-14B-4bit · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right every time (12 of 12) |
 | Record summary <sub>`summarize`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right in 31 of 57 tries; 4 test cases wrong too often; answer quality below the bar in 7 test cases · re-check pending |
-| Reply drafting <sub>`draft_reply`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right in 60 of 63 tries; one test case wrong too often; answer quality below the bar in 8 test cases |
+| Reply drafting <sub>`draft_reply`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right in 60 of 63 tries; one test case wrong too often; answer quality below the bar in 8 test cases · re-check pending |
 | Signal extraction <sub>`signal_extract`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right in 6 of 12 tries; 2 test cases wrong too often; answer quality below the bar in one test case · re-check pending |
 | Signature enrichment <sub>`enrich`</sub> | ✅ Ready<br><sub>Qwen3-14B-4bit · local_small → cheap_cloud is the same model, so no separate fallback</sub> | Right every time (12 of 12) |
 | Stage evidence extraction <sub>`stage_evidence_extract`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right in 20 of 30 tries; 3 test cases wrong too often |
@@ -653,7 +653,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 | `corpus_ask` | `premium` | `mlx-community/Qwen3-14B-4bit` | ⚠️ Usable with care | current |
 | `deal_health` | `cheap_cloud` | `mlx-community/Qwen3-14B-4bit` | ❌ Not reliable yet | current |
 | `document_extract` | `premium` | `mlx-community/Qwen3-14B-4bit` | ❔ Not measured | not measured |
-| `draft_reply` | `cheap_cloud` | `mlx-community/Qwen3-14B-4bit` | ❌ Not reliable yet | current |
+| `draft_reply` | `cheap_cloud` | `mlx-community/Qwen3-14B-4bit` | ❌ Not reliable yet | re-check pending |
 | `enrich` | `local_small` | `mlx-community/Qwen3-14B-4bit` | ✅ Ready | current |
 | `growth_fit` | `cheap_cloud` | `mlx-community/Qwen3-14B-4bit` | ❌ Not reliable yet | current |
 | `nl_search` | `cheap_cloud` | `mlx-community/Qwen3-14B-4bit` | ❔ Not measured | not measured |
@@ -783,7 +783,7 @@ under [Certification by provider and model](#certification-by-provider-and-model
 
 🟡 Mostly — Ready for 39 of the 47 features we tested; 7 more work if someone looks over the result; 1 not reliable yet.
 
-3 of these results were measured on an older version of the product and are re-check pending.
+4 of these results were measured on an older version of the product and are re-check pending.
 
 | Model | Where it ran | Features tested | ✅ | ⚠️ | ❌ | Tries right |
 |---|---|---:|---:|---:|---:|---|
@@ -813,7 +813,7 @@ under [Certification by provider and model](#certification-by-provider-and-model
 | [`draft_reply/account`](#draft_replyaccount) | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | ⚠️ Usable with care | 3 of 3 tries |
 | [`draft_reply/contact`](#draft_replycontact) | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | ⚠️ Usable with care | 6 of 6 tries |
 | [`draft_reply/first`](#draft_replyfirst) | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | ⚠️ Usable with care | 3 of 3 tries |
-| [`draft_reply/intro`](#draft_replyintro) | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | ✅ Ready | 12 of 12 tries |
+| [`draft_reply/intro`](#draft_replyintro) | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | ✅ Ready · re-check pending | 12 of 12 tries |
 | [`draft_reply/intro_note`](#draft_replyintro_note) | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | ✅ Ready | 9 of 9 tries |
 | [`draft_reply/reply`](#draft_replyreply) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready | 12 of 12 tries |
 | [`enrich/signature`](#enrichsignature) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready | 12 of 12 tries |
@@ -849,7 +849,7 @@ under [Certification by provider and model](#certification-by-provider-and-model
 
 🟡 Mostly — Ready for 28 of the 46 features we tested; 10 more work if someone looks over the result; 8 not reliable yet.
 
-3 of these results were measured on an older version of the product and are re-check pending.
+4 of these results were measured on an older version of the product and are re-check pending.
 
 | Model | Where it ran | Features tested | ✅ | ⚠️ | ❌ | Tries right |
 |---|---|---:|---:|---:|---:|---|
@@ -880,7 +880,7 @@ under [Certification by provider and model](#certification-by-provider-and-model
 | [`draft_reply/account`](#draft_replyaccount) | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | ✅ Ready | 9 of 9 tries |
 | [`draft_reply/contact`](#draft_replycontact) | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | ✅ Ready | 9 of 9 tries |
 | [`draft_reply/first`](#draft_replyfirst) | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | ❌ Not reliable yet | 9 of 9 tries |
-| [`draft_reply/intro`](#draft_replyintro) | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | ✅ Ready | 15 of 15 tries |
+| [`draft_reply/intro`](#draft_replyintro) | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | ✅ Ready · re-check pending | 15 of 15 tries |
 | [`draft_reply/intro_note`](#draft_replyintro_note) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ❌ Not reliable yet | 12 of 15 tries |
 | [`draft_reply/reply`](#draft_replyreply) | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | ✅ Ready | 36 of 36 tries |
 | [`enrich/signature`](#enrichsignature) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ✅ Ready | 12 of 12 tries |
@@ -916,7 +916,7 @@ under [Certification by provider and model](#certification-by-provider-and-model
 
 🟡 Mostly — Ready for 28 of the 45 features we tested; 14 more work if someone looks over the result; 3 not reliable yet.
 
-4 of these results were measured on an older version of the product and are re-check pending.
+5 of these results were measured on an older version of the product and are re-check pending.
 
 | Model | Where it ran | Features tested | ✅ | ⚠️ | ❌ | Tries right |
 |---|---|---:|---:|---:|---:|---|
@@ -946,7 +946,7 @@ under [Certification by provider and model](#certification-by-provider-and-model
 | [`draft_reply/account`](#draft_replyaccount) | `ollama · gemma4:12b · sovereign` | ✅ Ready | 9 of 9 tries |
 | [`draft_reply/contact`](#draft_replycontact) | `ollama · gemma4:12b · sovereign` | ✅ Ready | 9 of 9 tries |
 | [`draft_reply/first`](#draft_replyfirst) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | ⚠️ Usable with care | 3 of 3 tries |
-| [`draft_reply/intro`](#draft_replyintro) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | ✅ Ready | 9 of 9 tries |
+| [`draft_reply/intro`](#draft_replyintro) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | ✅ Ready · re-check pending | 9 of 9 tries |
 | [`draft_reply/intro_note`](#draft_replyintro_note) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | ✅ Ready | 9 of 9 tries |
 | [`draft_reply/reply`](#draft_replyreply) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | ⚠️ Usable with care | 24 of 24 tries |
 | [`enrich/signature`](#enrichsignature) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | ✅ Ready | 12 of 12 tries |
@@ -981,7 +981,7 @@ under [Certification by provider and model](#certification-by-provider-and-model
 
 🔴 Not yet — Ready for 9 of the 45 features we tested; 8 more work if someone looks over the result; 28 not reliable yet.
 
-11 of these results were measured on an older version of the product and are re-check pending.
+12 of these results were measured on an older version of the product and are re-check pending.
 
 | Model | Where it ran | Features tested | ✅ | ⚠️ | ❌ | Tries right |
 |---|---|---:|---:|---:|---:|---|
@@ -1009,7 +1009,7 @@ under [Certification by provider and model](#certification-by-provider-and-model
 | [`draft_reply/account`](#draft_replyaccount) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | ❌ Not reliable yet | 3 of 3 tries |
 | [`draft_reply/contact`](#draft_replycontact) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | ⚠️ Usable with care | 9 of 9 tries |
 | [`draft_reply/first`](#draft_replyfirst) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | ❌ Not reliable yet | 3 of 3 tries |
-| [`draft_reply/intro`](#draft_replyintro) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | ⚠️ Usable with care | 15 of 15 tries |
+| [`draft_reply/intro`](#draft_replyintro) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | ⚠️ Usable with care · re-check pending | 15 of 15 tries |
 | [`draft_reply/intro_note`](#draft_replyintro_note) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | ❌ Not reliable yet | 12 of 15 tries |
 | [`draft_reply/reply`](#draft_replyreply) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | ❌ Not reliable yet | 18 of 18 tries |
 | [`enrich/signature`](#enrichsignature) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | ✅ Ready | 12 of 12 tries |
@@ -1044,7 +1044,7 @@ under [Certification by provider and model](#certification-by-provider-and-model
 
 🔴 Not yet — Ready for 14 of the 44 features we tested; 19 more work if someone looks over the result; 11 not reliable yet.
 
-3 of these results were measured on an older version of the product and are re-check pending.
+4 of these results were measured on an older version of the product and are re-check pending.
 
 | Model | Where it ran | Features tested | ✅ | ⚠️ | ❌ | Tries right |
 |---|---|---:|---:|---:|---:|---|
@@ -1071,7 +1071,7 @@ under [Certification by provider and model](#certification-by-provider-and-model
 | [`draft_reply/account`](#draft_replyaccount) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ⚠️ Usable with care | 6 of 6 tries |
 | [`draft_reply/contact`](#draft_replycontact) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ⚠️ Usable with care | 6 of 6 tries |
 | [`draft_reply/first`](#draft_replyfirst) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ❌ Not reliable yet | 9 of 9 tries |
-| [`draft_reply/intro`](#draft_replyintro) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ✅ Ready | 12 of 12 tries |
+| [`draft_reply/intro`](#draft_replyintro) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ✅ Ready · re-check pending | 12 of 12 tries |
 | [`draft_reply/intro_note`](#draft_replyintro_note) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ⚠️ Usable with care | 16 of 21 tries |
 | [`draft_reply/reply`](#draft_replyreply) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ⚠️ Usable with care | 30 of 30 tries |
 | [`enrich/signature`](#enrichsignature) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ✅ Ready | 12 of 12 tries |
@@ -1112,9 +1112,9 @@ under [Certification by provider and model](#certification-by-provider-and-model
 | | |
 |---|---:|
 | Shipped invocation sites | 47 |
-| … best state `current` | 44 |
+| … best state `current` | 43 |
 | … best state `partial` | 0 |
-| … best state `stale` | 3 |
+| … best state `stale` | 4 |
 | … `absent` on every binding | 0 |
 | Scenarios in the corpus | 169 |
 | Committed records | 251 |
@@ -1122,13 +1122,13 @@ under [Certification by provider and model](#certification-by-provider-and-model
 
 #### Why the stale records went stale
 
-Counted per record — one (task, binding) pair — over the 28 stale record(s) this build can attribute. A record covers every site its task ships, so the JSON beside this page carries it once per site: its 40 `stale_cause` entries are these 28 records. A record appears on more than one row below when a change moved a case and the prompt built from it together.
+Counted per record — one (task, binding) pair — over the 38 stale record(s) this build can attribute. A record covers every site its task ships, so the JSON beside this page carries it once per site: its 50 `stale_cause` entries are these 38 records. A record appears on more than one row below when a change moved a case and the prompt built from it together.
 
 | What moved | Records | What it means |
 |---|---:|---|
 | the case | 1 | Somebody rewrote the test. Re-certify: the old number measured a different question. |
-| **the prompt this build sends** | 28 | The product changed. The band describes the NEW prompt, so a drop is the cost of that change and not the model. |
-| how a run is graded | 17 | What the judge is asked, or the rule that turns its scores into a grade, changed. A band can shift with neither the test nor the product touched. |
+| **the prompt this build sends** | 38 | The product changed. The band describes the NEW prompt, so a drop is the cost of that change and not the model. |
+| how a run is graded | 27 | What the judge is asked, or the rule that turns its scores into a grade, changed. A band can shift with neither the test nor the product touched. |
 
 A site's *best* state is the strongest state any of its bindings reached. A
 site `current` on one model and `stale` on three is counted once, as
@@ -1204,7 +1204,7 @@ Which model to run each site on, and what that choice rests on.
 | [`draft_reply/account`](#draft_replyaccount) | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `certified` | 1.00 | `current` | 1 | 10 |
 | [`draft_reply/contact`](#draft_replycontact) | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `certified` | 1.00 | `current` | 1 | 10 |
 | [`draft_reply/first`](#draft_replyfirst) | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `supported_degraded` | 1.00 | `current` | 1 | 10 |
-| [`draft_reply/intro`](#draft_replyintro) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `certified` | 1.00 | `current` | 2 | 10 |
+| [`draft_reply/intro`](#draft_replyintro) | - | - | - | `stale` | 2 | 10 |
 | [`draft_reply/intro_note`](#draft_replyintro_note) | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `certified` | 1.00 | `current` | 3 | 10 |
 | [`draft_reply/reply`](#draft_replyreply) | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `certified` | 1.00 | `current` | 4 | 10 |
 | [`enrich/signature`](#enrichsignature) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 2 | 8 |
@@ -1259,19 +1259,19 @@ verdict each reached. Each record's own p50 and p95 are in the site tables.
 
 | Provider | Model | Env | Sites | `current` | `partial` | `stale` | Runs | Passed | Reliability | Slowest p95 | `certified` | `supported_degraded` | `not_supported` |
 |---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini` | `gemini-3.1-flash-lite` | `cloud_frontier` | 45 | 42 | 0 | 3 | 645 | 637 | 0.99 | 24754ms | 27 | 16 | 2 |
-| `gemini` | `gemini-3.1-pro-preview` | `cloud_frontier` | 6 | 6 | 0 | 0 | 48 | 48 | 1.00 | 12492ms | 2 | 4 | 0 |
-| `gemini` | `gemini-3.5-flash` | `cloud_frontier` | 41 | 38 | 0 | 3 | 462 | 461 | 1.00 | 16000ms | 31 | 9 | 1 |
-| `ollama` | `gemma4:12b` | `sovereign` | 45 | 38 | 0 | 7 | 777 | 629 | 0.81 | 123468ms | 13 | 15 | 17 |
+| `gemini` | `gemini-3.1-flash-lite` | `cloud_frontier` | 45 | 41 | 0 | 4 | 645 | 637 | 0.99 | 24754ms | 27 | 16 | 2 |
+| `gemini` | `gemini-3.1-pro-preview` | `cloud_frontier` | 6 | 5 | 0 | 1 | 48 | 48 | 1.00 | 12492ms | 2 | 4 | 0 |
+| `gemini` | `gemini-3.5-flash` | `cloud_frontier` | 41 | 37 | 0 | 4 | 462 | 461 | 1.00 | 16000ms | 31 | 9 | 1 |
+| `ollama` | `gemma4:12b` | `sovereign` | 45 | 37 | 0 | 8 | 777 | 629 | 0.81 | 123468ms | 13 | 15 | 17 |
 | `openai_compatible` | `google/gemma-4-26b-a4b-it` | `cloud_frontier` | 6 | 6 | 0 | 0 | 198 | 171 | 0.86 | 63054ms | 1 | 2 | 3 |
-| `openai_compatible` | `google/gemma-4-31b-it` | `cloud_frontier` | 43 | 40 | 0 | 3 | 528 | 499 | 0.95 | 139188ms | 22 | 16 | 5 |
-| `openai_compatible` | `mistralai/ministral-14b-2512` | `eu_hosted` | 42 | 39 | 0 | 3 | 573 | 463 | 0.81 | 83052ms | 12 | 9 | 21 |
+| `openai_compatible` | `google/gemma-4-31b-it` | `cloud_frontier` | 43 | 39 | 0 | 4 | 528 | 499 | 0.95 | 139188ms | 22 | 16 | 5 |
+| `openai_compatible` | `mistralai/ministral-14b-2512` | `eu_hosted` | 42 | 38 | 0 | 4 | 573 | 463 | 0.81 | 83052ms | 12 | 9 | 21 |
 | `openai_compatible` | `mistralai/ministral-8b-2512` | `eu_hosted` | 6 | 6 | 0 | 0 | 171 | 148 | 0.87 | 6454ms | 4 | 0 | 2 |
-| `openai_compatible` | `mistralai/mistral-medium-3-5` | `cloud_frontier` | 40 | 37 | 0 | 3 | 564 | 540 | 0.96 | 13541ms | 23 | 11 | 6 |
-| `openai_compatible` | `mistralai/mistral-medium-3-5` | `eu_hosted` | 40 | 37 | 0 | 3 | 522 | 497 | 0.95 | 17751ms | 19 | 14 | 7 |
+| `openai_compatible` | `mistralai/mistral-medium-3-5` | `cloud_frontier` | 40 | 36 | 0 | 4 | 564 | 540 | 0.96 | 13541ms | 23 | 11 | 6 |
+| `openai_compatible` | `mistralai/mistral-medium-3-5` | `eu_hosted` | 40 | 36 | 0 | 4 | 522 | 497 | 0.95 | 17751ms | 19 | 14 | 7 |
 | `openai_compatible` | `mistralai/mistral-small-2603` | `eu_hosted` | 5 | 4 | 0 | 1 | 93 | 77 | 0.83 | 4105ms | 3 | 1 | 1 |
-| `openai_compatible` | `openai/gpt-oss-120b` | `cloud_frontier` | 44 | 41 | 0 | 3 | 816 | 734 | 0.90 | 6569ms | 14 | 19 | 11 |
-| `vllm` | `mlx-community/Qwen3-14B-4bit` | `sovereign` | 45 | 34 | 0 | 11 | 750 | 591 | 0.79 | 195164ms | 9 | 8 | 28 |
+| `openai_compatible` | `openai/gpt-oss-120b` | `cloud_frontier` | 44 | 40 | 0 | 4 | 816 | 734 | 0.90 | 6569ms | 14 | 19 | 11 |
+| `vllm` | `mlx-community/Qwen3-14B-4bit` | `sovereign` | 45 | 33 | 0 | 12 | 750 | 591 | 0.79 | 195164ms | 9 | 8 | 28 |
 
 </details>
 
@@ -1316,6 +1316,16 @@ model, real network).
 | `agent_loop/overnight_at_risk_sweep` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 3 scenarios it scored have changed since (the prompt this build sends): overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_reads_what_is_slipping_before_it_logs, overnight_sweep_retrieved_text_is_not_an_instruction |
 | `cold_start/company_message` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | the prompt this build sends and how a run is graded changed under scenario bare_answer_corrects_the_field_the_wizard_asked_for since the record scored it |
 | `cold_start/sitereadmessage` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): an_administrator_agreeing_to_margince_s_offer_gets_exactly_that_change, an_administrator_agreeing_with_a_plain_question_changes_nothing, an_administrator_answering_an_offer_with_another_value_corrects_it, dossier_correction_the_administrator_asked_for |
+| `draft_reply/intro` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): intro_request_asks_a_colleague_without_overclaiming, intro_request_claims_no_more_warmth_than_the_record_holds |
+| `draft_reply/intro` | `gemini · gemini-3.1-pro-preview · cloud_frontier` | 2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): intro_request_asks_a_colleague_without_overclaiming, intro_request_claims_no_more_warmth_than_the_record_holds |
+| `draft_reply/intro` | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | 2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): intro_request_asks_a_colleague_without_overclaiming, intro_request_claims_no_more_warmth_than_the_record_holds |
+| `draft_reply/intro` | `ollama · gemma4:12b · sovereign` | 2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): intro_request_asks_a_colleague_without_overclaiming, intro_request_claims_no_more_warmth_than_the_record_holds |
+| `draft_reply/intro` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): intro_request_asks_a_colleague_without_overclaiming, intro_request_claims_no_more_warmth_than_the_record_holds |
+| `draft_reply/intro` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): intro_request_asks_a_colleague_without_overclaiming, intro_request_claims_no_more_warmth_than_the_record_holds |
+| `draft_reply/intro` | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | 2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): intro_request_asks_a_colleague_without_overclaiming, intro_request_claims_no_more_warmth_than_the_record_holds |
+| `draft_reply/intro` | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | 2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): intro_request_asks_a_colleague_without_overclaiming, intro_request_claims_no_more_warmth_than_the_record_holds |
+| `draft_reply/intro` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): intro_request_asks_a_colleague_without_overclaiming, intro_request_claims_no_more_warmth_than_the_record_holds |
+| `draft_reply/intro` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): intro_request_asks_a_colleague_without_overclaiming, intro_request_claims_no_more_warmth_than_the_record_holds |
 | `offer_draft/draft` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 5 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): grounded_draft_from_a_conversation_price, injected_instruction_inside_evidence_is_ignored, no_captured_context_yields_no_lines, rich_context_prices_every_line_from_its_own_evidence, two_sources_disagree_on_price |
 | `rate_extract/fx` | `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | 2 scenarios it scored have changed since (the prompt this build sends): fx_rates_json_api_grounded, fx_rates_two_pairs_grounded |
 | `rate_extract/fx` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 2 scenarios it scored have changed since (the prompt this build sends): fx_rates_json_api_grounded, fx_rates_two_pairs_grounded |
@@ -1966,7 +1976,7 @@ Records (10):
 </details>
 
 <details>
-<summary><code>draft_reply/intro</code> — 2 scenario(s), 10 record(s), best state current</summary>
+<summary><code>draft_reply/intro</code> — 2 scenario(s), 10 record(s), best state stale</summary>
 
 ##### `draft_reply/intro`
 
@@ -1983,16 +1993,16 @@ Records (10):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 2/2 | `supported_degraded` | 6 | 6 | 1.00 | 1475ms | 17913ms | 6 | 0 | 0 | 0 |
-| `gemini · gemini-3.1-pro-preview · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 8567ms | 12492ms | 12 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 4297ms | 9960ms | 12 | 0 | 0 | 0 |
-| `ollama · gemma4:12b · sovereign` | `current` | 2/2 | `supported_degraded` | 18 | 17 | 0.94 | 9069ms | 40255ms | 17 | 1 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 2/2 | `certified` | 9 | 9 | 1.00 | 5063ms | 11893ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 2/2 | `not_supported` | 18 | 10 | 0.56 | 6174ms | 47915ms | 10 | 0 | 8 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 2/2 | `supported_degraded` | 18 | 18 | 1.00 | 1371ms | 6114ms | 18 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `current` | 2/2 | `certified` | 15 | 15 | 1.00 | 1763ms | 7234ms | 15 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 1275ms | 2847ms | 12 | 0 | 0 | 0 |
-| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 2/2 | `supported_degraded` | 15 | 15 | 1.00 | 46299ms | 189882ms | 15 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/2 | `supported_degraded` | 6 | 6 | 1.00 | 1475ms | 17913ms | 6 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-pro-preview · cloud_frontier` | `stale` | 0/2 | `certified` | 12 | 12 | 1.00 | 8567ms | 12492ms | 12 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/2 | `certified` | 12 | 12 | 1.00 | 4297ms | 9960ms | 12 | 0 | 0 | 0 |
+| `ollama · gemma4:12b · sovereign` | `stale` | 0/2 | `supported_degraded` | 18 | 17 | 0.94 | 9069ms | 40255ms | 17 | 1 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/2 | `certified` | 9 | 9 | 1.00 | 5063ms | 11893ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/2 | `not_supported` | 18 | 10 | 0.56 | 6174ms | 47915ms | 10 | 0 | 8 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/2 | `supported_degraded` | 18 | 18 | 1.00 | 1371ms | 6114ms | 18 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/2 | `certified` | 15 | 15 | 1.00 | 1763ms | 7234ms | 15 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/2 | `certified` | 12 | 12 | 1.00 | 1275ms | 2847ms | 12 | 0 | 0 | 0 |
+| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/2 | `supported_degraded` | 15 | 15 | 1.00 | 46299ms | 189882ms | 15 | 0 | 0 | 0 |
 
 </details>
 

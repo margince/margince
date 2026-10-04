@@ -16,6 +16,26 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
+// A chosen greeting name wins over the display name's first word, and an empty
+// or blank one falls back to that word rather than greeting nobody.
+func TestAGreetingUsesTheChosenNameElseTheFirstWord(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name, greeting, display, want string
+	}{
+		{"chosen name wins", "Sofia", "Dr. Sofia Meier", "Sofia"},
+		{"family name first", "Lan", "Nguyễn Thị Lan", "Lan"},
+		{"nothing chosen", "", "Dr. Sofia Meier", "Dr."},
+		{"blank is nothing chosen", "  \t ", "Lena Brandt", "Lena"},
+		{"a chosen name stays one line", "Sofia\nP.S.", "Sofia Meier", "SofiaP.S."},
+		{"no name at all", "", "", ""},
+	} {
+		if got := GreetingName(tc.greeting, tc.display); got != tc.want {
+			t.Errorf("%s: GreetingName(%q, %q) = %q, want %q", tc.name, tc.greeting, tc.display, got, tc.want)
+		}
+	}
+}
+
 // A line break is not only "\\n".
 //
 // U+0085 and U+2028/U+2029 break lines in some renderers and are invisible in a

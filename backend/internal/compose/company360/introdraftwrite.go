@@ -74,7 +74,7 @@ const introSystem = `You write one short message asking a COLLEAGUE at your own 
 This is a favour asked of a teammate, not a message to a customer. Write the way somebody writes to a colleague they see every week: brief, direct, no pitch and no pleasantries stacked on the front.
 
 Rules you must not break:
-- Open with a greeting line naming the colleague by first name, then a blank line, then the ask.
+- Open with a greeting line naming the colleague by first name, exactly as "colleague_greeting" spells it, then a blank line, then the ask.
 - In one sentence, name the contact you want to meet in full, with their title and company when given, so the colleague knows who you mean. Give a reason only when "deal" names one, in one sentence; with no deal, the ask is complete without a reason.
 - Say that the colleague and the contact have been in touch, with "relationship" and "last_spoke" as given, and nothing warmer: the colleague can check any claim about their own relationship from memory.
 - Do not write the introduction itself, and do not write to the contact. The message is TO the colleague.
@@ -93,14 +93,15 @@ Rules you must not break:
 func introRequest(facts introFacts) model.Request {
 	fence := promptfence.New()
 	payload, err := json.Marshal(map[string]string{
-		"colleague":       facts.colleague,
-		"contact":         facts.contact,
-		"contact_title":   facts.title,
-		"account":         facts.account,
-		"deal":            facts.deal,
-		"relationship":    facts.band,
-		"last_spoke":      introLastSpoke(facts),
-		"output_language": string(introLang(facts.lang)),
+		"colleague":          facts.colleague,
+		"colleague_greeting": facts.colleagueGreeting(),
+		"contact":            facts.contact,
+		"contact_title":      facts.title,
+		"account":            facts.account,
+		"deal":               facts.deal,
+		"relationship":       facts.band,
+		"last_spoke":         introLastSpoke(facts),
+		"output_language":    string(introLang(facts.lang)),
 	})
 	if err != nil {
 		// A map of strings cannot fail to marshal; an empty payload would
@@ -139,11 +140,17 @@ func introSchema() json.RawMessage {
 // this envelope appears without stating how its contract differs.
 func parseIntroDraft(raw string, facts introFacts) (introDraft, error) {
 	subject, body, err := draftreply.Parse(raw,
-		draftfloor.FirstName(facts.colleague), facts.contact)
+		facts.colleagueGreeting(), facts.contact)
 	if err != nil {
 		return introDraft{}, fmt.Errorf("company360: %w", err)
 	}
 	return introDraft{subject: subject, body: body}, nil
+}
+
+// colleagueGreeting is the name the ask opens with. The model is told it and
+// the reply is checked for it, so the two paths cannot greet different words.
+func (facts introFacts) colleagueGreeting() string {
+	return draftfloor.GreetingName(facts.greeting, facts.colleague)
 }
 
 // introLastSpoke says when the colleague and the contact last spoke, in words
@@ -226,7 +233,7 @@ func introFloor(facts introFacts) introDraft {
 		wording = introTable[draftfloor.DefaultLang]
 	}
 	lines := []string{
-		draftfloor.Fill(wording.greeting, draftfloor.FirstName(facts.colleague)),
+		draftfloor.Fill(wording.greeting, facts.colleagueGreeting()),
 		"",
 		introAsk(wording, facts),
 	}
@@ -266,12 +273,14 @@ func introAsk(wording introWording, facts introFacts) string {
 // which breaks the original.
 type IntroFixture struct {
 	Colleague string `json:"colleague"`
-	Contact   string `json:"contact"`
-	Title     string `json:"contact_title"`
-	Account   string `json:"account"`
-	Deal      string `json:"deal"`
-	Band      string `json:"relationship"`
-	LastAt    string `json:"last_spoke"`
+	// ColleagueGreeting is the colleague's chosen greeting name, if any.
+	ColleagueGreeting string `json:"colleague_greeting_name,omitempty"`
+	Contact           string `json:"contact"`
+	Title             string `json:"contact_title"`
+	Account           string `json:"account"`
+	Deal              string `json:"deal"`
+	Band              string `json:"relationship"`
+	LastAt            string `json:"last_spoke"`
 	// Correspondence is what the contact has written, which is what decides the
 	// language. Record names are not prose: a scenario that carried only them
 	// would certify an English ask for a German account.
@@ -304,6 +313,7 @@ func IntroFloorFor(fixture IntroFixture) (subject, body string) {
 func introFactsFromFixture(fixture IntroFixture) introFacts {
 	facts := introFacts{
 		colleague: fixture.Colleague,
+		greeting:  fixture.ColleagueGreeting,
 		contact:   fixture.Contact,
 		title:     fixture.Title,
 		account:   fixture.Account,
