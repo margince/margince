@@ -153,6 +153,36 @@ func TestAQuotedPromiseIsNotTheRepliersPromise(t *testing.T) {
 	}
 }
 
+// An old signal is settled even when the reading finds its commitment in
+// another message: only a commitment on the message the signal cited is filed.
+func TestAnOldSignalReadElsewhereIsSettledEmpty(t *testing.T) {
+	e := Setup(t)
+	company := e.SeedCompany(t, "Acme", &e.Rep1)
+	ines := employeeOf(t, e, company, "Ines Huber")
+	earlier := seedMessage(t, e, ines, "thread-elsewhere", "Pricing", "Hi Ines, "+pricingPromise, "outbound",
+		extractClock.Add(-96*time.Hour))
+	party(t, earlier, "from", &e.Rep1, nil)
+	cited := seedMessage(t, e, ines, "thread-elsewhere", "Re: Pricing", "Thanks, noted.", "inbound",
+		extractClock.Add(-72*time.Hour))
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := signals.RecordDerived(e.Admin(), tx, signals.DerivedSignal{
+			Kind: "commitment_made", CompanyID: company, Summary: "Pricing promised.",
+			Severity: "info", Fingerprint: "legacy-" + cited.String(),
+			Evidence: []signals.DerivedEvidence{{Snippet: "Pricing promised.", ActivityID: cited}},
+		}, extractClock.Add(-72*time.Hour))
+		return err
+	}); err != nil {
+		t.Fatalf("seed the old signal: %v", err)
+	}
+	brain := &scriptedBrain{reply: commitmentReply(t, earlier, pricingPromise, "")}
+	if pass := extractPassStats(t, e, brain); pass.Converted != 1 {
+		t.Fatalf("the pass converted %d old signals, want the one", pass.Converted)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM conversation_claim WHERE source_activity_id = $1`, cited); n != 0 {
+		t.Errorf("a commitment found on another message was filed against the cited one %d time(s)", n)
+	}
+}
+
 // A commitment signal a human filed is theirs, and the conversion leaves it.
 func TestAHumanFiledCommitmentSignalIsNotConverted(t *testing.T) {
 	e := Setup(t)
