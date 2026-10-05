@@ -17,6 +17,7 @@ import (
 	"io"
 
 	"github.com/jackc/pgx/v5"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -172,12 +173,7 @@ func (s *Store) UploadAttachment(ctx context.Context, in AttachmentInput) (crmco
 			account, in.ContractID); err != nil {
 			return err
 		}
-		if _, err := storekit.Audit(ctx, tx, "create", "attachment", id, nil, map[string]any{
-			fieldEntityType: in.EntityType,
-			fieldEntityID:   in.EntityID.String(),
-			"filename":      in.Filename,
-			"byte_size":     size,
-		}); err != nil {
+		if err := announceUploadedAttachment(ctx, tx, id, in, size); err != nil {
 			return err
 		}
 		// The key stops being provisional in the SAME transaction that gave it
@@ -222,4 +218,32 @@ func acceptUploadedFile(in AttachmentInput) (AttachmentInput, error) {
 	}
 	in.ContentType = mediaType
 	return in, nil
+}
+
+// announceUploadedAttachment writes the audit row and the outbox row that say a
+// file arrived, in the transaction that wrote the file's own row. That is the
+// write shape every other mutation keeps, and without the outbox row no
+// subscriber learns of an upload except by polling the list.
+//
+// The filename is in the audit row and not in the event. The audit row answers
+// to an auditor inside the workspace; the event travels to whoever subscribed,
+// and a name a rep typed can be the sensitive part by itself.
+func announceUploadedAttachment(
+	ctx context.Context, tx pgx.Tx, id ids.UUID, in AttachmentInput, size int64,
+) error {
+	auditID, err := storekit.Audit(ctx, tx, "create", "attachment", id, nil, map[string]any{
+		fieldEntityType: in.EntityType,
+		fieldEntityID:   in.EntityID.String(),
+		"filename":      in.Filename,
+		"byte_size":     size,
+	})
+	if err != nil {
+		return err
+	}
+	return storekit.EmitEvent(ctx, tx, auditID, id, crmcontracts.PublicEventAttachmentCreated{
+		ParentType:  in.EntityType,
+		ParentId:    openapi_types.UUID(in.EntityID),
+		ContentType: nullIfEmpty(in.ContentType),
+		ByteSize:    &size,
+	})
 }
