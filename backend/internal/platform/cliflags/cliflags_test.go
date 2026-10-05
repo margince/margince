@@ -228,3 +228,29 @@ func TestShortfallsNamesEveryWayAFlagEscapesTheEnvironment(t *testing.T) {
 		}
 	}
 }
+
+// The variable is read by the flag's own parser, so one text means one value
+// from either source: a value that works on the command line works moved into
+// the environment, and reads the same.
+func TestTheEnvironmentReadsATextAsItsFlagWould(t *testing.T) {
+	for _, text := range []string{"010", "0x10", "42"} {
+		var fromFlag, fromEnv int
+		var flagEnv, envEnv Env
+		flagged := flag.NewFlagSet("probe", flag.ContinueOnError)
+		flagEnv.Int(flagged, &fromFlag, "n", "PROBE_N", 0, "a number")
+		if err := flagged.Parse([]string{"--n", text}); err != nil {
+			t.Fatalf("the flag refused %q: %v", text, err)
+		}
+		envd := flag.NewFlagSet("probe", flag.ContinueOnError)
+		envEnv.Int(envd, &fromEnv, "n", "PROBE_N", 0, "a number")
+		if err := envd.Parse(nil); err != nil {
+			t.Fatal(err)
+		}
+		if err := envEnv.Apply(envd, fakeEnv(map[string]string{"PROBE_N": text})); err != nil {
+			t.Fatalf("the environment refused %q, which the flag took: %v", text, err)
+		}
+		if fromFlag != fromEnv {
+			t.Errorf("%q reads %d as a flag and %d from the environment", text, fromFlag, fromEnv)
+		}
+	}
+}

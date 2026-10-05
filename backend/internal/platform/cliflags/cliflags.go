@@ -25,7 +25,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
@@ -56,55 +55,40 @@ type binding struct {
 // reason the two are separated here.
 func (e *Env) String(fs *flag.FlagSet, target *string, name, env, literal, usage string) {
 	fs.StringVar(target, name, literal, usage)
-	e.bind(name, env, config.KindString, func(v string) error {
-		*target = v
-		return nil
-	})
+	e.bind(fs, name, env, config.KindString)
 }
 
 // Duration is String for a time.Duration flag ("15m", "24h").
 func (e *Env) Duration(fs *flag.FlagSet, target *time.Duration, name, env string, literal time.Duration, usage string) {
 	fs.DurationVar(target, name, literal, usage)
-	e.bind(name, env, config.KindDuration, func(v string) error {
-		d, err := time.ParseDuration(v)
-		if err != nil {
-			return fmt.Errorf("%s=%q is not a duration (e.g. 15m, 24h)", env, v)
-		}
-		*target = d
-		return nil
-	})
+	e.bind(fs, name, env, config.KindDuration)
 }
 
-// Int is String for a base-10 integer flag.
+// Int is String for an integer flag.
 func (e *Env) Int(fs *flag.FlagSet, target *int, name, env string, literal int, usage string) {
 	fs.IntVar(target, name, literal, usage)
-	e.bind(name, env, config.KindInt, func(v string) error {
-		n, err := strconv.Atoi(v)
-		if err != nil {
-			return fmt.Errorf("%s=%q is not a whole number", env, v)
-		}
-		*target = n
-		return nil
-	})
+	e.bind(fs, name, env, config.KindInt)
 }
 
-// Bool is String for a boolean flag. A value strconv.ParseBool cannot read is
-// refused rather than taken as false: an operator who typed "yes" meant
-// something, and booting with the opposite would hide it.
+// Bool is String for a boolean flag. A value the flag cannot read is refused
+// rather than taken as false: an operator who typed "yes" meant something, and
+// booting with the opposite would hide it.
 func (e *Env) Bool(fs *flag.FlagSet, target *bool, name, env string, literal bool, usage string) {
 	fs.BoolVar(target, name, literal, usage)
-	e.bind(name, env, config.KindBool, func(v string) error {
-		b, err := strconv.ParseBool(v)
-		if err != nil {
-			return fmt.Errorf("%s=%q is not true or false", env, v)
-		}
-		*target = b
-		return nil
-	})
+	e.bind(fs, name, env, config.KindBool)
 }
 
-func (e *Env) bind(name, env string, kind config.Kind, set func(string) error) {
-	e.bindings = append(e.bindings, binding{name: name, env: env, kind: kind, set: set})
+// bind records env as the source of a flag just registered on fs. The value is
+// parsed by the flag's own Value, so the flag and its variable read one text
+// one way — "010" or "0x10" means the same number from either.
+func (e *Env) bind(fs *flag.FlagSet, name, env string, kind config.Kind) {
+	value := fs.Lookup(name).Value
+	e.bindings = append(e.bindings, binding{name: name, env: env, kind: kind, set: func(v string) error {
+		if err := value.Set(v); err != nil {
+			return fmt.Errorf("%s=%q is not a valid %s", env, v, kind)
+		}
+		return nil
+	}})
 }
 
 // Apply fills every registered flag the caller did not pass from its environment
