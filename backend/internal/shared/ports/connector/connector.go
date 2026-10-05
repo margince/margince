@@ -345,6 +345,11 @@ type NormalizedRecord struct {
 	// record is a fact about the meeting.
 	Participants []MessageParticipant
 
+	// The parties the MaxParticipants cap withheld from Participants. Capture
+	// binds the workspace's own seats from this list and nothing else, and only
+	// when the provider attested it; every external name on it stays refused.
+	WithheldParties []MessageParticipant
+
 	// Reports that the PROVIDER enumerated Participants, so binding one to a
 	// colleague's user_id records what the provider stated rather than what a
 	// sender typed. The mail and calendar answers differ: a recipient list on

@@ -220,7 +220,7 @@ public.activity_mail_reference_referenced_idx CREATE INDEX activity_mail_referen
 public.activity_meeting_attendee_repair acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.activity_meeting_attendee_repair.activity_id uuid NOT NULL gen=- def=-
 public.activity_meeting_attendee_repair.activity_meeting_attendee_repair_activity_fk FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
-public.activity_meeting_attendee_repair.activity_meeting_attendee_repair_outcome_check CHECK ((outcome = ANY (ARRAY['attendees'::text, 'none'::text, 'capped'::text, 'unreadable'::text])))
+public.activity_meeting_attendee_repair.activity_meeting_attendee_repair_outcome_check CHECK ((outcome = ANY (ARRAY['attendees'::text, 'none'::text, 'capped'::text, 'capped_seats'::text, 'unreadable'::text])))
 public.activity_meeting_attendee_repair.activity_meeting_attendee_repair_pkey PRIMARY KEY (activity_id)
 public.activity_meeting_attendee_repair.outcome text NOT NULL gen=- def=-
 public.activity_meeting_attendee_repair.repaired_at timestamp with time zone NOT NULL gen=- def=now()
