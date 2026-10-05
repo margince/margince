@@ -5073,7 +5073,7 @@ export const de = {
   "settings.displayNameSave": "Speichern",
   "settings.greetingName": "Rufname",
   "settings.greetingNameHelp":
-    "Mit diesem Namen begrüßt dich dein Team in entworfenen Nachrichten. Lässt du das Feld leer, gilt das erste Wort deines Anzeigenamens.",
+    "Mit diesem Namen wirst du in entworfenen Nachrichten und Begrüßungen angesprochen. Lässt du das Feld leer, gilt das erste Wort deines Anzeigenamens.",
   "settings.greetingNameSave": "Speichern",
   "settings.languageHelp": "Gilt für diese Sitzung.",
   "settings.deviceCard": "Dieses Gerät",

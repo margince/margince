@@ -915,6 +915,7 @@ public.app_user.display_name text NOT NULL gen=- def=-
 public.app_user.email text NOT NULL gen=- def=-
 public.app_user.failed_login_count integer NOT NULL gen=- def=0
 public.app_user.greeting_name text gen=- def=-
+public.app_user.greeting_name_chosen_at timestamp with time zone gen=- def=-
 public.app_user.id uuid NOT NULL gen=- def=uuidv7()
 public.app_user.is_agent boolean NOT NULL gen=- def=false
 public.app_user.locale text gen=- def=-

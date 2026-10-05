@@ -204,4 +204,38 @@ func TestAnInvitedGreetingNameIsStoredAndAnnounced(t *testing.T) {
 	if _, events := greetingNameLedger(t, e.svc, userID.UUID); events != 1 {
 		t.Errorf("the invite emitted %d greeting-name events, want 1", events)
 	}
+	var announced *string
+	if err := e.svc.db.Tx(context.Background(), func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT envelope -> 'payload' ->> 'greeting_name' FROM event_outbox
+			  WHERE envelope ->> 'type' = 'user_greeting_name.changed'
+			    AND envelope -> 'entity' ->> 'id' = $1::text`, userID.UUID).Scan(&announced)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if textOf(announced) != "Lan" {
+		t.Errorf("the invite announced greeting_name %q, want Lan", textOf(announced))
+	}
+}
+
+// A member who cleared their greeting name before ever signing in through a
+// provider made a choice; the provider's first sign-in does not undo it.
+func TestAClearBeforeTheFirstFederatedSignInIsKept(t *testing.T) {
+	svc, _, userID, email := seedSSOEnv(t, "sso-greeting-cleared")
+	ctx := selfActorCtx(groupSyncCtx(), userID)
+	typed, blank := "Caz", ""
+	if _, err := svc.SaveMyGreetingName(ctx, &typed); err != nil {
+		t.Fatalf("setting: %v", err)
+	}
+	if _, err := svc.SaveMyGreetingName(ctx, &blank); err != nil {
+		t.Fatalf("clearing: %v", err)
+	}
+
+	if _, err := svc.LoginViaFederatedIdentity(groupSyncCtx(), "google",
+		OIDCClaims{Subject: "sub-greeting-cleared", Email: email, GivenName: "Carol"}); err != nil {
+		t.Fatalf("LoginViaFederatedIdentity: %v", err)
+	}
+	if got := storedGreetingName(t, svc, userID.UUID); got != nil {
+		t.Errorf("greeting_name = %q after the first sign-in, want the member's clear kept", textOf(got))
+	}
 }

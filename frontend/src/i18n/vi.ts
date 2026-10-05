@@ -5004,7 +5004,7 @@ export const vi = {
   "settings.displayNameSave": "L\u01b0u",
   "settings.greetingName": "Tên gọi",
   "settings.greetingNameHelp":
-    "Tên đồng nghiệp dùng để chào bạn trong thư soạn sẵn. Để trống thì dùng chữ đầu tiên trong tên của bạn.",
+    "Tên dùng để chào bạn trong bản nháp và lời chào. Để trống thì dùng chữ đầu tiên trong tên của bạn.",
   "settings.greetingNameSave": "Lưu",
   "settings.languageHelp": "Chỉ giữ trong phiên làm việc.",
   "settings.deviceCard": "Thiết bị này",

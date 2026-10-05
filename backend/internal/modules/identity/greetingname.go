@@ -39,9 +39,10 @@ const greetingNameField = "greeting_name"
 const greetingNameMaxRunes = 100
 
 // greetingNameOf flattens a typed value to one trimmed line and refuses one
-// past the bound. Nil or blank comes back "", which clears. draftfloor.OneLine
-// because the value is rendered into a greeting line, and a line break in it
-// would open a paragraph the template never wrote.
+// past the bound. Nil or blank comes back "", which clears. draftfloor.NameLine
+// because the value is rendered into a greeting line: a line break would open
+// a paragraph the template never wrote, and OneLine alone would drop it and
+// join the two words it separated.
 func greetingNameOf(raw *string) (string, error) {
 	if raw == nil {
 		return "", nil
@@ -129,7 +130,8 @@ func fillGreetingNameFromProvider(
 	}
 	tag, err := tx.Exec(ctx,
 		`UPDATE app_user SET greeting_name = $2
-		  WHERE id = $1 AND greeting_name IS NULL AND `+LiveMemberSQL("")+`
+		  WHERE id = $1 AND greeting_name IS NULL AND greeting_name_chosen_at IS NULL
+		    AND `+LiveMemberSQL("")+`
 		    AND NOT EXISTS (
 		        SELECT 1 FROM federated_identity f
 		         WHERE f.user_id = $1 AND f.provider <> $3)`, userID, name, provider)
@@ -145,7 +147,7 @@ func fillGreetingNameFromProvider(
 // writeGreetingName updates the locked row, then audits and publishes the change.
 func writeGreetingName(ctx context.Context, tx pgx.Tx, userID ids.UserID, before, after *string) error {
 	tag, err := tx.Exec(ctx,
-		`UPDATE app_user SET greeting_name = $2
+		`UPDATE app_user SET greeting_name = $2, greeting_name_chosen_at = now()
 		  WHERE id = $1 AND `+LiveMemberSQL("")+``, userID, after)
 	if err != nil {
 		return err

@@ -11,4 +11,8 @@ SET LOCAL lock_timeout = '3s';
 ALTER TABLE app_user
     ADD COLUMN greeting_name text
         CONSTRAINT app_user_greeting_name_length
-        CHECK (greeting_name IS NULL OR char_length(greeting_name) BETWEEN 1 AND 100);
+        CHECK (greeting_name IS NULL OR char_length(greeting_name) BETWEEN 1 AND 100),
+    -- When the member last set or cleared it themselves. NULL greeting_name
+    -- alone cannot tell "never said" from "cleared", and only the first lets a
+    -- sign-in provider fill the name in.
+    ADD COLUMN greeting_name_chosen_at timestamptz;

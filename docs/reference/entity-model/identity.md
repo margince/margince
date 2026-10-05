@@ -6,7 +6,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## app_user
 
-23 columns · primary key `(id)` · referenced by 126 foreign keys
+24 columns · primary key `(id)` · referenced by 126 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -16,6 +16,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 | `email` | `text` | yes | Required `text`. |
 | `failed_login_count` | `integer` | yes | Required `integer`, defaulting to `0`. |
 | `greeting_name` | `text` |  | Optional `text`, at most 100 characters. |
+| `greeting_name_chosen_at` | `timestamp with time zone` |  | Optional `timestamp with time zone`. |
 | `is_agent` | `boolean` | yes | Required `boolean`, defaulting to `false`. |
 | `locale` | `text` |  | One of `en`, `de`, `vi`. |
 | `locked_until` | `timestamp with time zone` |  | Optional `timestamp with time zone`. |

@@ -5175,7 +5175,7 @@ export const en = {
   "settings.displayNameSave": "Save",
   "settings.greetingName": "Greeting name",
   "settings.greetingNameHelp":
-    "The name colleagues greet you by in drafted messages. Empty uses the first word of your display name.",
+    "The name you are greeted by in drafted messages and greetings. Empty uses the first word of your display name.",
   "settings.greetingNameSave": "Save",
   "settings.languageHelp": "Applies to this session.",
   "settings.deviceCard": "This device",
