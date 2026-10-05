@@ -116,14 +116,22 @@ func (s *Service) SaveMyGreetingName(ctx context.Context, raw *string) (Seat, er
 // typed, or one an earlier sign-in filled and they kept, is never replaced by
 // what a provider sends. A given name that does not fit the bound is dropped
 // rather than cut, since half a name greets nobody.
-func fillGreetingNameFromProvider(ctx context.Context, tx pgx.Tx, userID ids.UserID, givenName string) error {
+//
+// And only on the member's first federated sign-in at all: a second provider
+// linked later is not one, so a name they cleared in between stays cleared.
+func fillGreetingNameFromProvider(
+	ctx context.Context, tx pgx.Tx, userID ids.UserID, provider, givenName string,
+) error {
 	name := draftfloor.OneLine(givenName)
 	if name == "" || !fitsGreetingBound(name) {
 		return nil
 	}
 	tag, err := tx.Exec(ctx,
 		`UPDATE app_user SET greeting_name = $2
-		  WHERE id = $1 AND greeting_name IS NULL AND `+LiveMemberSQL("")+``, userID, name)
+		  WHERE id = $1 AND greeting_name IS NULL AND `+LiveMemberSQL("")+`
+		    AND NOT EXISTS (
+		        SELECT 1 FROM federated_identity f
+		         WHERE f.user_id = $1 AND f.provider <> $3)`, userID, name, provider)
 	if err != nil {
 		return fmt.Errorf("identity: filling the greeting name from the provider: %w", err)
 	}

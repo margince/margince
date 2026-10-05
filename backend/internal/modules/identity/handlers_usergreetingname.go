@@ -21,6 +21,13 @@ func (h Handlers) SaveMyGreetingName(w http.ResponseWriter, r *http.Request) {
 	if !httperr.Decode(w, r, &body) {
 		return
 	}
+	// A null clears the name and an absent field must not: both decode to nil,
+	// so the raw body decides.
+	if _, present := httperr.PresentField(r, greetingNameField); !present {
+		httperr.Write(w, r, httperr.Validation(greetingNameField, "required",
+			"send greeting_name: a name, or null to clear it"))
+		return
+	}
 	seat, err := h.svc.SaveMyGreetingName(r.Context(), body.GreetingName)
 	if err != nil {
 		httperr.Write(w, r, err)

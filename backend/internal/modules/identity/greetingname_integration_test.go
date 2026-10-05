@@ -164,3 +164,25 @@ func TestASignInNeverReplacesAGreetingNameAlreadySet(t *testing.T) {
 		t.Errorf("a sign-in that changed nothing wrote %d audits / %d events, want none", audits, events)
 	}
 }
+
+// A second provider linked later is not a first sign-in: a name the member
+// cleared after the first one stays cleared.
+func TestASecondProviderDoesNotRefillAClearedGreetingName(t *testing.T) {
+	svc, conn, userID, email := seedSSOEnv(t, "sso-greeting-second")
+	if _, err := svc.LoginViaFederatedIdentity(groupSyncCtx(), "google",
+		OIDCClaims{Subject: "sub-greeting-google", Email: email, GivenName: "Carol"}); err != nil {
+		t.Fatalf("the Google sign-in: %v", err)
+	}
+	if _, err := conn.Exec(context.Background(),
+		`UPDATE app_user SET greeting_name = NULL WHERE id = $1`, userID); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := svc.LoginViaFederatedIdentity(groupSyncCtx(), "microsoft",
+		OIDCClaims{Subject: "sub-greeting-microsoft", Email: email, GivenName: "Carol"}); err != nil {
+		t.Fatalf("the Microsoft sign-in: %v", err)
+	}
+	if got := storedGreetingName(t, svc, userID.UUID); got != nil {
+		t.Errorf("greeting_name = %q after a second provider's first sign-in, want the member's clear kept", textOf(got))
+	}
+}

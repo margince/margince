@@ -168,8 +168,10 @@ func (s *Service) LoginViaFederatedIdentity(ctx context.Context, provider string
 		if linkErr != nil {
 			return linkErr
 		}
-		if firstLink {
-			if err := fillGreetingNameFromProvider(ctx, tx, userID, claims.GivenName); err != nil {
+		// A relink replaces an identity the member already signed in with, so it
+		// is not their first sign-in, and a name they cleared since stays cleared.
+		if firstLink && !wasRelink {
+			if err := fillGreetingNameFromProvider(ctx, tx, userID, provider, claims.GivenName); err != nil {
 				return err
 			}
 		}
