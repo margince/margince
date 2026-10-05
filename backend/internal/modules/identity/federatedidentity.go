@@ -168,12 +168,9 @@ func (s *Service) LoginViaFederatedIdentity(ctx context.Context, provider string
 		if linkErr != nil {
 			return linkErr
 		}
-		// A relink replaces an identity the member already signed in with, so it
-		// is not their first sign-in, and a name they cleared since stays cleared.
-		if firstLink && !wasRelink {
-			if err := fillGreetingNameFromProvider(ctx, tx, userID, provider, claims.GivenName); err != nil {
-				return err
-			}
+		if err := fillGreetingNameFromProvider(ctx, tx, userID, provider, claims.GivenName,
+			firstLink && !wasRelink); err != nil {
+			return err
 		}
 		// The map is read HERE, inside the transaction the grant commits in and
 		// only once the member is admitted: a pre-transaction read could grant

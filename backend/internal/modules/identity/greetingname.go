@@ -117,13 +117,14 @@ func (s *Service) SaveMyGreetingName(ctx context.Context, raw *string) (Seat, er
 // what a provider sends. A given name that does not fit the bound is dropped
 // rather than cut, since half a name greets nobody.
 //
-// And only on the member's first federated sign-in at all: a second provider
-// linked later is not one, so a name they cleared in between stays cleared.
+// And only on the member's first federated sign-in at all: a relink, or a
+// second provider linked later, is not one, so a name they cleared in between
+// stays cleared. newLink says this sign-in linked a fresh identity.
 func fillGreetingNameFromProvider(
-	ctx context.Context, tx pgx.Tx, userID ids.UserID, provider, givenName string,
+	ctx context.Context, tx pgx.Tx, userID ids.UserID, provider, givenName string, newLink bool,
 ) error {
 	name := draftfloor.OneLine(givenName)
-	if name == "" || !fitsGreetingBound(name) {
+	if !newLink || name == "" || !fitsGreetingBound(name) {
 		return nil
 	}
 	tag, err := tx.Exec(ctx,
