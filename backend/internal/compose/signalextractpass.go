@@ -182,7 +182,7 @@ func (x *SignalExtractor) RunWorkspace(ctx context.Context, wsID ids.WorkspaceID
 	pass.Converted = converted
 	if ai.IsDeferral(err) {
 		pass.Deferred = true
-		return pass, passFailure(failed)
+		return pass, passFailure(append(failed, faultsBesideADeferral(err)...))
 	}
 	if err != nil {
 		failed = append(failed, err)
@@ -247,4 +247,33 @@ func passFailure(failed []error) error {
 		return nil
 	}
 	return fmt.Errorf("signal extract: %w", errors.Join(failed...))
+}
+
+// faultsBesideADeferral keeps what a deferral is carrying and drops the deferral.
+//
+// A deferral is the pass's STATE, recorded on its row and read as deferred rather than
+// failed, so reporting it as a failure would schedule the next attempt as though the
+// budget were available. A signal that failed for its own reasons before the budget
+// ran out is a different thing: it heads the list and fails again every pass, so
+// losing it behind the deferral is how a recurring fault stays invisible.
+//
+// Recursive because a provider's own fault is reported as one error joining several:
+// the whole of it reads as a deferral when any member does, so dropping it wholesale
+// would take a genuine fault down with the sentinel beside it.
+func faultsBesideADeferral(err error) []error {
+	joined, ok := err.(interface{ Unwrap() []error })
+	if !ok {
+		// A provider already blocked carries no cause: the one that blocked it was
+		// recorded on the call that did, and a nil kept as a fault would make a
+		// deferral-only pass report a failure.
+		if err == nil || ai.IsDeferral(err) {
+			return nil
+		}
+		return []error{err}
+	}
+	var faults []error
+	for _, carried := range joined.Unwrap() {
+		faults = append(faults, faultsBesideADeferral(carried)...)
+	}
+	return faults
 }
