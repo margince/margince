@@ -33,6 +33,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/storedobjects"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -114,14 +115,14 @@ func (s *Store) StageCapturedFiles(
 	staged := make([]StagedFile, 0, len(files))
 	for _, file := range files {
 		id := ids.NewV7()
-		key := blobstore.WorkspaceKey(workspace, attachmentKind, id.String())
+		key := blobstore.WorkspaceKey(workspace, string(storedobjects.KindAttachment), id.String())
 		sum := sha256.Sum256(file.Body)
 		// Declared provisional BEFORE the bytes exist, on its own transaction,
 		// so the declaration survives the failure of the caller's — which is
 		// exactly the failure that leaves an object nothing references, and an
 		// erasure reads storage_key off the attachment row. See
 		// storedobjectintent.go.
-		if err := s.recordStoredObjectIntent(ctx, key); err != nil {
+		if err := s.recordAttachmentIntent(ctx, key); err != nil {
 			return nil, err
 		}
 		if err := s.blob.Put(ctx, key, bytes.NewReader(file.Body),
@@ -182,7 +183,7 @@ func (s *Store) RecordCapturedFiles(
 		}
 		// On the CALLER's transaction, the one that just gave the key a row:
 		// the pair commits together or neither does.
-		if err := clearStoredObjectIntent(ctx, tx, file.key); err != nil {
+		if err := storedobjects.Clear(ctx, tx, file.key); err != nil {
 			return err
 		}
 	}

@@ -19,29 +19,14 @@ package activities
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// provisional plants one ledger row as a writer would, dated `age` ago.
-//
-// Written through the OWNER connection so the test states the ledger's state
-// directly: what these cases are about is what the reaper is offered, not how a
-// key got there, and the writers' own half is covered where they are called.
-func provisional(t *testing.T, e *sendEnv, key string, age time.Duration) {
-	t.Helper()
-	if _, err := e.owner.Exec(context.Background(), `
-		INSERT INTO stored_object_intent (storage_key, recorded_at)
-		VALUES ($1, now() - $2::interval)`, key, age.String()); err != nil {
-		t.Fatalf("planting a provisional key: %v", err)
-	}
-}
-
-// systemStore is the reaper's own view: the sweep runs under the system
-// principal, which is what ListOrphanedObjects demands.
+// systemStore is the reaper's own view: the sweep runs under the system principal,
+// which is what the reference check demands.
 func systemStore(e *sendEnv) (*Store, context.Context) {
 	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
 	ctx = principal.WithActor(ctx, principal.Principal{
@@ -50,84 +35,70 @@ func systemStore(e *sendEnv) (*Store, context.Context) {
 	return NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws))), ctx
 }
 
-func TestAKeyWhoseRowNeverArrivedIsOfferedToTheReaper(t *testing.T) {
+// A key no attachment row carries is one the sweep may collect.
+//
+// This module answers only the reference half now: whether a key is old enough is
+// the ledger's question, and which module to ask is the sweep's. What stays here is
+// the half that needs this module's own table — an object with no row is one an
+// erasure cannot reach, because it finds an attachment's bytes by reading
+// storage_key off the row.
+func TestAKeyWhoseRowNeverArrivedIsUnreferenced(t *testing.T) {
 	e := setupSend(t)
-	provisional(t, e, "ws/attachment/orphan", 2*ProvisionalObjectGrace)
 	store, ctx := systemStore(e)
 
-	orphans, err := store.ListOrphanedObjects(ctx, time.Now().UTC().Add(-ProvisionalObjectGrace), 50)
+	unreferenced, err := store.UnreferencedAttachmentKeys(ctx, []string{"ws/attachment/orphan"})
 	if err != nil {
-		t.Fatalf("ListOrphanedObjects: %v", err)
+		t.Fatalf("UnreferencedAttachmentKeys: %v", err)
 	}
-
-	if len(orphans) != 1 || orphans[0].StorageKey != "ws/attachment/orphan" {
-		t.Fatalf("got %+v, want the one key whose row never arrived — an object with no row is one an "+
-			"erasure cannot reach, because it finds an attachment's bytes by reading storage_key off the row",
-			orphans)
+	if len(unreferenced) != 1 || unreferenced[0] != "ws/attachment/orphan" {
+		t.Fatalf("got %v, want the one key whose row never arrived", unreferenced)
 	}
 }
 
-func TestAKeyStillInsideTheGracePeriodIsLeftAlone(t *testing.T) {
-	e := setupSend(t)
-	provisional(t, e, "ws/attachment/inflight", time.Minute)
-	store, ctx := systemStore(e)
-
-	orphans, err := store.ListOrphanedObjects(ctx, time.Now().UTC().Add(-ProvisionalObjectGrace), 50)
-	if err != nil {
-		t.Fatalf("ListOrphanedObjects: %v", err)
-	}
-
-	// The window between the put and the row is a handful of statements. A
-	// reaper that did not wait would delete the object of an upload still in
-	// flight, which is a worse failure than the orphan it is chasing.
-	for _, o := range orphans {
-		if o.StorageKey == "ws/attachment/inflight" {
-			t.Fatal("an upload still inside the grace period was offered to the reaper")
-		}
-	}
-}
-
+// A live attachment row keeps its bytes out of the reaper's reach.
+//
+// THE REFERENCE CHECK IS THE SECOND LOCK. The first is that a key was declared at
+// all; this exists because a clear that never ran leaves a live file's key
+// provisional, and a reaper trusting the ledger alone would delete the bytes of a
+// document somebody can still open.
 func TestALiveAttachmentRowKeepsItsBytesOutOfTheReapersReach(t *testing.T) {
 	e := setupSend(t)
-	// A key that is BOTH provisional past the grace period and referenced by a
-	// live row — which is what a clear that never ran looks like. The ledger
-	// alone would offer it up; the join is what refuses.
 	const key = "ws/attachment/live"
 	seedAttachmentRow(t, e, key)
-	provisional(t, e, key, 2*ProvisionalObjectGrace)
 	store, ctx := systemStore(e)
 
-	orphans, err := store.ListOrphanedObjects(ctx, time.Now().UTC().Add(-ProvisionalObjectGrace), 50)
+	// Read the orphan alongside it, so an empty answer cannot pass for a working
+	// check: the reference check has to tell the two apart, not refuse both.
+	unreferenced, err := store.UnreferencedAttachmentKeys(ctx, []string{key, "ws/attachment/orphan"})
 	if err != nil {
-		t.Fatalf("ListOrphanedObjects: %v", err)
+		t.Fatalf("UnreferencedAttachmentKeys: %v", err)
 	}
-
-	for _, o := range orphans {
-		if o.StorageKey == key {
+	for _, k := range unreferenced {
+		if k == key {
 			t.Fatal("an object a live attachment row references was offered to the reaper — " +
 				"a reader can still open that document, and the reap would delete its bytes")
 		}
 	}
+	if len(unreferenced) != 1 {
+		t.Fatalf("got %v, want only the unreferenced key: a check that answers nothing for "+
+			"everything passes the assertion above while proving nothing", unreferenced)
+	}
 }
 
-func TestRetiringAnOrphanTakesItOutOfEveryLaterPass(t *testing.T) {
+// Nothing is asked of the database for an empty list.
+//
+// The sweep groups provisional keys by kind, so a kind with none of its own reaches
+// this with an empty slice every pass.
+func TestNoKeysIsNoQuestion(t *testing.T) {
 	e := setupSend(t)
-	const key = "ws/attachment/retired"
-	provisional(t, e, key, 2*ProvisionalObjectGrace)
 	store, ctx := systemStore(e)
 
-	if err := store.RetireOrphanedObject(ctx, key); err != nil {
-		t.Fatalf("RetireOrphanedObject: %v", err)
-	}
-
-	orphans, err := store.ListOrphanedObjects(ctx, time.Now().UTC().Add(-ProvisionalObjectGrace), 50)
+	unreferenced, err := store.UnreferencedAttachmentKeys(ctx, nil)
 	if err != nil {
-		t.Fatalf("ListOrphanedObjects: %v", err)
+		t.Fatalf("UnreferencedAttachmentKeys: %v", err)
 	}
-	for _, o := range orphans {
-		if o.StorageKey == key {
-			t.Fatal("a retired key came back, so every pass would delete bytes that are already gone")
-		}
+	if len(unreferenced) != 0 {
+		t.Fatalf("got %v for no keys at all", unreferenced)
 	}
 }
 
@@ -151,30 +122,27 @@ func seedAttachmentRow(t *testing.T, e *sendEnv, key string) {
 	}
 }
 
-// A key of a kind this sweep does not own is left alone, however old it is.
+// This check answers for ATTACHMENTS, and says so about everything else.
 //
-// Nothing records a non-attachment kind today, which is what makes this the moment to
-// hold it: the writer who records the second kind finds the rule already here rather
-// than discovering that the reaper deleted their live file.
-func TestAKindThisSweepDoesNotOwnIsNeverOffered(t *testing.T) {
+// A knowledge document's key has no attachment row, so this correctly calls it
+// unreferenced — and deleting it would destroy a live document. That is not a defect
+// here; it is why the sweep routes each key to the module that owns its kind instead
+// of asking one module about every key. The gate holding that routing is
+// compose's TestEveryStoredObjectKindHasAnOwner.
+//
+// Pinned at the source, because the hazard is invisible from the sweep: a wrong
+// route produces a confident "nobody references this" rather than an error.
+func TestTheAttachmentCheckAnswersOnlyForAttachments(t *testing.T) {
 	e := setupSend(t)
-	provisional(t, e, "ws/knowledge/a-live-document", 2*ProvisionalObjectGrace)
-	provisional(t, e, "ws/attachment/orphan", 2*ProvisionalObjectGrace)
 	store, ctx := systemStore(e)
 
-	orphans, err := store.ListOrphanedObjects(ctx, time.Now().UTC().Add(-ProvisionalObjectGrace), 50)
+	unreferenced, err := store.UnreferencedAttachmentKeys(ctx, []string{"ws/knowledge/a-live-document"})
 	if err != nil {
-		t.Fatalf("ListOrphanedObjects: %v", err)
+		t.Fatalf("UnreferencedAttachmentKeys: %v", err)
 	}
-
-	for _, o := range orphans {
-		if o.StorageKey == "ws/knowledge/a-live-document" {
-			t.Errorf("a knowledge key was offered to the reaper: this sweep checks the "+
-				"attachment table, which holds no row for any other kind, so offering one "+
-				"is offering a live file (%+v)", orphans)
-		}
-	}
-	if len(orphans) != 1 || orphans[0].StorageKey != "ws/attachment/orphan" {
-		t.Fatalf("got %+v, want only the attachment key whose row never arrived", orphans)
+	if len(unreferenced) != 1 {
+		t.Fatalf("got %v; this check reads the attachment table alone, so another kind's key is "+
+			"unreferenced TO IT — the routing is what keeps that answer away from the reaper",
+			unreferenced)
 	}
 }
