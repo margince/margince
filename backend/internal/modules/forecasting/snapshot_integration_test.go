@@ -17,6 +17,7 @@ package forecasting
 
 import (
 	"context"
+	"errors"
 	"os"
 	"testing"
 	"time"
@@ -28,6 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 type snapshotEnv struct {
@@ -86,7 +88,7 @@ func setupSnapshot(t *testing.T) *snapshotEnv {
 	// The module's own tests exercise the classifier and the window rule; the
 	// caller-visibility lens is held where it is implemented, in compose.
 	e.store = NewStore(database.BindTo(pool, e.wsTyped)).WithSnapshotLens(
-		func(_ context.Context, _ pgx.Tx, _ Scope, rows []Contribution) ([]Contribution, error) {
+		func(_ context.Context, _ pgx.Tx, _ Scope, _ *ids.UUID, rows []Contribution) ([]Contribution, error) {
 			return rows, nil
 		})
 	return e
@@ -307,6 +309,50 @@ func TestAMovementAcrossTwoDifferentWindowsIsRefused(t *testing.T) {
 	later := take(quarter, at.AddDate(0, 0, 1))
 	if _, err := e.store.Movement(ctx, ReadingWeighted, quarterly, later); err != nil {
 		t.Fatalf("two readings of the same quarter were refused: %v", err)
+	}
+}
+
+// A movement compares two readings of the SAME population.
+//
+// A workspace freeze differenced against an owner's freeze of the same quarter
+// reports the change of population as deals that moved, so the pair is refused
+// as a pair rather than classified.
+func TestAMovementAcrossTwoPopulationsIsRefused(t *testing.T) {
+	t.Parallel()
+	e := setupSnapshot(t)
+	ctx := e.as()
+
+	zone, err := time.LoadLocation("Europe/Berlin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	at := time.Date(2027, time.March, 8, 12, 0, 0, 0, zone)
+	quarter, err := ResolvePeriod(PeriodQuarter, at, 1, zone)
+	if err != nil {
+		t.Fatal(err)
+	}
+	take := func(scope Scope, when time.Time) ids.UUID {
+		t.Helper()
+		var id ids.UUID
+		if err := e.store.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+			var err error
+			id, err = e.store.TakeSnapshot(ctx, tx, NewSnapshot{
+				Period: quarter, Scope: scope, Trigger: TriggerDaily, BaseCurrency: "EUR",
+				Readings: mixedPopulation(t), TakenAt: when,
+			})
+			return err
+		}); err != nil {
+			t.Fatalf("taking the snapshot: %v", err)
+		}
+		return id
+	}
+	workspace := take(Scope{Kind: ScopeWorkspace}, at)
+	owner := take(Scope{Kind: ScopeOwner, ID: &e.rep}, at)
+
+	_, err = e.store.Movement(ctx, ReadingWeighted, workspace, owner)
+	var refused *values.ParseError
+	if !errors.As(err, &refused) || refused.Code != "populations_differ" {
+		t.Fatalf("a workspace freeze was differenced against an owner's and answered %v, want populations_differ", err)
 	}
 }
 

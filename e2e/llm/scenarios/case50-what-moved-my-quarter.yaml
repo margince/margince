@@ -8,7 +8,7 @@
 #
 # THE SEEDED WORLD holds two freezes a week apart, and between them two deals
 # changed: Vorort Systeme Ausbau was repriced from EUR 31,000 to EUR 26,000, and
-# valantic Migrationsprojekt (EUR 9,500) had its close date moved to February,
+# valantic Migrationsprojekt (EUR 9,500) had its close date moved to a later quarter,
 # which takes it out of the quarter. The tool books the first as an amount change
 # and the second as a deal that left the quarter, and says so; the case is that
 # the answer reports those, deal by deal, and does not describe a slip as a loss.
@@ -27,9 +27,9 @@ prompt: |
   week's forecast freeze. What moved it, deal by deal, and by how much?
 
 must_call:
+  - forecast_readings
   - forecast_movement
 may_call:
-  - forecast_readings
   - search_records
   - read_record
   - list_records

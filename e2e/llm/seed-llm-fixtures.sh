@@ -1478,7 +1478,10 @@ if [[ "$(lane_psql "SELECT count(*) FROM forecast_snapshot WHERE trigger = 'dail
   [[ -n "$vorort_deal" && -n "$valantic_deal" ]] || { echo "case 50 needs the Vorort and valantic deals" >&2; exit 1; }
   code="$(status_of PATCH "/deals/$vorort_deal" '{"amount_minor":2600000,"currency":"EUR","version":1}')"
   [[ "$code" = "200" ]] || { echo "repricing the Vorort deal answered HTTP $code" >&2; exit 1; }
-  code="$(status_of PATCH "/deals/$valantic_deal" '{"expected_close_date":"2027-02-10","version":1}')"
+  # 150 days out is past the end of any quarter, so the deal leaves it whatever day
+  # the lane runs, and the date is never one the product refuses as already past.
+  slipped="$(printf '{"expected_close_date":"%s","version":1}' "$(days_ahead 150)")"
+  code="$(status_of PATCH "/deals/$valantic_deal" "$slipped")"
   [[ "$code" = "200" ]] || { echo "slipping the valantic deal answered HTTP $code" >&2; exit 1; }
   freeze_forecast
 fi

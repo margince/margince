@@ -196,8 +196,8 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case49_who_can_introduce_us](../../e2e/llm/scenarios/case49-who-can-introduce-us.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** The route is a colleague's, not the caller's<br>**2** The thin deals are the flagged ones<br>**3** The official number is the report's, not the assistant's sum<br>**4** A claim is checked against the records, not recalled | `at_risk_relationships`, `intro_path_to`, `read_reporting` |
 | [case5_before_the_meeting](../../e2e/llm/scenarios/case5-before-the-meeting.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** A briefing arrives without naming a record<br>**2** The contacts are named, not their seats<br>**3** An empty calendar answer is not an empty diary<br>**5** The unkept promise is noticed | `search_records` |
 | [case5_before_the_meeting](../../e2e/llm/scenarios/case5-before-the-meeting.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/3 | 2 | **1** A briefing arrives without naming a record<br>**2** The contacts are named, not their seats<br>**3** An empty calendar answer is not an empty diary<br>**5** The unkept promise is noticed | `search_records` |
-| [case50_what_moved_my_quarter](../../e2e/llm/scenarios/case50-what-moved-my-quarter.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** A repricing is reported as one<br>**2** A slip out of the quarter is not called a loss<br>**3** The movement adds up to the difference between the freezes | `forecast_movement` |
-| [case50_what_moved_my_quarter](../../e2e/llm/scenarios/case50-what-moved-my-quarter.yaml) | `gpt-5.6-sol@codex-cli` | pass | 3/3 | 2 | **1** A repricing is reported as one<br>**2** A slip out of the quarter is not called a loss<br>**3** The movement adds up to the difference between the freezes | `forecast_movement` |
+| [case50_what_moved_my_quarter](../../e2e/llm/scenarios/case50-what-moved-my-quarter.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** A repricing is reported as one<br>**2** A slip out of the quarter is not called a loss<br>**3** The movement adds up to the difference between the freezes | `forecast_movement`, `forecast_readings` |
+| [case50_what_moved_my_quarter](../../e2e/llm/scenarios/case50-what-moved-my-quarter.yaml) | `gpt-5.6-sol@codex-cli` | pass | 3/3 | 2 | **1** A repricing is reported as one<br>**2** A slip out of the quarter is not called a loss<br>**3** The movement adds up to the difference between the freezes | `forecast_movement`, `forecast_readings` |
 | [case6_ask_the_company](../../e2e/llm/scenarios/case6-ask-the-company.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/3 | 2 | **1** The past cases are found without being named<br>**3** The record's date wins over the prose recalling it<br>**5** The disagreement is pointed out, not quietly resolved | `search_context` |
 | [case6_ask_the_company](../../e2e/llm/scenarios/case6-ask-the-company.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/3 | 2 | **1** The past cases are found without being named<br>**3** The record's date wins over the prose recalling it<br>**5** The disagreement is pointed out, not quietly resolved | `search_context` |
 | [case7_ask_for_a_number](../../e2e/llm/scenarios/case7-ask-for-a-number.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** The counts asked for come back as counts<br>**3** A refusal is not reported as a missing capability | `run_analytics_query` or `run_report` |
@@ -302,7 +302,7 @@ Every run of every case requiring this tool passed, for the model named.
 | `preview_import` | 1.00 | 6 | `case10_finish_the_import`, `case3_spreadsheet` |
 | `send_message` | 1.00 | 3 | `case44_chase_what_is_slipping` |
 | `update_record` | 1.00 | 6 | `case33_two_cards_for_one_company`, `case43_the_fair_leads_are_prospects` |
-| `forecast_readings` | 1.00 | 3 | `case21_what_are_we_closing` |
+| `forecast_readings` | 1.00 | 6 | `case21_what_are_we_closing`, `case50_what_moved_my_quarter` |
 | `query_workspace` | 1.00 | 3 | `case4_use_the_moment` |
 | `read_reporting` | 1.00 | 3 | `case49_who_can_introduce_us` |
 | `run_analytics_query` | 1.00 | 3 | `case20_put_it_in_the_board_pack` |
@@ -349,7 +349,7 @@ Every run of every case requiring this tool passed, for the model named.
 | `preview_import` | 1.00 | 6 | `case10_finish_the_import`, `case3_spreadsheet` |
 | `send_message` | 1.00 | 3 | `case44_chase_what_is_slipping` |
 | `update_record` | 1.00 | 6 | `case33_two_cards_for_one_company`, `case43_the_fair_leads_are_prospects` |
-| `forecast_readings` | 1.00 | 3 | `case21_what_are_we_closing` |
+| `forecast_readings` | 1.00 | 6 | `case21_what_are_we_closing`, `case50_what_moved_my_quarter` |
 | `run_analytics_query` | 1.00 | 3 | `case20_put_it_in_the_board_pack` |
 | `forecast_movement` | 1.00 | 3 | `case50_what_moved_my_quarter` |
 | `advance_project_phase` | 1.00 | 3 | `case41_close_the_project` |

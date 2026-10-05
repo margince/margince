@@ -107,6 +107,14 @@ type snapshotSide struct {
 	// every line of the waterfall would be a number nobody can act on.
 	PeriodStart time.Time
 	PeriodEnd   time.Time
+	// Population is what the snapshot was frozen over. A movement between two
+	// different populations reports the population change as deals that moved.
+	Scope      Scope
+	PipelineID *ids.UUID
+	// Withheld says the lens dropped rows: deals this caller cannot read, or that
+	// no longer exist. A consumer that draws a complete-looking chart from the
+	// remainder must say the rest is withheld.
+	Withheld bool
 }
 
 // Reading names which of the four money answers a movement explains. A

@@ -71,7 +71,9 @@ type Store struct {
 // cannot read and nulls the amounts a field mask withholds. Injected because
 // both decisions read the deal table and the caller's lens, which this module
 // owns neither of.
-type SnapshotLens func(ctx context.Context, tx pgx.Tx, scope Scope, rows []Contribution) ([]Contribution, error)
+type SnapshotLens func(
+	ctx context.Context, tx pgx.Tx, scope Scope, pipelineID *ids.UUID, rows []Contribution,
+) ([]Contribution, error)
 
 // WithSnapshotLens binds the lens every snapshot read passes through. A store
 // without one refuses to read a snapshot's rows: handing out per-deal figures

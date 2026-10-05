@@ -70,9 +70,11 @@ func TestForecastMovementShowsACallerOnlyWhatTheLiveForecastWould(t *testing.T) 
 		return id
 	}
 	mine := seed(e.Rep1, "Mine")
-	// A frozen row naming a deal no longer readable (here, gone): deals are
-	// workspace-readable, so the table has nothing else that withholds one.
-	theirs := ids.NewV7()
+	// Deals are workspace-readable, so another owner's deal stays in the movement
+	// as it does in the live reading; a frozen row naming a deal that no longer
+	// exists is what the lens has to drop.
+	theirs := seed(e.Rep3, "Theirs")
+	gone := ids.NewV7()
 
 	// One owner-scoped pair holding BOTH deals, so the row filter is what
 	// separates them, and a workspace pair a team-lens seat may not measure.
@@ -80,7 +82,7 @@ func TestForecastMovementShowsACallerOnlyWhatTheLiveForecastWould(t *testing.T) 
 	at := time.Date(2038, 2, 1, 9, 0, 0, 0, time.UTC)
 	opening := freezeScope(admin, t, e, at, owner, []forecasting.Contribution{frozenDeal(mine, e.Rep1, 100_000)})
 	closing := freezeScope(admin, t, e, at.Add(time.Hour), owner, []forecasting.Contribution{
-		frozenDeal(mine, e.Rep1, 140_000), frozenDeal(theirs, e.Rep3, 70_000),
+		frozenDeal(mine, e.Rep1, 140_000), frozenDeal(theirs, e.Rep3, 70_000), frozenDeal(gone, e.Rep3, 50_000),
 	})
 	workspace := forecasting.Scope{Kind: forecasting.ScopeWorkspace}
 	wsOpening := freezeScope(admin, t, e, at.Add(2*time.Hour), workspace, nil)
@@ -96,18 +98,18 @@ func TestForecastMovementShowsACallerOnlyWhatTheLiveForecastWould(t *testing.T) 
 		return answer, err
 	}
 
-	t.Run("an unmasked seat sees its own deal and none it cannot read", func(t *testing.T) {
+	t.Run("an unmasked seat sees the deals it can read and none that no longer exist", func(t *testing.T) {
 		got, err := move(e.As(e.Rep1, nil, ownSeat(false)), opening, closing)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if got.Data.OpeningMinor != 100_000 || got.Data.ClosingMinor != 140_000 {
-			t.Errorf("movement read %d to %d, want 100000 to 140000 over the seat's own deal only",
+		if got.Data.OpeningMinor != 100_000 || got.Data.ClosingMinor != 210_000 {
+			t.Errorf("movement read %d to %d, want 100000 to 210000 over the deals that still exist",
 				got.Data.OpeningMinor, got.Data.ClosingMinor)
 		}
 		for _, deal := range got.Data.Deals {
-			if deal.DealID == theirs.String() {
-				t.Errorf("movement listed %s, a deal this seat cannot read", theirs)
+			if deal.DealID == gone.String() {
+				t.Errorf("movement listed %s, a deal that no longer exists", gone)
 			}
 		}
 	})
@@ -117,8 +119,8 @@ func TestForecastMovementShowsACallerOnlyWhatTheLiveForecastWould(t *testing.T) 
 		if err != nil {
 			t.Fatal(err)
 		}
-		if got.Data.OpeningMinor != 0 || got.Data.ClosingMinor != 0 || len(got.Data.Deals) != 0 {
-			t.Errorf("a masked seat read %+v, want nothing: the live reading counts the masked deal as unpriced", got.Data)
+		if got.Data.OpeningMinor != 0 || got.Data.ClosingMinor != 0 {
+			t.Errorf("a masked seat read %+v, want zero totals: the live reading counts the masked deal as unpriced", got.Data)
 		}
 		live, err := registry.Invoke(e.As(e.Rep1, nil, ownSeat(true)), "forecast_readings",
 			json.RawMessage(`{"as_of":"2038-02-14","scope_kind":"owner","scope_id":"`+e.Rep1.String()+`"}`))
@@ -140,6 +142,35 @@ func TestForecastMovementShowsACallerOnlyWhatTheLiveForecastWould(t *testing.T) 
 		_, err := move(e.As(e.Rep1, nil, ownSeat(false)), wsOpening, wsClosing)
 		if !errors.Is(err, apperrors.ErrNotFound) {
 			t.Fatalf("an own-lens seat read a workspace snapshot pair: err = %v, want ErrNotFound", err)
+		}
+	})
+
+	t.Run("a pipeline's snapshot needs the pipeline grant", func(t *testing.T) {
+		e.WsExec(t, `UPDATE forecast_snapshot SET pipeline_id = $2 WHERE id = ANY($1)`,
+			[]ids.UUID{opening, closing}, pipeline)
+		noPipeline := ownSeat(false)
+		noPipeline.Objects = map[string]principal.ObjectGrant{
+			"forecast": {Read: true}, "deal": {Read: true}, "installation_settings": {Read: true},
+		}
+		if _, err := move(e.As(e.Rep1, nil, noPipeline), opening, closing); !errors.Is(err, apperrors.ErrNotFound) {
+			t.Fatalf("a seat without the pipeline grant read a pipeline's snapshots: err = %v, want ErrNotFound", err)
+		}
+		if _, err := move(e.As(e.Rep1, nil, ownSeat(false)), opening, closing); err != nil {
+			t.Fatalf("a seat with the pipeline grant was refused its pipeline's snapshots: %v", err)
+		}
+	})
+
+	t.Run("a seat without the deal grant reads totals and no deals", func(t *testing.T) {
+		noDeal := ownSeat(false)
+		noDeal.Objects = map[string]principal.ObjectGrant{
+			"forecast": {Read: true}, "pipeline": {Read: true}, "installation_settings": {Read: true},
+		}
+		got, err := move(e.As(e.Rep1, nil, noDeal), opening, closing)
+		if err != nil {
+			t.Fatalf("a forecast-only seat was refused a movement whose ids its own reading handed out: %v", err)
+		}
+		if len(got.Data.Deals) != 0 {
+			t.Errorf("a seat with no deal grant read %d deals", len(got.Data.Deals))
 		}
 	})
 

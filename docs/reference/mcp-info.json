@@ -10,16 +10,16 @@
   "totals": {
     "tools": 81,
     "resources": 11,
-    "tool_catalog_bytes": 250558,
+    "tool_catalog_bytes": 250640,
     "resource_catalog_bytes": 4179,
-    "approx_wire_tokens_total": 63684,
+    "approx_wire_tokens_total": 63704,
     "largest_tool_bytes": 9253,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
-      "description_bytes": 65359,
+      "description_bytes": 65441,
       "input_schema_bytes": 57066,
       "output_schema_bytes": 110786,
-      "description_plus_input_schema_bytes": 122425
+      "description_plus_input_schema_bytes": 122507
     }
   },
   "tools": {
@@ -5508,7 +5508,7 @@
           "readOnlyHint": true,
           "title": "Read the forecast"
         },
-        "description": "Answer what a period is expected to close — `won`, `evidence`, `best_case` and `open`, plus `weighted` — under the installation's own fiscal calendar and base currency. `won` counts deals by the day they ACTUALLY closed, not the day they were expected to. `evidence` is committed pipeline whose close date somebody confirmed; a provisional date stays in `open` and out of `evidence`. `coverage_note` says what the totals do not cover and is absent only when they cover every eligible deal, so quoting a total without it reports a partial pipeline as a complete one. run_report's forecast report and a hand-summed query_workspace also produce a number, and NEITHER is the forecast: only this applies the fiscal calendar, the base currency conversion and the weighting. These figures also cannot be cited in a composed document — for a board-pack section or anything a reader keeps, run_analytics_query with save and compose_analytics_report from the run id. Ask forecast_input_checks whether the inputs behind these numbers were read. `snapshots` lists this period's frozen states, newest first: the ids forecast_movement takes. Quote `as_of`, `timezone` and `base_currency` with the number — a total placed in the reader's own zone is a different total — and `eligible_count`, `priced_count` and `fx_missing_count` are the counts `coverage_note` is written from. (Governance: runs immediately; requires passport scope \"read\".)",
+        "description": "Answer what a period is expected to close — `won`, `evidence`, `best_case` and `open`, plus `weighted` — under the installation's own fiscal calendar and base currency. `won` counts deals by the day they ACTUALLY closed, not the day they were expected to. `evidence` is committed pipeline whose close date somebody confirmed; a provisional date stays in `open` and out of `evidence`. `coverage_note` says what the totals do not cover and is absent only when they cover every eligible deal, so quoting a total without it reports a partial pipeline as a complete one. run_report's forecast report and a hand-summed query_workspace also produce a number, and NEITHER is the forecast: only this applies the fiscal calendar, the base currency conversion and the weighting. These figures also cannot be cited in a composed document — for a board-pack section or anything a reader keeps, run_analytics_query with save and compose_analytics_report from the run id. Ask forecast_input_checks whether the inputs behind these numbers were read. `snapshots` lists this period's frozen states, newest first: the ids forecast_movement takes. Empty means nothing was frozen for this population, which includes managed teams. Quote `as_of`, `timezone` and `base_currency` with the number — a total placed in the reader's own zone is a different total — and `eligible_count`, `priced_count` and `fx_missing_count` are the counts `coverage_note` is written from. (Governance: runs immediately; requires passport scope \"read\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {

@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 81 |
 | Resources | 11 |
-| Tool catalog | 244.7 KB |
+| Tool catalog | 244.8 KB |
 | Resource catalog | 4.1 KB |
-| Approx. wire tokens | 63684 |
+| Approx. wire tokens | 63704 |
 | Largest tool | `prep_for_meeting` (9.0 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -30,7 +30,7 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 108.2 KB | 44% | **No** — a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 63.8 KB | 26% | Yes, every step |
+| Descriptions (incl. governance clause) | 63.9 KB | 26% | Yes, every step |
 | Input schemas | 55.7 KB | 22% | Yes, every step |
 | _Names, annotations, punctuation_ | 16.9 KB | 6% | Partly |
 | **Description + input schema** | **119.6 KB** | **48%** | **the recurring cost** |
@@ -95,7 +95,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 2.6 KB |
 | [`forecast_input_checks`](#forecast_input_checks) | What the forecast's inputs were checked against | yes |  | 2.7 KB |
 | [`forecast_movement`](#forecast_movement) | What moved the forecast | yes |  | 3.4 KB |
-| [`forecast_readings`](#forecast_readings) | Read the forecast | yes |  | 4.1 KB |
+| [`forecast_readings`](#forecast_readings) | Read the forecast | yes |  | 4.2 KB |
 | [`get_record_tags`](#get_record_tags) | Get a record's tags | yes |  | 1.9 KB |
 | [`get_tag`](#get_tag) | Get a tag | yes |  | 1.6 KB |
 | [`intro_path_to`](#intro_path_to) | Find a warm introduction path | yes |  | 2.3 KB |
@@ -6125,7 +6125,7 @@ Explain why a forecast changed between two points, as named causes that account 
 
 **Read the forecast**
 
-Answer what a period is expected to close — `won`, `evidence`, `best_case` and `open`, plus `weighted` — under the installation's own fiscal calendar and base currency. `won` counts deals by the day they ACTUALLY closed, not the day they were expected to. `evidence` is committed pipeline whose close date somebody confirmed; a provisional date stays in `open` and out of `evidence`. `coverage_note` says what the totals do not cover and is absent only when they cover every eligible deal, so quoting a total without it reports a partial pipeline as a complete one. run_report's forecast report and a hand-summed query_workspace also produce a number, and NEITHER is the forecast: only this applies the fiscal calendar, the base currency conversion and the weighting. These figures also cannot be cited in a composed document — for a board-pack section or anything a reader keeps, run_analytics_query with save and compose_analytics_report from the run id. Ask forecast_input_checks whether the inputs behind these numbers were read. `snapshots` lists this period's frozen states, newest first: the ids forecast_movement takes. Quote `as_of`, `timezone` and `base_currency` with the number — a total placed in the reader's own zone is a different total — and `eligible_count`, `priced_count` and `fx_missing_count` are the counts `coverage_note` is written from. (Governance: runs immediately; requires passport scope "read".)
+Answer what a period is expected to close — `won`, `evidence`, `best_case` and `open`, plus `weighted` — under the installation's own fiscal calendar and base currency. `won` counts deals by the day they ACTUALLY closed, not the day they were expected to. `evidence` is committed pipeline whose close date somebody confirmed; a provisional date stays in `open` and out of `evidence`. `coverage_note` says what the totals do not cover and is absent only when they cover every eligible deal, so quoting a total without it reports a partial pipeline as a complete one. run_report's forecast report and a hand-summed query_workspace also produce a number, and NEITHER is the forecast: only this applies the fiscal calendar, the base currency conversion and the weighting. These figures also cannot be cited in a composed document — for a board-pack section or anything a reader keeps, run_analytics_query with save and compose_analytics_report from the run id. Ask forecast_input_checks whether the inputs behind these numbers were read. `snapshots` lists this period's frozen states, newest first: the ids forecast_movement takes. Empty means nothing was frozen for this population, which includes managed teams. Quote `as_of`, `timezone` and `base_currency` with the number — a total placed in the reader's own zone is a different total — and `eligible_count`, `priced_count` and `fx_missing_count` are the counts `coverage_note` is written from. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 

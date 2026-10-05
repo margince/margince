@@ -10,13 +10,13 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // newForecastStore is the one way compose builds a forecasting store, so every
@@ -38,9 +38,15 @@ func newForecastStoreFor(pool *pgxpool.Pool) *forecasting.Store {
 // dropped, and an amount a field mask withholds is nulled exactly as the live
 // reading nulls it, so a movement cannot print a figure the forecast hid.
 func forecastSnapshotLens(
-	ctx context.Context, tx pgx.Tx, scope forecasting.Scope, rows []forecasting.Contribution,
+	ctx context.Context, tx pgx.Tx, scope forecasting.Scope, pipelineID *ids.UUID, rows []forecasting.Contribution,
 ) ([]forecasting.Contribution, error) {
 	if _, err := ResolveAnalyticsScope(ctx, tx, requestedFromForecastScope(scope)); err != nil {
+		if errors.Is(err, apperrors.ErrPermissionDenied) {
+			return nil, apperrors.ErrNotFound
+		}
+		return nil, err
+	}
+	if err := reportingPipeline(ctx, tx, (*openapi_types.UUID)(pipelineID)); err != nil {
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
 			return nil, apperrors.ErrNotFound
 		}
@@ -73,8 +79,8 @@ func forecastSnapshotLens(
 func readableDeals(
 	ctx context.Context, tx pgx.Tx, rows []forecasting.Contribution,
 ) (map[string]bool, error) {
-	if err := auth.Require(ctx, tableDeal, principal.ActionRead); err != nil {
-		return nil, err
+	if !auth.ReadGranted(ctx, tableDeal) {
+		return map[string]bool{}, nil
 	}
 	dealIDs := make([]ids.UUID, 0, len(rows))
 	for _, row := range rows {

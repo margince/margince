@@ -896,7 +896,8 @@
         3
       ],
       "requires": [
-        "forecast_movement"
+        "forecast_movement",
+        "forecast_readings"
       ],
       "requires_one_of": [],
       "by_model": [
@@ -2310,31 +2311,31 @@
     },
     {
       "name": "forecast_readings",
-      "tokens": 532,
+      "tokens": 553,
       "agents": [],
       "required_by_cases": [
-        "case21_what_are_we_closing"
+        "case21_what_are_we_closing",
+        "case50_what_moved_my_quarter"
       ],
       "required_as_one_of_a_set_by_cases": [],
       "permitted_in_cases": [
         "case22_can_i_trust_the_numbers",
         "case45_move_the_deal_on",
-        "case49_who_can_introduce_us",
-        "case50_what_moved_my_quarter"
+        "case49_who_can_introduce_us"
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
       "graded_by_certification_tasks": null,
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
-          "runs": 3,
-          "passed": 3,
+          "runs": 6,
+          "passed": 6,
           "reliability": 1,
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
-          "runs": 3,
-          "passed": 3,
+          "runs": 6,
+          "passed": 6,
           "reliability": 1,
           "cases_below_their_bar": []
         }

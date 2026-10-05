@@ -270,9 +270,9 @@ func (s *Store) SnapshotSide(ctx context.Context, tx pgx.Tx, id ids.UUID) (snaps
 	var out snapshotSide
 	var scope Scope
 	err := tx.QueryRow(ctx,
-		`SELECT definition_version, period_start, period_end, scope_kind, scope_id
+		`SELECT definition_version, period_start, period_end, scope_kind, scope_id, pipeline_id
 		 FROM forecast_snapshot WHERE id = $1`, id).
-		Scan(&out.DefinitionVersion, &out.PeriodStart, &out.PeriodEnd, &scope.Kind, &scope.ID)
+		Scan(&out.DefinitionVersion, &out.PeriodStart, &out.PeriodEnd, &scope.Kind, &scope.ID, &out.PipelineID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return snapshotSide{}, apperrors.ErrNotFound
 	}
@@ -328,10 +328,13 @@ func (s *Store) SnapshotSide(ctx context.Context, tx pgx.Tx, id ids.UUID) (snaps
 	if err != nil {
 		return snapshotSide{}, fmt.Errorf("forecasting: collecting the snapshot's contributions: %w", err)
 	}
-	out.Contributions, err = s.lens(ctx, tx, scope, out.Contributions)
+	out.Scope = scope
+	frozen := len(out.Contributions)
+	out.Contributions, err = s.lens(ctx, tx, scope, out.PipelineID, out.Contributions)
 	if err != nil {
 		return snapshotSide{}, err
 	}
+	out.Withheld = len(out.Contributions) < frozen
 	return out, nil
 }
 
@@ -382,5 +385,19 @@ func (s *Store) MovementTx(
 			Message: "a movement compares two readings of the same period",
 		}
 	}
+	if opening.Scope.Kind != closing.Scope.Kind || !sameID(opening.Scope.ID, closing.Scope.ID) ||
+		!sameID(opening.PipelineID, closing.PipelineID) {
+		return Movement{}, &values.ParseError{
+			Field: "from", Code: "populations_differ",
+			Message: "a movement compares two readings of the same scope and pipeline",
+		}
+	}
 	return Classify(reading, opening, closing), nil
+}
+
+func sameID(a, b *ids.UUID) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	return *a == *b
 }
