@@ -21,6 +21,10 @@ import (
 // not-found, the contract's only refusal for a file that cannot be had.
 var ErrBytesWithheld = fmt.Errorf("activities: the file's bytes were not kept: %w", apperrors.ErrNotFound)
 
+// fieldBytesWithheld is the column, and the audit images' key, that marks a
+// file recorded by name only.
+const fieldBytesWithheld = "bytes_withheld"
+
 // WithheldFile is one file a private message carried whose bytes capture did
 // not keep: what arrived, without the arrival itself.
 type WithheldFile struct {
