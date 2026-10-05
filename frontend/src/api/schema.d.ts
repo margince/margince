@@ -28765,7 +28765,7 @@ export interface components {
             id: string;
             name: string;
             /**
-             * @description One default per workspace.
+             * @description At most one default per workspace.
              * @default false
              */
             is_default: boolean;
@@ -29129,7 +29129,7 @@ export interface components {
             /** @enum {string} */
             kind: "email" | "call" | "meeting" | "note" | "task" | "message";
             /**
-             * @description Which transport carried this message; non-null only when `kind=message`.
+             * @description Which transport carried this message: set on every `kind=message` row, null on every other kind.
              *     The kind says what sort of interaction happened; this says what carried it. They
              *     are separate axes, and reading one off the other is what ADR-0107 retired.
              */
