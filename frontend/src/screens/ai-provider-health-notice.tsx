@@ -3,7 +3,7 @@
 
 import type { components } from "../api/schema";
 import { Badge } from "../design-system/atoms";
-import { formatRelativeTime } from "../format/format";
+import { formatRelativeTime } from "../format/relativetime";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 

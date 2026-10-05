@@ -569,10 +569,8 @@ function problemDetail(
   t?: (key: MessageKey) => string,
 ): string | null {
   const code = problemCode(problem);
-  const copyKey = code === null ? undefined : PROBLEM_CODE_COPY.get(code);
-  if (t && copyKey) {
-    return t(copyKey);
-  }
+  const copyKey = PROBLEM_CODE_COPY.get(code ?? "");
+  if (t && copyKey) return t(copyKey);
   if (isRecord(problem)) {
     // A field present but blank is the same fact as an absent one — it puts no
     // words on the screen — so it falls through to the title, and then to the

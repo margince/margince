@@ -368,9 +368,7 @@ export function tabContent(id: SettingsPageId): ReactNode {
       return (
         <>
           {/* A reindex that costs tokens, then a read of what the background
-              system is holding. They hid beside the custom-field editor before,
-              which put "define a field" and "watch a stalled queue" on one
-              page. */}
+              system is holding: they hid beside the custom-field editor. */}
           <EmbedReindexCard />
           <JobHealthCard />
           {/* Beside the queue reading, not under Capture or Extensions: each
