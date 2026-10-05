@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 81 |
 | Resources | 11 |
-| Tool catalog | 244.8 KB |
+| Tool catalog | 245.2 KB |
 | Resource catalog | 4.1 KB |
-| Approx. wire tokens | 63704 |
+| Approx. wire tokens | 63814 |
 | Largest tool | `prep_for_meeting` (9.0 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -30,10 +30,10 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 108.2 KB | 44% | **No** — a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 63.9 KB | 26% | Yes, every step |
-| Input schemas | 55.7 KB | 22% | Yes, every step |
+| Descriptions (incl. governance clause) | 64.3 KB | 26% | Yes, every step |
+| Input schemas | 55.8 KB | 22% | Yes, every step |
 | _Names, annotations, punctuation_ | 16.9 KB | 6% | Partly |
-| **Description + input schema** | **119.6 KB** | **48%** | **the recurring cost** |
+| **Description + input schema** | **120.1 KB** | **48%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -107,7 +107,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`list_pipelines`](#list_pipelines) | List pipelines and their stages | yes |  | 2.3 KB |
 | [`list_records`](#list_records) | List records | yes |  | 4.6 KB |
 | [`list_tags`](#list_tags) | List tags | yes |  | 1.6 KB |
-| [`log_activity`](#log_activity) | Log an activity |  |  | 3.9 KB |
+| [`log_activity`](#log_activity) | Log an activity |  |  | 4.0 KB |
 | [`merge_records`](#merge_records) | Merge two records |  |  | 2.4 KB |
 | [`merge_tags`](#merge_tags) | Fold one tag into another |  |  | 2.0 KB |
 | [`prep_for_meeting`](#prep_for_meeting) | Prepare for a meeting | yes |  | 9.0 KB |
@@ -125,9 +125,9 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`read_project_360`](#read_project_360) | Read a project's page | yes |  | 6.4 KB |
 | [`read_record`](#read_record) | Read a record | yes |  | 2.5 KB |
 | [`read_reporting`](#read_reporting) | Read sales reporting | yes |  | 3.2 KB |
-| [`relink_activities`](#relink_activities) | Re-associate a set of activities to a record |  |  | 2.0 KB |
-| [`relink_activity`](#relink_activity) | Re-associate an activity to a record |  |  | 2.3 KB |
-| [`relink_thread`](#relink_thread) | Re-associate a whole conversation to a record |  |  | 2.0 KB |
+| [`relink_activities`](#relink_activities) | Re-associate a set of activities to a record |  |  | 2.2 KB |
+| [`relink_activity`](#relink_activity) | Re-associate an activity to a record |  |  | 2.4 KB |
+| [`relink_thread`](#relink_thread) | Re-associate a whole conversation to a record |  |  | 2.1 KB |
 | [`remove_tag`](#remove_tag) | Take a tag off a record |  |  | 1.9 KB |
 | [`resolve_entities`](#resolve_entities) | Resolve contacts and companies | yes |  | 3.5 KB |
 | [`review_commitments`](#review_commitments) | Review open commitments | yes | [`ui://margince/commitments.html`](#commitments_view) | 3.4 KB |
@@ -8376,7 +8376,7 @@ Record something that happened — a call, a meeting, a note, a message — on t
       "type": "string"
     },
     "links": {
-      "description": "Every record this was about, ALL OF THEM in this call — EXCEPT a project, which this verb REFUSES: filing under a project writes a write-once retention mark, so it is made through relink_activity, which a human approves. A meeting or a call is with a CONTACT and reaches their company through them — linking one to a company is REFUSED, so name the contact who was there and the company follows from where they work. A meeting linked to the deal alone sits on no attendee's timeline and the company sees nothing. Adding a link AFTERWARDS is a second write — and a later link onto a project stages an approval a human must decide before it takes effect.",
+      "description": "Every record this was about, ALL OF THEM in this call — EXCEPT a project, which this verb REFUSES: filing under a project marks the message as commercial correspondence, so it is made through relink_activity, which a human approves. A meeting or a call is with a CONTACT and reaches their company through them — linking one to a company is REFUSED, so name the contact who was there and the company follows from where they work. A meeting linked to the deal alone sits on no attendee's timeline and the company sees nothing. Adding a link AFTERWARDS is a second write — and a later link onto a project stages an approval a human must decide before it takes effect.",
       "items": {
         "additionalProperties": false,
         "properties": {
@@ -13182,7 +13182,7 @@ Discover standard sales metrics, evaluate the same graphs as Analytics, or reope
 
 **Re-associate a set of activities to a record**
 
-Move up to 500 named activities onto one record, all or nothing. Each id must be visible and writable to you. A project destination needs a human. relink_thread moves one conversation. The answer lists the ids moved. (Governance: some calls run immediately and others a human approves first, decided per call from its arguments; requires passport scope "write".)
+Move up to 500 named activities onto one record, all or nothing. Each id must be visible and writable to you. It is staged for confirmation, and the retry moves exactly these ids. Once the user says yes, relay it with decide_approval: every destination can be put back, and a filing under a project can be undone by a member from the activity. relink_activity moves one message. The answer is the count moved. (Governance: some calls run immediately and others a human approves first, decided per call from its arguments; requires passport scope "write".)
 
 <details><summary>Input schema</summary>
 
@@ -13342,7 +13342,7 @@ Move up to 500 named activities onto one record, all or nothing. Each id must be
 
 **Re-associate an activity to a record**
 
-Fix what a recorded activity is about, when a captured mail or meeting landed on the wrong record or on none. Changes only the association; content is untouched. By default the new link is ADDED beside existing ones. log_activity records an event not recorded yet; relink_thread moves a whole conversation; relink_activities a picked set. Set replace_existing_of_type to move rather than associate. (Governance: some calls run immediately and others a human approves first, decided per call from its arguments; requires passport scope "write".)
+Fix what a recorded activity is about, when a captured mail or meeting landed on the wrong record or on none. Changes only the association; content is untouched. By default the new link is ADDED beside existing ones. Onto a project it waits for the user's yes, which you can relay with decide_approval. log_activity records an event not recorded yet; relink_activities moves a picked set, such as a whole thread's activities. Set replace_existing_of_type to move rather than associate. (Governance: some calls run immediately and others a human approves first, decided per call from its arguments; requires passport scope "write".)
 
 <details><summary>Input schema</summary>
 
@@ -13500,7 +13500,7 @@ Fix what a recorded activity is about, when a captured mail or meeting landed on
 
 **Re-associate a whole conversation to a record**
 
-Move one whole conversation (by thread_key) onto a record, in one transaction. Moves only activities you may write; the rest stay, uncounted. A project destination needs a human. relink_activity moves one message. The answer lists the ids moved. (Governance: some calls run immediately and others a human approves first, decided per call from its arguments; requires passport scope "write".)
+Move one whole conversation (by thread_key) onto a record, in one transaction. Refused for an assistant, for every destination: a thread key cannot be confirmed because the conversation may grow before the retry. List the thread's activities and call relink_activities with exactly those ids. relink_activities moves a named set; relink_activity moves one message. (Governance: some calls run immediately and others a human approves first, decided per call from its arguments; requires passport scope "write".)
 
 <details><summary>Input schema</summary>
 
@@ -13509,7 +13509,7 @@ Move one whole conversation (by thread_key) onto a record, in one transaction. M
   "additionalProperties": false,
   "properties": {
     "approval_id": {
-      "description": "Set on approved retry",
+      "description": "Never redeems a thread move; use relink_activities",
       "format": "uuid",
       "type": "string"
     },

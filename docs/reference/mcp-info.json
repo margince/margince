@@ -10,16 +10,16 @@
   "totals": {
     "tools": 81,
     "resources": 11,
-    "tool_catalog_bytes": 250640,
+    "tool_catalog_bytes": 251080,
     "resource_catalog_bytes": 4179,
-    "approx_wire_tokens_total": 63704,
+    "approx_wire_tokens_total": 63814,
     "largest_tool_bytes": 9253,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
-      "description_bytes": 65441,
-      "input_schema_bytes": 57066,
+      "description_bytes": 65840,
+      "input_schema_bytes": 57107,
       "output_schema_bytes": 110786,
-      "description_plus_input_schema_bytes": 122507
+      "description_plus_input_schema_bytes": 122947
     }
   },
   "tools": {
@@ -7635,7 +7635,7 @@
               "type": "string"
             },
             "links": {
-              "description": "Every record this was about, ALL OF THEM in this call — EXCEPT a project, which this verb REFUSES: filing under a project writes a write-once retention mark, so it is made through relink_activity, which a human approves. A meeting or a call is with a CONTACT and reaches their company through them — linking one to a company is REFUSED, so name the contact who was there and the company follows from where they work. A meeting linked to the deal alone sits on no attendee's timeline and the company sees nothing. Adding a link AFTERWARDS is a second write — and a later link onto a project stages an approval a human must decide before it takes effect.",
+              "description": "Every record this was about, ALL OF THEM in this call — EXCEPT a project, which this verb REFUSES: filing under a project marks the message as commercial correspondence, so it is made through relink_activity, which a human approves. A meeting or a call is with a CONTACT and reaches their company through them — linking one to a company is REFUSED, so name the contact who was there and the company follows from where they work. A meeting linked to the deal alone sits on no attendee's timeline and the company sees nothing. Adding a link AFTERWARDS is a second write — and a later link onto a project stages an approval a human must decide before it takes effect.",
               "items": {
                 "additionalProperties": false,
                 "properties": {
@@ -12279,7 +12279,7 @@
           "readOnlyHint": false,
           "title": "Re-associate a set of activities to a record"
         },
-        "description": "Move up to 500 named activities onto one record, all or nothing. Each id must be visible and writable to you. A project destination needs a human. relink_thread moves one conversation. The answer lists the ids moved. (Governance: some calls run immediately and others a human approves first, decided per call from its arguments; requires passport scope \"write\".)",
+        "description": "Move up to 500 named activities onto one record, all or nothing. Each id must be visible and writable to you. It is staged for confirmation, and the retry moves exactly these ids. Once the user says yes, relay it with decide_approval: every destination can be put back, and a filing under a project can be undone by a member from the activity. relink_activity moves one message. The answer is the count moved. (Governance: some calls run immediately and others a human approves first, decided per call from its arguments; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -12429,7 +12429,7 @@
           "readOnlyHint": false,
           "title": "Re-associate an activity to a record"
         },
-        "description": "Fix what a recorded activity is about, when a captured mail or meeting landed on the wrong record or on none. Changes only the association; content is untouched. By default the new link is ADDED beside existing ones. log_activity records an event not recorded yet; relink_thread moves a whole conversation; relink_activities a picked set. Set replace_existing_of_type to move rather than associate. (Governance: some calls run immediately and others a human approves first, decided per call from its arguments; requires passport scope \"write\".)",
+        "description": "Fix what a recorded activity is about, when a captured mail or meeting landed on the wrong record or on none. Changes only the association; content is untouched. By default the new link is ADDED beside existing ones. Onto a project it waits for the user's yes, which you can relay with decide_approval. log_activity records an event not recorded yet; relink_activities moves a picked set, such as a whole thread's activities. Set replace_existing_of_type to move rather than associate. (Governance: some calls run immediately and others a human approves first, decided per call from its arguments; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -12577,12 +12577,12 @@
           "readOnlyHint": false,
           "title": "Re-associate a whole conversation to a record"
         },
-        "description": "Move one whole conversation (by thread_key) onto a record, in one transaction. Moves only activities you may write; the rest stay, uncounted. A project destination needs a human. relink_activity moves one message. The answer lists the ids moved. (Governance: some calls run immediately and others a human approves first, decided per call from its arguments; requires passport scope \"write\".)",
+        "description": "Move one whole conversation (by thread_key) onto a record, in one transaction. Refused for an assistant, for every destination: a thread key cannot be confirmed because the conversation may grow before the retry. List the thread's activities and call relink_activities with exactly those ids. relink_activities moves a named set; relink_activity moves one message. (Governance: some calls run immediately and others a human approves first, decided per call from its arguments; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
             "approval_id": {
-              "description": "Set on approved retry",
+              "description": "Never redeems a thread move; use relink_activities",
               "format": "uuid",
               "type": "string"
             },
