@@ -163,6 +163,13 @@ func (t *providerTracker) observe(err error) {
 	t.fail(kind)
 }
 
+func (t *providerTracker) reset() {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.probing = false
+	t.recover()
+}
+
 func (t *providerTracker) recover() {
 	t.status = model.ProviderHealthStatus{Health: model.HealthOK}
 	t.consecutive, t.backoff = 0, 0
@@ -233,12 +240,16 @@ func (b *providerBook) tracker(provider string) *providerTracker {
 	return t
 }
 
-// forget clears a provider's recorded failures: a saved key or a rebind is the
-// operator's fix, and the next call is its probe.
+// forget clears a provider's recorded failures in place, so every client
+// already holding its tracker sees it: a saved key or a rebind is the
+// operator's fix, and the next call is the probe.
 func (b *providerBook) forget(provider string) {
 	b.mu.Lock()
-	defer b.mu.Unlock()
-	delete(b.trackers, provider)
+	t, ok := b.trackers[provider]
+	b.mu.Unlock()
+	if ok {
+		t.reset()
+	}
 }
 
 // ProviderHealthEntry is one provider's health as the operator surfaces read it.
@@ -333,3 +344,6 @@ func blockedProvider(b *binding, ladder []Tier, now time.Time) *ProviderDownErro
 	}
 	return first
 }
+
+// ProviderHealth lists every provider that is not answering normally.
+func (r *Router) ProviderHealth() []ProviderHealthEntry { return sharedProviderHealth.snapshot() }

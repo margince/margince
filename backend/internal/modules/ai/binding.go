@@ -136,6 +136,9 @@ func (r *Router) Rebind(cfg RoutingConfig) error {
 	}.withConfig(cfg, decisions)
 	r.install(next)
 	r.cache.clear()
+	for _, provider := range cfg.providers() {
+		sharedProviderHealth.forget(provider)
+	}
 	return nil
 }
 

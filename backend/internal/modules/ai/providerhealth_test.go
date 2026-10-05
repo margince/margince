@@ -346,3 +346,23 @@ func TestTheRouterRefusesACallWhoseEveryRungIsBlockedWithoutCallingOrTracing(t *
 		t.Errorf("provider called %d times, want none", inner.calls)
 	}
 }
+
+// Not parallel: it writes the process-wide book, which parallel tests share.
+func TestARebindClearsWhatTheOperatorJustFixed(t *testing.T) {
+	cfg := RoutingConfig{
+		Profile:    ProfileCloudFrontier,
+		Tiers:      map[Tier]ProviderConfig{TierCheapCloud: {Provider: ProviderFake}},
+		Embeddings: EmbeddingsConfig{ProviderConfig: ProviderConfig{Provider: ProviderFake}},
+	}
+	router, err := NewLocalRouter(cfg)
+	if err != nil {
+		t.Fatalf("building the router: %v", err)
+	}
+	sharedProviderHealth.tracker(ProviderFake).observe(ErrProviderUnauthorized)
+	if err := router.Rebind(cfg); err != nil {
+		t.Fatalf("rebinding: %v", err)
+	}
+	if got := sharedProviderHealth.tracker(ProviderFake).current().Health; got != model.HealthOK {
+		t.Errorf("health %s after a rebind, want ok", got)
+	}
+}

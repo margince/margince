@@ -5,6 +5,8 @@ package ai
 
 import (
 	"fmt"
+	"maps"
+	"slices"
 
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -186,4 +188,13 @@ func (cfg RoutingConfig) buildClients() (map[Tier]model.Client, model.Client, er
 		return nil, nil, fmt.Errorf("ai: embeddings lane: %w", err)
 	}
 	return clients, trackClient(embedder, cfg.Embeddings.Provider, sharedProviderHealth), nil
+}
+
+// providers names every provider this config binds, tiers and embeddings.
+func (cfg RoutingConfig) providers() []string {
+	seen := map[string]bool{cfg.Embeddings.Provider: true}
+	for _, binding := range cfg.Tiers {
+		seen[binding.Provider] = true
+	}
+	return slices.Sorted(maps.Keys(seen))
 }
