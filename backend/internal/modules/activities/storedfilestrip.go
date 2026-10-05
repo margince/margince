@@ -5,6 +5,7 @@ package activities
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"strconv"
@@ -13,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/storedobjects"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -75,8 +77,17 @@ func (s *Store) StoredFilesOfMessageTx(ctx context.Context, tx pgx.Tx, activityI
 	return files, nil
 }
 
+// readObject reads one object's bytes, bounded because the caller holds a
+// transaction open. An object already gone answers nil bytes rather than an
+// error: there is nothing left to withhold, and one such file must not stop
+// every message queued behind it.
 func (s *Store) readObject(ctx context.Context, key string) ([]byte, error) {
+	ctx, cancel := context.WithTimeout(ctx, capturedFileStoreTimeout)
+	defer cancel()
 	rc, _, err := s.blob.Get(ctx, key)
+	if errors.Is(err, blobstore.ErrNotFound) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading a stored file to withhold it: %w", err)
 	}

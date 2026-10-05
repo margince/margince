@@ -229,3 +229,27 @@ func TestTheRecheckSeesAThreadSharedAfterTheScan(t *testing.T) {
 		t.Fatal("a thread shared back after the scan was still due")
 	}
 }
+
+// A file whose object is already gone is withheld all the same: there is
+// nothing left to cut out by its bytes, so the original keeps only its
+// headers, and the message behind it in the queue is not held up.
+func TestAFileWhoseObjectIsGoneIsStillWithheld(t *testing.T) {
+	ctx, db, tag := captureWorkspace(t)
+	blob := blobstore.NewMemory()
+	address := "thread-" + tag + "@example.com"
+	source, thread := "msg-gone-"+tag, "thread-"+tag
+	key := captureBeforeTheVerdict(ctx, t, db, blob, source, thread, address)
+	judgeThreadPersonal(ctx, t, db, source, thread, address, "8 days")
+	if err := blob.Delete(ctx, key); err != nil {
+		t.Fatalf("losing the object: %v", err)
+	}
+
+	if _, err := privateThreadStripperFor(db.Pool(), blob).StripWorkspace(ctx, capture.DefaultPersonalPurgeWindows()); err != nil {
+		t.Fatalf("StripWorkspace: %v", err)
+	}
+	requireNamedWithoutBytes(t, filesFor(ctx, t, db, source))
+	encoded := base64.StdEncoding.EncodeToString(onePDF().Body)
+	if raw := storedOriginal(ctx, t, db, source); bytes.Contains(raw, []byte(encoded)) {
+		t.Error("the stored original still carries the file's bytes")
+	}
+}

@@ -35,7 +35,8 @@ import (
 // longer promises is that the column ALONE holds them. The private-thread strip
 // (privatethreadfiles.go) cuts a file's bytes out entirely once a personal
 // thread's undo window closes, leaving a marker and no reference: that file is
-// then named by its attachment row and nowhere stored.
+// then named by its attachment row, and its object is queued for the
+// stored-object reaper.
 //
 // For mail that key is transport-independent, so the FIRST connector to deliver
 // a message supplies the bytes on file and a second connector's copy of the

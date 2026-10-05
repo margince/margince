@@ -171,9 +171,13 @@ func WithholdStoredOriginalTx(ctx context.Context, tx pgx.Tx, rawCaptureID ids.U
 	}
 	byKey := make(map[string][]byte, len(files))
 	parts := make([]partslim.WithheldPart, 0, len(files))
+	located := true
 	for _, f := range files {
 		byKey[f.Key] = f.Body
 		parts = append(parts, partslim.WithheldPart{Ordinal: f.Ordinal, Body: f.Body})
+		// An object already gone leaves no bytes to find the part by, so the
+		// original keeps only its headers rather than a part nobody can locate.
+		located = located && len(f.Body) > 0
 	}
 	original, err = partslim.RestoreStoredParts(original, func(ref partslim.PartRef) ([]byte, error) {
 		if body, ok := byKey[ref.StorageKey]; ok {
@@ -181,7 +185,7 @@ func WithholdStoredOriginalTx(ctx context.Context, tx pgx.Tx, rawCaptureID ids.U
 		}
 		return nil, fmt.Errorf("capture: the original names a part this message no longer stores: part:%d", ref.Ordinal)
 	})
-	if err != nil {
+	if err != nil || !located {
 		// A stanza naming an object not among the files given cannot be put
 		// back, so nothing of the body is trusted: only the headers are kept.
 		original = partslim.HeadersOnly(original)

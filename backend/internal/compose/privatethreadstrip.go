@@ -8,7 +8,7 @@ package compose
 // Capture owns the stored original and activities owns the attachment rows and
 // their objects, so the two halves meet here, in one transaction per message:
 // the original is rewritten without the bytes, the rows are marked withheld and
-// the objects are deleted, or none of it happens.
+// their objects are queued for the stored-object reaper, or none of it happens.
 
 import (
 	"context"
@@ -61,18 +61,24 @@ func (s *privateThreadStripper) StripWorkspace(ctx context.Context, windows capt
 	}); err != nil {
 		return 0, fmt.Errorf("verdict: finding personal-thread mail whose files are due: %w", err)
 	}
-	for i, message := range due {
+	stripped := 0
+	for _, message := range due {
+		withheld := false
 		if err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
 			due, err := capture.PrivateThreadFilesStillDueTx(ctx, tx, windows, statutoryFloor(), message.Activity)
 			if err != nil || !due {
 				return err
 			}
+			withheld = true
 			return s.stripMessage(ctx, tx, message)
 		}); err != nil {
-			return i, fmt.Errorf("verdict: withholding a personal-thread message's files: %w", err)
+			return stripped, fmt.Errorf("verdict: withholding a personal-thread message's files: %w", err)
+		}
+		if withheld {
+			stripped++
 		}
 	}
-	return len(due), nil
+	return stripped, nil
 }
 
 func (s *privateThreadStripper) stripMessage(ctx context.Context, tx pgx.Tx, message capture.PrivateThreadMessage) error {

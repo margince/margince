@@ -27,11 +27,14 @@ business on the Senders page, one you have replied to, or a contact you
 correspond with.
 
 Mail that arrived before the verdict loses its files later, once you have had
-time to change your mind. On a thread held as personal, its files are removed
-the same way a week after you held it yourself, or a month after Margince did.
-Mail from a sender judged personal is deleted whole by the personal-mail
-cleanup on the same schedule. Sharing the thread, or marking the sender as
-business, before then keeps the files.
+time to change your mind. On a thread held as personal, its files stop being
+kept a week after you held it yourself, or a month after Margince did; the
+stored copies are deleted in the day after that. Sharing the thread back before
+then keeps them. This skips mail under a legal hold or inside its legal
+retention period, mail a privacy request is about, and mail a colleague also
+imported. Mail from a sender judged personal is deleted whole by the
+personal-mail cleanup on the same schedule, unless you mark the sender as
+business first.
 
 ### Who can see an email I captured or sent?
 To see who can read an email in Margince, open the message from a timeline: the line under its subject shows **Team**, **Shared**, **Participants**, **Selected** or **Withheld**, with a sentence saying what that means.
