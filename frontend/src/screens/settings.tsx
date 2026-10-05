@@ -152,11 +152,6 @@ import "./settings.css";
 import { ProvidersStat } from "./ai-settings";
 import type { SettingsPageId } from "./settingscatalog";
 import { SettingsBoundary, SettingsHome } from "./settingshome";
-// The catalog, the addresses and the visibility predicate moved to
-// ./settingsnav so `src/app/**` can read them without pulling in every card.
-// Re-exported here because this module's own consumers — the tests, the stories,
-// the testkit — ask for both halves, and splitting their imports would be churn
-// that proves nothing.
 import {
   ADMIN_SEGMENT,
   SETTINGS_SCREEN,
