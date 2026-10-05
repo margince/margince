@@ -77,10 +77,7 @@ type followingProposal struct {
 func lockProposalsFollowingDeal(
 	ctx context.Context, tx pgx.Tx, dealID ids.UUID, from, to *ids.UUID,
 ) ([]followingProposal, error) {
-	onDeal, err := proposalLinksDeal(dealID)
-	if err != nil {
-		return nil, err
-	}
+	onDeal := proposalLinksDeal(dealID)
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	deal, prev, next := arg(dealID), arg(from), arg(to)
@@ -117,12 +114,10 @@ func lockProposalsFollowingDeal(
 // Held by: TestEveryTranscriptCardOnTheDealFollowsIt
 // (backend/internal/compose/proposalsfollowdeal_integration_test.go), which
 // stages through the real transcript reader.
-func proposalLinksDeal(dealID ids.UUID) (json.RawMessage, error) {
-	doc, err := json.Marshal([]map[string]string{{"EntityType": "deal", "EntityID": dealID.String()}})
-	if err != nil {
-		return nil, fmt.Errorf("encode the deal link match: %w", err)
-	}
-	return doc, nil
+func proposalLinksDeal(dealID ids.UUID) json.RawMessage {
+	// Spelled rather than marshalled: a uuid's text needs no escaping, so the
+	// document has one possible shape and no encoding step that could fail.
+	return json.RawMessage(`[{"EntityType":"deal","EntityID":"` + dealID.String() + `"}]`)
 }
 
 // retargetInTx names the new owner as the seat one proposal is for. The row is
