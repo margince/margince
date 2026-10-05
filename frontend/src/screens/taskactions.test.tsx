@@ -279,9 +279,18 @@ test("the source email names who sent it and who was copied, above the words", a
   // reply's words, and with no envelope over them a reader took them for the
   // reply's.
   const message = screen.getByText("Please send the report.");
-  expect(
-    sender.compareDocumentPosition(message) & Node.DOCUMENT_POSITION_FOLLOWING,
-  ).toBeTruthy();
+  const envelope = [
+    line("From"),
+    line("To"),
+    line("Cc"),
+    screen.getByText(/blind-copied and are not shown/),
+  ];
+  for (const envelopeLine of envelope) {
+    expect(
+      (envelopeLine?.compareDocumentPosition(message) ?? 0) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  }
 });
 
 test("a task an agent wrote is marked as AI-assisted", async () => {

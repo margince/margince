@@ -94,8 +94,17 @@ func (s *Store) CaptureEmailRequests(ctx context.Context, asOf time.Time) error 
 		if err != nil {
 			return err
 		}
+		// One seat read per assignee per pass, not per message.
+		seats := map[ids.UUID]principal.Principal{}
 		for _, candidate := range candidates {
-			if err := s.captureEmailRequest(ctx, tx, candidate.message, candidate.user, asOf); err != nil {
+			seat, known := seats[candidate.user]
+			if !known {
+				if seat, err = auth.SeatPrincipal(ctx, tx, candidate.user); err != nil {
+					return err
+				}
+				seats[candidate.user] = seat
+			}
+			if err := s.captureEmailRequest(ctx, tx, candidate.message, seat, asOf); err != nil {
 				return err
 			}
 		}
@@ -103,12 +112,12 @@ func (s *Store) CaptureEmailRequests(ctx context.Context, asOf time.Time) error 
 	})
 }
 
-func (s *Store) captureEmailRequest(ctx context.Context, tx pgx.Tx, messageID, userID ids.UUID, asOf time.Time) error {
+func (s *Store) captureEmailRequest(ctx context.Context, tx pgx.Tx, messageID ids.UUID, seat principal.Principal, asOf time.Time) error {
 	source, err := readActivity(ctx, tx, ids.From[ids.ActivityKind](messageID), storekit.LiveOnly)
 	if err != nil {
 		return err
 	}
-	request, err := emailRequestTask(ctx, tx, source, userID, asOf)
+	request, err := emailRequestTask(ctx, tx, source, seat, asOf)
 	if err != nil {
 		return err
 	}

@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"slices"
 	"strings"
 	"time"
 
@@ -48,7 +47,11 @@ func (s *Store) takeEmailRequest(ctx context.Context, tx pgx.Tx, in LogActivityI
 	if err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
-	request, err := emailRequestTask(ctx, tx, source, userID, s.now())
+	seat, err := auth.SeatPrincipal(ctx, tx, userID)
+	if err != nil {
+		return crmcontracts.Activity{}, false, err
+	}
+	request, err := emailRequestTask(ctx, tx, source, seat, s.now())
 	if err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
@@ -108,100 +111,91 @@ func replayRequestTask(ctx context.Context, tx pgx.Tx, replay crmcontracts.Activ
 // for us, and one only copied on the mail is not.
 //
 // The automatic pass and a human taking the request both land here, and both
-// decide from the source's whole link set as the ASSIGNEE sees it, so the two
-// doors file one request on the same pages.
-func emailRequestTask(ctx context.Context, tx pgx.Tx, source crmcontracts.Activity, userID ids.UUID, asOf time.Time) (LogActivityInput, error) {
-	message := ids.UUID(source.Id)
-	filed, err := assigneeVisibleLinks(ctx, tx, message, userID)
+// decide from the source's whole link set as `seat` — the assignee, from
+// auth.SeatPrincipal — sees it, so the two doors file one request on the same
+// pages.
+func emailRequestTask(ctx context.Context, tx pgx.Tx, source crmcontracts.Activity, seat principal.Principal, asOf time.Time) (LogActivityInput, error) {
+	filed, err := readRequestFiling(ctx, tx, ids.UUID(source.Id), seat)
 	if err != nil {
 		return LogActivityInput{}, err
 	}
-	sender, err := readRequestSender(ctx, tx, message, filed)
-	if err != nil {
-		return LogActivityInput{}, err
-	}
-	return emailRequestTaskInput(source, requesterLinks(filed, sender), userID, asOf), nil
+	return emailRequestTaskInput(source, requesterLinks(filed), seat.UserID, asOf), nil
 }
 
-// requestSender is who a request came from, as its participants record it.
-type requestSender struct {
-	// known is false for a message with no sender row at all, which older
-	// capture wrote.
-	known bool
-	// contacts are the filed contacts among the senders.
-	contacts []ids.UUID
+// requestFiling is where a request is filed, as its assignee can see it.
+type requestFiling struct {
+	// senderKnown is false for a message with no sender row at all, which
+	// older capture wrote.
+	senderKnown bool
+	links       []filedLink
 }
 
-// readRequestSender answers which of the contacts the request is filed under
-// sent it — a subset of links already bounded to what the assignee sees.
-func readRequestSender(ctx context.Context, tx pgx.Tx, message ids.UUID, filed []ActivityLinkInput) (requestSender, error) {
-	candidates := []ids.UUID{}
-	for _, link := range filed {
-		if link.EntityType == linkEntityContact {
-			candidates = append(candidates, link.EntityID)
-		}
-	}
-	var sender requestSender
-	if err := tx.QueryRow(ctx, `
-		SELECT count(*) > 0, coalesce(array_agg(p.contact_id) FILTER (WHERE p.contact_id = ANY($2)), '{}')
-		  FROM activity_participant p
-		 WHERE p.activity_id = $1 AND p.role = 'from'`, message, candidates).Scan(&sender.known, &sender.contacts); err != nil {
-		return requestSender{}, fmt.Errorf("activities: reading who sent a request: %w", err)
-	}
-	return sender, nil
+type filedLink struct {
+	ActivityLinkInput
+	// fromSender marks a link to a contact who sent the message.
+	fromSender bool
 }
 
-// assigneeVisibleLinks is the source's links the assignee can open, read whole
-// rather than through the caller's own scope: the system pass sees every link
-// and a human taking the request sees only theirs, and the reminder must not
-// depend on which of them filed it.
-func assigneeVisibleLinks(ctx context.Context, tx pgx.Tx, message, assignee ids.UUID) ([]ActivityLinkInput, error) {
-	rows, err := tx.Query(ctx, `SELECT entity_type, `+linkIDCoalesce+` FROM activity_link WHERE activity_id = $1 ORDER BY id`, message)
+// readRequestFiling reads the source's live links the seat can open — read
+// whole rather than through the caller's own scope, because the system pass
+// sees every link and a human taking the request sees only theirs — and which
+// of them sent it.
+func readRequestFiling(ctx context.Context, tx pgx.Tx, message ids.UUID, seat principal.Principal) (requestFiling, error) {
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	messagePos := arg(message)
+	visible, err := auth.LinkTargetVisibleClause(principal.WithActor(ctx, seat), "l", arg)
 	if err != nil {
-		return nil, fmt.Errorf("activities: reading a request's links: %w", err)
+		return requestFiling{}, err
 	}
-	links, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (ActivityLinkInput, error) {
-		var link ActivityLinkInput
-		err := row.Scan(&link.EntityType, &link.EntityID)
-		return link, err
-	})
+	if visible == "" {
+		visible = scopeUnbounded
+	}
+	rows, err := tx.Query(ctx, fmt.Sprintf(`
+		SELECT l.entity_type, %[1]s,
+		       EXISTS (SELECT 1 FROM activity_participant p
+		                WHERE p.activity_id = l.activity_id AND p.role = 'from' AND p.contact_id = l.contact_id),
+		       EXISTS (SELECT 1 FROM activity_participant p WHERE p.activity_id = l.activity_id AND p.role = 'from')
+		  FROM activity_link l
+		 WHERE l.activity_id = $%[2]d AND %[3]s AND %[4]s
+		 ORDER BY l.id`, linkIDCoalesceQualified("l"), messagePos, linkTargetLive("l"), visible), args...)
 	if err != nil {
-		return nil, fmt.Errorf("activities: reading a request's links: %w", err)
+		return requestFiling{}, fmt.Errorf("activities: reading where a request is filed: %w", err)
 	}
-	byTable := map[string][]ids.UUID{}
-	for _, link := range links {
-		byTable[link.EntityType] = append(byTable[link.EntityType], link.EntityID)
+	var filed requestFiling
+	var link filedLink
+	if _, err := pgx.ForEachRow(rows, []any{&link.EntityType, &link.EntityID, &link.fromSender, &filed.senderKnown}, func() error {
+		filed.links = append(filed.links, link)
+		return nil
+	}); err != nil {
+		return requestFiling{}, fmt.Errorf("activities: reading where a request is filed: %w", err)
 	}
-	seen := map[string]map[ids.UUID]bool{}
-	for table, rowIDs := range byTable {
-		if seen[table], err = auth.SeatSees(ctx, tx, assignee, table, rowIDs); err != nil {
-			return nil, err
-		}
-	}
-	return slices.DeleteFunc(links, func(link ActivityLinkInput) bool { return !seen[link.EntityType][link.EntityID] }), nil
+	return filed, nil
 }
 
 // requesterLinks keeps the links to the contacts who sent the request. A
 // sender filed under no contact the assignee can see leaves the reminder on
 // the other records instead, so it still sits on a page; a message that never
 // recorded its sender keeps every link, which is all it can say.
-func requesterLinks(filed []ActivityLinkInput, sender requestSender) []ActivityLinkInput {
-	if !sender.known {
-		return filed
-	}
-	requesters, records := []ActivityLinkInput{}, []ActivityLinkInput{}
-	for _, link := range filed {
+func requesterLinks(filed requestFiling) []ActivityLinkInput {
+	all, requesters, records := []ActivityLinkInput{}, []ActivityLinkInput{}, []ActivityLinkInput{}
+	for _, link := range filed.links {
+		all = append(all, link.ActivityLinkInput)
 		switch {
 		case link.EntityType != linkEntityContact:
-			records = append(records, link)
-		case slices.Contains(sender.contacts, link.EntityID):
-			requesters = append(requesters, link)
+			records = append(records, link.ActivityLinkInput)
+		case link.fromSender:
+			requesters = append(requesters, link.ActivityLinkInput)
 		}
 	}
-	if len(requesters) > 0 {
+	switch {
+	case !filed.senderKnown:
+		return all
+	case len(requesters) > 0:
 		return requesters
+	default:
+		return records
 	}
-	return records
 }
 
 func emailRequestTaskInput(source crmcontracts.Activity, links []ActivityLinkInput, userID ids.UUID, asOf time.Time) LogActivityInput {

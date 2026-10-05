@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -85,14 +84,23 @@ func TestAReplyReminderSitsOnlyOnTheSendersPage(t *testing.T) {
 	sender, from := e.mailContact(t, "sender", "workspace")
 	firstCc, firstCcAddress := e.mailContact(t, "first-cc", "workspace")
 	secondCc, secondCcAddress := e.mailContact(t, "second-cc", "workspace")
+	// Linked by whoever logged the mail, but on none of its stated headers.
+	unstated, _ := e.mailContact(t, "unstated", "workspace")
 	company := e.company(t)
 	source := seedEmailRequestFiledUnder(t, e, "Send the report", "commitment", OwedVerdictAsksUs, from,
-		[]ActivityLinkInput{contactLink(sender), contactLink(firstCc), contactLink(secondCc), companyLink(company)},
+		[]ActivityLinkInput{contactLink(sender), contactLink(firstCc), contactLink(secondCc), contactLink(unstated), companyLink(company)},
 		mailParticipants{From: from, Cc: []string{firstCcAddress, secondCcAddress}})
 
 	links := remindedOn(t, e, source, false)
 	if len(links) != 1 || !links["contact:"+sender.String()] {
-		t.Fatalf("reminder sits on %v, want only the sender %v (copied: %v, %v)", links, sender, firstCc, secondCc)
+		t.Fatalf("reminder sits on %v, want only the sender %v (copied: %v, %v, unstated %v)", links, sender, firstCc, secondCc, unstated)
+	}
+	var role string
+	if err := e.owner.QueryRow(e.as(), `SELECT role FROM activity_participant WHERE activity_id = $1 AND contact_id = $2`, source, unstated).Scan(&role); err != nil {
+		t.Fatalf("a linked contact the headers do not name lost its participant row: %v", err)
+	}
+	if role != "cc" {
+		t.Fatalf("a linked contact the headers do not name is recorded as %q, want cc", role)
 	}
 }
 
@@ -155,37 +163,26 @@ func TestBothDoorsFileAReminderFromAHiddenSenderOnTheSameRecords(t *testing.T) {
 
 // A share to a team reaches its members only while the team is live: an
 // archived team keeps its membership rows, and the seat a reminder is filed for
-// must be judged the way that seat itself is resolved.
-func TestASeatSeesAContactSharedWithItsLiveTeamButNotItsArchivedOne(t *testing.T) {
-	e := setupLoad(t)
-	live, archived := ids.NewV7(), ids.NewV7()
-	e.exec(t, `INSERT INTO team (id, name) VALUES ($1, $2)`, live, "live-"+live.String())
-	e.exec(t, `INSERT INTO team (id, name, archived_at) VALUES ($1, $2, now())`, archived, "archived-"+archived.String())
-	sharedLive, _ := e.mailContact(t, "shared-live", "owner")
-	sharedArchived, _ := e.mailContact(t, "shared-archived", "owner")
-	for team, contact := range map[ids.UUID]ids.UUID{live: sharedLive, archived: sharedArchived} {
+// is judged the way that seat itself is resolved.
+func TestAReminderReachesASenderSharedWithTheAssigneesLiveTeamOnly(t *testing.T) {
+	for _, archived := range []bool{false, true} {
+		e := setupLoad(t)
+		team := ids.NewV7()
+		e.exec(t, `INSERT INTO team (id, name, archived_at) VALUES ($1, $2, CASE WHEN $3 THEN now() END)`, team, "team-"+team.String(), archived)
 		e.exec(t, `INSERT INTO team_membership (team_id, user_id) VALUES ($1, $2)`, team, e.rep)
+		shared, from := e.mailContact(t, "shared", "owner")
 		e.exec(t, `INSERT INTO record_grant (record_type, record_id, subject_type, subject_id, access, granted_by)
-			VALUES ('contact', $1, 'team', $2, 'read', $3)`, contact, team, e.other)
-	}
+			VALUES ('contact', $1, 'team', $2, 'write', $3)`, shared, team, e.other)
+		company := e.company(t)
+		source := seedEmailRequestFiledUnder(t, e, "Send the report", "commitment", OwedVerdictAsksUs, from,
+			[]ActivityLinkInput{contactLink(shared), companyLink(company)}, mailParticipants{From: from})
 
-	tx, err := e.owner.Begin(e.as())
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		if err := tx.Rollback(e.as()); err != nil {
-			t.Error(err)
+		want := "contact:" + shared.String()
+		if archived {
+			want = "company:" + company.String()
 		}
-	}()
-	seen, err := auth.SeatSees(e.as(), tx, e.rep, linkEntityContact, []ids.UUID{sharedLive, sharedArchived})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !seen[sharedLive] {
-		t.Fatal("a contact shared with the seat's live team is not visible to it")
-	}
-	if seen[sharedArchived] {
-		t.Fatal("a contact shared only with an archived team counted as visible to its former member")
+		if links := remindedOn(t, e, source, false); len(links) != 1 || !links[want] {
+			t.Fatalf("team archived %v: reminder sits on %v, want only %s", archived, links, want)
+		}
 	}
 }

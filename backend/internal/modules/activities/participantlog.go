@@ -129,16 +129,26 @@ func stampLoggedCounterparties(ctx context.Context, tx pgx.Tx, activityID ids.Ac
 				return err
 			}
 		}
-		// A contact the stated headers do not name was not on this message;
-		// the link still files it under them.
+		// The logger put a contact the stated headers do not name in the
+		// conversation, but the headers say who sent it: keep the evidence on
+		// the receiving side, never as the sender.
 		if role == "" {
-			continue
+			role = unstatedRecipientRole(theirRole)
 		}
 		if err := insertLoggedParticipant(ctx, tx, activityID, role, nil, &contact); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// unstatedRecipientRole is the role of a linked contact the stated headers do
+// not name: their side's role, unless that would make them the sender.
+func unstatedRecipientRole(theirRole string) string {
+	if theirRole == "from" {
+		return "cc"
+	}
+	return theirRole
 }
 
 // envelopeRole is the header a contact's address appears on, with the
