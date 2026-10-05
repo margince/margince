@@ -125,6 +125,7 @@ func (d replyDrafter) completeFirstVoiced(ctx context.Context, data replyActivit
 		}
 	}
 	draft.Subject, draft.Body = draftvoice.Sanitize(draft.Subject, draft.Body)
+	draft = data.greeted(draft)
 	// The sanitizer edits text, so the floor and the shape are re-checked on
 	// what would actually be served.
 	if len(voiceDraftViolations(draft)) > 0 || validateReplyDraft(draft) != nil {

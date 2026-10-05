@@ -379,6 +379,7 @@ func TestTheSharedRulesNameFieldsEverySurfaceActuallySends(t *testing.T) {
 	named := map[string]struct{ block, instruction string }{
 		"the language to write in": {"LANGUAGE", "in the language named by the\noutput_language field"},
 		"who the draft is from":    {"WHO IS WRITING", "named by the sender_name and sender_email fields"},
+		"how long the gap is":      {"TIME", "Size every time reference from silence_days"},
 	}
 	for what, rule := range named {
 		if !strings.Contains(blockOf(draftrules.Shared, rule.block), rule.instruction) {

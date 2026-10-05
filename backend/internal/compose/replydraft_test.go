@@ -195,8 +195,8 @@ func TestVoicedDraftInjectsTheProfileAndStampsTheVersion(t *testing.T) {
 }
 
 func TestVoicedDraftRetriesOnceOnAntiAIViolations(t *testing.T) {
-	violating := `{"subject":"Re: plan","body":"Here's the thing: it's not about tools, but transformation. What do you think?"}`
-	clean := `{"subject":"Re: plan","body":"The plan holds. We ship Monday."}`
+	violating := `{"subject":"Re: plan","body":"Hi Anna,\n\nHere's the thing: it's not about tools, but transformation. What do you think?"}`
+	clean := `{"subject":"Re: plan","body":"Hi Anna,\n\nThe plan holds. We ship Monday."}`
 	brain := &sequencedBrainStub{responses: []model.Response{
 		{Text: violating},
 		{Text: clean},
@@ -214,17 +214,17 @@ func TestVoicedDraftRetriesOnceOnAntiAIViolations(t *testing.T) {
 	if !strings.Contains(brain.requests[1].Messages[0].Content, "violated these hard rules") {
 		t.Fatal("the retry must name the violations")
 	}
-	if version == nil || draft.Body != "The plan holds. We ship Monday." {
+	if version == nil || draft.Body != "Hi Anna,\n\nThe plan holds. We ship Monday." {
 		t.Fatalf("draft = %+v version = %v", draft, version)
 	}
 }
 
 func TestVoicedDraftFallsBackToPlainWhenViolationsSurvive(t *testing.T) {
-	violating := `{"subject":"Re: plan","body":"Here's the thing: it's not about tools, but transformation. What do you think?"}`
+	violating := `{"subject":"Re: plan","body":"Hi Anna,\n\nHere's the thing: it's not about tools, but transformation. What do you think?"}`
 	brain := &sequencedBrainStub{responses: []model.Response{
 		{Text: violating},
 		{Text: violating},
-		{Text: `{"subject":"Re: plan","body":"A plain professional reply."}`},
+		{Text: `{"subject":"Re: plan","body":"Hi Anna,\n\nA plain professional reply."}`},
 	}}
 	drafter := replyDrafter{brain: brain}
 
@@ -236,7 +236,7 @@ func TestVoicedDraftFallsBackToPlainWhenViolationsSurvive(t *testing.T) {
 	if version != nil {
 		t.Fatalf("a fallback draft must not claim a voice version, got %v", version)
 	}
-	if draft.Body != "A plain professional reply." {
+	if draft.Body != "Hi Anna,\n\nA plain professional reply." {
 		t.Fatalf("draft = %+v, want the plain fallback", draft)
 	}
 	if len(brain.requests) != 3 {
@@ -249,7 +249,7 @@ func TestVoicedDraftFallsBackToPlainWhenViolationsSurvive(t *testing.T) {
 
 func TestVoicedDraftWithoutAProfileIsThePlainPath(t *testing.T) {
 	brain := &sequencedBrainStub{responses: []model.Response{
-		{Text: `{"subject":"Re: plan","body":"A plain professional reply."}`},
+		{Text: `{"subject":"Re: plan","body":"Hi Anna,\n\nA plain professional reply."}`},
 	}}
 	drafter := replyDrafter{brain: brain}
 	_, version, _, err := drafter.completeVoiced(context.Background(), ids.NewV7(),
@@ -393,13 +393,13 @@ func TestAFailedVoiceCriticRetryIsLoggedAndTheFirstDraftStands(t *testing.T) {
 	// The violation is a canned opener, which the sanitizer does NOT remove —
 	// so the fallback below is reached and the case pins the log rather than
 	// accidentally proving the sanitizer's behaviour.
-	violating := `{"subject":"Re: plan","body":"Here's the thing: it's not about tools, but transformation. What do you think?"}`
+	violating := `{"subject":"Re: plan","body":"Hi Anna,\n\nHere's the thing: it's not about tools, but transformation. What do you think?"}`
 	retryFailed := errors.New("upstream model refused the retry")
 	brain := &sequencedBrainStub{
 		responses: []model.Response{
 			{Text: violating},
 			{},
-			{Text: `{"subject":"Re: plan","body":"A plain professional reply."}`},
+			{Text: `{"subject":"Re: plan","body":"Hi Anna,\n\nA plain professional reply."}`},
 		},
 		errs: []error{nil, retryFailed, nil},
 	}
@@ -420,7 +420,7 @@ func TestAFailedVoiceCriticRetryIsLoggedAndTheFirstDraftStands(t *testing.T) {
 	// reader whether the draft it kept was one violation off or twelve.
 	first := replyDraft{
 		Subject: "Re: plan",
-		Body:    "Here's the thing: it's not about tools, but transformation. What do you think?",
+		Body:    "Hi Anna,\n\nHere's the thing: it's not about tools, but transformation. What do you think?",
 	}
 	wantCount := len(voiceDraftViolations(first))
 	if wantCount == 0 {
@@ -434,7 +434,7 @@ func TestAFailedVoiceCriticRetryIsLoggedAndTheFirstDraftStands(t *testing.T) {
 	if version != nil {
 		t.Errorf("a fallback draft must not claim a voice version, got %v", version)
 	}
-	if draft.Body != "A plain professional reply." {
+	if draft.Body != "Hi Anna,\n\nA plain professional reply." {
 		t.Errorf("draft = %+v, want the plain fallback", draft)
 	}
 	if len(brain.requests) != 3 {
@@ -455,5 +455,28 @@ func TestARetryThatDidNotClearNamesTheDraftItServed(t *testing.T) {
 			!strings.Contains(line, `phrase="as discussed"`) {
 			t.Errorf("served=%v logged %q, want %s with the rule and phrase", served, line, want)
 		}
+	}
+}
+
+// Both model attempts open without a greeting: the reply is served with the
+// floor's greeting in the draft's language, by the recipient's name.
+func TestAnUngreetedReplyIsServedWithTheFloorGreeting(t *testing.T) {
+	ungreeted := model.Response{Text: `{"subject":"Re: Termin","body":"Seit unserem Treffen sind zehn Tage vergangen.\n\nPasst Mittwoch?"}`}
+	brain := &sequencedBrainStub{responses: []model.Response{ungreeted, ungreeted}}
+	drafter := replyDrafter{brain: brain}
+	data := replyActivityData{
+		Envelope:  draftfloor.Envelope{Language: "de", ConversationState: "weeks", SilenceDays: "10"},
+		Recipient: "Dietmar", Subject: "Termin", Thread: "inbound_mail",
+	}
+
+	draft, _, _, err := drafter.completeVoiced(context.Background(), ids.NewV7(), data, draftvoice.Context{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(brain.requests) != 2 {
+		t.Fatalf("calls = %d, want the first attempt and one retry", len(brain.requests))
+	}
+	if want := "Hallo Dietmar,\n\nSeit unserem Treffen"; !strings.HasPrefix(draft.Body, want) {
+		t.Errorf("body = %q, want it to open %q", draft.Body, want)
 	}
 }

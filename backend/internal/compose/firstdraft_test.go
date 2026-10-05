@@ -37,7 +37,7 @@ func firstDrafter(brain completer) replyDrafter {
 // and it was what this path returned for every deployment, model or not.
 func TestAFirstMessageIsComposedRatherThanTemplated(t *testing.T) {
 	brain := &replyBrainStub{response: model.Response{
-		Text: `{"subject":"Following up on K5","body":"It was good to meet you at K5 last week."}`,
+		Text: `{"subject":"Following up on K5","body":"Hi Anna,\n\nIt was good to meet you at K5 last week."}`,
 	}}
 	intent := "introduce ourselves after meeting at K5"
 
@@ -45,7 +45,7 @@ func TestAFirstMessageIsComposedRatherThanTemplated(t *testing.T) {
 	if err != nil {
 		t.Fatalf("DraftFirstEmail: %v", err)
 	}
-	if subject != "Following up on K5" || body != "It was good to meet you at K5 last week." {
+	if subject != "Following up on K5" || body != "Hi Anna,\n\nIt was good to meet you at K5 last week." {
 		t.Fatalf("the model's draft did not reach the caller: subject=%q body=%q", subject, body)
 	}
 	deterministicSubject, deterministicBody := activities.DeterministicEmailDraft(firstMessageContext, intent)

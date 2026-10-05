@@ -29,19 +29,19 @@ import (
 // malformed reply is as expressible as a well-formed one.
 const (
 	replyDraftCleanReply = `{"subject":"Re: Heat recovery commissioning",` +
-		`"body":"September works. We commission on the 14th and hand over on the 16th."}`
+		`"body":"Hi Anna,\n\nSeptember works. We commission on the 14th and hand over on the 16th."}`
 	// Three deterministic tells at once — a canned opener, the not-X-but-Y
 	// reframe and a generic engagement question — none of which the sanitizer
 	// can mechanically remove, so this reply survives every pass the drafter
 	// makes over it.
 	replyDraftViolatingReply = `{"subject":"Re: Heat recovery commissioning",` +
-		`"body":"Here's the thing: it's not about dates, but transformation. What do you think?"}`
+		`"body":"Hi Anna,\n\nHere's the thing: it's not about dates, but transformation. What do you think?"}`
 	// One tell the sanitizer CAN mechanically remove. It earns the critic retry
 	// all the same — the floor runs on the raw draft — and it is gone from the
 	// text that would be served, so this reply is servable and still costs a
 	// second call.
 	replyDraftSanitizableReply = `{"subject":"Re: Heat recovery commissioning",` +
-		`"body":"September works — we commission on the 14th and hand over on the 16th."}`
+		`"body":"Hi Anna,\n\nSeptember works — we commission on the 14th and hand over on the 16th."}`
 	// A reply in no shape the drafter can read, which is what a critic retry
 	// coming back unusable looks like.
 	replyDraftUnreadableReply = "I have drafted the reply for you."

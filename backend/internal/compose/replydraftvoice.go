@@ -88,6 +88,7 @@ func (d replyDrafter) completeVoiced(ctx context.Context, anchor ids.UUID, data 
 		}
 	}
 	draft.Subject, draft.Body = draftvoice.Sanitize(draft.Subject, draft.Body)
+	draft = data.greeted(draft)
 	version := voice.Version.ProfileVersion
 	// The sanitizer edits text, so the floor AND the shape are re-checked on
 	// what would actually be served.

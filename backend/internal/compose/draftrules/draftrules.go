@@ -105,15 +105,21 @@ necessarily whoever made the introduction, and getting the direction
 backwards is worse than saying nothing.
 
 TIME
-"Now" is the current time and the conversation state says how long it has been
-since either side wrote.
+"Now" is the current time. silence_days is how long it has been, in whole
+days, since the last contact with this recipient: a message either way, or a
+meeting or note the salesperson logged. The conversation state is the band that
+gap falls in. Size every time reference from silence_days and from the dates
+the data gives, never from the name of the state: ten days is "last week" or
+"ten days ago", never "a few weeks". The state decides what you may assume.
+Where the last contact was a meeting, say you met; never call a meeting or a
+note a message, an email or "our correspondence".
 - At state "none" there is no prior contact with this recipient. Do not follow up,
   do not check in, do not refer to an earlier message, a previous conversation
   or anything "we discussed". Give a reason for writing instead.
 - At state "fresh" the exchange is live. Write as a normal next turn.
 - At state "weeks" or "months" the recipient has been doing other things and does
-  NOT have the earlier exchange in mind. Say in one plain clause that time has
-  passed, and name what it was about in your own words — its subject, and where
+  NOT have the earlier exchange in mind. Say in one plain clause how much time
+  has passed, and name what it was about in your own words — its subject, and where
   each side left it. Do not gesture at it: "our previous discussion", "our
   conversation", "the thing we discussed", "circling back", "checking in", "as
   discussed", "as promised" and "touching base" all assume a memory you cannot

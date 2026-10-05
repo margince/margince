@@ -188,8 +188,11 @@ func (d replyDrafter) completeWith(ctx context.Context, site draftSystem, activi
 // correction rides the user turn, so a plain draft told to fix a phrase stays a
 // plain draft rather than silently becoming a voiced one.
 func (d replyDrafter) completeChecked(ctx context.Context, site draftSystem, data replyActivityData, voiceBlock voiceBlockFor) (replyDraft, error) {
-	record := draftcheck.Grounds{Booked: data.Booked(), Met: draftcheck.IntentNamesMeeting(data.Intent)}
-	return draftcore.CorrectOnce(ctx, data.Lang(), data.Band(), record,
+	record := draftcheck.Grounds{
+		Booked: data.Booked(), Met: draftcheck.IntentNamesMeeting(data.Intent),
+		FirstName: data.Recipient, LastName: data.RecipientLastName,
+	}
+	draft, err := draftcore.CorrectOnce(ctx, data.Lang(), data.Band(), record,
 		func(ctx context.Context, correction string) (replyDraft, error) {
 			return d.completeWith(ctx, site, data, voiceBlock, correction)
 		},
@@ -199,6 +202,15 @@ func (d replyDrafter) completeChecked(ctx context.Context, site draftSystem, dat
 		func(draft replyDraft) (string, bool) { return draft.Subject, data.Threaded() },
 		draftRetryLog{log: d.logger()},
 	)
+	return data.greeted(draft), err
+}
+
+// greeted is the draft with the floor's greeting added if it still opens
+// without one. Applied wherever a reply draft is settled, including after the
+// voice sanitizer, because the critic retry bypasses the correction loop.
+func (data replyActivityData) greeted(draft replyDraft) replyDraft {
+	draft.Body = draftcheck.EnsureGreeting(draft.Body, data.Envelope, data.Recipient, data.RecipientLastName)
+	return draft
 }
 
 // draftRetryLog reports what the correction loop decided. A retry that does not

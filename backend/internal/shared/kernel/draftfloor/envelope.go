@@ -5,6 +5,7 @@ package draftfloor
 
 import (
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
@@ -129,6 +130,21 @@ func (e Envelope) At() time.Time {
 	}
 	return at
 }
+
+// Greeting renders the opening line in this envelope's language, band and
+// register. A formal German draft greets by full name where "Herr" or "Frau"
+// would go, because no gender is ever known; without a surname, or in any
+// other register or language, it is the familiar Greeting.
+func (e Envelope) Greeting(firstName, lastName string) string {
+	lastName = strings.TrimSpace(lastName)
+	if e.Lang() != textlang.German || e.Register == string(textlang.RegisterDu) || lastName == "" {
+		return Greeting(e.Lang(), e.Band(), firstName)
+	}
+	return fill(formalGermanGreeting, strings.TrimSpace(strings.TrimSpace(firstName)+" "+lastName))
+}
+
+// formalGermanGreeting is the Sie opening the shared drafting rules prescribe.
+const formalGermanGreeting = "Guten Tag %s,"
 
 // Band reads the envelope's conversation state back as a typed value.
 func (e Envelope) Band() convstate.Band { return convstate.Band(e.ConversationState) }
