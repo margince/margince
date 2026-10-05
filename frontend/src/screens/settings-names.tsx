@@ -37,7 +37,9 @@ export function DisplayNameSettingRow({ toast }: Readonly<{ toast: Toast }>) {
         if (error) {
           throwProblem(error, t);
         }
-        void queryClient.invalidateQueries({ queryKey: ["scheduling-profile"] });
+        void queryClient.invalidateQueries({
+          queryKey: ["scheduling-profile"],
+        });
         return data?.display_name ?? null;
       }}
     />
@@ -63,7 +65,8 @@ export function GreetingNameSettingRow({ toast }: Readonly<{ toast: Toast }>) {
       emptyAllowed
       // What greetings fall back to while this is empty.
       placeholder={
-        greetingNameOf({ display_name: me.data?.user.display_name }) ?? undefined
+        greetingNameOf({ display_name: me.data?.user.display_name }) ??
+        undefined
       }
       save={async (next) => {
         const { data, error } = await api.PUT("/me/greeting-name", {
