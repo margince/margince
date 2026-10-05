@@ -100,8 +100,8 @@ export const Counted: Story = {
 
 export const NoReceiptDrawer: Story = {
   render: () => (
-    // A host that routes deals but mounts no receipt drawer — the deal page,
-    // the meeting brief: the deal is a button and the facts are prose.
+    // A host that routes deals and mounts no receipt drawer, as the deal page
+    // and the meeting brief do: the deal is a button and the facts are prose.
     <StoryProviders>
       <SentenceList
         sentences={[

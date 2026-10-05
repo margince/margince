@@ -419,7 +419,7 @@ export function AskSection({
 }: Readonly<{
   companyId: string;
   onOpenRecord?: (entityType: string, entityId: string) => void;
-  onOpenReceipt?: OpenReceipt;
+  onOpenReceipt: OpenReceipt | undefined;
   // Opens a cited message in the page's email drawer; see `Citations`.
   onOpenEmail?: (activityId: string) => void;
   // The account's projects, as the page read them. Offered as a picker
@@ -1534,7 +1534,7 @@ export function useSuggestionsBody({
   companyId: string;
   view?: Company360;
   onOpenRecord?: (entityType: string, entityId: string) => void;
-  onOpenReceipt?: OpenReceipt;
+  onOpenReceipt: OpenReceipt | undefined;
   // Opens a cited message in the page's email drawer. A rule that fired on an
   // unanswered mail names that mail as its grounds, and the reader's next act
   // is to read it.
@@ -1762,7 +1762,7 @@ export function ProposedNextSteps(
     companyId: string;
     view?: Company360;
     onOpenRecord?: (entityType: string, entityId: string) => void;
-    onOpenReceipt?: OpenReceipt;
+    onOpenReceipt: OpenReceipt;
     onOpenEmail?: (activityId: string) => void;
   }>,
 ) {

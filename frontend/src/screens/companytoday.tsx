@@ -126,7 +126,7 @@ type TodayReadingInputs = Readonly<{
   // Opens the composer anchored on the account and its recipient.
   onDraftTo?: (contactId: string) => void;
   onOpenRecord?: (entityType: string, entityId: string) => void;
-  // Open a cited receipt or mail in the page's drawers. A suggestion resting
+  // Opens a cited receipt or mail in the page's drawers. A suggestion resting
   // on an unanswered mail names that mail, and reading it is the reader's move.
   onOpenReceipt?: OpenReceipt;
   onOpenEmail?: (activityId: string) => void;

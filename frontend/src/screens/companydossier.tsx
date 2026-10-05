@@ -46,7 +46,7 @@ export function DossierPanel({
 }: Readonly<{
   companyId: string;
   onOpenRecord?: (entityType: string, entityId: string) => void;
-  onOpenReceipt?: OpenReceipt;
+  onOpenReceipt: OpenReceipt;
   // Opens a cited message in the page's email drawer; see `Citations`.
   onOpenEmail?: (activityId: string) => void;
   // The account's own names for the records this prose cites, from the page

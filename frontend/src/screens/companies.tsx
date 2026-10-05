@@ -65,7 +65,6 @@ import {
 } from "./company360";
 import { NewDealAction } from "./companyactions";
 import { CompanyApprovalsPanel } from "./companyapprovals";
-import { openCitation } from "./companycitations";
 import { CompanyContractState, CompanyLastOffer } from "./companycommercial";
 import { CompanyContactsList } from "./companycontacts/contacts";
 import { CoverageBand } from "./companycontacts/summary";
@@ -129,7 +128,12 @@ import {
 import { ContactMeetingBrief } from "./meetingbrief";
 import { useOpenEmail } from "./openemail";
 import { PartnerTab } from "./partners";
-import { type OpenReceipt, RecordSpine, WrittenBy } from "./record360";
+import {
+  type OpenReceipt,
+  openCitation,
+  RecordSpine,
+  WrittenBy,
+} from "./record360";
 import {
   ChronologyFilter,
   ChronologyFooter,
@@ -2251,7 +2255,7 @@ function CompanyProfileTab({
   // read the same names and open through the same receipt.
   nameOf?: (entityType: string, entityId: string) => string | undefined;
   onOpenRecord?: (entityType: string, entityId: string) => void;
-  onOpenReceipt?: OpenReceipt;
+  onOpenReceipt: OpenReceipt;
   onOpenEmail?: (activityId: string) => void;
 }>) {
   if (!active) {
@@ -2289,7 +2293,7 @@ function ReferenceDisclosures({
   refusedReasonId?: string;
   nameOf?: (entityType: string, entityId: string) => string | undefined;
   onOpenRecord?: (entityType: string, entityId: string) => void;
-  onOpenReceipt?: OpenReceipt;
+  onOpenReceipt: OpenReceipt;
   onOpenEmail?: (activityId: string) => void;
 }>): ReactNode {
   return (

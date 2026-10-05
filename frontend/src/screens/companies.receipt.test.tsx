@@ -17,6 +17,7 @@ import { LocaleProvider } from "../i18n";
 import { CompanyScreen } from "./companies";
 import {
   company,
+  company360,
   companyBackstop,
   jsonResponse,
   stubFetch,
@@ -51,9 +52,13 @@ const DOSSIER: Dossier = {
   ],
 };
 
-function receipt(id: string, value: string): Receipt {
+function receipt(
+  entityType: Receipt["entity_type"],
+  id: string,
+  value: string,
+): Receipt {
   return {
-    entity_type: "profile_field",
+    entity_type: entityType,
     entity_id: id,
     source_kind: "human",
     produced_by: "human:u1",
@@ -62,20 +67,51 @@ function receipt(id: string, value: string): Receipt {
 }
 
 const RECEIPTS: Record<string, Receipt> = {
-  "p-1": receipt("p-1", "Load-shifting software"),
-  "p-2": receipt("p-2", "Energy-intensive manufacturers"),
+  "p-1": receipt("profile_field", "p-1", "Load-shifting software"),
+  "p-2": receipt("profile_field", "p-2", "Energy-intensive manufacturers"),
+  "f-1": receipt("fact", "f-1", "240 employees"),
 };
 
-function drawAccount() {
-  stubFetch(async (url) => {
-    const asked = /\/evidence\/profile_field\/([^/?]+)/.exec(url);
-    if (asked) {
-      return jsonResponse(RECEIPTS[asked[1]]);
-    }
-    return url.includes("/dossier")
-      ? jsonResponse(DOSSIER)
-      : companyBackstop(url);
-  });
+const HEADCOUNT = { entity_type: "fact", entity_id: "f-1" };
+
+const ANSWER = {
+  company_id: "o-1",
+  question: "whats_open",
+  generated_at: "2026-06-01T09:00:00Z",
+  generated_by: "model",
+  sentences: [
+    { text: "They have grown past 200 staff.", evidence: [HEADCOUNT] },
+  ],
+};
+
+const SUGGESTED = {
+  ...company360,
+  suggestions: [
+    {
+      kind: "no_reply",
+      fingerprint: "s-1",
+      reason: "They grew and nobody has written since.",
+      evidence: [HEADCOUNT],
+    },
+  ],
+};
+
+function drawAccount(three60: unknown = company360) {
+  stubFetch(
+    async (url, method) => {
+      const asked = /\/evidence\/(?:fact|profile_field)\/([^/?]+)/.exec(url);
+      if (asked) {
+        return jsonResponse(RECEIPTS[asked[1]]);
+      }
+      if (method === "POST" && url.includes("/ask")) {
+        return jsonResponse(ANSWER);
+      }
+      return url.includes("/dossier")
+        ? jsonResponse(DOSSIER)
+        : companyBackstop(url);
+    },
+    { company360: three60 },
+  );
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -90,8 +126,14 @@ function drawAccount() {
   );
 }
 
-describe("a cited profile field on the account overview", () => {
-  it("opens its receipt in the page's drawer and steps to the sentence's next one", async () => {
+async function openedReceipt(value: string) {
+  const drawer = await screen.findByRole("dialog", { name: "Source" });
+  expect(await within(drawer).findByText(value)).toBeTruthy();
+  return drawer;
+}
+
+describe("a cited receipt on the company page opens the page's drawer", () => {
+  it("from the overview's dossier, stepping to the sentence's next receipt", async () => {
     const user = userEvent.setup();
     drawAccount();
     await screen.findByRole("heading", { name: company.display_name });
@@ -99,16 +141,45 @@ describe("a cited profile field on the account overview", () => {
     await user.click(
       await screen.findByRole("button", { name: "2 profile fields" }),
     );
-    const drawer = await screen.findByRole("dialog", { name: "Source" });
-    expect(
-      await within(drawer).findByText("Load-shifting software"),
-    ).toBeTruthy();
-
+    const drawer = await openedReceipt("Load-shifting software");
     await user.click(
       within(drawer).getByRole("button", { name: "Next claim" }),
     );
     expect(
       await within(drawer).findByText("Energy-intensive manufacturers"),
     ).toBeTruthy();
+  });
+
+  it("from the Profile tab's dossier", async () => {
+    const user = userEvent.setup();
+    drawAccount();
+    await user.click(await screen.findByRole("button", { name: "Profile" }));
+
+    await user.click(
+      await screen.findByRole("button", { name: "2 profile fields" }),
+    );
+    await openedReceipt("Load-shifting software");
+  });
+
+  it("from a suggestion's grounds", async () => {
+    const user = userEvent.setup();
+    drawAccount(SUGGESTED);
+    await user.click(
+      await screen.findByText("They grew and nobody has written since."),
+    );
+
+    await user.click(await screen.findByRole("button", { name: "fact" }));
+    await openedReceipt("240 employees");
+  });
+
+  it("from an answer to a prepared question", async () => {
+    const user = userEvent.setup();
+    drawAccount();
+    await user.click(
+      await screen.findByRole("button", { name: "What is open here?" }),
+    );
+
+    await user.click(await screen.findByRole("button", { name: "fact" }));
+    await openedReceipt("240 employees");
   });
 });

@@ -75,7 +75,7 @@ export function GrowthFitPanel({
 }: Readonly<{
   companyId: string;
   onOpenRecord?: (entityType: string, entityId: string) => void;
-  onOpenReceipt?: OpenReceipt;
+  onOpenReceipt: OpenReceipt;
   // Opens a cited message in the page's email drawer; see `Citations`.
   onOpenEmail?: (activityId: string) => void;
 }>) {
@@ -307,7 +307,7 @@ function GrowthFitReasons({
 }: Readonly<{
   fit: GrowthFit;
   onOpenRecord?: (entityType: string, entityId: string) => void;
-  onOpenReceipt?: OpenReceipt;
+  onOpenReceipt: OpenReceipt;
   // Opens a cited message in the page's email drawer; see `Citations`.
   onOpenEmail?: (activityId: string) => void;
 }>) {

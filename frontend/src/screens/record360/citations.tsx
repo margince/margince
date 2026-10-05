@@ -5,8 +5,8 @@
 //
 // Every record page renders sentences a model or the deterministic fallback
 // wrote, each citing the records it rests on. This is that rendering, once: a
-// citation can never be clickable on the company page and flat on the deal
-// page, because both pages call the same component.
+// chip opens wherever its host mounts the door for its kind and is prose
+// everywhere else, never a control that does nothing.
 
 import type { components } from "../../api/schema";
 import { useRecordZone } from "../../app/recordzone";
@@ -16,6 +16,7 @@ import { Popover } from "../../design-system/popover";
 import { formatDate, formatDateTime, formatNumber } from "../../format/format";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { citationOpensRecord } from "./citationroute";
 
 /**
  * One sentence of grounded prose, with what it rests on.
@@ -207,16 +208,13 @@ function ownChip(cited: Cited, isOpenable: boolean): CitationChip {
 
 // The citation kinds that open a RECEIPT, not a screen: where the value came
 // from and what could not be recorded. Only these can be stepped through.
-const RECEIPT_CITATIONS = new Set<string>(["fact", "profile_field"]);
+const RECEIPT_KINDS = [
+  "fact",
+  "profile_field",
+] as const satisfies readonly CitedKind[];
+const RECEIPT_CITATIONS: ReadonlySet<string> = new Set(RECEIPT_KINDS);
 function opensReceipt(kind: string): kind is CitedSibling["entityType"] {
   return RECEIPT_CITATIONS.has(kind);
-}
-
-// The citation kinds with a screen of their own. Not `activity`, which opens
-// its message per row (`emailOf`), nor `company`, usually the current page.
-const ROUTABLE_CITATIONS = new Set<string>(["deal", "contact"]);
-export function citationOpensRecord(kind: string): boolean {
-  return ROUTABLE_CITATIONS.has(kind);
 }
 
 type CitationDoors = {
@@ -261,7 +259,7 @@ function emailOf(cited: Cited): Cited["email_summary"] | undefined {
 
 /** One steppable citation, in the receipt's own shape. */
 export type CitedSibling = {
-  entityType: "fact" | "profile_field";
+  entityType: (typeof RECEIPT_KINDS)[number];
   entityId: string;
 };
 
@@ -463,9 +461,9 @@ function chipKey(chip: CitationChip): string {
 /**
  * A chip with the evidence behind it. Resting on it opens the record's own
  * words in the agent's rule, and under them where and when they were said;
- * a reader checks the claim there. The record itself is one more step, for
- * the chip whose record has a page — never the chip's own click, because a
- * click that navigated away would be a receipt the reader cannot rest on.
+ * a reader checks the claim there. The record or its receipt is one more
+ * step, where the host has a door for its kind, and never the chip's own
+ * click: one that navigated away would be a receipt the reader cannot rest on.
  */
 function CitationWithReceipt({
   chip,
@@ -511,8 +509,8 @@ const NATURE_LABELS: Record<
  * SentenceList renders grounded prose — the standing brief, the deal's status
  * card and the answers to prepared questions read identically, because they
  * are the same thing written from the same records with the same citations.
- * One component, so a citation can never be clickable in one place and flat in
- * the other.
+ * One component, so a chip opens wherever its host mounts the door for its
+ * kind and is prose elsewhere, never a control that does nothing.
  */
 export function SentenceList({
   sentences,
