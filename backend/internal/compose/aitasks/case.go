@@ -56,6 +56,16 @@ type PreparedCase interface {
 	Evaluate(Trace) Outcome
 }
 
+// ConfidenceCase is a prepared case that can say how sure the model was of an
+// answer it gave. Optional, because only a site whose reply carries a
+// confidence has one to report.
+type ConfidenceCase interface {
+	PreparedCase
+	// AnswerConfidence is the least and the greatest confidence the reply put on
+	// the readings the scenario asks about, and false when it put none.
+	AnswerConfidence(Trace) (low, high float64, ok bool)
+}
+
 // DecisionCase is a prepared case whose site also has a decision form: the
 // request its adapter builds from the same fixture, the site's own gate, and
 // its floors.
