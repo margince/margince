@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // LeadReader is the caller's own read of the lead. Gated inside the store
@@ -96,9 +97,9 @@ func (s *Service) WithVoice(reader draftvoice.Reader, log *slog.Logger) *Service
 func (s *Service) Draft(
 	ctx context.Context, leadID ids.LeadID, req Request,
 ) (crmcontracts.CompanyEmailDraft, error) {
-	// Human-only: drafting spends the workspace's model budget on prose for a
-	// contact to send under their own name.
-	if err := auth.RequireHuman(ctx); err != nil {
+	// A human, or an agent holding draft: draft_email reaches this engine too
+	// (agentdraftseam.go), so one contact gets one draft whoever asks.
+	if err := auth.RequireHumanOrAgentScope(ctx, principal.ScopeDraft); err != nil {
 		return crmcontracts.CompanyEmailDraft{}, err
 	}
 	// The gate that matters runs HERE, in the caller's own read: a lead they

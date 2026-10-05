@@ -7179,6 +7179,12 @@ paths:
         Drafting is 🟢 (never auto-sends). The draft is returned, not sent. Keeping the rep's
         unsent message is a separate, explicit act at `PUT /mail-drafts`, which this route
         never performs.
+
+        The `draft_email` verb has a second shape this route does not serve: given `links`
+        instead of an activity, it drafts the FIRST message to a contact or lead through the
+        same engine as `POST /contacts/{id}/draft-email`, `POST /companies/{id}/draft-email` or
+        `POST /leads/{id}/draft-email`, and leaves the draft in the saved drafts of the human
+        the agent acts for, marked `agent_drafted`.
       x-mcp-tool: { verb: draft_email, record_type: activity, tier: auto_execute, scope: draft }
       requestBody:
         required: false
@@ -7610,8 +7616,10 @@ paths:
         is not an activity, not a scheduled send and never on a timeline, and only the seat
         that wrote it can read it. There is at most one per author and anchor.
 
-        The AI drafting routes still persist nothing: a draft exists only because the rep's
-        composer saved one here.
+        The AI drafting routes still persist nothing. A draft exists because the rep's composer
+        saved one here, or because an agent acting for the rep drafted a first message to a
+        contact or lead through `draft_email`, which leaves it here for the rep to review
+        (`agent_drafted`). That second writer is the tool surface, not this route.
       x-agent-access: human-only
       parameters:
         - name: anchor_type
@@ -41471,7 +41479,7 @@ components:
 
     MailDraft:
       type: object
-      required: [id, anchor_type, anchor_id, to, cc, bcc, subject, body, version, created_at, updated_at]
+      required: [id, anchor_type, anchor_id, to, cc, bcc, subject, body, version, agent_drafted, created_at, updated_at]
       description: |
         One rep's unsent message, readable by its author and nobody else. Not an activity.
       properties:
@@ -41485,6 +41493,12 @@ components:
         body: { type: string }
         html_body: { type: [string, 'null'] }
         version: { type: integer, format: int64 }
+        agent_drafted:
+          type: boolean
+          description: >-
+            An agent wrote these words for the author through `draft_email`, and the author has
+            not saved over them yet. The screen says so before the message is sent. A save from
+            the composer clears it.
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
 

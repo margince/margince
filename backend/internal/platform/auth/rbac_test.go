@@ -34,6 +34,30 @@ func TestRequireHumanRejectsOnlyAgents(t *testing.T) {
 	}
 }
 
+func TestAnAgentPassesTheDraftingGateOnlyWithTheScopeNamed(t *testing.T) {
+	agent := func(scopes ...principal.Scope) context.Context {
+		return principal.WithActor(context.Background(), principal.Principal{
+			Type: principal.PrincipalAgent, ID: "agent:test", Scopes: principal.NewScopeSet(scopes...),
+		})
+	}
+	if err := RequireHumanOrAgentScope(agent(principal.ScopeDraft), principal.ScopeDraft); err != nil {
+		t.Errorf("an agent holding draft was refused: %v", err)
+	}
+	if err := RequireHumanOrAgentScope(agent(principal.ScopeRead), principal.ScopeDraft); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("an agent holding only read = %v, want ErrPermissionDenied", err)
+	}
+	human := principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalHuman, ID: "human:test"})
+	if err := RequireHumanOrAgentScope(human, principal.ScopeDraft); err != nil {
+		t.Errorf("a human was refused: %v", err)
+	}
+	buyer := principal.WithActor(context.Background(), principal.Principal{
+		Type: principal.PrincipalBuyer, ID: "buyer:test", Scopes: principal.NewScopeSet(principal.ScopeDraft),
+	})
+	if err := RequireHumanOrAgentScope(buyer, principal.ScopeDraft); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("a buyer = %v, want ErrPermissionDenied", err)
+	}
+}
+
 func TestRequireHumanNeedsAnActor(t *testing.T) {
 	// A missing actor is a programming error (middleware always binds one),
 	// surfaced as an error rather than a silent pass.

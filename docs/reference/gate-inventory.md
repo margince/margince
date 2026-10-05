@@ -508,7 +508,7 @@ The eight shapes, what each is for, and how each one silently passes:
 |---|---|---|
 | `consentpurposescope_test.go` | H1 | consent\_purpose is installation-wide configuration, not a row-scoped record. |
 | `consumermailonelist_test.go` | H2 | One consumer-mail list, held by a test rather than by a comment. |
-| `draftpersistenceparity_test.go` | H3 | Two drafting tools answer the persistence question differently ON PURPOSE, and each says so beside the other's name. |
+| `draftpersistenceparity_test.go` | H3 | Two drafting tools keep their drafts in different places ON PURPOSE, and each says so beside the other's name. |
 | `elapsedonespelling_test.go` | H1 | "How many days of silence" is spelled once. |
 | `employmentcurrency_test.go` | H1 | employment.IsCurrentSQL calls itself "the ONE spelling of 'this job is still theirs', and the only definition of a current employment in this product". |
 | `importtargetsclaim_test.go` | H3 | What the contract says an import can receive, against what it actually can. |

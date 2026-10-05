@@ -240,7 +240,7 @@ Counts are of the core catalog above; an enabled unit's SERVED verbs
 | Scope | Tools it unlocks | What it means |
 |---|---|---|
 | `read` | 17 | Reads only. It is also the sole scope that makes a tool `readOnlyHint: true`, and the only scope a **read seat** may spend at all. |
-| `draft` | 2 | Proposes text. Not read-only: `draft_email` returns a proposal and writes nothing, while `draft_follow_ups_for` persists a draft activity on the deal's timeline. |
+| `draft` | 2 | Proposes text. Not read-only: `draft_email` leaves a first message in the saved drafts of the human it acts for (never on a timeline, and a reply it writes nowhere), while `draft_follow_ups_for` persists a draft activity on the deal's timeline. |
 | `write` | 12 | Creates, patches, archives, advances, merges, promotes, disqualifies, re-links — every change that stays inside the workspace. |
 | `send` | 3 | The three egress verbs. All three are 🟡, so the scope buys the right to *ask*, never the right to send unattended. |
 | `enrich` | 1 | `enrich` — the one verb that fetches from a third party. 🟡 and `Egress: true`, like the `send` three: the cap buys the right to ask. |

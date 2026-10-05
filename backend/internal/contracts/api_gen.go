@@ -36686,7 +36686,9 @@ type MagicUndo struct {
 
 // MailDraft One rep's unsent message, readable by its author and nobody else. Not an activity.
 type MailDraft struct {
-	AnchorId openapi_types.UUID `json:"anchor_id"`
+	// AgentDrafted An agent wrote these words for the author through `draft_email`, and the author has not saved over them yet. The screen says so before the message is sent. A save from the composer clears it.
+	AgentDrafted bool               `json:"agent_drafted"`
+	AnchorId     openapi_types.UUID `json:"anchor_id"`
 
 	// AnchorType What the composer opened against: `activity` for a reply to that message, or the
 	// record a new conversation starts from.

@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -114,9 +115,9 @@ func (s *Service) WithVoice(reader draftvoice.Reader, log *slog.Logger) *Service
 func (s *Service) Draft(
 	ctx context.Context, contactID ids.ContactID, req Request,
 ) (crmcontracts.CompanyEmailDraft, error) {
-	// Human-only: drafting spends the workspace's model budget on prose for a
-	// contact to send under their own name.
-	if err := auth.RequireHuman(ctx); err != nil {
+	// A human, or an agent holding draft: draft_email reaches this engine too
+	// (agentdraftseam.go), so one contact gets one draft whoever asks.
+	if err := auth.RequireHumanOrAgentScope(ctx, principal.ScopeDraft); err != nil {
 		return crmcontracts.CompanyEmailDraft{}, err
 	}
 	// The gates that matter run HERE, in the caller's own composite read: a
