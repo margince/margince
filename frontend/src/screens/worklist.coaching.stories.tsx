@@ -21,6 +21,7 @@ function member(
   return {
     user_id: `id-${display_name}`,
     display_name,
+    activation: "active",
     counts: { waiting: 0, at_risk: 0, overdue: 0, promises_due: 0, ...counts },
   };
 }

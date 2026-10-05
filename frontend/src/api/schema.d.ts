@@ -40535,6 +40535,39 @@ export interface components {
              *     labelled in ranked order — a client draws a heading where the band changes.
              */
             bands?: components["schemas"]["WorklistBand"][];
+            plan_coverage?: components["schemas"]["WorklistPlanCoverage"];
+        };
+        /**
+         * @description Whose weekly plans this read looked at, present only when `scope` is `team` and the
+         *     due commitments were read across the team roster. Absent under every other scope.
+         *
+         *     It exists because "nothing due" and "not looked at" differ. A teammate whose plan
+         *     could not be read contributes no rows, and without this a lead would read their
+         *     silence as a week with nothing owed.
+         */
+        WorklistPlanCoverage: {
+            /** @description One entry per roster member whose plan this read asked for, in roster order. */
+            members: components["schemas"]["WorklistPlanCoverageMember"][];
+            /**
+             * @description True when the roster came back at its cap, so teammates past it were never asked
+             *     for a plan at all — the same admission `scope_truncated` makes for the page.
+             */
+            truncated: boolean;
+        };
+        /** @description One teammate and whether their weekly plan was read. */
+        WorklistPlanCoverageMember: {
+            /**
+             * Format: uuid
+             * @description Whose plan this entry is about.
+             */
+            user_id: string;
+            /** @description The teammate, as the roster names them. */
+            display_name: string;
+            /**
+             * @description True when the plan was read, whether or not anything in it was due. False when the
+             *     read failed, so this teammate's commitments are unknown rather than absent.
+             */
+            read: boolean;
         };
         /**
          * @description What one source contributed, in numbers that say what they counted.
@@ -40754,6 +40787,10 @@ export interface components {
              *     ordered by display name. Never empty: a caller on no team is their own single
              *     row, because "only you" and "nobody" are different answers and the second reads
              *     as an outage.
+             *
+             *     For a named team (`team`), invited seats that have not signed in yet appear
+             *     too, marked by `activation`, so a lead sees who is on the team rather than only
+             *     who has arrived.
              */
             members: components["schemas"]["TeamBoardMember"][];
             /**
@@ -40783,6 +40820,12 @@ export interface components {
             user_id: string;
             /** @description The teammate, as the roster names them. */
             display_name: string;
+            /**
+             * @description `invited` is a seat that has not signed in yet. Its workload is not measured, so
+             *     its `counts` carry no meaning — a client draws "not measured" for it, never zero.
+             * @enum {string}
+             */
+            activation: "active" | "invited";
             counts: components["schemas"]["TeamBoardCounts"];
         };
         /**

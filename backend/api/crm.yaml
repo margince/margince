@@ -54114,6 +54114,42 @@ components:
             something to tell a reader, and a client inferring the headings from the rows it
             received could not say it. The queue arrives sorted so each band's rows are
             labelled in ranked order — a client draws a heading where the band changes.
+        plan_coverage:
+          $ref: '#/components/schemas/WorklistPlanCoverage'
+
+    WorklistPlanCoverage:
+      type: object
+      description: |
+        Whose weekly plans this read looked at, present only when `scope` is `team` and the
+        due commitments were read across the team roster. Absent under every other scope.
+
+        It exists because "nothing due" and "not looked at" differ. A teammate whose plan
+        could not be read contributes no rows, and without this a lead would read their
+        silence as a week with nothing owed.
+      required: [members, truncated]
+      properties:
+        members:
+          type: array
+          items: { $ref: '#/components/schemas/WorklistPlanCoverageMember' }
+          description: 'One entry per roster member whose plan this read asked for, in roster order.'
+        truncated:
+          type: boolean
+          description: |
+            True when the roster came back at its cap, so teammates past it were never asked
+            for a plan at all — the same admission `scope_truncated` makes for the page.
+
+    WorklistPlanCoverageMember:
+      type: object
+      description: One teammate and whether their weekly plan was read.
+      required: [user_id, display_name, read]
+      properties:
+        user_id: { type: string, format: uuid, description: 'Whose plan this entry is about.' }
+        display_name: { type: string, description: 'The teammate, as the roster names them.' }
+        read:
+          type: boolean
+          description: |
+            True when the plan was read, whether or not anything in it was due. False when the
+            read failed, so this teammate's commitments are unknown rather than absent.
 
     WorklistReach:
       type: object
@@ -54347,6 +54383,10 @@ components:
             ordered by display name. Never empty: a caller on no team is their own single
             row, because "only you" and "nobody" are different answers and the second reads
             as an outage.
+
+            For a named team (`team`), invited seats that have not signed in yet appear
+            too, marked by `activation`, so a lead sees who is on the team rather than only
+            who has arrived.
         unassigned:
           $ref: '#/components/schemas/TeamBoardCounts'
           description: |
@@ -54367,7 +54407,7 @@ components:
     TeamBoardMember:
       type: object
       description: One teammate and the work they are answerable for.
-      required: [user_id, display_name, counts]
+      required: [user_id, display_name, activation, counts]
       properties:
         user_id:
           type: string
@@ -54376,6 +54416,12 @@ components:
             Whose row this is. It is what `GET /worklist?owner=` takes, which is the
             drill-down the board routes to.
         display_name: { type: string, description: 'The teammate, as the roster names them.' }
+        activation:
+          type: string
+          enum: [active, invited]
+          description: |
+            `invited` is a seat that has not signed in yet. Its workload is not measured, so
+            its `counts` carry no meaning — a client draws "not measured" for it, never zero.
         counts: { $ref: '#/components/schemas/TeamBoardCounts' }
 
     TeamBoardCounts:

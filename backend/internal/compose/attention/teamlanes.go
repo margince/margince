@@ -27,10 +27,13 @@ type Teammates interface {
 	LiveTeammatesOfCaller(ctx context.Context) ([]TeamMember, bool, error)
 }
 
-// TeamMember is one live human seat sharing a live team with the caller.
+// TeamMember is one human seat on a team the caller may read.
 type TeamMember struct {
 	UserID      ids.UUID
 	DisplayName string
+	// Invited is a seat that has not signed in yet. Only a named team's roster
+	// carries one; its workload is not measured.
+	Invited bool
 }
 
 // OverdueLoad counts each contact's open tasks already past due. Its own reader
