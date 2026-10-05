@@ -5,6 +5,7 @@ package draftfloor_test
 
 import (
 	"context"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -112,6 +113,10 @@ func TestTheRegisterReadsTheSameTextsAsTheLanguage(t *testing.T) {
 			written: draftfloor.Written{Rewrite: informalDraft, Purpose: "mach es kürzer"},
 			want:    "du",
 		},
+		"a subject is read before the draft being rewritten": {
+			written: draftfloor.Written{Subject: "Wie besprochen: Sie erhalten Ihre Unterlagen", Rewrite: informalDraft},
+			want:    "Sie",
+		},
 		"the correspondence still wins over the draft and the intent": {
 			written: draftfloor.Written{Body: formalMail, Rewrite: informalDraft, Purpose: informalIntent},
 			want:    "Sie",
@@ -127,5 +132,30 @@ func TestTheRegisterReadsTheSameTextsAsTheLanguage(t *testing.T) {
 				t.Errorf("envelope = %q/%q, want de/%q", got.Language, got.Register, tc.want)
 			}
 		})
+	}
+}
+
+// The rep's and the installation's language are settings reads, so a draft
+// whose own text decides its language makes neither.
+func TestTextThatDecidesTheLanguageReadsNoSetting(t *testing.T) {
+	t.Parallel()
+	var reads atomic.Int32
+	read := func(context.Context) string {
+		reads.Add(1)
+		return "vi"
+	}
+	resolver := draftfloor.NewResolver().WithUserLanguage(read).WithBaseLanguage(read)
+
+	decided := resolver.Resolve(context.Background(),
+		draftfloor.Written{Purpose: "Ask her whether the pilot can start in May and if she has the budget for it."},
+		convstate.State{Band: convstate.BandNone})
+	if decided.Language != "en" || reads.Load() != 0 {
+		t.Errorf("a readable purpose = %q after %d setting reads, want en after none", decided.Language, reads.Load())
+	}
+
+	fallen := resolver.Resolve(context.Background(), draftfloor.Written{Purpose: "pilot in May"},
+		convstate.State{Band: convstate.BandNone})
+	if fallen.Language != "vi" || reads.Load() != 1 {
+		t.Errorf("an unreadable purpose = %q after %d setting reads, want vi after one", fallen.Language, reads.Load())
 	}
 }

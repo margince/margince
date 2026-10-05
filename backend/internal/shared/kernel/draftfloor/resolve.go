@@ -157,11 +157,16 @@ func (r *Resolver) Resolve(ctx context.Context, written Written, state convstate
 		register(written), state, now, name, email)
 }
 
-// register reads the same texts as the language ladder, in the same order, so
-// a rewrite or a first message with no correspondence keeps the du or Sie its
-// own text uses.
+// evidence is the text a draft's language and register are read from, in the
+// order both ladders trust it. One list, so a rewrite or a first message with
+// no correspondence keeps the du or Sie of the text that chose its language.
+func (w Written) evidence() []string {
+	return []string{w.Body, w.Subject, w.Rewrite, w.Purpose}
+}
+
+// register is the first du or Sie the evidence shows.
 func register(written Written) textlang.Register {
-	for _, text := range []string{written.Body, written.Rewrite, written.Purpose} {
+	for _, text := range written.evidence() {
 		if found := textlang.DetectRegister(text); found != textlang.RegisterUnknown {
 			return found
 		}
@@ -181,16 +186,23 @@ func (r *Resolver) language(ctx context.Context, written Written) textlang.Lang 
 	if textlang.Known(written.Stored) {
 		return textlang.Lang(written.Stored)
 	}
-	var user, base string
-	if r != nil && r.user != nil {
-		user = r.user(ctx)
-	}
-	if r != nil && r.base != nil {
-		base = r.base(ctx)
+	var user, base func(context.Context) string
+	if r != nil {
+		user, base = r.user, r.base
 	}
 	// The helper the footer under a sent message walks too, so the two cannot
 	// disagree about how a text or a fallback is judged.
-	return textlang.FirstKnown([]string{written.Body, written.Subject, written.Rewrite, written.Purpose}, user, base)
+	return textlang.FirstKnown(written.evidence(), deferred(ctx, user), deferred(ctx, base))
+}
+
+// deferred reads a configured language only when FirstKnown reaches its tier.
+func deferred(ctx context.Context, read func(context.Context) string) func() string {
+	return func() string {
+		if read == nil {
+			return ""
+		}
+		return read(ctx)
+	}
 }
 
 // actor names the acting human, or nobody.
