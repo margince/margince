@@ -39,8 +39,10 @@ func seedKeptCommitment(t *testing.T) keptCommitment {
 	if err != nil {
 		t.Fatalf("want the claim on the customer pointing at the task: %v", err)
 	}
-	return keptCommitment{transcriptEnv: e, task: task, claim: claim,
-		settle: NewCommitmentSettleTrigger(e.Pool, slog.Default())}
+	return keptCommitment{
+		transcriptEnv: e, task: task, claim: claim,
+		settle: NewCommitmentSettleTrigger(e.Pool, slog.Default()),
+	}
 }
 
 // newest is the most recent outbox envelope of a type matching where, as the
