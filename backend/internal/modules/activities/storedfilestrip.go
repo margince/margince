@@ -115,7 +115,7 @@ func (s *Store) WithholdStoredFilesTx(ctx context.Context, tx pgx.Tx, files []St
 			continue
 		}
 		if _, err := storekit.Audit(ctx, tx, "update", "attachment", f.ID,
-			map[string]any{"bytes_withheld": false}, map[string]any{"bytes_withheld": true}); err != nil {
+			map[string]any{fieldBytesWithheld: false}, map[string]any{fieldBytesWithheld: true}); err != nil {
 			return fmt.Errorf("activities: auditing a withheld file: %w", err)
 		}
 		if err := s.blob.Delete(ctx, f.Key); err != nil {

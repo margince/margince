@@ -26,6 +26,13 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// PrivateThreadMessage is one message whose files are due, and the stored
+// original it was read from, if any.
+type PrivateThreadMessage struct {
+	Activity   ids.UUID
+	RawCapture *ids.UUID
+}
+
 // SelectPrivateThreadFilesDueTx lists messages on a thread held as personal
 // whose undo window has closed and that still have stored file bytes.
 //
@@ -37,13 +44,6 @@ import (
 // colleague also imported is theirs too and is left alone. So, as the purge
 // leaves them, is mail under a hold, inside the statutory floor, or named by an
 // open data-subject request: withholding bytes cannot be undone either.
-// PrivateThreadMessage is one message whose files are due, and the stored
-// original it was read from, if any.
-type PrivateThreadMessage struct {
-	Activity   ids.UUID
-	RawCapture *ids.UUID
-}
-
 func SelectPrivateThreadFilesDueTx(
 	ctx context.Context, tx pgx.Tx, windows PersonalPurgeWindows, floor StatutoryFloor, limit int,
 ) ([]PrivateThreadMessage, error) {
