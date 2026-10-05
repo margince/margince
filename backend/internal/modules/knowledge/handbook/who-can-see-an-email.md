@@ -22,10 +22,16 @@ from a sender your verdict judged a personal correspondent in the last 14 days.
 Margince keeps such a message's files out of the file store, and the stored
 original carries none of their bytes. The message itself is kept, and still
 lists each file by name and size, with its kind where the filename shows one,
-marked as not kept. A sender
-verdict does not apply to a sender you marked as business on the Senders page,
-one you have replied to, or a contact you correspond with. This covers new mail
-only: mail that arrived before the verdict keeps its files.
+marked as not kept. A sender verdict does not apply to a sender you marked as
+business on the Senders page, one you have replied to, or a contact you
+correspond with.
+
+Mail that arrived before the verdict loses its files later, once you have had
+time to change your mind. On a thread held as personal, its files are removed
+the same way a week after you held it yourself, or a month after Margince did.
+Mail from a sender judged personal is deleted whole by the personal-mail
+cleanup on the same schedule. Sharing the thread, or marking the sender as
+business, before then keeps the files.
 
 ### Who can see an email I captured or sent?
 To see who can read an email in Margince, open the message from a timeline: the line under its subject shows **Team**, **Shared**, **Participants**, **Selected** or **Withheld**, with a sentence saying what that means.

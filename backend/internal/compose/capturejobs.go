@@ -395,6 +395,9 @@ type counterpartyVerdictWorker struct {
 	// purger destroys personal mail past its window. Nil in a role with no
 	// object store, and the stage is then skipped rather than half-done.
 	purger *CapturePurger
+	// stripper withholds the files of personal-thread mail past the same
+	// window. Nil without an object store, for the same reason.
+	stripper *privateThreadStripper
 	// backlogNotice tells a seat their capture backlog stopped moving. Nil in a
 	// role composed without notices, and the stage is then skipped.
 	backlogNotice BacklogNotifier
@@ -470,6 +473,23 @@ func (w *counterpartyVerdictWorker) judgeWorkspace(ctx context.Context, workspac
 	if destroyed > 0 && w.log != nil {
 		w.log.InfoContext(ctx, "counterparty verdict: destroyed personal mail past its window",
 			"workspace", workspace.String(), "messages", destroyed)
+	}
+	return w.stripPrivateThreads(ctx, wsCtx, workspace)
+}
+
+// stripPrivateThreads withholds the files of personal-thread mail past the
+// purge's window. After the purge, so mail it destroys is not stripped first.
+func (w *counterpartyVerdictWorker) stripPrivateThreads(ctx, wsCtx context.Context, workspace ids.UUID) error {
+	if w.stripper == nil {
+		return nil
+	}
+	stripped, err := w.stripper.StripWorkspace(wsCtx, capture.DefaultPersonalPurgeWindows())
+	if err != nil {
+		return err
+	}
+	if stripped > 0 && w.log != nil {
+		w.log.InfoContext(ctx, "counterparty verdict: withheld the files of personal-thread mail past its window",
+			"workspace", workspace.String(), "messages", stripped)
 	}
 	return nil
 }

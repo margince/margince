@@ -173,6 +173,9 @@ func addCapturePipelineJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerC
 		// report mail as gone while it is not, which is the same reason the
 		// HTTP purge is built at the store and not at assembly.
 		purger: capturePurgerFor(pool, cfg.Blobstore, log, cfg.ControllerVault),
+		// The files of personal-thread mail, after the same window, and only
+		// with an object store for the same reason as the purge.
+		stripper: privateThreadStripperFor(pool, cfg.Blobstore),
 		// The stall notice, which is the only thing that tells a seat their
 		// backlog stopped moving: an outage refunds the attempt rather than
 		// spending it, so nothing retires and nothing else surfaces it.
