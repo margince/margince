@@ -2523,6 +2523,7 @@ export const en = {
   "email.detail.none": "This message",
   "email.detail.attachments_one": "{count} attachment",
   "email.detail.attachments_other": "{count} attachments",
+  "email.detail.attachmentWithheld": "Not kept: private mail",
   "email.detail.showQuoted": "Show quoted history",
   "email.detail.withheldReason": "This message is not shared with you",
   "email.detail.from": "From",

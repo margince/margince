@@ -54,6 +54,10 @@ type FileKeeper interface {
 	// Record writes the rows, inside the transaction that captured the message.
 	Record(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
 		from FileSource, staged []StagedFile) error
+	// RecordWithheld writes a row naming each file a private message carried,
+	// with no bytes stored: the name, size and type, and nothing to open.
+	RecordWithheld(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
+		from FileSource, files []CapturedFile) error
 }
 
 // CapturedFile is one file a message carried, already bounded, renamed safely
@@ -144,16 +148,7 @@ func (s *Sink) stageParts(ctx context.Context, rec connector.NormalizedRecord) (
 	if len(rec.Parts) == 0 || s.files == nil {
 		return nil, nil
 	}
-	files := make([]CapturedFile, 0, len(rec.Parts))
-	for _, part := range rec.Parts {
-		files = append(files, CapturedFile{
-			PartID:       partIdentity(part.Ordinal),
-			Filename:     part.Filename,
-			ContentType:  part.ContentType,
-			DeclaredType: part.DeclaredType,
-			Body:         part.Body,
-		})
-	}
+	files := capturedFilesOf(rec.Parts)
 	// Proven, never assumed. Nothing downstream will fail on an unbound
 	// context: ADR-0091 §8 phase D took the tenant column off every core table,
 	// so no write here can bounce off a NOT NULL, and an object store never had
@@ -173,6 +168,21 @@ func (s *Sink) stageParts(ctx context.Context, rec connector.NormalizedRecord) (
 	return staged, nil
 }
 
+// capturedFilesOf is the keeper's view of a message's parts.
+func capturedFilesOf(parts []connector.Part) []CapturedFile {
+	files := make([]CapturedFile, 0, len(parts))
+	for _, part := range parts {
+		files = append(files, CapturedFile{
+			PartID:       partIdentity(part.Ordinal),
+			Filename:     part.Filename,
+			ContentType:  part.ContentType,
+			DeclaredType: part.DeclaredType,
+			Body:         part.Body,
+		})
+	}
+	return files
+}
+
 // recordParts writes the rows for one newly captured activity.
 //
 // It takes the typed fields rather than reading them back out of rec.Fields:
@@ -185,16 +195,35 @@ func (s *Sink) recordParts(
 	if len(staged) == 0 || s.files == nil {
 		return nil
 	}
-	from := FileSource{
+	if err := s.files.Record(ctx, tx, activityID, fileSourceFor(rec, fields), staged); err != nil {
+		return fmt.Errorf("capture: recording the files a message carried: %w", err)
+	}
+	return nil
+}
+
+// recordWithheldParts names the files a private message carried, on rows with
+// no bytes behind them, so its owner still sees what was attached.
+func (s *Sink) recordWithheldParts(
+	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
+	rec connector.NormalizedRecord, fields ActivityFields, parts []connector.Part,
+) error {
+	if len(parts) == 0 || s.files == nil {
+		return nil
+	}
+	if err := s.files.RecordWithheld(ctx, tx, activityID, fileSourceFor(rec, fields), capturedFilesOf(parts)); err != nil {
+		return fmt.Errorf("capture: naming the files a private message carried: %w", err)
+	}
+	return nil
+}
+
+// fileSourceFor is the provenance every file of one message shares.
+func fileSourceFor(rec connector.NormalizedRecord, fields ActivityFields) FileSource {
+	return FileSource{
 		System:     rec.NaturalKey.SourceSystem,
 		MessageID:  rec.NaturalKey.SourceID,
 		CapturedBy: rec.CapturedBy,
 		Category:   fileCategoryFor(fields),
 	}
-	if err := s.files.Record(ctx, tx, activityID, from, staged); err != nil {
-		return fmt.Errorf("capture: recording the files a message carried: %w", err)
-	}
-	return nil
 }
 
 // partIdentity is the part's identity within its message, as stored. It is the

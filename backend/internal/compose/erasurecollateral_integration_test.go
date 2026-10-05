@@ -85,3 +85,37 @@ func TestAnErasureTombstonesTheAttachmentsItPurged(t *testing.T) {
 			"without one, its filename stays readable through the compliance log", n)
 	}
 }
+
+// A withheld file has a row and no object. The erasure deletes the row and
+// asks no object store about it — on an installation with no store, an erasure
+// that counted the empty key as an object to purge would refuse outright.
+// Hung on the contact rather than on a captured message to keep the subject's
+// scope to one table; the eraser reads both through the same query.
+func TestAnErasureDeletesAWithheldFileWithoutAnObjectStore(t *testing.T) {
+	e := integration.Setup(t)
+
+	var contact, attachment ids.UUID
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		ctx := context.Background()
+		if err := tx.QueryRow(ctx, `
+			INSERT INTO contact (full_name, owner_id, source, captured_by, visibility)
+			VALUES ('Withheld Subject', $1, 'manual', 'human:test', 'workspace')
+			RETURNING id`, e.Rep1).Scan(&contact); err != nil {
+			return err
+		}
+		return tx.QueryRow(ctx, `
+			INSERT INTO attachment (entity_type, entity_id, filename, storage_key, source, captured_by, bytes_withheld)
+			VALUES ('contact', $1, 'payslip.pdf', '', 'imap', 'connector:imap', true)
+			RETURNING id`, contact).Scan(&attachment)
+	}); err != nil {
+		t.Fatalf("seeding the subject and their withheld file: %v", err)
+	}
+
+	if err := privacy.NewEraser(InstallationDB(e.Pool)).
+		EraseContact(e.Admin(), contact, "subject request"); err != nil {
+		t.Fatalf("EraseContact with a withheld file and no object store: %v", err)
+	}
+	if n := countRows(t, e, `SELECT count(*) FROM attachment WHERE id = $1`, attachment); n != 0 {
+		t.Fatalf("the withheld file's row survived the erasure (%d left)", n)
+	}
+}

@@ -58,3 +58,21 @@
     border-color var(--dur-state) var(--ease-out),
     color var(--dur-state) var(--ease-out);
 }
+
+/* A file recorded by name only: the same card, quieter, and still under the
+   pointer, because there is nothing behind it to open. */
+.file-chip-withheld {
+  border-style: dashed;
+  color: var(--textSecondary);
+}
+.file-chip-withheld:hover {
+  border-color: var(--borderSubtle);
+  color: var(--textSecondary);
+}
+.file-chip-withheld:hover svg {
+  color: inherit;
+}
+.file-chip-note {
+  flex: none;
+  font-style: italic;
+}

@@ -2451,6 +2451,7 @@ export const de = {
   "email.detail.none": "Diese Nachricht",
   "email.detail.attachments_one": "{count} Anhang",
   "email.detail.attachments_other": "{count} Anhänge",
+  "email.detail.attachmentWithheld": "Nicht gespeichert: private Mail",
   "email.detail.showQuoted": "Zitierten Verlauf anzeigen",
   "email.detail.withheldReason":
     "Diese Nachricht ist nicht für dich freigegeben",

@@ -232,7 +232,9 @@ func (s *Sink) finishNewActivity(
 	if err != nil {
 		return counterpartyDecision{}, err
 	}
+	var withheldParts []connector.Part
 	if private {
+		withheldParts = rec.Parts
 		var withheld int
 		rec, withheld = stripPersonalParts(rec)
 		if err := s.personalPartsWithheld(ctx, tx, rec, withheld, verdict); err != nil {
@@ -244,6 +246,9 @@ func (s *Sink) finishNewActivity(
 		return counterpartyDecision{}, err
 	}
 	if err := s.recordParts(ctx, tx, id, rec, fields, staged); err != nil {
+		return counterpartyDecision{}, err
+	}
+	if err := s.recordWithheldParts(ctx, tx, id, rec, fields, withheldParts); err != nil {
 		return counterpartyDecision{}, err
 	}
 	if err := s.logPartDrops(ctx, tx, rec); err != nil {

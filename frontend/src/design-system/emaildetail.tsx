@@ -293,6 +293,7 @@ function EmailBody({
  */
 function Attachments({ files }: Readonly<{ files: EmailAttachmentSummary[] }>) {
   const { locale } = useLocale();
+  const t = useT();
   if (files.length === 0) {
     // No empty region: a heading over nothing says the message had files and
     // they are missing, which is a different claim from having had none.
@@ -309,7 +310,11 @@ function Attachments({ files }: Readonly<{ files: EmailAttachmentSummary[] }>) {
         {files.map((file) => (
           <li key={file.id}>
             <FileChip
-              href={`/v1/attachments/${file.id}`}
+              // A private message's file was named but not kept, so it is
+              // listed without a link to bytes that do not exist.
+              {...(file.bytes_withheld
+                ? { withheld: t("email.detail.attachmentWithheld") }
+                : { href: `/v1/attachments/${file.id}` })}
               filename={file.filename}
               // Absent rather than zero when the server sent no size: a size
               // it could not record is not a file of no bytes.

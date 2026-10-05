@@ -17,12 +17,9 @@ package capture
 // of the object store and out of raw_capture, because a copy in the stored
 // original is the same file kept somewhere else.
 //
-// The cost, stated rather than glossed: the owner loses the file LIST too. A
-// row naming the attachment without its bytes would need the keeper contract
-// to carry a withheld file, and that shape belongs to the module that owns the
-// attachment table. Until then the breadcrumb is what says the files were kept
-// out deliberately rather than never seen — which is the distinction somebody
-// asking "where are my attachments" actually needs.
+// The owner keeps the file LIST: each withheld file is recorded by name, size
+// and type on a row with no bytes behind it (FileKeeper.RecordWithheld), so
+// "where are my attachments" has an answer on the message itself.
 
 import (
 	"context"
@@ -170,7 +167,8 @@ func withholdRawParts(rec connector.NormalizedRecord) connector.NormalizedRecord
 const fieldVerdict = "verdict"
 
 // stripPersonalParts takes a private thread's files out of the record before
-// anything stores them, and reports how many it withheld.
+// anything stores them, and reports how many it withheld. The caller keeps the
+// parts it took, to name them on rows without bytes.
 //
 // The parts are REMOVED rather than emptied. Staging writes each body to the
 // object store unconditionally, so an emptied part would put a zero-length

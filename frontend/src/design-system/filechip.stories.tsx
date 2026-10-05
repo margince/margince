@@ -34,6 +34,16 @@ export const OtherKind: Story = {
   args: { href: "/v1/attachments/a-2", filename: "terms-redline.docx" },
 };
 
+// A private message's file, recorded by name, size and type with no bytes kept:
+// the same card, quieter, and not a link.
+export const Withheld: Story = {
+  args: {
+    withheld: "Not kept: private mail",
+    filename: "payslip-september.pdf",
+    size: "120 kB",
+  },
+};
+
 // What a message's shelf of files looks like: the mix a mail actually carries,
 // with the sizes that tell a signature logo from the paper it came with.
 export const MailAttachments: Story = {

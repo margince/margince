@@ -30038,6 +30038,11 @@ components:
         filename: { type: string }
         byte_size: { type: [integer, 'null'] }
         content_type: { type: [string, 'null'] }
+        bytes_withheld:
+          type: boolean
+          description: >-
+            True when the message is private to its owner and the file was recorded by
+            name, size and type only. There are no bytes to fetch.
 
     EmailAccess:
       type: object
@@ -40741,6 +40746,12 @@ components:
             as company_id above, and just as deliberately not a second parent. Set at
             upload by the contact filing the paper; never inferred from a filename or a date,
             which is the guess the document state exists to refuse.
+        bytes_withheld:
+          type: boolean
+          readOnly: true
+          description: >-
+            True for a file a private message carried that was recorded by name, size and
+            type only: no bytes were kept, so there is nothing to download (404) or read.
         source: { type: string }
         captured_by: { type: string, readOnly: true, description: 'Server-stamped from the authenticated principal; never client-supplied.' }
         created_at: { type: string, format: date-time }
