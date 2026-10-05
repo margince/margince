@@ -59,7 +59,10 @@ func TestACrowdedMeetingBindsItsSeatsAndNoStrangerOnEitherPath(t *testing.T) {
 	e := integration.Setup(t)
 	seedCalendarConnection(t, e)
 	seatEmail := e.WsScalar(t, `SELECT email FROM app_user WHERE id = $1`, e.Rep1)
-	crowd := crowdWithSeat(seatEmail)
+	// The calendar's owner is on the invitation too, under their login
+	// address, and capture has already stamped them once.
+	ownerEmail := e.WsScalar(t, `SELECT email FROM app_user WHERE id = $1`, e.AdminUser)
+	crowd := append(crowdWithSeat(seatEmail), attendee{email: ownerEmail, response: "accepted"})
 
 	repaired := seedCapturedMeeting(t, e, "evt-crowd-repair", time.Now().Add(-time.Hour), crowd...)
 	if _, err := repairMeetingAttendeesBatch(
@@ -97,6 +100,10 @@ func TestACrowdedMeetingBindsItsSeatsAndNoStrangerOnEitherPath(t *testing.T) {
 		if !slices.Equal(seats, want) {
 			t.Errorf("%s meeting binds seats %v, want %v — a colleague on a crowded meeting "+
 				"must still be able to read it", name, seats, want)
+		}
+		if rows := e.WsCount(t, `SELECT count(*) FROM activity_participant WHERE activity_id = $1 AND user_id = $2`,
+			id, e.AdminUser); rows > 1 {
+			t.Errorf("%s meeting holds %d rows for its owner, want at most 1 — one colleague in the room is one row", name, rows)
 		}
 		if strangers != 0 {
 			t.Errorf("%s meeting records %d strangers past the cap, want 0 — a distribution "+

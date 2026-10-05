@@ -52,13 +52,17 @@ func StampSeatsPastTheCap(
 		roles = append(roles, p.Role)
 		names = append(names, strings.TrimSpace(p.DisplayName))
 	}
-	// DISTINCT ON the seat: a colleague listed as organizer and attendee is
-	// still one colleague in the room, and the first role stated stands.
+	// One row per seat: a colleague listed twice, or a calendar owner capture
+	// already stamped, is still one colleague in the room. The uniqueness index
+	// keys on role and address, so it cannot say that itself.
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO activity_participant (activity_id, user_id, address, role, display_name)
 		SELECT DISTINCT ON (u.id) $1, u.id, inp.address, inp.role, inp.display_name
 		  FROM unnest($2::text[], $3::text[], $4::text[]) WITH ORDINALITY AS inp(address, role, display_name, ord)
 		  JOIN app_user u ON lower(u.email) = inp.address
+		 WHERE NOT EXISTS (
+		       SELECT 1 FROM activity_participant ap
+		        WHERE ap.activity_id = $1 AND ap.user_id = u.id)
 		 ORDER BY u.id, inp.ord
 		ON CONFLICT DO NOTHING`,
 		activityID, addresses, roles, names); err != nil {
