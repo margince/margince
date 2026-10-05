@@ -69,6 +69,7 @@
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
   background: var(--bgChip);
+  color: var(--textPrimary);
 }
 .reporting-block-choice {
   display: flex;

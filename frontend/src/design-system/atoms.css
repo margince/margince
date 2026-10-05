@@ -687,6 +687,7 @@
   padding-inline: var(--space-1);
   border-radius: var(--r-xs);
   background: var(--bgChip);
+  color: var(--textPrimary);
   font: var(--fontBodySmall);
 }
 
@@ -702,6 +703,7 @@
      thing that CAN take a second line, so it does. */
   flex-wrap: wrap;
   background: var(--bgChip);
+  color: var(--textPrimary);
   border-radius: var(--r-sm);
   padding: 3px;
   gap: 2px;
@@ -826,6 +828,7 @@
 
 .kbd {
   background: var(--bgChip);
+  color: var(--textPrimary);
   border: 1px solid var(--borderStrong);
   border-bottom-width: 2px;
   border-radius: var(--r-xs);

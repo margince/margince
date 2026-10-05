@@ -120,6 +120,7 @@
   height: 30px;
   border-radius: var(--r-sm);
   background: var(--bgChip);
+  color: var(--textPrimary);
   display: grid;
   place-items: center;
   flex: none;
