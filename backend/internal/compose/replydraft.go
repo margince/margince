@@ -58,8 +58,11 @@ type replyActivityData struct {
 	// rule sends to the familiar greeting rather than to a guess.
 	RecipientLastName string `json:"recipient_last_name,omitempty"`
 
-	Subject      string `json:"subject,omitempty"`
-	Body         string `json:"body,omitempty"`
+	Subject string `json:"subject,omitempty"`
+	Body    string `json:"body,omitempty"`
+	// OccurredAt is the anchor's own date, RFC 3339. The band alone spans 8 to
+	// 90 days, and a model given only its name wrote "a few weeks" for ten.
+	OccurredAt   string `json:"occurred_at,omitempty"`
 	Intent       string `json:"intent,omitempty"`
 	Conversation string `json:"conversation,omitempty"`
 	// Thread identifies inbound evidence for grounding and consent semantics.
@@ -177,6 +180,7 @@ func (d replyDrafter) DraftEmailWithProvenance(ctx context.Context, anchor ids.U
 		RecipientLastName: boundedRunes(surname, recipientMaxRunes),
 		Subject:           boundedRunes(topic, replyActivityMaxRunes),
 		Body:              boundedRunes(body, replyActivityMaxRunes),
+		OccurredAt:        activity.OccurredAt.UTC().Format(time.RFC3339),
 		Intent:            boundedRunes(strings.TrimSpace(intent), replyActivityMaxRunes),
 		Conversation:      conversation,
 	}

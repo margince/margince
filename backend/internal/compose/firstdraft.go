@@ -106,6 +106,13 @@ func (d replyDrafter) DraftFirstEmail(ctx context.Context, intent string) (strin
 // draftvoice.Violations and draftvoice.Sanitize, so this one decides only what
 // to do when the floor trips.
 func (d replyDrafter) completeFirstVoiced(ctx context.Context, data replyActivityData, voice draftvoice.Context) (replyDraft, error) {
+	draft, err := d.firstVoicedDraft(ctx, data, voice)
+	return data.greeted(draft), err
+}
+
+// firstVoicedDraft is completeFirstVoiced before the greeting repair, so the
+// voice floor judges the model's own text.
+func (d replyDrafter) firstVoicedDraft(ctx context.Context, data replyActivityData, voice draftvoice.Context) (replyDraft, error) {
 	if !voice.OK {
 		return d.completeChecked(ctx, firstDraftSystem, data, nil)
 	}

@@ -359,6 +359,7 @@ func TestTheSharedRulesNameFieldsEverySurfaceActuallySends(t *testing.T) {
 	envelope := draftfloor.Envelope{
 		Language:          "en",
 		ConversationState: "fresh",
+		SilenceDays:       "10",
 		Now:               "2026-08-11T09:00:00Z",
 		SenderName:        "Lars Jankowfsky",
 		SenderEmail:       "lars@example.com",
@@ -379,6 +380,7 @@ func TestTheSharedRulesNameFieldsEverySurfaceActuallySends(t *testing.T) {
 	named := map[string]struct{ block, instruction string }{
 		"the language to write in": {"LANGUAGE", "in the language named by the\noutput_language field"},
 		"who the draft is from":    {"WHO IS WRITING", "named by the sender_name and sender_email fields"},
+		"how long the gap is":      {"TIME", "Size every time reference from silence_days"},
 	}
 	for what, rule := range named {
 		if !strings.Contains(blockOf(draftrules.Shared, rule.block), rule.instruction) {
@@ -398,7 +400,7 @@ func TestTheSharedRulesNameFieldsEverySurfaceActuallySends(t *testing.T) {
 		if err := json.Unmarshal(encoded, &decoded); err != nil {
 			t.Fatalf("%s: decode: %v", surface, err)
 		}
-		for _, field := range []string{"output_language", "sender_name", "sender_email"} {
+		for _, field := range []string{"output_language", "sender_name", "sender_email", "silence_days"} {
 			if value, ok := fieldOnSurface(decoded, field); !ok || value == "" {
 				t.Errorf("the shared rules tell the model to read %q, but the %s payload carries no such field — "+
 					"an instruction pointing at nothing is what let a German corpus answer an English thread",
