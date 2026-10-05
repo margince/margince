@@ -33,7 +33,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/partslim"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
-	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // withheldPersonalParts is the breadcrumb a stripped message leaves, in the
@@ -110,31 +109,6 @@ func senderIsPersonalTx(
 		return false, fmt.Errorf("capture: reading whether this sender is a personal correspondent: %w", err)
 	}
 	return personal, nil
-}
-
-// captureActivityRecord writes one activity record's original and then the
-// activity. The original is stored AFTER the record is read against the seat's
-// own addresses, so the privacy question it asks sees the same record that
-// staging asks it about.
-func (s *Sink) captureActivityRecord(
-	ctx context.Context, tx pgx.Tx, seat ids.UUID, rec connector.NormalizedRecord, fields ActivityFields,
-) (datasource.EntityRef, bool, counterpartyDecision, error) {
-	// FIRST of everything that touches an activity row in this transaction,
-	// alias adoption included: adoption recomputes the audience of every
-	// message it adopts, which locks those rows, and a transaction holding one
-	// before it asks for the merge lock is the cycle takeMergeLockFirst exists
-	// to break.
-	if err := s.takeMergeLockFirst(ctx, tx, rec); err != nil {
-		return datasource.EntityRef{}, false, counterpartyDecision{}, err
-	}
-	rec, fields, err := s.readAgainstTheSeatsAddressesTx(ctx, tx, seat, rec, fields)
-	if err != nil {
-		return datasource.EntityRef{}, false, counterpartyDecision{}, err
-	}
-	if rec, err = storeOriginalTx(ctx, tx, rec); err != nil {
-		return datasource.EntityRef{}, false, counterpartyDecision{}, err
-	}
-	return s.captureActivity(ctx, tx, rec, fields)
 }
 
 // storeOriginalTx writes the record's original to raw_capture and stamps the

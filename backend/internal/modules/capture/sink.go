@@ -235,8 +235,24 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 
 		switch fields := rec.Fields.(type) {
 		case ActivityFields:
+			// FIRST of everything that touches an activity row in this
+			// transaction, alias adoption included: adoption recomputes the
+			// audience of every message it adopts, which locks those rows, and a
+			// transaction holding one before it asks for the merge lock is the
+			// cycle takeMergeLockFirst exists to break.
+			if err := s.takeMergeLockFirst(ctx, tx, rec); err != nil {
+				return err
+			}
 			var err error
-			ref, activityCreated, decision, err = s.captureActivityRecord(ctx, tx, actor.UserID, rec, fields)
+			if rec, fields, err = s.readAgainstTheSeatsAddressesTx(ctx, tx, actor.UserID, rec, fields); err != nil {
+				return err
+			}
+			// Stored only now, so the original's privacy question sees the record
+			// staging sees, after it was read against the seat's own addresses.
+			if rec, err = storeOriginalTx(ctx, tx, rec); err != nil {
+				return err
+			}
+			ref, activityCreated, decision, err = s.captureActivity(ctx, tx, rec, fields)
 			return err
 		case LeadFields:
 			if rec, err = storeOriginalTx(ctx, tx, rec); err != nil {
