@@ -154,7 +154,7 @@ func seedParkedSenders(t *testing.T, env captureEnv) {
 		t.Fatal(err)
 	}
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		return store.ResolveReviewed(context.Background(), tx, decided, capturemod.PendingStatusRejected, "declined by a person")
+		return store.ResolveReviewed(context.Background(), tx, decided, capturemod.PendingStatusRejected, "declined in the review queue")
 	}); err != nil {
 		t.Fatal(err)
 	}

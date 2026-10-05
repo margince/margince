@@ -25,7 +25,7 @@ const enrichStateObject = "capture_auto_enrich_state"
 // inside the window, for a company nobody has since made a dossier for or
 // archived: a read by a human leaves a non-failed site_read, which the sweep
 // already treats as done, so reopening it would only queue a duplicate. One
-// text for the count, the list and the lock, so they cannot disagree.
+// text for the count, the list and the lock.
 const parkedEnrichment = `
 	s.attempts >= $1 AND s.last_outcome IN ('exhausted', 'failed')
 	AND s.last_attempt_at >= $2 AND s.last_attempt_at < $3

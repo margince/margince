@@ -21,9 +21,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// ExhaustedReason is what RetireExhausted records. It is the ledger's only
-// spelling of "retired for lack of an answer", which is what separates a row to
-// reopen from one the model DID judge and could not hold with confidence.
+// ExhaustedReason is what RetireExhausted records for a row retired for lack
+// of an answer, which is what separates a row to reopen from one the model DID
+// judge and could not hold with confidence.
 const ExhaustedReason = "no usable verdict within the attempt bound"
 
 // pendingObject names the ledger row in the audit trail.
@@ -47,8 +47,8 @@ func (w ReopenWindow) Validate() error {
 
 // parkedByExhaustion selects the rows RetireExhausted ended inside the window.
 // A human's decision moves a row out of `unsure` (or stamps it as the owner's),
-// so neither can match; every reader and the lock below share this one text so
-// the count an operator sees is the set the reopen acts on.
+// so neither can match; the count, the list and the lock below share this text,
+// so the count an operator sees is the set the reopen acts on.
 const parkedByExhaustion = `
 	status = 'unsure' AND disposition_reason = $1 AND attempts >= $2
 	AND NOT resolved_by_owner
