@@ -331,7 +331,7 @@ creates the connection.
 ## A gap: attachments
 
 Everything an agent sends *to the AI model* is scrubbed for secrets first: API
-keys, access codes, private keys and passwords are removed and replaced with a
+keys, tokens, private keys and passwords are removed and replaced with a
 marker.
 
 This applies only to what goes to the model. An email an agent sends to a

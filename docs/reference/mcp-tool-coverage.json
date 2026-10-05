@@ -1263,7 +1263,7 @@
     {
       "case": "case42_can_i_answer_on_whatsapp",
       "number": 2,
-      "name": "A channel that cannot send is still reported as working",
+      "name": "A channel that cannot send replies still captures, files and reads",
       "statement": "A transport that can carry no reply still captures, files and reads, and reporting the first as the second tells the reader the product cannot do what it has just done."
     },
     {

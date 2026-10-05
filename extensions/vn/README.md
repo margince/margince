@@ -85,8 +85,12 @@ refusal was received, within 24 hours, carrying no advertising of its own.
 
 The acknowledgement goes out through the controller lane. That is the one lane
 that may write to somebody who has just suppressed themselves, because the
-message serves the subject and not the sender. The consent module sends it from
-the `optout_acknowledgement` controller template.
+message serves the subject and not the sender. The consent module queues it from
+the `optout_acknowledgement` controller template in the same transaction as the
+refusal.
+
+The 24 hours are not enforced. Nothing measures the gap or alerts on it, so a
+worker outage longer than a day sends the acknowledgement late with no error.
 
 ## Windows
 

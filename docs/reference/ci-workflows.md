@@ -17,7 +17,7 @@ Every other workflow sits outside the gate:
 | `sbom.yml` | manual dispatch only | No |
 | `release.yml` | manual dispatch only | No |
 | `release-tag.yml` | `v*` tag push | No (runs on a tag, after every merge) |
-| `desktop-macos.yml` / `desktop-windows.yml` | `desktop/**` pull requests, dispatch, `workflow_call` | No (not required checks) |
+| `desktop-macos.yml` / `desktop-windows.yml` | `desktop/**` pull requests, dispatch, `workflow_call`; macOS also on a `desktop/**` push to `main` | No (not required checks) |
 
 The merge queue rule is off, so the `merge_group` trigger in `ci.yml` does not
 fire. `main-health.yml` is the only publisher of `main`'s SonarCloud analysis.
@@ -340,5 +340,7 @@ MSVC, the event bus needs MSYS2, and the macOS half rewrites every Mach-O load
 command to `@rpath` and re-signs each patched file. Path-scoped to `desktop/**`
 on pull requests so an ordinary change never pays for a Postgres compile, plus
 manual dispatch, plus `workflow_call` from `release-tag.yml`. The macOS lane
+also runs on a `desktop/**` push to `main`, so the merged tree is built once
+more; the Windows lane does not. The macOS lane
 uploads a tarball because `upload-artifact` does not preserve the executable bit;
 the Windows lane has no such bit and uploads the folder.

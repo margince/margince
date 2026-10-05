@@ -380,8 +380,9 @@ Two administrator actions are worth knowing:
 
 ## Money
 
-Margince stores every amount without rounding, together with its currency. Most currencies have
-two decimal places; some, such as yen, won and dong, have none.
+Margince stores every amount as a whole number of the currency's smallest unit,
+such as cents for euros, together with its currency. Most currencies have two
+decimal places; some, such as yen, won and dong, have none.
 
 **Two currencies are never added together.** A column holding more than one
 currency shows no total at all; it says "several currencies, no single total".

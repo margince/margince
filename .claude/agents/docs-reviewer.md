@@ -1,6 +1,6 @@
 ---
 name: docs-reviewer
-description: Reviews the unpushed Markdown diff against docs/reference/docs-prose-style.md for what the prose gate cannot see (wrong facts, wrong audience, padding, restated rules). Runs after `go test ./gates/ -run 'Docs|PublicReferences'` is green. Read-only; reports findings for the main agent to fix.
+description: Reviews the unpushed Markdown diff against docs/reference/docs-prose-style.md for what the prose gate cannot see (wrong facts, wrong audience, padding, restated rules). Runs after `cd backend && go test ./gates/ -run 'Docs|PublicTree'` is green. Read-only; reports findings for the main agent to fix.
 tools: Bash, Read, Grep, Glob
 model: opus
 ---
@@ -12,8 +12,12 @@ make targets and environment variables. Do not report those. Your job is the par
 Read `docs/reference/docs-prose-style.md` first. Then read the diff:
 
 ```bash
-git diff origin/main...HEAD -- '*.md'
+git diff "$(git merge-base origin/main HEAD)" -- '*.md'
+git status --short -- '*.md'
 ```
+
+The first command diffs the merge base against the working tree, so uncommitted edits are included. The second
+lists new files, which a diff does not show until they are added; read those whole.
 
 For each changed passage, check these in order:
 

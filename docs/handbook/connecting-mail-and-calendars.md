@@ -110,8 +110,9 @@ mailbox. You choose a window: **3 months, 6 months, 1 year, 2 years, 3 years, 5
 years, 7 years or 10 years**, or skip it. Six months is the default.
 
 Before it runs, it counts the messages in the window, without reading their
-contents, and shows an estimated AI cost. It counts up to 20,000 messages; a
-larger mailbox is reported as "At least {count} messages in that period".
+contents, and shows an estimated AI cost. Outlook gives an exact count. Gmail
+is counted up to 20,000 messages; a larger Gmail mailbox is reported as "At
+least {count} messages in that period".
 
 You can stop it: "Stopped. Everything captured so far is kept."
 

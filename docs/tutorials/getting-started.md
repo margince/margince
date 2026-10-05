@@ -61,8 +61,13 @@ api behind it, so it is the only URL you need.
 
 Sign in as `admin@demo.test` with `operator-supplied-first-password` (from
 `config/margince-admin-password`). The app asks you to set a new password
-before anything else works. To skip that step, run `make seed-dev` first: it
-completes the admin's first login and sets the password to `demo-password-123`.
+before anything else works. The rest of this page follows that cold path.
+
+`make seed-dev` (against the running stack) is the shortcut past it. It
+completes the admin's first login and sets the password to `demo-password-123`,
+describes the demo company so the cold start never opens, and writes demo
+records. Take it and the next two paragraphs do not apply: you land on a filled
+app.
 
 The first login opens the **cold start**. It asks for your website (or "Enter
 the details yourself"), shows the crawl as it reads the site, and lets you
@@ -73,8 +78,8 @@ explains it.
 
 After that you have contacts, leads, the deal board and the activity timeline,
 all empty. `make dev` boots a cold installation so you see what a first
-customer sees. Run `make seed-dev` against the running stack when you want demo
-records (it is idempotent and safe to re-run).
+customer sees. Run `make seed-dev` later when you want demo records; it is
+idempotent and safe to re-run.
 
 Prefer the API? Log in and reuse the session. The example uses the
 `make seed-dev` password. The `crm_session` cookie is `Secure`, so pull it out

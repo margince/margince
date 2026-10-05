@@ -73,8 +73,8 @@ cloud provider outright, and
 whether its text can leave the installation. Read that before promising
 anyone this runs air-gapped.
 
-Interactions have a 100ms budget. Every budget is published with its last
-measurement. The ones nobody has measured yet
+Opening a contact, company or deal has a 100ms server budget. Every budget is
+published with its last measurement. The ones nobody has measured yet
 say so, instead of being left out:
 [docs/reference/performance-budgets.md](docs/reference/performance-budgets.md).
 

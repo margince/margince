@@ -39917,7 +39917,7 @@ components:
       properties:
         id: { type: string, format: uuid }
         name: { type: string }
-        is_default: { type: boolean, default: false, description: One default per workspace. }
+        is_default: { type: boolean, default: false, description: At most one default per workspace. }
         position: { type: integer, default: 0 }
         stages:
           type: array
@@ -40300,7 +40300,7 @@ components:
           allOf: [{ $ref: '#/components/schemas/ProviderRef' }]
           nullable: true
           description: |
-            Which transport carried this message; non-null only when `kind=message`.
+            Which transport carried this message: set on every `kind=message` row, null on every other kind.
             The kind says what sort of interaction happened; this says what carried it. They
             are separate axes, and reading one off the other is what ADR-0107 retired.
         subject: { type: [string, 'null'] }

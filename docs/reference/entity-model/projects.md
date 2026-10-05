@@ -28,7 +28,7 @@ The 3 tables owned by `projects`, as the migrations build them. [Back to the ent
 | `captured_by` | `text` | yes | Server-stamped from the authenticated principal; never client-supplied. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `legal_hold` | `boolean`, default `false` | yes | True while a litigation or investigation hold is preserving this record. |
-| `search_tsv` | `tsvector`, default `(setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(name, ''::text))), 'A'::"char") \|\| setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(key, ''::text))), 'A'::"char"))` |  | Computed by the database. It cannot be written directly. |
+| `search_tsv` | `tsvector`, generated as `(setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(name, ''::text))), 'A'::"char") \|\| setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(key, ''::text))), 'A'::"char"))` |  | Computed by the database. It cannot be written directly. |
 | `source` | `text` | yes | Which internal channel the record arrived by. |
 | `source_system` | `text` |  | The outside system the record came from, when it came from one. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |

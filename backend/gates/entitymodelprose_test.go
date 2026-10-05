@@ -255,14 +255,18 @@ func namesIdentifier(def, name string) bool {
 	}
 }
 
-// typeCell is a column's type and, when it has one, its default. The default
-// sits here rather than in the description so an undescribed column reads as
-// one: its last cell is empty.
+// typeCell is a column's type and, when it has one, its default or generation
+// expression. Either sits here rather than in the description so an undescribed
+// column reads as one: its last cell is empty.
 func typeCell(column emColumn) string {
-	if column.def == "" {
+	switch {
+	case column.def == "":
 		return "`" + column.dataType + "`"
+	case column.generated:
+		return fmt.Sprintf("`%s`, generated as `%s`", column.dataType, column.def)
+	default:
+		return fmt.Sprintf("`%s`, default `%s`", column.dataType, column.def)
 	}
-	return fmt.Sprintf("`%s`, default `%s`", column.dataType, column.def)
 }
 
 func onDeleteMeaning(action string) string {

@@ -199,11 +199,14 @@ Consequences:
   skips the integration lane. `frontend/src/mcp-apps/forbidden.json` is the
   exception: it is authored under `frontend/` but copied into a Go package under
   a byte-equality test, so it is classified backend too.
-- A **CI PR still runs the full backend lane** when it touches `ci.yml`, the
-  `Makefile`, or `scripts/**`: those change what a gate *does*, so the gates
-  re-run to prove they still pass under the new definition. `release.yml` and
-  `sbom.yml` are outside the scope, because neither runs a backend gate.
-  Neither proves itself on a schedule either, since both are dispatch-only: a
+- A **CI PR still runs the full backend lane**, integration shards included,
+  when it touches `ci.yml`, a `_lane-*.yml`, the `Makefile`, or `scripts/**`.
+  Those change what a gate *does*, so the gates re-run to prove they still pass
+  under the new definition. `release.yml` and `sbom.yml` sit outside
+  `backend_db`, because neither runs a backend gate, so they boot no Postgres
+  shard. They still match `backend` (through `.github/**`) and `deps` (through
+  `.github/workflows/**`), so the Go gates and the license gate run on them.
+  Neither workflow proves itself on a schedule, since both are dispatch-only: a
   change that breaks one is discovered by whoever next dispatches it, so a
   PR touching either is worth dispatching from its own branch before merging.
 - **Draft PRs run nothing** until marked ready (`draft == false` guards every
@@ -212,10 +215,9 @@ Consequences:
   non-draft change, docs included. A leaked `CRAFT-FIX`/`CRAFT-DISPUTE` marker,
   or a hardcoded credential, can land in any file type, so neither can be gated
   on the scope classifier. The **image-pin gate rides in `secret-scan`** for the
-  same reason. It reads the whole workflow directory while the `backend` scope
-  names one file, so gated on the classifier it would skip on the PR that
-  unpins an action in `sbom.yml` or `release.yml`. Renovate bumps `uses:` across
-  all three workflows and auto-merges on green.
+  same reason: supply-chain surface is not a scope. Renovate bumps `uses:`
+  across every workflow and auto-merges on green, so the pin check runs on every
+  change rather than on whichever scopes happen to cover the file it edits.
 
 ## Job graph
 

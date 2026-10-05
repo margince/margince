@@ -47,7 +47,7 @@ Every section below answers a question that screen raises.
 
 ## "~3,436 messages" — counting the scope without reading the mail
 
-The count is a real provider call, but it reads **ids only**. The preview pages
+The count is a real provider call, and on Gmail it reads **ids only**. The preview pages
 `messages.list?q=after:<date>` and counts what comes back: a list of `{id, threadId}` pairs, with no
 headers, snippet or body. The call that fetches a message is used by the import loop, never by the
 preview.
@@ -61,6 +61,9 @@ Two decisions shape the count:
 - **It is bounded.** 500 ids per page, 40 pages, so up to 20,000 messages are counted one by one. A
   larger mailbox reports the counted floor instead of turning a preview into a long scan. The user
   consents to a bound on the scope; the bound is not a promise of the final count.
+
+Microsoft mail takes neither path. Graph answers an exact `@odata.count` for the date filter, so the
+preview uses it directly: there is no cap, and the count is never a floor.
 
 ## "~0.84 USD" — pricing work that hasn't happened
 

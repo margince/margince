@@ -218,12 +218,14 @@ The ceiling is named in tokens, never money, because cost is priced read-side
 and is never the gate (see Cost, below).
 
 Both figures, and their **product**, are bounded by `MaxMonthlyTokens` (10^12).
-The bound on the product is enforced by *refusing*, not clamping. A per-user
-rate that is individually valid can still make `MonthlyTokens` error once
-enough full users exist. Every read this budget gates then errors with it,
-including the read `ReplaceBudget` itself needs before it can accept a
-correction. The rate table takes the same posture with an unpriced call
-(below, under Cost): it reports the gap instead of clamping.
+The bound has two postures, split by whether anyone is choosing the value now.
+A config being *written* is refused when its product passes the bound
+(`MonthlyTokens`, on `PreviewBudget` and `ReplaceBudget`). A config already
+*stored* saturates instead (`SaturatingMonthlyTokens`). Enough full users can
+push a valid per-user rate past the bound; routed spend, the status screen and
+the read `ReplaceBudget` needs before a correction then all work against the
+bound rather than erroring. A clamp can only authorize less than what was
+configured, never more.
 
 **Bands** (`BudgetBand(spent, monthly)` in `usage.go`) turn spend into one of
 three postures with one set of thresholds shared by every consumer that asks
@@ -492,8 +494,9 @@ Each run reports one of four outcomes (`accepted`, `wrong_answer`, `invalid`,
 `single_turn` > `single_call`). A pinned rubric judge on its own `cert_judge`
 binding, never the candidate's, scores quality 0–100. Nothing here gates a
 merge: `make e2e-ai-report` reports each shipped site's record as current,
-partial, stale or absent. A stale record describes a prompt that no longer
-ships. An absent record makes no claim. A partial record is current for the
+partial, stale or absent. A stale record is an outdated measurement:
+something it measured (a scenario, or the prompt the product sends) has changed
+since. An absent record makes no claim. A partial record is current for the
 scenarios it measured and silent on the rest. Each scenario has its own stamp
 (`aicert.ScenarioStamps`, folded by `FoldScenarioStamps` into the task's
 `PromptVersion`), so adding a scenario marks the record partial (for example

@@ -197,8 +197,9 @@ Company research walks the company's **own** site: the home page, the imprint,
 about, team, services, products and contact pages, plus what it finds linked
 from those.
 
-**Margince decides which pages to read.** Nothing on the website can send the
-read to another site or make it read more.
+**Margince decides which pages to read.** Links on the site's own
+pages can change which of its pages get read. Nothing on the website can send
+the read to another site or make it read more pages than its limit.
 
 An address on another domain is recorded as skipped and never fetched. The site's
 own `robots.txt` is honoured.

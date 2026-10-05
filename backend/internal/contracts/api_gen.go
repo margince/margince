@@ -21408,7 +21408,7 @@ type Activity struct {
 	// CapturedBy Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.
 	CapturedBy *string `json:"captured_by,omitempty"`
 
-	// ChannelProvider Which transport carried this message; non-null only when `kind=message`.
+	// ChannelProvider Which transport carried this message: set on every `kind=message` row, null on every other kind.
 	// The kind says what sort of interaction happened; this says what carried it. They
 	// are separate axes, and reading one off the other is what ADR-0107 retired.
 	ChannelProvider *ProviderRef `json:"channel_provider,omitempty"`
@@ -38514,7 +38514,7 @@ type Pipeline struct {
 	CreatedAt  *time.Time         `json:"created_at,omitempty"`
 	Id         openapi_types.UUID `json:"id"`
 
-	// IsDefault One default per workspace.
+	// IsDefault At most one default per workspace.
 	IsDefault bool       `json:"is_default"`
 	Name      string     `json:"name"`
 	Position  int        `json:"position"`

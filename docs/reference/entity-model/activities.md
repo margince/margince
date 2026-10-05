@@ -21,7 +21,7 @@ The 25 tables owned by `activities`, as the migrations build them. [Back to the 
 | `capture_label_declined_at` | `timestamp with time zone` |  |  |
 | `capture_label_declined_ruleset` | `text` |  |  |
 | `capture_labeled_at` | `timestamp with time zone` |  |  |
-| `channel_provider` | `text` |  | Which transport carried this message; non-null only when `kind=message`. |
+| `channel_provider` | `text` |  | Which transport carried this message: set on every `kind=message` row, null on every other kind. |
 | `claims_host_slot` | `boolean`, default `false` | yes |  |
 | `counterparty_email` | `text` |  |  |
 | `counterparty_outbound_attested` | `boolean`, default `false` | yes |  |
@@ -63,7 +63,7 @@ The 25 tables owned by `activities`, as the migrations build them. [Back to the 
 | `captured_by` | `text` | yes | Server-stamped from the authenticated principal (human:<uuid> \| agent:<id> \| connector:<name>); never client-supplied. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `raw` | `jsonb` |  | The unparsed upstream payload the row was built from, kept for replay and debugging. |
-| `search_tsv` | `tsvector`, default `(((setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(subject, ''::text))), 'A'::"char") \|\| setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(subject, ''::text))), 'A'::"char")) \|\| setweight(to_tsvector(activity_ts_config(language), f_unaccent(((COALESCE(subject, ''::text) \|\| ' '::text) \|\| COALESCE(body, ''::text)))), 'B'::"char")) \|\| setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(body, ''::text))), 'C'::"char"))` |  | Computed by the database. It cannot be written directly. |
+| `search_tsv` | `tsvector`, generated as `(((setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(subject, ''::text))), 'A'::"char") \|\| setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(subject, ''::text))), 'A'::"char")) \|\| setweight(to_tsvector(activity_ts_config(language), f_unaccent(((COALESCE(subject, ''::text) \|\| ' '::text) \|\| COALESCE(body, ''::text)))), 'B'::"char")) \|\| setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(body, ''::text))), 'C'::"char"))` |  | Computed by the database. It cannot be written directly. |
 | `source` | `text` | yes | Which internal channel the record arrived by. |
 | `source_system` | `text` |  | Which system this record came from: `email` for any captured or sent mail (one identity across gmail/outlook/imap), else gcal/outlook/transcript or a caller's own. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |

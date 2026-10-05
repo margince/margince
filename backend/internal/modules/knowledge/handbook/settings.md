@@ -131,8 +131,9 @@ the Settings group *People*. One page each: the roster, the team list, the
 roles, and the seat count with the licence beside it.
 
 **Members**: "Everyone with a seat, and what each can access." Invite, change
-role, deactivate, reactivate. Only administrators see this page. Every seat can
-still look a colleague up in the share and assignee pickers on a record.
+role, deactivate, reactivate. Only a role allowed to view users sees this page:
+Admin by default, or a custom role given that permission. Every seat can still
+look a colleague up in the share and assignee pickers on a record.
 
 **Teams**: "Team membership, which decides team-scoped record access." Create one,
 archive it, and open a team to add or remove its members. Being in a team grants
@@ -327,8 +328,9 @@ System health and Reset data sit in the **Governance** group, and Data import in
   each mailbox, and how many filed meetings are held back across the whole
   installation. Counts only; the contacts and messages stay visible to their
   mailbox owner alone. Same readers as Background jobs.
-- **Reset data**: returns an installation to its first-boot state and deletes
-  everything in it. It appears only where whoever runs the installation has
+- **Reset data**: returns an installation to its first-boot state. It deletes
+  every record and setting, but keeps the company and its users, so everyone
+  can still sign in. It appears only where whoever runs the installation has
   turned it on.
 
 ---

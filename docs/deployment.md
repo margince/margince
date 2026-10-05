@@ -115,8 +115,9 @@ connector off; the code default is off, so an absent block exposes nothing.
 
 **Decide the retention posture before first boot** if the installation must keep
 everything. By default the shipped storage-limitation ladder runs. A meeting
-transcript and an AI payload are erased after a year, which meets the
-storage-limitation obligation of Art. 5(1)(e) and only that one. An unconverted
+transcript and an AI payload are erased after a year, which supports the
+storage-limitation obligation of Art. 5(1)(e); whether a year is the right
+period is each installation's call, and the rules are editable. An unconverted
 lead is archived after a year (taken off every list, kept restorable); author
 `anonymize` for that policy where the lead's identity must not be kept. The
 [compliance handbook](handbook/compliance.md) lists what an installation reading

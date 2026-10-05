@@ -100,7 +100,7 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `partner_company_id` | `uuid` |  | Deal registration/attribution to a partner company. |
 | `pipeline_id` | `uuid` | yes | The deal's pipeline. |
 | `priority` | `text` |  | Human importance, set by a colleague and never derived. |
-| `priority_rank` | `smallint`, default `CASE priority WHEN 'high'::text THEN 3 WHEN 'medium'::text THEN 2 WHEN 'low'::text THEN 1 ELSE NULL::integer END` |  | Computed by the database. It cannot be written directly. |
+| `priority_rank` | `smallint`, generated as `CASE priority WHEN 'high'::text THEN 3 WHEN 'medium'::text THEN 2 WHEN 'low'::text THEN 1 ELSE NULL::integer END` |  | Computed by the database. It cannot be written directly. |
 | `project_id` | `uuid` |  | The body of work this deal belongs to. |
 | `source_author_id` | `uuid` |  | Points at `app_user.id`. |
 | `source_author_name` | `text` |  |  |
@@ -113,7 +113,7 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `captured_by` | `text` | yes | Server-stamped from the authenticated principal (human:<uuid> \| agent:<id> \| connector:<name>); never client-supplied. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `legal_hold` | `boolean`, default `false` | yes | True while a litigation or investigation hold is preserving this record. |
-| `search_tsv` | `tsvector`, default `((setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(name, ''::text))), 'A'::"char") \|\| setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(name, ''::text))), 'A'::"char")) \|\| setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(description, ''::text))), 'B'::"char"))` |  | Computed by the database. It cannot be written directly. |
+| `search_tsv` | `tsvector`, generated as `((setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(name, ''::text))), 'A'::"char") \|\| setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(name, ''::text))), 'A'::"char")) \|\| setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(description, ''::text))), 'B'::"char"))` |  | Computed by the database. It cannot be written directly. |
 | `source` | `text` | yes | Which internal channel the record arrived by. |
 | `source_system` | `text` |  | The outside system the record came from, when it came from one. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
@@ -708,7 +708,7 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `name` | `text` | yes | Unique per workspace among live (non-archived) templates. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
-| `search_tsv` | `tsvector`, default `(setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(name, ''::text))), 'A'::"char") \|\| setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(name, ''::text))), 'A'::"char"))` |  | Computed by the database. It cannot be written directly. |
+| `search_tsv` | `tsvector`, generated as `(setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(name, ''::text))), 'A'::"char") \|\| setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(name, ''::text))), 'A'::"char"))` |  | Computed by the database. It cannot be written directly. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
 
@@ -734,7 +734,7 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
-| `is_default` | `boolean`, default `false` | yes | One default per workspace. |
+| `is_default` | `boolean`, default `false` | yes | At most one default per workspace. |
 | `name` | `text` | yes |  |
 | `position` | `integer`, default `0` | yes |  |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
@@ -776,7 +776,7 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `captured_by` | `text` | yes | Server-stamped from the authenticated principal; never client-supplied. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
-| `search_tsv` | `tsvector`, default `((((setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(name, ''::text))), 'A'::"char") \|\| setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(name, ''::text))), 'A'::"char")) \|\| setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(sku, ''::text))), 'A'::"char")) \|\| setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(description, ''::text))), 'B'::"char")) \|\| setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(description, ''::text))), 'B'::"char"))` |  | Computed by the database. It cannot be written directly. |
+| `search_tsv` | `tsvector`, generated as `((((setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(name, ''::text))), 'A'::"char") \|\| setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(name, ''::text))), 'A'::"char")) \|\| setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(sku, ''::text))), 'A'::"char")) \|\| setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(description, ''::text))), 'B'::"char")) \|\| setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(description, ''::text))), 'B'::"char"))` |  | Computed by the database. It cannot be written directly. |
 | `source` | `text` | yes | Which internal channel the record arrived by. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |

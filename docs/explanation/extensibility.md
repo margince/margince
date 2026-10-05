@@ -155,9 +155,11 @@ proves it.
 
 The generator also derives each unit's **`manifest.generated.json`** next to the unit. It records the
 unit's identity and the **risk tiers** it requests: every operation the extension adds that runs at a
-🟢/🟡 tier or asks for a scope. These are the things an operator must approve before the unit's tools
-are served. The generator reads them statically from the declaration's AST, so review tooling and the
-planned approval flow learn what a unit needs without compiling or executing its code.
+🟢/🟡 tier or asks for a scope. The manifest records these requests; it does not gate serving. No
+operator approval step exists yet: `RegisterExtensions` registers a handler-bearing tool as soon as
+its unit is composed, so composing a unit is what enables it. The generator reads the requests
+statically from the declaration's AST, so review tooling, and a later approval flow, learn what a
+unit needs without compiling or executing its code.
 
 The first governed kind is the **agent tool** (`extension.Tool`: a verb, a requested tier, one
 requested scope). A tool declaration derives into one risk-tier request carrying its security

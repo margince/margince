@@ -39,8 +39,8 @@ surface decides. Each iteration:
    workspace's model budget.
 2. **Reason**: one model call (`brain.Complete`).
 3. **Parse** the proposed step. The protocol requires one of `tool` or `final`, never both; malformed
-   output retries with feedback, and after 3 consecutive invalid steps the run ends with a degraded
-   status instead of returning a partial result.
+   output retries with feedback, and after 3 consecutive invalid steps the run ends degraded and
+   returns the partial result it reached (`partial: true`, `steps_completed`).
 4. **Terminal**: a `final` step completes the run.
 5. **Act**: `registry.Invoke(tool, args)` (the runner's *only* path to an action).
 6. **Observe** the tool's result:
@@ -101,8 +101,11 @@ config. `internal/modules/ai/` owns it:
 
 ## Known gaps
 
-- **The per-agent volume budget is not enforced.** The admission gate binds scope ∧ seat ∧ tier
-  today; a per-agent budget ceiling is designed but not wired.
+- **A passport's model-token share only warns.** The admission gate meters each passport's reads,
+  writes, egress and calls (`platform/agentvolume`), and crossing one of those stops the agent or asks
+  the lending human. The cost counter, its share of the workspace AI budget, refuses nothing: past
+  the share the answer carries a warning, so one passport's model spend is bounded only by the
+  workspace budget.
 
 ## Where to go next
 

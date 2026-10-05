@@ -133,9 +133,9 @@ anything you typed is cleared.
 **Either** there is a signed contract on the deal, in which case you press
 Confirm and it closes with no further questions. "Signed contract" is stricter
 than it sounds. The contract must be unarchived, past draft, and carry a signed
-date. It must also have an attachment filed under Contract or Legal, in the
-Current or Final state. A contract record with no paper on it does not
-clear the bar.
+date. It must also have an unarchived attachment filed under Contract or Legal, in
+the Current or Final state. A contract record with no paper on it, or only
+archived paper, does not clear the bar.
 
 **Or** there is not. You will not see the question until you press Confirm.
 When you press Confirm without a signed contract, the dialog comes back with a

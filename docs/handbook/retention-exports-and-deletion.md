@@ -251,7 +251,10 @@ Margince can assemble the Art. 15 package: the contact's record, their
 correspondence, their consent history, and the evidence of why the contact
 exists at all. Ask whoever runs your installation to download it for you.
 
-- **Only an administrator can have it assembled.** Agents cannot.
+- **Only a human user can have it assembled**, never an agent. By default that
+  is an administrator. A custom role can be given the privacy requests
+  permission too; its holder also needs to delete contacts and to see every
+  record in the company.
 - **It answers access requests only**, never erasure or rectification.
 - **It does not close the request.** Mark it fulfilled yourself once you have
   actually sent it, and record what you sent in the resolution.

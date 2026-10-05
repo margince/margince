@@ -12,8 +12,9 @@ Sales won follows the selected close period and the current deal owner. Reassign
 a deal moves its live sales and target results to the new owner; saved snapshots
 keep the owner and results captured then. Open pipeline and stage age describe
 the current pipeline, with their expected-close window printed beside the chart.
-A salesperson's target is for the month or fiscal quarter that contains the period
-you chose, compared with that month's or quarter's actual. Changing the event period does not turn today's pipeline into history.
+A salesperson's target is for the month or fiscal quarter that contains the end of
+the period you chose, or the current cutoff if that comes first, compared with that
+month's or quarter's actual. Changing the event period does not turn today's pipeline into history.
 
 “This month” and “This quarter” follow the installation’s calendar and reset when
 that period begins. The dates beside the figures identify the period measured.
@@ -37,8 +38,9 @@ Stage-age records stay within the selected reporting scope.
 - **Stage age:** median and 75th percentile for current open deals. Small cohorts
   are withheld. A percentile describes the population; it is not a stalled-deal alarm.
 - **SDR outcomes:** weekly held meetings and accepted opportunities, counted
-  separately. Older meetings are credited to their current host; the metric’s
-  coverage details say when this applies. An accepted opportunity stays credited
+  separately. A held meeting keeps the host recorded when it was held. An older meeting
+  with no such record, or only part of one, is credited to its current host; the
+  metric’s coverage details say when this applies. An accepted opportunity stays credited
   to the SDR who created it after the deal changes owner. These two series are not
   a conversion rate.
 - **Sales and SDR summaries:** period totals above their trends. Target progress

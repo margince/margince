@@ -2,7 +2,8 @@
 
 Scoped to this directory. The root [AGENTS.md](../AGENTS.md) still governs
 everything else: the branch/PR loop, the license header, the commit rules. The
-rules below are frontend-only, and no gate catches a breach of them for you.
+rules below are frontend-only. Gates hold parts of some, and each section says
+which; whatever it does not name, no gate catches for you.
 
 `craft static` does not scan `*.test.tsx`, so P3 (*tests prove behaviour or
 they are noise*, no real-clock flakiness) holds here only because the author

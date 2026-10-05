@@ -29,7 +29,7 @@ backend/api/jobs.yaml
         ▼
    DISPATCHER row            role: dispatcher   ·   jobs.FleetWide
         │  enumerate the fleet — compose/dispatch.go, the ONE scan
-        │  dispatchPerWorkspace | dispatchWith | dispatchOne
+        │  dispatchWith | dispatchOne
         ▼  one child per fan-out UNIT, one InsertMany, tagged `sweep`
    WORKER row × N            role: worker       ·   jobs.WorkspaceScoped
         │  workspaceJobCtx binds args.WorkspaceID() onto the context
@@ -251,12 +251,16 @@ declared ones: `cadence: on_demand` (a human's confirm enqueues it, no clock doe
 workspace until a human confirms again.
 
 **A dispatcher may read; it may not write.** `TestEveryFleetWideJobOnlyDispatches` holds the
-`FleetWide` marker to the code. A dispatcher's `Work` must reach one of three fan-out helpers
-(`dispatchPerWorkspace`, `dispatchWith` or `dispatchOne`) and must issue no tenant write. That
-allowlist is closed, and a direct `river.Insert` is not in it. The three helpers build a child's
-insert options: they stamp the `sweep` tag and read the declared queue and attempt cap. A dispatcher
-inserting around them enqueues a child invisible to both sweep gauges, carrying whatever numbers its
-author typed.
+`FleetWide` marker to the code. A dispatcher's `Work` must reach the fleet through one of the
+helpers in the gate's closed allowlist, and must issue no tenant write. Two of them enqueue one child
+per unit (`dispatchWith`, `dispatchOne`); the other three run the pass for each workspace in this
+process (`runPerWorkspace`, `runPerEveryWorkspace`, `runEach`). A direct `river.Insert` is not in
+the list. The two enqueuing helpers build a child's insert options and always stamp the `sweep`
+tag. `dispatchWith` takes the options its caller hands it, and the caller passes the declared
+queue and attempt cap. `dispatchOne` picks them by the child's declared `opts_owner`: the
+declaration for `fan_out`, the child's own `InsertOpts()` for `args`, and the dispatcher's options
+for `caller`. A dispatcher inserting around the helpers enqueues a child invisible to both sweep
+gauges, carrying whatever numbers its author typed.
 
 **Atomicity is the correctness argument.** `dispatchWith` inserts the whole fan-out as one
 `InsertMany`. A per-workspace loop of single inserts that fails partway leaves some children queued
@@ -476,7 +480,7 @@ never enqueue.
   declaration.
 - **A dispatcher enumerates and enqueues.** A workspace job does the work and owns its failure. A
   `Work` body that loops the fleet is the shape this layer removed.
-- **A fan-out goes through `dispatchPerWorkspace` / `dispatchWith` / `dispatchOne`**, never a direct
+- **A fan-out goes through `dispatchWith` / `dispatchOne`**, never a direct
   River insert, or the child loses the sweep tag and its declared cap.
 - **Args carry ids.** A scalar is a ratified exception with a written reason.
 - **Return the failure through `jobs.FaultContext`**, and vet anything read back out of

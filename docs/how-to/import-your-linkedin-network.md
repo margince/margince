@@ -177,8 +177,9 @@ answer the import is for. Per account it reports:
 | **You know** | how many of *your* connections work there |
 | **Already contacts** | how many of those are confirmed matches, shown as `{on file} of {total}` |
 
-The gap between the two columns is the finding: **connections you know at this account who are not in the
-CRM**. Rows are ranked by connection count, then name, then id, so two reads of an unchanged network
+The gap between the two columns is the finding: **connections you know at this account with no confirmed
+contact match**. A suggested or unmatched connection may still be a contact on file; only a confirmed match
+counts. Rows are ranked by connection count, then name, then id, so two reads of an unchanged network
 return the same order. A footnote states what the view cannot show: how many accounts were truncated
 by the page limit, and how many connections resolved to no account at all.
 

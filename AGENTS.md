@@ -99,10 +99,10 @@ issue list; a comment does not. The rest:
    hold, or an open closing PR you did not write. Refuse, tell whoever asked who
    holds it (questions and urgency go there), and name a free issue nearby. If
    they insist: takeover comment first, then reassign. No claim expires.
-3. Nothing pointing elsewhere means it is yours: resume it, or claim it with
-   `gh issue edit <n> --add-assignee @me --add-label "status: in progress"`. Then
-   re-read, and stand down if somebody else appeared. Claim the sub-issue, never
-   its tracker.
+3. Every signal pointing to you means it is yours: resume it. A free issue (no
+   signal at all) is claimed before any work: `gh issue edit <n> --add-assignee
+   @me --add-label "status: in progress"`, then re-read and stand down if somebody
+   else appeared. Claim the sub-issue, never its tracker.
 4. To release: remove the assignee, remove the label once nobody else holds it,
    and comment where you stopped. Closing strips the label (`issue-closed.yml`),
    so a `Closes #N` merge needs no release.

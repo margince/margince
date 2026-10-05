@@ -180,9 +180,9 @@ An agent also has no access to the buyer's side of the room.
 
 ## Limits of Deal Rooms
 
-**No archive button.** You cannot archive a Deal Room from the app. A deal holds one room at a
-time, and opening a second needs the first archived, so each deal can have only
-one Deal Room. The message that tells you to archive the old room names
+**No archive button.** You cannot archive a Deal Room from the app. A deal holds one active
+room at a time, and opening a second needs the first archived, so in the app
+each deal gets only one Deal Room. The message that tells you to archive the old room names
 something the app does not offer.
 
 **A dead link always shows the dead-link page.** A link that was already used

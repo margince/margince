@@ -2,8 +2,8 @@
 
 > Reading copy. The [German version](../de/verarbeitungsverzeichnis-und-dsfa.md)
 > is the one to file. Each row there names the source file that enforces it,
-> under `backend/internal/`. The paths were last checked on [date] at commit
-> [sha].
+> under `backend/internal/`. `backend/gates/processingrecord_test.go` fails
+> when a named file no longer exists.
 
 ## Four processing operations
 

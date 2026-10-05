@@ -69,7 +69,8 @@ Per line, in this order:
 3. **Line total** = net + tax.
 
 Each line is **rounded first**, then the lines are added up. So the offer's
-totals always match the lines a buyer can read off the page, to the cent.
+totals always match the lines a buyer can read off the page, to the currency's
+smallest unit.
 
 The offer's **Net**, **Tax** and **Gross** are those sums.
 

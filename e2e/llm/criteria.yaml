@@ -326,7 +326,7 @@ cases:
         carrying the provider value this installation registered rather than a
         spelling that happens to look right.
     2:
-      name: A channel that cannot send is still reported as working
+      name: A channel that cannot send replies still captures, files and reads
       statement: >-
         A transport that can carry no reply still captures, files and reads, and
         reporting the first as the second tells the reader the product cannot do

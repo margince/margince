@@ -101,14 +101,12 @@ workspace worker, never a fleet loop inside one job row.
    ([write-backbone.md](../explanation/write-backbone.md#6-correlation--causation-the-trace)).
    `workspaceJobCtx` binds the tenant and only the tenant.
 
-   A dispatcher's `Work` instead reaches one of the fan-out helpers
-   (`dispatchPerWorkspace`, `dispatchWith`, `dispatchOne`) and issues no tenant write of its own:
+   A dispatcher's `Work` instead reaches one of the fleet helpers (`dispatchWith`, `dispatchOne`,
+   `runPerWorkspace`, `runPerEveryWorkspace`, `runEach`) and issues no tenant write of its own:
 
    ```go
    func (w *closeDateSweepWorker) Work(ctx context.Context, _ *river.Job[CloseDateSweepArgs]) error {
-       return jobs.FaultContext(ctx, dispatchPerWorkspace(ctx, w.pool,
-           workspaceSweepOpts(CloseDateWorkspaceArgs{}.Kind()),
-           func(ws ids.UUID) river.JobArgs { return CloseDateWorkspaceArgs{Workspace: ws} }))
+       return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.correctWorkspace))
    }
    ```
 
@@ -137,10 +135,13 @@ workspace worker, never a fleet loop inside one job row.
      posture, and whether there is a schedule at all from the declaration, never from where the call
      sits. Do not build a `river.PeriodicJob` by hand, and do not touch River's runtime
      `PeriodicJobBundle`; forbidigo blocks the latter.
-   - A fan-out over the fleet calls `dispatchPerWorkspace(ctx, pool, workspaceSweepOpts(ChildArgs{}.Kind()), argsFor)`,
-     or `dispatchWith` when the insert must join a transaction you already hold. Both insert the whole
+   - A fan-out over the fleet calls
+     `dispatchWith(ctx, workspaces, insert, workspaceSweepOpts(ChildArgs{}.Kind()), argsFor)`. Pass the
+     insert of a transaction you already hold when the fan-out must join it. It inserts the whole
      fan-out as one `InsertMany`, because a partial fan-out that fails and retries re-runs the
      workspaces whose children already completed.
+   - A pass that runs each workspace in this process calls `runPerWorkspace(ctx, pool, run)`, which
+     attempts every workspace and joins the failures.
    - A fan-out per connection or per build loops `dispatchOne(ctx, args, callerOpts)`, whose
      options are decided by the child's declared `opts_owner`: pass `callerOpts` for `caller` and
      `nil` for the other two. Passing the wrong one panics rather than silently dropping a uniqueness
@@ -177,7 +178,7 @@ The failures you are most likely to meet, in the order you would meet them:
 | `jobrole_test.go` | `X declares both WorkspaceID() and FleetWide()` | A job does one workspace's work or dispatches, never both |
 | `jobwirekey_test.go` | `X.F ships as json:"ws", want json:"workspace_id"` | A divergent key is invisible to `args->>'workspace_id'`, and a null there reads as a dispatcher instead of tenant work the query cannot see |
 | `jobwirekey_test.go` | `X is a dispatcher (it declares FleetWide()) but ships a json:"workspace_id" key` | Put the workspace on the children it enqueues; the dispatcher's own args carry none |
-| `jobfleetwide_test.go` | `W works FleetWide args X but never fans out` | A dispatcher must reach `dispatchPerWorkspace`, `dispatchWith` or `dispatchOne`. If it does tenant work instead, it is `WorkspaceScoped` |
+| `jobfleetwide_test.go` | `W works FleetWide args X but never fans out` | A dispatcher must reach one of the fleet helpers (`dispatchWith`, `dispatchOne`, `runPerWorkspace`, `runPerEveryWorkspace`, `runEach`). If it does tenant work instead, it is `WorkspaceScoped` |
 | `jobfleetwide_test.go` | `W works FleetWide args X and issues a tenant write` | Move the write into the workspace worker, where it can succeed or fail as its own row |
 | `jobfault_test.go` | `a worker return must be nil, jobs.Fault(...), or a river control return — a raw cause is written verbatim into river_job.errors` | Wrap the return in `jobs.FaultContext(ctx, err)` |
 | `jobfault_test.go` | `W logs an error and returns nil — River will record this job as completed while the work failed` | Return the failure, or ratify it with `fault: {nil_after_logging: …}` naming the retry policy that later redoes the work |

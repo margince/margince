@@ -61,8 +61,12 @@ the cell as written. If the cell is the email of a Margince user, the record als
 links to that user, so it shows their current name. The author is set when the
 import creates the record. A later file does not change it.
 
-**A file of contacts becomes leads.** Set `object` to `lead` for those. An
-unqualified list does not land in the core records.
+**A file of contacts takes `lead` or `contact`.** Pick by where it came from. A
+machine-sourced list (a scraped export, a purchased list, a badge dump) takes
+`lead`: its rows land unworked, and someone promotes the ones worth keeping. A
+file of contacts the business already knows (a migration off another CRM, a
+customer list from a retired system) takes `contact`: those rows were qualified
+elsewhere, so they land as contacts, through the same duplicate checks.
 
 ### What happens to a company you already have
 

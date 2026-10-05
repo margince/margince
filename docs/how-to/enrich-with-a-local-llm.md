@@ -35,10 +35,11 @@ expect slow, sometimes empty answers.
 
 ## 2. Point the AI lanes at Ollama
 
-A dev stack is bound to one broker over `openai_compatible` on every tier and on
-the embed lane (`seeds.ai_routing` in `config/margince.dev.yaml`), so **enrich
-needs one rebind**: point `local_small`, the first rung of `enrich`'s ladder
-(`local_small` → `cheap_cloud`), at Ollama.
+A dev stack binds every tier and the embed lane to `gemini` (`seeds.ai_routing`
+in `config/margince.dev.yaml`). **Enrich itself needs one rebind**: point
+`local_small`, the first rung of `enrich`'s ladder (`local_small` →
+`cheap_cloud`), at Ollama. Step 3 says what else must move for a stack with no
+cloud key.
 
 On a running stack do it under **Settings → AI**, which takes effect immediately.
 To have a *fresh* stack come up this way, edit the seed and `make dev-fresh`; the
@@ -68,21 +69,21 @@ Edit the other tiers to:
 
 `scripts/dev.sh` (`make dev`) scans the `seeds.ai_routing` that will bind this
 stack and drops to the offline fake unless **every bound cloud provider's key is
-set** (`anthropic` → `ANTHROPIC_API_KEY`, `openai` → `OPENAI_API_KEY`, `gemini` →
-`GEMINI_API_KEY`, `openai_compatible` → `OPENAI_COMPATIBLE_API_KEY`); local
-providers (`ollama`/`vllm`/`fake`) need no key.
+set**. The keys are `anthropic` → `ANTHROPIC_API_KEY`, `openai` → `OPENAI_API_KEY`,
+`gemini` → `GEMINI_API_KEY`, `gemini_vertex` → `GEMINI_VERTEX_SA_JSON`,
+`openai_compatible` → `OPENAI_COMPATIBLE_API_KEY` and `jev` → `TYPESAFE_API_KEY`.
+Local providers (`ollama`/`vllm`/`fake`) need no key.
 
-If any key is missing, the stack runs on the offline fake, and that fakes the
-*Ollama* call too, because the fake stands in for the whole binding instead of
-for the unkeyed tier. So rebind the tiers you exercise to a local provider
-instead of leaving one cloud tier unkeyed. The fake is a fallback: once the
-binding is servable it outranks the flag, so a stack that can reach its models
-never answers with canned text.
+The scan counts every binding, not only the tiers you exercise: an unused tier
+and the `embeddings` lane count too. If any key is missing, the stack runs on
+the offline fake, and that fakes the *Ollama* call too, because the fake stands
+in for the whole binding instead of for the unkeyed tier. The fake is a
+fallback: once the binding is servable it outranks the flag, so a stack that can
+reach its models never answers with canned text.
 
-The shipped dev routing binds every tier and the embed lane to one broker over
-the `openai_compatible` adapter. Out of the box you must either set
-`OPENAI_COMPATIBLE_API_KEY`, or rebind the tiers you exercise to `ollama` (step 2)
-for a fully local, no-key stack:
+So out of the box you must either set `GEMINI_API_KEY`, or rebind every cloud
+binding (all four tiers and `embeddings`) to `ollama` (step 2) for a fully
+local, no-key stack:
 
 ```sh
 make dev   # look for: "dev: the stored model binding serves the cold-start read-back (providers bound by …)"
@@ -93,7 +94,7 @@ make dev   # look for: "dev: the stored model binding serves the cold-start read
 >
 > ⚠️ enrich escalates to `cheap_cloud` on a provider error or schema failure, and
 > the cold-start read-back starts on `cheap_cloud`. For a local-only run, bind
-> every tier you use to Ollama.
+> every tier and the embed lane to Ollama.
 
 `make dev` brings up the app on `:8080` (the api behind it), cold: the bootstrap
 company and admin, no records. Open

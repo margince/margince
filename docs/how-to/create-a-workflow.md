@@ -33,8 +33,8 @@ permission table (`catalog_actions.go`'s `actionDefs`) too (step 6 covers the pe
      **or** `Schedule`, never both. `Schedule` is a non-empty marker string; `noActivityScheduleMarker`'s
      doc says why it documents intent only and is never parsed as a cron expression.
      `RegisterWorkflow` panics on a handler declaring neither, or both.
-   - Set `Spec().Tier` to the risk tier the *action* carries (`mcp.TierGreen` for an
-     auto-executing effect, `mcp.TierYellow` for one that must stage for approval).
+   - Set `Spec().Tier` to the risk tier the *action* carries (`mcp.TierAutoExecute` for an
+     auto-executing effect, `mcp.TierConfirmationRequired` for one that must stage for approval).
 
 3. **Add a `Catalog()` entry** in `automations_catalog.go` whose `Key` equals the handler's
    `Spec().Name` **character for character**. `Key == Spec().Name` is the only link between a

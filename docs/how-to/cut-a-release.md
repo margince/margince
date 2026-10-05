@@ -71,8 +71,10 @@ Two consequences:
   consumer applies without harm. The tag points at the dist service's own
   record and is written only after a success, so it fails in the safe direction.
 
-`scripts/release-patch-base.sh` states the rule and its fallbacks (the first
-release of a repository has nothing behind it and draws no patch at all).
+`scripts/release-patch-base.sh` states the rule and its fallbacks. With no
+`released` tag, the base is the push's previous tip; with no previous tip either
+(a manual dispatch, or a new branch), it is `HEAD~1`, so that release's patch
+covers one commit. Only a checkout where none of these resolves draws no patch.
 `make test-release-patch-base` walks the publish/skip/publish sequence.
 
 ## To build a bundle without releasing anything
