@@ -111,9 +111,9 @@ func PrivateThreadFilesStillDueTx(
 	return due, nil
 }
 
-// privateThreadFilesDue is the one spelling of which messages' files are due,
-// over `activity a` joined to its verdict `v`, with its arguments. The scan and
-// the recheck both read it, so they cannot come to disagree.
+// privateThreadFilesDue says which messages' files are due, over `activity a`
+// joined to its verdict `v`, with its arguments. The scan and the recheck both
+// read it, so they ask the same question.
 func privateThreadFilesDue(windows PersonalPurgeWindows, floor StatutoryFloor) (string, []any) {
 	args := []any{windows.ByOwner, windows.ByClassifier}
 	shielded, args := floor.column(len(args), args)
