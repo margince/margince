@@ -9,7 +9,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
-import { MONEY_ABSENT } from "../format/format";
+import { formatMoneyCompact, MONEY_ABSENT } from "../format/format";
 import { LocaleProvider } from "../i18n";
 import { Button } from "./atoms";
 import {
@@ -43,6 +43,9 @@ describe("DealCard + PipelineBoard", () => {
     ageMs: 62 * 86_400_000,
     stalled: true,
   };
+  // The card's figure as the compact formatter writes it, asked rather than
+  // spelled: whether a thousand reads "K" or "k" is the ICU build's to say.
+  const compactFigure = formatMoneyCompact(4_800_000, "EUR", "en");
 
   // Staleness reaches the reader as a WORD, and only as a word: a card that also
   // carried an edge stripe said one thing twice, and the half of it that a
@@ -50,7 +53,7 @@ describe("DealCard + PipelineBoard", () => {
   it("renders value/age and the stalled aging flag (AC-pipeline-5)", () => {
     render(<DealCard deal={deal} href="#/deals/d1" zone="Europe/Berlin" />);
     // Compact on the card: the column head carries the exact sum.
-    expect(screen.getByText("€48K")).toBeTruthy();
+    expect(screen.getByText(compactFigure)).toBeTruthy();
     expect(screen.getByText("Stalled")).toBeTruthy();
     expect(screen.getByRole("link").className).not.toContain("stalled");
   });
@@ -61,7 +64,7 @@ describe("DealCard + PipelineBoard", () => {
   it("reads name, then figure, then the stall, on every card", () => {
     render(<DealCard deal={deal} href="#/deals/d1" zone="Europe/Berlin" />);
     const name = screen.getByRole("link", { name: "Fleet retrofit" });
-    const figure = screen.getByText("€48K");
+    const figure = screen.getByText(compactFigure);
     const stall = screen.getByText("Stalled");
     const follows = (a: Node, b: Node) =>
       (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;

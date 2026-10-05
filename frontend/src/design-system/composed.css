@@ -490,19 +490,25 @@
   gap: var(--gapActions);
   margin-inline-start: auto;
 }
-/* Bare glyphs in the supporting ink, with the ground coming back under the
-   pointer: a ground and an edge on every verb is sixty buttons on a column of
-   twenty cards, where the glyphs alone read as one quiet line a rep reaches
-   into. Stated above `.btn-ghost:hover`'s specificity, so the hover is not
-   settled by which sheet the bundler emits last. */
+/* Bare glyphs, with the ground coming back under the pointer: a ground and an
+   edge on every verb is sixty buttons on a column of twenty cards, where the
+   glyphs alone read as one quiet line a rep reaches into. Stated above
+   `.btn-ghost:hover`'s specificity, so the hover is not settled by which sheet
+   the bundler emits last. */
 .deal-card .deal-actions .btn {
   border-color: transparent;
   background: none;
   box-shadow: none;
-  color: var(--textSecondary);
 }
 .deal-card .deal-actions .btn:hover:not(:disabled) {
   background: var(--bgHover);
+}
+/* The supporting ink goes on the GLYPH, never the button: a `.btn`'s ink is the
+   control tier's, measured against every ground a button is drawn on. */
+.deal-card .deal-actions svg {
+  color: var(--textSecondary);
+}
+.deal-card .deal-actions .icon-action:hover svg {
   color: var(--textPrimary);
 }
 
