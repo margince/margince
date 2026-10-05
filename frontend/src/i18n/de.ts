@@ -1139,7 +1139,7 @@ export const de = {
   "deal.mail.title": "Bisherige E-Mails",
   "deal.openDeal": "Deal öffnen",
   "deal.card.summary": "Deal-Zusammenfassung: {name}",
-  "deal.card.email": "E-Mail: {name}",
+  "deal.card.email": "E-Mail schreiben: {name}",
   "deal.card.addTask": "Aufgabe hinzufügen: {name}",
   "deal.mail.sent": "Gesendet {ago}",
   "deal.mail.received": "Erhalten {ago}",

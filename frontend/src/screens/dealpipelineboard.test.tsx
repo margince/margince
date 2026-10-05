@@ -123,7 +123,7 @@ describe("DealPipelineBoard", () => {
       asked.push(target);
     });
     await user.click(
-      screen.getByRole("button", { name: "Email: Fleet retrofit" }),
+      screen.getByRole("button", { name: "Write email: Fleet retrofit" }),
     );
     expect(asked).toEqual([{ entityType: "deal", entityId: "d1" }]);
   });
@@ -132,7 +132,7 @@ describe("DealPipelineBoard", () => {
   // verb that opened onto a refusal would be a press that does nothing.
   it("offers no mail verb to a reader with no mailbox", () => {
     renderBoard([openDeal], null);
-    expect(screen.queryByRole("button", { name: /^Email/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Write email/ })).toBeNull();
   });
 
   it("files a task in the deal page's own task drawer once the grant is known", async () => {
@@ -158,7 +158,7 @@ describe("DealPipelineBoard", () => {
     expect(
       archived.getByRole("button", { name: "Deal summary: Old retrofit" }),
     ).toBeTruthy();
-    expect(archived.queryByRole("button", { name: /^Email/ })).toBeNull();
+    expect(archived.queryByRole("button", { name: /^Write email/ })).toBeNull();
     expect(archived.queryByRole("button", { name: /^Add task/ })).toBeNull();
   });
 });

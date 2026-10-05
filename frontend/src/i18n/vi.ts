@@ -1124,7 +1124,7 @@ export const vi = {
   "deal.mail.title": "Các email trước",
   "deal.openDeal": "Mở deal",
   "deal.card.summary": "Tóm tắt deal: {name}",
-  "deal.card.email": "Gửi email: {name}",
+  "deal.card.email": "Viết email: {name}",
   "deal.card.addTask": "Thêm công việc: {name}",
   "deal.mail.sent": "Đã gửi {ago}",
   "deal.mail.received": "Đã nhận {ago}",

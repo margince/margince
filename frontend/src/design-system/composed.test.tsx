@@ -94,7 +94,7 @@ describe("DealCard + PipelineBoard", () => {
       screen.getByRole("button", { name: "Deal summary: Fleet retrofit" }),
     );
     await user.click(
-      screen.getByRole("button", { name: "Email: Fleet retrofit" }),
+      screen.getByRole("button", { name: "Write email: Fleet retrofit" }),
     );
     await user.click(
       screen.getByRole("button", { name: "Add task: Fleet retrofit" }),
@@ -114,7 +114,7 @@ describe("DealCard + PipelineBoard", () => {
     expect(
       screen.getByRole("button", { name: "Deal summary: Fleet retrofit" }),
     ).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /^Email/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Write email/ })).toBeNull();
     expect(screen.queryByRole("button", { name: /^Add task/ })).toBeNull();
   });
 

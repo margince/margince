@@ -1138,7 +1138,7 @@ export const en = {
   "deal.mail.title": "Previous emails",
   "deal.openDeal": "Open deal",
   "deal.card.summary": "Deal summary: {name}",
-  "deal.card.email": "Email: {name}",
+  "deal.card.email": "Write email: {name}",
   "deal.card.addTask": "Add task: {name}",
   "deal.mail.sent": "Sent {ago}",
   "deal.mail.received": "Received {ago}",
