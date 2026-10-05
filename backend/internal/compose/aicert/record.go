@@ -211,6 +211,13 @@ type ScenarioRecord struct {
 	Abandoned int `json:"abandoned,omitempty"`
 	// Decision is this scenario's own share of a decision record.
 	Decision *DecisionStats `json:"decision,omitempty"`
+	// CommitmentBand is the scenario's own commitment_band, copied so a reader of
+	// the record need not open the corpus; AnswerConfidenceMin/Max are the least
+	// and greatest confidence over this scenario's kept runs, absent when none
+	// of them reported one.
+	CommitmentBand      string   `json:"commitment_band,omitempty"`
+	AnswerConfidenceMin *float64 `json:"answer_confidence_min,omitempty"`
+	AnswerConfidenceMax *float64 `json:"answer_confidence_max,omitempty"`
 }
 
 // KindDecision marks a record of the decision lane: one site, one configured

@@ -43,6 +43,10 @@ const CommitmentTaskKind = "commitment_task"
 // CommitmentTaskConfidence is the reading at or above which a promise a named
 // colleague made becomes their task without asking. Below it, down to the
 // extractor's own floor, the promise is proposed instead.
+//
+// It sits inside the gap the certification records show: a plain dated promise
+// is read at 0.9 or more, a soft one at 0.3 or less, and the extractors drop
+// anything under 0.7. TestCommitmentTaskConfidenceSitsInTheCertifiedGap holds it.
 const CommitmentTaskConfidence = 0.85
 
 // The claim kinds a commitment is filed under.

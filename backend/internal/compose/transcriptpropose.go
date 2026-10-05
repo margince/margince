@@ -169,6 +169,9 @@ func transcriptRequest(lines []string, meetingDay string, lang string) model.Req
 			`Use "" when the transcript states no deadline, and when what it states is `+
 			`ambiguous: an empty due date is a next step nobody dated, and a guessed one `+
 			`is a deadline nobody agreed to. `+
+			`"confidence" is how firmly the transcript commits the speaker: a plain "I will" `+
+			`with a thing and a day is high, while "I'll try", "at some point" or "maybe" `+
+			`names no real commitment and is low, whatever you are sure the words say. `+
 			`"source_lines" are the line numbers it is stated on, between 1 and %d.`,
 		meetingDay, maxTranscriptProposals, len(lines))
 

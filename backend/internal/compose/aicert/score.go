@@ -62,6 +62,15 @@ type RunResult struct {
 	// Abandoned says the candidate broke off its answer on every attempt, so,
 	// like a withheld run, it names the binding rather than a model that served.
 	Abandoned bool `json:"abandoned,omitempty"`
+	// AnswerConfidence is the range of confidences a KEPT run's reply put on its
+	// readings, absent for a run that did not pass or whose site reports none.
+	AnswerConfidence *ConfidenceRange `json:"answer_confidence,omitempty"`
+}
+
+// ConfidenceRange is the least and greatest confidence over some answers.
+type ConfidenceRange struct {
+	Min float64 `json:"min"`
+	Max float64 `json:"max"`
 }
 
 // delivered reports whether a served model answered this run, and so whether
