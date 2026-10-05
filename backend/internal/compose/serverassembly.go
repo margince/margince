@@ -226,7 +226,7 @@ func (s *Server) wireAnalyticsSurface(pool *pgxpool.Pool) {
 	s.reportingHandlers = reporting.NewHandlers(reportingService)
 	s.reportingExportHandlers = reportingExportHandlers{service: reportingService}
 	s.forecastHandlers = forecasting.NewHandlers(
-		forecasting.NewStore(InstallationDB(pool)),
+		newForecastStoreFor(pool),
 		ForecastDeals, ForecastPeriodAt, ForecastWritableScope,
 		ForecastConversionHistory, ForecastForwardMeasure,
 		func() time.Time { return time.Now().UTC() },
@@ -241,7 +241,7 @@ func (s *Server) wireAnalyticsSurface(pool *pgxpool.Pool) {
 		InstallationDB(pool), func() time.Time { return time.Now().UTC() })
 	s.analyticsShareHandlers = newAnalyticsShareHandlers(
 		NewAnalyticsShareStore(func() time.Time { return time.Now().UTC() }),
-		forecasting.NewStore(InstallationDB(pool)),
+		newForecastStoreFor(pool),
 		func() time.Time { return time.Now().UTC() },
 	)
 }

@@ -13,14 +13,10 @@
 # case; this one keeps the stage a rep reads off the call, so a run that
 # closes the deal as Won has done more than it was told.
 #
-# forecast_movement IS DELIBERATELY NOT REQUIRED, and this is the written ruling
-# the lane owes it. It takes two forecast snapshot ids and nothing on the MCP
-# surface hands one out — no tool lists snapshots and no resource publishes them —
-# so a model asked "what changed in the forecast" can only call forecast_readings
-# or invent an id. Requiring the tool here would grade a route nobody can walk.
-# What IS graded is the honest half: figures come from readings the model took,
-# and a reason is one those readings support — the stage's probability against
-# the deal's amount — never causes it has no data for.
+# forecast_movement is case 50's. This case grades the honest half of "what does
+# that do to my quarter": figures come from readings the model took, and a reason
+# is one those readings support — the stage's probability against the deal's
+# amount — never causes it has no data for.
 name: case45_move_the_deal_on
 criteria: [1, 2, 3]
 

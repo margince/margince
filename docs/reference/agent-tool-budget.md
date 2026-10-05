@@ -55,7 +55,7 @@ spends it on every run of every agent.
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 5 | 5 of 81 | 1890 | 1288 | 3765 | 11% | 19445 | 0 | 5 |
 | `overnight_at_risk_sweep` | 7 | 7 of 81 | 2729 | 1807 | 5122 | 15% | 18088 | 7 | 6 |
-| _whole served catalog's listing, for scale — no run is offered it_ | 81 | — | 28410 | — | — | 86% | — | — | — |
+| _whole served catalog's listing, for scale — no run is offered it_ | 81 | — | 28444 | — | — | 86% | — | — | — |
 
 ### `morning_brief`
 
@@ -151,15 +151,15 @@ a term in an addition.
 | `change_lists` | 592 | — |
 | `create_record` | 586 | — |
 | `update_record` | 581 | — |
+| `forecast_readings` | 553 | — |
 | `query_workspace` | 530 | — |
-| `forecast_readings` | 509 | — |
 | `read_reporting` | 506 | — |
 | `run_analytics_query` | 506 | — |
 | `progress_deal` | 505 | — |
 | `resolve_entities` | 493 | — |
 | `search_records` | 456 | — |
-| `forecast_movement` | 453 | — |
 | `advance_deal` | 446 | — |
+| `forecast_movement` | 443 | — |
 | `annotate_brief` | 417 | 2 scenarios |
 | `advance_project_phase` | 416 | — |
 | `review_commitments` | 401 | — |

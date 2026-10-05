@@ -31,7 +31,7 @@
   "catalog": {
     "tools": 81,
     "system_frame_tokens": 586,
-    "tokens": 28410,
+    "tokens": 28444,
     "median_tool_tokens": 289,
     "mean_tool_tokens": 350
   },
@@ -139,12 +139,12 @@
       "tokens": 581
     },
     {
-      "name": "query_workspace",
-      "tokens": 530
+      "name": "forecast_readings",
+      "tokens": 553
     },
     {
-      "name": "forecast_readings",
-      "tokens": 509
+      "name": "query_workspace",
+      "tokens": 530
     },
     {
       "name": "read_reporting",
@@ -167,12 +167,12 @@
       "tokens": 456
     },
     {
-      "name": "forecast_movement",
-      "tokens": 453
-    },
-    {
       "name": "advance_deal",
       "tokens": 446
+    },
+    {
+      "name": "forecast_movement",
+      "tokens": 443
     },
     {
       "name": "annotate_brief",

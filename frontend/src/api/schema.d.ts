@@ -32867,6 +32867,20 @@ export interface components {
             scope_limited?: boolean;
             landing?: components["schemas"]["ForecastLanding"];
             sufficiency?: components["schemas"]["ForecastSufficiency"];
+            /** @description The frozen states of this period and population, newest first: the ten most recent plus the period's first, so a reader has both the latest and the "since the period opened" anchor. These are the ids `getForecastMovement` takes in `from` and `to`. Only whole-pipeline snapshots are listed; one restricted to a single pipeline covers a different population. Empty when nothing was frozen, and always empty for `managed_teams`, which nothing is frozen against. */
+            snapshots?: components["schemas"]["ForecastSnapshotRef"][];
+        };
+        /** @description One frozen forecast, by the handle a movement read takes. */
+        ForecastSnapshotRef: {
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            taken_at: string;
+            /**
+             * @description Why it was taken.
+             * @enum {string}
+             */
+            trigger: "daily" | "call" | "period_close" | "recheck";
         };
         /**
          * @description Where the period finishes if nothing changes, and what that answer rests on.

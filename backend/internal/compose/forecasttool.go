@@ -51,7 +51,7 @@ const (
 // is it now", and a second clock argument would be a knob nobody turns.
 func forecastToolReader(pool *pgxpool.Pool) agents.ForecastReader {
 	now := func() time.Time { return time.Now().UTC() }
-	store := forecasting.NewStore(InstallationDB(pool))
+	store := newForecastStoreFor(pool)
 	return func(ctx context.Context, req agents.ForecastRequest) (json.RawMessage, error) {
 		at, err := forecastAsOf(req, now)
 		if err != nil {
@@ -80,7 +80,12 @@ func forecastToolReader(pool *pgxpool.Pool) agents.ForecastReader {
 			// The RESOLVED scope, so an agent is told which population the
 			// number covers rather than the blank it asked with.
 			out = forecastToolResult(period, resolved, readings, baseCurrency, at, limited)
-			call, err := store.CurrentCallTx(ctx, tx, period, scope)
+			refs, err := store.SnapshotRefsTx(ctx, tx, period, resolved, baseCurrency)
+			if err != nil {
+				return err
+			}
+			out.Snapshots = forecastSnapshotRefsToTool(refs)
+			call, err := store.CurrentCallTx(ctx, tx, period, resolved)
 			switch {
 			case err == nil:
 				encoded, err := json.Marshal(forecastCallToTool(call))
@@ -169,6 +174,18 @@ func forecastToolResult(
 	return out
 }
 
+// forecastSnapshotRefsToTool renders the period's snapshot handles. Empty, never
+// nil: null reads as "unknown" to a model, and nothing frozen is a real answer.
+func forecastSnapshotRefsToTool(refs []forecasting.SnapshotRef) []agents.ForecastSnapshotRefResult {
+	out := make([]agents.ForecastSnapshotRefResult, 0, len(refs))
+	for _, ref := range refs {
+		out = append(out, agents.ForecastSnapshotRefResult{
+			ID: ref.ID.String(), TakenAt: ref.TakenAt.UTC().Format(time.RFC3339), Trigger: ref.Trigger,
+		})
+	}
+	return out
+}
+
 // forecastCallToTool renders the standing call for a model. The note rides
 // along here, unlike on the event: a reader asking what the forecast is wants
 // the reason a contact gave for it, and this answer is not a subscription
@@ -193,7 +210,7 @@ func forecastCallToTool(call forecasting.Call) map[string]any {
 // movementToolReader answers forecast_movement, through the same store the
 // endpoint reads. One classifier, two transports.
 func movementToolReader(pool *pgxpool.Pool) agents.MovementReader {
-	store := forecasting.NewStore(InstallationDB(pool))
+	store := newForecastStoreFor(pool)
 	return func(ctx context.Context, req agents.MovementRequest) (json.RawMessage, error) {
 		reading := forecasting.ReadingOpen
 		if req.Reading != "" {

@@ -3938,6 +3938,28 @@
           "scope_limited": {
             "type": "boolean"
           },
+          "snapshots": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "taken_at": {
+                  "type": "string"
+                },
+                "trigger": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "taken_at",
+                "trigger"
+              ]
+            }
+          },
           "timezone": {
             "type": "string"
           },
@@ -3961,6 +3983,7 @@
           "period_start",
           "priced_count",
           "scope_kind",
+          "snapshots",
           "timezone",
           "weighted_minor",
           "won_minor"
