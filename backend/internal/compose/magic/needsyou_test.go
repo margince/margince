@@ -66,13 +66,12 @@ func decisionsWaiting(
 // reader is asked. Two kinds sharing a key would ask one question twice.
 func TestADecisionWaitingCarriesTheKindItAsksAbout(t *testing.T) {
 	want := map[string]string{
-		"coldstart":           "magic.action.approval_coldstart",
-		"send_email":          "magic.action.approval_send_email",
-		"advance_deal":        "magic.action.approval_advance_deal",
-		"promote_lead":        "magic.action.approval_promote_lead",
-		"overnight":           "magic.action.approval_overnight",
-		"transcript_proposal": "magic.action.approval_transcript_proposal",
-		"commitment_task":     "magic.action.approval_commitment_task",
+		"coldstart":       "magic.action.approval_coldstart",
+		"send_email":      "magic.action.approval_send_email",
+		"advance_deal":    "magic.action.approval_advance_deal",
+		"promote_lead":    "magic.action.approval_promote_lead",
+		"overnight":       "magic.action.approval_overnight",
+		"commitment_task": "magic.action.approval_commitment_task",
 	}
 	seen := make(map[string]string, len(want))
 	for kind, key := range want {

@@ -24,7 +24,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
@@ -87,8 +86,6 @@ func approvalsServiceWithEffects(pool *pgxpool.Pool) *approvals.Service {
 	svc.WithEffect(deals.CloseDateCorrectionKind, closeDateConfirmEffect(svc, deals.NewStore(InstallationDB(pool), DealsInstallation())))
 	svc.WithEffect(deals.FollowUpReconcileKind, followUpConfirmEffect(svc, activities.NewStore(InstallationDB(pool))))
 	svc.WithPrecheck(deals.FollowUpReconcileKind, followUpPrecheck())
-	svc.WithEffect(TranscriptProposalKind, transcriptProposalEffect(svc,
-		activities.NewStore(InstallationDB(pool)), identity.NewService(pool)))
 	svc.WithEffect(CommitmentTaskKind, commitmentTaskEffect(svc,
 		activities.NewStore(InstallationDB(pool)), contacts.NewStore(InstallationDB(pool))))
 	svc.WithPrecheck(CommitmentTaskKind, commitmentTaskPrecheck())

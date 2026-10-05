@@ -2252,7 +2252,6 @@ export const en = {
   "approval.field.because": "Reason",
   "approval.field.from_stage": "From",
   "approval.field.to_stage": "To",
-  "approval.kind.transcript_proposal": "Add next step from transcript",
   "approval.kind.commitment_task": "Add commitment task",
   "approval.kind.fx_rate_proposal": "Update exchange rates",
   "approval.kind.disqualify_lead": "Disqualify lead",
@@ -12076,8 +12075,6 @@ export const en = {
     "Promoting a lead is waiting for your word",
   "magic.action.approval_overnight":
     "An overnight proposal is waiting for your word",
-  "magic.action.approval_transcript_proposal":
-    "A proposal from a recording is waiting for your word",
   "magic.action.approval_commitment_task":
     "A commitment from a conversation is waiting for your word",
   "magic.action.approval_capture_counterparty":

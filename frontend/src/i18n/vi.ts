@@ -2171,8 +2171,6 @@ export const vi = {
   "approval.field.because": "Lý do",
   "approval.field.from_stage": "Từ",
   "approval.field.to_stage": "Đến",
-  "approval.kind.transcript_proposal":
-    "Thêm bước tiếp theo từ bản ghi cuộc trò chuyện",
   "approval.kind.commitment_task": "Thêm việc cho cam kết",
   "approval.kind.fx_rate_proposal": "Làm mới tỷ giá",
   "approval.kind.disqualify_lead": "Loại một khách hàng tiềm năng",
@@ -11809,8 +11807,6 @@ export const vi = {
     "Việc chuyển một lead thành deal đang chờ bạn duyệt",
   "magic.action.approval_overnight":
     "Một đề xuất từ đêm qua đang chờ bạn duyệt",
-  "magic.action.approval_transcript_proposal":
-    "Một đề xuất từ bản ghi âm đang chờ bạn duyệt",
   "magic.action.approval_commitment_task":
     "Một lời hứa từ cuộc trò chuyện đang chờ bạn duyệt",
   "magic.action.approval_capture_counterparty":

@@ -16834,8 +16834,8 @@ export interface paths {
          *     (`POST /claims/{id}/settle`).
          *
          *     Needs `contact:read`, `activity:read` and `relationship:read` on top of the deal
-         *     grant: each row names a contact, quotes a captured activity, and is this account's
-         *     through the contact's employment edge. A commitment whose contact or activity the
+         *     grant: each row names a contact, quotes a captured activity, and belongs to this
+         *     account through the contact's employment edge. A commitment whose contact or activity the
          *     caller may not see is left out, and `complete` is then false, so the card can say it
          *     speaks about less than the account rather than that nothing is owed. `has_more`
          *     says more commitments exist past the 25 returned. A deal with no company has
@@ -35782,7 +35782,7 @@ export interface components {
         Approval: {
             /** Format: uuid */
             id: string;
-            /** @description Examples: coldstart | send_email | advance_deal | promote_lead | overnight | deal_follow_up | transcript_proposal | commitment_task. */
+            /** @description Examples: coldstart | send_email | advance_deal | promote_lead | overnight | deal_follow_up | commitment_task. */
             kind: string;
             /** @enum {string} */
             status: "pending" | "approved" | "rejected" | "expired";

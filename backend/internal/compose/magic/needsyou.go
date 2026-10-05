@@ -79,7 +79,6 @@ var approvalSentences = map[string]string{
 	"advance_deal":          "magic.action.approval_advance_deal",
 	"promote_lead":          "magic.action.approval_promote_lead",
 	"overnight":             "magic.action.approval_overnight",
-	"transcript_proposal":   "magic.action.approval_transcript_proposal",
 	"commitment_task":       "magic.action.approval_commitment_task",
 	kindCaptureCounterparty: "magic.action.approval_capture_counterparty",
 }

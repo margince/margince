@@ -2188,8 +2188,6 @@ export const de = {
   "approval.field.because": "Grund",
   "approval.field.from_stage": "Von",
   "approval.field.to_stage": "Nach",
-  "approval.kind.transcript_proposal":
-    "Nächsten Schritt aus Transkript anlegen",
   "approval.kind.commitment_task": "Aufgabe für eine Zusage anlegen",
   "approval.kind.fx_rate_proposal": "Wechselkurse aktualisieren",
   "approval.kind.disqualify_lead": "Lead disqualifizieren",
@@ -11920,8 +11918,6 @@ export const de = {
     "Die Umwandlung eines Leads wartet auf dein Wort",
   "magic.action.approval_overnight":
     "Ein Vorschlag aus der Nacht wartet auf dein Wort",
-  "magic.action.approval_transcript_proposal":
-    "Ein Vorschlag aus einer Aufzeichnung wartet auf dein Wort",
   "magic.action.approval_commitment_task":
     "Eine Zusage aus einem Gespräch wartet auf dein Wort",
   "magic.action.approval_capture_counterparty":
