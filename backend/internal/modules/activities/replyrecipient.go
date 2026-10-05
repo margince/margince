@@ -17,9 +17,11 @@ package activities
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/mailrole"
@@ -50,6 +52,10 @@ type ReplyRecipient struct {
 	// Empty where the record holds no surname, which is an answer: the greeting
 	// falls back to the familiar form rather than to a guess.
 	LastName string
+	// FiledAddress is the reachable primary email of the one contact a note is
+	// filed on, never a seat's. Empty on anything else, including a note filed
+	// on several contacts: there the rep chooses.
+	FiledAddress string
 }
 
 // ReplyRecipientFor names the contact a reply to this activity is written to.
@@ -79,7 +85,8 @@ func (s *Store) ReplyRecipientFor(ctx context.Context, id ids.ActivityID) (Reply
 		// The activity read applies the link-walk scope. Reaching a contact
 		// through an activity the caller cannot see would answer a name their
 		// own scope withholds.
-		if _, err := readActivityContent(ctx, tx, id, storekit.LiveOnly); err != nil {
+		activity, err := readActivityContent(ctx, tx, id, storekit.LiveOnly)
+		if err != nil {
 			return err
 		}
 
@@ -112,7 +119,9 @@ func (s *Store) ReplyRecipientFor(ctx context.Context, id ids.ActivityID) (Reply
 			                   FROM contact_email pe
 			                  WHERE pe.contact_id = p.id AND pe.archived_at IS NULL` +
 			contactaddress.ReachableOrder + `
-			                  LIMIT 1), '')
+			                  LIMIT 1), ''),
+			       NOT EXISTS (SELECT 1 FROM activity_participant ap WHERE ap.activity_id = $1),
+			       count(*) OVER ()
 			  FROM contact p
 			  JOIN (
 			       SELECT contact_id,
@@ -132,8 +141,10 @@ func (s *Store) ReplyRecipientFor(ctx context.Context, id ids.ActivityID) (Reply
 		q += ` ORDER BY c.rank, c.created_at, c.id LIMIT 1`
 
 		var address string
+		var unattended bool
+		var candidates int
 		err = tx.QueryRow(ctx, q, args...).Scan(
-			&out.FullName, &out.FirstName, &out.LastName, &address)
+			&out.FullName, &out.FirstName, &out.LastName, &address, &unattended, &candidates)
 		if errors.Is(err, pgx.ErrNoRows) {
 			// Linked to nobody, or to a contact out of scope. Both mean no
 			// name, which the floor renders as an unnamed greeting rather
@@ -156,12 +167,37 @@ func (s *Store) ReplyRecipientFor(ctx context.Context, id ids.ActivityID) (Reply
 		if mailrole.GreetsNobody(out.FullName, address) {
 			out = ReplyRecipient{}
 		}
-		return nil
+		// With no participants every candidate is a linked contact this caller
+		// may read, so exactly one is the only unambiguous addressee.
+		if activity.Kind != crmcontracts.ActivityKindNote || !unattended || candidates != 1 {
+			return nil
+		}
+		out.FiledAddress, err = filedAddress(ctx, tx, address)
+		return err
 	})
 	if err != nil {
 		return ReplyRecipient{}, err
 	}
 	return out, nil
+}
+
+// filedAddress is a note's contact address unless it is one of our own seats.
+// ReplyAddressFor drops a participant carrying user_id; a note has no
+// participant, so the seat is recognised by its address instead.
+func filedAddress(ctx context.Context, tx pgx.Tx, address string) (string, error) {
+	if address == "" {
+		return "", nil
+	}
+	var seat bool
+	if err := tx.QueryRow(ctx,
+		`SELECT EXISTS (SELECT 1 FROM app_user WHERE lower(email) = lower($1))`,
+		address).Scan(&seat); err != nil {
+		return "", fmt.Errorf("check whether a note's address is a seat: %w", err)
+	}
+	if seat {
+		return "", nil
+	}
+	return address, nil
 }
 
 // GreetingName is the one name a floor draft greets by, or empty.
