@@ -354,6 +354,24 @@ func TestAMovementAcrossTwoPopulationsIsRefused(t *testing.T) {
 	if !errors.As(err, &refused) || refused.Code != "populations_differ" {
 		t.Fatalf("a workspace freeze was differenced against an owner's and answered %v, want populations_differ", err)
 	}
+
+	// The same population in two base currencies is a pair too: subtracting EUR
+	// from USD reports the switch as deals that moved.
+	var usd ids.UUID
+	if err := e.store.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		var err error
+		usd, err = e.store.TakeSnapshot(ctx, tx, NewSnapshot{
+			Period: quarter, Scope: Scope{Kind: ScopeWorkspace}, Trigger: TriggerCall, BaseCurrency: "USD",
+			Readings: mixedPopulation(t), TakenAt: at.Add(time.Hour),
+		})
+		return err
+	}); err != nil {
+		t.Fatalf("taking the USD snapshot: %v", err)
+	}
+	_, err = e.store.Movement(ctx, ReadingWeighted, workspace, usd)
+	if !errors.As(err, &refused) || refused.Code != "currencies_differ" {
+		t.Fatalf("a EUR freeze was differenced against a USD one and answered %v, want currencies_differ", err)
+	}
 }
 
 // A frozen contribution remembers the stage the deal stood in.

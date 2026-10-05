@@ -109,8 +109,9 @@ type snapshotSide struct {
 	PeriodEnd   time.Time
 	// Population is what the snapshot was frozen over. A movement between two
 	// different populations reports the population change as deals that moved.
-	Scope      Scope
-	PipelineID *ids.UUID
+	Scope        Scope
+	PipelineID   *ids.UUID
+	BaseCurrency string
 	// Withheld says the lens dropped rows: deals this caller cannot read, or that
 	// no longer exist. A consumer that draws a complete-looking chart from the
 	// remainder must say the rest is withheld.
