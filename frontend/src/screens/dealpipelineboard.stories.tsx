@@ -121,7 +121,7 @@ export const WithCardVerbsDark: Story = {
 const openSummary: Story["play"] = async ({ canvasElement }) => {
   const canvas = within(canvasElement);
   const [first] = await canvas.findAllByRole("button", {
-    name: "Deal summary",
+    name: /^Deal summary:/,
   });
   await userEvent.click(first);
   const page = within(canvasElement.ownerDocument.body);

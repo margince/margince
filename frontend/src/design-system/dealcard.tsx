@@ -275,7 +275,7 @@ function DealCardFoot({
           <Badge tone="danger">{t("deal.singleThreaded")}</Badge>
         )}
       </span>
-      {verbs && <DealCardVerbs actions={actions} />}
+      {verbs && <DealCardVerbs actions={actions} dealName={deal.name} />}
     </span>
   );
 }
@@ -287,15 +287,21 @@ function DealCardFoot({
  * room while hidden left a blank band under the hairline of every card with
  * nothing else to say, and a screen with no pointer could never reveal it.
  */
-function DealCardVerbs({ actions }: Readonly<{ actions: DealCardActions }>) {
+function DealCardVerbs({
+  actions,
+  dealName,
+}: Readonly<{ actions: DealCardActions; dealName: string }>) {
   const t = useT();
+  // Each verb names its deal: a board repeats these three on every card, and a
+  // screen reader's list of buttons is otherwise twenty identical triples.
+  const name = { name: dealName };
   return (
     <span className="deal-actions">
       {actions.onSummary && (
         <IconAction
           inline
           variant="ghost"
-          label={t("deal360.brief")}
+          label={t("deal.card.summary", name)}
           icon={<Sparkles aria-hidden="true" />}
           onClick={actions.onSummary}
         />
@@ -304,7 +310,7 @@ function DealCardVerbs({ actions }: Readonly<{ actions: DealCardActions }>) {
         <IconAction
           inline
           variant="ghost"
-          label={t("contact.action.email")}
+          label={t("deal.card.email", name)}
           // Not the bare envelope: the mail chip beside it draws that glyph
           // for mail RECEIVED, and one glyph on one line for two things is a
           // reader pressing the wrong one.
@@ -316,7 +322,7 @@ function DealCardVerbs({ actions }: Readonly<{ actions: DealCardActions }>) {
         <IconAction
           inline
           variant="ghost"
-          label={t("log.addTask")}
+          label={t("deal.card.addTask", name)}
           icon={<ListPlus aria-hidden="true" />}
           onClick={actions.onAddTask}
         />

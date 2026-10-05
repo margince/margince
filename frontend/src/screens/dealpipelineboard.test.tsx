@@ -103,7 +103,9 @@ describe("DealPipelineBoard", () => {
   it("opens a deal's summary beside the board, with the way into the deal", async () => {
     const user = userEvent.setup();
     renderBoard([openDeal], null);
-    await user.click(screen.getByRole("button", { name: "Deal summary" }));
+    await user.click(
+      screen.getByRole("button", { name: "Deal summary: Fleet retrofit" }),
+    );
     const drawer = await screen.findByRole("dialog", {
       name: "Fleet retrofit",
     });
@@ -120,7 +122,9 @@ describe("DealPipelineBoard", () => {
     renderBoard([openDeal], (target) => {
       asked.push(target);
     });
-    await user.click(screen.getByRole("button", { name: "Email" }));
+    await user.click(
+      screen.getByRole("button", { name: "Email: Fleet retrofit" }),
+    );
     expect(asked).toEqual([{ entityType: "deal", entityId: "d1" }]);
   });
 
@@ -128,13 +132,15 @@ describe("DealPipelineBoard", () => {
   // verb that opened onto a refusal would be a press that does nothing.
   it("offers no mail verb to a reader with no mailbox", () => {
     renderBoard([openDeal], null);
-    expect(screen.queryByRole("button", { name: "Email" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Email/ })).toBeNull();
   });
 
   it("files a task in the deal page's own task drawer once the grant is known", async () => {
     const user = userEvent.setup();
     renderBoard([openDeal], null);
-    await user.click(await screen.findByRole("button", { name: "Add task" }));
+    await user.click(
+      await screen.findByRole("button", { name: "Add task: Fleet retrofit" }),
+    );
     expect(
       await screen.findByRole("dialog", { name: "Add task" }),
     ).toBeTruthy();
@@ -146,11 +152,13 @@ describe("DealPipelineBoard", () => {
   it("offers an archived deal its summary and nothing that writes to it", async () => {
     const { container } = renderBoard([openDeal, archivedDeal], () => {});
     await within(card(container, "d1")).findByRole("button", {
-      name: "Add task",
+      name: "Add task: Fleet retrofit",
     });
     const archived = within(card(container, "d2"));
-    expect(archived.getByRole("button", { name: "Deal summary" })).toBeTruthy();
-    expect(archived.queryByRole("button", { name: "Email" })).toBeNull();
-    expect(archived.queryByRole("button", { name: "Add task" })).toBeNull();
+    expect(
+      archived.getByRole("button", { name: "Deal summary: Old retrofit" }),
+    ).toBeTruthy();
+    expect(archived.queryByRole("button", { name: /^Email/ })).toBeNull();
+    expect(archived.queryByRole("button", { name: /^Add task/ })).toBeNull();
   });
 });

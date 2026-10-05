@@ -90,9 +90,15 @@ describe("DealCard + PipelineBoard", () => {
         }}
       />,
     );
-    await user.click(screen.getByRole("button", { name: "Deal summary" }));
-    await user.click(screen.getByRole("button", { name: "Email" }));
-    await user.click(screen.getByRole("button", { name: "Add task" }));
+    await user.click(
+      screen.getByRole("button", { name: "Deal summary: Fleet retrofit" }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Email: Fleet retrofit" }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Add task: Fleet retrofit" }),
+    );
     expect(pressed).toEqual(["summary", "email", "task"]);
 
     rerender(
@@ -105,9 +111,11 @@ describe("DealCard + PipelineBoard", () => {
         />
       </LocaleProvider>,
     );
-    expect(screen.getByRole("button", { name: "Deal summary" })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Email" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Add task" })).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Deal summary: Fleet retrofit" }),
+    ).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /^Email/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Add task/ })).toBeNull();
   });
 
   // A press on a verb is not a press on the card: the deal's own door does not
@@ -124,7 +132,9 @@ describe("DealCard + PipelineBoard", () => {
         actions={{ onSummary: () => undefined }}
       />,
     );
-    await user.click(screen.getByRole("button", { name: "Deal summary" }));
+    await user.click(
+      screen.getByRole("button", { name: "Deal summary: Fleet retrofit" }),
+    );
     expect(opened).toEqual([]);
   });
 
