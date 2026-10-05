@@ -26,7 +26,7 @@ import (
 // part's bytes base64-encoded, the way a provider's MIME does.
 func withAttachedOriginal(rec connector.NormalizedRecord) connector.NormalizedRecord {
 	encoded := base64.StdEncoding.EncodeToString(rec.Parts[0].Body)
-	rec.Raw = []byte("From: her@example.com\r\n" +
+	rec.Raw = []byte("From: " + rec.Counterparty.Email + "\r\n" +
 		"Content-Type: multipart/mixed; boundary=\"b1\"\r\n\r\n" +
 		"--b1\r\nContent-Type: text/plain\r\n\r\nAttached, as promised.\r\n" +
 		"--b1\r\nContent-Type: application/pdf\r\nContent-Transfer-Encoding: base64\r\n\r\n" +
@@ -34,15 +34,23 @@ func withAttachedOriginal(rec connector.NormalizedRecord) connector.NormalizedRe
 	return rec
 }
 
-// judgeSenderPersonal settles this seat's verdict on her@example.com as a
-// personal correspondent, against the activity the first message created.
-func judgeSenderPersonal(ctx context.Context, t *testing.T, db *database.DB, firstSourceID string) {
+// fromAddress is the record sent from address. Each case uses its own,
+// because a verdict, override or contact one case seeds outlives it in the
+// shared database and would decide the next case's sender.
+func fromAddress(rec connector.NormalizedRecord, address string) connector.NormalizedRecord {
+	rec.Counterparty.Email = address
+	return rec
+}
+
+// judgeSenderPersonal settles this seat's verdict on address as a personal
+// correspondent, against the activity the first message created.
+func judgeSenderPersonal(ctx context.Context, t *testing.T, db *database.DB, firstSourceID, address string) {
 	t.Helper()
 	if err := db.Tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
 			INSERT INTO capture_pending_counterparty (email, activity_id, owner_id, status, kind, resolved_at)
-			SELECT 'her@example.com', a.id, $2, 'noise', 'personal', now()
-			  FROM activity a WHERE a.source_id = $1`, firstSourceID, captureSeatID)
+			SELECT $3, a.id, $2, 'noise', 'personal', now()
+			  FROM activity a WHERE a.source_id = $1`, firstSourceID, captureSeatID, address)
 		return err
 	}); err != nil {
 		t.Fatalf("judging the sender personal: %v", err)
@@ -70,12 +78,13 @@ func TestAPersonalSendersFilesAreKeptNowhere(t *testing.T) {
 	blob := blobstore.NewMemory()
 	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blob))
 
-	if _, err := sink.Upsert(ctx, mailRecord("msg-first-"+tag)); err != nil {
+	address := "personal-" + tag + "@example.com"
+	if _, err := sink.Upsert(ctx, fromAddress(mailRecord("msg-first-"+tag), address)); err != nil {
 		t.Fatalf("capturing the first message: %v", err)
 	}
-	judgeSenderPersonal(ctx, t, db, "msg-first-"+tag)
+	judgeSenderPersonal(ctx, t, db, "msg-first-"+tag, address)
 
-	rec := withAttachedOriginal(withFiles(mailRecord("msg-personal-"+tag), onePDF()))
+	rec := withAttachedOriginal(withFiles(fromAddress(mailRecord("msg-personal-"+tag), address), onePDF()))
 	if _, err := sink.Upsert(ctx, rec); err != nil {
 		t.Fatalf("capturing the personal sender's message: %v", err)
 	}
@@ -101,21 +110,22 @@ func TestABusinessOverrideKeepsAPersonalSendersFiles(t *testing.T) {
 	ctx, db, tag := captureWorkspace(t)
 	blob := blobstore.NewMemory()
 	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blob))
+	address := "override-" + tag + "@example.com"
 
-	if _, err := sink.Upsert(ctx, mailRecord("msg-first-"+tag)); err != nil {
+	if _, err := sink.Upsert(ctx, fromAddress(mailRecord("msg-first-"+tag), address)); err != nil {
 		t.Fatalf("capturing the first message: %v", err)
 	}
-	judgeSenderPersonal(ctx, t, db, "msg-first-"+tag)
+	judgeSenderPersonal(ctx, t, db, "msg-first-"+tag, address)
 	if err := db.Tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
 			INSERT INTO capture_sender_override (user_id, address, decision, overruled_kind)
-			VALUES ($1, 'her@example.com', 'business', 'personal')`, captureSeatID)
+			VALUES ($1, $2, 'business', 'personal')`, captureSeatID, address)
 		return err
 	}); err != nil {
 		t.Fatalf("overriding the verdict: %v", err)
 	}
 
-	rec := withAttachedOriginal(withFiles(mailRecord("msg-readmitted-"+tag), onePDF()))
+	rec := withAttachedOriginal(withFiles(fromAddress(mailRecord("msg-readmitted-"+tag), address), onePDF()))
 	if _, err := sink.Upsert(ctx, rec); err != nil {
 		t.Fatalf("capturing the readmitted sender's message: %v", err)
 	}
@@ -125,5 +135,70 @@ func TestABusinessOverrideKeepsAPersonalSendersFiles(t *testing.T) {
 	encoded := base64.StdEncoding.EncodeToString(onePDF().Body)
 	if raw := storedOriginal(ctx, t, db, "msg-readmitted-"+tag); !bytes.Contains(raw, []byte(encoded)) {
 		t.Error("the stored original lost the bytes of a business sender's attachment")
+	}
+}
+
+// A personal verdict on an address a correspondence contact holds is the
+// forgery noiseMailScope already refuses: the contact's mail keeps its files.
+func TestACorrespondenceContactsFilesSurviveAPersonalVerdict(t *testing.T) {
+	ctx, db, tag := captureWorkspace(t)
+	blob := blobstore.NewMemory()
+	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blob))
+	address := "contact-" + tag + "@example.com"
+	from := func(rec connector.NormalizedRecord) connector.NormalizedRecord { return fromAddress(rec, address) }
+
+	if _, err := sink.Upsert(ctx, from(mailRecord("msg-first-"+tag))); err != nil {
+		t.Fatalf("capturing the first message: %v", err)
+	}
+	judgeSenderPersonal(ctx, t, db, "msg-first-"+tag, address)
+	if err := db.Tx(ctx, func(tx pgx.Tx) error {
+		var contact string
+		if err := tx.QueryRow(ctx, `
+			INSERT INTO contact (full_name, source, captured_by, visibility)
+			VALUES ('Her', 'imap', 'connector:imap', 'workspace') RETURNING id`).Scan(&contact); err != nil {
+			return err
+		}
+		_, err := tx.Exec(ctx, `
+			INSERT INTO contact_email (contact_id, email, source, captured_by)
+			VALUES ($1, $2, 'imap', 'connector:imap')`, contact, address)
+		return err
+	}); err != nil {
+		t.Fatalf("seeding the correspondence contact: %v", err)
+	}
+
+	rec := withAttachedOriginal(withFiles(from(mailRecord("msg-contact-"+tag)), onePDF()))
+	if _, err := sink.Upsert(ctx, rec); err != nil {
+		t.Fatalf("capturing the contact's message: %v", err)
+	}
+	if files := filesFor(ctx, t, db, "msg-contact-"+tag); len(files) != 1 {
+		t.Errorf("stored %d files for a correspondence contact, want 1", len(files))
+	}
+}
+
+// A file the parser's bounds refused is in no part to splice out, so a
+// personal sender's original keeps only its headers.
+func TestAPersonalSendersRefusedFileLeavesNoBytesInTheOriginal(t *testing.T) {
+	ctx, db, tag := captureWorkspace(t)
+	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blobstore.NewMemory()))
+
+	address := "dropped-" + tag + "@example.com"
+	if _, err := sink.Upsert(ctx, fromAddress(mailRecord("msg-first-"+tag), address)); err != nil {
+		t.Fatalf("capturing the first message: %v", err)
+	}
+	judgeSenderPersonal(ctx, t, db, "msg-first-"+tag, address)
+
+	rec := withAttachedOriginal(withFiles(fromAddress(mailRecord("msg-dropped-"+tag), address), onePDF()))
+	rec.Parts = nil
+	rec.PartDrops = []connector.PartDrop{{Count: 1, Reason: "too large"}}
+	if _, err := sink.Upsert(ctx, rec); err != nil {
+		t.Fatalf("capturing the message: %v", err)
+	}
+	encoded := base64.StdEncoding.EncodeToString(onePDF().Body)
+	raw := storedOriginal(ctx, t, db, "msg-dropped-"+tag)
+	if bytes.Contains(raw, []byte(encoded)) {
+		t.Error("the refused file's bytes are still in the stored original")
+	}
+	if !bytes.HasPrefix(raw, []byte("From: "+address+"\r\n")) {
+		t.Errorf("the stored original lost its headers: %q", raw)
 	}
 }

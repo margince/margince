@@ -49,3 +49,12 @@ func TestWithholdPartsFallsBackToTheHeadersWhenAPartIsNotLocated(t *testing.T) {
 		t.Errorf("the fallback lost the message headers: %q", out)
 	}
 }
+
+// An original with no blank line cannot be split into header and body, so
+// nothing of it is kept but the marker.
+func TestHeadersOnlyKeepsNothingOfAnUnsplittableOriginal(t *testing.T) {
+	out := partslim.HeadersOnly([]byte("Subject: no blank line anywhere JVBERi0xLjQ="))
+	if bytes.Contains(out, []byte("JVBERi0xLjQ=")) {
+		t.Errorf("an unsplittable original kept its bytes: %q", out)
+	}
+}

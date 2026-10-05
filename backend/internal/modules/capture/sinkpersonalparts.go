@@ -33,6 +33,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/partslim"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // withheldPersonalParts is the breadcrumb a stripped message leaves, in the
@@ -64,7 +65,9 @@ func messageIsPrivateTx(
 //
 // It asks the sender-scoped half of PersonalPurgeScope (purgepersonal.go): the
 // seat's own verdict, inbound mail only, inside noiseVerdictReach, and no
-// `business` override and no attested reply to the address. The purge's other
+// `business` override and no attested reply to the address. It also refuses an
+// address a correspondence contact holds, because unlike the purge it acts at
+// once and leaves no window to correct a forged verdict. The purge's other
 // clauses are about a stored row — a hold, a contact filing — and no row exists
 // yet. Spelled here rather than shared because that scope is a SQL fragment
 // over a stored activity `a`, and this message is not one.
@@ -77,6 +80,15 @@ func senderIsPersonalTx(
 		rec.Counterparty.SentByOwner() {
 		return false, nil
 	}
+	// Locked, through the reader the verdict engine uses: a `business` override
+	// committing while this message is captured must win, not lose its files.
+	override, err := OverrideForTx(ctx, tx, seat, address)
+	if err != nil || override == OverrideBusiness {
+		return false, err
+	}
+	// The From header is unauthenticated, so a forged message can earn an
+	// address a personal verdict. A contact the workspace corresponds with at
+	// that address outranks it, exactly as it does for noiseMailScope.
 	var personal bool
 	if err := tx.QueryRow(ctx, `
 		SELECT EXISTS (
@@ -86,22 +98,49 @@ func senderIsPersonalTx(
 		     AND p.resolved_at IS NOT NULL
 		     AND now() <= p.resolved_at + `+quoteInterval(noiseVerdictReach)+`
 		     AND NOT EXISTS (
-		       SELECT 1 FROM capture_sender_override o
-		        WHERE o.user_id = $1 AND o.address = $2 AND o.decision = $5)
-		     AND NOT EXISTS (
 		       SELECT 1 FROM activity c
 		        WHERE c.counterparty_email = $2
 		          AND c.direction = 'outbound' AND c.counterparty_outbound_attested
-		          AND c.archived_at IS NULL))`,
-		seat, address, PendingStatusNoise, KindPersonal, OverrideBusiness).Scan(&personal); err != nil {
+		          AND c.archived_at IS NULL)
+		     AND NOT EXISTS (
+		       SELECT 1 FROM contact_email pe JOIN contact pr ON pr.id = pe.contact_id
+		        WHERE pe.email = $2 AND pr.archived_at IS NULL
+		          AND pe.from_correspondence))`,
+		seat, address, PendingStatusNoise, KindPersonal).Scan(&personal); err != nil {
 		return false, fmt.Errorf("capture: reading whether this sender is a personal correspondent: %w", err)
 	}
 	return personal, nil
 }
 
+// captureActivityRecord writes one activity record's original and then the
+// activity. The original is stored AFTER the record is read against the seat's
+// own addresses, so the privacy question it asks sees the same record that
+// staging asks it about.
+func (s *Sink) captureActivityRecord(
+	ctx context.Context, tx pgx.Tx, seat ids.UUID, rec connector.NormalizedRecord, fields ActivityFields,
+) (datasource.EntityRef, bool, counterpartyDecision, error) {
+	// FIRST of everything that touches an activity row in this transaction,
+	// alias adoption included: adoption recomputes the audience of every
+	// message it adopts, which locks those rows, and a transaction holding one
+	// before it asks for the merge lock is the cycle takeMergeLockFirst exists
+	// to break.
+	if err := s.takeMergeLockFirst(ctx, tx, rec); err != nil {
+		return datasource.EntityRef{}, false, counterpartyDecision{}, err
+	}
+	rec, fields, err := s.readAgainstTheSeatsAddressesTx(ctx, tx, seat, rec, fields)
+	if err != nil {
+		return datasource.EntityRef{}, false, counterpartyDecision{}, err
+	}
+	if rec, err = storeOriginalTx(ctx, tx, rec); err != nil {
+		return datasource.EntityRef{}, false, counterpartyDecision{}, err
+	}
+	return s.captureActivity(ctx, tx, rec, fields)
+}
+
 // storeOriginalTx writes the record's original to raw_capture and stamps the
-// stored row back onto the record. Raw capture is append-once, so a private
-// message's files leave the original here, before its only write.
+// stored row back onto the record, so the activity can name the original it was
+// read from. Raw capture is append-once, so a private message's files leave the
+// original here, before its only write.
 func storeOriginalTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) (connector.NormalizedRecord, error) {
 	rec, err := withholdPrivateOriginalTx(ctx, tx, rec)
 	if err != nil {
@@ -135,7 +174,13 @@ func withholdPrivateOriginalTx(
 // original raw_capture is about to store. The parts themselves stay on the
 // record until finishNewActivity strips them and leaves the breadcrumb.
 func withholdRawParts(rec connector.NormalizedRecord) connector.NormalizedRecord {
-	if len(rec.Parts) == 0 || len(rec.Raw) == 0 {
+	if len(rec.Raw) == 0 || (len(rec.Parts) == 0 && len(rec.PartDrops) == 0) {
+		return rec
+	}
+	// A file the bounds refused is in no part to splice, yet still in the
+	// original, so only its headers are kept.
+	if len(rec.PartDrops) > 0 {
+		rec.Raw = partslim.HeadersOnly(rec.Raw)
 		return rec
 	}
 	parts := make([]partslim.WithheldPart, 0, len(rec.Parts))

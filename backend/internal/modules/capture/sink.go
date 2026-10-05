@@ -233,32 +233,15 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 			return nil
 		}
 
-		// Stamped back onto the record, so the activity below can name the
-		// original it was read from and a purge can follow the link instead of
-		// joining on two writers' keys and hoping they agree. rec is a value
-		// copy; this settles it for every reader downstream of here.
-		if rec, err = storeOriginalTx(ctx, tx, rec); err != nil {
-			return err
-		}
-
 		switch fields := rec.Fields.(type) {
 		case ActivityFields:
-			// FIRST of everything that touches an activity row in this
-			// transaction, alias adoption included: adoption recomputes the
-			// audience of every message it adopts, which locks those rows, and a
-			// transaction holding one before it asks for the merge lock is the
-			// cycle takeMergeLockFirst exists to break.
-			if err := s.takeMergeLockFirst(ctx, tx, rec); err != nil {
-				return err
-			}
 			var err error
-			if rec, fields, err = s.readAgainstTheSeatsAddressesTx(ctx, tx, actor.UserID, rec, fields); err != nil {
-				return err
-			}
-			ref, activityCreated, decision, err = s.captureActivity(ctx, tx, rec, fields)
+			ref, activityCreated, decision, err = s.captureActivityRecord(ctx, tx, actor.UserID, rec, fields)
 			return err
 		case LeadFields:
-			var err error
+			if rec, err = storeOriginalTx(ctx, tx, rec); err != nil {
+				return err
+			}
 			ref, dedupeHit, dedupeFields, err = s.captureLead(ctx, tx, rec, fields)
 			return err
 		default:

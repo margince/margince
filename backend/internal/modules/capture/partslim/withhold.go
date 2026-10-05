@@ -43,13 +43,13 @@ func WithholdParts(raw []byte, parts []WithheldPart) ([]byte, bool) {
 	for _, part := range parts {
 		s, err := withholdSplice(raw, part.Ordinal, part.Body)
 		if err != nil {
-			return headersOnly(raw), false
+			return HeadersOnly(raw), false
 		}
 		splices = append(splices, s)
 	}
 	ordered, err := orderSplices(splices)
 	if err != nil {
-		return headersOnly(raw), false
+		return HeadersOnly(raw), false
 	}
 	return applySplices(raw, ordered), true
 }
@@ -90,9 +90,10 @@ func orderSplices(splices []splice) ([]splice, error) {
 	return ordered, nil
 }
 
-// headersOnly is the message's top header block and the blank line ending it.
-// A message with no blank line is all header, and comes back unchanged.
-func headersOnly(raw []byte) []byte {
+// HeadersOnly is the message's top header block and the blank line ending it.
+// A message with no blank line cannot be told header from body, so it keeps
+// only the withheld marker.
+func HeadersOnly(raw []byte) []byte {
 	end := -1
 	for _, sep := range [][]byte{[]byte("\r\n\r\n"), []byte("\n\n")} {
 		if at := bytes.Index(raw, sep); at >= 0 && (end < 0 || at+len(sep) < end) {
@@ -100,7 +101,7 @@ func headersOnly(raw []byte) []byte {
 		}
 	}
 	if end < 0 {
-		return raw
+		return []byte(PartWithheldHeader + ": all\r\n\r\n")
 	}
 	return append([]byte(nil), raw[:end]...)
 }
