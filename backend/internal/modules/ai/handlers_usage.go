@@ -188,14 +188,16 @@ func (h Handlers) GetAiHealth(w http.ResponseWriter, r *http.Request) {
 
 // GetAiProviderHealth implements (GET /ai/provider-health).
 //
-// Admitted by the same grant as GetAiHealth. It reads the in-process book, not
-// ai_call, so it answers for this process alone and needs no database.
+// Admitted by the same grant as GetAiHealth. It reads the in-process book
+// merged with the status other processes shared, not ai_call, so it needs no
+// database and still answers for this process alone when the shared store is
+// unreachable.
 func (h Handlers) GetAiProviderHealth(w http.ResponseWriter, r *http.Request) {
 	if err := auth.Require(r.Context(), "ai_diagnostics", principal.ActionRead); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
-	entries := h.providers.snapshot()
+	entries := h.providers.report(r.Context())
 	out := crmcontracts.AiProviderHealth{Providers: make([]crmcontracts.AiProviderHealthEntry, 0, len(entries))}
 	for _, e := range entries {
 		wire := crmcontracts.AiProviderHealthEntry{

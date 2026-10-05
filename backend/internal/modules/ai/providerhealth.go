@@ -124,6 +124,10 @@ type providerTracker struct {
 	status      model.ProviderHealthStatus
 	consecutive int
 	backoff     time.Duration
+	// notify queues a status change for the other processes; nil when nothing
+	// is shared. sharedAt is when the status was last queued.
+	notify   func(model.ProviderHealthStatus)
+	sharedAt time.Time
 }
 
 func newProviderTracker(now func() time.Time) *providerTracker {
@@ -160,6 +164,8 @@ func (t *providerTracker) observe(err error) {
 	kind := classifyFailure(err)
 	t.mu.Lock()
 	defer t.mu.Unlock()
+	before := t.status
+	defer func() { t.share(before) }()
 	switch {
 	case kind != failNone:
 		t.fail(kind)
@@ -177,6 +183,8 @@ func (t *providerTracker) observe(err error) {
 func (t *providerTracker) reset() {
 	t.mu.Lock()
 	defer t.mu.Unlock()
+	before := t.status
+	defer func() { t.share(before) }()
 	t.recover()
 }
 
@@ -233,6 +241,7 @@ type providerBook struct {
 	mu       sync.Mutex
 	now      func() time.Time
 	trackers map[string]*providerTracker
+	sharer   healthSharer
 }
 
 func newProviderBook(now func() time.Time) *providerBook {
@@ -247,6 +256,7 @@ func (b *providerBook) tracker(provider string) *providerTracker {
 	t, ok := b.trackers[provider]
 	if !ok {
 		t = newProviderTracker(b.now)
+		t.notify = func(st model.ProviderHealthStatus) { b.sharer.enqueue(provider, st) }
 		b.trackers[provider] = t
 	}
 	return t
@@ -262,6 +272,9 @@ func (b *providerBook) forget(provider string) {
 	if ok {
 		t.reset()
 	}
+	// The fault may have been seen by another process, so there may be no local
+	// tracker to reset and still a shared key to drop.
+	b.sharer.enqueue(provider, model.ProviderHealthStatus{Health: model.HealthOK})
 }
 
 // ProviderHealthEntry is one provider's health as the operator surfaces read it.

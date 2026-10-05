@@ -20,6 +20,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/aiactivity"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -30,6 +31,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/events"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
+	"github.com/margince/margince/backend/internal/platform/providerhealthstore"
 	"github.com/margince/margince/backend/internal/platform/ratelimit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -99,6 +101,7 @@ func openBus(ctx context.Context, cfg workerConfig) (*redis.Client, error) {
 		return nil, err
 	}
 	ratelimit.ShareProcess(rdb)
+	ai.ShareProviderHealth(providerhealthstore.New(rdb))
 	return rdb, nil
 }
 
