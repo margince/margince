@@ -46,11 +46,7 @@ import (
 // record contains, so "this table has no owner_id" is never on its own a
 // reason to skip the probe.
 var rowScopedResponses = map[string]expectedTarget{
-	"MeetingInvitation": {table: "activity", idPath: "id"},
-	// What filing an activity under a project did to its retention. It names no
-	// activity id of its own — the route's {id} is the record — and it carries
-	// the decider's name and written reason, so a replay re-probes the activity.
-	"ProjectFiling":                        {table: "activity", pathParam: "id"},
+	"MeetingInvitation":                    {table: "activity", idPath: "id"},
 	"inline:POST /v1/scheduling/proposals": {table: "activity", idPath: "id"},
 	"Contact":                              {table: "contact", idPath: "id"},
 	"Company":                              {table: "company", idPath: "id"},

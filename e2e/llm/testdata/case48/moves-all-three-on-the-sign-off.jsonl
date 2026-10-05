@@ -1,4 +1,5 @@
-{"type": "system", "subtype": "init", "tools": ["mcp__margince__decide_approval", "mcp__margince__list_records", "mcp__margince__relink_activities", "mcp__margince__relink_thread"]}
+{"type": "system", "subtype": "init", "tools": ["mcp__margince__decide_approval", "mcp__margince__list_records", "mcp__margince__read_record", "mcp__margince__relink_activities", "mcp__margince__relink_thread"]}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__read_record", "input": {"record_type": "activity", "id": "a-1"}}]}}
 {"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__list_records", "input": {"record_type": "company", "thread_key": "seed-kp300-delay"}}]}}
 {"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__relink_thread", "input": {"thread_key": "seed-kp300-delay", "entity_type": "company", "entity_id": "co-rhoen"}}]}}
 {"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__relink_activities", "input": {"activity_ids": ["a-1", "a-2", "a-3"], "entity_type": "company", "entity_id": "co-rhoen", "replace_existing_of_type": true}}]}}

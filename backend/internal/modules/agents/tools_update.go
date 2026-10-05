@@ -184,7 +184,7 @@ func (t updateRecord) applySplit(ctx context.Context, args updateRecordArgs, spl
 			ApprovalID: staged.ApprovalID,
 			Fields:     split.Conflicts,
 			Replay:     canonical,
-			Message:    splitStagingNote(split.Conflicts, staged.ApprovalID, staged.AlreadyApproved),
+			Message:    splitStagingNote(split.Conflicts, staged.ApprovalID, staged.AlreadyApproved, staged.ReleasableByCaller),
 		},
 	})
 }
@@ -195,16 +195,20 @@ func (t updateRecord) applySplit(ctx context.Context, args updateRecordArgs, spl
 // who has already answered re-sends the call, and each re-send is another
 // approval for the same withheld fields — so the line that says which of the two
 // happened is what keeps one act to one authority object.
-func splitStagingNote(conflicts []string, id ids.ApprovalID, alreadyApproved bool) string {
+func splitStagingNote(conflicts []string, id ids.ApprovalID, alreadyApproved, releasable bool) string {
 	fields := strings.Join(conflicts, ", ")
 	if alreadyApproved {
 		return fmt.Sprintf(
 			"fields %s were last edited by a human and were NOT applied; a human has already approved this exact overwrite as approval %s — call update_record with exactly the replay arguments plus \"approval_id\": %q",
 			fields, id, id.String())
 	}
+	who := "once a human approves it"
+	if releasable {
+		who = "once the user says yes, release it with decide_approval (or they approve it in the CRM)"
+	}
 	return fmt.Sprintf(
-		"fields %s were last edited by a human and were NOT applied; staged as approval %s — once a human approves it, call update_record with exactly the replay arguments plus \"approval_id\": %q",
-		fields, id, id.String())
+		"fields %s were last edited by a human and were NOT applied; staged as approval %s — %s, call update_record with exactly the replay arguments plus \"approval_id\": %q",
+		fields, id, who, id.String())
 }
 
 // stageConflicts records the 🟡 residue of one split update. The read

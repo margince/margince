@@ -178,10 +178,10 @@ which it was sent or received** — its own date, not the day you filed it.
 The mark is written the moment the link is made, by any route. **Moving the
 email off the project does not remove it.** An erasure request will then hold
 that message under a restriction rather than deleting it, and it appears on the
-Restricted records page with the project's name as the reason. A mistaken filing
-is taken back with **Undo filing** on the project's timeline: you write why, the
-message leaves the project and the mark is withdrawn, unless a won deal, a sent
-offer or a statutory hold still holds it. An assistant cannot undo a filing.
+Restricted records page with the project's name as the reason. **Undo filing** on
+the project's timeline takes a mistaken filing back, with a written reason, unless a
+won deal or sent offer, a controller's pin, a legal hold, an erasure request or a
+statutory hold keeps the message. An assistant cannot undo a filing.
 
 ## Fixing a mistake: Relink
 

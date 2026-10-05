@@ -10,16 +10,16 @@
   "totals": {
     "tools": 81,
     "resources": 11,
-    "tool_catalog_bytes": 251080,
+    "tool_catalog_bytes": 251175,
     "resource_catalog_bytes": 4179,
-    "approx_wire_tokens_total": 63814,
+    "approx_wire_tokens_total": 63838,
     "largest_tool_bytes": 9253,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
-      "description_bytes": 65840,
-      "input_schema_bytes": 57107,
+      "description_bytes": 65913,
+      "input_schema_bytes": 57129,
       "output_schema_bytes": 110786,
-      "description_plus_input_schema_bytes": 122947
+      "description_plus_input_schema_bytes": 123042
     }
   },
   "tools": {
@@ -7594,7 +7594,7 @@
           "readOnlyHint": false,
           "title": "Log an activity"
         },
-        "description": "Record something that happened — a call, a meeting, a note, a message — on the records it was about: name every one of them in this call. A meeting is with a contact, and also concerns their company and the deal it is for. It writes history and changes nothing else: no deal moves, no field updates, nobody is notified. Unlinked, it appears on no timeline, and adding a link afterwards is a second call — relink_activity — which a human has to approve when it files under a project. Use progress_deal when the same event also moves a deal, so move and note are one act; create_task for something still owed. Keep the activity id — draft_email, send_email and send_message identify a conversation by it. (Governance: runs immediately; requires passport scope \"write\".)",
+        "description": "Record something that happened — a call, a meeting, a note, a message — on the records it was about: name every one of them in this call. A meeting is with a contact, and also concerns their company and the deal it is for. It writes history and changes nothing else: no deal moves, no field updates, nobody is notified. Unlinked, it appears on no timeline, and adding a link afterwards is a second call — relink_activity — which waits for the user's yes when it files under a project. Use progress_deal when the same event also moves a deal, so move and note are one act; create_task for something still owed. Keep the activity id — draft_email, send_email and send_message identify a conversation by it. (Governance: runs immediately; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -7635,7 +7635,7 @@
               "type": "string"
             },
             "links": {
-              "description": "Every record this was about, ALL OF THEM in this call — EXCEPT a project, which this verb REFUSES: filing under a project marks the message as commercial correspondence, so it is made through relink_activity, which a human approves. A meeting or a call is with a CONTACT and reaches their company through them — linking one to a company is REFUSED, so name the contact who was there and the company follows from where they work. A meeting linked to the deal alone sits on no attendee's timeline and the company sees nothing. Adding a link AFTERWARDS is a second write — and a later link onto a project stages an approval a human must decide before it takes effect.",
+              "description": "Every record this was about, ALL OF THEM in this call — EXCEPT a project, which this verb REFUSES: filing under a project marks the activity as commercial correspondence, so it is made through relink_activity, which waits for the user's yes. A meeting or a call is with a CONTACT and reaches their company through them — linking one to a company is REFUSED, so name the contact who was there and the company follows from where they work. A meeting linked to the deal alone sits on no attendee's timeline and the company sees nothing. Adding a link AFTERWARDS is a second write — and a later link onto a project stages an approval that waits for the user's yes before it takes effect.",
               "items": {
                 "additionalProperties": false,
                 "properties": {
@@ -12279,7 +12279,7 @@
           "readOnlyHint": false,
           "title": "Re-associate a set of activities to a record"
         },
-        "description": "Move up to 500 named activities onto one record, all or nothing. Each id must be visible and writable to you. It is staged for confirmation, and the retry moves exactly these ids. Once the user says yes, relay it with decide_approval: every destination can be put back, and a filing under a project can be undone by a member from the activity. relink_activity moves one message. The answer is the count moved. (Governance: some calls run immediately and others a human approves first, decided per call from its arguments; requires passport scope \"write\".)",
+        "description": "Move up to 500 named activities onto one record, all or nothing. Each id must be visible and writable to you. A project destination, or any move the installation's policy raises, is staged for confirmation and the retry moves exactly these ids; once the user says yes, relay it with decide_approval. A filing under a project can be undone by a member from the activity. relink_activity moves one message. The answer is the count moved. (Governance: some calls run immediately and others a human approves first, decided per call from its arguments; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -12429,7 +12429,7 @@
           "readOnlyHint": false,
           "title": "Re-associate an activity to a record"
         },
-        "description": "Fix what a recorded activity is about, when a captured mail or meeting landed on the wrong record or on none. Changes only the association; content is untouched. By default the new link is ADDED beside existing ones. Onto a project it waits for the user's yes, which you can relay with decide_approval. log_activity records an event not recorded yet; relink_activities moves a picked set, such as a whole thread's activities. Set replace_existing_of_type to move rather than associate. (Governance: some calls run immediately and others a human approves first, decided per call from its arguments; requires passport scope \"write\".)",
+        "description": "Fix what a recorded activity is about, when a captured mail or meeting landed on the wrong record or on none. Changes only the association; content is untouched. By default the new link is ADDED beside existing ones. Onto a project it waits for the user's yes; the answer says whether you may relay it with decide_approval. log_activity records an event not recorded yet; relink_activities moves a picked set, such as a whole thread's activities. Set replace_existing_of_type to move rather than associate. (Governance: some calls run immediately and others a human approves first, decided per call from its arguments; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -12577,12 +12577,12 @@
           "readOnlyHint": false,
           "title": "Re-associate a whole conversation to a record"
         },
-        "description": "Move one whole conversation (by thread_key) onto a record, in one transaction. Refused for an assistant, for every destination: a thread key cannot be confirmed because the conversation may grow before the retry. List the thread's activities and call relink_activities with exactly those ids. relink_activities moves a named set; relink_activity moves one message. (Governance: some calls run immediately and others a human approves first, decided per call from its arguments; requires passport scope \"write\".)",
+        "description": "Move one whole conversation (by thread_key) onto a record, in one transaction. Refused for an assistant, at every destination and however it is called: a thread key cannot be confirmed because the conversation may grow before the retry. List the thread's activities and call relink_activities with exactly those ids. relink_activities moves a named set; relink_activity moves one message. (Governance: some calls run immediately and others a human approves first, decided per call from its arguments; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
             "approval_id": {
-              "description": "Never redeems a thread move; use relink_activities",
+              "description": "Cannot authorize a thread move; use relink_activities",
               "format": "uuid",
               "type": "string"
             },

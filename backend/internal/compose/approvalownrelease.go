@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -40,12 +41,11 @@ var agentStraightThrough = func() map[releaseTarget]bool {
 	return straight
 }()
 
-// filingGuard answers whether filings under a project could still be undone by
-// a member, for the activities the call names. The activities store holds the
-// predicate the undo itself refuses by.
-type filingGuard interface {
-	FilingsStayUndoable(ctx context.Context, activityIDs []ids.UUID, project ids.UUID) (bool, error)
-}
+// filingGuard answers whether filings under a project could still be undone by a
+// member, for the activities a call names. activities.FilingsStayUndoable is the
+// verdict the undo itself applies; it reads through the approval's own
+// transaction, so judging a release opens no second connection.
+type filingGuard func(ctx context.Context, q activities.Querier, activityIDs []ids.UUID, project ids.UUID) (bool, error)
 
 // undoableAgentRelease is approvals.UndoableRelease for agent-staged calls. A
 // tool whose tier turns on its arguments is judged by where THIS call resolves,
@@ -55,17 +55,21 @@ type filingGuard interface {
 // undoable, which keeps the stricter rule for it.
 //
 // A filing under a project is undoable by a member only while the activity is
-// not restricted, held or under an open erasure request, so that destination is
-// also judged by the state of the activities the call names; without a guard it
-// is not undoable.
+// not restricted, held, kept by another basis or under an open erasure request,
+// so that destination is also judged by the state of the activities the call
+// names; without a guard it is not undoable.
 func undoableAgentRelease(guard filingGuard) approvals.UndoableRelease {
-	return func(ctx context.Context, kind, targetType string, change json.RawMessage) bool {
-		if undoable, decided := agents.ReleaseUndoableByDestination(kind, change); decided {
-			return undoable && filingsStayUndoable(ctx, guard, change)
+	return func(ctx context.Context, q approvals.Queryer, call approvals.StagedCall) bool {
+		if undoable, decided := agents.ReleaseUndoableByDestination(call.Kind, call.Change); decided {
+			return undoable && filingsStayUndoable(ctx, guard, q, call)
 		}
-		return agentStraightThrough[releaseTarget{kind, agentRecordType(targetType)}]
+		return agentStraightThrough[releaseTarget{call.Kind, agentRecordType(call.TargetType)}]
 	}
 }
+
+// singleRelinkTool is the one relink that names a single activity, in its body or
+// (over REST) in its route.
+const singleRelinkTool = "relink_activity"
 
 // relinkedActivities is the slice of a staged relink the state check reads: the
 // destination and the activities, named singly or as a set.
@@ -77,22 +81,27 @@ type relinkedActivities struct {
 }
 
 // filingsStayUndoable is true for every destination but a project, and for a
-// project when the guard says the undo could still take each filing back.
-func filingsStayUndoable(ctx context.Context, guard filingGuard, change json.RawMessage) bool {
-	var call relinkedActivities
-	if err := json.Unmarshal(change, &call); err != nil {
+// project when the guard says the undo could still take each filing back. A
+// single relink staged over REST names its activity in the route, not the body,
+// so that id is the staged target's.
+func filingsStayUndoable(ctx context.Context, guard filingGuard, q activities.Querier, call approvals.StagedCall) bool {
+	var args relinkedActivities
+	if err := json.Unmarshal(call.Change, &args); err != nil {
 		return false
 	}
-	if call.EntityType != string(recordTypeProject) {
+	if agentRecordType(args.EntityType) != recordTypeProject {
 		return true
 	}
 	if guard == nil {
 		return false
 	}
-	named := call.ActivityIDs
-	if call.ActivityID != nil {
-		named = append(named, *call.ActivityID)
+	named := args.ActivityIDs
+	switch {
+	case args.ActivityID != nil:
+		named = append(named, *args.ActivityID)
+	case call.Kind == singleRelinkTool && agentRecordType(call.TargetType) == recordTypeActivity && call.TargetID != ids.Nil:
+		named = append(named, call.TargetID)
 	}
-	stay, err := guard.FilingsStayUndoable(ctx, named, call.EntityID)
+	stay, err := guard(ctx, q, named, args.EntityID)
 	return err == nil && stay
 }

@@ -12513,6 +12513,8 @@ func (e Project360Section) Valid() bool {
 
 // Defines values for ProjectFilingRefusalCode.
 const (
+	ProjectFilingRefusalCodeArchived          ProjectFilingRefusalCode = "archived"
+	ProjectFilingRefusalCodeErasurePending    ProjectFilingRefusalCode = "erasure_pending"
 	ProjectFilingRefusalCodeHiddenProject     ProjectFilingRefusalCode = "hidden_project"
 	ProjectFilingRefusalCodeLegalHold         ProjectFilingRefusalCode = "legal_hold"
 	ProjectFilingRefusalCodeNotFiled          ProjectFilingRefusalCode = "not_filed"
@@ -12524,6 +12526,10 @@ const (
 // Valid indicates whether the value is a known member of the ProjectFilingRefusalCode enum.
 func (e ProjectFilingRefusalCode) Valid() bool {
 	switch e {
+	case ProjectFilingRefusalCodeArchived:
+		return true
+	case ProjectFilingRefusalCodeErasurePending:
+		return true
 	case ProjectFilingRefusalCodeHiddenProject:
 		return true
 	case ProjectFilingRefusalCodeLegalHold:
@@ -47404,25 +47410,6 @@ type GetMeetingBriefParams struct {
 	ProjectId *openapi_types.UUID `form:"project_id,omitempty" json:"project_id,omitempty"`
 }
 
-// UndoActivityProjectFilingParams defines parameters for UndoActivityProjectFiling.
-type UndoActivityProjectFilingParams struct {
-	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
-	// create (API-CC-6). **Scope:** the key is unique within
-	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
-	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
-	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
-	// answer lost": without it the blind retry answers `409 version_skew`, because the first
-	// attempt already bumped the version.
-	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
-	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
-	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
-	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
-	// than half-honouring it, so read this contract, not the client, to know which calls are safe
-	// to retry blind.
-	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
-}
-
 // RelinkActivityJSONBody defines parameters for RelinkActivity.
 type RelinkActivityJSONBody struct {
 	EntityId   openapi_types.UUID               `json:"entity_id"`
@@ -64489,7 +64476,7 @@ type ServerInterface interface {
 	GetActivityProjectFiling(w http.ResponseWriter, r *http.Request, id Id)
 	// Undo filing this activity under a project. Requires a stated reason; audited.
 	// (POST /activities/{id}/project-filing/undo)
-	UndoActivityProjectFiling(w http.ResponseWriter, r *http.Request, id Id, params UndoActivityProjectFilingParams)
+	UndoActivityProjectFiling(w http.ResponseWriter, r *http.Request, id Id)
 	// Re-associate a captured activity to a chosen deal/entity (idempotent, source-preserving).
 	// (POST /activities/{id}/relink)
 	RelinkActivity(w http.ResponseWriter, r *http.Request, id Id, params RelinkActivityParams)
@@ -66886,7 +66873,7 @@ func (_ Unimplemented) GetActivityProjectFiling(w http.ResponseWriter, r *http.R
 
 // Undo filing this activity under a project. Requires a stated reason; audited.
 // (POST /activities/{id}/project-filing/undo)
-func (_ Unimplemented) UndoActivityProjectFiling(w http.ResponseWriter, r *http.Request, id Id, params UndoActivityProjectFilingParams) {
+func (_ Unimplemented) UndoActivityProjectFiling(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -72498,32 +72485,8 @@ func (siw *ServerInterfaceWrapper) UndoActivityProjectFiling(w http.ResponseWrit
 
 	r = r.WithContext(ctx)
 
-	// Parameter object where we will unmarshal all parameters from the context
-	var params UndoActivityProjectFilingParams
-
-	headers := r.Header
-
-	// ------------- Optional header parameter "Idempotency-Key" -------------
-	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
-		var IdempotencyKey IdempotencyKey
-		n := len(valueList)
-		if n != 1 {
-			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
-			return
-		}
-
-		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
-		if err != nil {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
-			return
-		}
-
-		params.IdempotencyKey = &IdempotencyKey
-
-	}
-
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.UndoActivityProjectFiling(w, r, id, params)
+		siw.Handler.UndoActivityProjectFiling(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {

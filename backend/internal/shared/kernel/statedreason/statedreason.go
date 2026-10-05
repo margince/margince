@@ -14,10 +14,13 @@ import "strings"
 const Max = 2000
 
 // Trim answers the reason as stated and whether it is admissible.
+//
+// The bound is checked on the reason as sent, before trimming, because that is
+// what the contract's maxLength binds: edge whitespace does not buy extra room.
 func Trim(reason string) (string, bool) {
-	stated := strings.TrimSpace(reason)
-	if stated == "" || len([]rune(stated)) > Max {
+	if len([]rune(reason)) > Max {
 		return "", false
 	}
-	return stated, true
+	stated := strings.TrimSpace(reason)
+	return stated, stated != ""
 }

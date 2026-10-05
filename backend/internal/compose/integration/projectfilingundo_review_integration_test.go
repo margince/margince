@@ -21,6 +21,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -146,8 +147,8 @@ func TestAProjectTheMemberCannotSeeIsUnnamedAndStillHoldsTheActivity(t *testing.
 	}
 }
 
-// The read needs the activity grant like every other read of one.
-func TestTheFilingIsReadOnlyByAMemberWhoMayReadActivities(t *testing.T) {
+// A seat holding only a project grant is refused the read, as for any activity read.
+func TestTheFilingReadNeedsTheActivityReadGrant(t *testing.T) {
 	e := Setup(t)
 	f := filedUnderAProject(t, e)
 	noActivities := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
@@ -197,10 +198,25 @@ func TestAProjectRelinkIsReleasableOnlyWhileTheUndoCouldTakeItBack(t *testing.T)
 		restricted_reason = 'commercial_correspondence', retention_class = 'commercial_correspondence', retention_class_at = now()
 		WHERE id = $1`, restricted)
 
+	// Kept by another basis, and by a deal that qualifies it with no evidence row:
+	// the undo refuses both, so a credential's release must not be offered them.
+	stamped := seedStampFixture(t, e)
+	winDeal(t, e, stamped)
+	late := ids.NewV7()
+	e.WsExec(t, `INSERT INTO activity (id, kind, subject, body, occurred_at, source, captured_by)
+		VALUES ($1, 'email', 'late', 'body', now(), 'manual', 'human:x')`, late)
+	linkToDeal(t, e, late, stamped.deal)
+	archived := ids.NewV7()
+	e.WsExec(t, `INSERT INTO activity (id, kind, subject, body, occurred_at, source, captured_by, archived_at)
+		VALUES ($1, 'email', 'archived', 'body', now(), 'manual', 'human:x', now())`, archived)
+
 	for name, tc := range map[string]struct {
 		activities []ids.UUID
 		want       bool
 	}{
+		"an activity kept by another basis":     {[]ids.UUID{stamped.email}, false},
+		"an activity a won deal qualifies":      {[]ids.UUID{late}, false},
+		"an archived activity":                  {[]ids.UUID{archived}, false},
 		"an ordinary activity":                  {[]ids.UUID{clean}, true},
 		"an activity held through a link":       {[]ids.UUID{held}, false},
 		"an activity under an open erasure":     {[]ids.UUID{erasing}, false},
@@ -210,13 +226,13 @@ func TestAProjectRelinkIsReleasableOnlyWhileTheUndoCouldTakeItBack(t *testing.T)
 		"no activities":                         {nil, false},
 		"the same activity twice, which is one": {[]ids.UUID{clean, clean}, true},
 	} {
-		got, err := e.Activities.FilingsStayUndoable(e.Admin(), tc.activities, f.project)
+		got, err := staysUndoable(e, tc.activities, f.project)
 		if err != nil || got != tc.want {
 			t.Errorf("%s: undoable = %v (err %v), want %v", name, got, err, tc.want)
 		}
 	}
 	e.WsExec(t, `UPDATE project SET legal_hold = true WHERE id = $1`, f.project)
-	if got, err := e.Activities.FilingsStayUndoable(e.Admin(), []ids.UUID{clean}, f.project); err != nil || got {
+	if got, err := staysUndoable(e, []ids.UUID{clean}, f.project); err != nil || got {
 		t.Errorf("a filing under a held project: undoable = %v (err %v), want false", got, err)
 	}
 }
@@ -245,7 +261,7 @@ func TestAnUndoWaitsForADealWinInFlightAndThenRefuses(t *testing.T) {
 		_, err := e.Activities.UndoProjectFiling(e.Admin(), ids.ActivityID{UUID: f.email}, undoReason)
 		finished <- err
 	}()
-	waitUntilBlockedOnTheDeal(t, owner)
+	waitUntilBlockedBy(t, winning)
 
 	// What the win's own transaction writes, through the real stamp writer.
 	if err := activities.StampCorrespondenceForDeal(ctx, winning, ids.DealID{UUID: deal.deal}, "deal_won"); err != nil {
@@ -264,23 +280,41 @@ func TestAnUndoWaitsForADealWinInFlightAndThenRefuses(t *testing.T) {
 	}
 }
 
-// waitUntilBlockedOnTheDeal polls the server's own view of who is waiting for a
-// row lock, with a deadline, rather than sleeping and hoping. Nothing else in
-// this test takes a lock another session waits on.
-func waitUntilBlockedOnTheDeal(t *testing.T, owner *pgx.Conn) {
+// waitUntilBlockedBy waits until some session is blocked by the transaction
+// held on holder's connection, asked of the server through pg_blocking_pids on
+// a connection of its own, paced by a ticker and bounded by a deadline.
+func waitUntilBlockedBy(t *testing.T, holder interface {
+	QueryRow(context.Context, string, ...any) pgx.Row
+},
+) {
 	t.Helper()
-	deadline := time.Now().Add(10 * time.Second)
-	for time.Now().Before(deadline) {
-		var waiting int
-		if err := owner.QueryRow(context.Background(), `
-			SELECT count(*) FROM pg_locks WHERE NOT granted AND locktype IN ('transactionid', 'tuple')`).Scan(&waiting); err != nil {
+	var holderPID int
+	if err := holder.QueryRow(context.Background(), `SELECT pg_backend_pid()`).Scan(&holderPID); err != nil {
+		t.Fatal(err)
+	}
+	observer := OwnerConn(t)
+	deadline := time.After(10 * time.Second)
+	tick := time.NewTicker(20 * time.Millisecond)
+	defer tick.Stop()
+	for {
+		var blocked int
+		// A fresh reading each pass: the statistics view is a per-transaction snapshot.
+		if _, err := observer.Exec(context.Background(), `SELECT pg_stat_clear_snapshot()`); err != nil {
 			t.Fatal(err)
 		}
-		if waiting > 0 {
+		if err := observer.QueryRow(context.Background(),
+			`SELECT count(*) FROM pg_stat_activity WHERE $1 = ANY(pg_blocking_pids(pid))`, holderPID).Scan(&blocked); err != nil {
+			t.Fatal(err)
+		}
+		if blocked > 0 {
 			return
 		}
+		select {
+		case <-deadline:
+			t.Fatal("the undo never queued behind the writer's row lock, so it does not serialize with it")
+		case <-tick.C:
+		}
 	}
-	t.Fatal("the undo never queued behind the deal's row lock, so it does not serialize with a win")
 }
 
 // A credential is not offered, and is refused, the release of a project relink
@@ -318,5 +352,97 @@ func TestACredentialDoesNotReleaseAProjectRelinkOverAnActivityUnderErasure(t *te
 	}
 	if projectLinks(t, e, f.mine[0], f.project) != 0 {
 		t.Error("the refused release filed the activity")
+	}
+}
+
+// staysUndoable asks the guard through the transaction a decision would already
+// hold, as the approval engine does.
+func staysUndoable(e *Env, named []ids.UUID, project ids.UUID) (bool, error) {
+	var stays bool
+	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		var err error
+		stays, err = activities.FilingsStayUndoable(e.Admin(), tx, named, project)
+		return err
+	})
+	return stays, err
+}
+
+// A legal hold written while the undo is being judged cannot slip between its
+// reading of the holds and its clearing of the class: the undo holds the project
+// FOR SHARE, so it waits for the hold and then refuses.
+func TestAnUndoWaitsForALegalHoldBeingPlacedAndThenRefuses(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+	ctx := context.Background()
+	f := filedUnderAProject(t, e)
+
+	placing, err := owner.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := placing.Exec(ctx, `UPDATE project SET legal_hold = true WHERE id = $1`, f.project); err != nil {
+		t.Fatal(err)
+	}
+	finished := make(chan error, 1)
+	go func() {
+		_, err := e.Activities.UndoProjectFiling(e.Admin(), ids.ActivityID{UUID: f.email}, undoReason)
+		finished <- err
+	}()
+	waitUntilBlockedBy(t, placing)
+	if err := placing.Commit(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	if got := refusalCode(t, <-finished); got != "legal_hold" {
+		t.Errorf("the undo that waited for the hold refused with %q, want legal_hold", got)
+	}
+	theFilingStands(t, e, f)
+}
+
+// An open erasure request covering a contact on the activity keeps the class, on
+// the write and on the read alike.
+func TestAFilingUnderAnOpenErasureRequestIsNotUndone(t *testing.T) {
+	e := Setup(t)
+	f := filedUnderAProject(t, e)
+	contact := e.SeedContact(t, "Erasure Subject", &e.Rep1)
+	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, contact_id) VALUES ($1, 'contact', $2)`, f.email, contact)
+	e.WsExec(t, `INSERT INTO data_subject_request (kind, status, subject_ref, due_at, contact_id)
+		VALUES ('erasure', 'in_progress', $1::text, now() + interval '30 days', $2)`, contact.String(), contact)
+	id := ids.ActivityID{UUID: f.email}
+
+	state, err := e.Activities.GetProjectFiling(e.Admin(), id)
+	if err != nil || state.Undoable || state.Refusal == nil || string(state.Refusal.Code) != "erasure_pending" {
+		t.Fatalf("the filing reads as %+v (err %v), want refused for the erasure request", state, err)
+	}
+	_, err = e.Activities.UndoProjectFiling(e.Admin(), id, undoReason)
+	if got := refusalCode(t, err); got != "erasure_pending" {
+		t.Errorf("refusal = %q, want erasure_pending", got)
+	}
+	theFilingStands(t, e, f)
+}
+
+// A caller who may not read deals is told that something else keeps the activity,
+// not that a deal does.
+func TestACallerWithoutTheDealGrantIsNotToldWhichDealKeepsTheActivity(t *testing.T) {
+	e := Setup(t)
+	f := filedUnderAProject(t, e)
+	deal := seedStampFixture(t, e)
+	winDeal(t, e, deal)
+	linkToDeal(t, e, f.email, deal.deal)
+	e.WsExec(t, `DELETE FROM activity_retention_evidence WHERE activity_id = $1 AND basis <> 'project_linked'`, f.email)
+	noDeals := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
+		Objects: map[string]principal.ObjectGrant{
+			"activity": {Read: true, Update: true}, "project": {Read: true}, "contact": {Read: true}, "company": {Read: true},
+		},
+		RowScope: principal.RowScopeAll,
+	})
+
+	_, err := e.Activities.UndoProjectFiling(noDeals, ids.ActivityID{UUID: f.email}, undoReason)
+	if got := refusalCode(t, err); got != "other_basis_remains" {
+		t.Errorf("a seat without the deal grant was refused with %q, want the generic other_basis_remains", got)
+	}
+	_, err = e.Activities.UndoProjectFiling(e.Admin(), ids.ActivityID{UUID: f.email}, undoReason)
+	if got := refusalCode(t, err); got != "qualifying_deal" {
+		t.Errorf("a seat with the deal grant was refused with %q, want qualifying_deal", got)
 	}
 }

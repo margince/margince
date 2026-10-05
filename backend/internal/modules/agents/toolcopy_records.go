@@ -98,7 +98,7 @@ var logActivityCopy = toolCopy{
 		"and also concerns their company and the deal it is for.",
 	Limits: "It writes history and changes nothing else: no deal moves, no field updates, nobody " +
 		"is notified. Unlinked, it appears on no timeline, and adding a link afterwards is a " +
-		"second call — relink_activity — which a human has to approve when it files under a " +
+		"second call — relink_activity — which waits for the user's yes when it files under a " +
 		"project.",
 	Instead: "Use progress_deal when the same event also moves a deal, so move and note are one " +
 		"act; create_task for something still owed.",
@@ -116,8 +116,8 @@ var relinkActivityCopy = toolCopy{
 	Purpose: "Fix what a recorded activity is about, when a captured mail or meeting landed on " +
 		"the wrong record or on none.",
 	Limits: "Changes only the association; content is untouched. By default the new link is " +
-		"ADDED beside existing ones. Onto a project it waits for the user's yes, which you can " +
-		"relay with decide_approval.",
+		"ADDED beside existing ones. Onto a project it waits for the user's yes; the answer says " +
+		"whether you may relay it with decide_approval.",
 	Instead: "log_activity records an event not recorded yet; relink_activities moves a " +
 		"picked set, such as a whole thread's activities.",
 	Retain: "Set replace_existing_of_type to move rather than associate.",
@@ -125,18 +125,18 @@ var relinkActivityCopy = toolCopy{
 
 var relinkThreadCopy = toolCopy{
 	Purpose: "Move one whole conversation (by thread_key) onto a record, in one transaction.",
-	Limits: "Refused for an assistant, for every destination: a thread key cannot be confirmed " +
-		"because the conversation may grow before the retry. List the thread's activities and " +
-		"call relink_activities with exactly those ids.",
+	Limits: "Refused for an assistant, at every destination and however it is called: a thread " +
+		"key cannot be confirmed because the conversation may grow before the retry. List the " +
+		"thread's activities and call relink_activities with exactly those ids.",
 	Instead: "relink_activities moves a named set; relink_activity moves one message.",
 }
 
 var relinkActivitiesCopy = toolCopy{
 	Purpose: "Move up to 500 named activities onto one record, all or nothing.",
-	Limits: "Each id must be visible and writable to you. It is staged for confirmation, and the " +
-		"retry moves exactly these ids. Once the user says yes, relay it with decide_approval: " +
-		"every destination can be put back, and a filing under a project can be undone by a " +
-		"member from the activity.",
+	Limits: "Each id must be visible and writable to you. A project destination, or any move the " +
+		"installation's policy raises, is staged for confirmation and the retry moves exactly " +
+		"these ids; once the user says yes, relay it with decide_approval. A filing under a " +
+		"project can be undone by a member from the activity.",
 	Instead: "relink_activity moves one message.",
 	Retain:  "The answer is the count moved.",
 }

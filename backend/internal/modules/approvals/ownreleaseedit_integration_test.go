@@ -12,7 +12,6 @@ package approvals
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"strings"
 	"testing"
@@ -23,8 +22,8 @@ import (
 
 func TestACredentialDoesNotEditTheProposalItReleasesItself(t *testing.T) {
 	e := setupStaging(t)
-	e.svc.WithUndoableRelease(func(_ context.Context, kind, _ string, _ json.RawMessage) bool {
-		return kind == "company_name_promotion"
+	e.svc.WithUndoableRelease(func(_ context.Context, _ Queryer, call StagedCall) bool {
+		return call.Kind == "company_name_promotion"
 	})
 	target := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(), `
@@ -55,8 +54,8 @@ func TestACredentialDoesNotEditTheProposalItReleasesItself(t *testing.T) {
 
 func TestACredentialDoesNotEditAProposalAHumanStaged(t *testing.T) {
 	e := setupStaging(t)
-	e.svc.WithUndoableRelease(func(_ context.Context, kind, _ string, _ json.RawMessage) bool {
-		return kind == "company_name_promotion"
+	e.svc.WithUndoableRelease(func(_ context.Context, _ Queryer, call StagedCall) bool {
+		return call.Kind == "company_name_promotion"
 	})
 	target := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(), `

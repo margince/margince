@@ -31,7 +31,7 @@
   "catalog": {
     "tools": 81,
     "system_frame_tokens": 586,
-    "tokens": 28554,
+    "tokens": 28578,
     "median_tool_tokens": 292,
     "mean_tool_tokens": 352
   },
@@ -68,11 +68,11 @@
         "whats_slipping_this_week"
       ],
       "of_served_tools": 81,
-      "tokens": 5128,
-      "listing_tokens": 2732,
-      "step_schema_tokens": 1810,
+      "tokens": 5138,
+      "listing_tokens": 2737,
+      "step_schema_tokens": 1814,
       "percent_of_ceiling": 15,
-      "headroom_tokens": 18082,
+      "headroom_tokens": 18072,
       "dangling_cross_references": [
         "at_risk_relationships → intro_path_to",
         "at_risk_relationships → who_knows",
@@ -120,7 +120,7 @@
     },
     {
       "name": "log_activity",
-      "tokens": 680
+      "tokens": 685
     },
     {
       "name": "send_message",
@@ -240,7 +240,7 @@
     },
     {
       "name": "relink_activity",
-      "tokens": 298
+      "tokens": 303
     },
     {
       "name": "merge_records",
@@ -284,7 +284,7 @@
     },
     {
       "name": "relink_activities",
-      "tokens": 253
+      "tokens": 259
     },
     {
       "name": "company_coverage",
@@ -295,16 +295,16 @@
       "tokens": 245
     },
     {
+      "name": "relink_thread",
+      "tokens": 240
+    },
+    {
       "name": "commit_import",
       "tokens": 236
     },
     {
       "name": "decide_approval_bundle",
       "tokens": 235
-    },
-    {
-      "name": "relink_thread",
-      "tokens": 233
     },
     {
       "name": "qualify_lead",

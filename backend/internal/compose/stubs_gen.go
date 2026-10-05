@@ -99,7 +99,7 @@ func (stubs) GetActivityProjectFiling(w nethttp.ResponseWriter, r *nethttp.Reque
 	httperr.NotImplemented(w, r, "GetActivityProjectFiling")
 }
 
-func (stubs) UndoActivityProjectFiling(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.UndoActivityProjectFilingParams) {
+func (stubs) UndoActivityProjectFiling(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "UndoActivityProjectFiling")
 }
 

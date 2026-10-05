@@ -21,6 +21,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -208,6 +209,10 @@ func TestOnlyANamedMemberWithAReasonUndoesAFiling(t *testing.T) {
 			_, err := e.Activities.UndoProjectFiling(e.Admin(), id, strings.Repeat("x", 2001))
 			return err
 		}, false},
+		"a reason padded past the bound with whitespace": {func() error {
+			_, err := e.Activities.UndoProjectFiling(e.Admin(), id, "  "+strings.Repeat("x", 2000))
+			return err
+		}, false},
 		"a member without activity.update": {func() error { _, err := e.Activities.UndoProjectFiling(readOnly, id, undoReason); return err }, true},
 		"an agent acting for an admin": {func() error {
 			_, err := e.Activities.UndoProjectFiling(relinkAgentCtx(e, e.AgentPassport), id, undoReason)
@@ -215,11 +220,14 @@ func TestOnlyANamedMemberWithAReasonUndoesAFiling(t *testing.T) {
 		}, true},
 	} {
 		err := tc.try()
-		if err == nil {
+		var detailed *httperr.DetailedError
+		switch {
+		case err == nil:
 			t.Errorf("%s undid the filing", name)
-		}
-		if tc.denied && !errors.Is(err, apperrors.ErrPermissionDenied) {
+		case tc.denied && !errors.Is(err, apperrors.ErrPermissionDenied):
 			t.Errorf("%s → %v, want a permission denial", name, err)
+		case !tc.denied && (!errors.As(err, &detailed) || len(detailed.Fields) != 1 || detailed.Fields[0].Field != "reason"):
+			t.Errorf("%s → %v, want a validation refusal naming the reason field", name, err)
 		}
 	}
 	theFilingStands(t, e, f)

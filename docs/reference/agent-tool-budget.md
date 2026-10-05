@@ -54,8 +54,8 @@ spends it on every run of every agent.
 | Agent | Tools | Of served | Listing | Step schema | Per step | Of the window | Headroom | Dangling refs | Temptation |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 5 | 5 of 81 | 1890 | 1288 | 3765 | 11% | 19445 | 0 | 5 |
-| `overnight_at_risk_sweep` | 7 | 7 of 81 | 2732 | 1810 | 5128 | 15% | 18082 | 7 | 6 |
-| _whole served catalog's listing, for scale — no run is offered it_ | 81 | — | 28554 | — | — | 87% | — | — | — |
+| `overnight_at_risk_sweep` | 7 | 7 of 81 | 2737 | 1814 | 5138 | 15% | 18072 | 7 | 6 |
+| _whole served catalog's listing, for scale — no run is offered it_ | 81 | — | 28578 | — | — | 87% | — | — | — |
 
 ### `morning_brief`
 
@@ -75,8 +75,8 @@ window for the goal, the grounding and everything it reads.
 
 > Sweep this workspace's open deals for risk: deals with no activity in 14+ days, stakeholders gone quiet, or missing next steps. First call whats_slipping_this_week: it returns the at-risk deals across the whole workspace. A deal the retrieved context mentions is one example, not the sweep, so do not read or log on it before that list. Then read each listed deal and log ONE note activity per at-risk deal summarizing the risk and the evidence (cite the records you read). Do not advance stages, send anything, or archive anything.
 
-Attaches 7 tools and pays 5128 tokens on every step (2732 listing, 1810 step schema), leaving
-18082 of its budget and 27640 tokens of the
+Attaches 7 tools and pays 5138 tokens on every step (2737 listing, 1814 step schema), leaving
+18072 of its budget and 27630 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `at_risk_relationships`
@@ -146,7 +146,7 @@ a term in an addition.
 | `preview_import` | 725 | — |
 | `bulk_update_records` | 720 | — |
 | `read_lists` | 699 | — |
-| `log_activity` | 680 | 3 scenarios |
+| `log_activity` | 685 | 3 scenarios |
 | `send_message` | 603 | — |
 | `change_lists` | 592 | — |
 | `create_record` | 586 | — |
@@ -176,7 +176,7 @@ a term in an addition.
 | `forecast_input_checks` | 324 | — |
 | `demote_lead` | 317 | — |
 | `promote_lead` | 304 | — |
-| `relink_activity` | 298 | — |
+| `relink_activity` | 303 | — |
 | `merge_records` | 293 | — |
 | `read_record` | 292 | 2 scenarios |
 | `archive_record` | 289 | — |
@@ -187,12 +187,12 @@ a term in an addition.
 | `prepare_handoff` | 267 | — |
 | `describe_query_vocabulary` | 266 | — |
 | `invite_meeting` | 264 | — |
-| `relink_activities` | 253 | — |
+| `relink_activities` | 259 | — |
 | `company_coverage` | 246 | — |
 | `describe_report_blocks` | 245 | — |
+| `relink_thread` | 240 | — |
 | `commit_import` | 236 | — |
 | `decide_approval_bundle` | 235 | — |
-| `relink_thread` | 233 | — |
 | `qualify_lead` | 229 | — |
 | `apply_tag` | 226 | — |
 | `create_task` | 221 | — |

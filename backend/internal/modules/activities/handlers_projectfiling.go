@@ -22,7 +22,7 @@ func (h Handlers) GetActivityProjectFiling(w http.ResponseWriter, r *http.Reques
 }
 
 // UndoActivityProjectFiling implements (POST /activities/{id}/project-filing/undo).
-func (h Handlers) UndoActivityProjectFiling(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.UndoActivityProjectFilingParams) {
+func (h Handlers) UndoActivityProjectFiling(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	var req crmcontracts.RetentionOverrideRequest
 	if !httperr.Decode(w, r, &req) {
 		return

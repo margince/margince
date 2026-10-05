@@ -6895,7 +6895,7 @@ paths:
         A `meeting` or a `call` cannot be relinked to an `company` — it is with a contact, and
         the company is reached through that contact's employer. The estate refuses it
         (migration 1788000100).
-      x-mcp-tool: { verb: relink_activity, record_type: activity, tier: dynamic, tier_resolver: destination_record_type, confirmation_required_when: 'entity_type is project — filing under a project classifies the activity as commercial correspondence — a member can take that back with a written reason, but a contact confirms it first', scope: write }
+      x-mcp-tool: { verb: relink_activity, record_type: activity, tier: dynamic, tier_resolver: destination_record_type, confirmation_required_when: 'entity_type is project — filing under a project classifies the activity as commercial correspondence — a member can take that back with a written reason, but a human or a member confirms it first', scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
         # Conditions the move on the version the caller read the ACTIVITY at.
@@ -6976,8 +6976,6 @@ paths:
         restricted` — a hold that has started never shortens. The decision is recorded with the
         deciding member's name and the written reason, in one transaction with the audit entry and
         the `activity.updated` event.
-      parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -6994,8 +6992,12 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409':
           description: >-
-            The filing cannot be undone; the problem's `code` is one of `not_filed`,
-            `other_basis_remains`, `restricted`, `legal_hold`, `hidden_project` or `qualifying_deal`.
+            The filing cannot be undone; the problem's `code` is one of `not_filed`, `archived`,
+            `restricted`, `legal_hold`, `erasure_pending`, `hidden_project`, `other_basis_remains`
+            or `qualifying_deal`, or `decider_unnamed` when the deciding account has no display name.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /activities/relink-thread:
@@ -7017,7 +7019,7 @@ paths:
         A `meeting` or a `call` cannot be relinked to an `company` — it is with a contact, and
         the company is reached through that contact's employer. The estate refuses it
         (migration 1788000100).
-      x-mcp-tool: { verb: relink_thread, record_type: activity, tier: dynamic, tier_resolver: destination_record_type, confirmation_required_when: 'entity_type is project — filing under a project classifies every activity in the thread as commercial correspondence — a member can take that back with a written reason, but a contact confirms it first', scope: write }
+      x-mcp-tool: { verb: relink_thread, record_type: activity, tier: dynamic, tier_resolver: destination_record_type, confirmation_required_when: 'entity_type is project — filing under a project classifies every activity in the thread as commercial correspondence — a member can take that back with a written reason, but a human or a member confirms it first', scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -7054,7 +7056,7 @@ paths:
         the company is reached through that contact's employer. The estate refuses it
         (migration 1788000100).
 
-      x-mcp-tool: { verb: relink_activities, record_type: activity, tier: dynamic, tier_resolver: destination_record_type, confirmation_required_when: 'entity_type is project — filing under a project classifies every named activity as commercial correspondence — a member can take that back with a written reason, but a contact confirms it first', scope: write }
+      x-mcp-tool: { verb: relink_activities, record_type: activity, tier: dynamic, tier_resolver: destination_record_type, confirmation_required_when: 'entity_type is project — filing under a project classifies every named activity as commercial correspondence — a member can take that back with a written reason, but a human or a member confirms it first', scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -49508,7 +49510,7 @@ components:
       type: object
       required: [code, message]
       properties:
-        code: { type: string, enum: [not_filed, other_basis_remains, restricted, legal_hold, hidden_project, qualifying_deal] }
+        code: { type: string, enum: [not_filed, archived, restricted, legal_hold, erasure_pending, hidden_project, other_basis_remains, qualifying_deal] }
         message: { type: string }
     ProjectFilingUndoDecision:
       type: object

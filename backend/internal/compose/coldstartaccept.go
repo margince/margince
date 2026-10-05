@@ -52,7 +52,7 @@ func approvalsHandlersWithEffects(pool *pgxpool.Pool, volume approvals.VolumeRel
 // decision-grant mapping (TestEveryRegisteredEffectKindHasADecisionGrantMapping).
 func approvalsServiceWithEffects(pool *pgxpool.Pool) *approvals.Service {
 	svc := approvals.NewService(InstallationDB(pool)).
-		WithUndoableRelease(undoableAgentRelease(activities.NewStore(InstallationDB(pool))))
+		WithUndoableRelease(undoableAgentRelease(activities.FilingsStayUndoable))
 	store := newCounterpartyStore(pool)
 	svc.WithEffect("coldstart", coldstartAcceptEffect(svc, store))
 	svc.WithEffect(enrichProposalKind, scrapeAcceptEffect(svc, store))

@@ -79,9 +79,10 @@ func (s *Dispatcher) explain(tool string, err error) string {
 			overQuota.Error() + ")"
 	case errors.As(err, &staged):
 		// A 🟡 call that reached the inbox, and the branch that says WHAT is
-		// waiting there. It is not this credential's to release — the one that
-		// proposed an action does not answer it — so the caller's job is to
-		// relay, and it can only relay a description it was given: an agent sent
+		// waiting there. The contact answers it — in the CRM, or through this
+		// credential when the change can be undone and the call is attended
+		// (stagedReleasePath) — so the caller's job is to relay, and it can only
+		// relay a description it was given: an agent sent
 		// to read_approval for the sentence tells the user a change is pending
 		// and cannot say which.
 		//

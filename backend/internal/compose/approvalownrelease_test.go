@@ -9,7 +9,9 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
@@ -193,7 +195,7 @@ func TestEveryDynamicToolIsJudgedByItsCallOrStaysHumanReleased(t *testing.T) {
 // undoableWithoutGuard is the classification with no filing guard installed: a project
 // destination is then not undoable, the stricter answer.
 func undoableWithoutGuard(kind, target string, change json.RawMessage) bool {
-	return undoableAgentRelease(nil)(context.Background(), kind, target, change)
+	return undoableAgentRelease(nil)(context.Background(), nil, approvals.StagedCall{Kind: kind, TargetType: target, Change: change})
 }
 
 type fakeFilingGuard struct {
@@ -202,12 +204,14 @@ type fakeFilingGuard struct {
 	failed bool
 }
 
-func (g *fakeFilingGuard) FilingsStayUndoable(_ context.Context, activities []ids.UUID, _ ids.UUID) (bool, error) {
-	g.asked = append(g.asked, activities...)
-	if g.failed {
-		return false, errors.New("the read failed")
+func (g *fakeFilingGuard) guard() filingGuard {
+	return func(_ context.Context, _ activities.Querier, named []ids.UUID, _ ids.UUID) (bool, error) {
+		g.asked = append(g.asked, named...)
+		if g.failed {
+			return false, errors.New("the read failed")
+		}
+		return g.stay, nil
 	}
-	return g.stay, nil
 }
 
 // A project destination is undoable by state: the named activities must still be
@@ -217,30 +221,35 @@ func TestAProjectRelinkIsReleasableOnlyWhileItsFilingsStayUndoable(t *testing.T)
 	one := ids.NewV7()
 	project := `"entity_type":"project","entity_id":"` + ids.NewV7().String() + `"`
 	single := json.RawMessage(`{"activity_id":"` + one.String() + `",` + project + `}`)
+	routed := json.RawMessage(`{` + project + `}`)
 	set := json.RawMessage(`{"activity_ids":["` + one.String() + `"],` + project + `}`)
 	company := json.RawMessage(`{"activity_ids":["` + one.String() + `"],"entity_type":"company"}`)
 
 	for _, tc := range []struct {
-		name   string
-		guard  filingGuard
-		change json.RawMessage
-		want   bool
+		name  string
+		guard *fakeFilingGuard
+		call  approvals.StagedCall
+		want  bool
 	}{
-		{"a single filing that stays undoable", &fakeFilingGuard{stay: true}, single, true},
-		{"a set that stays undoable", &fakeFilingGuard{stay: true}, set, true},
-		{"a restricted, held or erasure-pending activity", &fakeFilingGuard{stay: false}, set, false},
-		{"a guard that cannot answer", &fakeFilingGuard{failed: true}, set, false},
-		{"no guard installed", nil, set, false},
-		{"a company is never asked", &fakeFilingGuard{stay: false}, company, true},
+		{"a single filing that stays undoable", &fakeFilingGuard{stay: true}, approvals.StagedCall{Kind: "relink_activity", TargetType: "activity", Change: single}, true},
+		{"a single filing whose activity is named by the route", &fakeFilingGuard{stay: true}, approvals.StagedCall{Kind: "relink_activity", TargetType: "activity", TargetID: one, Change: routed}, true},
+		{"a routed filing the undo could not take back", &fakeFilingGuard{stay: false}, approvals.StagedCall{Kind: "relink_activity", TargetType: "activity", TargetID: one, Change: routed}, false},
+		{"a set that stays undoable", &fakeFilingGuard{stay: true}, approvals.StagedCall{Kind: "relink_activities", TargetType: "company", Change: set}, true},
+		{"a restricted, held or erasure-pending activity", &fakeFilingGuard{stay: false}, approvals.StagedCall{Kind: "relink_activities", TargetType: "company", Change: set}, false},
+		{"a guard that cannot answer", &fakeFilingGuard{failed: true}, approvals.StagedCall{Kind: "relink_activities", TargetType: "company", Change: set}, false},
+		{"a company is never asked", &fakeFilingGuard{stay: false}, approvals.StagedCall{Kind: "relink_activities", TargetType: "company", Change: company}, true},
 	} {
-		got := undoableAgentRelease(tc.guard)(context.Background(), "relink_activities", "company", tc.change)
+		got := undoableAgentRelease(tc.guard.guard())(context.Background(), nil, tc.call)
 		if got != tc.want {
 			t.Errorf("%s: undoable = %v, want %v", tc.name, got, tc.want)
 		}
 	}
-	guard := &fakeFilingGuard{stay: true}
-	undoableAgentRelease(guard)(context.Background(), "relink_activity", "activity", single)
-	if len(guard.asked) != 1 || guard.asked[0] != one {
-		t.Errorf("the single form asked about %v, want the one activity it names", guard.asked)
+	if got := undoableAgentRelease(nil)(context.Background(), nil, approvals.StagedCall{Kind: "relink_activities", Change: set}); got {
+		t.Error("a project relink with no guard installed is undoable, want the stricter answer")
+	}
+	one2 := &fakeFilingGuard{stay: true}
+	undoableAgentRelease(one2.guard())(context.Background(), nil, approvals.StagedCall{Kind: "relink_activity", TargetType: "activity", Change: single})
+	if len(one2.asked) != 1 || one2.asked[0] != one {
+		t.Errorf("the single form asked about %v, want the one activity it names", one2.asked)
 	}
 }

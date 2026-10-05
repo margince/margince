@@ -59,6 +59,9 @@ var projectFilingRefusals = map[crmcontracts.ProjectFilingRefusalCode]string{
 		"on this activity, and a hold that has started never shortens.",
 	crmcontracts.ProjectFilingRefusalCodeLegalHold: "A legal hold sits on a record this activity is " +
 		"linked to, so its retention cannot be shortened until the hold is lifted.",
+	crmcontracts.ProjectFilingRefusalCodeArchived: "This activity is archived, so its filing can no longer be undone.",
+	crmcontracts.ProjectFilingRefusalCodeErasurePending: "An open erasure request covers a contact on this " +
+		"activity, so its retention class stays until the request is decided.",
 	crmcontracts.ProjectFilingRefusalCodeHiddenProject: "A project you cannot see still holds this " +
 		"activity. Ask someone who can see it to undo the filing.",
 	crmcontracts.ProjectFilingRefusalCodeOtherBasisRemains: "Something else still qualifies this " +
@@ -80,73 +83,112 @@ type filingEntry struct {
 	qualifiedAt time.Time
 }
 
+// Querier is the read handle the verdict needs: a transaction, the caller's own
+// or one borrowed from the approval it is judging.
+type Querier interface {
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+}
+
+// filingBlockers are the reasons an undo is, or would be, refused that do not
+// depend on how the project filing itself reads: one answer over a set of
+// activities, shared by the undo, the read, and the judgement of a filing about
+// to be made, so the three ask one question.
+type filingBlockers struct {
+	found          int
+	restricted     bool
+	archived       bool
+	legalHold      bool
+	erasurePending bool
+	otherBasis     bool
+	qualifiedDeal  bool
+}
+
+// readFilingBlockers asks them of every named activity at once; a flag is true
+// when it holds for any of them. The hold, deal and erasure questions are
+// retentionscope's, the same text the erasure engine asks of the same rows, and
+// the hold arm also covers the project an evidence row names after the link is
+// gone.
+func readFilingBlockers(ctx context.Context, q Querier, activityIDs []ids.UUID) (filingBlockers, error) {
+	var b filingBlockers
+	err := q.QueryRow(ctx, `
+		SELECT count(*),
+		       coalesce(bool_or(a.restricted_at IS NOT NULL), false),
+		       coalesce(bool_or(a.archived_at IS NOT NULL), false),
+		       coalesce(bool_or(`+retentionscope.HeldThroughAnyLink("a.id")+`
+		         OR EXISTS (SELECT 1 FROM activity_retention_evidence e JOIN project fp ON fp.id = e.project_id
+		                     WHERE e.activity_id = a.id AND fp.legal_hold)), false),
+		       coalesce(bool_or(`+retentionscope.UnderOpenErasure("a.id")+`), false),
+		       coalesce(bool_or(EXISTS (SELECT 1 FROM activity_retention_evidence e
+		                                 WHERE e.activity_id = a.id AND e.basis <> $2)), false),
+		       coalesce(bool_or(`+retentionscope.QualifyingDealLink("a.id")+`), false)
+		  FROM activity a WHERE a.id = ANY($1)`, activityIDs, BasisProjectLinked).Scan(
+		&b.found, &b.restricted, &b.archived, &b.legalHold, &b.erasurePending, &b.otherBasis, &b.qualifiedDeal)
+	return b, err
+}
+
 // projectFilingFacts is what the judgement reads, gathered once.
 type projectFilingFacts struct {
-	filings       []filingEntry
-	hidden        map[ids.UUID]bool // projects that exist and this caller cannot see
-	restricted    bool
-	legalHold     bool
-	hiddenLink    bool
-	otherBasis    bool
-	qualifiedDeal bool
+	filingBlockers
+	filings     []filingEntry
+	hidden      map[ids.UUID]bool // projects that exist and this caller cannot see
+	hiddenLink  bool
+	dealVisible bool // the caller may read deals, and so may be told one qualifies
 }
 
 // refusal is the verdict, in the order the reasons outrank one another: a hold
-// that has started is named before anything that merely keeps the class.
+// that has started is named before anything that merely keeps the class. A
+// caller who cannot read deals is told that something else qualifies the activity,
+// not which deal.
 func (f projectFilingFacts) refusal() *ProjectFilingRefusedError {
 	switch {
 	case len(f.filings) == 0:
 		return refusalFor(crmcontracts.ProjectFilingRefusalCodeNotFiled)
 	case f.restricted:
 		return refusalFor(crmcontracts.ProjectFilingRefusalCodeRestricted)
+	case f.archived:
+		return refusalFor(crmcontracts.ProjectFilingRefusalCodeArchived)
 	case f.legalHold:
 		return refusalFor(crmcontracts.ProjectFilingRefusalCodeLegalHold)
+	case f.erasurePending:
+		return refusalFor(crmcontracts.ProjectFilingRefusalCodeErasurePending)
 	case f.hiddenLink:
 		return refusalFor(crmcontracts.ProjectFilingRefusalCodeHiddenProject)
 	case f.otherBasis:
 		return refusalFor(crmcontracts.ProjectFilingRefusalCodeOtherBasisRemains)
-	case f.qualifiedDeal:
+	case f.qualifiedDeal && f.dealVisible:
 		return refusalFor(crmcontracts.ProjectFilingRefusalCodeQualifyingDeal)
+	case f.qualifiedDeal:
+		return refusalFor(crmcontracts.ProjectFilingRefusalCodeOtherBasisRemains)
 	}
 	return nil
 }
 
-// readProjectFilingFacts gathers the evidence, the holds and the links under the
-// caller's transaction. The undo calls it under the row lock, so what it read is
-// what the write then changes.
-//
-// The hold and deal questions are retentionscope's, the same text the erasure
-// engine asks of the same rows, and the project-hold arm also covers the project
-// an evidence row names after the link itself is gone.
+// readProjectFilingFacts gathers the blockers, the filings and the links under
+// the caller's transaction. The undo calls it under the row lock, so what it read
+// is what the write then changes.
 func readProjectFilingFacts(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (projectFilingFacts, error) {
 	var facts projectFilingFacts
-	if err := tx.QueryRow(ctx, `
-		SELECT a.restricted_at IS NOT NULL,
-		       `+retentionscope.HeldThroughAnyLink("a.id")+`
-		       OR EXISTS (SELECT 1 FROM activity_retention_evidence e JOIN project fp ON fp.id = e.project_id
-		                   WHERE e.activity_id = a.id AND fp.legal_hold),
-		       `+retentionscope.QualifyingDealLink("a.id")+`
-		  FROM activity a WHERE a.id = $1`, id).Scan(&facts.restricted, &facts.legalHold, &facts.qualifiedDeal); err != nil {
+	var err error
+	if facts.filingBlockers, err = readFilingBlockers(ctx, tx, []ids.UUID{id.UUID}); err != nil {
 		return facts, err
 	}
+	if facts.found == 0 {
+		return facts, pgx.ErrNoRows
+	}
+	facts.dealVisible = auth.ReadGranted(ctx, "deal")
 	rows, err := tx.Query(ctx, `
-		SELECT basis, project_id, coalesce(project_name, ''), qualified_at
+		SELECT project_id, coalesce(project_name, ''), qualified_at
 		  FROM activity_retention_evidence
-		 WHERE activity_id = $1
-		 ORDER BY qualified_at, id`, id)
+		 WHERE activity_id = $1 AND basis = $2
+		 ORDER BY qualified_at, id`, id, BasisProjectLinked)
 	if err != nil {
 		return facts, err
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var basis string
 		var entry filingEntry
-		if err := rows.Scan(&basis, &entry.projectID, &entry.name, &entry.qualifiedAt); err != nil {
+		if err := rows.Scan(&entry.projectID, &entry.name, &entry.qualifiedAt); err != nil {
 			return facts, err
-		}
-		if basis != BasisProjectLinked {
-			facts.otherBasis = true
-			continue
 		}
 		facts.filings = append(facts.filings, entry)
 	}
@@ -229,25 +271,29 @@ func holdsAHiddenProjectLink(ctx context.Context, tx pgx.Tx, id ids.ActivityID) 
 	return hidden, err
 }
 
-// linkedDealSignature identifies the set of deal links the activity carries, so a
-// link added between the lock and the judgement shows as a different set.
-func linkedDealSignature(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (string, error) {
+// linkSignature identifies the set of links the activity carries, so a link added
+// between the lock and the judgement shows as a different set.
+func linkSignature(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (string, error) {
 	var signature string
 	err := tx.QueryRow(ctx, `SELECT coalesce(md5(string_agg(l.id::text, ',' ORDER BY l.id)), '')
-		  FROM activity_link l WHERE l.activity_id = $1 AND l.entity_type = 'deal'`, id).Scan(&signature)
+		  FROM activity_link l WHERE l.activity_id = $1`, id).Scan(&signature)
 	return signature, err
 }
 
-// shareLockQualifyingRecords takes FOR SHARE on the deals the activity is linked
-// to and on their offers, and answers the signature of the set it locked. A
-// deal's win and an offer's send each stamp the correspondence in their own
-// transaction, and a stamp that read the class as set skips it while its
-// evidence row still lands; against an undo that cleared the class in between,
-// that leaves evidence on an unclassed row. Sharing the rows makes the two
-// serialize: the undo either waits for the stamp and then reads its evidence, or
-// the stamp waits, finds the class gone and stamps afresh.
+// shareLockQualifyingRecords takes FOR SHARE on every record the activity is
+// linked to, on the projects its evidence names and on the offers of its deals,
+// and answers the signature of the links it locked.
+//
+// Two writers race the undo through those rows. A deal's win and an offer's send
+// each stamp the correspondence in their own transaction, and a stamp that read
+// the class as set skips it while its evidence row still lands; against an undo
+// that cleared the class in between, that leaves evidence on an unclassed row.
+// A legal hold is placed by updating the held record, and one placed after the
+// undo read the holds but before it cleared the class would be shortened under.
+// Sharing the rows serializes both: the undo waits for the writer and then reads
+// what it committed, or the writer waits and finds the class gone.
 func shareLockQualifyingRecords(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (string, error) {
-	var lockedDeals, lockedOffers int
+	var locked int
 	err := tx.QueryRow(ctx, `
 		WITH locked_deals AS (
 		  SELECT d.id FROM deal d
@@ -256,13 +302,32 @@ func shareLockQualifyingRecords(ctx context.Context, tx pgx.Tx, id ids.ActivityI
 		locked_offers AS (
 		  SELECT o.id FROM offer o
 		   WHERE EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = $1 AND l.deal_id = o.deal_id)
-		   ORDER BY o.id FOR SHARE)
-		SELECT (SELECT count(*) FROM locked_deals), (SELECT count(*) FROM locked_offers)`,
-		id).Scan(&lockedDeals, &lockedOffers)
+		   ORDER BY o.id FOR SHARE),
+		locked_projects AS (
+		  SELECT p.id FROM project p
+		   WHERE EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = $1 AND l.project_id = p.id)
+		      OR EXISTS (SELECT 1 FROM activity_retention_evidence e WHERE e.activity_id = $1 AND e.project_id = p.id)
+		   ORDER BY p.id FOR SHARE),
+		locked_companies AS (
+		  SELECT c.id FROM company c
+		   WHERE EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = $1 AND l.company_id = c.id)
+		   ORDER BY c.id FOR SHARE),
+		locked_leads AS (
+		  SELECT ld.id FROM lead ld
+		   WHERE EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = $1 AND l.lead_id = ld.id)
+		   ORDER BY ld.id FOR SHARE),
+		locked_contacts AS (
+		  SELECT ct.id FROM contact ct
+		   WHERE EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = $1 AND l.contact_id = ct.id)
+		   ORDER BY ct.id FOR SHARE)
+		SELECT (SELECT count(*) FROM locked_deals) + (SELECT count(*) FROM locked_offers)
+		     + (SELECT count(*) FROM locked_projects) + (SELECT count(*) FROM locked_companies)
+		     + (SELECT count(*) FROM locked_leads) + (SELECT count(*) FROM locked_contacts)`,
+		id).Scan(&locked)
 	if err != nil {
 		return "", err
 	}
-	return linkedDealSignature(ctx, tx, id)
+	return linkSignature(ctx, tx, id)
 }
 
 // GetProjectFiling reads one activity's project filing and the decisions already

@@ -91,7 +91,7 @@ This page does not grade single steps or name a best model per site — that is
 | … some case requires as one of a set | 4 |
 | … **no case requires** | 28 |
 | … of those, permitted somewhere but never required | 23 |
-| Prompt tokens spent on tools no case requires | 8368 |
+| Prompt tokens spent on tools no case requires | 8375 |
 | Use cases | 29 |
 | Acceptance criteria the cases declare, each with a statement | 73 |
 
@@ -473,8 +473,8 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 | `describe_query_vocabulary` | 266 | — | `case4_use_the_moment` | — |
 | `company_coverage` | 246 | — | `case5_before_the_meeting` | — |
 | `describe_report_blocks` | 245 | — | `case20_put_it_in_the_board_pack` | — |
+| `relink_thread` | 240 | — | `case48_that_whole_thread_is_filed_wrong` | — |
 | `decide_approval_bundle` | 235 | — | — | — |
-| `relink_thread` | 233 | — | `case48_that_whole_thread_is_filed_wrong` | — |
 | `create_task` | 221 | `deal_health` | `case42_can_i_answer_on_whatsapp` | — |
 | `whats_slipping_this_week` | 211 | `agent_loop` | `case44_chase_what_is_slipping` | `overnight_at_risk_sweep` |
 | `list_input_checks` | 209 | — | `case21_what_are_we_closing`, `case22_can_i_trust_the_numbers` | — |

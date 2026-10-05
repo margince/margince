@@ -1,3 +1,6 @@
+DROP TRIGGER IF EXISTS activity_class_needs_evidence ON activity_retention_evidence;
+DROP FUNCTION IF EXISTS activity_class_needs_evidence();
+
 SET LOCAL lock_timeout = '3s';
 
 CREATE OR REPLACE FUNCTION activity_refuse_restricted_mutation() RETURNS trigger

@@ -5,16 +5,17 @@
 
 package gates
 
-// A written reason is bounded by one number. The contract's
-// RetentionOverrideRequest says it, statedreason.Max is the Go spelling both the
-// controller's overrides and the undo of a project filing use, and nothing else
-// may carry its own.
+// The written reason on a decision that narrows what the installation keeps is
+// bounded by one number. The contract's RetentionOverrideRequest says it, and
+// statedreason.Max is the Go spelling both the controller's overrides and the
+// undo of a project filing use. This holds that pair together; it does not claim
+// to find another reason bound elsewhere in the contract.
 
 import (
 	"os"
-	"regexp"
-	"strconv"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/statedreason"
 )
@@ -25,15 +26,23 @@ func TestTheStatedReasonBoundIsTheContractsMaxLength(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	block := regexp.MustCompile(`(?s)\n {4}RetentionOverrideRequest:\n(.*?)\n {4}\S`).FindSubmatch(raw)
-	if block == nil {
-		t.Fatal("RetentionOverrideRequest is gone from the contract; the reason bound has nothing to mirror")
+	var contract struct {
+		Components struct {
+			Schemas map[string]struct {
+				Properties map[string]struct {
+					MaxLength *int `yaml:"maxLength"` //nolint:tagliatelle // the contract spells its keywords in camelCase
+				} `yaml:"properties"`
+			} `yaml:"schemas"`
+		} `yaml:"components"`
 	}
-	found := regexp.MustCompile(`reason:\s*\{[^}]*maxLength:\s*(\d+)`).FindSubmatch(block[1])
-	if found == nil {
+	if err := yaml.Unmarshal(raw, &contract); err != nil {
+		t.Fatalf("decoding the contract: %v", err)
+	}
+	reason, found := contract.Components.Schemas["RetentionOverrideRequest"].Properties["reason"]
+	if !found || reason.MaxLength == nil {
 		t.Fatal("RetentionOverrideRequest.reason declares no maxLength; the Go bound has nothing to mirror")
 	}
-	if want, _ := strconv.Atoi(string(found[1])); want != statedreason.Max {
-		t.Errorf("statedreason.Max = %d, the contract's reason maxLength = %d", statedreason.Max, want)
+	if *reason.MaxLength != statedreason.Max {
+		t.Errorf("statedreason.Max = %d, the contract's reason maxLength = %d", statedreason.Max, *reason.MaxLength)
 	}
 }

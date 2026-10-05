@@ -183,7 +183,7 @@ func agentReleasesOnlyItsHumansProposal(p principal.Principal, a row, own ownRel
 func agentReleasesNoIrreversibleProposal(p principal.Principal, a row) error {
 	if sameAgent(a, p) {
 		return fmt.Errorf("this credential proposed the action, and what it does cannot be taken back once "+
-			"released — a message sent — so the contact it acts for releases it in the CRM: %w",
+			"released — a sent message stays sent — so the contact it acts for releases it in the CRM: %w",
 			apperrors.ErrPermissionDenied)
 	}
 	if p.ConnectionID != ids.Nil {

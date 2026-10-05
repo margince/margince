@@ -170,7 +170,7 @@ func (s *Service) decidableMembers(ctx context.Context, tx pgx.Tx, p principal.P
 		if err != nil {
 			return nil, err
 		}
-		if visible && agentMayDecide(p, a, approve, s.ownReleaseFor(ctx, a)) == nil {
+		if visible && agentMayDecide(p, a, approve, s.ownReleaseFor(ctx, tx, a)) == nil {
 			mine = append(mine, a)
 		}
 	}

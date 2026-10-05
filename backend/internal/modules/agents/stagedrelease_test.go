@@ -110,21 +110,28 @@ func TestEveryDestinationToolIsClassifiedByItsOwnTierResolver(t *testing.T) {
 	}
 }
 
-// A released approval for a thread names a key, so the tool never runs one —
-// including a proposal staged before thread moves stopped staging.
-func TestARedeemedThreadRelinkIsRefusedBeforeItMovesAnything(t *testing.T) {
-	relinker := &recordingRelinker{}
-	ctx := withApprovalRedeemed(context.Background(), 0, false)
+// The thread tool never runs, at any destination and whatever the context says:
+// a company, contact, deal or lead move resolves to the auto-execute tier, so
+// the refusal has to live on the execution path itself, not only where a call is
+// staged or an approval redeemed.
+func TestAThreadRelinkIsRefusedOnTheExecutionPathAtEveryDestination(t *testing.T) {
+	for _, entity := range []string{"company", "contact", "deal", "lead", "project"} {
+		for name, ctx := range map[string]context.Context{
+			"a direct call":       context.Background(),
+			"a redeemed approval": withApprovalRedeemed(context.Background(), 0, false),
+		} {
+			relinker := &recordingRelinker{}
+			_, err := relinkThread{relinker: relinker}.Handle(ctx, json.RawMessage(
+				`{"thread_key":"thread:x","entity_type":"`+entity+`","entity_id":"`+ids.NewV7().String()+`"}`,
+			))
 
-	_, err := relinkThread{relinker: relinker}.Handle(ctx, json.RawMessage(
-		`{"thread_key":"thread:x","entity_type":"company","entity_id":"`+ids.NewV7().String()+`"}`,
-	))
-
-	var bad *BadArgsError
-	if !errors.As(err, &bad) || !strings.Contains(bad.Guidance, "relink_activities") {
-		t.Fatalf("a redeemed thread move → %v, want the thread-key refusal", err)
-	}
-	if relinker.entityType != "" {
-		t.Error("the thread was moved under a released approval")
+			var bad *BadArgsError
+			if !errors.As(err, &bad) || !strings.Contains(bad.Guidance, "relink_activities") {
+				t.Errorf("%s onto a %s → %v, want the thread-key refusal", name, entity, err)
+			}
+			if relinker.entityType != "" {
+				t.Errorf("%s onto a %s moved the thread", name, entity)
+			}
+		}
 	}
 }

@@ -54,12 +54,12 @@ func (s *Store) UndoProjectFiling(ctx context.Context, id ids.ActivityID, reason
 	}
 	var out crmcontracts.ProjectFiling
 	err = s.tx(ctx, func(tx pgx.Tx) error {
-		// Deals and offers are locked before the activity, the order a deal's win
-		// takes (its own row, then the activity it stamps), so the two cannot
-		// wait on each other. The set is read once more under the activity lock:
-		// a deal linked in between was not locked, and the undo says so rather
-		// than judge it unprotected.
-		dealsBefore, err := shareLockQualifyingRecords(ctx, tx, id)
+		// The linked records are locked before the activity, the order a deal's
+		// win takes (its own row, then the activity it stamps), so the two cannot
+		// wait on each other. The links are read once more under the activity
+		// lock: a record linked in between was not locked, and the undo says so
+		// rather than judge it unprotected.
+		linksBefore, err := shareLockQualifyingRecords(ctx, tx, id)
 		if err != nil {
 			return err
 		}
@@ -70,12 +70,12 @@ func (s *Store) UndoProjectFiling(ctx context.Context, id ids.ActivityID, reason
 		if err := auth.EnsureActivityWritableIn(ctx, tx, id.UUID, !held); err != nil {
 			return err
 		}
-		dealsAfter, err := linkedDealSignature(ctx, tx, id)
+		linksAfter, err := linkSignature(ctx, tx, id)
 		if err != nil {
 			return err
 		}
-		if dealsBefore != dealsAfter {
-			return fmt.Errorf("the activity's deals changed while the undo was being judged; retry: %w", apperrors.ErrConflict)
+		if linksBefore != linksAfter {
+			return fmt.Errorf("the activity's links changed while the undo was being judged; retry: %w", apperrors.ErrConflict)
 		}
 		facts, err := readProjectFilingFacts(ctx, tx, id)
 		if err != nil {
