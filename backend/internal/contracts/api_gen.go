@@ -1105,6 +1105,30 @@ func (e AiProfileState) Valid() bool {
 	}
 }
 
+// Defines values for AiProviderHealthEntryHealth.
+const (
+	AiProviderHealthEntryHealthDegraded     AiProviderHealthEntryHealth = "degraded"
+	AiProviderHealthEntryHealthDown         AiProviderHealthEntryHealth = "down"
+	AiProviderHealthEntryHealthOutOfCredit  AiProviderHealthEntryHealth = "out_of_credit"
+	AiProviderHealthEntryHealthUnauthorized AiProviderHealthEntryHealth = "unauthorized"
+)
+
+// Valid indicates whether the value is a known member of the AiProviderHealthEntryHealth enum.
+func (e AiProviderHealthEntryHealth) Valid() bool {
+	switch e {
+	case AiProviderHealthEntryHealthDegraded:
+		return true
+	case AiProviderHealthEntryHealthDown:
+		return true
+	case AiProviderHealthEntryHealthOutOfCredit:
+		return true
+	case AiProviderHealthEntryHealthUnauthorized:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AiProviderKeyStatusCredentialKind.
 const (
 	AiProviderKeyStatusCredentialKindApiKey         AiProviderKeyStatusCredentialKind = "api_key"
@@ -22506,6 +22530,32 @@ type AiProfileProviders string
 
 // AiProfileState defines model for AiProfile.State.
 type AiProfileState string
+
+// AiProviderHealth defines model for AiProviderHealth.
+type AiProviderHealth struct {
+	// Providers Providers that are not answering normally, in name order. Empty when all are.
+	Providers []AiProviderHealthEntry `json:"providers"`
+}
+
+// AiProviderHealthEntry defines model for AiProviderHealthEntry.
+type AiProviderHealthEntry struct {
+	// Health `degraded` still takes calls; the other three refuse them until `retry_after`, when one
+	// probe is allowed. `out_of_credit` and `unauthorized` are the administrator's to fix.
+	Health AiProviderHealthEntryHealth `json:"health"`
+
+	// Provider The provider's name as the routing binds it, never a key or host.
+	Provider string `json:"provider"`
+
+	// RetryAfter When one probe call is next allowed. Absent for `degraded`, which is not blocked.
+	RetryAfter *time.Time `json:"retry_after,omitempty"`
+
+	// Since When the provider first stopped answering normally, kept across failed probes.
+	Since time.Time `json:"since"`
+}
+
+// AiProviderHealthEntryHealth `degraded` still takes calls; the other three refuse them until `retry_after`, when one
+// probe is allowed. `out_of_credit` and `unauthorized` are the administrator's to fix.
+type AiProviderHealthEntryHealth string
 
 // AiProviderKeyInput Exactly one of the two fields, the one the vendor's `credential_kind` names. The server refuses neither, both, or the other one with a 422.
 type AiProviderKeyInput struct {
@@ -64640,6 +64690,9 @@ type ServerInterface interface {
 	// Authenticated AI configuration posture for transparent human-facing workspaces.
 	// (GET /ai/profile)
 	GetAiProfile(w http.ResponseWriter, r *http.Request)
+	// Which AI providers are not answering, and why.
+	// (GET /ai/provider-health)
+	GetAiProviderHealth(w http.ResponseWriter, r *http.Request)
 	// Which model vendors hold a credential (admin/ops).
 	// (GET /ai/provider-keys)
 	ListAiProviderKeys(w http.ResponseWriter, r *http.Request)
@@ -67142,6 +67195,12 @@ func (_ Unimplemented) ReplaceAiPriceSync(w http.ResponseWriter, r *http.Request
 // Authenticated AI configuration posture for transparent human-facing workspaces.
 // (GET /ai/profile)
 func (_ Unimplemented) GetAiProfile(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Which AI providers are not answering, and why.
+// (GET /ai/provider-health)
+func (_ Unimplemented) GetAiProviderHealth(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -73866,6 +73925,26 @@ func (siw *ServerInterfaceWrapper) GetAiProfile(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetAiProfile(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAiProviderHealth operation middleware
+func (siw *ServerInterfaceWrapper) GetAiProviderHealth(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAiProviderHealth(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -105130,6 +105209,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/profile", wrapper.GetAiProfile)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/ai/provider-health", wrapper.GetAiProviderHealth)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/provider-keys", wrapper.ListAiProviderKeys)

@@ -565,6 +565,15 @@ function problemDetail(
   if (t && code === "assistant_unavailable") {
     return t("common.assistantUnavailable");
   }
+  if (t && code === "provider_out_of_credit") {
+    return t("common.providerOutOfCredit");
+  }
+  if (t && code === "provider_unauthorized") {
+    return t("common.providerUnauthorized");
+  }
+  if (t && code === "provider_unavailable") {
+    return t("common.providerUnavailable");
+  }
   if (t && code === "permission_denied") {
     return t("common.permissionDenied");
   }

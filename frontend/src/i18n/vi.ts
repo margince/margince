@@ -1373,6 +1373,12 @@ export const vi = {
     "Yêu cầu thất bại. Không có nguyên nhân nào được báo về.",
   "common.assistantUnavailable":
     "Trợ lý chưa phản hồi nên không thể soạn giúp bạn phần này. Quản trị viên có thể kiểm tra liên kết mô hình trong Cài đặt → AI. Không bắt buộc phải có trợ lý — bạn có thể tự nhập các thông tin này.",
+  "common.providerOutOfCredit":
+    "Nhà cung cấp AI đã hết số dư. Hãy liên hệ quản trị viên hệ thống của bạn.",
+  "common.providerUnauthorized":
+    "Nhà cung cấp AI đã từ chối thông tin xác thực được cấu hình. Hãy liên hệ quản trị viên hệ thống của bạn.",
+  "common.providerUnavailable":
+    "Nhà cung cấp AI hiện không phản hồi. Hãy thử lại sau hoặc liên hệ quản trị viên hệ thống của bạn.",
   "common.gatewayUnavailable":
     "Máy chủ chưa hoàn tất yêu cầu này kịp thời. Có thể nó vẫn đang chạy — hãy đợi một lát trước khi thử lại, nếu không cùng một công việc sẽ chạy hai lần.",
   "common.permissionDenied":

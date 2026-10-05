@@ -1385,6 +1385,12 @@ export const en = {
   "common.errorNoCause": "The request failed. No cause reported.",
   "common.assistantUnavailable":
     "The assistant did not respond, so no draft was created. Enter the details manually, or ask an administrator to check the model in Settings under AI.",
+  "common.providerOutOfCredit":
+    "The AI provider has no credit left. Contact your system administrator.",
+  "common.providerUnauthorized":
+    "The AI provider refused the configured credential. Contact your system administrator.",
+  "common.providerUnavailable":
+    "The AI provider is not answering right now. Try again later or contact your system administrator.",
   "common.gatewayUnavailable":
     "The server did not finish the request in time and may still be processing it. Wait before retrying, or the work can run twice.",
   // Every 403 the server codes `permission_denied`, which is two refusals with

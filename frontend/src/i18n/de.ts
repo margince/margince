@@ -1391,6 +1391,12 @@ export const de = {
     "Die Anfrage ist fehlgeschlagen. Keine Ursache gemeldet.",
   "common.assistantUnavailable":
     "Der Assistent hat nicht geantwortet, daher wurde kein Entwurf erstellt. Gib die Angaben von Hand ein oder lass einen Admin das Modell in den Einstellungen unter KI prüfen.",
+  "common.providerOutOfCredit":
+    "Beim KI-Anbieter ist kein Guthaben mehr vorhanden. Wende dich an deinen Systemadministrator.",
+  "common.providerUnauthorized":
+    "Der KI-Anbieter hat den hinterlegten Zugangsschlüssel abgelehnt. Wende dich an deinen Systemadministrator.",
+  "common.providerUnavailable":
+    "Der KI-Anbieter antwortet gerade nicht. Versuche es später erneut oder wende dich an deinen Systemadministrator.",
   "common.gatewayUnavailable":
     "Der Server hat die Anfrage nicht rechtzeitig abgeschlossen und verarbeitet sie möglicherweise noch. Warte, bevor du es erneut versuchst, sonst kann die Arbeit zweimal laufen.",
   "common.permissionDenied":

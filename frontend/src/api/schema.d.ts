@@ -10820,6 +10820,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ai/provider-health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Which AI providers are not answering, and why.
+         * @description Every provider this process currently treats as degraded, down, out of credit or refusing
+         *     its credential, in name order. A provider that is answering normally is not listed, so an
+         *     empty list is the healthy answer.
+         *
+         *     This is the view of the process serving the request, learned from the calls it made: it
+         *     is not a probe and not a shared record. The list never contains a key, a host or the
+         *     provider's own message text. It is admitted through the same grant as `/ai/health`.
+         */
+        get: operations["getAiProviderHealth"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ai/budget": {
         parameters: {
             query?: never;
@@ -21314,6 +21340,30 @@ export interface components {
             /** @description How far back the counts reach, so a reader knows what "no calls" covers. */
             window_hours: number;
             rungs: components["schemas"]["AiRungHealth"][];
+        };
+        AiProviderHealth: {
+            /** @description Providers that are not answering normally, in name order. Empty when all are. */
+            providers: components["schemas"]["AiProviderHealthEntry"][];
+        };
+        AiProviderHealthEntry: {
+            /** @description The provider's name as the routing binds it, never a key or host. */
+            provider: string;
+            /**
+             * @description `degraded` still takes calls; the other three refuse them until `retry_after`, when one
+             *     probe is allowed. `out_of_credit` and `unauthorized` are the administrator's to fix.
+             * @enum {string}
+             */
+            health: "degraded" | "down" | "out_of_credit" | "unauthorized";
+            /**
+             * Format: date-time
+             * @description When the provider first stopped answering normally, kept across failed probes.
+             */
+            since: string;
+            /**
+             * Format: date-time
+             * @description When one probe call is next allowed. Absent for `degraded`, which is not blocked.
+             */
+            retry_after?: string;
         };
         /** @description One model tier and what it has been doing. */
         AiRungHealth: {
@@ -59333,6 +59383,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AiHealth"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+        };
+    };
+    getAiProviderHealth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The providers that are not answering normally. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiProviderHealth"];
                 };
             };
             401: components["responses"]["Unauthorized"];
