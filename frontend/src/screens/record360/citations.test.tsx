@@ -251,7 +251,7 @@ describe("which door a chip opens", () => {
     const onOpenReceipt = vi.fn();
     const receipted: Cited = {
       ...cited("fact", "f-1", "Headcount"),
-      quote: "We are 240 people across three offices.",
+      quote: "Headcount is 240 across three offices.",
       origin: "Website",
     };
     render(
@@ -261,7 +261,7 @@ describe("which door a chip opens", () => {
     );
     await user.click(screen.getByRole("button", { name: "Headcount" }));
     expect(
-      screen.getByText("We are 240 people across three offices."),
+      screen.getByText("Headcount is 240 across three offices."),
     ).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Open record" })).toBeNull();
     cleanup();
