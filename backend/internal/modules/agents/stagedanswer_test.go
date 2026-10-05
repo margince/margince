@@ -79,15 +79,15 @@ func TestAWholePatchRefusalTellsTheAgentToSpendAnApprovalItAlreadyHas(t *testing
 // approves it" is what sends the agent back to stage the residue twice.
 func TestASplitPatchNoteTellsTheAgentToSpendAnApprovalItAlreadyHas(t *testing.T) {
 	id := ids.From[ids.ApprovalKind](ids.NewV7())
-	undecided := splitStagingNote([]string{"full_name"}, id, false, false)
+	undecided := splitStagingNote([]string{"full_name"}, id, stagedState{})
 	if !strings.Contains(undecided, "once a human approves it") {
 		t.Fatalf("undecided note %q does not tell the agent to wait for a human", undecided)
 	}
-	lent := splitStagingNote([]string{"full_name"}, id, false, true)
+	lent := splitStagingNote([]string{"full_name"}, id, stagedState{Releasable: true})
 	if !strings.Contains(lent, "decide_approval") || strings.Contains(lent, "once a human approves it") {
 		t.Fatalf("a note for a credential that may release %q does not offer the relay", lent)
 	}
-	released := splitStagingNote([]string{"full_name"}, id, true, false)
+	released := splitStagingNote([]string{"full_name"}, id, stagedState{AlreadyApproved: true})
 	if !strings.Contains(released, "already approved this exact overwrite") {
 		t.Fatalf("released note %q does not tell the agent the decision exists", released)
 	}

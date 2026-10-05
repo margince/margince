@@ -184,10 +184,14 @@ func (t updateRecord) applySplit(ctx context.Context, args updateRecordArgs, spl
 			ApprovalID: staged.ApprovalID,
 			Fields:     split.Conflicts,
 			Replay:     canonical,
-			Message:    splitStagingNote(split.Conflicts, staged.ApprovalID, staged.AlreadyApproved, staged.ReleasableByCaller),
+			Message:    splitStagingNote(split.Conflicts, staged.ApprovalID, stagedState{AlreadyApproved: staged.AlreadyApproved, Releasable: staged.ReleasableByCaller}),
 		},
 	})
 }
+
+// stagedState is what the note needs to know about the approval it names: whether
+// a human has already answered it, and whether this credential may release it.
+type stagedState struct{ AlreadyApproved, Releasable bool }
 
 // splitStagingNote is what the agent reads about the fields that were withheld.
 //
@@ -195,15 +199,15 @@ func (t updateRecord) applySplit(ctx context.Context, args updateRecordArgs, spl
 // who has already answered re-sends the call, and each re-send is another
 // approval for the same withheld fields — so the line that says which of the two
 // happened is what keeps one act to one authority object.
-func splitStagingNote(conflicts []string, id ids.ApprovalID, alreadyApproved, releasable bool) string {
+func splitStagingNote(conflicts []string, id ids.ApprovalID, state stagedState) string {
 	fields := strings.Join(conflicts, ", ")
-	if alreadyApproved {
+	if state.AlreadyApproved {
 		return fmt.Sprintf(
 			"fields %s were last edited by a human and were NOT applied; a human has already approved this exact overwrite as approval %s — call update_record with exactly the replay arguments plus \"approval_id\": %q",
 			fields, id, id.String())
 	}
 	who := "once a human approves it"
-	if releasable {
+	if state.Releasable {
 		who = "once the user says yes, release it with decide_approval (or they approve it in the CRM)"
 	}
 	return fmt.Sprintf(
