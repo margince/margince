@@ -6,6 +6,8 @@ package activities
 import (
 	"context"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -328,6 +330,53 @@ func TestTheEnvelopeAndTheSignOffAgreeAboutAuthorship(t *testing.T) {
 			named := envelope != ""
 			if signedOff := signed != "Body"; named != signedOff {
 				t.Fatalf("envelope named=%v but signed=%v — the two disagree", named, signedOff)
+			}
+		})
+	}
+}
+
+// A display name typed with a line break or a run of spaces stays one line
+// under the closing, in both the plain and the markup part.
+func TestTheClosingNamesTheSenderOnOneLine(t *testing.T) {
+	store := (&Store{}).WithSignature(&stubSignature{}).
+		WithSenderName(&stubSenderName{name: " Lars \n  Jankowfsky "})
+
+	if got := signedBody(humanCtx(ids.NewV7()), t, store, "Thx"); got != "Thx\n\nBest regards,\nLars Jankowfsky" {
+		t.Fatalf("unexpected signed body: %q", got)
+	}
+}
+
+// The send reads the name once and hands it to the closing: the closing uses
+// the name it is given, not a second read.
+func TestTheClosingCarriesTheNameItIsGiven(t *testing.T) {
+	store := (&Store{}).WithSignature(&stubSignature{}).
+		WithSenderName(&stubSenderName{name: "A later edit"})
+
+	sign, err := store.signOffAs(humanCtx(ids.NewV7()), "Thx", "", "Lars Jankowfsky")
+	if err != nil {
+		t.Fatalf("resolving the sign-off failed: %v", err)
+	}
+	if sign.Text != "Best regards,\nLars Jankowfsky" {
+		t.Fatalf("sign-off = %q, want the name the send already read", sign.Text)
+	}
+}
+
+// The contract requires `body`; a request without the key is refused rather
+// than answered as though the composer were blank.
+func TestASignOffPreviewWithoutABodyIsRefused(t *testing.T) {
+	h := Handlers{store: (&Store{}).WithSignature(&stubSignature{body: "Marek"})}
+	for name, payload := range map[string]string{"absent": `{}`, "present": `{"body":""}`} {
+		t.Run(name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, "/v1/emails:sign-off", strings.NewReader(payload)).
+				WithContext(humanCtx(ids.NewV7()))
+			rec := httptest.NewRecorder()
+			h.PreviewEmailSignOff(rec, req)
+			want := http.StatusOK
+			if name == "absent" {
+				want = http.StatusUnprocessableEntity
+			}
+			if rec.Code != want {
+				t.Fatalf("answered %d, want %d: %s", rec.Code, want, rec.Body.String())
 			}
 		})
 	}

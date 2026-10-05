@@ -42,7 +42,7 @@ type EmailSignature struct {
 
 // GetMyEmailSignature reads the caller's own signature. A member who has never
 // written one has no row, and that is not an error: an empty body is the honest
-// answer and the send path treats it as "sign nothing".
+// answer, and the send path closes with a plain greeting and the member's name.
 func (s *Store) GetMyEmailSignature(ctx context.Context) (EmailSignature, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.UserID == ids.Nil {

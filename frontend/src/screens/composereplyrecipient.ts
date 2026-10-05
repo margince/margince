@@ -36,12 +36,15 @@ export function useReplyRecipient(anchor: string | undefined): {
     },
     enabled: anchor !== undefined,
   });
+  // A failed refetch keeps the last answer in `data`; a read that failed is
+  // not one to prefill a To field from.
+  const answer = query.isError ? undefined : query.data;
   return {
-    address: query.data?.address === "" ? undefined : query.data?.address,
+    address: answer?.address === "" ? undefined : answer?.address,
     // Undefined until this ANCHOR's own answer arrives — the query is keyed on
     // it, so a previous thread's settled answer is never served here. That
     // matters: undefined means "not answered yet", which is a different fact
     // from an empty list, and only the empty list says nobody's mailbox.
-    mailboxes: query.data?.mailbox_user_ids,
+    mailboxes: answer?.mailbox_user_ids,
   };
 }

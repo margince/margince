@@ -51,7 +51,7 @@ const COMPANY_VIEW = {
 
 // The server's answer is a function of who asks, so a test can change the
 // signed-in member and see whose sign-off the composer draws.
-function stubRoutes(signOffFor: (userId: string) => SignOff) {
+function stubRoutes(signOffFor: (userId: string) => SignOff | Response) {
   const asked: string[] = [];
   const session = { userId: "user-a" };
   vi.stubGlobal(
@@ -66,8 +66,10 @@ function stubRoutes(signOffFor: (userId: string) => SignOff) {
       const key = `${method} ${url.pathname.replace(/^\/v1/, "")}`;
       asked.push(key);
       if (key === "GET /me") return jsonResponse(meAs(session.userId));
-      if (key === "POST /emails:sign-off")
-        return jsonResponse(signOffFor(session.userId));
+      if (key === "POST /emails:sign-off") {
+        const answer = signOffFor(session.userId);
+        return answer instanceof Response ? answer : jsonResponse(answer);
+      }
       if (key === "GET /consent-purposes") return jsonResponse({ data: [] });
       if (key === "GET /voice-profiles") return jsonResponse({ data: [] });
       if (key === "GET /companies/company-1/360")
@@ -206,5 +208,21 @@ describe("the sign-off under the composer's body", () => {
     await waitFor(() => expect(asked).toContain("GET /me"));
     expect(screen.queryByRole("region", { name: REGION_NAME })).toBeNull();
     expect(asked).not.toContain("POST /emails:sign-off");
+  });
+
+  // The send blocks on the same read, so a preview that failed says so rather
+  // than leaving the reader to assume nothing is appended.
+  it("says so when the sign-off could not be read", async () => {
+    stubRoutes(
+      () =>
+        new Response(JSON.stringify({ title: "Internal Server Error" }), {
+          status: 500,
+          headers: { "Content-Type": "application/problem+json" },
+        }),
+    );
+    renderComposer();
+
+    await screen.findByText("Could not load the sign-off a send adds.");
+    expect(screen.queryByRole("region", { name: REGION_NAME })).toBeNull();
   });
 });

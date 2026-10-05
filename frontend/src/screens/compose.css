@@ -184,7 +184,7 @@
 }
 
 /* The sign-off a send appends, under the body: the server's text, kept to its
- * own line breaks, in the muted ink of something the reader does not edit. */
+ * own line breaks and spacing, in the muted ink of something the reader does not edit. */
 .compose-signoff {
   display: flex;
   flex-direction: column;
@@ -193,7 +193,7 @@
 
 .compose-signoff-text {
   margin: 0;
-  white-space: pre-line;
+  white-space: pre-wrap;
   color: var(--textSecondary);
 }
 

@@ -5001,7 +5001,8 @@ export interface paths {
          *
          *     The caller's own signature when they have written one. Otherwise a plain
          *     closing in the message's language — detected from `body`, then `subject`, then
-         *     the installation's language — above the caller's display name.
+         *     the installation's language, then English — above the caller's display name
+         *     when one is on file.
          *
          *     Writes nothing. The send asks again, so a signature changed in between goes out
          *     as changed.
@@ -17134,7 +17135,7 @@ export interface paths {
          *
          *     A member who has never written one has no row, and that is not an error:
          *     `body` is empty, and their mail closes with a plain greeting and their
-         *     display name instead (`POST /emails:sign-off` shows it).
+         *     display name, when one is on file, instead (`POST /emails:sign-off` shows it).
          */
         get: operations["getMyEmailSignature"];
         /**
@@ -26284,7 +26285,7 @@ export interface components {
             /**
              * @description The sign-off appended below every message this member sends, plain text.
              *     Empty means none written; a send then closes with a plain greeting and
-             *     the member's display name.
+             *     the member's display name when one is on file.
              */
             body: string;
             /** Format: date-time */
@@ -26304,7 +26305,7 @@ export interface components {
             text: string;
             /**
              * @description `signature`: the caller's own, from Settings. `closing`: the caller has written
-             *     none, so the send closes with a plain greeting and their name. `none`: this
+             *     none, so the send closes with a plain greeting and their name when available. `none`: this
              *     send appends nothing.
              * @enum {string}
              */

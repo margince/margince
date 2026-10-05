@@ -2584,7 +2584,7 @@ export function ComposeModal({
             />
             {/* The sign-off the send appends, under the words it closes. A
                 channel message carries none, so it shows none. */}
-            {!isChannelReply && (
+            {open && !isChannelReply && (
               <SignOffPreview body={body} subject={subject} />
             )}
             {/* What travels WITH the message, under the words it is about —

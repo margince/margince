@@ -33213,7 +33213,7 @@ type EmailPresentationLifecycle string
 // EmailSignOff defines model for EmailSignOff.
 type EmailSignOff struct {
 	// Kind `signature`: the caller's own, from Settings. `closing`: the caller has written
-	// none, so the send closes with a plain greeting and their name. `none`: this
+	// none, so the send closes with a plain greeting and their name when available. `none`: this
 	// send appends nothing.
 	Kind EmailSignOffKind `json:"kind"`
 
@@ -33223,7 +33223,7 @@ type EmailSignOff struct {
 }
 
 // EmailSignOffKind `signature`: the caller's own, from Settings. `closing`: the caller has written
-// none, so the send closes with a plain greeting and their name. `none`: this
+// none, so the send closes with a plain greeting and their name when available. `none`: this
 // send appends nothing.
 type EmailSignOffKind string
 
@@ -33240,7 +33240,7 @@ type EmailSignOffRequest struct {
 type EmailSignature struct {
 	// Body The sign-off appended below every message this member sends, plain text.
 	// Empty means none written; a send then closes with a plain greeting and
-	// the member's display name.
+	// the member's display name when one is on file.
 	Body      string     `json:"body"`
 	UpdatedAt *time.Time `json:"updated_at,omitempty"`
 }

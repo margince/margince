@@ -19,6 +19,7 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
+	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -91,6 +92,16 @@ func (o SignOff) under(body string) string {
 // One lookup for both renderings. Two would be two chances for the plain part
 // and the markup part of one message to disagree about who signed it.
 func (s *Store) signOff(ctx context.Context, body, subject string) (SignOff, error) {
+	name, err := s.senderDisplayName(ctx)
+	if err != nil {
+		return SignOff{}, err
+	}
+	return s.signOffAs(ctx, body, subject, name)
+}
+
+// signOffAs is signOff with the sender's display name already read, so a send
+// writes one name in its From header and its closing.
+func (s *Store) signOffAs(ctx context.Context, body, subject, name string) (SignOff, error) {
 	if s.signature == nil {
 		return SignOff{Kind: SignOffNone}, nil
 	}
@@ -105,12 +116,9 @@ func (s *Store) signOff(ctx context.Context, body, subject string) (SignOff, err
 	if sign = strings.TrimSpace(sign); sign != "" {
 		return SignOff{Text: sign, Kind: SignOffSignature}, nil
 	}
-	name, err := s.senderDisplayName(ctx)
-	if err != nil {
-		return SignOff{}, err
-	}
 	closing := mailcopy.For(string(s.footerLanguage(ctx, body, subject))).SignOffClosing
-	if name = strings.TrimSpace(name); name != "" {
+	// One line, or a line break typed into the name would split the closing.
+	if name = draftfloor.NameLine(name); name != "" {
 		closing += "\n" + name
 	}
 	return SignOff{Text: closing, Kind: SignOffClosing}, nil

@@ -4561,6 +4561,7 @@ export const en = {
   "compose.signOff": "Added when you send",
   "compose.signOffClosing": "You have no signature, so this closing is added.",
   "compose.signOffSet": "Set your signature",
+  "compose.signOffFailed": "Could not load the sign-off a send adds.",
   "compose.transport": "Send via",
   "compose.transportEmail": "Email",
   "compose.recipientHint": "Name or address",
@@ -5166,7 +5167,7 @@ export const en = {
   "settings.signatureLabel": "Sign-off",
   "settings.signaturePlaceholder": "Marek Janetzke\nGradion · +49 40 123456",
   "settings.signatureHint":
-    "Plain text. Leave empty to sign off with a short closing and your name. AI drafts never add a sign-off.",
+    "Plain text. If empty, mail closes with a greeting and your name. AI never adds one.",
   "settings.signatureSaving": "Saving…",
   "settings.signatureEdit": "Edit signature",
   "settings.signatureNone": "No sign-off set",

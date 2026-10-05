@@ -5,8 +5,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { routeHash } from "../app/router";
 import { useT } from "../i18n";
 import { throwProblem, useMe } from "./common";
+import { settingsHref } from "./settingsrouting";
 
 type SignOff = components["schemas"]["EmailSignOff"];
 
@@ -31,7 +33,10 @@ export function SignOffPreview({
   subject,
 }: Readonly<{ body: string; subject: string }>) {
   const t = useT();
-  const { signOff, stale } = useSignOff(body, subject);
+  const { signOff, stale, failed } = useSignOff(body, subject);
+  if (failed) {
+    return <p className="t-caption">{t("compose.signOffFailed")}</p>;
+  }
   if (!signOff?.text || signOff.kind === "none") {
     return null;
   }
@@ -48,7 +53,9 @@ export function SignOffPreview({
       {signOff.kind === "closing" && (
         <p className="t-caption">
           {t("compose.signOffClosing")}{" "}
-          <a href="#/settings/account">{t("compose.signOffSet")}</a>
+          <a href={routeHash(settingsHref("account"))}>
+            {t("compose.signOffSet")}
+          </a>
         </p>
       )}
     </section>
@@ -58,7 +65,7 @@ export function SignOffPreview({
 function useSignOff(
   body: string,
   subject: string,
-): { signOff: SignOff | undefined; stale: boolean } {
+): { signOff: SignOff | undefined; stale: boolean; failed: boolean } {
   const userId = useMe().data?.user.id;
   const [settled, setSettled] = useState({ body, subject });
   useEffect(() => {
@@ -84,5 +91,9 @@ function useSignOff(
       previousQuery?.queryKey[1] === userId ? previous : undefined,
   });
   const pending = settled.body !== body || settled.subject !== subject;
-  return { signOff: query.data, stale: pending || query.isPlaceholderData };
+  return {
+    signOff: query.data,
+    stale: pending || query.isPlaceholderData,
+    failed: query.isError,
+  };
 }

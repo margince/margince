@@ -59,3 +59,15 @@ export const NoSignature: Story = {
     );
   },
 };
+
+// Both states in the dark theme: the muted ink has to stay readable on the
+// drawer's dark ground.
+export const SignatureDark: Story = {
+  ...Signature,
+  globals: { theme: "dark" },
+};
+
+export const NoSignatureDark: Story = {
+  ...NoSignature,
+  globals: { theme: "dark" },
+};
