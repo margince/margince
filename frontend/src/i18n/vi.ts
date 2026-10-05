@@ -2171,6 +2171,8 @@ export const vi = {
   "approval.field.because": "Lý do",
   "approval.field.from_stage": "Từ",
   "approval.field.to_stage": "Đến",
+  "approval.kind.transcript_proposal":
+    "Thêm bước tiếp theo từ bản ghi cuộc trò chuyện",
   "approval.kind.commitment_task": "Thêm việc cho cam kết",
   "approval.kind.fx_rate_proposal": "Làm mới tỷ giá",
   "approval.kind.disqualify_lead": "Loại một khách hàng tiềm năng",

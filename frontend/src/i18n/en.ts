@@ -2252,6 +2252,7 @@ export const en = {
   "approval.field.because": "Reason",
   "approval.field.from_stage": "From",
   "approval.field.to_stage": "To",
+  "approval.kind.transcript_proposal": "Add next step from transcript",
   "approval.kind.commitment_task": "Add commitment task",
   "approval.kind.fx_rate_proposal": "Update exchange rates",
   "approval.kind.disqualify_lead": "Disqualify lead",

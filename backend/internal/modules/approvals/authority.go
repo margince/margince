@@ -81,7 +81,7 @@ const (
 	kindCommitmentTask = "commitment_task"
 	// kindTranscriptProposal is retired: nothing stages it and no effect
 	// applies it. It stays governed so the cards already decided under it stay
-	// readable to the people who decided them.
+	// readable to whoever decided them.
 	kindTranscriptProposal = "transcript_proposal"
 )
 
