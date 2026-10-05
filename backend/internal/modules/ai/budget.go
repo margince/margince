@@ -215,7 +215,9 @@ func providerFaultOf(status int, err error) error {
 
 var (
 	emptyBalancePhrases = []string{"credit balance is too low", "insufficient credit", "insufficient_quota", "billing hard limit"}
-	rejectedKeyPhrases  = []string{"api key", "api_key", "x-api-key", "credential", "authentication"}
+	// "api key" alone is not here: a vendor's permission refusal says "your API key
+	// does not have permission", which is one model or feature, not a bad key.
+	rejectedKeyPhrases = []string{"api key not valid", "api_key_invalid", "invalid api key", "incorrect api key", "invalid x-api-key", "api key expired", "reported as leaked", "authentication"}
 )
 
 func mentionsAny(text string, phrases []string) bool {

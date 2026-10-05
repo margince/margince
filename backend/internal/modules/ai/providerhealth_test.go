@@ -103,12 +103,13 @@ func TestAnEmptyBalanceOrRejectedKeyIsRecognisedByItsTextUnderStatusesThatAlsoMe
 		text   string
 		want   error
 	}{
-		"anthropic empty balance":       {http.StatusBadRequest, "anthropic: invalid_request_error: Your credit balance is too low to access the API (http 400)", ErrProviderQuota},
-		"gemini key not valid":          {http.StatusBadRequest, "gemini: INVALID_ARGUMENT: API key not valid. Please pass a valid API key.", ErrProviderUnauthorized},
-		"a revoked key under 403":       {http.StatusForbidden, "vendor: PERMISSION_DENIED: your API key was reported as leaked", ErrProviderUnauthorized},
-		"a moderation flag under 403":   {http.StatusForbidden, "openrouter: this input requires moderation and was flagged", nil},
-		"a model not enabled under 403": {http.StatusForbidden, "vertex: PERMISSION_DENIED: the model is not enabled for this project", nil},
-		"an ordinary bad request":       {http.StatusBadRequest, "openai: invalid_request_error: max_tokens is too large", nil},
+		"anthropic empty balance":             {http.StatusBadRequest, "anthropic: invalid_request_error: Your credit balance is too low to access the API (http 400)", ErrProviderQuota},
+		"gemini key not valid":                {http.StatusBadRequest, "gemini: INVALID_ARGUMENT: API key not valid. Please pass a valid API key.", ErrProviderUnauthorized},
+		"a revoked key under 403":             {http.StatusForbidden, "vendor: PERMISSION_DENIED: your API key was reported as leaked", ErrProviderUnauthorized},
+		"a moderation flag under 403":         {http.StatusForbidden, "openrouter: this input requires moderation and was flagged", nil},
+		"a model not enabled under 403":       {http.StatusForbidden, "vertex: PERMISSION_DENIED: the model is not enabled for this project", nil},
+		"a permission refusal naming the key": {http.StatusForbidden, "anthropic: permission_error: Your API key does not have permission to use the specified resource.", nil},
+		"an ordinary bad request":             {http.StatusBadRequest, "openai: invalid_request_error: max_tokens is too large", nil},
 	} {
 		got := providerFaultOf(tc.status, errors.New(tc.text))
 		if tc.want == nil && errors.Unwrap(got) != nil {
@@ -213,12 +214,13 @@ func TestAProbeInFlightRefusesOthersWithAMomentStillAheadOfThem(t *testing.T) {
 	if ok || !st.RetryAfter.After(clock.now()) {
 		t.Errorf("a second caller got admitted=%v with retry %v, want a refusal with a moment after now", ok, st.RetryAfter)
 	}
-	if !tr.current().Blocked(clock.now()) {
-		t.Error("the router would still let a call through while the probe is in flight")
+	clock.advance(CallCeiling - time.Second)
+	if _, ok := tr.admit(); ok {
+		t.Error("a second probe started while the first could still be running")
 	}
-	clock.advance(probeLease)
+	clock.advance(time.Second)
 	if _, ok := tr.admit(); !ok {
-		t.Error("a probe that never reported held the slot past its lease")
+		t.Error("a probe that never reported held the slot past the longest call")
 	}
 }
 
@@ -509,5 +511,37 @@ func TestABindingNamesTheProvidersItsTiersUse(t *testing.T) {
 	got := b.providers()
 	if len(got) != 2 || got[0] != "gemini" || got[1] != "openai" {
 		t.Errorf("providers %v, want gemini and openai once each", got)
+	}
+}
+
+func TestAFailedProbeOrAnUnreachableHostRefundsTheItemTheWalkEndedOn(t *testing.T) {
+	t.Parallel()
+	clock := newClock()
+	dial := &net.OpError{Op: "dial", Err: syscall.ECONNREFUSED}
+	client := trackClient(&faultClient{err: dial}, "openai", newProviderBook(clock.now))
+	r := ladderOf(client, client)
+	ask := func() error {
+		_, _, err := r.Complete(wsContext(t), TaskSummarize, model.Request{Messages: []model.Message{{Role: "user", Content: "x"}}})
+		return err
+	}
+	if err := ask(); !IsDeferral(err) || !errors.Is(err, dial) {
+		t.Errorf("the call that found the host unreachable: %v, want a deferral keeping the cause", err)
+	}
+	clock.advance(downProbeCap)
+	if err := ask(); !IsDeferral(err) {
+		t.Errorf("a failed probe: %v, want a deferral, not a charge to the item that probed", err)
+	}
+}
+
+func TestACallRefusedBecauseTheProviderIsBlockedHasNothingToTrace(t *testing.T) {
+	t.Parallel()
+	if !refusedUncalled(&ProviderDownError{}) {
+		t.Error("a refusal with no failure behind it would be traced as a provider error")
+	}
+	if refusedUncalled(&ProviderDownError{Cause: ErrProviderQuota}) {
+		t.Error("the call that tripped the provider made a real call and must be traced")
+	}
+	if refusedUncalled(errors.New("x")) {
+		t.Error("an ordinary error was read as an untraced refusal")
 	}
 }

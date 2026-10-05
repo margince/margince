@@ -74,8 +74,6 @@ const (
 	accountReprobe = 15 * time.Minute
 	downProbeFloor = 30 * time.Second
 	downProbeCap   = 5 * time.Minute
-	// probeLease is how long the one admitted probe holds the slot.
-	probeLease = time.Minute
 )
 
 type failureKind int
@@ -124,6 +122,9 @@ type providerTracker struct {
 	status      model.ProviderHealthStatus
 	consecutive int
 	backoff     time.Duration
+	// probeUntil is when the admitted probe's slot is free again: the longest
+	// a call may run, so a hung probe is not joined by a second one.
+	probeUntil time.Time
 	// notify queues a status change for the other processes; nil when nothing
 	// is shared. sharedAt is when the status was last queued.
 	notify   func(model.ProviderHealthStatus)
@@ -141,10 +142,10 @@ func (t *providerTracker) current() model.ProviderHealthStatus {
 }
 
 // admit lets a call through, or refuses it with the blocking status. Once the
-// retry moment passes, exactly one caller is let through as the probe: it takes
-// a lease by moving RetryAfter forward, so everyone else is refused with a
-// moment still ahead of them, and a probe that never reports frees the slot
-// itself when the lease runs out.
+// retry moment passes, exactly one caller is let through as the probe and holds
+// the slot until it reports or the longest call could have ended. Everyone
+// else is refused with a moment still ahead of them, soon, because the probe
+// usually answers in seconds.
 func (t *providerTracker) admit() (model.ProviderHealthStatus, bool) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -155,7 +156,12 @@ func (t *providerTracker) admit() (model.ProviderHealthStatus, bool) {
 	if now.Before(t.status.RetryAfter) {
 		return t.status, false
 	}
-	t.status.RetryAfter = now.Add(probeLease)
+	if now.Before(t.probeUntil) {
+		refused := t.status
+		refused.RetryAfter = now.Add(downProbeFloor)
+		return refused, false
+	}
+	t.probeUntil = now.Add(CallCeiling)
 	return t.status, true
 }
 
@@ -166,15 +172,13 @@ func (t *providerTracker) observe(err error) {
 	defer t.mu.Unlock()
 	before := t.status
 	defer func() { t.share(before) }()
+	t.probeUntil = time.Time{}
 	switch {
 	case kind != failNone:
 		t.fail(kind)
 	case errors.Is(err, context.Canceled):
 		// The caller walked away before the provider answered: a probe that
 		// was cut short frees its slot without counting for or against it.
-		if t.status.Health.Blocking() {
-			t.status.RetryAfter = t.now()
-		}
 	default:
 		t.recover()
 	}
@@ -189,6 +193,7 @@ func (t *providerTracker) reset() {
 }
 
 func (t *providerTracker) recover() {
+	t.probeUntil = time.Time{}
 	t.status = model.ProviderHealthStatus{Health: model.HealthOK}
 	t.consecutive, t.backoff = 0, 0
 }
@@ -381,4 +386,13 @@ func blockedBy(b *binding, tier Tier, cause error) error {
 		return cause
 	}
 	return &ProviderDownError{Provider: b.routeMeta[tier].provider, Health: st.Health, RetryAfter: st.RetryAfter, Cause: cause}
+}
+
+// refusedUncalled reports whether err is a refusal that made no provider call:
+// a blocked provider answering ErrProviderDown with no failure behind it. Such
+// a call has nothing to trace; the one that tripped the provider has a Cause
+// and is a real failure.
+func refusedUncalled(err error) bool {
+	var down *ProviderDownError
+	return errors.As(err, &down) && down.Cause == nil
 }

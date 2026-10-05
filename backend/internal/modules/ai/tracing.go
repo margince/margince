@@ -279,9 +279,10 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 		if errors.Is(lastErr, model.ErrOutputWithheld) || errors.Is(lastErr, model.ErrRequestRejected) {
 			return model.Response{}, lastTier, false, lastErr
 		}
-		// A rejected key walks on, as above, but when the walk ends on it the
-		// provider is blocked, and this call is refunded like the next one.
-		if errors.Is(lastErr, ErrProviderUnauthorized) {
+		// A walk that ends on a failure of the provider itself has left that
+		// provider blocked (or kept it so, when this call was its probe), and
+		// the call is refunded like the next one: the item did nothing wrong.
+		if classifyFailure(lastErr) != failNone {
 			if down, blocked := blockedBy(b, lastTier, lastErr).(*ProviderDownError); blocked {
 				return model.Response{}, lastTier, false, down
 			}

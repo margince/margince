@@ -235,6 +235,9 @@ func (r *Router) serveAttempt(ctx context.Context, lc *logicalCall, task Task, l
 	start := r.now()
 	trace := r.newAttemptTrace(ctx, task, key, reason, req)
 	defer func() {
+		if refusedUncalled(err) {
+			return
+		}
 		// BEFORE finalize, which is what buffers the row: a field set after it
 		// would be written to a copy nobody reads.
 		trace.SecretsRemoved, trace.SecretKinds = strips.report()
