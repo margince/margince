@@ -401,7 +401,8 @@ func (s *observedStream) Next(ctx context.Context) (string, bool, error) {
 }
 
 func (s *observedStream) Close() error {
-	s.finish(context.Canceled)
+	// A stream closed before it ended frees a probe slot without counting.
+	s.once.Do(func() { s.client.tracker.observe(s.admitted, context.Canceled) })
 	return s.TokenStream.Close()
 }
 

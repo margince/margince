@@ -616,9 +616,11 @@ type streamClient struct {
 func (c *streamClient) Complete(context.Context, model.Request) (model.Response, error) {
 	return model.Response{}, nil
 }
+
 func (c *streamClient) Stream(context.Context, model.Request) (model.TokenStream, error) {
 	return c.stream, nil
 }
+
 func (c *streamClient) Embed(context.Context, model.EmbedRequest) (model.Embeddings, error) {
 	return model.Embeddings{}, nil
 }

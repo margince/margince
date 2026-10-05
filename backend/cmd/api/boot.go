@@ -468,7 +468,7 @@ func workerHandoffOptions(
 
 // shareThroughRedis hands the Redis client to the two process-wide registries
 // that coordinate this process with the others: rate limits and provider health.
-func shareThroughRedis(rdb *redis.Client) {
+func shareThroughRedis(ctx context.Context, rdb *redis.Client) {
 	ratelimit.ShareProcess(rdb)
-	ai.ShareProviderHealth(providerhealthstore.New(rdb))
+	ai.ShareProviderHealth(ctx, providerhealthstore.New(rdb))
 }

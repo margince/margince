@@ -43,9 +43,9 @@ type ProviderHealthStore interface {
 // ShareProviderHealth makes this process publish its provider statuses to store
 // and read the others' through it. A role without a shared store never calls it
 // and keeps answering for itself alone.
-func ShareProviderHealth(store ProviderHealthStore) {
+func ShareProviderHealth(ctx context.Context, store ProviderHealthStore) {
 	sharedProviderHealth.sharer.use(store)
-	go sharedProviderHealth.maintain(shareTick)
+	go sharedProviderHealth.maintain(ctx, shareTick)
 }
 
 // maintain keeps this process's records honest for as long as it runs: an
@@ -53,9 +53,16 @@ func ShareProviderHealth(store ProviderHealthStore) {
 // and a status another process cleared (a confirmed key test, a rebind) is
 // cleared here too, so the fix reaches the process that owns the retry window.
 // It costs nothing while every provider is healthy.
-func (b *providerBook) maintain(every time.Duration) {
-	for range time.Tick(every) {
-		b.reconcile(context.Background())
+func (b *providerBook) maintain(ctx context.Context, every time.Duration) {
+	ticker := time.NewTicker(every)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			b.reconcile(ctx)
+		}
 	}
 }
 

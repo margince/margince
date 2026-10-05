@@ -264,7 +264,9 @@ func TestAProviderClearedByAnotherProcessIsClearedHereToo(t *testing.T) {
 	tr := book.tracker("openai")
 	tr.observe(admission{}, ErrProviderQuota)
 	store.wait(t)
-	store.Clear(context.Background(), "openai")
+	if err := store.Clear(context.Background(), "openai"); err != nil {
+		t.Fatalf("clearing the shared record: %v", err)
+	}
 	store.wait(t)
 
 	book.reconcile(context.Background())

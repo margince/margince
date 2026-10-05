@@ -101,7 +101,7 @@ func openBus(ctx context.Context, cfg workerConfig) (*redis.Client, error) {
 		return nil, err
 	}
 	ratelimit.ShareProcess(rdb)
-	ai.ShareProviderHealth(providerhealthstore.New(rdb))
+	ai.ShareProviderHealth(ctx, providerhealthstore.New(rdb))
 	return rdb, nil
 }
 
