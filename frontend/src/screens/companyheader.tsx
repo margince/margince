@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useId } from "react";
+import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
@@ -9,13 +9,14 @@ import {
   useRecordWriteRefusal,
 } from "../app/capability";
 import { navigate } from "../app/router";
-import { Badge, Button, OverflowMenu } from "../design-system/atoms";
+import { Badge, Button, Field, OverflowMenu } from "../design-system/atoms";
 import { InlineChoice } from "../design-system/inlinechoice";
+import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import { AddToShortlistAction } from "./addtoshortlist";
 import { ArchiveAction } from "./archive";
 import { useClaimRecord } from "./claimrecord";
-import { throwProblem, useViewerId } from "./common";
+import { problemMessageOf, throwProblem, useViewerId } from "./common";
 import { LIFECYCLE_LABELS, LIFECYCLE_OPTIONS } from "./companies";
 import { DecisionsChip } from "./companyapprovals";
 import { patchCompanyField, searchCompanyTargets } from "./companyform";
@@ -26,12 +27,13 @@ import { MergeAction } from "./merge";
 import { memberName, useRosterNames } from "./roster";
 import { ShareAction } from "./share";
 
-// The account header's editable pieces: lifecycle and owner, the two values a
-// rep changes in place (InlineChoice) rather than through an edit modal, plus
-// what the account IS (CompanyRelationshipBadges) and the record's own menu
-// (CompanyActionBadges). The subtitle and facts strip live in
-// companyheaderfacts.tsx and the header's other verbs in
-// companyheaderactions.tsx, so this file holds only the pieces that write.
+// The account header's editable pieces: lifecycle (a real control beside the
+// name) and owner (changed in place through InlineChoice), the two values a
+// rep sets without an edit modal, plus what the account IS
+// (CompanyRelationshipBadges) and the record's own menu (CompanyActionBadges).
+// The subtitle and facts strip live in companyheaderfacts.tsx and the header's
+// other verbs in companyheaderactions.tsx, so this file holds only the pieces
+// that write.
 //
 // Split out of companies.tsx because that file had grown past 2,700 lines
 // carrying the list screen, the enrichment tools, the evidence cards and this
@@ -129,13 +131,16 @@ export function useCompanyReadOnlyReason(company: Company): string | undefined {
   return undefined;
 }
 
-// Exported for its two mount points: the header passes it into RecordView's
-// `nameBadge` slot, where the record's standing belongs on the name's own
-// line, and the rail's Details grid mounts the SAME control rather than a
-// second InlineChoice with its own PATCH. One implementation of how lifecycle
-// is written, two places it is drawn, so the two cannot disagree about what
-// they last wrote. `hideLabel` is unconditional: both callers name the field
-// themselves, the badge beside the name and the grid's own label column.
+// The account's standing, drawn as the header's one real control beside the
+// company's name. Deliberately NOT InlineChoice: that primitive is a value
+// inside a line of text, sized to the text (24px) so the line does not move
+// when it opens, and the header is not a line of text — the stage is the one
+// thing a rep sets on an account, and as a pale inline chip it read as
+// metadata a reader could not act on. So it is the design system's own
+// dropdown worn as a filled button: `--controlHeight`, the same picker, the
+// same PATCH (useCompanyFieldPatch) the rail's Details grid writes through.
+// The grid keeps its inline field, because there the stage IS a value in a
+// row of values.
 export function CompanyLifecycleControl({
   company,
 }: Readonly<{ company: Company }>) {
@@ -146,39 +151,82 @@ export function CompanyLifecycleControl({
   const canUpdate = useCanWriteRecord("company", company);
   const readOnlyReason = useCompanyReadOnlyReason(company);
   const patch = useCompanyFieldPatch(company);
+  // What the reader picked, held until the record they picked it against has
+  // answered. A refused save keeps it, so the button still says what they
+  // chose while the refusal beside it says why it did not land — snapping back
+  // to the stored stage would discard their answer and explain nothing.
+  const [pending, setPending] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [failure, setFailure] = useState<string | null>(null);
+  const stored = company.lifecycle ?? "unknown";
+  const label = (value: string) => t(LIFECYCLE_LABELS[value as Lifecycle]);
+  if (!canUpdate || readOnlyReason) {
+    // A reader who may not change the stage is shown the stage. A button that
+    // looks pressable and then refuses is the defect InlineChoice was built
+    // to avoid, and the header keeps that rule.
+    return (
+      <span title={readOnlyReason} data-testid="company-lifecycle">
+        <Badge tone="accent">{label(stored)}</Badge>
+      </span>
+    );
+  }
+  const commit = async (next: string) => {
+    // One write at a time: a second pick on top of an unanswered one would
+    // send a version the first is about to move past.
+    if (saving) {
+      return;
+    }
+    // Choosing what is already stored is not an edit: no audit row for a
+    // change that did not happen.
+    if (next === stored) {
+      setPending(null);
+      setFailure(null);
+      return;
+    }
+    setPending(next);
+    setSaving(true);
+    setFailure(null);
+    try {
+      await patch({
+        lifecycle: next as NonNullable<UpdateCompanyRequest["lifecycle"]>,
+      });
+      setPending(null);
+    } catch (err) {
+      setFailure(problemMessageOf(err, t));
+    } finally {
+      setSaving(false);
+    }
+  };
   return (
-    <InlineChoice
-      // Named for the company record's own layout suite, which measures this
-      // control's drawn size. Neither the shared primitive's class (it matches
-      // every other screen's inline choice) nor the German copy inside it (a
-      // copy change must not fail a layout assertion) can name it.
-      testId="company-lifecycle"
+    <Field
       label={t("company.lifecycle")}
-      // The badge already reads as the account's standing beside its name —
-      // a "Lifecycle: " prefix in front of it would be the one value on the
-      // line saying its own name twice. `label` still drives the accessible
-      // name (aria-label, sr-only form label), so a screen reader hears
-      // "Lifecycle" regardless.
-      hideLabel
-      value={company.lifecycle ?? "unknown"}
-      options={LIFECYCLE_OPTIONS.map((value) => ({
-        value,
-        label: t(LIFECYCLE_LABELS[value]),
-      }))}
-      canEdit={canUpdate && !readOnlyReason}
-      readOnlyReason={readOnlyReason}
-      // The account's standing is the one value beside its name a reader
-      // looks for first. Tinted rather than filled: it marks the one value
-      // here a reader can set, without reading as the page's primary action.
-      render={(value) => (
-        <Badge tone="accent">{t(LIFECYCLE_LABELS[value as Lifecycle])}</Badge>
+      // The button's face is the stage itself; a visible "Lifecycle" over it
+      // would be the one control in the header naming itself twice. The label
+      // still names it for assistive tech.
+      labelHidden
+      error={failure ?? undefined}
+    >
+      {(control) => (
+        <Select
+          {...control}
+          appearance="button"
+          // Named for the company record's own layout suite, which measures
+          // this control's drawn size; neither the shared primitive's class
+          // nor the German copy on its face can name it.
+          testId="company-lifecycle"
+          value={pending ?? stored}
+          options={LIFECYCLE_OPTIONS.map((value) => ({
+            value,
+            label: label(value),
+          }))}
+          // Busy, not disabled: the button keeps focus and its full ink
+          // while the write is out, and refuses the press itself. `commit`
+          // turns away a pick that lands anyway (from the keyboard).
+          aria-busy={saving || undefined}
+          onChange={(next) => void commit(next)}
+        />
       )}
-      onSave={(next) =>
-        patch({
-          lifecycle: next as NonNullable<UpdateCompanyRequest["lifecycle"]>,
-        })
-      }
-    />
+    </Field>
   );
 }
 
