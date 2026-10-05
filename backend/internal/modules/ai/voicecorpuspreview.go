@@ -98,8 +98,9 @@ func PreviewCorpusText(format, content string) (CorpusPreview, error) {
 	// an email and "Sam:" in a chat log arrive identically. Nothing in the text
 	// separates them; only the SHARE of the words those labels own does. At or
 	// above half the source is a conversation and the owner is asked which
-	// speaker they are. Below half the source is prose, and on ingest a label
-	// that names somebody in the workspace leaves it (voicecorpusquotes.go).
+	// speaker they are. Below half the source is prose; on ingest the turns of a
+	// label naming a contact or colleague the owner can see are taken out of it
+	// (voicecorpusquotes.go).
 	//
 	// The labels are reported either way. A caller reads an empty speakers list
 	// as "single-author prose, ingest it whole", so erasing them is what would

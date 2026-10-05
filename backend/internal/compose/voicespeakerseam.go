@@ -11,6 +11,7 @@ package compose
 import (
 	"context"
 	"errors"
+	"slices"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -20,21 +21,29 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
-// voiceKnownSpeakers answers with every label either module recognises. A caller
-// without the grant to read contacts recognises no contact, which is not a
-// failure of the ingest: the names it cannot see are names it cannot quote.
+// voiceKnownSpeakers answers with every label either module recognises, less
+// the caller's own names: a contact or colleague who shares the owner's name
+// does not make the owner's own lines a quotation. A caller without the grant
+// to read contacts recognises no contact, which is not a failure of the ingest:
+// the names it cannot see are names it cannot quote.
 func voiceKnownSpeakers(pool *pgxpool.Pool) ai.KnownSpeakers {
 	store := contacts.NewStore(InstallationDB(pool))
-	colleagues := identity.NewService(pool)
+	seats := identity.NewService(pool)
 	return func(ctx context.Context, labels []string) ([]string, error) {
 		fromContacts, err := store.ContactNamesAmong(ctx, labels)
 		if err != nil && !errors.Is(err, apperrors.ErrPermissionDenied) {
 			return nil, err
 		}
-		fromColleagues, err := colleagues.ColleagueNamesAmong(ctx, labels)
+		fromColleagues, own, err := seats.SeatNamesAmong(ctx, labels)
 		if err != nil {
 			return nil, err
 		}
-		return append(fromContacts, fromColleagues...), nil
+		known := make([]string, 0, len(fromContacts)+len(fromColleagues))
+		for _, label := range append(fromContacts, fromColleagues...) {
+			if !slices.Contains(own, label) {
+				known = append(known, label)
+			}
+		}
+		return known, nil
 	}
 }

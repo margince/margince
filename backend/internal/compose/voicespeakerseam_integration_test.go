@@ -30,15 +30,18 @@ func TestAQuotedNameIsSomebodyTheOwnerCanSee(t *testing.T) {
 	e.MakeCapturePrivate(t, "contact", private, e.Rep3)
 	e.WsExec(t, `UPDATE app_user SET display_name = 'Lena Fischer' WHERE id = $1`, e.Rep2)
 	e.WsExec(t, `UPDATE app_user SET display_name = 'Nav Playa' WHERE id = $1`, e.Rep1)
+	e.SeedContact(t, "Nav Kumar", &e.Rep2)
+	e.WsExec(t, `UPDATE app_user SET display_name = 'Omar Locked', locked_until = now() + interval '1 day' WHERE id = $1`, e.Rep3)
 	known := voiceKnownSpeakers(e.Pool)
-	labels := []string{"Sam", "Dana", "fischer", "Nav", "Frage"}
+	labels := []string{"Sam", "Dana", "fischer", "Nav", "Omar", "Frage"}
 
 	named, err := known(e.As(e.Rep1, []ids.UUID{e.Team1}, quoteReaderPerms), labels)
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Dana is another rep's private capture, the owner is not a quotation of
-	// themselves, and a heading is nobody.
+	// Dana is another rep's private capture, Omar's seat is locked out of the
+	// roster, the owner is not a quotation of themselves even though a contact
+	// shares their name, and a heading is nobody.
 	if got := strings.Join(named, ","); got != "Sam,fischer" {
 		t.Fatalf("named = %q, want the visible contact and the colleague only", got)
 	}
