@@ -380,6 +380,7 @@ func startProjectionLanes(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cl
 	startNoticeCaseOpen(ctx, pool, rdb, background, logger, stdout)
 
 	startDealRoomTimeline(ctx, pool, rdb, background, logger, stdout)
+	startCommitmentSettle(ctx, pool, rdb, background, logger, stdout)
 
 	// What the AI is doing for one contact, projected into the table the UI
 	// reads. Deterministic like the projections above, so it runs on every

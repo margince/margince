@@ -260,15 +260,17 @@ function openLoops(
       theirs: false,
     }),
   );
-  // A commitment that became a task is the task's: the page lists the task,
-  // on this card or beside it, and the claim would say the same thing twice.
+  // A commitment that became a task is the task's while it is open: the page
+  // lists the task, on this card or beside it, and the claim would say the
+  // same thing twice. Once kept, the task leaves the open list and settled
+  // its claim with it, so the claim stays as the record that it was kept.
   const fromClaims = LOOPS.flatMap((loop) =>
     claims
       .filter(
         (claim) =>
           claim.kind === loop.kind &&
           claim.status !== "dismissed" &&
-          !claim.task_activity_id,
+          (!claim.task_activity_id || claim.status === "done"),
       )
       .map(
         (claim): OpenLoop => ({

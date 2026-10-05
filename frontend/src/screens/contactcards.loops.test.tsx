@@ -299,6 +299,21 @@ describe("a commitment read from a conversation", () => {
     expect(screen.queryByRole("button", { name: "Dismiss" })).toBeNull();
   });
 
+  it("stays as a kept commitment once its task is done", () => {
+    const view = viewWithDue(null);
+    // biome-ignore lint/style/noNonNullAssertion: the fixture above builds it.
+    const kept = view.claims![0];
+    kept.task_activity_id = "t-1";
+    kept.status = "done";
+    render(
+      <StoryProviders>
+        <ContactCommitmentsCard view={view} firstName="Dana" />
+      </StoryProviders>,
+    );
+    const box = screen.getByRole("checkbox", { name: /Send the pilot quote/ });
+    expect(box).toHaveProperty("checked", true);
+  });
+
   it("is drawn once, as its task, when it became one", () => {
     const view = viewWithDue(null);
     // biome-ignore lint/style/noNonNullAssertion: the fixture above builds it.
