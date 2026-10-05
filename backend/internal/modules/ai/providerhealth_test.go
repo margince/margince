@@ -663,13 +663,17 @@ func TestAStreamClosedUnfinishedFreesTheProbeSlotWithoutCounting(t *testing.T) {
 	tracker := book.tracker("openai")
 	tracker.observe(admission{}, ErrProviderQuota)
 	clock.advance(accountReprobe)
-	client := trackClient(&streamClient{stream: &scriptedStream{}}, "openai", book)
+	stream := &scriptedStream{}
+	client := trackClient(&streamClient{stream: stream}, "openai", book)
 	opened, err := client.Stream(context.Background(), model.Request{})
 	if err != nil {
 		t.Fatalf("the probe stream was refused: %v", err)
 	}
 	if err := opened.Close(); err != nil {
 		t.Fatalf("closing: %v", err)
+	}
+	if !stream.closed {
+		t.Error("closing the wrapper never reached the stream beneath it")
 	}
 	if h := client.Health().Health; h != model.HealthOutOfCredit {
 		t.Errorf("health %s after an abandoned probe, want it unchanged", h)

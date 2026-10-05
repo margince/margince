@@ -190,7 +190,8 @@ func (cfg RoutingConfig) buildClients() (map[Tier]model.Client, model.Client, er
 	return clients, trackClient(embedder, cfg.Embeddings.Provider, sharedProviderHealth), nil
 }
 
-// providers names every provider this config binds, tiers and embeddings.
+// providers names every provider this config binds: tiers, embeddings and the
+// decisions lane.
 func (cfg RoutingConfig) providers() []string {
 	seen := map[string]bool{cfg.Embeddings.Provider: true}
 	for _, binding := range cfg.Tiers {

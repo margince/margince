@@ -34,10 +34,15 @@ function setup() {
         { status: 200, headers: { "Content-Type": "application/json" } },
       );
     }
-    return new Response(JSON.stringify(ROUTING), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
+    // Only the settings save answers with the routing document; the key save
+    // answers a bare success.
+    if (url.includes("/ai/provider-settings/")) {
+      return new Response(JSON.stringify(ROUTING), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    return new Response(null, { status: 204 });
   });
   vi.stubGlobal("fetch", fetchMock);
   const client = new QueryClient({

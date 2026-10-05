@@ -106,9 +106,24 @@ func (s *Redis) Load(ctx context.Context) (map[string]model.ProviderHealthStatus
 		// A key that expired leaves its provider in the index; drop it so the
 		// index does not grow past what is recorded. A failure is not the
 		// reader's problem: the next Load tries again.
-		if err := s.rdb.SRem(ctx, indexKey, expired...).Err(); err != nil {
-			slog.WarnContext(ctx, "providerhealthstore: pruning expired providers from the index", "error", err)
+		for _, provider := range expired {
+			if err := s.pruneIfStillAbsent(ctx, provider.(string)); err != nil {
+				slog.WarnContext(ctx, "providerhealthstore: pruning an expired provider from the index", "provider", provider, "error", err)
+			}
 		}
 	}
 	return out, nil
+}
+
+// pruneScript drops a provider from the index only while its key is still
+// absent, in one step: a Publish that landed between the read that saw the key
+// expired and this removal has written the key again, and must keep its place.
+var pruneScript = redis.NewScript(`
+if redis.call('EXISTS', KEYS[2]) == 0 then
+  return redis.call('SREM', KEYS[1], ARGV[1])
+end
+return 0`)
+
+func (s *Redis) pruneIfStillAbsent(ctx context.Context, provider string) error {
+	return pruneScript.Run(ctx, s.rdb, []string{indexKey, keyPrefix + provider}, provider).Err()
 }
