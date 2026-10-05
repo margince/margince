@@ -205,6 +205,9 @@ func (s *Store) OpenAttachment(ctx context.Context, id ids.UUID) (crmcontracts.A
 		if withheld {
 			return ErrBytesWithheld
 		}
+		if s.blob == nil {
+			return ErrBlobstoreUnconfigured
+		}
 		att, err := readAttachment(ctx, tx, id)
 		if err != nil {
 			return err
@@ -214,9 +217,6 @@ func (s *Store) OpenAttachment(ctx context.Context, id ids.UUID) (crmcontracts.A
 	})
 	if err != nil {
 		return crmcontracts.Attachment{}, nil, err
-	}
-	if s.blob == nil {
-		return crmcontracts.Attachment{}, nil, ErrBlobstoreUnconfigured
 	}
 	rc, _, err := s.blob.Get(ctx, key)
 	if err != nil {

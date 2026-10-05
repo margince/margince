@@ -21,7 +21,8 @@ as personal, from a sender that thread's verdict saw. It also covers a message
 from a sender your verdict judged a personal correspondent in the last 14 days.
 Margince keeps such a message's files out of the file store, and the stored
 original carries none of their bytes. The message itself is kept, and still
-lists each file by name and size, marked as not kept. A sender
+lists each file by name and size, with its kind where the filename shows one,
+marked as not kept. A sender
 verdict does not apply to a sender you marked as business on the Senders page,
 one you have replied to, or a contact you correspond with. This covers new mail
 only: mail that arrived before the verdict keeps its files.

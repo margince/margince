@@ -44,6 +44,20 @@ export const Withheld: Story = {
   },
 };
 
+// The same card in a narrow column, where the note wraps under the name rather
+// than running past the card's edge.
+export const WithheldNarrow: Story = {
+  render: () => (
+    <div style={{ maxWidth: 260 }}>
+      <FileChip
+        withheld="Nicht gespeichert, weil die E-Mail privat ist."
+        filename="gehaltsabrechnung-september.pdf"
+        size="120 kB"
+      />
+    </div>
+  ),
+};
+
 // What a message's shelf of files looks like: the mix a mail actually carries,
 // with the sizes that tell a signature logo from the paper it came with.
 export const MailAttachments: Story = {
