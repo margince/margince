@@ -630,3 +630,11 @@
 .ai-task-facts dd {
   margin: 0;
 }
+
+/* A provider's health: the badge above the two lines that explain it. */
+.ai-provider-health {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}

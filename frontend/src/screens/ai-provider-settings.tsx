@@ -16,6 +16,7 @@ import {
   OpenRouterSettings,
   upstreamOf,
 } from "./ai-openrouter-settings";
+import { invalidateProviderHealth } from "./ai-provider-health";
 import { isOpenRouter } from "./ai-provider-links";
 import { ROUTING_KEY } from "./ai-routing-query";
 import { problemMessageOf, throwProblem } from "./common";
@@ -198,6 +199,7 @@ export function useSetProviderSettings() {
       queryClient.invalidateQueries({ queryKey: ROUTING_KEY });
       // A key test and a model list ask the provider at its host.
       queryClient.invalidateQueries({ queryKey: ["ai-available-models"] });
+      invalidateProviderHealth(queryClient);
     },
   });
 }

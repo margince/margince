@@ -221,6 +221,10 @@ func (r *Router) serveAttempt(ctx context.Context, lc *logicalCall, task Task, l
 		// The site's own defect, found with the key's: before any provider.
 		req, keyErr = withSiteThinking(req, task)
 	}
+	if downErr := r.blockedUnlessCached(b, task, ladder, key, wsID, keyErr); downErr != nil {
+		// Like a budget deferral: no call was made, so nothing is traced.
+		return model.Response{}, RouteInfo{}, downErr
+	}
 
 	// Every terminal from here on is traced — the budget-read and cache-key
 	// failures included: one Call appended to lc for the served call, the
@@ -231,6 +235,9 @@ func (r *Router) serveAttempt(ctx context.Context, lc *logicalCall, task Task, l
 	start := r.now()
 	trace := r.newAttemptTrace(ctx, task, key, reason, req)
 	defer func() {
+		if refusedUncalled(err) {
+			return
+		}
 		// BEFORE finalize, which is what buffers the row: a field set after it
 		// would be written to a copy nobody reads.
 		trace.SecretsRemoved, trace.SecretKinds = strips.report()

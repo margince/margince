@@ -9,6 +9,7 @@ package compose
 
 import (
 	"errors"
+	"time"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
 )
@@ -48,8 +49,24 @@ func declinedByTheModels(err error) bool {
 }
 
 // sweepPaused reports whether err ends a pass cleanly rather than failing it:
-// the budget band that defers background work, or no provider bound at all.
+// a deferral (the budget band or a blocked provider), or no provider bound at all.
 // Either way what is committed stands and the rest waits for a later cycle.
 func sweepPaused(err error) bool {
-	return errors.Is(err, ai.ErrBudgetDeferred) || errors.Is(err, ai.ErrUnconfiguredModel)
+	return ai.IsDeferral(err) || errors.Is(err, ai.ErrUnconfiguredModel)
+}
+
+// verdictRetryBackoff spaces a verdict row that failed for a reason it may
+// outlive (a provider blip, a malformed reply, a validator rejection).
+const verdictRetryBackoff = 30 * time.Minute
+
+// deferralBackoff is how long a deferred row waits before it is due again. A
+// blocked provider names its own next probe and the row honours it exactly;
+// a budget stop keeps the fixed spacing, because its window boundary is a
+// month away and one pass must not park work that long.
+func deferralBackoff(err error) time.Duration {
+	var down *ai.ProviderDownError
+	if errors.As(err, &down) {
+		return max(time.Until(down.RetryAfter), 0)
+	}
+	return verdictRetryBackoff
 }

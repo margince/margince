@@ -495,5 +495,11 @@ const (
 	// Scout the open company pairs, so it can withdraw a suggestion raised twice
 	// for one business. The ids select suggestions to supersede; a rep sees a
 	// suggestion only through deals' visibility clause.
-	modulesTierUnscopedCeiling = 114
+	//
+	// 115: capture.AutoEnrichStore.ParkedEnrichments is the operator recovery's
+	// list of companies whose enrichment an outage exhausted. System-only, no
+	// seat to narrow to, and the ids go straight into the reopen of each
+	// company's own backoff cursor; nothing returns one to a reader, and the
+	// sweep that then re-reads them applies its own eligibility.
+	modulesTierUnscopedCeiling = 115
 )

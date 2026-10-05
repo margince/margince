@@ -516,6 +516,16 @@ export function useViewerId(enabled = true): string | undefined {
   return useMe(enabled).data?.user.id;
 }
 
+const PROBLEM_CODE_COPY = new Map<string, MessageKey>([
+  ["gateway_unavailable", "common.gatewayUnavailable"],
+  ["assistant_unavailable", "common.assistantUnavailable"],
+  ["provider_out_of_credit", "common.providerOutOfCredit"],
+  ["provider_unauthorized", "common.providerUnauthorized"],
+  ["provider_unavailable", "common.providerUnavailable"],
+  ["permission_denied", "common.permissionDenied"],
+  ["seat_tier_insufficient", "common.seatReadOnly"],
+]);
+
 // RFC 7807 bodies carry the honest detail; surface it instead of a generic
 // failure so the error state names its cause. `null` says the body carried no
 // such text at all — a non-OK response the server sent no body with, or one
@@ -559,18 +569,8 @@ function problemDetail(
   t?: (key: MessageKey) => string,
 ): string | null {
   const code = problemCode(problem);
-  if (t && code === "gateway_unavailable") {
-    return t("common.gatewayUnavailable");
-  }
-  if (t && code === "assistant_unavailable") {
-    return t("common.assistantUnavailable");
-  }
-  if (t && code === "permission_denied") {
-    return t("common.permissionDenied");
-  }
-  if (t && code === "seat_tier_insufficient") {
-    return t("common.seatReadOnly");
-  }
+  const copyKey = PROBLEM_CODE_COPY.get(code ?? "");
+  if (t && copyKey) return t(copyKey);
   if (isRecord(problem)) {
     // A field present but blank is the same fact as an absent one — it puts no
     // words on the screen — so it falls through to the title, and then to the

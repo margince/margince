@@ -25,6 +25,7 @@ import (
 // which the chat-completions shape expresses. stdlib HTTP only, mirroring
 // anthropic.go; no vendor SDK.
 type openaiClient struct {
+	model.NoHealth
 	http         *http.Client
 	baseURL      string
 	apiKey       string

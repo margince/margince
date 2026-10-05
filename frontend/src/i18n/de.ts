@@ -591,6 +591,8 @@ export const de = {
   "aiAdmin.coverage":
     "Die Zahlen umfassen nur dauerhaft gespeicherte Website-Lesevorgänge, Unternehmensscans und Aufbauvorgänge von Stilprofilen. Nicht jeder geplante KI-Lauf wird gezählt, und die Zahlen garantieren nicht, dass eine Anfrage noch ausgeführt werden darf.",
   "aiAdmin.unavailable": "Nicht verfügbar",
+  "aiAdmin.providerWaiting":
+    "Wartet auf den KI-Anbieter: {waiting}. Die Arbeit läuft von selbst weiter, sobald er antwortet.",
   "aiAdmin.impact.blocked": "Wartet auf Kontingent",
   "aiAdmin.impact.model": "Anderes Modell gewählt",
   "aiAdmin.impact.decision": "Entscheidungsmodell geändert",
@@ -1391,6 +1393,12 @@ export const de = {
     "Die Anfrage ist fehlgeschlagen. Keine Ursache gemeldet.",
   "common.assistantUnavailable":
     "Der Assistent hat nicht geantwortet, daher wurde kein Entwurf erstellt. Gib die Angaben von Hand ein oder lass einen Admin das Modell in den Einstellungen unter KI prüfen.",
+  "common.providerOutOfCredit":
+    "Beim KI-Anbieter ist kein Guthaben mehr vorhanden. Wende dich an deine Admins.",
+  "common.providerUnauthorized":
+    "Der KI-Anbieter hat den hinterlegten API-Schlüssel abgelehnt. Wende dich an deine Admins.",
+  "common.providerUnavailable":
+    "Der KI-Anbieter antwortet gerade nicht. Versuche es später erneut oder wende dich an deine Admins.",
   "common.gatewayUnavailable":
     "Der Server hat die Anfrage nicht rechtzeitig abgeschlossen und verarbeitet sie möglicherweise noch. Warte, bevor du es erneut versuchst, sonst kann die Arbeit zweimal laufen.",
   "common.permissionDenied":
@@ -5492,6 +5500,36 @@ export const de = {
   "jobs.reasonVetted":
     "Gründe, Klassen und Abhilfen stammen aus der Job-Schicht, nie aus der Rohursache des Workers. Einen Fehler, den sie nicht formulieren kann, zeigt sie mit einem festen Ersatztext und ohne Klasse.",
   "jobs.generatedAt": "Stand: {time}",
+
+  "settings.providerHealth": "Status der KI-Anbieter",
+  "settings.providerHealthSub":
+    "Ob jeder KI-Anbieter antwortet, so wie dieser Server es erlebt hat.",
+  "providerHealth.adminOnly":
+    "Der Status der KI-Anbieter betrifft die ganze Installation und erfordert eine Berechtigung, die deine Rolle nicht hat.",
+  "providerHealth.healthy": "Alle KI-Anbieter antworten.",
+  "aiProviderHealth.label.degraded": "Eingeschränkt",
+  "aiProviderHealth.label.down": "Nicht erreichbar",
+  "aiProviderHealth.label.outOfCredit": "Kein Guthaben",
+  "aiProviderHealth.label.unauthorized": "Schlüssel abgelehnt",
+  "aiProviderHealth.reason.degraded":
+    "Einige Anfragen an diesen Anbieter schlagen fehl. Aufrufe laufen weiterhin.",
+  "aiProviderHealth.reason.down":
+    "Dieser Anbieter ist nicht erreichbar. Aufrufe warten bis zur nächsten Prüfung.",
+  "aiProviderHealth.reason.outOfCredit":
+    "Das Konto hat kein Guthaben mehr. Aufrufe warten bis zur nächsten Prüfung.",
+  "aiProviderHealth.reason.unauthorized":
+    "Der Anbieter hat den API-Schlüssel abgelehnt. Aufrufe warten bis zur nächsten Prüfung.",
+  "aiProviderHealth.fix.degraded":
+    "Prüfe die Statusseite des Anbieters oder wende dich an deine Admins.",
+  "aiProviderHealth.fix.down":
+    "Prüfe Statusseite und Host des Anbieters oder wende dich an deine Admins.",
+  "aiProviderHealth.fix.outOfCredit":
+    "Lade das Konto beim Anbieter auf oder wende dich an deine Admins.",
+  "aiProviderHealth.fix.unauthorized":
+    "Ersetze den Schlüssel oder wende dich an deine Admins.",
+  "aiProviderHealth.since": "Begann {when}",
+  "aiProviderHealth.nextCheck": "Nächste Prüfung {when}",
+  "aiProviderHealth.nextCheckDue": "Die nächste Prüfung steht an",
 
   "settings.extIngest": "Abgewiesene Connector-Datensätze",
   "settings.extIngestSub":

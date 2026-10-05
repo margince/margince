@@ -239,6 +239,10 @@ func (stubs) GetAiProfile(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetAiProfile")
 }
 
+func (stubs) GetAiProviderHealth(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetAiProviderHealth")
+}
+
 func (stubs) ListAiProviderKeys(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ListAiProviderKeys")
 }

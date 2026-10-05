@@ -16171,6 +16171,33 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
 
+  /ai/provider-health:
+    get:
+      tags: [AI]
+      operationId: getAiProviderHealth
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Which AI providers are not answering, and why.
+      description: |
+        Every provider this process currently treats as degraded, down, out of credit or refusing
+        its credential, in name order. A provider that is answering normally is not listed, so an
+        empty list is the healthy answer.
+
+        The API and the worker each publish their status changes to Redis and this reads the merged
+        view, where the worst or blocking status wins, so an outage only the worker saw still shows.
+        Without Redis a process shows only its own view. Shared entries expire after 30
+        minutes unless refreshed every 10 while the provider is unhealthy. It is learned from real
+        calls, not a probe. The list never contains a key, a host or the
+        provider's own message text. It is admitted through the same grant as `/ai/health`.
+      responses:
+        '200':
+          description: The providers that are not answering normally.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AiProviderHealth' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+
   /ai/budget:
     get:
       tags: [AI]
@@ -30855,6 +30882,37 @@ components:
           type: array
           items: { $ref: '#/components/schemas/AiRungHealth' }
 
+    AiProviderHealth:
+      type: object
+      required: [providers]
+      properties:
+        providers:
+          type: array
+          description: Providers that are not answering normally, in name order. Empty when all are.
+          items: { $ref: '#/components/schemas/AiProviderHealthEntry' }
+
+    AiProviderHealthEntry:
+      type: object
+      required: [provider, health, since]
+      properties:
+        provider:
+          type: string
+          description: The provider's name as the routing binds it, never a key or host.
+        health:
+          type: string
+          enum: [degraded, down, out_of_credit, unauthorized]
+          description: |
+            `degraded` still takes calls; the other three refuse them until `retry_after`, when one
+            probe is allowed. `out_of_credit` and `unauthorized` are the administrator's to fix.
+        since:
+          type: string
+          format: date-time
+          description: When the provider first stopped answering normally, kept across failed probes.
+        retry_after:
+          type: string
+          format: date-time
+          description: When one probe call is next allowed. Absent for `degraded`, which is not blocked.
+
     AiRungHealth:
       type: object
       description: One model tier and what it has been doing.
@@ -31031,6 +31089,13 @@ components:
         unit: { type: string }
         available: { type: boolean }
         count: { type: integer, format: int64 }
+        waiting_on_provider:
+          type: integer
+          format: int64
+          description: >-
+            Work waiting for the AI provider to answer, not for the budget. It resumes by
+            itself at the provider's next probe, and a budget raise does not change it;
+            `count` holds only what a raise would resume.
     AiStatus:
       type: object
       required: [observed_at, budget, routing_version, task_contract_hash, features, deferred_work, deferred_work_coverage]

@@ -17,6 +17,7 @@ import {
   type ModelCatalogue,
   useAvailableModels,
 } from "./ai-models";
+import { invalidateProviderHealth } from "./ai-provider-health";
 import {
   AdapterFields,
   DECISION_PROVIDERS,
@@ -91,6 +92,7 @@ export function BindingEditor({
     onSuccess: async (saved) => {
       queryClient.setQueryData(ROUTING_KEY, saved);
       await queryClient.invalidateQueries({ queryKey: ["ai-status"] });
+      await invalidateProviderHealth(queryClient);
     },
   });
 

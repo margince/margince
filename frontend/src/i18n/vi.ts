@@ -581,6 +581,8 @@ export const vi = {
   "aiAdmin.coverage":
     "Chỉ đếm các lần đọc website, quét tài khoản và tạo giọng văn được lưu bền vững. Không bao gồm mọi lượt AI theo lịch và không đảm bảo yêu cầu vẫn đủ điều kiện chạy.",
   "aiAdmin.unavailable": "Không khả dụng",
+  "aiAdmin.providerWaiting":
+    "Đang chờ nhà cung cấp AI: {waiting}. Công việc tự chạy tiếp khi nhà cung cấp phản hồi.",
   "aiAdmin.impact.blocked": "Chờ hạn mức",
   "aiAdmin.impact.model": "Đã chọn mô hình khác",
   "aiAdmin.impact.decision": "Đã đổi mô hình quyết định",
@@ -1373,6 +1375,12 @@ export const vi = {
     "Yêu cầu thất bại. Không có nguyên nhân nào được báo về.",
   "common.assistantUnavailable":
     "Trợ lý chưa phản hồi nên không thể soạn giúp bạn phần này. Quản trị viên có thể kiểm tra liên kết mô hình trong Cài đặt → AI. Không bắt buộc phải có trợ lý — bạn có thể tự nhập các thông tin này.",
+  "common.providerOutOfCredit":
+    "Nhà cung cấp AI đã hết số dư. Hãy liên hệ quản trị viên hệ thống của bạn.",
+  "common.providerUnauthorized":
+    "Nhà cung cấp AI đã từ chối thông tin xác thực được cấu hình. Hãy liên hệ quản trị viên hệ thống của bạn.",
+  "common.providerUnavailable":
+    "Nhà cung cấp AI hiện không phản hồi. Hãy thử lại sau hoặc liên hệ quản trị viên hệ thống của bạn.",
   "common.gatewayUnavailable":
     "Máy chủ chưa hoàn tất yêu cầu này kịp thời. Có thể nó vẫn đang chạy — hãy đợi một lát trước khi thử lại, nếu không cùng một công việc sẽ chạy hai lần.",
   "common.permissionDenied":
@@ -5424,6 +5432,36 @@ export const vi = {
   "jobs.reasonVetted":
     "Lý do, lớp lỗi và cách xử lý đều là câu chữ của chính tầng tác vụ, không bao giờ là nguyên nhân thô từ worker. Một lỗi mà tầng đó không diễn đạt được sẽ báo bằng câu thay thế cố định và không mang lớp lỗi nào. Một lớp lỗi được đặt ra cho văn bản chưa kiểm chứng sẽ khiến cảnh báo của bạn dựa trên phỏng đoán.",
   "jobs.generatedAt": "Đọc lúc {time}",
+
+  "settings.providerHealth": "Trạng thái nhà cung cấp AI",
+  "settings.providerHealthSub":
+    "Từng nhà cung cấp AI có đang phản hồi hay không, theo máy chủ này ghi nhận.",
+  "providerHealth.adminOnly":
+    "Trạng thái nhà cung cấp AI áp dụng cho toàn bộ hệ thống và cần một quyền mà vai trò của bạn không có.",
+  "providerHealth.healthy": "Tất cả nhà cung cấp AI đang phản hồi.",
+  "aiProviderHealth.label.degraded": "Suy giảm",
+  "aiProviderHealth.label.down": "Không kết nối được",
+  "aiProviderHealth.label.outOfCredit": "Hết tín dụng",
+  "aiProviderHealth.label.unauthorized": "Khóa bị từ chối",
+  "aiProviderHealth.reason.degraded":
+    "Một số yêu cầu tới nhà cung cấp này đang thất bại. Các lệnh gọi vẫn được gửi đi.",
+  "aiProviderHealth.reason.down":
+    "Không kết nối được tới nhà cung cấp này. Các lệnh gọi chờ đến lần kiểm tra tiếp theo.",
+  "aiProviderHealth.reason.outOfCredit":
+    "Tài khoản đã hết tín dụng. Các lệnh gọi chờ đến lần kiểm tra tiếp theo.",
+  "aiProviderHealth.reason.unauthorized":
+    "Nhà cung cấp đã từ chối khóa API. Các lệnh gọi chờ đến lần kiểm tra tiếp theo.",
+  "aiProviderHealth.fix.degraded":
+    "Hãy xem trang trạng thái của nhà cung cấp, hoặc liên hệ quản trị viên hệ thống của bạn.",
+  "aiProviderHealth.fix.down":
+    "Hãy xem trang trạng thái và máy chủ của nhà cung cấp, hoặc liên hệ quản trị viên hệ thống.",
+  "aiProviderHealth.fix.outOfCredit":
+    "Hãy nạp tín dụng cho tài khoản nhà cung cấp, hoặc liên hệ quản trị viên hệ thống.",
+  "aiProviderHealth.fix.unauthorized":
+    "Hãy thay khóa, hoặc liên hệ quản trị viên hệ thống của bạn.",
+  "aiProviderHealth.since": "Bắt đầu {when}",
+  "aiProviderHealth.nextCheck": "Lần kiểm tra tiếp theo {when}",
+  "aiProviderHealth.nextCheckDue": "Đã đến lúc kiểm tra tiếp",
 
   "settings.extIngest": "Bản ghi bị từ chối từ trình kết nối",
   "settings.extIngestSub":

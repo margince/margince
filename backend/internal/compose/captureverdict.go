@@ -24,7 +24,6 @@ package compose
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -53,9 +52,6 @@ const (
 	// verdictCreateFloor is what a CREATING answer needs, and it is higher —
 	// see clearsItsFloor for why the two mistakes are not the same size.
 	verdictCreateFloor = 0.85
-	// verdictRetryBackoff spaces a row that failed for a reason it may outlive
-	// (a provider fault, a malformed reply).
-	verdictRetryBackoff = 30 * time.Minute
 	// verdictCatchUpCap bounds one pass so a large backlog is drained over
 	// several cycles rather than in one unbounded run.
 	verdictCatchUpCap = 200
@@ -175,11 +171,11 @@ func (e *CounterpartyVerdictEngine) RunWorkspace(ctx context.Context, maxVerdict
 			}
 			n, err := e.judgeClaimed(wsCtx, batch, budget)
 			resolved += n
-			if errors.Is(err, ai.ErrBudgetDeferred) {
+			if ai.IsDeferral(err) {
 				// The refund is judgeClaimed's, because it is what knows where
 				// it stopped. Releasing from here would hand back the whole
 				// batch, including the sender already deferred inside it.
-				e.log.InfoContext(wsCtx, "counterparty verdict: budget exhausted, stopping the pass", "resolved", resolved)
+				e.log.InfoContext(wsCtx, "counterparty verdict: work deferred, stopping the pass", "resolved", resolved)
 				return nil
 			}
 			if err != nil {
@@ -218,9 +214,9 @@ func (e *CounterpartyVerdictEngine) judgeClaimed(
 	// out its lease. The stored reason is fixed rather than the error's text:
 	// disposition_reason is read by operators and by the review queue, and a
 	// provider's raw message must not travel there. The cause reaches the log.
-	releaseUnreached := func(rest []capture.PendingCounterparty) {
+	releaseUnreached := func(rest []capture.PendingCounterparty, backoff time.Duration) {
 		for _, row := range rest {
-			if err := e.pending.Defer(ctx, row, verdictRetryBackoff,
+			if err := e.pending.Defer(ctx, row, backoff,
 				"the pass stopped before reaching this sender", true); err != nil {
 				e.log.WarnContext(ctx, "counterparty verdict: releasing a claimed row failed",
 					"disposition", row.ID.String(), "err", err)
@@ -236,20 +232,22 @@ func (e *CounterpartyVerdictEngine) judgeClaimed(
 			// a refund attempted afterwards matches nothing and is lost in
 			// silence.
 			//
-			// A budget stop never reached a model: refunded, or two quiet cycles
-			// would exhaust an address's allowance and retire a genuine sender
-			// to `unsure` for no reason but the workspace running out of budget.
+			// A deferral (budget stop or provider outage) never reached a model:
+			// refunded, or two quiet cycles would exhaust an address's allowance
+			// and retire a genuine sender to `unsure` for no reason but the
+			// workspace running out of budget or the provider being down.
 			// Any other fault is a property of this message, which an outsider
 			// writes, so it is charged — otherwise content crafted to break the
 			// answer would be re-judged forever at one paid call a time.
-			outOfBudget := errors.Is(err, ai.ErrBudgetDeferred)
-			if deferErr := e.pending.Defer(ctx, row, verdictRetryBackoff,
-				"the verdict could not be completed", outOfBudget); deferErr != nil {
-				releaseUnreached(claimed[i+1:])
+			deferred := ai.IsDeferral(err)
+			backoff := deferralBackoff(err)
+			if deferErr := e.pending.Defer(ctx, row, backoff,
+				"the verdict could not be completed", deferred); deferErr != nil {
+				releaseUnreached(claimed[i+1:], backoff)
 				return applied, deferErr
 			}
-			if outOfBudget {
-				releaseUnreached(claimed[i+1:])
+			if deferred {
+				releaseUnreached(claimed[i+1:], backoff)
 				return applied, err
 			}
 			e.log.WarnContext(ctx, "counterparty verdict: judging a sender failed",

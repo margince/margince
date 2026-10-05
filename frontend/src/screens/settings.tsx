@@ -129,6 +129,7 @@ import { OvernightGrantCard } from "./overnight-grant";
 import { OwnDomainsCard } from "./own-domains";
 import { PasswordSettingRow } from "./passwordcard";
 import { ProductsAdmin } from "./products";
+import { ProviderHealthCard } from "./providerhealth";
 import { FxRatesCard, ModelCostsCard } from "./rates";
 import { RecordRolesCard } from "./recordroles";
 import { ReviewTemplatesCard } from "./reviewtemplates";
@@ -367,15 +368,14 @@ export function tabContent(id: SettingsPageId): ReactNode {
       return (
         <>
           {/* A reindex that costs tokens, then a read of what the background
-              system is holding. They hid beside the custom-field editor before,
-              which put "define a field" and "watch a stalled queue" on one
-              page. */}
+              system is holding: they hid beside the custom-field editor. */}
           <EmbedReindexCard />
           <JobHealthCard />
           {/* Beside the queue reading, not under Capture or Extensions: each
               answers "is something broken in the background". */}
           <CaptureHealthCard />
           <ExtensionIngestHealthCard />
+          <ProviderHealthCard />
         </>
       );
     case "extensions":
