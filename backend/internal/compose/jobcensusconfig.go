@@ -211,6 +211,6 @@ func (censusGeocoder) Resolve(context.Context, string) (geocode.Point, bool, err
 // register never gave.
 type censusVatChecker struct{}
 
-func (censusVatChecker) Check(context.Context, string) (vatcheck.Result, error) {
+func (censusVatChecker) Check(context.Context, string, string) (vatcheck.Result, error) {
 	return vatcheck.Result{}, errCensusSeam
 }

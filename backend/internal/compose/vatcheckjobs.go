@@ -245,7 +245,11 @@ func (w *vatCheckWorker) consult(
 		return nil
 	}
 
-	result, err := w.checker.Check(wsCtx, number)
+	requester, err := store.RequesterVatNumber(wsCtx)
+	if err != nil {
+		return jobs.FaultContext(wsCtx, err)
+	}
+	result, err := w.checker.Check(wsCtx, number, requester)
 	if errors.Is(err, vatcheck.ErrMalformedNumber) {
 		// The stated value is not a VAT ID, so no request was made — and the
 		// answer a reader needs is INVALID.

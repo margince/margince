@@ -66,14 +66,10 @@ type workerConfig struct {
 	webhookKey           string
 	geocodeBaseURL       string
 	vatCheckBaseURL      string
-	vatCheckRequester    string
 	geocodeBackfill      time.Duration
 	certLogBaseURL       string
 	technicalBackfill    time.Duration
 	webhookRetryInterval time.Duration
-	deepReadMaxPages     int
-	deepReadMaxBytes     int
-	deepReadWall         time.Duration
 	// jobDrainWindow is how long a job already running at shutdown keeps its
 	// work context; see defaultJobDrainWindow for the budget it is part of.
 	jobDrainWindow time.Duration
@@ -160,9 +156,6 @@ func workerFlagSet() (*flag.FlagSet, *cliflags.Env, *workerConfig, error) {
 	env.String(fs, &cfg.graphNotifyURL, "graph-notification-url", "MARGINCE_GRAPH_NOTIFICATION_URL", "", "public URL Microsoft posts Graph change notifications to, operator token and all (https://<api>/webhooks/graph?token=...); enables the subscription register+renew job. Empty leaves Outlook capture on the poll.")
 	fs.DurationVar(&cfg.graphWatchInterval, "graph-watch-interval", 6*time.Hour, "Graph subscription maintenance scan interval")
 	fs.DurationVar(&cfg.graphWatchRenew, "graph-watch-renew-within", 24*time.Hour, "renew a Graph subscription this far ahead of its <3-day deadline")
-	if err := registerDeepReadFlags(fs, cfg); err != nil {
-		return nil, nil, nil, err
-	}
 	if err := registerJobDrainFlag(fs, cfg); err != nil {
 		return nil, nil, nil, err
 	}
@@ -192,11 +185,6 @@ func workerFlagSet() (*flag.FlagSet, *cliflags.Env, *workerConfig, error) {
 		"VIES base URL; enables checking a company's stated VAT ID against the EU register. "+
 			"Empty leaves it off and a VAT number is stored as the page stated it, unverified. "+
 			"Use 'public' for the Commission's own service.")
-	env.String(fs, &cfg.vatCheckRequester, "vat-check-requester", "MARGINCE_VAT_CHECK_REQUESTER", "",
-		"This installation's OWN VAT ID (e.g. DE123456789). VIES issues a consultation number — "+
-			"the receipt a business shows to say it verified a counterpart — only for a check made "+
-			"under a requester's number. Without it the check still runs and still answers; it just "+
-			"comes back with no proof attached.")
 	env.String(fs, &cfg.certLogBaseURL, "certlog-base-url", "MARGINCE_CERTLOG_BASE_URL", "",
 		"certificate-transparency base URL; enables reading what a company publicly runs — its DNS "+
 			"records, its certificate history and one polite fetch of its own homepage. Empty "+
@@ -245,15 +233,6 @@ func parseWorkerFlags(args []string) (workerConfig, error) {
 	if cfg.dsn == "" {
 		return workerConfig{}, errors.New("worker: --dsn or MARGINCE_DSN required")
 	}
-	// The refusal half of the auto-enrich daily cap: a typo fails the boot
-	// here; compose resolves the value where it is spent, from the same
-	// process environment, which is fixed at exec.
-	if _, err := compose.AutoEnrichDailyCapFromEnv(config.FromOS); err != nil {
-		return workerConfig{}, err
-	}
-	if cfg.deepReadMaxPages < 0 || cfg.deepReadMaxBytes < 0 || cfg.deepReadWall < 0 {
-		return workerConfig{}, errors.New("worker: the deep-read caps must be zero (default/uncapped) or positive")
-	}
 	// A negative pacing value would read as "take the default" downstream,
 	// which quietly ignores what the operator actually typed.
 	if cfg.sendRateLimit < 0 || cfg.sendRateWindow < 0 || cfg.sendMaxAge < 0 {
@@ -299,39 +278,6 @@ func resolveObservePprof(cfg *workerConfig) error {
 	return nil
 }
 
-// registerDeepReadFlags declares the three deep-read crawl caps. They are a
-// group of their own because each backs its flag default with an environment
-// variable that has to be READ before the flag is declared, and a set-but
-// unparseable value there is a boot error rather than a silent fallback to the
-// built-in — an operator who typed a cap and got the default instead would have
-// no way to tell.
-// The deep-read caps, named so each role can declare them without spelling the
-// strings a second time.
-const (
-	deepReadMaxPagesEnv = "MARGINCE_DEEPREAD_MAX_PAGES"
-	deepReadMaxBytesEnv = "MARGINCE_DEEPREAD_MAX_BYTES"
-	deepReadWallEnv     = "MARGINCE_DEEPREAD_WALL"
-)
-
-func registerDeepReadFlags(fs *flag.FlagSet, cfg *workerConfig) error {
-	maxPages, err := envIntOr(deepReadMaxPagesEnv, 0)
-	if err != nil {
-		return err
-	}
-	maxBytes, err := envIntOr(deepReadMaxBytesEnv, 0)
-	if err != nil {
-		return err
-	}
-	wall, err := envDurationOr(deepReadWallEnv, 0)
-	if err != nil {
-		return err
-	}
-	fs.IntVar(&cfg.deepReadMaxPages, "deepread-max-pages", maxPages, "deep-read crawl page cap; 0 takes the built-in default")
-	fs.IntVar(&cfg.deepReadMaxBytes, "deepread-max-bytes", maxBytes, "deep-read crawl aggregate byte cap; 0 takes the built-in default")
-	fs.DurationVar(&cfg.deepReadWall, "deepread-wall", wall, "deep-read crawl wall clock; 0 takes the built-in default")
-	return nil
-}
-
 // validateSchedulerIntervals rejects a non-positive value for any duration
 // that becomes a River periodic schedule. River refuses none of them:
 // PeriodicInterval(0) yields Next(t) == t, so the enqueuer re-derives a run
@@ -343,8 +289,8 @@ func registerDeepReadFlags(fs *flag.FlagSet, cfg *workerConfig) error {
 // gmail-watch-renew-within and graph-watch-renew-within are lead times —
 // time.Now().Add(within) in DueWatches — so zero validly means "renew
 // missing or already-expired watches" and both are checked separately
-// (negative only); and the deep-read / backfill caps are counts with a documented
-// zero-means-default meaning, validated above. Zero and negative here are
+// (negative only); and the two backfill intervals, where zero switches the
+// sweep off, are not schedules this set governs. Zero and negative here are
 // boot errors, never silent defaults.
 func validateSchedulerIntervals(cfg workerConfig) error {
 	intervals := []struct {
@@ -377,21 +323,6 @@ func validateSchedulerIntervals(cfg workerConfig) error {
 	return nil
 }
 
-// envIntOr / envDurationOr back a numeric flag's default with an
-// environment variable; a set-but-unparseable value is a boot error,
-// never a silent fallback.
-func envIntOr(key string, fallback int) (int, error) {
-	v := config.FromOS(key)
-	if v == "" {
-		return fallback, nil
-	}
-	parsed, err := strconv.Atoi(v)
-	if err != nil {
-		return 0, fmt.Errorf("worker: %s=%q is not an integer: %w", key, v, err)
-	}
-	return parsed, nil
-}
-
 // defaultFxBootstrapCurrencies is the candidate set the FX refresh proposes on
 // an empty sheet when the operator configured none — the three foreign
 // currencies the base-EUR UI and the demo seed already use. Overridable via
@@ -411,6 +342,8 @@ func fxBootstrapCurrencies(configured []string) []string {
 	return configured
 }
 
+// envDurationOr backs a duration flag's default with an environment variable;
+// a set-but-unparseable value is a boot error, never a silent fallback.
 func envDurationOr(key string, fallback time.Duration) (time.Duration, error) {
 	v := config.FromOS(key)
 	if v == "" {

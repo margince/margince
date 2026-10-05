@@ -23,11 +23,11 @@ worker that does the work. Declare both.
    - **`queue`** — must name an entry in the file's own `queues:` block. Reuse `default` unless the
      work is long or outbound-bound; a **new** queue owes a `reason` for having been split out of
      the default pool, and its `max_workers` is held equal to compose's `jobQueues()` by the census.
-   - **`timeout`** — **there is no default.** Pick one of the four forms: a literal (`2m`),
-     `{derived: goConstant, value: 4h, reason: …}`, `{operator: ConfigField}`, or
-     `{none: true, reason: …}`. Every dispatcher in the file takes `2m`, for one shared reason: a
-     dispatcher runs one indexed scan and one insert-many, database-bound, with no model call, crawl
-     or outbound request in it.
+   - **`timeout`** — **there is no default.** Pick one of the three forms: a literal (`2m`),
+     `{derived: goConstant, value: 4h, reason: …}`, or `{none: true, reason: …}`. Every
+     dispatcher in the file takes `2m`, for one shared reason: a dispatcher runs one indexed
+     scan and one insert-many, database-bound, with no model call, crawl or outbound request in
+     it.
    - **`opts_owner`** — `fan_out` if a dispatcher's fan-out builds this kind's insert options, `args`
      if the args type's own `InsertOpts()` does, `caller` if scattered enqueue sites do.
 
@@ -123,9 +123,7 @@ worker that does the work. Declare both.
    ```
 
    Never call `river.AddWorker` / `AddWorkerArgs` / `AddWorkerSafely` — forbidigo blocks all three
-   outside the one sanctioned line in `jobregistry.go`. Use `addDeclaredWorkerWithTimeout` **only**
-   for a kind whose declared timeout is `{operator: …}`; the census checks that those two sets are
-   the same one.
+   outside the one sanctioned line in `jobregistry.go`.
 
    If the kind's registration is gated on a new `JobRunnerConfig` field, add the field, name it in
    the entry's `registration.when`, and answer it in `configDependencies`
@@ -164,7 +162,7 @@ The failures you are most likely to meet, in the order you would meet them:
 
 | Where | Message | What it means |
 |---|---|---|
-| `make gen` | `kind "x": declares no timeout — an absent one is River's silent 1-minute default, which is what this contract removes` | Pick one of the four `timeout` forms. There is no default and absence is not one of them |
+| `make gen` | `kind "x": declares no timeout — an absent one is River's silent 1-minute default, which is what this contract removes` | Pick one of the three `timeout` forms. There is no default and absence is not one of them |
 | `make gen` | `kind "x": is a dispatcher that fans out to nothing` / `fans_out_to "y", whose role is "dispatcher"` | A dispatcher must declare `fans_out_to` + `fan_out_unit`, and the child must be `role: worker` |
 | `make gen` | `kind "x": declares a cadence but its role is "worker"` | An enqueued worker is never ticked. Move the cadence to the dispatcher |
 | `make gen` | `kind "x": opts_owner is fan_out but no max_attempts is declared` | The fan-out helper reads that number and nothing else supplies it; its absence is River's silent 25-rung ladder |

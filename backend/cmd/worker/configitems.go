@@ -65,24 +65,8 @@ func workerUnflaggedItems() []config.Item {
 			Doc: "enrichment provider: live|offline|off; an unknown value is a boot error rather than a silently disabled feature",
 		},
 		{
-			Name: compose.AutoEnrichDailyCapEnv, Kind: config.KindInt, Default: "0", Roles: both,
-			Doc: "daily cap on automatic site deep reads (company auto-enrich and domain triage spend one budget); 0 takes the compiled default",
-		},
-		{
-			Name: deepReadMaxPagesEnv, Kind: config.KindInt, Default: "0", Roles: worker,
-			Doc: "cap on pages one deep read fetches; 0 takes the compiled default",
-		},
-		{
-			Name: deepReadMaxBytesEnv, Kind: config.KindInt, Default: "0", Roles: worker,
-			Doc: "cap on bytes one deep read fetches; 0 takes the compiled default",
-		},
-		{
 			Name: jobDrainWindowEnv, FlagName: "job-drain-window", Kind: config.KindDuration, Default: "20s", Roles: worker,
 			Doc: "how long a job already running at shutdown is given to finish before its context is cancelled; the termination grace period must cover it plus 5s and teardown",
-		},
-		{
-			Name: deepReadWallEnv, Kind: config.KindDuration, Default: "0", Roles: worker,
-			Doc: "wall-clock ceiling on one deep read; 0 takes the compiled default",
 		},
 	}
 }
