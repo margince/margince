@@ -6,6 +6,7 @@ package attention
 import (
 	"context"
 	"errors"
+	"slices"
 	"testing"
 	"time"
 
@@ -94,4 +95,40 @@ func TestFailedPlanReadCannotLookLikeAnEmptyDay(t *testing.T) {
 		}
 	}
 	t.Fatalf("missing source not reported: %+v", day.SourcesUnavailable)
+}
+
+// A duty recorded after its deadline is imported backlog: routine review, never
+// a Focus card. One that fell due while recorded stays urgent however old.
+func TestADutyRecordedAfterItsDeadlineIsBacklogNotToday(t *testing.T) {
+	due := rankInstant.Add(-6 * 365 * 24 * time.Hour)
+	imported := item("case", "notice_case", withDue(due))
+	opened := rankInstant.Add(-24 * time.Hour)
+	imported.OccurredAt = &opened
+	row := classifyLegalDeadline(imported, rankInstant)
+	if urgentWork(row) || focusEligible(row, rankInstant) {
+		t.Errorf("a 2020 duty recorded yesterday is urgent=%v focus=%v, want backlog", urgentWork(row), focusEligible(row, rankInstant))
+	}
+	if row.item.DueAt == nil || !row.item.DueAt.Equal(due) {
+		t.Fatalf("the legal deadline was changed: %+v", row.item.DueAt)
+	}
+	if !slices.ContainsFunc(row.item.Because, func(r crmcontracts.WorklistReason) bool {
+		return r.Kind == "opened_overdue"
+	}) {
+		t.Errorf("a backlog duty does not say why: %+v", row.item.Because)
+	}
+
+	live := item("case", "notice_case", withDue(rankInstant.Add(-30*24*time.Hour)))
+	recorded := rankInstant.Add(-60 * 24 * time.Hour)
+	live.OccurredAt = &recorded
+	if !urgentWork(classifyLegalDeadline(live, rankInstant)) {
+		t.Error("a duty that fell due while recorded was demoted; a live breach stays urgent")
+	}
+
+	// An Art. 13 duty is due at acquisition and recorded moments after it.
+	art13 := item("case", "notice_case", withDue(rankInstant.Add(-2*time.Hour)))
+	moments := rankInstant.Add(-2*time.Hour + time.Second)
+	art13.OccurredAt = &moments
+	if !urgentWork(classifyLegalDeadline(art13, rankInstant)) {
+		t.Error("an Art. 13 duty recorded a second after acquisition was read as imported backlog")
+	}
 }

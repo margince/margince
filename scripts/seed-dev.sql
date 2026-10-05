@@ -148,13 +148,19 @@ BEGIN
 
   -- A team with admin + Rep One as members, so the roster picker and the
   -- "who has access" list have a demonstrable, non-trivial membership.
+  -- The predicate is not optional: team_name_unique is partial on
+  -- archived_at IS NULL, and Postgres infers a partial index only from a
+  -- statement that repeats its WHERE.
   INSERT INTO team (name)
   VALUES ('DACH Sales')
-  ON CONFLICT (name) DO NOTHING;
+  ON CONFLICT (name) WHERE archived_at IS NULL DO NOTHING;
 
+  -- Live only, for the same reason the upsert above says archived_at IS NULL: the
+  -- name is unique among live rows now, so a name alone can match an archived team
+  -- as well, and the memberships below would join a team nobody can see.
   SELECT id INTO dach_team_id
     FROM team
-    WHERE name = 'DACH Sales';
+    WHERE name = 'DACH Sales' AND archived_at IS NULL;
 
   INSERT INTO team_membership (team_id, user_id)
   VALUES

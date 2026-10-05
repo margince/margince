@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer states that Vorort Systeme Ausbau was repriced down by EUR 5,000 from EUR 31,000 to EUR 26,000, exactly as the criterion requires.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 1. The answer says the Vorort Systeme Ausbau deal was repriced down, by EUR 5,000 (from EUR 31,000 to EUR 26,000). Answer no if it names a different change for that deal, a different amount, or leaves the deal out.",
+  "answer": "Open pipeline fell from EUR 179,000 to EUR 164,500. Vorort Systeme Ausbau was repriced down by EUR 5,000, from EUR 31,000 to EUR 26,000, and valantic Migrationsprojekt (EUR 9,500) was lost, which is why the open number dropped."
+}

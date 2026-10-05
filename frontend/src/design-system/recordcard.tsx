@@ -12,9 +12,10 @@
  * decision is made before the click rather than after it.
  *
  * It is for a record LISTED as a reference — the account's contacts, on the
- * glance and in the rail. A name appearing inline in a sentence or a fact's
- * value is not this: expanding every mention is how a page stops being
- * readable, and `EntityRef` stays the shape there.
+ * glance and in the rail, the companies and contacts a search finds. A name
+ * appearing inline in a sentence or a fact's value is not this: expanding
+ * every mention is how a page stops being readable, and `EntityRef` stays the
+ * shape there.
  *
  * The card is NOT the link. The name is, and so is each handle beside it —
  * a card-wide anchor with a button inside it is a control inside a control,
@@ -33,6 +34,7 @@ export function RecordCard({
   name,
   href,
   identity,
+  logo,
   position,
   email,
   aside,
@@ -50,6 +52,9 @@ export function RecordCard({
    * address is filed under, which is why it is not optional.
    */
   identity: string;
+  // A company's resolved logo, drawn on the mark. `Avatar` keeps the monogram
+  // under it while it loads, if it fails, and when there is none.
+  logo?: string | null;
   /**
    * What this record is to the one listing it — a job title, what somebody
    * was at a former employer. A node rather than a string because the value
@@ -72,7 +77,7 @@ export function RecordCard({
   // target, and a reader who aims at the face gets nothing.
   const mark = (
     <>
-      <Avatar name={name} identity={identity} />
+      <Avatar name={name} identity={identity} src={logo} />
       <span className="record-card-name">{name}</span>
     </>
   );

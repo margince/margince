@@ -38,6 +38,8 @@ const ownerMovedAway = "the deal changed owner; a message drafted for the previo
 //   - transcript_proposal: every card whose task would land on the deal
 //     moves, including one a colleague asked for — the next step is the
 //     deal's, and so is the owner who acts on it.
+//   - commitment_task: the same, for a promise nobody could be named for. A
+//     promise a named colleague made stays theirs, whoever owns the deal.
 //   - held_draft: a reply drafted for the previous owner is withdrawn. It was
 //     composed under their authority, to be sent from their mailbox, so it is
 //     not handed on; the next sweep drafts one for the new owner.
@@ -89,14 +91,16 @@ func lockProposalsFollowingDeal(
 		   AND (
 		     (kind = $%[4]d AND target_entity_type = 'deal' AND target_entity_id = $%[1]d
 		        AND on_behalf_of IS DISTINCT FROM $%[3]d)
-		  OR (kind = $%[5]d AND proposed_change->'links' @> $%[6]d
+		  OR ((kind = $%[5]d OR (kind = $%[8]d AND NOT proposed_change ? 'seat_id'))
+		        AND proposed_change->'links' @> $%[6]d
 		        AND on_behalf_of IS DISTINCT FROM $%[3]d)
 		  OR (kind = $%[7]d AND target_entity_type = 'deal' AND target_entity_id = $%[1]d
 		        AND on_behalf_of IS NOT NULL AND on_behalf_of IS NOT DISTINCT FROM $%[2]d)
 		   )
 		 `+lockOrder+`
 		 FOR UPDATE`,
-		deal, prev, next, arg(kindDealFollowUp), arg(kindTranscriptProposal), arg(onDeal), arg(kindHeldDraft)),
+		deal, prev, next, arg(kindDealFollowUp), arg(kindTranscriptProposal), arg(onDeal), arg(kindHeldDraft),
+		arg(kindCommitmentTask)),
 		args...)
 	if err != nil {
 		return nil, fmt.Errorf("lock the proposals following the deal's owner: %w", err)

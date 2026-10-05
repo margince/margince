@@ -132,8 +132,9 @@ func answered[T any](t *testing.T, out string) T {
 
 // The whole round trip, on the credentials it really takes: the one that
 // proposed the action sees it and reads it, a SECOND one answers it, and the
-// first redeems what was released. The split is the rule, not the harness — a
-// credential does not confirm its own proposal.
+// first redeems what was released. The split is the rule, not the harness — an
+// enrich fetches a page the model named, which cannot be unfetched, so its
+// proposer does not release it.
 func TestAStagedCallIsSeenAndAnsweredFromTheConversationThatStagedIt(t *testing.T) {
 	q := setupQueue(t)
 	invoke := q.invoker(t, q.mintPassport(t, "proposing agent", "read", "write", "enrich"))
@@ -193,8 +194,8 @@ func TestAStagedCallIsSeenAndAnsweredFromTheConversationThatStagedIt(t *testing.
 		t.Error("read_approval answered without the change it proposes — there is nothing to decide from")
 	}
 
-	// THE PROPOSER DOES NOT ANSWER IT. Approving the row it staged would be the
-	// confirm-first act performed on itself.
+	// THE PROPOSER DOES NOT ANSWER IT: what the release does leaves the
+	// workspace, and nobody could take it back after seeing it.
 	answer := `{"staged_action_id":"` + approvalID.String() + `","decision":"approve"}`
 	if _, err = invoke("decide_approval", answer); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("the proposer approving its own proposal → %v, want ErrPermissionDenied", err)

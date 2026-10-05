@@ -83,6 +83,17 @@ func bodyCeiling(ceiling BodyCeiling, r *http.Request) int64 {
 	return ceiling(r)
 }
 
+// PermissionsPolicy denies every powerful browser feature the app does not
+// use. The one it does, writing to the clipboard (the copy buttons), is
+// allowed for this origin alone. frontend/nginx.conf sends the same value on
+// the app shell, and a test there holds the two equal.
+const PermissionsPolicy = "accelerometer=(), autoplay=(), camera=(), clipboard-read=(), " +
+	"clipboard-write=(self), display-capture=(), encrypted-media=(), fullscreen=(), " +
+	"geolocation=(), gyroscope=(), hid=(), idle-detection=(), magnetometer=(), " +
+	"microphone=(), midi=(), payment=(), picture-in-picture=(), " +
+	"publickey-credentials-get=(), screen-wake-lock=(), serial=(), usb=(), " +
+	"xr-spatial-tracking=()"
+
 // SecureHeaders sets the browser-facing response headers on everything —
 // UI and API alike. SameSite=Strict on the session cookie covers CSRF;
 // these close what it does not: framing (clickjacking), MIME sniffing,
@@ -108,6 +119,15 @@ func SecureHeaders(next http.Handler) http.Handler {
 		// two years and forbid a downgrade on the next visit. A browser
 		// ignores it on the plain-HTTP hop, so it is safe to set always.
 		h.Set("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload")
+		h.Set("Permissions-Policy", PermissionsPolicy)
+		// same-origin on both: every first-party sign-in and connector
+		// flow is a full-page redirect, never a popup, so no window of this
+		// origin needs a handle on another, and nothing here is meant to be
+		// embedded by another origin. An MCP client that opens /oauth/authorize
+		// in a popup loses its handle on that window; the grant still
+		// completes, since the code reaches the client at its redirect_uri.
+		h.Set("Cross-Origin-Opener-Policy", "same-origin")
+		h.Set("Cross-Origin-Resource-Policy", "same-origin")
 		next.ServeHTTP(w, r)
 	})
 }

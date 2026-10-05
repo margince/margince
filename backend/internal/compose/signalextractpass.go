@@ -45,6 +45,9 @@ type ExtractPass struct {
 	// OutOfTime says the pass ran up against its own deadline and stopped
 	// while conversations were still owed a reading.
 	OutOfTime bool
+	// Converted is how many commitment signals written before the commitment
+	// rule were read through it and settled.
+	Converted int
 }
 
 // extractStopMargin is how much of the pass's deadline is kept in reserve.
@@ -172,6 +175,17 @@ func (x *SignalExtractor) RunWorkspace(ctx context.Context, wsID ids.WorkspaceID
 		}
 	}
 	pass.Raised = raised
+	// After the conversations that are due now, which are worth more than the
+	// old ones, and inside the same deadline and budget.
+	converted, err := x.convertLegacyCommitments(ctx)
+	pass.Converted = converted
+	if errors.Is(err, ai.ErrBudgetDeferred) {
+		pass.Deferred = true
+		return pass, passFailure(failed)
+	}
+	if err != nil {
+		failed = append(failed, err)
+	}
 	return pass, passFailure(failed)
 }
 

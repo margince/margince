@@ -150,7 +150,7 @@ Also called: page size, see all records, load more.
 ### How do I see archived records?
 To see archived records in Margince, open the list — **Contacts**, **Companies**, **Leads**, **Deals** or **Projects** — and tick **Show archived** in the toolbar.
 Archived rows then appear among the live ones with an **Archived** badge; untick it to hide them again. On **Leads**, disqualified and qualified leads are the archived ones.
-An archived record opens read-only and cannot be restored from the app. See [Contacts, companies, leads, deals and projects](records.md).
+An archived record opens read-only. A contact, company or deal can be brought back with **Undo** on the entry that archived it in its history. See [Contacts, companies, leads, deals and projects](records.md).
 Also called: show deleted, find an archived contact, closed records, inactive.
 
 ## Views

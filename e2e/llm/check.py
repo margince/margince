@@ -32,6 +32,9 @@ and no fallback: every path that cannot produce a real verdict raises
 JudgeUnavailable, which arrives here as exit 2 and stops the lane. A silent pass
 would be this lane reporting green having checked nothing.
 
+What the run left in the database is not read here: a scenario's
+`must_end_with` is endstate.py's, which the lane calls with the stack still up.
+
 Deliberately NOT judged: wording, tone, length, formatting, the order it did
 things in, or extra correct information. Only whether the facts are right and
 the required things were said.
@@ -52,6 +55,7 @@ network.
 import json
 import os
 import re
+import shlex
 import sys
 import tempfile
 
@@ -78,9 +82,9 @@ _REPO_ROOT = os.path.realpath(
 _TEMP_ROOT = os.path.realpath(tempfile.gettempdir())
 
 
-def _open_checked(path):
-    """Open a file this script was told to read, refusing anything outside
-    the repo or the system temp directory.
+def checked_path(path):
+    """The real path of a file this lane was told to open, refusing anything
+    outside the repo or the system temp directory.
 
     Every path this script opens arrives as one of its own CLI arguments,
     built by scripts/e2e-llm.sh from a scenario glob or its own mktemp
@@ -94,7 +98,11 @@ def _open_checked(path):
     roots = (_REPO_ROOT + os.sep, _TEMP_ROOT + os.sep)
     if real != _REPO_ROOT and not real.startswith(roots):
         raise ValueError(f"refusing to open {path!r}: outside the repo and the system temp directory")
-    return open(real, encoding="utf-8")
+    return real
+
+
+def _open_checked(path):
+    return open(checked_path(path), encoding="utf-8")
 
 
 def parse_scenario(path):
@@ -329,15 +337,16 @@ def unrun(path):
     on all eighteen runs of a lane, every scenario was recorded as failing its
     criteria, and the verdict said six use cases were broken.
 
-    ONLY those two shapes. A transcript with no assistant turn never got as far
-    as the model, and a terminal error naming a credential refusal never got
-    past the door. Every OTHER `is_error` is a run that happened — the lane sets
+    ONLY three shapes. A transcript with no assistant turn never got as far as
+    the model, one with no terminal `result` was cut off by its driver, and a
+    terminal error naming a credential refusal never got past the door. Every
+    OTHER `is_error` is a run that happened — the lane sets
     `--max-turns 20`, and exhausting it is a finding about the scenario, not
     about the harness. Excusing one of those would be this same defect inverted:
     a real answer thrown away as a harness fault, and the rest of the lane
     abandoned with it.
     """
-    saw_assistant, called_tool = False, False
+    saw_assistant, called_tool, saw_result = False, False, False
     failure = ""
     for line in _open_checked(path):
         line = line.strip()
@@ -352,10 +361,14 @@ def unrun(path):
             for block in (event.get("message") or {}).get("content") or []:
                 if isinstance(block, dict) and block.get("type") == "tool_use":
                     called_tool = True
-        if event.get("type") == "result" and event.get("is_error"):
-            failure = str(event.get("result") or "")
+        if event.get("type") == "result":
+            saw_result = True
+            if event.get("is_error"):
+                failure = str(event.get("result") or "")
     if not saw_assistant:
         return "the transcript carries no assistant turn: the model was never reached"
+    if not saw_result:
+        return "the run never finished: no result event — the driver stopped mid-run"
     # A REFUSAL AFTER A TOOL CALL IS NOT A REFUSAL AT THE DOOR. The credential
     # that shipped this defect produced one assistant turn carrying the error
     # text and called nothing — the model was never reached. A tool answering
@@ -366,6 +379,36 @@ def unrun(path):
     # guess at wording.
     if failure and not called_tool and _REFUSALS.search(failure):
         return failure
+    return ""
+
+
+def offered_problem(scenario, path):
+    """Why this run could not have satisfied must_call, or "" when it could.
+
+    A required tool the server never offered fails must_call for a reason that
+    is not the model's — a scope, a page the client did not follow, a server
+    that attached nothing — so the lane stops rather than scoring it. The
+    tools are the ones the transcript's system line says were offered.
+    """
+    offered = None
+    for line in _open_checked(path):
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if event.get("type") == "system" and event.get("subtype") == "init":
+            offered = event.get("tools") or []
+            break
+    if offered is None:
+        return "the transcript carries no system line, so what was offered is unknown"
+    if not offered:
+        return "the server offered no tools at all"
+    missing = [
+        entry for entry in scenario.get("must_call", [])
+        if not any(tool_matches(offered, alt) for alt in alternatives(entry))
+    ]
+    if missing:
+        return f"a required tool was never offered to the model: {', '.join(map(str, missing))}"
     return ""
 
 
@@ -405,6 +448,10 @@ def _called_with(calls, alternative):
     for a plain string, so both `report=activities-by-kind` and
     `group_by=["direction"]` are expressible.
 
+    `=*` asks only that the argument was sent with a value, for an id the run
+    mints itself: an approval_id a scenario cannot know but the redeeming call
+    must carry, since the same call without it stages a second proposal.
+
     A malformed alternative RAISES rather than answering no: it is a fault in
     the scenario, and reading it as an argument the answer failed to send would
     file a broken entry as a finding about the product.
@@ -420,6 +467,8 @@ def _called_with(calls, alternative):
         actual = arguments.get(argument)
         rendered = actual if isinstance(actual, str) else json.dumps(actual, separators=(",", ":"))
         seen.append(rendered)
+        if expected == "*" and actual not in (None, "", [], {}):
+            return True, seen
         if rendered == expected:
             return True, seen
     return False, seen
@@ -486,6 +535,22 @@ def main():
         print(value if not isinstance(value, list) else "\n".join(map(str, value)))
         return 0
 
+    if sys.argv[1] == "--candidate":
+        # KEY=value lines for the lane to eval: which model, folder and wire a
+        # candidate names on a route, refused before the stack boots.
+        import candidates
+
+        args = sys.argv[2:] + [""] * 5
+        try:
+            route = candidates.resolve(args[0], args[1], args[2], args[3], args[4])
+        except candidates.RouteError as err:
+            print(err, file=sys.stderr)
+            return 1
+        for key in ("model", "folder", "wire", "key_env", "effort"):
+            print(f"{key.upper()}={shlex.quote(getattr(route, key))}")
+        print(f"DRIVER={route.candidate}:{route.via}")
+        return 0
+
     if sys.argv[1] == "--record":
         scenario = parse_scenario(sys.argv[2])
         runs = int(sys.argv[4])
@@ -502,6 +567,18 @@ def main():
             "runs": runs,
             "pass_at": scenario.get("pass_at"),
         }
+        # How the number was measured, which the folder alone cannot say: a CLI
+        # route and the comparable bridge can both have run one model.
+        for field, variable in (
+            ("driver", "E2E_LLM_DRIVER"),
+            ("effort", "E2E_LLM_EFFORT"),
+            ("system_prompt", "E2E_LLM_SYSTEM_PROMPT"),
+            ("search", "E2E_LLM_SEARCH"),
+        ):
+            if os.environ.get(variable):
+                record[field] = os.environ[variable]
+        if os.environ.get("E2E_LLM_SELF_JUDGED") in ("true", "false"):
+            record["self_judged"] = os.environ["E2E_LLM_SELF_JUDGED"] == "true"
         if usage is not None:
             # runs_measured rides WITH the totals into the committed record. A
             # later reader summing cost across scenarios can then tell a cheap
@@ -525,6 +602,13 @@ def main():
             sys.exit(1)
         sys.exit(0)
 
+    if sys.argv[1] == "--offered":
+        problem = offered_problem(parse_scenario(sys.argv[2]), sys.argv[3])
+        if problem:
+            print(problem)
+            return 1
+        return 0
+
     if sys.argv[1] == "--judge-ready":
         # Asked before the lane spends a token on the candidate: a scenario with
         # judged criteria and no judge configured is a lane that would drive
@@ -532,7 +616,7 @@ def main():
         for path in sys.argv[2:]:
             if not parse_scenario(path).get("judge", []):
                 continue
-            judge.configured()
+            judge.ready()
             break
         return 0
 

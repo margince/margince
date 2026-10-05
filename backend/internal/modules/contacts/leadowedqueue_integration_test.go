@@ -60,6 +60,8 @@ func TestTheOwedDialKeepsAnsweredLeadsOutOfTheBoundedPage(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	e.seedLeadTouch(t, ids.From[ids.LeadKind](ids.UUID(owedLead.Id)), "email", "inbound", "human:x", "manual", owedLead.CreatedAt)
+
 	// A page smaller than the answered set: without the dial this returns only
 	// answered leads and the caller concludes nothing is owed.
 	one := 1

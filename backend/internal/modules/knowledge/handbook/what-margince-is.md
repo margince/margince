@@ -33,8 +33,10 @@ can your agent. If you are not allowed to do something, it cannot do it for you.
 
 And there is a short list of things it can never do at all, however it is
 configured — chief among them: **an agent never releases a proposal that is not
-its own business.** It may not approve the card its own credential staged, nor
-one staged for a different colleague. It may answer a card staged for the
+its own business.** It may not approve one staged for a different colleague,
+nor its own proposal unless that is a change that would have gone straight
+through but for a human's earlier edit, sends nothing outside the workspace,
+and is approved in a conversation rather than on a schedule. It may answer a card staged for the
 colleague it acts for, which is exactly what they could have answered
 themselves; and it may always reject its own proposal.
 
@@ -126,16 +128,19 @@ Each Margince screen sits in one place in the sidebar, and a few are reached ano
 
 ### How do I search for something?
 To search Margince, click the search field **Search or ask Margince** in the top bar, or press ⌘K (Ctrl+K), and start typing.
-1. Type a name, company, deal or any other word. Matching records appear as you type, each marked **Record**.
-2. Choose a result to open it, or choose **See all results for “…”** to open the full **Search results** page.
-3. On that page, **Show only** narrows the results to one kind.
+1. Type a name, company, deal or any other word. Matches appear as you type, a few of each kind, under headings such as **Companies**, **Contacts** and **Emails**.
+2. Choose a result to open it, or choose **See all results for “…”** to open the full **Search results** page. Enter opens the row you moved to with the arrow keys. If you have not moved, Enter opens a screen or action that matches what you typed, or else a record whose whole name you typed, or else the **Search results** page. So Enter on half a name shows the results instead of opening the first one.
+3. On that page, **Show all** beside a kind, or **Show only**, lists every match of that kind.
 If nothing matches, the palette says **No matches.** If record search fails, it says **Search failed** and the screen commands still work.
 Also called: find, look up, global search.
 
 **Search results** are grouped by kind: Contacts, Companies, Deals, Leads,
-Projects, Activities, Products, Offer templates and Tags. A result that came
-from a connected system is marked **From a connected system**, rather than
-looking like something somebody here typed.
+Projects, Products, Offer templates, Emails, Activities and Tags. Each kind
+shows its best few matches, so a company stays on the page however many emails
+mention it. A company's name also finds the contacts who currently work there,
+each with the line **Works at** followed by the company's name, after the
+contacts whose own name matched. A result that came from a connected system is marked **From a
+connected system**, rather than looking like something somebody here typed.
 
 ### What is the command palette?
 The command palette is the Margince box that finds any screen, action, setting or record from one place. It opens over the page you are on, with the placeholder **Search or ask Margince**.

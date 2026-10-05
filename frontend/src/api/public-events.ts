@@ -858,7 +858,7 @@ export interface components {
              */
             entity_id: string;
         };
-        /** @description activity.updated's BOUNDED delta: UpdateActivity's known mutable fields (subject, body, occurred_at, due_at, remind_at, assignee_id, is_done, meeting_status) each carried only when this update touched them, plus RelinkActivity's relinked target and SetActivityAudience's audience, plus explicit request-reminder restoration's restored flag — a fixed, KNOWN key set (unlike contact/company/deal/lead.updated's genuinely open patch), so it is typed rather than an open map. */
+        /** @description activity.updated's BOUNDED delta: UpdateActivity's known mutable fields (subject, body, occurred_at, due_at, remind_at, assignee_id, is_done, meeting_status) each carried only when this update touched them, plus RelinkActivity's relinked target and SetActivityAudience's audience, plus explicit request-reminder restoration's restored flag and capture's own-sent-mail direction correction — a fixed, KNOWN key set (unlike contact/company/deal/lead.updated's genuinely open patch), so it is typed rather than an open map. */
         PublicEventActivityChangedFields: {
             /** @description True when explicit request acceptance restores an archived unfinished reminder. */
             restored?: boolean;
@@ -894,6 +894,13 @@ export interface components {
              */
             meeting_status?: "booked" | "held" | "no_show" | "canceled";
             relinked?: components["schemas"]["PublicEventActivityRelinkedRef"];
+            /**
+             * @description Set when capture learned that a message stored as received was the seat's own sent mail (absent otherwise). The counterparty changes with it; a subscriber that must know re-reads the row.
+             * @enum {string}
+             */
+            direction?: "outbound";
+            /** @description True when the sender's own provider filing attested the message as their outbound mail, whether it was stored as received or as unattested outbound (absent otherwise). */
+            outbound_attested?: boolean;
             /**
              * @description The activity's new audience (absent when this update did not touch it). Who is named is not carried: a subscriber that must know re-reads the row under its own audience, exactly as a human does.
              * @enum {string}
@@ -1760,6 +1767,7 @@ export const subscribableEventTypeValues: ReadonlyArray<FlattenedDeepRequired<co
 export const publicEventLeadSourceChangedChangeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventLeadSourceChanged"]["change"]> = ["created", "updated", "deleted"];
 export const publicEventLeadDisqualifyReasonChangedChangeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventLeadDisqualifyReasonChanged"]["change"]> = ["created", "updated", "deleted"];
 export const publicEventActivityChangedFieldsMeeting_statusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventActivityChangedFields"]["meeting_status"]> = ["booked", "held", "no_show", "canceled"];
+export const publicEventActivityChangedFieldsDirectionValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventActivityChangedFields"]["direction"]> = ["outbound"];
 export const publicEventActivityChangedFieldsAudienceValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventActivityChangedFields"]["audience"]> = ["workspace", "participants", "selected"];
 export const publicEventForecastAssuranceCreatedStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventForecastAssuranceCreated"]["status"]> = ["complete", "incomplete"];
 export const publicEventForecastAssuranceCreatedReadinessValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventForecastAssuranceCreated"]["readiness"]> = ["ready", "ready_with_exceptions", "needs_review", "checks_incomplete"];

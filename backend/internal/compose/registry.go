@@ -46,10 +46,10 @@ func NewRegistryFor(db *database.DB, send SendPath) *agents.Registry {
 	// handle: a registry built for a named workspace must not admit through a
 	// service that resolves a different one.
 	return registryWithGate(db, auth.NewGate(identity.NewServiceFor(db)), nil, send, companyEnricher{}, nil, nil, nil,
-		meetingBriefReader(newMeetingBriefService(db)), slog.Default(), registryFeatures{reporting: true})
+		meetingBriefReader(newMeetingBriefService(db)), slog.Default(), registryFeatures{})
 }
 
-type registryFeatures struct{ lists, reporting bool }
+type registryFeatures struct{ lists bool }
 
 func registryWithDraftBrain(pool *pgxpool.Pool, brain completer, send SendPath) *agents.Registry {
 	db := InstallationDB(pool)
@@ -79,7 +79,8 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	// Every mutating tool shares retry claims and replay authorization on every host role.
 	opts = append(opts, withContractTierFloor(),
 		agents.WithIdempotency(toolIdempotency(pool)), agents.WithReplayReader(provider),
-		agents.WithBaseLanguage(installationLanguage(pool)))
+		agents.WithBaseLanguage(installationLanguage(pool)),
+		agents.WithSeatNamer(seatNamer(identity.NewServiceFor(db))))
 	// Approval decisions need the same registered effects as the HTTP path.
 	approvalsSvc := decidingApprovalsService(pool, send, log)
 	registry := agents.NewRegistry(approvalsAdapter{svc: approvalsSvc}, gate, opts...)
@@ -97,11 +98,9 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 		reportToolCatalog(), reportPlanVocabulary())
 	agents.RegisterReportVocabularyTool(registry,
 		agents.NewReportVocabularyResource(reportToolCatalog()))
-	if features.reporting {
-		agents.RegisterReportingTool(registry, reportingReader(pool))
-	}
+	agents.RegisterReportingTool(registry, reportingReader(pool))
 	agents.RegisterAnalyticsReportTool(registry,
-		analyticsReportComposer(pool, analyticsquery.DefaultFloor, features.reporting))
+		analyticsReportComposer(pool, analyticsquery.DefaultFloor))
 	// The UI and tools share calculation engines and current-reader disclosure rules.
 	agents.RegisterAnalyticsQueryTool(registry,
 		analyticsQueryToolRunner(InstallationDB(pool)))
@@ -116,8 +115,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	agents.RegisterCoverageTool(registry, coverageToolReader(pool))
 	// Search references are read back through the governed provider before disclosure.
 	agents.RegisterQueryTool(registry, provider,
-		queryRunner(pool, embedder),
-		seatNamer(identity.NewService(pool)))
+		queryRunner(pool, embedder))
 	agents.RegisterVocabularyTool(registry, search.NewQuerySchemaResource(queryVocabulary(pool)))
 	agents.RegisterBriefTool(registry, briefReader(pool))
 	agents.RegisterAnnotateBriefTool(registry, briefAnnotator(pool))

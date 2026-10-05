@@ -125,7 +125,7 @@ func startJobRunner(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vaul
 	}
 	_, _ = fmt.Fprintln(stdout, jobRunnerBanner(cfg, watchCfg,
 		compose.GraphWatchWillRun(captureReg, graphWatchConfig(cfg)), modelPath, vault, lanes.runner))
-	return func() { stopJobRunner(ctx, runner, logger) }, nil
+	return func() { stopJobRunner(ctx, runner, logger, cfg.jobDrainWindow) }, nil
 }
 
 // jobLane is the job runner as SHUTDOWN sees it: two ways to stop, one softer
@@ -137,9 +137,19 @@ type jobLane interface {
 	StopAndCancel(ctx context.Context) error
 }
 
-// jobDrainWindow bounds the graceful drain: a job caught mid-flight by shutdown
-// gets this long to finish on its own terms.
-const jobDrainWindow = 30 * time.Second
+// defaultJobDrainWindow is --job-drain-window's default: how long a job caught
+// mid-flight by shutdown gets to finish on its own terms.
+//
+// It is one term of the shutdown budget, and the budget is what an operator
+// sizes the pod's termination grace period against: the drain window, then
+// jobCancelWindow, then the teardown that closes the bus and the pool. Twenty
+// seconds leaves the whole of it inside a thirty-second grace period, which is
+// the common default; a deployment that raises the window raises the grace
+// period with it.
+const defaultJobDrainWindow = 20 * time.Second
+
+// jobDrainWindowEnv backs --job-drain-window with the environment.
+const jobDrainWindowEnv = "MARGINCE_JOB_DRAIN_WINDOW"
 
 // jobCancelWindow bounds the wait AFTER the work contexts are cancelled. Short,
 // because nothing is being given time to finish here — only to notice it was
@@ -149,33 +159,40 @@ const jobCancelWindow = 5 * time.Second
 // stopJobRunner ends the job lane before this process closes what the jobs
 // write through.
 //
+// The runner was started under the signal context with SoftStopTimeout set to
+// the same drain window, so the signal itself began a SOFT stop: fetching ended
+// at once, and every job already running kept its work context. This call is
+// the bounded wait on that drain, and it is also what starts the stop on a path
+// that never cancelled the run context — a boot that failed after the runner
+// started.
+//
 // The drain is bounded, and River's Stop RETURNS on that deadline rather than
 // enforcing it — in-flight job goroutines keep running. Shutdown does not wait
 // for them: run() closes the bus and then the pool as its deferred calls
-// unwind, so an overrun used to leave a job writing into a closed Redis
-// client, or reading through a closed pool. The failure
-// lands in whatever the job logs, at shutdown, where it reads as a symptom of
-// stopping rather than of a job that was never stopped.
+// unwind, so an overrun would leave a job writing into a closed Redis client,
+// or reading through a closed pool.
 //
 // So an overrun escalates rather than proceeding. Cancelling the work contexts
 // and waiting again is what actually ends those goroutines; River marks a job
 // cancelled this way for retry, so the cost is a job that runs again, not one
-// that is lost.
+// that is lost. River's own soft-stop timer cancels the same contexts at the
+// same point; the escalation here is what makes the bound this function's
+// rather than a setting's.
 //
 // If even that overruns, the process closes its connections under live job
-// goroutines — the same shape as before, but named at Error with what will
-// fail, rather than left to be inferred from a downstream write's complaint.
-func stopJobRunner(ctx context.Context, lane jobLane, logger *slog.Logger) {
+// goroutines, and says so at Error with what will fail, rather than leaving it
+// to be inferred from a downstream write's complaint.
+func stopJobRunner(ctx context.Context, lane jobLane, logger *slog.Logger, drain time.Duration) {
 	// The run context is already cancelled at shutdown, so give the
 	// drain its own bounded window.
-	stopCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), jobDrainWindow)
+	stopCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), drain)
 	defer cancel()
 	drained := lane.Stop(stopCtx)
 	if drained == nil {
 		return
 	}
 	logger.Warn("the job drain did not finish inside its window; cancelling the jobs still in flight so they cannot outlive the bus and the pool this process is about to close",
-		"window", jobDrainWindow, "err", drained)
+		"window", drain, "err", drained)
 	cancelCtx, cancelHard := context.WithTimeout(context.WithoutCancel(ctx), jobCancelWindow)
 	defer cancelHard()
 	if err := lane.StopAndCancel(cancelCtx); err != nil {
@@ -198,9 +215,12 @@ func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, cap
 		return nil, err
 	}
 	return compose.NewJobRunner(pool, logger, compose.JobRunnerConfig{
-		ReportingEnabled: cfg.reportingEnabled,
-		ListsEnabled:     cfg.listsEnabled,
-		SendDelivery:     compose.NewDeliveryStager(pool, sendInserter),
+		ListsEnabled: cfg.listsEnabled,
+		// The signal context the runner starts under is cancelled on SIGTERM;
+		// with a drain window, that cancellation stops fetching and leaves the
+		// jobs already running their window to finish (stopJobRunner).
+		DrainWindow:  cfg.jobDrainWindow,
+		SendDelivery: compose.NewDeliveryStager(pool, sendInserter),
 		// The send lane reads attachment bytes from the same object store
 		// capture writes them to; without it a message carrying files fails at
 		// the read rather than going out without them.
@@ -263,6 +283,8 @@ func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, cap
 		// sealed token. Without a configured vault there is no token to unseal
 		// and the poller stays off by omission.
 		ChannelVault: vault,
+		// The price sweep lists each keyed vendor's models with the key sealed here.
+		AIKeyVault: vault,
 		// The classify + enrich passes run only where a model is
 		// configured; without one both are absent by omission.
 		ClassifyBrain:        modelPath.CaptureClassify,

@@ -254,6 +254,35 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/AuthCapabilities' }
 
+  /status:
+    get:
+      tags: [Identity]
+      operationId: getStatus
+      security: []
+      x-agent-access: human-only
+      summary: Anonymous reachability probe for external uptime monitors.
+      description: |
+        Answers a fixed body and does no work: it proves the public path (DNS, TLS,
+        any load balancer or ingress, and routing into the api) and nothing else.
+        Dependency health is `/readyz`'s job: an instance that cannot reach its
+        dependencies fails readiness and stops receiving traffic, so this probe then
+        fails at the edge. Discloses nothing: no version, dependency, or AI state.
+        Before the installation is bootstrapped it answers 503, like every `/v1` route.
+      responses:
+        '200':
+          description: The api is reachable through the public path.
+          headers:
+            Cache-Control:
+              schema: { type: string, enum: [no-store] }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ServiceStatus' }
+        '503':
+          description: The installation is not bootstrapped yet.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
   /auth/login:
     post:
       tags: [Identity]
@@ -7744,6 +7773,33 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
   /scheduling/proposals:
+    get:
+      tags: [Activities]
+      operationId: listMeetingProposals
+      security:
+        - cookieAuth: []
+      summary: List the acting host's open proposals and personal links for one contact.
+      description: Open means not yet used, not expired and not withdrawn. Withdraw one by archiving its activity.
+      x-agent-access: human-only
+      parameters:
+        - { name: contact_id, in: query, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Open proposals, newest first.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/MeetingProposal' }
+        default:
+          description: The operation could not be completed.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
     post:
       tags: [Activities]
       operationId: createMeetingProposal
@@ -12578,11 +12634,38 @@ paths:
           style: form
           explode: false
           description: Restrict to these object types (default all).
+        - name: per_type
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 20 }
+          description: >
+            Answer GROUPED instead of as one ranked list: up to this many hits of EACH type, each
+            type's best first. Relevance is not comparable across types — a message naming an
+            account ten times outranks the account itself — so a short ranked list can hold
+            nothing but messages, while a grouped answer carries every type that matched.
+            `data` holds each type's hits together, best first. The page is the whole answer, so it
+            takes no `cursor` and no `limit`; `types_with_more` names the types holding more than
+            it carries, and asking again without `per_type`, with `types` set to one of them, pages
+            through the rest.
+        - name: with_employees
+          in: query
+          schema: { type: boolean, default: false }
+          description: >
+            Also find the contacts who currently work at a company the query matches, each
+            carrying that company as `works_at`. A contact the query matches by its own text is
+            returned once, as itself; one found only through its employer ranks after every contact
+            matched by its own text. Staff are read from the best-matching companies only, as
+            many as a grouped page can show (20), so a word matching hundreds of accounts reaches
+            the contacts at its strongest matches rather than at all of them. It needs the caller
+            to read contacts, companies and the employment between them, and finds no one through
+            the installation's own company or through a query using the websearch operators (`or`,
+            `-word`, quotes), where `-acme` would reach every other company in the workspace.
+            Honoured by both page shapes, so a contact a grouped page shows is also on the ranked
+            list narrowed to `types=contact`.
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
       responses:
         '200':
-          description: Ranked cross-object results.
+          description: Ranked cross-object results, or with `per_type` a few of each type.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/SearchResponse' }
@@ -13609,9 +13692,12 @@ paths:
         actually captured: an activity somebody logged by hand was never governed by a capture
         rule and is left alone.
 
-        An erasure request that has been EXECUTED leaves such a hold and is therefore covered. One
-        still open is not: nothing marks the messages it will be about until somebody acts on it,
-        so a purge can destroy correspondence a pending request was going to assemble.
+        A data-subject request still OPEN is covered too, and of every kind: an access request
+        needs the messages to build the package and a rectification needs them to correct against.
+        Nothing is marked on the messages while a request waits — they are found through the
+        subject's own addresses — so the mail survives and is reported as skipped rather than
+        destroyed and counted as a success. An erasure request already EXECUTED leaves a hold and
+        was always covered.
 
         Contacts go too on your own rule, but only the ones your mail is the sole reason this CRM
         knows them. A contact with an address outside the rule, a deal against their name, or mail
@@ -16105,6 +16191,93 @@ paths:
           description: The configuration changed; reload before saving.
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /ai/task-overrides:
+    get:
+      tags: [AI]
+      operationId: getAiTaskOverrides
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Read the per-task thinking level and timeouts (ai_routing read).
+      responses:
+        '200':
+          description: The stored overrides; the ETag is the If-Match a save is held to.
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AiTaskOverrides' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+    put:
+      tags: [AI]
+      operationId: replaceAiTaskOverrides
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Replace the per-task overrides installation-wide (ai_routing update). Every role applies them within a minute.
+      description: |
+        Optional If-Match carries the revision returned in the GET ETag header. A stale revision
+        returns 409 without changing settings. Omitting If-Match, or sending *, replaces whatever
+        is stored.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AiTaskOverrides' }
+      responses:
+        '200':
+          description: The overrides as stored.
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AiTaskOverrides' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '409':
+          description: Someone saved the overrides since they were read; reload before saving.
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /ai/task-overrides/preview:
+    post:
+      tags: [AI]
+      operationId: previewAiTaskOverrides
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Judge a draft of the overrides without saving it (ai_routing read and update).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AiTaskOverrides' }
+      responses:
+        '200':
+          description: Every field a save refuses, what each task would be sent with, and stale overrides.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AiTaskOverridesPreview' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+
+  /ai/routing/schema:
+    get:
+      tags: [AI]
+      operationId: getAiRoutingSchema
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: The JSON Schema of the routing document, with a description and documentation link per OpenRouter field (ai_routing read).
+      description: |
+        The routing $defs of the configuration schema the editor gate holds to the parser, so
+        the admin screen documents exactly what a save accepts. Each OpenRouter field carries
+        `x-doc-url` and `x-placement` (tier, or connection for the keys set on the provider).
+      responses:
+        '200':
+          description: The routing $defs.
+          content:
+            application/schema+json:
+              schema: { type: object, additionalProperties: true }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+
   /ai/routing/preview:
     post:
       tags: [AI]
@@ -16226,6 +16399,11 @@ paths:
         naming the fault, never a partially applied binding. An empty `tiers` is accepted and
         means unbound — the state an installation is in before anyone chooses models.
 
+        A `gemini_vertex` binding is asked for at its location before it is stored: a model that
+        location does not serve is a 422 naming the tier, the model and the location, and so is
+        a missing or unusable service-account key. Google not answering admits the save, so an
+        outage cannot block an unrelated routing edit.
+
         Audit-only write (no event stream, EVT-NOEVT-3).
       requestBody:
         required: true
@@ -16240,7 +16418,7 @@ paths:
               schema: { $ref: '#/components/schemas/AiRouting' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
-        '409': { description: The supplied configuration revision is stale. }
+        '409': { description: 'The supplied configuration revision is stale, or, with no revision supplied, the document kept changing while its Vertex AI bindings were being checked. Read it again and retry.' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /ai/provider-keys:
@@ -16283,9 +16461,9 @@ paths:
                 mixed:
                   value:
                     providers:
-                      - { provider: anthropic, configured: true, env_var: ANTHROPIC_API_KEY }
-                      - { provider: openai, configured: false, env_var: OPENAI_API_KEY }
-                      - { provider: gemini, configured: true, env_var: GEMINI_API_KEY }
+                      - { provider: anthropic, configured: true, env_var: ANTHROPIC_API_KEY, usable: true }
+                      - { provider: openai, configured: false, env_var: OPENAI_API_KEY, usable: false }
+                      - { provider: gemini, configured: true, env_var: GEMINI_API_KEY, usable: true }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
 
@@ -16302,10 +16480,9 @@ paths:
         schema: { type: string }
         description: >-
           The lane being edited, named as the routing document names it (`premium`, `embeddings`, …).
-          It selects WHICH stored binding supplies the host, for the installation that binds one
-          vendor at two — a broker on one lane and a self-hosted gateway on another, which the
-          routing validator permits. Omitted, or naming a lane bound to some other vendor, the host
-          falls back to any binding on this vendor and then to the adapter's own default.
+          A vendor's host is set once, on the provider (`providers` in the routing document), so
+          this matters only for `embeddings`, which may name a server of its own. Every other value
+          asks the provider's host, and a vendor with none set asks the adapter's own default.
       - name: top
         in: query
         required: false
@@ -16319,6 +16496,25 @@ paths:
           Omitted, the vendor's whole list comes back in the vendor's own order. A vendor that
           publishes no such measure cannot honour this: it answers with the full list and no
           `ranked_by`, rather than inventing an order and calling it a ranking.
+      - name: location
+        in: query
+        required: false
+        schema: { type: string, pattern: '^(global|us|eu|[a-z]+-[a-z]+[0-9]{1,2})$' }
+        description: >-
+          The Vertex AI location being edited, for `gemini_vertex` only — which models are served
+          differs by location, and the location is where Google processes the call. Omitted, the
+          lane's stored location is used. Under the `eu_hosted` profile a location outside the EU
+          answers `profile_forbids` before any credential is used. Ignored by every other vendor.
+      - name: model
+        in: query
+        required: false
+        schema: { type: string, minLength: 1, maxLength: 200 }
+        description: >-
+          Probe ONE model instead of listing: `gemini_vertex` asks the location whether it serves
+          this id (one `countTokens` call, or one `embedContent` when `tier` is `embeddings`). The
+          answer lists just that model when it is served, `unavailable: no_endpoint` when the
+          location does not serve it, and `unreachable` when Google could not be asked. Every other
+          vendor answers `not_published`: it has no per-location availability to probe.
     get:
       tags: [AI]
       operationId: listAvailableModels
@@ -16335,7 +16531,8 @@ paths:
 
         The vendor is named, and only the vendor: the host it is reached at comes from this
         installation's own stored binding, or from the adapter's default. There is no request
-        parameter that selects an endpoint.
+        parameter that selects an endpoint: a `gemini_vertex` `location` picks one of Google's
+        three host shapes and cannot name a host.
 
         A vendor that cannot be asked is NOT an error — the response is 200 with `unavailable`
         naming the state. The model field on the routing form takes any id the vendor serves,
@@ -16361,6 +16558,55 @@ paths:
                 noKey:
                   summary: The vendor takes a key and holds none
                   value: { provider: anthropic, models: [], unavailable: no_key }
+                notServedHere:
+                  summary: A probed model the location does not serve
+                  value: { provider: gemini_vertex, models: [], unavailable: no_endpoint }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+
+  /ai/provider-locations/{provider}:
+    parameters:
+      - name: provider
+        in: path
+        required: true
+        schema: { type: string }
+        description: The routing name of the vendor — the same string a binding uses.
+    get:
+      tags: [AI]
+      operationId: listProviderLocations
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Where one vendor can process a call (admin/ops).
+      description: |
+        The locations a `gemini_vertex` binding may name, asked of Google with the stored
+        service-account key's project, plus the `eu` and `us` multi-regions and `global` when
+        Google's list omits them. A metadata call on Google's global host; it carries no customer
+        data, so it is answered under every profile.
+
+        `resident` and `jurisdiction` are this build's residency policy, never Google's words: a
+        location Google adds tomorrow appears as an option and is not resident until this build
+        says so. Under `eu_hosted` every location is still listed, and a binding at one with
+        `resident: false` is refused on save.
+
+        A vendor that cannot be asked is NOT an error — the response is 200 with `unavailable`.
+        Every vendor but `gemini_vertex` answers `not_published`: it has no location to choose.
+      responses:
+        '200':
+          description: Where the vendor can process a call, or why it could not be asked.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProviderLocationList' }
+              examples:
+                answered:
+                  summary: Google answered
+                  value:
+                    provider: gemini_vertex
+                    locations:
+                      - { id: eu, display_name: EU (multi-region), jurisdiction: eu, resident: true }
+                      - { id: europe-west2, display_name: London, jurisdiction: other, resident: false }
+                noKey:
+                  summary: No service-account key is held
+                  value: { provider: gemini_vertex, locations: [], unavailable: no_key }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
 
@@ -16379,8 +16625,14 @@ paths:
       summary: Store or rotate one vendor's BYOK key (admin/ops).
       description: |
         Seals the key in the installation's key vault and records only an opaque, workspace-bound
-        reference. `api_key` is WRITE-ONLY: no read path returns it, and the setting that points
-        at it holds the reference and never the bytes.
+        reference. `api_key` and `service_account_json` are WRITE-ONLY: no read path returns
+        either, and the setting that points at one holds the reference and never the bytes.
+
+        Send exactly the one field the vendor takes, which `credential_kind` on the list names:
+        `service_account_json` for `gemini_vertex`, `api_key` for every other cloud vendor. A
+        service-account key is checked before it is sealed: it must be a Google key file for a
+        service account, and Google must exchange it for an access token. A key that fails
+        either is a 422 naming what is wrong, never echoing the key.
 
         Sending a key for a vendor that already has one ROTATES it. The new credential is sealed
         before the reference moves, and the superseded one is destroyed only after the move
@@ -16393,8 +16645,9 @@ paths:
         whatever the clipboard did and a key with a trailing newline authenticates nothing while
         looking exactly like one that would.
 
-        422 for a vendor this build serves with no key at all (a local model needs none), and for
-        an empty key — removing a credential is DELETE, not an empty write.
+        422 for a vendor this build serves with no key at all (a local model needs none), for
+        an empty key — removing a credential is DELETE, not an empty write — for the field the
+        vendor does not take, and for both fields at once.
 
         Requires a key vault. Without one there is nowhere to put the bytes, and the refusal says
         so rather than recording a reference to something that was never written.
@@ -16450,6 +16703,54 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+  /ai/provider-settings/{provider}:
+    parameters:
+      - name: provider
+        in: path
+        required: true
+        schema: { type: string }
+        description: The routing name of the vendor — the same string a binding uses.
+    put:
+      tags: [AI]
+      operationId: setAiProviderSettings
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Set one provider's host, upstream pins and location (admin/ops).
+      description: |
+        Replaces this provider's entry in the routing document's `providers` and re-validates
+        the whole document under the routing lock, so no If-Match is needed: nothing else in
+        the document changes. An empty object (`{}`) removes the entry.
+
+        Every lane on the provider reads the new host and pins from here, and takes effect
+        without a restart, exactly as `PUT /ai/routing` does.
+
+        A 422 names the fault: `no_host` when the change leaves a lane that binds this provider
+        with nowhere to dial (the message names the lanes); `invalid_value` for an upstream on a
+        provider other than an OpenRouter-hosted `openai_compatible`, a host the profile forbids,
+        or a malformed URL. 404 for a provider this build does not know.
+
+        Audit-only write (no event stream, EVT-NOEVT-3).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AiProviderSettings' }
+            examples:
+              openrouter:
+                value: { base_url: 'https://openrouter.ai/api', upstream: { only: [mistral/eu] } }
+      responses:
+        '200':
+          description: The whole routing document, as it now reads.
+          headers:
+            ETag: { schema: { type: string }, description: The configuration revision now stored. }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AiRouting' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: 'The routing document kept changing while its Vertex AI bindings were being checked against the new location. Read it again and retry.' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /ai/provider-keys/{provider}/test:
     parameters:
       - name: provider
@@ -16524,6 +16825,10 @@ paths:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
         - { name: task, in: query, schema: { type: string }, description: 'Filter to one task (capture_classify, enrich, …).' }
+        - { name: provider, in: query, schema: { type: string }, description: 'Filter to calls that ended on one provider (openai_compatible, gemini, …).' }
+        - { name: model, in: query, schema: { type: string }, description: 'Filter to calls that ended on one configured model id.' }
+        - { name: served_provider, in: query, schema: { type: string }, description: 'Filter to calls a broker served from one upstream host.' }
+        - { name: tier, in: query, schema: { type: string }, description: 'Filter to calls that ended on one tier.' }
       responses:
         '200':
           description: One page of terminal calls.
@@ -16532,6 +16837,56 @@ paths:
               schema: { $ref: '#/components/schemas/AiCallListResponse' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /ai/call-stats:
+    get:
+      tags: [AI]
+      operationId: getAiCallStats
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Call figures over a window, grouped — calls, failures, timeouts, latency, tokens and cost (ai_diagnostics read).
+      description: |
+        Counts every model-call attempt in the window, cache hits excluded. A failure is an
+        attempt with a sentinel that is not an answer, the same rule the health dot reads;
+        a timeout is an attempt its deadline stopped. Cost is priced from the rate sheet the
+        way /ai/usage prices it, and calls no rate prices are counted in `unpriced`.
+      parameters:
+        - { name: window, in: query, schema: { type: string, enum: ['24h', '7d', '30d'], default: '7d' } }
+        - { name: group, in: query, schema: { type: string, enum: [provider, model, served_provider, tier, task], default: provider } }
+        - { name: provider, in: query, schema: { type: string } }
+        - { name: model, in: query, schema: { type: string } }
+        - { name: tier, in: query, schema: { type: string } }
+        - { name: task, in: query, schema: { type: string } }
+      responses:
+        '200':
+          description: One row per group, most calls first; empty when the window holds none.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AiCallStats' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /ai/call-stats/flow:
+    get:
+      tags: [AI]
+      operationId: getAiTaskFlow
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Which step of one task's route answered its calls over a window (ai_diagnostics read).
+      parameters:
+        - { name: task, in: query, required: true, schema: { type: string } }
+        - { name: window, in: query, schema: { type: string, enum: ['24h', '7d', '30d'], default: '7d' } }
+      responses:
+        '200':
+          description: The task's logical calls, how many got no answer, and each step of its route.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AiTaskFlow' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /ai/calls/{id}:
@@ -22154,7 +22509,7 @@ paths:
         - $ref: '#/components/parameters/IdempotencyKey'
       responses:
         '200':
-          description: The offer, with pdf_asset_ref populated.
+          description: The offer, with pdf_asset_ref populated — null, as on every read, for a caller who cannot open the offer's buyer company.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Offer' }
@@ -22189,10 +22544,11 @@ paths:
       x-agent-access: human-only
       summary: Download the offer's most recently rendered PDF.
       description: |
-        Streams the bytes `pdf_asset_ref` points at (set by `renderOffer`). 404 both when the
-        offer has never been rendered (`pdf_asset_ref` is null) and on the usual row-scope
-        miss — neither leaks which case applies. 501 mirrors `renderOffer`'s own posture when
-        the deployment has no blobstore wired.
+        Streams the bytes `pdf_asset_ref` points at (set by `renderOffer`). 404 when the
+        caller's read of the offer carries no `pdf_asset_ref` — never rendered, or withheld
+        because the caller cannot open the offer's buyer company — and on the usual row-scope
+        miss; none leaks which case applies. 501 mirrors `renderOffer`'s own posture when the
+        deployment has no blobstore wired.
       responses:
         '200':
           description: The PDF bytes; Content-Disposition names the file.
@@ -24509,6 +24865,38 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /deals/{id}/commitments:
+    get:
+      tags: [Deals]
+      operationId: getDealCommitments
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      summary: What the customer committed to that this deal waits on.
+      description: |
+        The open commitments the contacts employed at the deal's company made to us, read
+        out of captured activities: overdue first, then by nearest due date, at most 25.
+        Each carries the quoted words and the activity they came from, so a reader can check
+        it, and its claim id, so a reader with `contact:update` can dismiss it
+        (`POST /claims/{id}/settle`).
+
+        Needs `contact:read`, `activity:read` and `relationship:read` on top of the deal
+        grant: each row names a contact, quotes a captured activity, and is this account's
+        through the contact's employment edge. A commitment whose contact or activity the
+        caller may not see is left out, and `complete` is then false, so the card can say it
+        speaks about less than the account rather than that nothing is owed. `has_more`
+        says more commitments exist past the 25 returned. A deal with no company has
+        nothing to read and answers an empty, complete list.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: The customer's open commitments on this deal's account.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DealCommitments' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   /deals/{id}/role-proposals:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -26176,13 +26564,14 @@ paths:
       operationId: refreshAiModelRates
       summary: Re-price the models this installation calls from the providers' own catalogues.
       description: |
-        Admin/ops-only. Reads OpenRouter's public model list and writes today's price for each
-        OpenRouter-hosted model this installation binds (tiers, embeddings, decision model) and,
-        while something is bound at OpenRouter, each `openai_compatible` model already on the
-        sheet that the list still names. A self-hosted model priced by hand is never touched. A model
-        whose price already matches is left alone and leaves no audit row; a future-dated manual
-        price is not touched. Runs inline and answers with what happened per provider. A provider
-        that publishes no price list reports `not_available`: its prices are set by hand.
+        Admin/ops-only. Runs the price sync now: vendor APIs whose key is usable are priced from
+        models.dev (each model already on the sheet, plus each chat or embedding model the key
+        lists that models.dev prices), and the OpenRouter-hosted models this installation binds,
+        plus the `openai_compatible` models already on the sheet while something is bound there,
+        from OpenRouter's list. A price set by hand is never rewritten (`kept`), and a
+        future-dated price is not touched. A model at its catalogue price writes nothing and
+        leaves no audit row; the run itself is recorded as the last sync. Runs inline and
+        answers with what happened per provider.
         Human session only (x-agent-access: human-only).
       security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
@@ -26194,6 +26583,47 @@ paths:
               schema: { $ref: '#/components/schemas/AiModelRateRefreshReport' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+
+  /ai/price-sync:
+    get:
+      tags: [Rates]
+      operationId: getAiPriceSync
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
+      x-agent-access: human-only
+      summary: Whether model prices sync daily, and what the last sync did (ai_model_rate read).
+      description: |
+        `auto_sync` is on until an admin turns it off. `last_run` is absent until the sync has run
+        once, by the daily job or by `POST /ai-model-rates/refresh`.
+      responses:
+        '200':
+          description: The sync's posture and its last run.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AiPriceSync' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+    put:
+      tags: [Rates]
+      operationId: replaceAiPriceSync
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
+      x-agent-access: human-only
+      summary: Turn the daily model price sync on or off (ai_model_rate update).
+      description: |
+        Off stops only the daily job; `POST /ai-model-rates/refresh` still runs on demand. Audited.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AiPriceSyncChange' }
+      responses:
+        '200':
+          description: The sync's posture and its last run.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AiPriceSync' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /ai-model-rates/propose-refresh:
     post:
@@ -27124,7 +27554,7 @@ components:
     AiModelRate:
       type: object
       description: One effective-dated model price. The four buckets are USD per 1M tokens as decimal strings (the server stores µUSD integers). Transparency-only — never gates routing.
-      required: [provider, model_id, input_per_mtok, output_per_mtok, cache_read_per_mtok, cache_write_per_mtok, effective_date, lane]
+      required: [provider, model_id, input_per_mtok, output_per_mtok, cache_read_per_mtok, cache_write_per_mtok, effective_date, lane, source]
       properties:
         provider: { type: string }
         model_id: { type: string }
@@ -27142,6 +27572,14 @@ components:
         cache_read_per_mtok: { type: string, pattern: '^[0-9]{1,12}(\.[0-9]{1,6})?$' }
         cache_write_per_mtok: { type: string, pattern: '^[0-9]{1,12}(\.[0-9]{1,6})?$' }
         effective_date: { type: string, format: date }
+        source:
+          type: string
+          enum: [manual, catalogue, seed]
+          description: |
+            Who wrote this price. `manual` was typed into the sheet and the daily sync never
+            rewrites it; `catalogue` was read from models.dev or OpenRouter by the sync; `seed` was
+            planted when the installation was provisioned. Removing a model's price hands it back
+            to the sync.
     AiModelRateListResponse:
       type: object
       required: [data]
@@ -27157,12 +27595,12 @@ components:
           items: { $ref: '#/components/schemas/AiModelRateProviderRefresh' }
     AiModelRateProviderRefresh:
       type: object
-      required: [provider, outcome, updated, unchanged, models, unlisted]
+      required: [provider, outcome, updated, unchanged, added, kept, models, unlisted]
       properties:
         provider: { type: string, description: The provider as the routing document spells it. }
         outcome:
           type: string
-          enum: [updated, unchanged, not_available, not_listed, unreachable, not_bound]
+          enum: [updated, unchanged, not_available, not_listed, unreachable, not_bound, not_configured]
           x-go-type: string
           description: |
             `updated` wrote at least one price; `unchanged` found every priced model already
@@ -27170,9 +27608,12 @@ components:
             publishes no price to read; `not_listed` means a bound model is absent from the
             catalogue altogether, so its id may be misspelt; `unreachable` means the catalogue
             could not be read;
-            `not_bound` means nothing this provider serves is bound or on the sheet.
+            `not_bound` means nothing this provider serves is bound or on the sheet;
+            `not_configured` means the provider holds no usable key, so the sync did not touch it.
         updated: { type: integer, minimum: 0, description: Prices written today. }
         unchanged: { type: integer, minimum: 0, description: Models already at the catalogue price. }
+        added: { type: integer, minimum: 0, description: Models priced for the first time today. }
+        kept: { type: integer, minimum: 0, description: "Models whose price was set by hand, which the sync never rewrites." }
         models:
           type: array
           items: { type: string }
@@ -27181,6 +27622,30 @@ components:
           type: array
           items: { type: string }
           description: Bound model ids the catalogue does not name.
+    AiPriceSync:
+      type: object
+      additionalProperties: false
+      required: [auto_sync]
+      properties:
+        auto_sync: { type: boolean, description: Whether the daily job syncs model prices. }
+        last_run: { $ref: '#/components/schemas/AiPriceSyncRun' }
+    AiPriceSyncRun:
+      type: object
+      additionalProperties: false
+      required: [ran_at, trigger, report]
+      properties:
+        ran_at: { type: string, format: date-time }
+        trigger:
+          type: string
+          enum: [manual, scheduled]
+          description: '`manual` was an admin pressing Refresh now; `scheduled` the daily job.'
+        report: { $ref: '#/components/schemas/AiModelRateRefreshReport' }
+    AiPriceSyncChange:
+      type: object
+      additionalProperties: false
+      required: [auto_sync]
+      properties:
+        auto_sync: { type: boolean }
     SetAiModelRateRequest:
       type: object
       required: [provider, model_id, input_per_mtok, output_per_mtok, cache_read_per_mtok, cache_write_per_mtok]
@@ -28368,6 +28833,12 @@ components:
         models:
           type: array
           items: { $ref: '#/components/schemas/AvailableModel' }
+        complete:
+          type: boolean
+          description: >-
+            True when `models` is exactly what the asked place serves — a `gemini_vertex` list,
+            each model asked of the location — so a client offers nothing beside it. Absent or
+            false for a vendor's own list, which may lag a model the vendor shipped since.
         ranked_by:
           type: string
           description: >-
@@ -28385,7 +28856,8 @@ components:
             so asking would be the egress the profile exists to prevent.
             `not_published` — this adapter, or the decision endpoint's host, publishes no list.
             `unreachable` — the vendor was asked and did not answer.
-            `no_endpoint` — an OpenAI-wire binding names no host, so there is no address to ask.
+            `no_endpoint` — the provider has no host set, so there is no address to ask; or, for
+            a `model` probe, the location does not serve that model.
     AvailableModel:
       type: object
       additionalProperties: false
@@ -28436,16 +28908,68 @@ components:
             a shortened list rather than asking a reader to trust the order. A decimal string for
             the same reason the prices are: it is displayed, never arithmetic. Absent where the
             vendor publishes no such measure, which is also when the list cannot be ranked.
+    ProviderLocationList:
+      type: object
+      additionalProperties: false
+      required: [provider, locations]
+      description: >-
+        Where one vendor can process a call. An empty `locations` always carries `unavailable`.
+      properties:
+        provider:
+          type: string
+          description: The routing name of the vendor that was asked.
+        locations:
+          type: array
+          items: { $ref: '#/components/schemas/ProviderLocation' }
+        unavailable:
+          type: string
+          enum: [no_key, not_published, unreachable, profile_forbids]
+          description: >-
+            Why the list is empty, when it is. Absent means the vendor answered.
+            `no_key` — no service-account key is held. `not_published` — this vendor has no
+            location to choose. `unreachable` — Google was asked and did not answer.
+            `profile_forbids` — the profile is `sovereign`, which forbids asking Google at all.
+    ProviderLocation:
+      type: object
+      additionalProperties: false
+      required: [id, display_name, jurisdiction, resident]
+      properties:
+        id:
+          type: string
+          description: The string a binding's `location` names, exactly as Google spells it.
+        display_name:
+          type: string
+          description: Google's own label, or this build's for a multi-region Google did not list.
+        jurisdiction:
+          type: string
+          enum: [eu, us, other, global]
+          description: >-
+            Whose law the processing happens under, by this build's policy: `eu` exactly when
+            `resident`, `global` for the endpoint that may process anywhere, `us` for the US
+            multi-region and US regions, and `other` for everything else — London and Zürich
+            among them.
+        resident:
+          type: boolean
+          description: >-
+            Whether Google keeps ML processing at this location inside the EU, which is what the
+            `eu_hosted` profile admits. This build's list, never Google's: a location Google adds
+            is not resident until this build names it.
     AiProviderKeyStatus:
       type: object
       additionalProperties: false
-      required: [provider, configured, env_var, optional]
+      required: [provider, configured, env_var, optional, credential_kind, usable]
       description: >-
         What may be known about one vendor's credential. Facts about the vendor and whether a key
         is held, and nothing about the key: it has no read path, and neither does anything derived
         from it — a length, a prefix or a masked tail would each narrow a brute force while
         feeling harmless.
       properties:
+        usable:
+          type: boolean
+          description: >-
+            Whether this vendor can be called as the installation stands: a key is held, the
+            adapter calls without one, or it takes no key. The daily price sync reads this same
+            answer to decide which vendors it prices.
         provider:
           type: string
           description: The routing name of the vendor, the same string a binding uses.
@@ -28466,6 +28990,20 @@ components:
             Whether the adapter calls without a key when none is held. `jev_compatible` is: a
             decision server on the operator's own host needs none, so the key is sent when held
             and an absent one is not a gap to fix.
+        credential_kind:
+          type: string
+          enum: [api_key, service_account]
+          description: >-
+            Which field of `AiProviderKeyInput` this vendor takes: `service_account` is a
+            service-account key file (`service_account_json`), `api_key` is a pasted key. A
+            property of the vendor, not of what is stored.
+        priced_by:
+          type: string
+          description: >-
+            The provider whose prices this one's calls take for a model its own price sheet does
+            not list: `gemini` for `gemini_vertex`, which serves the same models. A price written
+            for this provider overrides it. Absent for a provider whose unpriced models stay
+            unpriced.
     AiProviderKeyTestResult:
       type: object
       additionalProperties: false
@@ -28497,20 +29035,25 @@ components:
             a vendor tested at a key endpoint or with the decision probe passes without one.
         reason:
           type: string
-          enum: [no_key, profile_forbids, not_published, no_endpoint, auth_failed, rate_limited, unreachable]
+          enum: [no_key, profile_forbids, not_published, no_endpoint, auth_failed, permission_denied, rate_limited, unreachable]
           description: >-
             Why the test did not pass, present only when `ok` is false.
             `no_key` — the vendor takes a credential and holds none.
             `profile_forbids` — the installation profile forbids reaching this vendor at all.
             `not_published` — this build cannot ask the vendor anything (an unknown adapter).
-            `no_endpoint` — an OpenAI-wire vendor that no binding gives a host yet.
+            `no_endpoint` — an OpenAI-wire vendor that has no host set on the provider yet.
             `auth_failed` — the vendor refused the credential.
+            `permission_denied` — the vendor accepted the credential and refused the call: the
+            account lacks a role or has not enabled the API (for Vertex AI, `roles/aiplatform.user`
+            and the Vertex AI API).
             `rate_limited` — the vendor is throttling this credential; it may still be valid.
             `unreachable` — the vendor did not answer, or answered with something else.
     AiProviderKeyInput:
       type: object
       additionalProperties: false
-      required: [api_key]
+      description: >-
+        Exactly one of the two fields, the one the vendor's `credential_kind` names. The server
+        refuses neither, both, or the other one with a 422.
       properties:
         api_key:
           type: string
@@ -28520,6 +29063,14 @@ components:
           description: >-
             The vendor credential. WRITE-ONLY — no response in this contract returns it, and the
             setting that records it holds an opaque vault reference rather than these bytes.
+        service_account_json:
+          type: string
+          minLength: 1
+          maxLength: 8192
+          writeOnly: true
+          description: >-
+            A Google service-account key file's whole contents, for `gemini_vertex`. WRITE-ONLY,
+            exactly as `api_key` is. Its `project_id` is the project every call is billed to.
     AiRouting:
       type: object
       description: |
@@ -28535,6 +29086,8 @@ components:
           description: |
             The location ladder (§4). `sovereign` means zero egress by construction: a cloud
             provider on any tier is refused, and so is a local provider pointed at another host.
+            `eu_hosted` promises EU inference: a broker lane must pin EU-region hosts, and a
+            `gemini_vertex` lane must name an EU location.
         tiers:
           type: object
           additionalProperties: { $ref: '#/components/schemas/AiTierBinding' }
@@ -28543,6 +29096,53 @@ components:
           $ref: '#/components/schemas/AiEmbeddingsBinding'
         decisions:
           $ref: '#/components/schemas/AiDecisionsBinding'
+        providers:
+          type: object
+          additionalProperties: { $ref: '#/components/schemas/AiProviderSettings' }
+          description: |
+            Provider name to what that provider is configured with, independent of any lane: its
+            host and the broker's upstream pins. Every lane binding a provider reads them from
+            here. A client that omits the field keeps the stored entries; one that sends it owns
+            the map, so an entry it leaves out is removed.
+
+    AiProviderSettings:
+      type: object
+      additionalProperties: false
+      description: |
+        One provider's configuration. An entry no lane binds is held to its shape only, so a
+        host can be set before anything is bound to it.
+      properties:
+        base_url:
+          type: string
+          description: >-
+            Where the provider is reached. Required on `openai_compatible` while a lane binds it,
+            and on `jev_compatible` while the decisions lane binds it (the FULL decision endpoint,
+            posted to as written). Optional elsewhere; empty means the adapter's compiled default.
+        upstream:
+          $ref: '#/components/schemas/AiOpenRouterUpstream'
+        location:
+          type: string
+          pattern: '^(global|us|eu|[a-z]+-[a-z]+[0-9]{1,2})$'
+          description: |
+            The Vertex AI location a `gemini_vertex` provider is served from, which is where Google
+            processes the call: `eu`, `us`, `global`, or a region such as `europe-west4`. Required
+            while a lane binds `gemini_vertex`, and refused on every other provider. Moving it asks
+            Google about each bound model at the new location first; one it does not serve is a 422.
+
+    AiOpenRouterUpstream:
+      type: object
+      additionalProperties: false
+      description: |
+        Which OpenRouter hosts may serve this provider's requests, for every lane on it: a
+        residency pin lives here. Accepted on `openai_compatible` with an OpenRouter host only.
+        How one model is served (sort, quantizations, …) stays on the tier's `routing`.
+      properties:
+        only: { type: array, uniqueItems: true, items: { type: string }, description: "Upstream slugs allowed; a hard filter." }
+        ignore: { type: array, uniqueItems: true, items: { type: string }, description: "Upstream slugs excluded; a hard filter." }
+        allow_fallbacks: { type: boolean, description: "Override the broker's host fallback. False is a real choice, distinct from absent." }
+        zdr: { type: boolean, description: "Zero data retention: only hosts that keep no copy of the prompt or the answer may serve a request." }
+        data_collection: { type: string, enum: [allow, deny], description: "deny keeps every request off hosts that may store or train on prompts." }
+        enforce_distillable_text: { type: boolean, description: "Only models whose licence allows their output to train other models." }
 
     AiTierBinding:
       type: object
@@ -28552,9 +29152,24 @@ components:
           type: string
           description: |
             The adapter serving this tier: fake | anthropic | ollama | vllm | openai_compatible
-            | openai | gemini. The credential is never part of this document.
+            | openai | gemini | gemini_vertex. The credential is never part of this document.
         model: { type: string, description: The provider-native model id. }
-        base_url: { type: string, description: 'Endpoint override; empty means the provider default.' }
+        base_url:
+          type: string
+          description: |
+            On a tier, the provider's host as resolved from `providers`; on write it is accepted
+            only when empty or equal to the provider's, and a different one is a 422
+            `moved_to_provider`. On the embeddings lane it is a live override: a separate
+            embeddings server for that lane alone. Empty means the provider's host.
+        location:
+          type: string
+          pattern: '^(global|us|eu|[a-z]+-[a-z]+[0-9]{1,2})$'
+          description: |
+            On a tier, the `gemini_vertex` provider's location as resolved from `providers`; on write
+            it is accepted only when empty or equal to the provider's, and a different one is a 422
+            `moved_to_provider`. On the embeddings lane it is a live override: Vertex serves an
+            embedding model at fewer locations than a chat model, so the lane may sit elsewhere.
+            Refused on every provider but `gemini_vertex`.
         input:
           type: array
           items: { type: string }
@@ -28579,21 +29194,99 @@ components:
       type: object
       additionalProperties: false
       description: |
-        Upstream-selection preferences for an openai_compatible binding pointed at
-        OpenRouter; refused on any other binding, and on the embeddings lane every
-        preference but only, ignore and allow_fallbacks is refused. Absent means the
-        product default (reliability over price); an empty object means no preferences
-        (the broker's own price-weighted routing). The two are different choices and a
-        client must not turn one into the other.
+        How an openai_compatible binding pointed at OpenRouter serves its model, in OpenRouter's
+        own request shape: `provider` (which hosts and how) and `reasoning` (how hard the model
+        thinks). Refused on any other binding; on the embeddings lane only the connection's keys
+        are accepted. Absent means the product
+        default (reliability over price); an empty object means no preferences (the broker's own
+        price-weighted routing). The two are different choices and a client must not turn one
+        into the other. The keys that say which hosts may read a request (only, ignore,
+        allow_fallbacks, zdr, data_collection, enforce_distillable_text) belong to the provider
+        (`AiOpenRouterUpstream`): on a tier they are accepted only when equal to the provider's,
+        and refused otherwise, each by its path. `GET /ai/routing/schema` describes every field.
+        The flat keys are the older spelling, still read; a response writes `provider` and
+        `reasoning`.
       properties:
-        only: { type: array, items: { type: string }, description: "Upstream slugs allowed; a hard filter." }
-        ignore: { type: array, items: { type: string }, description: "Upstream slugs excluded; a hard filter." }
-        quantizations: { type: array, items: { type: string }, description: 'Serving precisions allowed (bf16, fp16, fp8, fp4, int8 …); a hard filter.' }
-        sort: { type: string, description: 'price | throughput | latency. Reorders rather than filters, and disables load balancing.' }
-        require_parameters: { type: boolean, description: "Keep the request off hosts that lack any parameter it carries. False is a real choice, distinct from absent." }
-        allow_fallbacks: { type: boolean, description: "Override the broker's host fallback. False is a real choice, distinct from absent." }
-        preferred_max_latency_p90: { type: number, format: double, description: "Seconds; hosts above it are deprioritized, never removed. Omit to leave unset." }
-        reasoning_effort: { type: string, description: 'none | minimal | low | medium | high | xhigh | max. Unset leaves each host its own default.' }
+        provider: { $ref: '#/components/schemas/AiOpenRouterProvider' }
+        reasoning: { $ref: '#/components/schemas/AiOpenRouterReasoning' }
+        only: { type: array, items: { type: string }, deprecated: true, description: "Older spelling of provider.only." }
+        ignore: { type: array, items: { type: string }, deprecated: true, description: "Older spelling of provider.ignore." }
+        quantizations: { type: array, items: { type: string }, deprecated: true, description: 'Older spelling of provider.quantizations.' }
+        sort: { type: string, deprecated: true, description: 'Older spelling of provider.sort.' }
+        require_parameters: { type: boolean, deprecated: true, description: "Older spelling of provider.require_parameters." }
+        allow_fallbacks: { type: boolean, deprecated: true, description: "Older spelling of provider.allow_fallbacks." }
+        preferred_max_latency_p90: { type: number, format: double, deprecated: true, description: "Older spelling of provider.preferred_max_latency.p90, in seconds." }
+        reasoning_effort: { type: string, deprecated: true, description: 'Older spelling of reasoning.effort.' }
+
+    AiOpenRouterProvider:
+      type: object
+      additionalProperties: false
+      description: OpenRouter's `provider` request object, sent as written. Every key is optional; GET /ai/routing/schema documents each.
+      properties:
+        order: { type: array, minItems: 1, uniqueItems: true, items: { type: string }, description: 'Host slugs to try first, in this order.' }
+        only: { type: array, items: { type: string }, description: 'Upstream slugs allowed; a hard filter. Set on the provider.' }
+        ignore: { type: array, items: { type: string }, description: 'Upstream slugs excluded; a hard filter. Set on the provider.' }
+        allow_fallbacks: { type: boolean, description: "Whether the broker may switch hosts on failure. Set on the provider." }
+        require_parameters: { type: boolean, description: 'Keep the request off hosts that lack any parameter it carries.' }
+        data_collection: { type: string, enum: [allow, deny], description: 'Whether hosts that may store prompts are allowed. Set on the provider.' }
+        zdr: { type: boolean, description: 'Zero data retention only. Set on the provider.' }
+        enforce_distillable_text: { type: boolean, description: 'Only models whose output may train other models. Set on the provider.' }
+        quantizations: { type: array, minItems: 1, uniqueItems: true, items: { type: string }, description: 'Serving precisions allowed (bf16, fp16, fp8, fp4, int8 …); a hard filter.' }
+        sort:
+          description: 'price | throughput | latency, or {by, partition}. Reorders rather than filters, and disables load balancing.'
+          oneOf:
+            - { type: string, enum: [price, throughput, latency] }
+            - $ref: '#/components/schemas/AiOpenRouterSort'
+        max_price: { $ref: '#/components/schemas/AiOpenRouterPrice' }
+        preferred_min_throughput:
+          description: Tokens per second, one number or per percentile; a soft preference.
+          oneOf:
+            - { type: number, format: double, minimum: 0 }
+            - $ref: '#/components/schemas/AiOpenRouterPercentiles'
+        preferred_max_latency:
+          description: Seconds, one number or per percentile; a soft preference.
+          oneOf:
+            - { type: number, format: double, minimum: 0 }
+            - $ref: '#/components/schemas/AiOpenRouterPercentiles'
+
+    AiOpenRouterSort:
+      type: object
+      additionalProperties: false
+      required: [by]
+      properties:
+        by: { type: string, enum: [price, throughput, latency] }
+        partition: { type: string, enum: [model, none], description: 'none sorts across every model of a fallback list at once.' }
+
+    AiOpenRouterPrice:
+      type: object
+      additionalProperties: false
+      description: The most a request may cost, in USD per million prompt or completion tokens, or per request or image.
+      properties:
+        prompt: { type: number, format: double, minimum: 0 }
+        completion: { type: number, format: double, minimum: 0 }
+        request: { type: number, format: double, minimum: 0 }
+        image: { type: number, format: double, minimum: 0 }
+
+    AiOpenRouterPercentiles:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        p50: { type: number, format: double, minimum: 0 }
+        p75: { type: number, format: double, minimum: 0 }
+        p90: { type: number, format: double, minimum: 0 }
+        p99: { type: number, format: double, minimum: 0 }
+
+    AiOpenRouterReasoning:
+      type: object
+      additionalProperties: false
+      description: OpenRouter's `reasoning` request object. effort and max_tokens are two spellings of one budget; write one.
+      not: { required: [effort, max_tokens] }
+      properties:
+        effort: { type: string, enum: [max, xhigh, high, medium, low, minimal, none] }
+        max_tokens: { type: integer, minimum: 1 }
+        exclude: { type: boolean, description: 'Think, but leave the reasoning out of the answer.' }
+        enabled: { type: boolean }
 
     AiEmbeddingsBinding:
       allOf:
@@ -28625,10 +29318,12 @@ components:
         model: { type: string, description: 'The decision model id, e.g. jev-1.13.0 on jev or typesafe/jev-1.13 on OpenRouter.' }
         base_url:
           type: string
+          deprecated: true
           description: >-
-            The FULL decision endpoint URL, posted to as written. Optional for jev (default
-            https://api.typesafe.ai/v1/systemone); required for jev_compatible, e.g.
-            https://openrouter.ai/api/alpha/decisions or http://127.0.0.1:8767/v1/systemone.
+            The decision provider's endpoint as resolved from `providers` (the FULL URL, posted to
+            as written; jev defaults to https://api.typesafe.ai/v1/systemone). On write it is
+            accepted only when empty or equal to the provider's; a different one is a 422
+            `moved_to_provider`.
 
     IntegrationsSettings:
       type: object
@@ -30242,6 +30937,7 @@ components:
       properties:
         task: { type: string }
         display_name: { type: string }
+        summary: { type: string, description: 'What the task does, in plain words.' }
         execution_mode: { type: string }
         leading_tier: { type: string }
         normal_candidates: { type: array, items: { $ref: '#/components/schemas/AiRouteCandidate' } }
@@ -30256,6 +30952,78 @@ components:
           description: 'Why a feature that declares a decision form is not answered by the decision lane; absent when it is, and for a feature with no decision form.'
         decision_candidate:
           $ref: '#/components/schemas/AiRouteCandidate'
+        decides: { type: boolean, description: 'The task declares a decision form, so a decision model may answer it first and its decision timeout applies.' }
+        overrides: { $ref: '#/components/schemas/AiTaskOverride' }
+        defaults: { $ref: '#/components/schemas/AiTaskSettings' }
+    AiTaskOverride:
+      type: object
+      additionalProperties: false
+      description: An admin's settings for one task. An absent field keeps the product's own value.
+      properties:
+        thinking: { type: string, enum: [minimal, low, medium, high], description: 'The exact level every site of the task is sent at. Outranks the binding and the site floor; a model with no thinking control ignores it.' }
+        decision_timeout_ms: { type: integer, minimum: 5000, maximum: 60000, description: 'How long the decision model may take before the task falls back to its ladder. Decision tasks only.' }
+        attempt_timeout_ms: { type: integer, minimum: 10000, maximum: 300000, description: 'How long one model call on the ladder may take before the next tier is tried.' }
+    AiTaskOverrides:
+      type: object
+      description: Every task's override, keyed by task id.
+      additionalProperties: { $ref: '#/components/schemas/AiTaskOverride' }
+    AiTaskSettings:
+      type: object
+      required: [decision_timeout_ms, attempt_timeout_ms]
+      description: What a task's calls are sent with.
+      properties:
+        thinking: { type: string, description: 'Absent when no level is chosen: the binding and the site floor decide.' }
+        decision_timeout_ms: { type: integer }
+        attempt_timeout_ms: { type: integer }
+    AiTaskOverridesPreview:
+      type: object
+      required: [effective, stale]
+      properties:
+        errors: { type: array, items: { $ref: '#/components/schemas/AiFieldError' }, description: 'Every field the save would refuse, by its path (<task>.<field>).' }
+        effective: { type: object, additionalProperties: { $ref: '#/components/schemas/AiTaskSettings' }, description: 'What each task would be sent with.' }
+        stale: { type: array, items: { type: string }, description: 'Stored overrides for tasks this installation no longer runs; calls ignore them.' }
+    AiCallStats:
+      type: object
+      required: [window, group, rows]
+      properties:
+        window: { type: string }
+        group: { type: string }
+        rows: { type: array, items: { $ref: '#/components/schemas/AiCallStatsRow' } }
+    AiCallStatsRow:
+      type: object
+      required: [key, calls, failed, timeouts, p50_ms, p95_ms, tokens_in, tokens_out, cost_microusd, unpriced]
+      properties:
+        key: { type: string, description: 'The group value: a provider, model id, upstream host, tier or task. Empty when the attempts carried none (a host a direct vendor does not report).' }
+        calls: { type: integer, format: int64 }
+        failed: { type: integer, format: int64 }
+        timeouts: { type: integer, format: int64 }
+        p50_ms: { type: integer, format: int64 }
+        p95_ms: { type: integer, format: int64 }
+        tokens_in: { type: integer, format: int64 }
+        tokens_out: { type: integer, format: int64 }
+        cost_microusd: { type: integer, format: int64, description: 'USD micro-units, priced at each call''s day.' }
+        unpriced: { type: integer, format: int64, description: 'Calls that spent tokens no rate prices; their cost is not in cost_microusd.' }
+    AiTaskFlow:
+      type: object
+      required: [task, window, total, unanswered, steps]
+      properties:
+        task: { type: string }
+        window: { type: string }
+        total: { type: integer, format: int64, description: 'Logical calls in the window, cache hits excluded.' }
+        unanswered: { type: integer, format: int64, description: 'Logical calls whose last attempt failed.' }
+        steps: { type: array, items: { $ref: '#/components/schemas/AiFlowStep' }, description: 'The decision model first, then each tier in ladder order.' }
+    AiFlowStep:
+      type: object
+      required: [decision, tier, provider, model, attempts, answered, p50_ms, gave_up]
+      properties:
+        decision: { type: boolean }
+        tier: { type: string }
+        provider: { type: string }
+        model: { type: string }
+        attempts: { type: integer, format: int64 }
+        answered: { type: integer, format: int64, description: 'Logical calls this step answered.' }
+        p50_ms: { type: integer, format: int64 }
+        gave_up: { type: object, additionalProperties: { type: integer, format: int64 }, description: 'Why the walk moved past this step, by sentinel (timeout, provider_error) or the next attempt''s reason (decision_below_floor, …).' }
     AiDeferredWork:
       type: object
       required: [carrier, unit, available]
@@ -30291,6 +31059,30 @@ components:
         current_version: { type: string }
         features: { type: array, items: { $ref: '#/components/schemas/AiFeatureRoute' } }
         unused_tiers: { type: array, items: { type: string } }
+        errors:
+          type: array
+          description: |
+            Every key the save would refuse, by its path in the routing document
+            (tiers.cheap_cloud.routing.provider.sort.by). Absent when the draft is valid; when
+            present, features are judged with each refused tier routing left as stored.
+          items: { $ref: '#/components/schemas/AiFieldError' }
+        effective: { $ref: '#/components/schemas/AiRoutingEffective' }
+    AiRoutingEffective:
+      type: object
+      required: [tiers]
+      description: What each tier will send OpenRouter once saved, the connection's keys and the product default merged in. Only tiers whose binding sends a block.
+      properties:
+        tiers:
+          type: object
+          additionalProperties: { $ref: '#/components/schemas/AiOpenRouterRouting' }
+    AiFieldError:
+      type: object
+      required: [field, code, message]
+      description: One refused input, the shape a 422's details.errors carries.
+      properties:
+        field: { type: string, description: 'The path of the refused key.' }
+        code: { type: string }
+        message: { type: string, description: 'What is wrong and what to write instead.' }
     AiUsage:
       type: object
       description: 'AI usage + budget (AIRT-WIRE-1): the AIRT-PARAM-33 meter aggregated per day × task × tier, plus the budget band. Token-denominated; cost_est_minor is computed on read from the workspace''s ai_model_rate price sheet as of each call''s day (ADR-0067, price-on-read) — omitted, never a fabricated 0, when a task line''s window carries no priced call, and accompanied by unpriced_calls when it is a partial total.'
@@ -30311,6 +31103,7 @@ components:
                   properties:
                     task: { type: string, description: 'capture_classify, enrich, summarize, …' }
                     task_display_name: { type: string }
+                    task_summary: { type: string, description: 'What the task does, in plain words, for a reader deciding what it costs.' }
                     tier: { type: string, description: 'local_small, cheap_cloud, premium, frontier, local_large, or decide (the decision-model lane).' }
                     calls: { type: integer }
                     cached_hits: { type: integer }
@@ -30397,6 +31190,11 @@ components:
             safety or recitation stop, a content filter, a blocked prompt. `request_rejected` — the provider's own error code named the request
             malformed, which is a defect on the calling side.
 
+            `timeout` — the attempt's deadline stopped it: the task's model call timeout on a
+            ladder attempt, its decision model timeout on a decision attempt. A failure like
+            `provider_error`, named apart so a slow host can be told from a broken one. A
+            caller's own cancellation is never a timeout.
+
             `provider_error` is the FALLBACK: a provider failure naming none of those. It
             covers a connection or TLS fault and a non-429 server error as well as a call the
             model answered badly, so it says the provider failed and nothing about how far the
@@ -30425,7 +31223,7 @@ components:
       properties:
         attempt: { type: integer }
         is_terminal: { type: boolean }
-        attempt_reason: { type: string, description: 'Why this attempt ran — one of provider_error, schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder. Or one of decision_below_floor, decision_error, decision_off_enum, decision_state_too_large, decision_uncertified, decision_local_only — the decision attempt before this walk did not stand, and why. Read an unrecognized reason as "some reason" rather than refusing it.' }
+        attempt_reason: { type: string, description: 'Why this attempt ran — one of provider_error, timeout (the attempt before stopped at its deadline), schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder. Or one of decision_below_floor, decision_error, decision_off_enum, decision_state_too_large, decision_uncertified, decision_local_only — the decision attempt before this walk did not stand, and why. Read an unrecognized reason as "some reason" rather than refusing it.' }
         kind: { type: string, enum: [completion, embedding, decision], x-go-type: string, description: 'What this attempt asked: a chat completion, an embedding, or a decision model.' }
         tier: { type: string, description: 'The tier this attempt ran on; decide for the decision lane.' }
         provider: { type: string }
@@ -30811,6 +31609,10 @@ components:
         source_key_used:
           type: string
           description: 'Which column identified a row for idempotency — the request''s `source_key`, or the natural key chosen in its absence. Stated because the whole re-run guarantee rests on it.'
+        mapping:
+          type: object
+          additionalProperties: { type: string }
+          description: '`{source column → target field}` as the run was staged with it, after validation — the same shape the create request''s `mapping` takes. A report says where each column went, not only how many rows landed. Absent for a run that carries no mapping.'
         links:
           $ref: '#/components/schemas/ImportRunLinks'
         estimated_duration_seconds:
@@ -33371,8 +34173,9 @@ components:
         open_commitments:
           type: [integer, 'null']
           description: >-
-            Open `commitment_made` signals — things one side said they would do. Null when the
-            caller cannot read signals.
+            Commitments either side made with the contacts at this account, read out of
+            conversations, still owed and not yet a task. Null when the caller cannot read
+            contacts and activities.
 
     Company360StateStrip:
       type: object
@@ -36221,6 +37024,30 @@ components:
             carries no words, absence proves nothing, never stored.
       additionalProperties: false
 
+    DealCommitments:
+      type: object
+      required: [data, complete, has_more]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/DealCommitment' } }
+        has_more:
+          type: boolean
+          description: True when more open commitments exist than the most urgent ones returned.
+        complete:
+          type: boolean
+          description: False when a commitment was left out because its contact or its message is outside what the caller may read.
+    DealCommitment:
+      type: object
+      required: [id, contact_id, contact_name, body, source_quote, source_activity_id, source_kind, occurred_at]
+      properties:
+        id: { type: string, format: uuid, description: 'The id of the claim, which `POST /claims/{id}/settle` takes.' }
+        contact_id: { type: string, format: uuid }
+        contact_name: { type: string }
+        body: { type: string, description: 'What was committed to, in the language of the reader.' }
+        source_quote: { type: string, description: 'The words it was read from, verbatim.' }
+        source_activity_id: { type: string, format: uuid, description: 'The captured activity it was read from.' }
+        source_kind: { type: string, description: 'The kind of activity it was read from (`email`, `meeting`, …), so a client opens it in the reader that kind needs.' }
+        due_at: { type: string, format: date-time, nullable: true, description: 'Absent when the conversation named no day.' }
+        occurred_at: { type: string, format: date-time, description: 'When it was said.' }
     DealCoverage:
       type: object
       required: [deal_id, stakeholders, our_side, risks, sections_omitted]
@@ -38548,11 +39375,21 @@ components:
 
     TransitionPolicyList:
       type: object
-      required: [data]
+      required: [data, automation_enabled]
       properties:
         data:
           type: array
           items: { $ref: '#/components/schemas/TransitionPolicy' }
+        automation_enabled:
+          type: boolean
+          description: |
+            Whether this installation permits stage automation at all
+            (`deals.stage_autopilot_enabled`). It defaults to FALSE, and while it is
+            off every transition is forced to `propose` regardless of its own rule.
+
+            A rule's `mode` therefore describes what was asked for, not what will
+            happen: read both before telling somebody a transition moves deals by
+            itself.
 
     TransitionPolicy:
       type: object
@@ -39023,6 +39860,7 @@ components:
         location: { type: string }
         duration_minutes: { type: integer }
         enabled: { type: boolean }
+        video_app: { type: string, enum: [google_meet, microsoft_teams], description: Present when new meetings get a video call link from the host's calendar. }
     SchedulingProfile:
       type: object
       required: [enabled, provider, calendar_id, duration_minutes, notice_minutes, horizon_days, buffer_minutes, title, location]
@@ -39044,6 +39882,7 @@ components:
         public_url: { type: string, readOnly: true }
         replace_link: { type: boolean, writeOnly: true }
         email_reminder: { type: boolean, description: Send one operational email reminder one hour before future meetings. }
+        video_call: { type: boolean, description: Add a video call link from the connected calendar (Google Meet or Microsoft Teams) to new meetings. Absent means on. }
     MeetingInvitationRequest:
       type: object
       required: [contact_id, attendee_email, start, end, subject, location, description]
@@ -39055,6 +39894,7 @@ components:
         subject: { type: string, maxLength: 200 }
         location: { type: string, maxLength: 1000 }
         description: { type: string, maxLength: 5000 }
+        video_call: { type: boolean, description: Add a video call link from the connected calendar. Absent follows the host's profile setting. }
     MeetingAvailability:
       type: object
       required: [slots, truncated]
@@ -39078,6 +39918,7 @@ components:
         location: { type: string, maxLength: 1000 }
         description: { type: string, maxLength: 5000 }
         duration_minutes: { type: integer, minimum: 15, maximum: 480 }
+        video_call: { type: boolean, description: Add a video call link when the guest books. Absent follows the host's profile setting. }
         options:
           type: array
           maxItems: 3
@@ -39118,6 +39959,28 @@ components:
         calendar_url: { type: string }
         management_token: { type: string }
         reminder_status: { type: string, enum: [off, pending, queued, unavailable] }
+        provider: { type: string, enum: [gcal, graphcal], description: The calendar provider that holds the event. Omitted on guest reads. }
+        video_call: { type: boolean, description: A video call link was requested for this meeting. }
+        video_url: { type: string, description: "The join link the calendar created. Absent until the calendar accepts the invitation, or when it could not create one." }
+    MeetingProposal:
+      type: object
+      required: [id, subject, duration_minutes, options, url, created_at, expires_at]
+      properties:
+        id: { type: string, format: uuid, description: The proposal's activity id; archive it to withdraw the link. }
+        subject: { type: string }
+        duration_minutes: { type: integer }
+        options:
+          type: array
+          description: The offered times. Empty for a personal link where the guest picks any open time.
+          items:
+            type: object
+            required: [start, end]
+            properties:
+              start: { type: string, format: date-time }
+              end: { type: string, format: date-time }
+        url: { type: string, description: "The personal link, for copying or resending." }
+        created_at: { type: string, format: date-time }
+        expires_at: { type: string, format: date-time }
     MeetingInvitationChange:
       type: object
       required: [action, version]
@@ -43929,7 +44792,7 @@ components:
           type: array
           uniqueItems: true
           description: Distinct configured provider keys, sorted; fake is never returned.
-          items: { type: string, enum: [anthropic, gemini, ollama, openai, openai_compatible, vllm] }
+          items: { type: string, enum: [anthropic, gemini, gemini_vertex, ollama, openai, openai_compatible, vllm] }
 
     AiProfile:
       type: object
@@ -43944,7 +44807,7 @@ components:
           type: array
           uniqueItems: true
           description: Distinct configured provider keys, sorted; fake is never returned.
-          items: { type: string, enum: [anthropic, gemini, ollama, openai, openai_compatible, vllm] }
+          items: { type: string, enum: [anthropic, gemini, gemini_vertex, ollama, openai, openai_compatible, vllm] }
         configured_models:
           type: array
           description: Authenticated tier-to-model bindings. Credentials and endpoints never appear here.
@@ -43961,9 +44824,19 @@ components:
           x-enum-varnames: [AssistantModelTierLocalSmall, AssistantModelTierCheapCloud, AssistantModelTierPremium, AssistantModelTierFrontier, AssistantModelTierLocalLarge]
         provider:
           type: string
-          enum: [anthropic, gemini, ollama, openai, openai_compatible, vllm]
-          x-enum-varnames: [AssistantModelProviderAnthropic, AssistantModelProviderGemini, AssistantModelProviderOllama, AssistantModelProviderOpenAI, AssistantModelProviderOpenAICompatible, AssistantModelProviderVLLM]
+          enum: [anthropic, gemini, gemini_vertex, ollama, openai, openai_compatible, vllm]
+          x-enum-varnames: [AssistantModelProviderAnthropic, AssistantModelProviderGemini, AssistantModelProviderGeminiVertex, AssistantModelProviderOllama, AssistantModelProviderOpenAI, AssistantModelProviderOpenAICompatible, AssistantModelProviderVLLM]
         model: { type: string }
+
+    ServiceStatus:
+      type: object
+      description: The fixed answer of `GET /status`.
+      additionalProperties: false
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [ok]
 
     AuthCapabilities:
       type: object
@@ -44200,6 +45073,28 @@ components:
             how much.
         landing: { $ref: '#/components/schemas/ForecastLanding' }
         sufficiency: { $ref: '#/components/schemas/ForecastSufficiency' }
+        snapshots:
+          type: array
+          items: { $ref: '#/components/schemas/ForecastSnapshotRef' }
+          description: >-
+            The frozen states of this period and population, newest first: the ten most recent
+            plus the period's first, so a reader has both the latest and the "since the period
+            opened" anchor. These are the ids `getForecastMovement` takes in `from` and `to`.
+            Only whole-pipeline snapshots are listed; one restricted to a single pipeline covers
+            a different population. Empty when nothing was frozen, and always empty for
+            `managed_teams`, which nothing is frozen against.
+      additionalProperties: false
+    ForecastSnapshotRef:
+      type: object
+      description: One frozen forecast, by the handle a movement read takes.
+      required: [id, taken_at, trigger]
+      properties:
+        id: { type: string, format: uuid }
+        taken_at: { type: string, format: date-time }
+        trigger:
+          type: string
+          enum: [daily, call, period_close, recheck]
+          description: Why it was taken.
       additionalProperties: false
     ForecastLanding:
       type: object
@@ -45565,7 +46460,7 @@ components:
             installation and currency settings beside it.
         reporting:
           type: boolean
-          description: Whether analytics.performance_enabled makes saved reporting available.
+          description: Reporting is always available. Retained for compatibility with older clients.
         lists:
           type: boolean
           description: >
@@ -46655,6 +47550,21 @@ components:
             filters offer, not every type `taggable` admits. It is what tells a searcher
             whether the word is worth opening before they open it. Null on every other hit
             type, and null when no count was taken.
+        works_at:
+          allOf: [{ $ref: '#/components/schemas/SearchHitEmployer' }]
+          readOnly: true
+          nullable: true
+          description: >
+            On a `contact` hit found through `with_employees`: the company it currently works at
+            that the query matched, which is why the hit is here — the contact's own text did not
+            match. When the contact works at several matching companies, the best-matching one.
+            Null on every other hit, a contact the query matched by its own text included.
+        logo_url:
+          type: [string, 'null']
+          readOnly: true
+          description: >
+            For a `company` hit only: the company's logo, the same URL its record carries as
+            `Company.logo_url`. Absent when it has none, and on every other hit type.
         is_partner:
           type: [boolean, 'null']
           description: >
@@ -46689,12 +47599,29 @@ components:
             means UNKNOWN rather than authoritative — this field is never guessed. A client
             must accept all four and must not expect any but the first.
 
+    SearchHitEmployer:
+      type: object
+      description: >-
+        A company a contact currently works at, by any current employment — the same reading
+        as the company's own roster, not only the contact's primary employer.
+      required: [company_id, company_name]
+      properties:
+        company_id: { type: string, format: uuid }
+        company_name: { type: string }
+
     SearchResponse:
       type: object
       required: [data, page]
       properties:
         data: { type: array, items: { $ref: '#/components/schemas/SearchResult' } }
         page: { $ref: '#/components/schemas/PageInfo' }
+        types_with_more:
+          type: array
+          items: { type: string, enum: [contact, company, deal, activity, lead, project, product, offer_template, tag] }
+          description: >
+            On a `per_type` answer only: the types that matched more hits than the page carries
+            for them. Absent on a ranked answer, whose `page.has_more` says the same thing for
+            the list as a whole.
 
     ContextEntityRef:
       type: object
@@ -48229,7 +49156,7 @@ components:
       required: [id, kind, status, proposed_by, created_at]
       properties:
         id: { type: string, format: uuid }
-        kind: { type: string, description: 'coldstart | send_email | advance_deal | promote_lead | overnight | transcript_proposal.' }
+        kind: { type: string, description: 'Examples: coldstart | send_email | advance_deal | promote_lead | overnight | deal_follow_up | transcript_proposal | commitment_task.' }
         status: { type: string, enum: [pending, approved, rejected, expired] }
         proposal_id: { type: [string, 'null'], format: uuid, description: 'For kind=coldstart, the ColdStartProposal this approval accepts (links the staged proposal to its approval item).' }
         proposed_by: { type: string, description: 'agent:<id> / connector:<n> that staged this.' }
@@ -50589,6 +51516,21 @@ components:
           type: boolean
           description: Only with a document. Marks the thread as one the seller still owes an answer on.
         source: { type: string, description: 'Provenance. Required on the seller edge; a buyer''s comment always carries the credential''s own value. `manual` for someone writing through this product.' }
+        request_id:
+          type: string
+          format: uuid
+          description: |
+            An id the CLIENT mints for this attempt, so a repeated delivery of the
+            same attempt lands once.
+
+            Repeating an attempt answers with the SAME thread rather than an error: a
+            double-click, a mobile retry and a proxy replay are one attempt arriving
+            twice. Scoped to the room, so an id only has to be unique within the one
+            being written to. Omit it and no deduplication applies.
+
+            Mint it fresh per attempt rather than deriving it from the message —
+            saying the same thing twice on purpose is allowed, and a key derived from
+            the text would refuse the second one.
       additionalProperties: false
 
     PostDealRoomCommentRequest:
@@ -50597,6 +51539,21 @@ components:
       properties:
         body: { type: string, minLength: 1 }
         source: { type: string }
+        request_id:
+          type: string
+          format: uuid
+          description: |
+            An id the CLIENT mints for this attempt, so a repeated delivery of the
+            same attempt lands once.
+
+            Repeating an attempt answers with the SAME thread rather than an error: a
+            double-click, a mobile retry and a proxy replay are one attempt arriving
+            twice. Scoped to the room, so an id only has to be unique within the one
+            being written to. Omit it and no deduplication applies.
+
+            Mint it fresh per attempt rather than deriving it from the message —
+            saying the same thing twice on purpose is allowed, and a key derived from
+            the text would refuse the second one.
       additionalProperties: false
 
     DealRoomCredentialRequest:
@@ -50796,7 +51753,7 @@ components:
         fx_rate_to_base: { type: [string, 'null'], readOnly: true, description: 'Native→base, frozen at send (RT-PR-C2). Decimal-as-string to avoid float rounding.' }
         fx_rate_date: { type: [string, 'null'], format: date, readOnly: true }
         template_id: { type: [string, 'null'], format: uuid, description: The offer_template used for locale/layout at render time; unset falls back to the workspace's default template for the offer's locale. }
-        pdf_asset_ref: { type: [string, 'null'], description: 'Rendered PDF ref, set by renderOffer (B-E03.22/WP7).' }
+        pdf_asset_ref: { type: [string, 'null'], description: 'Rendered PDF ref, set by renderOffer. Null, as are buyer_company_id and buyer_snapshot, for a reader who cannot open the buyer company; cleared when a draft''s buyer changes.' }
         accepted_at: { type: [string, 'null'], format: date-time, readOnly: true }
         ai_generated: { type: boolean, readOnly: true, default: false, description: 'True only on the response of the regenerate call that produced this draft revision; false on every other read — provenance is stamped on the drafting call itself, not persisted across future reads.' }
         ai_disclosure: { type: [string, 'null'], readOnly: true, description: 'The provenance notice shown to the drafting user, marking the text as model-written so they review it before sending; non-null iff ai_generated=true. Carried beside the draft rather than inside body, and not appended to it on send.' }
@@ -50890,7 +51847,16 @@ components:
       type: object
       description: Header-field patch; allowed only while status=draft (422 offer_not_draft otherwise). Totals are derived and not settable (422).
       properties:
-        currency: { type: string, pattern: '^[A-Z]{3}$' }
+        currency:
+          type: string
+          pattern: '^[A-Z]{3}$'
+          description: |
+            Refused while the draft carries priced lines. A line's price is an integer with no
+            unit of its own, so moving the currency would leave every one of them where it is
+            and read it in the new one — a silent reprice of a document a buyer will sign.
+            Remove the lines and re-enter them in the new currency, or start a new offer in it.
+            Changing the currency on a draft with no priced lines is free, and re-sending the
+            currency the offer already holds is not a change.
         buyer_company_id: { type: [string, 'null'], format: uuid }
         valid_until: { type: [string, 'null'], format: date }
         template_id: { type: [string, 'null'], format: uuid }
@@ -52506,9 +53472,10 @@ components:
           type: string
           format: uuid
           description: |
-            Whose record a `meeting` row's brief is read on. Sent only for
-            `source: meeting`, and only where the meeting names a contact this caller may
-            see.
+            Who a meeting is with: the first attendee by name who holds no seat here, is not
+            employed by the installation's own company, and is a contact this caller may
+            see. Sent by `source: meeting` and `source: meeting_outcome`. On a `meeting`
+            row it is also whose record the brief is read on.
 
             It is not the row's SUBJECT, which is the meeting itself — the row is about
             the appointment, and the brief happens to be reached through somebody's page:
@@ -52714,6 +53681,23 @@ components:
             So absence does not mean "covered". It means this endpoint is making no claim,
             and a client MUST NOT read it as one. See `WorklistDealFacts.no_champion`,
             which carries the same fact out under the same rule.
+        champion_unknown:
+          type: [boolean, 'null']
+          description: |
+            `true` when an imported deal leaves its champion unsaid: no seat the caller
+            can read holds the champion role, whether no seat was recorded, a seat is
+            withheld from the caller, or the seats carry other roles. The source system
+            may have had no such role, so this is not a finding that nobody is carrying
+            the deal. Never sent beside `no_champion`, and `false` is never sent.
+
+            Absent on a deal created here, on a deal whose champion is named, and when
+            the server did not assess coverage.
+        no_next_step:
+          type: [boolean, 'null']
+          description: >-
+            `true` when the deal carries no open task of its own, so nothing is
+            planned to move it. Never `false`: absent means a step is planned or
+            the server did not check.
 
     AttentionRelationshipFacts:
       type: object
@@ -53969,8 +54953,10 @@ components:
             Whose record a `meeting` row's brief is read on, carried out from
             `AttentionItem.with_contact`.
 
-            Sent only for `source: meeting`, and only where the meeting names a contact
-            this caller may see. It is not the row's SUBJECT — the row is about the
+            Sent for `source: meeting` and `source: meeting_outcome`, and only where the
+            meeting names a contact this caller may see. On a `meeting_outcome` row no
+            move opens a brief, so the field only says who the meeting was with, as
+            `contact` does. It is not the row's SUBJECT — the row is about the
             appointment — and it exists because the brief is not a page of its own: it
             opens as `?prep=<activity>` on a contact's record, so the address needs both
             ids and the subject carries only one.
@@ -53980,6 +54966,16 @@ components:
             attendees are all withheld both produce, and both mean the same thing here.
         contact:
           $ref: '#/components/schemas/WorklistContactFacts'
+        host:
+          allOf:
+            - $ref: '#/components/schemas/WorklistOwner'
+          description: |
+            Who hosted the meeting a `meeting` or `meeting_outcome` row is about: the
+            seat whose calendar it came off. `kind` is always `user`.
+
+            A fact about the meeting, kept apart from `owner`, which says who answers
+            for the row. Absent where no calendar claims the meeting. `label` follows
+            `WorklistOwner.label`: absent where this caller may not resolve the name.
         due_at: { type: string, format: date-time, description: 'When this is due, or when the meeting starts.' }
         overdue: { type: boolean, description: 'Past due at the read instant, resolved server-side so every surface agrees.' }
         due_group:
@@ -54512,7 +55508,7 @@ components:
       properties:
         kind:
           type: string
-          enum: [pinned, buyer_wrote_last, waiting_days, overdue, due_today, closing_soon, expected_revenue, material, below_material, quiet_days, no_champion, promised, approved_and_failed, blocks_customer_work, routine, repeated_failure, legal_deadline, meeting_soon, meeting_unprepared, response_overdue, response_due_soon, unassigned, stale, no_reply_history, asks_nothing, addressed_elsewhere, outcome_unrecorded]
+          enum: [pinned, buyer_wrote_last, waiting_days, overdue, due_today, closing_soon, expected_revenue, material, below_material, quiet_days, no_champion, champion_unknown, promised, approved_and_failed, blocks_customer_work, routine, repeated_failure, legal_deadline, opened_overdue, earlier_requests, first_asked, no_next_step, meeting_soon, meeting_unprepared, response_overdue, response_due_soon, unassigned, stale, no_reply_history, asks_nothing, addressed_elsewhere, outcome_unrecorded]
           description: 'Which fact this is. The client writes the phrase.'
         value: { $ref: '#/components/schemas/WorklistValue' }
 
@@ -54549,11 +55545,12 @@ components:
         client's to apply.
       required: [kind]
       properties:
-        kind: { type: string, enum: [date, money, days, level, score, none] }
+        kind: { type: string, enum: [date, money, days, level, score, count, none] }
         date: { type: string, format: date-time }
         minor: { type: integer, format: int64, description: 'Money in minor units of `currency`.' }
         currency: { type: string, pattern: '^[A-Z]{3}$' }
         days: { type: integer }
+        count: { type: integer, minimum: 1, description: 'How many of something, such as earlier requests folded into one card.' }
         level: { type: integer, minimum: 0, maximum: 6 }
         score:
           type: number
@@ -54722,6 +55719,16 @@ components:
         label: { type: string, description: "The contact's display name. Absent when the caller may not read the contact." }
         touch:
           $ref: '#/components/schemas/WorklistContactTouch'
+        employer:
+          allOf:
+            - $ref: '#/components/schemas/ContactEmployer'
+          description: |
+            Where the contact works today, so a meeting row says which account the
+            meeting was with. Sent on `meeting` and `meeting_outcome` rows only: every
+            other row's title already names its record.
+
+            Absent where the contact has no current employer, or where this caller may
+            not read the employment or the company. Absent never means "works nowhere".
 
     WorklistContactTouch:
       type: object
@@ -54785,7 +55792,9 @@ components:
 
             Absence therefore says nothing either way. A client MUST NOT render it as
             "nobody is carrying this", and MUST NOT render it as "somebody is": the four
-            cases are indistinguishable on the wire by design.
+            cases are indistinguishable in this field by design. An imported deal whose
+            readable committee names no champion carries `champion_unknown` in the item's
+            `because` instead, which says so without telling those cases apart.
 
     WorklistSourceUnavailable:
       type: object

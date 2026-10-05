@@ -16,8 +16,9 @@ import {
   type ModelCatalogue,
   unkeyedProviders,
   useAiModelCatalogue,
+  withBorrowedRows,
 } from "./ai-models";
-import { useProviderKeys } from "./ai-provider-keys";
+import { useProviderKeys } from "./ai-provider-key-hooks";
 import { DECISION_PROVIDERS } from "./ai-routing-fields";
 import { type Lane, TiersTable } from "./ai-routing-lane";
 import { ROUTING_KEY, type RoutingRead, useRouting } from "./ai-routing-query";
@@ -150,6 +151,7 @@ function ModelTiers({
   // Which vendors hold a credential, joined into the rows and the editor. Same
   // grant as this card, so no second denial to answer.
   const keys = useProviderKeys(true);
+  const sheet = withBorrowedRows(catalogue.data, keys.data?.providers);
   const canDiagnose = useCan("ai_diagnostics", "read");
   const canBudget = useCan("ai_budget", "read");
   const health = useAiHealth(canDiagnose).data;
@@ -236,7 +238,7 @@ function ModelTiers({
         lanes={lanes}
         health={health}
         features={features}
-        catalogue={catalogue.data}
+        catalogue={sheet}
         unkeyed={unkeyed}
         canManage={canManage}
         onAddDecisions={routing.decisions ? undefined : editDecisions}
@@ -247,7 +249,7 @@ function ModelTiers({
           initial={editing.initial}
           label={editing.label}
           keys={keys.data?.providers}
-          catalogue={catalogue.data}
+          catalogue={sheet}
           canManage={canManage}
           onClose={() => setEditing(null)}
         />
@@ -382,24 +384,27 @@ function startableProviders(
 // The stored profile is kept when it is one: an operator who declared eu_hosted
 // before binding anything must not be moved off it by a first click. A fresh
 // installation stores an empty profile, which is no member of the enum, and
-// then `cloud_frontier` — what both cloud presets need — is written instead.
+// then the preset's own profile is written instead.
 export function firstBinding(
   id: keyof typeof SETUP_PROVIDERS,
   stored: string,
 ): Routing {
   const p = SETUP_PROVIDERS[id];
+  const host = p.baseUrl ? { base_url: p.baseUrl } : {};
   const lane = {
     provider: p.provider,
     model: p.chatModel,
-    ...(p.baseUrl ? { base_url: p.baseUrl } : {}),
+    ...host,
+    ...(p.location ? { location: p.location } : {}),
   };
   return {
-    profile: isProfile(stored) ? stored : "cloud_frontier",
+    profile: isProfile(stored) ? stored : p.profile,
     tiers: Object.fromEntries(TIER_ORDER.map((t) => [t, { ...lane }])),
     embeddings: {
       provider: p.provider,
       model: p.embedModel,
-      ...(p.baseUrl ? { base_url: p.baseUrl } : {}),
+      ...host,
+      ...(p.embedLocation ? { location: p.embedLocation } : {}),
     },
   };
 }
@@ -418,11 +423,9 @@ function sheetAsOf(catalogue: ModelCatalogue): string | null {
   );
 }
 
-const PROFILES: readonly Routing["profile"][] = [
-  "eu_hosted",
-  "sovereign",
-  "cloud_frontier",
-];
+// A declared mirror of the server's profiles, held both ways by
+// backend/gates/frontendproviders_test.go, which reads this `[…] as const` form.
+const PROFILES = ["eu_hosted", "sovereign", "cloud_frontier"] as const;
 
 function isProfile(value: string): value is Routing["profile"] {
   return PROFILES.some((p) => p === value);

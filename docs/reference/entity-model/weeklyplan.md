@@ -37,6 +37,7 @@ The 2 tables owned by `weeklyplan`, as the migrations build them. [Back to the e
 - `weekly_plan_outcome_matches_status` — `CHECK ((((status = 'closed') = (commitments_due IS NOT NULL)) AND ((commitments_due IS NULL) = (commitments_kept IS NULL))))`
 - `weekly_plan_risks_bounded` — `CHECK (((risks IS NULL) OR (length(risks) <= 2000)))`
 - `weekly_plan_status_check` — `CHECK ((status = ANY (ARRAY['open', 'closed'])))`
+- `weekly_plan_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
@@ -86,6 +87,7 @@ The 2 tables owned by `weeklyplan`, as the migrations build them. [Back to the e
 - `weekly_plan_commitment_response_bound` — `CHECK ((length(manager_response) <= 2000))`
 - `weekly_plan_commitment_response_whole` — `CHECK ((((btrim(manager_response) = '') = (manager_user_id IS NULL)) AND ((manager_user_id IS NULL) = (responded_at IS NULL))))`
 - `weekly_plan_commitment_state_check` — `CHECK ((state = ANY (ARRAY['open', 'done', 'missed', 'dropped'])))`
+- `weekly_plan_commitment_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 

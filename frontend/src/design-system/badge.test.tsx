@@ -94,7 +94,7 @@ describe("Badge", () => {
       "badge-wrap",
     );
     expect(badgeFor("Open")).not.toHaveClass("badge-wrap");
-    const css = readFileSync(join(here, "atoms.css"), "utf8");
+    const css = readFileSync(join(here, "badge.css"), "utf8");
     expect(css).toMatch(
       /\.badge-wrap,\s*\.badge-wrap \.badge-label\s*\{\s*white-space:\s*normal;/,
     );
@@ -182,7 +182,7 @@ describe("Badge", () => {
   // same edge transparent, so mixed variants share a height; nothing else draws
   // an edge. The type is one declaration and the rest is the root's.
   describe("its stylesheet", () => {
-    const sheet = readFileSync(join(here, "atoms.css"), "utf8").replace(
+    const sheet = readFileSync(join(here, "badge.css"), "utf8").replace(
       /\/\*[\s\S]*?\*\//g,
       "",
     );

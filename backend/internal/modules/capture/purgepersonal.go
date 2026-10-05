@@ -176,7 +176,7 @@ func SelectPersonalPurgeTx(
 	limitAt := "$" + strconv.Itoa(len(args))
 	rows, err := tx.Query(ctx, `
 		SELECT a.id,
-		       `+withheldReason(shielded, floor.shieldedAs(), false)+` AS withheld,
+		       `+withheldReason(shielded, floor.shieldedAs())+` AS withheld,
 		       (SELECT count(*) FROM capture_import o WHERE o.activity_id = a.id) AS importers
 		  FROM activity a
 		  JOIN capture_import i ON i.activity_id = a.id AND i.user_id = $3
@@ -218,6 +218,12 @@ func SeatsWithPersonalMailDueTx(
 		  JOIN capture_pending_counterparty p
 		    ON p.email = a.counterparty_email AND p.owner_id = i.user_id
 		 WHERE `+personalPurgeDue("i.user_id")+`
+		   -- Nor is a message an open request is about. The selector reports
+		   -- those rather than filtering them, which is right for a receipt and
+		   -- wrong here: a seat whose every due message is held has no work, and
+		   -- censusing it hands the sweep a seat it finds nothing to destroy for
+		   -- on every pass.
+		   AND NOT `+underAnOpenRequest+`
 		   -- A restricted message is not work: the selector reports it as
 		   -- withheld rather than destroying it, so a seat whose only due mail
 		   -- is restricted has nothing for this sweep to do. The per-seat

@@ -128,11 +128,9 @@ func (m *Meter) RungHealthReport(ctx context.Context) ([]RungHealth, error) {
 		rows, err := tx.Query(ctx, `
 			WITH attempts AS (
 			  SELECT tier, occurred_at, attempt, id, latency_ms,
-			         (error_sentinel IS NOT NULL
-			          AND error_sentinel <> ''
-			          AND NOT error_sentinel = ANY($2)) AS failed,
+			         `+failedAttemptSQL("ac", 2)+` AS failed,
 			         coalesce(error_sentinel, '') AS sentinel
-			    FROM ai_call
+			    FROM ai_call ac
 			   WHERE occurred_at >= $1
 			     AND NOT cache_hit
 			     AND tier <> ''

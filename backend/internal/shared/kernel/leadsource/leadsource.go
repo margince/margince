@@ -1,22 +1,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Package leadsource says which lead sources are a RECORD rather than a
-// request to act.
-//
-// A lead the product read off a public web page is a note that the contact
-// exists. Nobody wrote in, nobody asked for anything, and nothing is owed —
-// so the automations that turn a new lead into somebody's work must not fire
-// for one.
-//
-// It lives in the kernel because two modules ask it and a module never imports
-// a sibling: `automation` decides whether to mint the follow-up task, and
-// `contacts` decides whether to assign an owner. Spelled in one of them, the
-// other would grow a second copy, and the two would answer differently the
-// first time a source was added.
+// Package leadsource distinguishes records imported or discovered in bulk from
+// live intake. A historical record does not create a new follow-up obligation.
 package leadsource
 
-import "slices"
+import (
+	"slices"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+)
 
 // The source_system values a captured lead carries. Named rather than spelled
 // at each test: these strings are written by the capture path and read by two
@@ -46,16 +39,11 @@ var passive = []string{SiteRead, Crawl}
 // do. Failing open here matches the automations' own defensive reading of a
 // missing payload.
 func IsPassiveDiscovery(sourceSystem string) bool {
-	return slices.Contains(passive, sourceSystem)
+	return provenance.ImporterNamespace(sourceSystem) || slices.Contains(passive, sourceSystem)
 }
 
-// PassiveDiscoverySources is the same set for a caller that has to ask the
-// question of many rows at once — a SQL sweep binding it as one parameter
-// rather than reading each payload.
-//
-// Cloned, so a caller cannot rewrite the rule for everybody else by holding
-// onto the slice: this set decides whether work is minted and whether a breach
-// is escalated, and neither reader owns it.
+// PassiveDiscoverySources returns the named discovery sources. SQL readers
+// exclude the import namespace separately through provenance's shared prefix.
 func PassiveDiscoverySources() []string {
 	return slices.Clone(passive)
 }

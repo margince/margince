@@ -82,7 +82,6 @@ func sweepInsertOpts() *river.InsertOpts {
 // Embedder registers nothing for the drift sweep and anyway for a reindex —
 // which is why the posture is stated per kind and never per field.
 type JobRunnerConfig struct {
-	ReportingEnabled bool
 	// ListsEnabled is lists.enabled: off, the Live List check records nothing.
 	ListsEnabled bool
 	// TestOnly is jobs.Config.TestOnly, carried here because jobtest boots its
@@ -90,6 +89,12 @@ type JobRunnerConfig struct {
 	// what River does with it and why it keeps River's own name. Production
 	// leaves it false; TestJobRunnerConfigIsNeverSetInProduction holds that.
 	TestOnly bool
+	// DrainWindow is jobs.Config.SoftStopTimeout: how long a job already
+	// running when the runner stops keeps its work context. Zero leaves the
+	// runner's stop hard — every running job's work context is cancelled the
+	// moment the context the runner was started under is — which only a test
+	// harness wants.
+	DrainWindow time.Duration
 	// SendPacing bounds how fast one mailbox transmits and how long a
 	// delivery may be deferred before it parks; the zero value takes the
 	// documented defaults (SendPacing.withDefaults).
@@ -176,6 +181,9 @@ type JobRunnerConfig struct {
 	// could only fail every job it enqueued. Declared by omission, the posture
 	// GmailRegistry already takes.
 	ChannelVault keyvault.Vault
+	// AIKeyVault holds the sealed vendor keys the price sweep lists models with.
+	// Nil lists with the environment's keys only; the sweep still registers.
+	AIKeyVault keyvault.Vault
 	// ChannelAPI is the Telegram Bot API seam the poller dials out through. Nil
 	// takes the real client, which is what every process role passes; the
 	// acceptance suites substitute a fake, because a poller left on the real
@@ -379,10 +387,11 @@ func NewJobRunner(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*j
 	}
 
 	return jobs.New(pool, jobs.Config{
-		Queues:       jobQueues(),
-		Workers:      reg.workers,
-		PeriodicJobs: periodic,
-		TestOnly:     cfg.TestOnly,
+		Queues:          jobQueues(),
+		Workers:         reg.workers,
+		PeriodicJobs:    periodic,
+		SoftStopTimeout: cfg.DrainWindow,
+		TestOnly:        cfg.TestOnly,
 	}, log)
 }
 
@@ -398,7 +407,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 	// them. The schedules that drive them are the list below, because a
 	// cadence is the declaration's and not the group's.
 	addModelLaneJobs(reg, pool, cfg, log)
-	addDatabaseOnlySweepJobs(reg, pool, log, cfg.BriefMail, cfg.ReportingEnabled)
+	addDatabaseOnlySweepJobs(reg, pool, log, cfg.BriefMail)
 	addCapturePipelineJobs(reg, pool, cfg, log)
 	addStoredObjectJobs(reg, pool, cfg, log)
 	addGmailCaptureJobs(reg, pool, cfg, log)
@@ -428,6 +437,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		addDealScoutJobs(reg, pool, cfg, log),
 		addListEvaluateJobs(reg, pool, cfg, log),
 		addFinanceJobs(reg, pool, cfg, log),
+		addAIPriceSyncJobs(reg, pool, cfg, log),
 		registerTelegramPoll(reg, pool, cfg, log),
 		// The composed extension jobs, if any. Empty on every vanilla process:
 		// the ext_ kinds and their ticks do not exist there at all.

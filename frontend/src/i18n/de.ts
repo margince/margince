@@ -232,6 +232,86 @@ export const de = {
   "reporting.redacted": "Datenschutzbereinigung angewandt",
   "reporting.withheld":
     "Einige Beiträge sind aufgrund deiner aktuellen Berechtigungen ausgeblendet.",
+  "scheduling.proposeHelp":
+    "Biete zwei oder drei Zeiten per E-Mail an. Nichts wird blockiert, bis eine gewählt ist.",
+  "scheduling.inviteHelp":
+    "Die Zeit steht schon fest. Die Kalendereinladung geht sofort raus.",
+  "scheduling.linkHelp":
+    "Dein Kontakt wählt eine freie Zeit. Der Link bucht einmal und läuft nach 7 Tagen ab.",
+  "scheduling.pickOffer": "Wähle zwei oder drei Zeiten zum Anbieten",
+  "scheduling.pickAgreed": "Wähle die vereinbarte Zeit",
+  "scheduling.openTimes": "Deine freien Zeiten",
+  "scheduling.guestPicks": "{name} wählt die Zeit",
+  "scheduling.guestPicksOne":
+    "Dein Kontakt bucht eine der freien Zeiten im Kalender.",
+  "scheduling.guest": "Dein Gast",
+  "scheduling.length": "Dauer",
+  "scheduling.minutes_one": "{count} Min.",
+  "scheduling.minutes_other": "{count} Min.",
+  "scheduling.previousWeek": "Vorherige Woche",
+  "scheduling.nextWeek": "Nächste Woche",
+  "scheduling.noFreeTime": "Keine freie Zeit",
+  "scheduling.review": "Prüfen",
+  "scheduling.details": "Details",
+  "scheduling.timesToOffer": "Angebotene Zeiten",
+  "scheduling.agreedTime": "Vereinbarte Zeit",
+  "scheduling.pickedOf_one": "{count} von 3",
+  "scheduling.pickedOf_other": "{count} von 3",
+  "scheduling.pickOfferEmpty": "Wähle 2 oder 3 Zeiten im Kalender.",
+  "scheduling.pickAgreedEmpty": "Wähle die vereinbarte Zeit im Kalender.",
+  "scheduling.removeTime": "{time} entfernen",
+  "scheduling.reviewTimes_one": "E-Mail prüfen · {count} Zeit",
+  "scheduling.reviewTimes_other": "E-Mail prüfen · {count} Zeiten",
+  "scheduling.pickTwo": "Wähle mindestens 2 Zeiten",
+  "scheduling.pickOne": "Wähle eine Zeit",
+  "scheduling.sendInviteAt": "Einladung senden · {time}",
+  "scheduling.createLinkReview": "Link erstellen und E-Mail prüfen",
+  "scheduling.connectFirst": "Verbinde zuerst einen Kalender",
+  "scheduling.proposeNote":
+    "Diese Zeiten bleiben in deinem Kalender frei, bis eine gewählt ist. Margince prüft vor der Buchung erneut.",
+  "scheduling.inviteNote":
+    "Wird aus deinem Kalender gesendet. Du siehst, wann der Kalender sie annimmt; die Antwort des Gasts kommt separat.",
+  "scheduling.linkNote":
+    "Du prüfst die E-Mail vor dem Versand. Der Link bucht einmal und läuft nach 7 Tagen ab.",
+  "scheduling.videoGoogle": "Google-Meet-Link hinzufügen",
+  "scheduling.videoTeams": "Microsoft-Teams-Link hinzufügen",
+  "scheduling.videoGeneric": "Videocall-Link hinzufügen",
+  "scheduling.videoHint": "Wird mit der Kalendereinladung erstellt.",
+  "scheduling.linkReady": "Link erstellt · läuft ab am {date}",
+  "scheduling.dayPast": "vergangen",
+  "scheduling.dayFull": "nichts frei",
+  "scheduling.linkReplaced":
+    "Du hast den Vorschlag geändert, deshalb bekommt er einen neuen Link. Der vorherige bleibt offen, bis du ihn unter „Termine“ beim Kontakt zurückziehst.",
+  "scheduling.bookWith": "Termin mit {name} buchen",
+  "scheduling.setupTitle":
+    "Buchung fertig einrichten · {done} von {total} erledigt",
+  "scheduling.stepCalendar": "Ein Kalender, der Einladungen senden kann",
+  "scheduling.stepHours": "Deine Zeiten und Zeitzone",
+  "scheduling.stepLink": "Dein Buchungslink ist aktiv",
+  "scheduling.stepDone": "Erledigt",
+  "scheduling.stepOpen": "Noch offen",
+  "scheduling.calendarTitle": "Kalender",
+  "scheduling.calendarIntro":
+    "Von hier gehen Einladungen raus, und hier wird deine belegte Zeit gelesen.",
+  "scheduling.availabilityTitle": "Verfügbarkeit",
+  "scheduling.defaultsTitle": "Standards für Termine",
+  "scheduling.defaultsIntro":
+    "Gilt für jeden neuen Termin. Beim Buchen kannst du sie ändern.",
+  "scheduling.videoDefaultGoogle":
+    "Neuen Terminen einen Google-Meet-Link hinzufügen",
+  "scheduling.videoDefaultTeams":
+    "Neuen Terminen einen Microsoft-Teams-Link hinzufügen",
+  "scheduling.videoDefaultGeneric":
+    "Neuen Terminen einen Videocall-Link hinzufügen",
+  "scheduling.videoDefaultHelp":
+    "Wird mit jeder Kalendereinladung erstellt, auch bei Buchungen über deinen Link. Beim Buchen kannst du ihn für einen einzelnen Termin abschalten.",
+  "scheduling.videoTeamsHelp":
+    "Benötigt ein Microsoft-365-Geschäfts- oder Schulkonto.",
+  "scheduling.locationFallback": "Gilt für Termine ohne Videocall.",
+  "scheduling.unsaved": "Du hast ungespeicherte Änderungen",
+  "scheduling.discard": "Verwerfen",
+  "scheduling.brand": "Firmenname und Logo",
+  "scheduling.copyBookingLink": "Buchungslink kopieren",
   "scheduling.back": "Zurück zu Margince",
   "scheduling.prepare": "Auf diesen Termin vorbereiten",
   "scheduling.timezone": "Zeitzone",
@@ -364,7 +444,7 @@ export const de = {
   "scheduling.hostName": "Dein öffentlicher Name",
   "scheduling.subject": "Termintitel",
   "scheduling.location": "Ort oder Besprechungslink",
-  "scheduling.duration": "Dauer in Minuten",
+  "scheduling.duration": "Termindauer",
   "scheduling.noticeHelp":
     "24 Stunden bedeutet mindestens einen vollen Tag im Voraus.",
   "scheduling.anchorBrand":
@@ -408,6 +488,59 @@ export const de = {
   "scheduling.publicUrlMissing":
     "Richte eine öffentliche Adresse für diese Installation ein, bevor du Buchungslinks teilst.",
   "scheduling.new": "Termin buchen",
+  "scheduling.backLink": "Zurück",
+  "scheduling.deliveryTitle": "Zustellung",
+  "scheduling.step.created": "Einladung erstellt",
+  "scheduling.step.sending": "Wird an den Kalender gesendet…",
+  "scheduling.step.sendingChange": "Neue Zeit wird an den Kalender gesendet…",
+  "scheduling.step.sendingCancel": "Absage wird an den Kalender gesendet…",
+  "scheduling.step.accepted": "Kalender hat die Einladung angenommen",
+  "scheduling.step.refused": "Kalender hat die Einladung nicht angenommen",
+  "scheduling.step.canceled": "Im Kalender abgesagt",
+  "scheduling.step.reply": "Antwort des Gasts ausstehend",
+  "scheduling.fact.video": "Videoanruf",
+  "scheduling.fact.location": "Ort",
+  "scheduling.fact.reminder": "Erinnerung",
+  "scheduling.videoPending":
+    "Der Link erscheint, sobald der Kalender die Einladung annimmt.",
+  "scheduling.videoMissing":
+    "Der Kalender hat keinen Videolink hinzugefügt. Füge ihn in deinem Kalender hinzu.",
+  "scheduling.openGoogleCalendar": "In Google Kalender öffnen",
+  "scheduling.openOutlookCalendar": "In Outlook-Kalender öffnen",
+  "scheduling.attentionTitle":
+    "Der Kalender hat die Einladung nicht angenommen",
+  "scheduling.retryHelp":
+    "Ein neuer Versuch sendet dieselbe Einladung, der Gast erhält also keine zweite.",
+  "scheduling.videoApp": "{app} · Link in deiner Einladung",
+  "scheduling.pickDay": "Tag auswählen",
+  "scheduling.changeTime": "Zeit ändern",
+  "scheduling.confirmAt": "{day}, {time} bestätigen",
+  "scheduling.suggestedTimes": "Vorgeschlagene Zeiten",
+  "scheduling.noTimesDay":
+    "An diesem Tag sind keine Zeiten frei. Wähle einen anderen Tag.",
+  "scheduling.noTimesMonth":
+    "In diesem Monat sind keine Zeiten frei. Versuche den nächsten Monat.",
+  "contact.meetings.copyBookingLink": "Meinen Buchungslink kopieren",
+  "contact.meetings.join": "Mit {app} teilnehmen",
+  "contact.meetings.joinCall": "Am Videoanruf teilnehmen",
+  "contact.meetings.noShow": "Nicht erschienen",
+  "contact.meetings.canceled": "Abgesagt",
+  "contact.meetings.today": "Heute",
+  "contact.meetings.tomorrow": "Morgen",
+  "contact.meetings.inDays_one": "In {days} Tag",
+  "contact.meetings.inDays_other": "In {days} Tagen",
+  "contact.meetings.waitingOn": "Warten auf {name}",
+  "contact.meetings.waitingOnReply": "Warten auf Antwort",
+  "contact.meetings.personalLink": "Persönlicher Link",
+  "contact.meetings.offeredTimes": "Vorgeschlagene Zeiten",
+  "contact.meetings.sentExpires": "Gesendet am {sent} · gültig bis {expires}",
+  "contact.meetings.resend": "Erneut senden",
+  "contact.meetings.withdraw": "Zurückziehen",
+  "contact.meetings.moreFor": "Weitere Aktionen für {subject}",
+  "contact.meetings.withdrawTitle": "Diese Einladung zurückziehen?",
+  "contact.meetings.withdrawBody":
+    "Der Link funktioniert nicht mehr, und der Gast kann darüber nicht mehr buchen.",
+  "contact.meetings.withdrawConfirm": "Einladung zurückziehen",
 
   "aiAdmin.allowance": "Monatliches KI-Kontingent",
   "aiAdmin.pool":
@@ -616,8 +749,6 @@ export const de = {
   "brief.changes.accept": "Annehmen",
   "brief.changes.accepted": "Angenommen",
   "brief.changes.undone": "Rückgängig gemacht",
-  "brief.changes.empty":
-    "In den letzten 24 Stunden wurden keine Änderungen in deinem Auftrag vorgenommen.",
   "brief.updates.title": "Updates",
   "brief.task.undated": "Kein Fälligkeitsdatum",
   "brief.readings.summary": "Arbeitsübersicht",
@@ -627,7 +758,7 @@ export const de = {
   "brief.readings.unavailable": "Nicht gezählt",
   "brief.readings.unavailable.urgent": "Quellen nicht verfügbar",
   "brief.readings.unavailable.meetings": "Kalender nicht verfügbar",
-  "brief.readings.unavailable.leads": "Lead-Quelle nicht verfügbar",
+  "brief.readings.unavailable.leads": "Aufgaben nicht verfügbar",
   "brief.readings.unavailable.decisions": "Quelle nicht verfügbar",
   "brief.feed.incomplete":
     "Keine Einträge geladen. Ein Teil der Arbeit konnte nicht geprüft werden.",
@@ -712,6 +843,12 @@ export const de = {
   "history.undo.confirmTitle": "Diese Änderung rückgängig machen?",
   "history.undo.confirmEdgeBody":
     "Damit ändert sich die Verknüpfung mit {other}. Beide Datensätze bleiben bestehen, nur die Verknüpfung zwischen ihnen ändert sich.",
+  "history.undo.confirmCreateBody":
+    "Der Datensatz wird archiviert. Über seinen Verlauf kannst du ihn zurückholen.",
+  "history.undo.confirmArchiveBody":
+    "Der Datensatz wird aus dem Archiv zurückgeholt.",
+  "history.undo.confirmPromoteBody":
+    "Der Kontakt wird wieder zum Lead. Hat die Umwandlung den Kontakt erst angelegt, wird er archiviert.",
   "history.undo.confirmBody_one":
     "{count} Feld wird auf seinen Wert vor dieser Änderung zurückgesetzt:",
   "history.undo.confirmBody_other":
@@ -940,6 +1077,8 @@ export const de = {
   "search.group.activity": "Aktivitäten",
   "search.group.lead": "Leads",
   "search.group.tag": "Tags",
+  "search.group.email": "E-Mails",
+  "search.group.showAllNamed": "Alle {group} anzeigen",
   "search.kind.contact": "Kontakt",
   "search.kind.company": "Unternehmen",
   "search.kind.partnerCompany": "Partnerunternehmen",
@@ -952,6 +1091,7 @@ export const de = {
   "search.kind.tag": "Tag",
   "search.filter.label": "Nur anzeigen",
   "search.filter.all": "Alle",
+  "search.filter.activity": "E-Mails und Aktivitäten",
   "search.pending": "Wird gesucht…",
   "search.tag.carriedBy_one": "{count} Datensatz mit diesem Tag",
   "search.tag.carriedBy_other": "{count} Datensätze mit diesem Tag",
@@ -960,6 +1100,7 @@ export const de = {
   "search.partner.badge": "Partner",
   "search.partner.open": "Partnerdatensatz öffnen",
   "search.partner.openNamed": "Partnerdatensatz öffnen für {name}",
+  "search.contact.worksAt": "Arbeitet bei {company}",
 
   "palette.aria": "Befehlspalette",
   "palette.placeholder": "Suchen oder Margince fragen",
@@ -1040,7 +1181,7 @@ export const de = {
   "record.archive": "Archivieren",
   "record.disqualify": "Disqualifizieren",
   "record.archiveConfirm":
-    "Diesen Datensatz archivieren? Das lässt sich nicht rückgängig machen.",
+    "Diesen Datensatz archivieren? Über seinen Verlauf kannst du ihn zurückholen.",
   "record.archived": "Archiviert",
   "record.archivedReadOnly":
     "Dieses Unternehmen ist archiviert und lässt keine Änderungen zu.",
@@ -1952,6 +2093,13 @@ export const de = {
   "co.next.overdue": "\u00dcberfällig",
   "co.next.due": "Fällig {when}",
   "co.next.undated": "Kein Fälligkeitsdatum",
+  "commitment.dismiss": "Verwerfen",
+  "commitment.quote": "„{quote}“",
+  "deal.watch.title": "Zusagen des Kunden",
+  "deal.watch.incomplete":
+    "Einige Zusagen dieses Unternehmens sind für dich nicht sichtbar.",
+  "deal.watch.more": "Die 25 dringendsten Zusagen; weitere sind offen.",
+  "deal.watch.source": "Nachricht öffnen",
   "co.work.closes": "Abschluss {date}",
   "co.brief.by.model": "Von Margince geschrieben",
   "co.brief.by.deterministic": "Aus CRM-Datensätzen zusammengestellt",
@@ -2048,6 +2196,7 @@ export const de = {
   "approval.field.to_stage": "Nach",
   "approval.kind.transcript_proposal":
     "Nächsten Schritt aus Transkript anlegen",
+  "approval.kind.commitment_task": "Aufgabe für eine Zusage anlegen",
   "approval.kind.fx_rate_proposal": "Wechselkurse aktualisieren",
   "approval.kind.disqualify_lead": "Lead disqualifizieren",
   "approval.kind.demote_lead": "Lead-Qualifizierung zurücknehmen",
@@ -3202,7 +3351,7 @@ export const de = {
   "deal.fxBase": "Basis {value} · Kurs {rate} vom {date}",
   "deal.archive": "Deal archivieren",
   "deal.archiveConfirm":
-    "Das Archivieren entfernt diesen Deal aus den offenen Deals. Das lässt sich hier nicht rückgängig machen.",
+    "Das Archivieren entfernt diesen Deal aus den offenen Deals. Über seinen Verlauf kannst du ihn zurückholen.",
   "deal.archivedReadOnly":
     "Dieser Deal ist archiviert und lässt keine Änderungen zu.",
   "deal.notYoursToChange":
@@ -3370,6 +3519,8 @@ export const de = {
   "offer.committedNet": "Verbindlicher Nettowert",
   "offer.edit": "Kopfdaten bearbeiten",
   "offer.currency": "Währung",
+  "offer.currencyFixedByLines":
+    "Die Währung ist festgelegt, sobald eine Position einen Preis hat: Bei einem Wechsel würde jeder vorhandene Preis als Betrag in der neuen Währung interpretiert. Entferne die Positionen, um die Währung zu ändern, oder erstelle ein neues Angebot.",
   "offer.buyerCompany": "Käuferunternehmen",
   "offer.buyerCompanyConfirm": "Käuferunternehmen: {name}",
   "offer.template": "Vorlage",
@@ -3726,7 +3877,7 @@ export const de = {
   "brief.readings.prepUnknown": "Vorbereitung nicht geprüft",
   "brief.readings.prepared": "Alle vorbereitet",
   "brief.readings.leads": "Akquise",
-  "brief.readings.leadsBasis": "Zugewiesen · kein Erstkontakt",
+  "brief.readings.leadsBasis": "Geplante Aufgaben für Leads",
   "brief.readings.leadsDue": "Nächste Fälligkeit {value}",
   "brief.rail": "Kontext",
   "brief.deck.later": "Später",
@@ -4522,7 +4673,6 @@ export const de = {
     "Nur offene Deals, in {currency} umgerechnet, ungewichtet und gewichtet",
   "analytics.currency": "Währung",
   "analytics.count": "Offene Deals",
-  "analytics.closedDeals": "Abgeschlossene Deals",
   "analytics.unweighted": "Dealwert",
   "analytics.weighted": "Wahrscheinlichkeitsgewichteter Wert",
   "analytics.priced": "{priced} von {total} bepreist",
@@ -4533,7 +4683,6 @@ export const de = {
   "analytics.sectionForecast": "Forecast",
   "analytics.sectionPipeline": "Pipeline-Analyse",
   "analytics.sectionPerformance": "Leistung",
-  "analytics.noClosedDeals": "Noch keine Deals abgeschlossen.",
   "analytics.sectionOutcomes": "Meine Ergebnisse",
   "analytics.sectionCoverage": "Datenabdeckung",
   "analytics.sectionDelivery": "Umsetzung",
@@ -4710,10 +4859,8 @@ export const de = {
   "analytics.meetingsCanceled": "Abgesagt",
   "analytics.outcomesOwnLensOnly":
     "Dieser Bereich misst die Datensätze eines einzelnen Nutzerkontos. Die breiteren Bereiche decken den Rest der Sicht ab.",
-  "analytics.openOutcomeDeals": "Deals mit Status {outcome} öffnen",
   "analytics.reportWinLoss": "Gewonnen und verloren",
   "analytics.reportStageAge": "Verweildauer je Phase",
-  "analytics.outcome": "Ergebnis",
   "analytics.won": "Gewonnen",
   "analytics.lost": "Verloren",
   "analytics.baseValue": "Deal-Wert · {currency}",
@@ -4729,13 +4876,6 @@ export const de = {
   "analytics.readingNone": "Keine",
   "analytics.readingLoading": "Wird geladen",
   "analytics.readingUnavailable": "Nicht verfügbar",
-  "analytics.medianDaysToClose": "Tage bis Abschluss (Median)",
-  "analytics.p75DaysToClose": "Tage bis Abschluss (P75)",
-  "analytics.medianDaysInStage": "Tage in der Phase (Median)",
-  "analytics.p75DaysInStage": "Tage in der Phase (P75)",
-  "analytics.tooFewForMedian": "Zu wenige Deals",
-  "analytics.days": "{days} T",
-  "analytics.unknownStage": "Frühere Phase",
   "analytics.share.open": "Ansicht teilen",
   "analytics.share.title": "Diese Ansicht teilen",
   "analytics.share.kindLegend": "Was der Link zeigt",
@@ -5144,6 +5284,7 @@ export const de = {
   "agent.fact.tools": "Tools",
   "agent.fact.sources": "Quellen",
   "agent.fact.offline": "offline",
+  "agent.fact.searchIndex": "Suchindex: {model}",
   "agent.fact.noCalls": "Noch keine Modellaufrufe",
   "agent.fact.hidden": "Für deine Rolle ausgeblendet",
   "agent.fact.noModel": "Kein Modell konfiguriert",
@@ -5555,7 +5696,7 @@ export const de = {
   "privacynotice.source.crmMigration":
     "Ihre Daten waren bereits in unserem bisherigen Kundensystem und wurden mit ihm hierher übertragen.",
   "privacynotice.source.mailboxHistory":
-    "Wir standen bereits per E-Mail mit Ihnen in Kontakt, bevor unser Postfach mit diesem System verbunden wurde.",
+    "Bevor unser Postfach mit diesem System verbunden wurde, enthielt es bereits E-Mails, die wir Ihnen geschickt haben, oder E-Mails, die wir erhalten haben und die auch an Sie gingen.",
   "privacynotice.source.purchasedOrImported":
     "Ihre Daten stammen aus einer gekauften oder importierten Liste.",
   "privacynotice.source.unknown":
@@ -8767,6 +8908,7 @@ export const de = {
     "Entscheidungsmodell für diese Aufgabe nicht zertifiziert",
   "aicalls.reason.decision_local_only":
     "Aufgabe nur lokal, Entscheidungsmodell nicht lokal",
+  "aicalls.reason.timeout": "Der Versuch davor lief in sein Zeitlimit",
   "aicalls.decisionAnswer": "antwortete {choice} mit {confidence}",
   "aicalls.callsLabel": "Letzte Aufrufe",
   "aicalls.filter.all": "Alle Aufgaben",
@@ -8779,6 +8921,8 @@ export const de = {
   "aicalls.detail.contextNone": "Kein Unternehmenskontext eingefügt",
   "aicalls.detail.attempts": "Versuche",
   "aicalls.detail.request": "Anfrage-Nutzdaten",
+  "aicalls.detail.settings": "Gesendete Anfrage-Einstellungen",
+  "aicalls.detail.servedBy": "bedient von {host}",
   "aicalls.detail.response": "Antwort-Nutzdaten",
   "aicalls.payload.off":
     "Die Erfassung der Nutzdaten ist ausgeschaltet. Setze ai.capture_payloads: true in margince.yaml, um Inhalte von Anfrage und Antwort aufzuzeichnen.",
@@ -9021,6 +9165,8 @@ export const de = {
     "Im Schlüsseltresor gespeichert und nicht auslesbar. Füge einen neuen Schlüssel ein, um ihn zu ersetzen. Er kann auch als {envVar} bereitgestellt werden.",
   "aiProviderKeys.absentHint":
     "Für diesen Anbieter gibt es keinen Schlüssel, daher können ihm zugeordnete Modelle nicht aufgerufen werden. Ein Schlüssel kann auch als {envVar} bereitgestellt werden.",
+  "aiProviderKeys.vertexRoleHint":
+    "Das Dienstkonto braucht die Rolle Vertex AI User (roles/aiplatform.user).",
   "aiProviderKeys.addPlaceholder": "API-Schlüssel einfügen",
   "aiProviderKeys.replacePlaceholder": "Neuen Schlüssel einfügen",
   "aiProviderKeys.add": "Hinzufügen",
@@ -9031,6 +9177,57 @@ export const de = {
   "aiProviderKeys.withheld":
     "Nur Admins und Operations mit der Berechtigung zum Ändern von Modellzuordnungen sehen, welche Anbieter einen Schlüssel haben.",
   "aiProviderKeys.remove": "Entfernen",
+  "aiProviderKeys.serviceAccountConfigured": "Dienstkonto-Schlüssel hinterlegt",
+  "serviceAccountKey.label": "Dienstkonto-Schlüssel (JSON)",
+  "serviceAccountKey.placeholder":
+    "Füge die ganze Schlüsseldatei ein, die Google Cloud heruntergeladen hat",
+  "serviceAccountKey.fileLabel": "Oder wähle die Schlüsseldatei",
+  "serviceAccountKey.fileEmpty":
+    "Zieh die .json-Schlüsseldatei hierher oder klicke, um sie zu wählen",
+  "serviceAccountKey.empty":
+    "Füge den Inhalt der Schlüsseldatei ein oder wähle die Datei.",
+  "serviceAccountKey.notJson":
+    "Das ist kein JSON. Füge die ganze Schlüsseldatei so ein, wie Google Cloud sie heruntergeladen hat.",
+  "serviceAccountKey.notServiceAccount":
+    "Dieses JSON ist kein Dienstkonto-Schlüssel: Es braucht type service_account, eine client_email und einen private_key.",
+  "serviceAccountKey.unreadable":
+    "Die Datei konnte nicht gelesen werden. Wähle sie noch einmal oder füge ihren Inhalt ein.",
+  "aiRouting.location.label": "Standort",
+  "aiRouting.location.help":
+    "Wo Google die Aufrufe dieser Strecke verarbeitet.",
+  "aiRouting.location.residentHelp":
+    "Das Profil eu_hosted lässt nur die als EU-resident markierten Standorte zu.",
+  "aiRouting.location.forbidden":
+    "Dieser Standort liegt außerhalb der EU, daher lehnt das Profil eu_hosted ihn ab. Wähle einen EU-residenten Standort.",
+  "aiRouting.location.loading":
+    "Google wird gefragt, welche Standorte dieser Schlüssel erreicht…",
+  "aiRouting.location.noKey":
+    "Noch ist kein Dienstkonto-Schlüssel hinterlegt. Füge ihn unter Modellanbieter-Schlüssel hinzu, dann erscheinen hier die Standorte, die er erreicht.",
+  "aiRouting.location.unreachable":
+    "Google hat nicht geantwortet, daher steht nur der gespeicherte Standort zur Wahl. Beim Speichern wird erneut geprüft.",
+  "aiRouting.location.noModels":
+    "{location} bedient keines der Modelle, die Google auflistet. Jede ID, die der Standort bedient, funktioniert trotzdem: eintippen.",
+  "aiRouting.location.option": "{group} · {name} ({id})",
+  "aiRouting.location.optionBare": "{group} · {id}",
+  "aiRouting.location.group.eu": "EU",
+  "aiRouting.location.group.us": "USA",
+  "aiRouting.location.group.other": "Andere",
+  "aiRouting.location.group.global": "Global",
+  "aiRouting.location.resident": "EU-resident",
+  "aiRouting.location.nonResident": "Nicht resident",
+  "aiRouting.location.notResident": "außerhalb der EU",
+  "aiRouting.probe.checking":
+    "Es wird geprüft, ob {location} dieses Modell bedient…",
+  "aiRouting.probe.served": "Wird in {location} bedient.",
+  "aiRouting.probe.notServed":
+    "Wird in {location} nicht bedient. Wähle ein anderes Modell oder einen anderen Standort.",
+  "aiRouting.probe.unverified":
+    "Konnte dieses Modell in {location} nicht prüfen. Beim Speichern wird Google erneut gefragt.",
+  "aiRouting.probe.cleared":
+    "{model} wird in {location} nicht bedient, daher wurde das Feld geleert.",
+  "firstRun.ai.euResidency": "EU-Datenresidenz",
+  "firstRun.ai.locationBeforeKey":
+    "EU (Multi-Region) hält jeden Aufruf in der EU. Andere Standorte stehen unter Einstellungen → KI, sobald der Schlüssel gespeichert ist.",
   "aiRouting.withheld":
     "Nur Admins und Operations mit der Berechtigung zum Ändern von Modellzuordnungen sehen, welche Modelle diese Installation verwendet.",
   "aiRouting.title": "Modellstufen",
@@ -9047,6 +9244,11 @@ export const de = {
   "aiRouting.dimensions.label": "Vektorbreite",
   "aiRouting.dimensions.help":
     "Leer lassen für den Standardwert des Anbieters. Werte außerhalb von 1 bis 2.000 werden abgelehnt.",
+  "aiRouting.provider.noHost":
+    "{provider} hat noch keinen Host. Lege ihn unter Anbieter fest, bevor du speicherst.",
+  "aiRouting.embeddingsServer.label": "Embedding-Server",
+  "aiRouting.embeddingsServer.help":
+    "Nur wenn das Embedding-Modell auf einem eigenen Server läuft. Leer nutzt den Host des Anbieters.",
   "aiRouting.baseUrl.placeholder": "https://openrouter.ai/api",
   "aiRouting.baseUrl.label": "Host",
   "aiRouting.baseUrl.help":
@@ -9058,10 +9260,12 @@ export const de = {
     "Vollständige Endpunkt-URL, unverändert verwendet. Erforderlich.",
   "aiRouting.baseUrl.placeholder.jevCompatible":
     "https://openrouter.ai/api/alpha/decisions",
+  "aiRouting.models.askingLocation":
+    "Google wird gefragt, welche Modelle {location} bedient …",
   "aiRouting.models.noKey":
     "Kein Schlüssel, daher keine Modellliste. Beliebige Modell-ID eingeben.",
   "aiRouting.models.noEndpoint":
-    "Host oben eintragen, um die Modellliste zu laden.",
+    "Lege den Host dieses Anbieters unter Anbieter fest, um seine Modellliste zu laden.",
   "aiRouting.models.profileForbids":
     "Dieses Profil erlaubt diesen Anbieter nicht.",
   "aiRouting.models.notPublished":
@@ -9087,6 +9291,10 @@ export const de = {
   "aiProviderKeys.modelCount_other": "{count} Modelle verfügbar",
   "aiProviderKeys.reason.authFailed":
     "Der Anbieter hat diesen Schlüssel abgelehnt. Prüfe ihn und ersetze ihn.",
+  "aiProviderKeys.reason.permissionDenied":
+    "Der Anbieter hat den Schlüssel akzeptiert, den Aufruf aber abgelehnt. Prüfe die Berechtigungen des Schlüssels.",
+  "aiProviderKeys.reason.permissionDeniedVertex":
+    "Google hat den Schlüssel akzeptiert, den Aufruf aber abgelehnt. Gib dem Dienstkonto die Rolle Vertex AI User (roles/aiplatform.user) und aktiviere die Vertex AI API im Projekt.",
   "aiProviderKeys.reason.rateLimited":
     "Der Anbieter drosselt diesen Schlüssel. Er kann trotzdem gültig sein; versuche es später erneut.",
   "aiProviderKeys.reason.noKey":
@@ -9127,7 +9335,8 @@ export const de = {
   "aiRouting.median": "Median {ms} ms",
   "aiTasks.title": "KI-Aufgaben",
   "aiTasks.intro":
-    "Nur lesbar: Die Stufe jeder Aufgabe ist vertraglich festgelegt. Jede Zeile zeigt die Stufe und das Modell, auf dem sie gerade läuft.",
+    "Bearbeite eine Aufgabe, um zu sehen, wie ihre Aufrufe liefen, und um Denkstufe und Zeitlimits festzulegen. Die Stufe ist vertraglich festgelegt; jede Zeile zeigt die Stufe und das Modell, auf dem sie gerade läuft.",
+  "aiTasks.whatItDoes": "{task}: was es tut",
   "aiTasks.decisionFirst": "Zuerst Entscheidungsmodell",
   "aiTasks.viewCalls": "Aufrufe ansehen",
   "workingHours.title": "Buchbare Zeiten",
@@ -9724,7 +9933,7 @@ export const de = {
   "contact.deals.untitled": "Deal ohne Titel",
   "contact.deals.noStage": "Noch keine Phase",
   "contact.meetings.upcoming": "Anstehend",
-  "contact.meetings.past": "Vergangene Termine",
+  "contact.meetings.past": "Stattgefundene Termine",
   "contact.meetings.noneBooked": "Keine anstehenden Termine.",
   "contact.meetings.noneLogged": "Keine Termine erfasst.",
   "contact.meetings.untitled": "Termin ohne Titel",
@@ -10690,6 +10899,7 @@ export const de = {
     "{urgent} dringend · {due} fällig · {inPlay} in Arbeit · {lower} Routine · {total} gesamt",
   "worklist.summary.noMiddle":
     "{urgent} dringend · {due} fällig · {lower} Routine · {total} gesamt",
+  "worklist.summary.wholeDay": "Ganzer Tag: {sentence}",
   "worklist.summary.split": "{today} heute · {review} zu prüfen",
   "worklist.completeness": "{shown} von {considered} angezeigt",
   "worklist.review.partial":
@@ -10725,8 +10935,8 @@ export const de = {
   "worklist.pane.openRow": "Details für {position}, {title} anzeigen",
   "worklist.pane.loading": "Datensatz wird geladen…",
   "worklist.pane.nothing": "Noch nichts erfasst.",
-  "worklist.pane.lastInbound": "Zuletzt eingehend",
-  "worklist.pane.lastOutbound": "Zuletzt ausgehend",
+  "worklist.pane.lastInbound": "Letzte Nachricht von diesem Kontakt",
+  "worklist.pane.lastOutbound": "Letzte Nachricht an diesen Kontakt",
   "worklist.pane.never": "Nie",
   "worklist.pane.company": "Unternehmen",
   "worklist.pane.role": "Rolle",
@@ -10772,6 +10982,9 @@ export const de = {
   "worklist.scope.all": "Alle",
   "worklist.owner.visibleLabel": "Ansicht",
   "worklist.manager.cancel": "Abbrechen",
+  "worklist.owner.wholeTeam": "Das ganze Team",
+  "worklist.owner.everyone": "Alle",
+  "worklist.owner.nobodyYet": "Noch niemand",
   "worklist.owner.mine": "Meine Worklist",
   "worklist.owner.backToMine": "Zurück zu deiner Worklist",
   "worklist.manager.reassign": "Neu zuweisen",
@@ -10851,8 +11064,8 @@ export const de = {
   "worklist.coaching.promises_one": "{name} hat {count} fällige Kundenzusage",
   "worklist.coaching.promises_other":
     "{name} hat {count} fällige Kundenzusagen",
-  "worklist.coaching.waiting_one": "{count} Kontakt wartet auf {name}",
-  "worklist.coaching.waiting_other": "{count} Kontakte warten auf {name}",
+  "worklist.coaching.waiting_one": "{count} Unterhaltung wartet auf {name}",
+  "worklist.coaching.waiting_other": "{count} Unterhaltungen warten auf {name}",
   "worklist.coaching.overdue_one": "{name} hat {count} überfällige Aufgabe",
   "worklist.coaching.overdue_other": "{name} hat {count} überfällige Aufgaben",
   "worklist.board.promises": "Fällige Zusagen",
@@ -10876,7 +11089,8 @@ export const de = {
   "worklist.hidden.clear":
     "Nichts ist ausgeblendet. Jeder wartende Kontakt erreicht eine Worklist.",
   "worklist.hidden.truncated":
-    "Die Zählung ist unvollständig. Jede Zahl ist ein Mindestwert.",
+    "Die Worklist ist an ihrer Lesegrenze. Die Zahlen sind Mindestwerte, und eine Regel mit „Nicht gezählt“ kann trotzdem Nachrichten zurückhalten. Öffne eine Regel, um sie zu sehen.",
+  "worklist.hidden.notCounted": "Nicht gezählt",
   "worklist.hidden.count": "{count} wartend",
   "worklist.hidden.pastHorizon": "Zu alt für die Worklist",
   "worklist.hidden.pastHorizon.detail":
@@ -10898,11 +11112,13 @@ export const de = {
     "Zurückgestellt oder als nicht zuständig markiert. Zurückgestellte Einträge kommen automatisch zurück.",
   "worklist.hidden.shown": "Angezeigt in der Worklist: {count}.",
   "worklist.hidden.rows.loading": "Zurückgehaltene Nachrichten werden geladen…",
+  "worklist.hidden.rows.outOfReach":
+    "Bei dieser Menge ließ sich keine Nachricht lesen. Es können trotzdem welche zurückgehalten werden.",
   "worklist.hidden.rows.empty": "Diese Regel hält gerade nichts zurück.",
   "worklist.filter.label": "Art der Arbeit",
   "worklist.filter.all": "Alle",
   "worklist.filter.customer_waiting": "Kontakt wartet",
-  "worklist.filter.leads": "Leads",
+  "worklist.filter.leads": "Akquise",
   "worklist.filter.deals_at_risk": "Gefährdete Deals",
   "worklist.filter.meetings": "Termine",
   "worklist.filter.tasks": "Aufgaben",
@@ -10948,13 +11164,24 @@ export const de = {
   "worklist.because.quiet_days": "verstummt",
   "worklist.because.quiet_days.value_one": "seit {value} Tag still",
   "worklist.because.quiet_days.value_other": "seit {value} Tagen still",
+  "worklist.because.no_next_step": "kein nächster Schritt geplant",
   "worklist.because.no_champion": "kein Champion",
+  "worklist.because.champion_unknown": "Champion unbekannt",
   "worklist.because.promised": "von dir zugesagt",
   "worklist.because.approved_and_failed": "freigegeben, aber nicht ausgeführt",
   "worklist.because.blocks_customer_work": "Kontakt wartet darauf",
   "worklist.because.routine": "Routinebereinigung",
   "worklist.because.repeated_failure": "wiederholter Fehler",
+  "worklist.because.earlier_requests": "frühere Anfragen in diesem Thread",
+  "worklist.because.earlier_requests.value_one":
+    "{value} frühere Anfrage in diesem Thread",
+  "worklist.because.earlier_requests.value_other":
+    "{value} frühere Anfragen in diesem Thread",
+  "worklist.because.first_asked": "früher angefragt",
+  "worklist.because.first_asked.value": "zuerst angefragt am {value}",
   "worklist.because.legal_deadline": "gesetzliche Frist läuft",
+  "worklist.because.opened_overdue":
+    "erst nach Fristablauf erfasst, aus importiertem Bestand",
   "worklist.because.meeting_soon": "beginnt bald",
   "worklist.because.meeting_unprepared": "nichts vorbereitet",
   "worklist.because.outcome_unrecorded": "kein Ergebnis erfasst",
@@ -11037,7 +11264,7 @@ export const de = {
   "noticeDuty.askConfirm": "Bestätigung der Daten anfragen",
   "noticeDuty.end": "Pflicht beenden…",
   "noticeDuty.sent":
-    "An {address} gesendet. Die Pflicht ist erfüllt, sobald die Nachricht verschickt ist.",
+    "An {address} gesendet. Der Eintrag verschwindet aus deiner Worklist, bleibt aber offen, bis die Nachricht zugestellt ist, und kommt zurück, falls die Nachricht nicht ankommt.",
   "noticeDuty.notSent":
     "Nicht gesendet: Diese Installation kann keine E-Mail an {address} senden.",
   "noticeDuty.ended":
@@ -11157,6 +11384,9 @@ export const de = {
   // nicht braucht.
   "worklist.verb.open_meeting_brief": "Termin vorbereiten",
   "worklist.deal.closes": "Abschluss {date}",
+  "worklist.when.held": "Fand statt: {when}",
+  "worklist.meeting.hostedBy": "Organisiert von {name}",
+  "worklist.meeting.hostedByYou": "Von dir organisiert",
   "worklist.when.starts": "Beginn: {when}",
   "worklist.when.due": "Fällig: {when}",
   "worklist.batch.system_incident_one":
@@ -11331,6 +11561,21 @@ export const de = {
   "aiRates.refresh.outcome.unreachable": "Nicht erreichbar",
   "aiRates.refresh.outcome.not_bound": "Nicht in Verwendung",
   "aiRates.refresh.outcome.not_listed": "Nicht in der Liste",
+  "aiRates.refresh.outcome.not_configured": "Kein Schlüssel",
+  "aiPriceSync.title": "Modellpreise",
+  "aiPriceSync.autoSync.label": "Täglich automatisch abgleichen",
+  "aiPriceSync.autoSync.help":
+    "Liest die Preise jedes eingerichteten Anbieters einmal täglich. Manuell gesetzte Preise bleiben erhalten.",
+  "aiPriceSync.sources": "Quellen: models.dev · OpenRouter",
+  "aiPriceSync.lastSynced": "Zuletzt abgeglichen {ago}",
+  "aiPriceSync.never": "Noch nicht abgeglichen",
+  "aiPriceSync.adminOnly": "Deine Rolle kann das nicht ändern.",
+  "aiPriceSync.withheld": "Modellpreise sind für dich nicht sichtbar.",
+  "aiRates.refresh.addedCount_one": "{count} Modell hinzugefügt",
+  "aiRates.refresh.addedCount_other": "{count} Modelle hinzugefügt",
+  "aiRates.refresh.keptCount_one": "{count} manueller Preis beibehalten",
+  "aiRates.refresh.keptCount_other": "{count} manuelle Preise beibehalten",
+  "aiProviders.setByHand": "Manuell",
   "aiRates.refresh.unlisted": "Nicht in der Liste des Anbieters: {ids}",
   "aiRates.refresh.updatedCount_one": "{count} Preis geschrieben",
   "aiRates.refresh.updatedCount_other": "{count} Preise geschrieben",
@@ -11346,7 +11591,35 @@ export const de = {
   "aiProviders.inUse": "In Verwendung",
   "aiProviders.unpriced": "{model} ist in Verwendung und hat keinen Preis.",
   "aiProviders.setPrice": "Preis festlegen",
-  "aiProviders.manage": "Verwalten",
+  "aiProviderSettings.service.choose": "Dienst auswählen",
+  "aiProviderSettings.service.label": "Dienst",
+  "aiProviderSettings.service.openrouter": "OpenRouter",
+  "aiProviderSettings.service.openrouterEu": "OpenRouter (EU)",
+  "aiProviderSettings.service.openrouterEu.note":
+    "Anfragen werden nur in der EU verarbeitet. Erfordert einen OpenRouter-Business- oder -Enterprise-Tarif, und es werden nur EU-fähige Modelle bedient.",
+  "aiProviderSettings.service.mistral": "Mistral",
+  "aiProviderSettings.service.together": "Together",
+  "aiProviderSettings.service.groq": "Groq",
+  "aiProviderSettings.service.deepseek": "DeepSeek",
+  "aiProviderSettings.service.typesafe": "TypeSafe (Standard)",
+  "aiProviderSettings.service.otherChat": "Anderer OpenAI-kompatibler Dienst",
+  "aiProviderSettings.service.otherDecisions": "Anderer Entscheidungsserver",
+  "aiProviderSettings.service.otherAddress": "Andere Adresse",
+  "aiProviderSettings.service.learnMore": "Über OpenRouter EU",
+  "aiProviderSettings.host.line": "Host: {host}",
+  "aiProviderSettings.host.default": "Nutzt die eigene Adresse des Dienstes.",
+  "aiProviderSettings.host.guide": "So findest du deinen Host",
+  "aiProviderSettings.save": "Verbindung speichern",
+  "aiProviders.name.anthropic": "Anthropic",
+  "aiProviders.name.openaiCompatible": "OpenAI-kompatibel",
+  "aiProviders.name.openai": "OpenAI",
+  "aiProviders.name.gemini": "Google Gemini",
+  "aiProviders.name.geminiVertex": "Gemini auf Vertex AI",
+  "aiProviders.name.jev": "TypeSafe Jev",
+  "aiProviders.name.jevCompatible": "Jev-kompatibel",
+  "aiProviders.name.ollama": "Ollama",
+  "aiProviders.name.vllm": "vLLM",
+  "aiProviders.borrowedFrom": "Von {provider}",
   "aiProviders.connection": "Verbindung",
   "aiProviders.prices": "Preise",
   "aiProviders.addPrice": "Preis hinzufügen",
@@ -11390,8 +11663,7 @@ export const de = {
     "Geschlossen: {reason}. Der Datensatz bleibt als Verlauf erhalten.",
   "lead.standing.closedUnreasoned":
     "Geschlossen. Der Datensatz bleibt als Verlauf erhalten.",
-  "lead.standing.yourMove": "Wartet auf deine Antwort",
-  "lead.standing.noResponse": "Noch keine Antwort an diesen Lead.",
+  "lead.standing.noResponse": "Keine erste Antwort erfasst.",
   "lead.standing.theirMove": "Wartet auf den Lead",
   "lead.standing.answeredOn": "Am {at} beantwortet. Noch keine Rückmeldung.",
   "lead.standing.inMotion": "In Bewegung",
@@ -11402,12 +11674,9 @@ export const de = {
   "lead.standing.rests.closed": "Disqualifiziert, kein Grund erfasst.",
   "lead.standing.rests.ladder": "Lead-Status",
   "lead.standing.rests.record": "Lead-Datensatz",
-  "lead.standing.rests.captured": "Erfasst am {at}.",
-  "lead.standing.rests.noResponse": "Keine erste Antwort erfasst.",
   "lead.standing.rests.engaged": "Interaktion erfasst {at}.",
   "lead.readings.title": "Lead-Übersicht",
   "lead.readings.firstResponse": "Erste Antwort",
-  "lead.readings.noClock": "Keine Zielzeit gesetzt",
   "lead.readings.archived": "Archiviert",
   "lead.readings.merged": "Zusammengeführt",
   "lead.readings.mergedInto": "In einen anderen Lead",
@@ -11415,15 +11684,9 @@ export const de = {
   "lead.readings.noCompany": "Keins",
   "lead.readings.scoreManual": "Manuell gesetzt",
   "lead.readings.owed": "Ausstehend",
-  "lead.today.answer": "{name} antworten",
-  "lead.today.answerMeta": "Erste Antwort fällig",
   "lead.today.nextTask": "Nächste Aufgabe",
-  "lead.today.reply": "Antworten",
   "lead.today.openTasks": "Aufgaben öffnen",
   "lead.readings.answered": "Beantwortet",
-  "lead.standing.dueBy": "Noch keine Antwort. Erste Antwort fällig bis {at}.",
-  "lead.standing.overdueSince":
-    "Noch keine Antwort. Erste Antwort war fällig am {at}.",
   "stageAutomation.title": "Phasenautomatisierung",
   "stageAutomation.intro":
     "Ergebnisse der Phasenwechsel, die Margince vorgeschlagen hat. Dieser Bericht ändert nichts; er ist der Beleg dafür, einen Übergang Deals automatisch verschieben zu lassen.",
@@ -11455,6 +11718,9 @@ export const de = {
   "stageAutomation.rules": "Regeln für Übergänge",
   "stageAutomation.rulesIntro":
     "Das Einschalten eines Übergangs verschiebt noch keine Deals. Margince fragt weiter nach, bis die Bilanz oben die Schwelle erreicht, und verschiebt dann automatisch.",
+  "stageAutomation.offTitle": "Phasen-Automatik ist ausgeschaltet",
+  "stageAutomation.offBody":
+    "Solange sie aus ist, bewegt sich kein Deal von selbst, unabhängig davon, was unten eingestellt ist. Admins schalten sie in den Einstellungen zur Phasen-Automatik für die gesamte Installation ein.",
   "stageAutomation.modeHint":
     "Wenn eingeschaltet und die Bilanz ausreicht, verschiebt Margince den Deal und benachrichtigt dich danach.",
   "stageAutomation.notEarnedYet": "Noch nicht qualifiziert: {why}",
@@ -11504,26 +11770,37 @@ export const de = {
     "JJJJ-MM oder JJJJ-MM-TT. Leer lassen, wenn unbekannt.",
   "employment.more": "Weitere Anstellungen anzeigen",
 
-  "magic.title": "Was Margince erledigt hat",
-  "magic.since": "Seit {when}",
   "magic.window.label": "Zeitraum",
   "magic.window.brief": "Seit meinem letzten Morgenbericht",
   "magic.window.week": "Letzte 7 Tage",
   "magic.window.month": "Letzte 30 Tage",
+  "magic.heading.brief": "Seit deinem letzten Morgenbericht",
+  "magic.heading.week": "Die letzten 7 Tage",
+  "magic.heading.month": "Die letzten 30 Tage",
+  "magic.intro": "Was Margince seit {when} getan hat.",
+  "magic.summary": "Übersicht",
+  "magic.clear.done": "Nichts für dich erledigt",
+  "magic.clear.needsYou": "Nichts wartet auf dich",
+  "magic.clear.couldNotComplete": "Nichts ist fehlgeschlagen",
+  "magic.clear.watching": "Alle Quellen in Ordnung",
+  "magic.count.keptInSync_one": "{count} synchron gehalten",
+  "magic.count.keptInSync_other": "{count} synchron gehalten",
+  "magic.count.done_one": "{count} für dich erledigt",
+  "magic.count.done_other": "{count} für dich erledigt",
+  "magic.count.needsYou_one": "{count} wartet auf dich",
+  "magic.count.needsYou_other": "{count} warten auf dich",
+  "magic.count.couldNotComplete_one":
+    "{count} konnte nicht abgeschlossen werden",
+  "magic.count.couldNotComplete_other":
+    "{count} konnten nicht abgeschlossen werden",
+  "magic.count.watching_one": "{count} muss wiederhergestellt werden",
+  "magic.count.watching_other": "{count} müssen wiederhergestellt werden",
+  "magic.incomplete": "{lane}: möglicherweise unvollständig",
   "magic.loading": "Wird gelesen, was die Maschinerie getan hat",
   "magic.lane.done": "Für dich erledigt",
   "magic.lane.needsYou": "Wartet auf dich",
   "magic.lane.couldNotComplete": "Konnte nicht abgeschlossen werden",
   "magic.lane.watching": "Muss wiederhergestellt werden",
-  "magic.empty.done": "In diesem Zeitraum wurde nichts für dich erledigt.",
-  "magic.empty.needsYou": "Keine Entscheidung wartet auf dich.",
-  "magic.empty.couldNotComplete": "Alles Begonnene ist angekommen.",
-  "magic.empty.watching": "Alle Quellen und Regeln sind in Ordnung.",
-  "magic.laneCount_one": "{count} Zeile",
-  "magic.laneCount_other": "{count} Zeilen",
-  "magic.col.what": "Was passiert ist",
-  "magic.col.about": "Betrifft",
-  "magic.col.by": "Von",
   "magic.aboutMany_one": "{label} und {others} weiterer",
   "magic.aboutMany_other": "{label} und {others} weitere",
   "magic.aboutCount_one": "{count} Datensatz",
@@ -11551,6 +11828,18 @@ export const de = {
     "Transkriptinhalte nach Ablauf der Aufbewahrungsfrist gelöscht",
   "magic.action.retention_deal_archive":
     "Abgeschlossene Deals nach Ablauf der Aufbewahrungsfrist archiviert",
+  "magic.action.create_contact": "Kontakt angelegt:",
+  "magic.action.create_company": "Unternehmen angelegt:",
+  "magic.action.create_deal": "Deal angelegt:",
+  "magic.action.create_lead": "Lead angelegt:",
+  "magic.action.create_project": "Projekt angelegt:",
+  "magic.action.create_activity": "E-Mail oder Termin gespeichert:",
+  "magic.action.archive_contact": "Kontakt archiviert:",
+  "magic.action.archive_company": "Unternehmen archiviert:",
+  "magic.action.archive_deal": "Deal archiviert:",
+  "magic.action.archive_lead": "Lead archiviert:",
+  "magic.action.archive_project": "Projekt archiviert:",
+  "magic.action.archive_activity": "E-Mail oder Termin archiviert:",
   "magic.why.mail_filed": "Die Absenderadresse gehört zu diesem Kontakt.",
   "magic.why.public_records":
     "Aus der öffentlichen Website und den DNS-Einträgen des Unternehmens.",
@@ -11573,15 +11862,12 @@ export const de = {
   "magic.by.mailbox": "Postfach-Synchronisierung",
   "magic.by.agent": "Ein Agent",
   "magic.by.system": "Margince",
-  "magic.col.when": "Wann",
   "magic.failingSince": "Fehlerhaft seit {when}",
-  "magic.col.wayBack": "Weg zurück",
   "magic.noRecord": "Kein Datensatz genannt",
   "magic.undo.action": "Rückgängig",
   "magic.undo.done": "Rückgängig gemacht",
-  "magic.undo.perRecord": "Jeden Datensatz einzeln rückgängig machen",
+  "magic.decide": "Entscheiden",
   "magic.records.title": "Was sich geändert hat, Datensatz für Datensatz",
-  "magic.records.show": "Was sich geändert hat",
   "magic.records.empty": "Keiner dieser Datensätze ist noch sichtbar.",
   "magic.records.more": "Mehr anzeigen",
   "magic.records.fromTo": "{from} → {to}",
@@ -11598,6 +11884,30 @@ export const de = {
   "magic.notShown.unknownEntityType":
     "ein Datensatztyp, den diese Seite nicht einordnen kann",
   "magic.notShown.outOfScope": "außerhalb deiner eigenen Datensätze",
+  "magic.glance.label": "Was erledigt wurde",
+  "magic.glance.emailsFiled": "E-Mails zugeordnet",
+  "magic.glance.profilesRead": "Firmenprofile gelesen",
+  "magic.glance.recordsUpdated": "Datensätze aktualisiert",
+  "magic.glance.dealsMoved": "Deals weitergerückt",
+  "magic.glance.leadsPromoted": "Leads zu Deals geworden",
+  "magic.glance.ownersChanged": "Arbeit neu zugewiesen",
+  "magic.glance.activitiesRelinked": "Austausche neu zugeordnet",
+  "magic.glance.messagesSent": "Nachrichten gesendet",
+  "magic.glance.meetingsBooked": "Termine gebucht",
+  "magic.glance.leadsDisqualified": "Leads disqualifiziert",
+  "magic.glance.retention": "Aufbewahrung angewendet",
+  "magic.glance.recordsCreated": "Datensätze angelegt",
+  "magic.glance.recordsArchived": "Datensätze archiviert",
+  "magic.timeline.title": "Wann es passiert ist",
+  "magic.timeline.agent": "Agenten",
+  "magic.timeline.sync": "Synchronisierung und Regeln",
+  "magic.timeline.summary":
+    "Wann jede Zeile dieses Berichts passiert ist, von {from} bis jetzt",
+  "magic.timeline.now": "Jetzt",
+  "magic.done.all_one": "{count} Änderung im Einzelnen",
+  "magic.done.all_other": "Alle {count} Änderungen im Einzelnen",
+  "magic.done.atLeast_one": "{count} Änderung im Einzelnen",
+  "magic.done.atLeast_other": "{count} Änderungen im Einzelnen",
   "magic.action.advance_stage": "Ein Deal ist eine Phase weitergerückt",
   "magic.action.promote": "Aus einem Lead wurde ein Deal",
   "magic.action.update": "Ein Datensatz wurde aktualisiert",
@@ -11618,6 +11928,10 @@ export const de = {
     "Ein Vorschlag aus der Nacht wartet auf dein Wort",
   "magic.action.approval_transcript_proposal":
     "Ein Vorschlag aus einer Aufzeichnung wartet auf dein Wort",
+  "magic.action.approval_commitment_task":
+    "Eine Zusage aus einem Gespräch wartet auf dein Wort",
+  "magic.action.approval_capture_counterparty":
+    "{target} hat dir geschrieben. Als Kontakt behalten?",
   "magic.action.approval_pending":
     "Ein Vorschlag vom Typ {kind} wartet auf dein Wort",
   "magic.action.capture_reauth_required":
@@ -11647,4 +11961,249 @@ export const de = {
     "Was du aus dieser Quelle siehst, kann unvollständig sein.",
   "magic.consequence.capture_history_incomplete":
     "Älterer Austausch aus dieser Quelle fehlt.",
+  "aiFigures.window.24h": "24 Std.",
+  "aiFigures.window.7d": "7 T.",
+  "aiFigures.window.30d": "30 T.",
+  "aiFigures.window": "Zeitraum",
+  "aiFigures.groupBy": "Gruppieren nach",
+  "aiFigures.by.host": "Nach Host",
+  "aiFigures.by.model": "Nach Modell",
+  "aiFigures.by.tier": "Nach Stufe",
+  "aiFigures.recentCalls": "Letzte Aufrufe",
+  "aiFigures.intro":
+    "Jeder Aufruf über diese Verbindung. Gelesen aus demselben Aufrufprotokoll wie Status und Verlauf.",
+  "aiFigures.intro.broker":
+    "Jeder Aufruf über diese Verbindung und welcher OpenRouter-Host ihn bedient hat. Gelesen aus demselben Aufrufprotokoll wie Status und Verlauf.",
+  "aiFigures.openRow":
+    "Öffne eine Zeile, um die Aufrufe zu sehen, die dort endeten.",
+  "aiFigures.lastWeek": "Letzte 7 Tage",
+  "aiFigures.noHost": "Kein Host hat geantwortet",
+  "aiFigures.costAtLeast": "mindestens {cost}",
+  "aiFigures.hostUnrecorded": "Host nicht erfasst",
+  "aiFigures.empty": "Keine Aufrufe in diesem Zeitraum.",
+  "aiFigures.pending": "Aufrufprotokoll wird gelesen …",
+  "aiFigures.unread":
+    "Die Aufrufzahlen konnten nicht gelesen werden. Versuche es gleich noch einmal.",
+  "aiFigures.col.calls": "Aufrufe",
+  "aiFigures.col.failed": "Fehlgeschlagen",
+  "aiFigures.col.timeouts": "Zeitüberschreitungen",
+  "aiFigures.col.p50": "p50",
+  "aiFigures.col.p95": "p95",
+  "aiFigures.col.cost": "Kosten",
+  "aiFigures.line.none": "Keine Aufrufe in den letzten 7 Tagen",
+  "aiFigures.line.calls_one": "{count} Aufruf",
+  "aiFigures.line.calls_other": "{count} Aufrufe",
+  "aiFigures.line.noneFailed": "0 fehlgeschlagen",
+  "aiFigures.line.failed_one": "{count} fehlgeschlagen",
+  "aiFigures.line.failed_other": "{count} fehlgeschlagen",
+  "aiFigures.line.timeouts_one": "({count} Zeitüberschreitung)",
+  "aiFigures.line.timeouts_other": "({count} Zeitüberschreitungen)",
+  "aiFigures.line.timeoutCount_one": "{count} Zeitüberschreitung",
+  "aiFigures.line.timeoutCount_other": "{count} Zeitüberschreitungen",
+  "aiFigures.line.p50": "p50 {latency}",
+  "aiFigures.line.sort": "Sortierung: {sort}",
+  "aiFigures.line.week": "7 T.: {figures}",
+  "aiFigures.line.prefix": "7 T.: {sentence}",
+  "aicalls.filtered": "Es werden Aufrufe gezeigt, die bei {filter} endeten.",
+  "aicalls.filtered.clear": "Alle Aufrufe zeigen",
+  "aiOpenRouter.title": "OpenRouter-Einstellungen",
+  "aiOpenRouter.privacyDocs": "Datenrichtlinien ↗",
+  "aiOpenRouter.routingDocs": "Anbieter-Routing ↗",
+  "aiOpenRouter.intro":
+    "Erscheint, weil der Dienst OpenRouter ist. Gilt für jede Stufe dieser Verbindung, und keine Stufe kann es lockern.",
+  "aiOpenRouter.zdr": "Keine Datenspeicherung",
+  "aiOpenRouter.zdr.help": "Nur Hosts, die nichts speichern.",
+  "aiOpenRouter.deny": "Hosts ablehnen, die mit Prompts trainieren",
+  "aiOpenRouter.deny.help": "Sendet data_collection: deny.",
+  "aiOpenRouter.distill": "Nur destillierbare Modelle",
+  "aiOpenRouter.distill.help":
+    "Nur Modelle, deren Lizenz die Weiterverwendung der Ausgabe erlaubt.",
+  "aiOpenRouter.fallbacks": "Ausweichen erlauben",
+  "aiOpenRouter.fallbacks.help":
+    "Einen anderen Host versuchen, wenn der bevorzugte ausfällt.",
+  "aiOpenRouter.only": "Nur diese Hosts verwenden",
+  "aiOpenRouter.only.help":
+    "OpenRouter-Hostnamen, durch Komma getrennt. Leer heißt jeder Host, der die Regeln oben erfüllt.",
+  "aiOpenRouter.only.placeholder": "zum Beispiel mistral/eu, cerebras",
+  "aiOpenRouter.ignore": "Nie verwenden",
+  "aiOpenRouter.ignore.help": "Hosts, die überall übersprungen werden.",
+  "aiOpenRouter.ignore.placeholder": "zum Beispiel coreweave",
+  "aiOpenRouter.account":
+    "Einstellungen in deinem OpenRouter-Konto gelten ebenfalls und werden hier nicht gezeigt.",
+  "aiServing.title": "Bereitstellung",
+  "aiServing.openRouter": "OpenRouter",
+  "aiServing.guide": "Routing-Leitfaden ↗",
+  "aiServing.blocked.decisions":
+    "Das Entscheidungsmodell antwortet über den Entscheidungs-Endpunkt von OpenRouter, der keinen Routing-Block annimmt. Sein Zeitlimit wird pro Aufgabe unter KI-Aufgaben festgelegt.",
+  "aiServing.blocked.provider":
+    "Host-Routing gilt nur für OpenRouter. {provider} stellt dieses Modell selbst bereit. Denkstufe und Zeitlimit werden weiterhin pro Aufgabe unter KI-Aufgaben festgelegt.",
+  "aiServing.blocked.host":
+    "Host-Routing gilt nur für OpenRouter. Die Verbindung zeigt auf einen anderen Dienst. Denkstufe und Zeitlimit werden weiterhin pro Aufgabe unter KI-Aufgaben festgelegt.",
+  "aiServing.empty":
+    "Leer nutzt die mitgelieferte Vorgabe: nach Durchsatz sortieren, fp16 oder bf16, nur Hosts, die alle gesendeten Parameter unterstützen. {} lässt OpenRouter selbst routen.",
+  "aiServing.empty.embeddings":
+    "Leer ergänzt nichts zu den Host-Regeln der Verbindung. Diese Spur nimmt nur only, ignore, allow_fallbacks, zdr, data_collection und enforce_distillable_text.",
+  "aiServing.json": "Bereitstellungs-JSON",
+  "aiServing.format": "Formatieren",
+  "aiServing.example": "Beispiel einfügen",
+  "aiServing.useDefault": "Mitgelieferte Vorgabe nutzen",
+  "aiServing.checking": "Wird mit dem Server geprüft …",
+  "aiServing.valid": "Gültig",
+  "aiServing.shippedDefault": "Mitgelieferte Vorgabe",
+  "aiServing.problems_one": "{count} Problem",
+  "aiServing.problems_other": "{count} Probleme",
+  "aiServing.reference": "Feldreferenz",
+  "aiServing.connectionOnly": "nur Verbindung",
+  "aiServing.openRouterDocs": "OpenRouter ↗",
+  "aiServing.referenceNote":
+    "Gelesen aus GET /ai/routing/schema. Schlüssel, die Margince pro Aufruf setzt (model, messages, tools, response_format …), werden abgelehnt.",
+  "aiServing.asked": "Was OpenRouter angefragt wird",
+  "aiServing.askedFor":
+    "jeder Aufruf von {lane}, nachdem deine Einstellungen, die Verbindung und die Vorgaben von Margince zusammengeführt sind",
+  "aiServing.fixFirst":
+    "Behebe die Probleme oben, um zu sehen, was gesendet wird.",
+  "aiServing.brokerOwn": "Nichts zusätzlich: OpenRouter wählt den Host selbst.",
+  "aiServing.showJson": "Gesendetes JSON zeigen",
+  "aiServing.source.default": "Vorgabe von Margince",
+  "aiServing.source.connection": "Verbindung",
+  "aiServing.source.tier": "Hier festgelegt",
+  "aiServing.source.task": "Jede Aufgabe",
+  "aiServing.say.sort": "Den Host nach {by} wählen.",
+  "aiServing.say.sortAcross":
+    "Den Host nach {by} wählen und dabei auch Ausweichmodelle vergleichen.",
+  "aiServing.say.quantizations":
+    "Nur Hosts, die das Modell mit {levels}-Genauigkeit ausführen.",
+  "aiServing.say.requireParameters":
+    "Nur Hosts, die jede Option unterstützen, die Margince sendet, etwa das Antwortformat.",
+  "aiServing.say.requireParametersOff":
+    "Hosts dürfen Optionen ignorieren, die sie nicht unterstützen.",
+  "aiServing.say.zdr":
+    "Nur Hosts, die keine Kopie von Prompts oder Antworten behalten.",
+  "aiServing.say.zdrOff":
+    "Hosts, die eine Kopie von Prompts behalten, sind erlaubt.",
+  "aiServing.say.denyCollection":
+    "Hosts überspringen, die Prompts speichern oder damit trainieren könnten.",
+  "aiServing.say.allowCollection":
+    "Hosts, die Prompts speichern, sind erlaubt.",
+  "aiServing.say.distill":
+    "Nur Modelle, deren Lizenz die Weiterverwendung ihrer Ausgabe erlaubt.",
+  "aiServing.say.distillOff": "Modelle jeder Lizenz sind erlaubt.",
+  "aiServing.say.only": "Nur {hosts} verwenden.",
+  "aiServing.say.ignore": "Nie {hosts} verwenden.",
+  "aiServing.say.order": "Zuerst {hosts} versuchen.",
+  "aiServing.say.fallbacks":
+    "Auf einen anderen Host ausweichen, wenn diese ausfallen.",
+  "aiServing.say.noFallbacks":
+    "Lieber fehlschlagen als einen anderen Host verwenden.",
+  "aiServing.say.maxPrice":
+    "Hosts überspringen, deren Preise diese Grenzen überschreiten: {prices}.",
+  "aiServing.say.maxLatency":
+    "Hosts bevorzugen, die innerhalb von {latency} zu antworten beginnen. Ein langsamerer Host antwortet trotzdem, wenn kein schnellerer frei ist.",
+  "aiServing.say.minThroughput":
+    "Hosts bevorzugen, die mindestens {throughput} Tokens pro Sekunde erzeugen.",
+  "aiServing.say.effort": "Mit Stufe {effort} denken.",
+  "aiServing.say.maxTokens": "Höchstens {tokens} Tokens lang denken.",
+  "aiServing.say.exclude":
+    "Denken, aber die Begründung aus der Antwort lassen.",
+  "aiServing.say.include": "Die Begründung mit der Antwort zurückgeben.",
+  "aiServing.say.thinkOn": "Denken einschalten.",
+  "aiServing.say.thinkOff": "Denken ausschalten.",
+  "aiServing.say.taskEffort":
+    "Die Denkstufe kommt aus der Einstellung jeder Aufgabe unter KI-Aufgaben.",
+  "aiServing.say.raw": "{key} = {value}",
+  "aiFigures.line.brokerOwn": "eigenes Routing des Brokers",
+  "aiFigures.line.sortAcross": "{by} über alle Modelle",
+  "aiTasks.settings": "Einstellungen",
+  "aiTasks.custom": "Angepasst",
+  "aiTaskSheet.decision": "Entscheidung",
+  "aiTaskSheet.settings": "Einstellungen",
+  "aiTaskSheet.thinkingGuide": "Was Denkstufen bewirken ↗",
+  "aiTaskSheet.thinking": "Denkstufe",
+  "aiTaskSheet.thinking.default":
+    "Standard (Bindung und jeder Prompt entscheiden)",
+  "aiTaskSheet.thinking.default.help":
+    "Die Untergrenze jedes Prompts und die Bindung der Stufe entscheiden, wie viel das Modell denkt.",
+  "aiTaskSheet.thinking.minimal.help":
+    "Sofort antworten. Am günstigsten und schnellsten. Wird jedem Anbieter über dessen eigene Denkeinstellung gesendet.",
+  "aiTaskSheet.thinking.low.help":
+    "Kurz nachdenken vor der Antwort. Wird jedem Anbieter über dessen eigene Denkeinstellung gesendet.",
+  "aiTaskSheet.thinking.medium.help":
+    "Die Schritte durchdenken. Langsamer, mehr Tokens. Wird jedem Anbieter über dessen eigene Denkeinstellung gesendet.",
+  "aiTaskSheet.thinking.high.help":
+    "Ausführlich nachdenken. Am langsamsten und teuersten. Wird jedem Anbieter über dessen eigene Denkeinstellung gesendet.",
+  "aiTaskSheet.decisionTimeout": "Zeitlimit des Entscheidungsmodells",
+  "aiTaskSheet.decisionTimeout.help":
+    "{low} bis {high} s. Gibt das Entscheidungsmodell auf, weicht die Aufgabe auf ihr Stufenmodell aus.",
+  "aiTaskSheet.attemptTimeout": "Zeitlimit pro Modellaufruf",
+  "aiTaskSheet.attemptTimeout.help":
+    "{low} bis {high} s pro Aufruf eines Stufenmodells. Ein längerer Aufruf wird gestoppt und als Zeitüberschreitung gezählt. Gilt für jeden Anbieter.",
+  "aiTaskSheet.attemptTimeout.help.decision":
+    "{low} bis {high} s pro Aufruf eines Stufenmodells, auch beim Ausweichen. Ein längerer Aufruf wird gestoppt und als Zeitüberschreitung gezählt. Gilt für jeden Anbieter.",
+  "aiTaskSheet.seconds": "{seconds} s",
+  "aiTaskSheet.seconds.default": "{seconds} s (Standard)",
+  "aiTaskSheet.reset": "Auf Standard zurücksetzen",
+  "aiTaskSheet.fixed": "Durch Vertrag festgelegt",
+  "aiTaskSheet.tiersTried": "Versuchte Stufen",
+  "aiTaskSheet.runs": "Läuft",
+  "aiTaskSheet.fixed.help": "Ändere diese in ai-tasks.yaml.",
+  "aiTaskSheet.addTask": "KI-Aufgabe hinzufügen oder ändern ↗",
+  "aiTaskSheet.conflict":
+    "Jemand hat diese Einstellungen während deiner Bearbeitung gespeichert",
+  "aiTaskSheet.conflict.help":
+    "Schließe dieses Fenster und öffne es erneut, um vom jetzt gespeicherten Stand auszugehen.",
+  "aiTaskSheet.saveFailed": "Die Einstellungen wurden nicht gespeichert",
+  "aiTaskSheet.readFailed":
+    "Die gespeicherten Einstellungen konnten nicht gelesen werden",
+  "aiTaskSheet.unsaved": "Nicht gespeicherte Änderungen",
+  "aiTaskSheet.applies":
+    "Gilt innerhalb einer Minute für die ganze Installation.",
+  "aiTaskSheet.save": "Einstellungen speichern",
+  "aiTaskSheet.viewCalls": "Diese Aufrufe ansehen →",
+  "aiTaskSheet.hostsUnder":
+    "· welcher Host jeden Aufruf bedient hat, steht unter Anbieter.",
+  "aiOutcome.firstTry": "Beim ersten Versuch beantwortet",
+  "aiOutcome.fallback": "Vom Ausweichen beantwortet",
+  "aiOutcome.noAnswer": "Keine Antwort",
+  "aiOutcome.legend": "Wie Aufrufe eine Antwort bekamen",
+  "aiOutcome.headline.all_one": "Der eine Aufruf bekam eine Antwort.",
+  "aiOutcome.headline.all_other": "Alle {total} Aufrufe bekamen eine Antwort.",
+  "aiOutcome.headline.lost":
+    "{share} von {total} Aufrufen bekamen eine Antwort. {lost} nicht.",
+  "aiOutcome.lostNote_one":
+    "{lost} Aufruf bekam von keinem Schritt eine Antwort. Die Aufgabe behandelt ihn wie ohne Modellantwort.",
+  "aiOutcome.lostNote_other":
+    "{lost} Aufrufe bekamen von keinem Schritt eine Antwort. Die Aufgabe behandelt sie wie ohne Modellantwort.",
+  "aiOutcome.step": "Schritt {n} · {role}",
+  "aiOutcome.role.decision": "Entscheidungsmodell",
+  "aiOutcome.role.tier": "Stufenmodell",
+  "aiOutcome.role.fallback": "Ausweichen",
+  "aiOutcome.answered": "{answered} von {attempts} beantwortet",
+  "aiOutcome.usually": "meist in {latency}",
+  "aiOutcome.notNeeded": "In diesem Zeitraum nicht gebraucht",
+  "aiOutcome.gaveUp.on_one": "{count} {reason} → weitergegeben",
+  "aiOutcome.gaveUp.on_other": "{count} {reason} → weitergegeben",
+  "aiOutcome.gaveUp.last_one": "{count} {reason} → keine Antwort",
+  "aiOutcome.gaveUp.last_other": "{count} {reason} → keine Antwort",
+  "aiOutcome.gaveUp.timeout": "Zeit überschritten",
+  "aiOutcome.gaveUp.failed": "fehlgeschlagen",
+  "aiOutcome.gaveUp.throttled": "gedrosselt",
+  "aiOutcome.gaveUp.quota": "Kontingent erschöpft",
+  "aiOutcome.gaveUp.refused": "abgelehnt",
+  "aiOutcome.gaveUp.unsure": "nicht sicher genug",
+  "aiOutcome.gaveUp.offEnum": "außerhalb der Auswahl beantwortet",
+  "aiOutcome.gaveUp.invalid": "in falscher Form beantwortet",
+  "aiOutcome.latencyTitle": "Wie lange Aufrufe dauern, gemessen am Zeitlimit",
+  "aiOutcome.latencyMarks":
+    "● die Hälfte endet innerhalb von {p50} · ◆ 95 % innerhalb von {p95}",
+  "aiOutcome.timeout": "Zeitlimit",
+  "aiOutcome.decisionTimeout": "Zeitlimit des Entscheidungsmodells",
+  "aiOutcome.limit": "│ {name} {seconds} s",
+  "aiOutcome.limitNear": "│ {name} {seconds} s: p95 liegt nah daran",
+  "aiOutcome.limitOver": "│ {name} {seconds} s: p95 liegt darüber",
+  "aiOutcome.limitFar": "{name} {seconds} s, weit über p95",
+  "aiServing.notJson":
+    "ist kein gültiges JSON; prüfe Kommas und Klammern in dieser Zeile.",
+  "aiServing.notObject": "muss ein Objekt sein: der Text zwischen { und }.",
+  "aiServing.previewFailed":
+    "Der Server konnte diesen Wert nicht prüfen: {reason} Speichern bleibt aus, bis er es kann.",
 } as const satisfies Record<MessageKey, string>;

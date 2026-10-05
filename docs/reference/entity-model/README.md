@@ -31,7 +31,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 294 |
-| Columns | 3492 |
+| Columns | 3496 |
 | Foreign keys | 475 |
 | Owning areas | 36 |
 
@@ -154,7 +154,7 @@ erDiagram
 | [`ai_call_config`](ai.md#ai_call_config) | ai | 6 | 1 |
 | [`ai_call_payload`](ai.md#ai_call_payload) | ai | 5 | 0 |
 | [`ai_feedback`](ai.md#ai_feedback) | ai | 15 | 0 |
-| [`ai_model_rate`](ai.md#ai_model_rate) | ai | 10 | 0 |
+| [`ai_model_rate`](ai.md#ai_model_rate) | ai | 11 | 0 |
 | [`ai_task_run`](aiactivity.md#ai_task_run) | aiactivity | 25 | 0 |
 | [`ai_usage`](ai.md#ai_usage) | ai | 10 | 0 |
 | [`analytics_share`](compose.md#analytics_share) | compose | 14 | 0 |
@@ -189,7 +189,7 @@ erDiagram
 | [`capture_digest`](capture.md#capture_digest) | capture | 5 | 0 |
 | [`capture_exclusion`](capture.md#capture_exclusion) | capture | 7 | 0 |
 | [`capture_freemail_domain`](capture.md#capture_freemail_domain) | capture | 5 | 0 |
-| [`capture_import`](capture.md#capture_import) | capture | 8 | 0 |
+| [`capture_import`](capture.md#capture_import) | capture | 9 | 0 |
 | [`capture_owner_identity`](capture.md#capture_owner_identity) | capture | 7 | 0 |
 | [`capture_pending_counterparty`](capture.md#capture_pending_counterparty) | capture | 21 | 0 |
 | [`capture_sender_override`](capture.md#capture_sender_override) | capture | 7 | 0 |
@@ -255,13 +255,13 @@ erDiagram
 | [`deal_risk_day`](deals.md#deal_risk_day) | deals | 7 | 1 |
 | [`deal_risk_verdict`](deals.md#deal_risk_verdict) | deals | 2 | 0 |
 | [`deal_room`](dealrooms.md#deal_room) | dealrooms | 14 | 6 |
-| [`deal_room_comment`](dealrooms.md#deal_room_comment) | dealrooms | 9 | 0 |
+| [`deal_room_comment`](dealrooms.md#deal_room_comment) | dealrooms | 10 | 0 |
 | [`deal_room_document`](dealrooms.md#deal_room_document) | dealrooms | 12 | 2 |
 | [`deal_room_engagement`](dealrooms.md#deal_room_engagement) | dealrooms | 6 | 0 |
 | [`deal_room_invitation`](dealrooms.md#deal_room_invitation) | dealrooms | 14 | 0 |
 | [`deal_room_participant`](dealrooms.md#deal_room_participant) | dealrooms | 13 | 5 |
 | [`deal_room_session`](dealrooms.md#deal_room_session) | dealrooms | 10 | 0 |
-| [`deal_room_thread`](dealrooms.md#deal_room_thread) | dealrooms | 15 | 1 |
+| [`deal_room_thread`](dealrooms.md#deal_room_thread) | dealrooms | 16 | 1 |
 | [`deal_stage_evidence`](deals.md#deal_stage_evidence) | deals | 19 | 1 |
 | [`deal_stage_history`](deals.md#deal_stage_history) | deals | 19 | 2 |
 | [`deal_status_card`](compose.md#deal_status_card) | compose | 6 | 0 |

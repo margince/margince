@@ -31,6 +31,7 @@
 //   cannot become a second door onto a record.
 
 import { minorUnitDigits, toMajorUnits } from "../format/minorunits";
+import { followContentSize } from "./size";
 import {
   asFiniteNumber,
   asRecord,
@@ -42,7 +43,7 @@ import {
 const PROTOCOL_VERSION = "2026-01-26";
 
 /** What a view shows for a value it does not have. Never "NaN", never "0". */
-const ABSENT = "—";
+export const ABSENT = "—";
 
 /** The handler a view registers, called once per tool result the host pushes. */
 type ResultHandler = (data: unknown, warnings: Warning[]) => void;
@@ -55,6 +56,7 @@ let initializeID: number | null = null;
 // result after it has announced itself, and these two states are what let
 // handle() refuse anything out of order.
 let initialized = false;
+let sizing = false;
 // The host's origin, LEARNED rather than configured.
 //
 // A view is loaded into an opaque sandbox origin and cannot know its host's
@@ -229,6 +231,12 @@ function deliverResult(message: Record<string, unknown>): void {
   if (resultHandler === null) return;
   const envelope = asRecord(asRecord(message.params).structuredContent);
   resultHandler(envelope.data ?? null, asWarnings(envelope.warnings));
+  // Sized from the first answer drawn: before it the document is only padding,
+  // and a host told that height shrinks the frame just to grow it again.
+  if (!sizing) {
+    sizing = true;
+    followContentSize(send);
+  }
 }
 
 function handle(event: MessageEvent): void {
@@ -292,9 +300,10 @@ export function warned(warnings: Warning[], code: string): boolean {
 
 /**
  * el and heading below are the ONLY two ways anything reaches the page, and
- * both take text rather than markup. Nothing else in a view touches the
- * document, which is what keeps the containment property at the top of this
- * file true of every character a reader sees.
+ * both take text rather than markup. parts.ts and badge.ts compose them into
+ * the app's components and touch the document no other way, which is what keeps the
+ * containment property at the top of this file true of every character a
+ * reader sees.
  *
  * el REFUSES a heading tag at compile time. A heading is not just an element
  * here — it carries a size token and the class the stylesheet keys off — so a

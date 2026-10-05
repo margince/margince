@@ -57,6 +57,7 @@ function activity(
 // second assertion reads the first render's DOM.
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
 
@@ -486,24 +487,82 @@ describe("the deals tab", () => {
 });
 
 describe("the meetings tab", () => {
-  it("puts the booked meeting above the ones already held", () => {
-    withProviders(<ContactMeetingsTab view={view} />);
-    expect(screen.getByText("Contract review")).toBeTruthy();
-    expect(screen.getByText("Depot walkthrough")).toBeTruthy();
+  const held = activity({
+    id: "a-2",
+    kind: "meeting",
+    subject: "Depot walkthrough",
+    occurred_at: "2026-08-09T08:00:00Z",
   });
 
-  it("draws only the meetings, never the whole chronology", () => {
+  // The tab lists the contact's meetings from their own read, narrowed on the
+  // server, rather than from the 360's first page of every kind.
+  function serveMeetings(rows: SectionActivity[]) {
+    stubWithSession(
+      {
+        "GET /activities": () =>
+          jsonResponse({ data: rows, page: { has_more: false } }),
+      },
+      {},
+    );
+  }
+
+  it("puts the booked meeting above the ones already held", async () => {
+    serveMeetings([held]);
     withProviders(<ContactMeetingsTab view={view} />);
-    // The email in the same activities page belongs to the Activity tab. A
-    // filter that let it through here would make this tab a second, worse
-    // spelling of that one.
+    const booked = screen.getByText("Contract review");
+    const past = await screen.findByText("Depot walkthrough");
+    expect(
+      booked.compareDocumentPosition(past) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("asks the server for this contact's meetings alone", async () => {
+    // The email in the same 360 page belongs to the Activity tab. A list that
+    // let it through here would make this tab a second, worse spelling of
+    // that one.
+    serveMeetings([held]);
+    const requests = vi.spyOn(globalThis, "fetch");
+    withProviders(<ContactMeetingsTab view={view} />);
+    await screen.findByText("Depot walkthrough");
+    const asked = requests.mock.calls
+      .map(([input, init]) =>
+        input instanceof Request ? input : new Request(input, init),
+      )
+      .map((request) => new URL(request.url))
+      .find((url) => url.pathname.endsWith("/activities"));
+    expect(asked?.searchParams.get("kind")).toBe("meeting");
+    expect(asked?.searchParams.get("entity_type")).toBe("contact");
+    expect(asked?.searchParams.get("entity_id")).toBe("p-1");
     expect(screen.queryByText("Fleet renewal")).toBeNull();
+  });
+
+  it("files a meeting booked after the next one under Upcoming, not Held", async () => {
+    // Only the soonest booking arrives as next_meeting. A second one further
+    // out is still ahead of the read, and listing it as held told the reader
+    // a meeting had happened that had not.
+    serveMeetings([
+      activity({
+        id: "a-10",
+        kind: "meeting",
+        subject: "Rollout planning",
+        occurred_at: "2026-08-27T13:00:00Z",
+      }),
+      held,
+    ]);
+    withProviders(<ContactMeetingsTab view={view} />);
+    const later = await screen.findByText("Rollout planning");
+    const upcoming = screen.getByRole("region", { name: "Upcoming" });
+    expect(upcoming.contains(later)).toBe(true);
+    const past = screen.getByRole("region", { name: "Held" });
+    expect(within(past).queryByText("Rollout planning")).toBeNull();
+    expect(within(past).getByText("Depot walkthrough")).toBeTruthy();
   });
 
   it("offers a brief for the booked meeting and for one already held", async () => {
     // The backend assembles a brief for ANY meeting activity. Reaching it only
     // through the next meeting's prep moment left every other meeting on the
     // record with a brief nothing could ask for.
+    serveMeetings([held]);
     const briefed: string[] = [];
     withProviders(
       <ContactMeetingsTab
@@ -511,53 +570,55 @@ describe("the meetings tab", () => {
         onBriefMeeting={(id) => briefed.push(id)}
       />,
     );
+    await screen.findByText("Depot walkthrough");
     const actions = screen.getAllByRole("button", { name: "Prepare brief" });
     expect(actions.length).toBe(2);
     await userEvent.setup().click(actions[0]);
     expect(briefed.length).toBe(1);
   });
 
-  it("offers no brief for a meeting the reader may find but not read", () => {
+  it("offers no brief for a meeting the reader may find but not read", async () => {
     // The timeline carries discoverable-but-withheld rows on purpose, so the
     // reader knows a conversation happened. The brief endpoint applies the
     // stricter content gate, so a verb here would promise what their own grant
     // refuses — and answer 404 when they took it up.
-    const withWithheld: Contact360 = {
-      ...view,
-      activities: {
-        data: [
-          activity({
-            id: "a-secret",
-            kind: "meeting",
-            subject: "Board session",
-            occurred_at: "2026-08-10T08:00:00Z",
-            content_state: "withheld",
-          }),
-        ],
-        page: { has_more: false },
-      },
-      next_meeting: undefined,
-    };
+    serveMeetings([
+      activity({
+        id: "a-secret",
+        kind: "meeting",
+        subject: "Board session",
+        occurred_at: "2026-08-10T08:00:00Z",
+        content_state: "withheld",
+      }),
+    ]);
     withProviders(
-      <ContactMeetingsTab view={withWithheld} onBriefMeeting={() => {}} />,
+      <ContactMeetingsTab
+        view={{ ...view, next_meeting: undefined }}
+        onBriefMeeting={() => {}}
+      />,
     );
     // The row is DRAWN — the reader learns a meeting happened — and carries no
-    // verb. Asserting the subject would be wrong: a withheld row redacts it,
-    // which is the whole point of the state.
-    expect(screen.queryByText(/Nothing logged/)).toBeNull();
+    // verb. Its subject is redacted, which is the whole point of the state.
+    expect(
+      await screen.findByText("Content for participants only"),
+    ).toBeTruthy();
+    expect(screen.queryByText("Board session")).toBeNull();
     expect(screen.queryByRole("button", { name: "Prepare brief" })).toBeNull();
   });
 
-  it("offers no brief when the surface cannot open one", () => {
+  it("offers no brief when the surface cannot open one", async () => {
     // Without the callback the verb would be a button that does nothing, which
     // teaches a reader the feature is broken rather than absent.
+    serveMeetings([held]);
     withProviders(<ContactMeetingsTab view={view} />);
+    await screen.findByText("Depot walkthrough");
     expect(screen.queryByRole("button", { name: "Prepare brief" })).toBeNull();
   });
 
   it("names the meeting the reader picked, not the soonest one", async () => {
     // The defect this replaces: the drawer always read next_meeting, so a
     // brief opened from a past meeting described a different room.
+    serveMeetings([held]);
     const briefed: string[] = [];
     withProviders(
       <ContactMeetingsTab
@@ -565,6 +626,7 @@ describe("the meetings tab", () => {
         onBriefMeeting={(id) => briefed.push(id)}
       />,
     );
+    await screen.findByText("Depot walkthrough");
     const actions = screen.getAllByRole("button", { name: "Prepare brief" });
     // The booked meeting leads the tab; the held one follows it.
     await userEvent.setup().click(actions[1]);

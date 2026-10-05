@@ -6,7 +6,9 @@
 package gates
 
 // GET /records/{entity_type}/{id}/context accepts exactly the record types the
-// search module can search, and the contract has to say the same set.
+// search module can anchor a context read on — every searchable type but the
+// text-only ones — and the contract has to say the same set. The full
+// searchable set is searchtypeenum_test.go's.
 //
 // The handler derives its own admission from that table (search.knownEntity),
 // so the two can only disagree in the contract's direction — and every way they
@@ -38,7 +40,7 @@ const contextPath = "/records/{entity_type}/{id}/context"
 func TestContextAnchorEnumMatchesTheSearchableEntities(t *testing.T) {
 	t.Parallel()
 	contract := contextAnchorEnum(t)
-	searchable := searchableEntitiesFromSource(t)
+	searchable := searchableEntitiesFromSource(t, anchorsOnly)
 	slices.Sort(contract)
 	slices.Sort(searchable)
 	if !slices.Equal(contract, searchable) {
@@ -102,10 +104,20 @@ func contextAnchorEnum(t *testing.T) []string {
 	return nil
 }
 
-// searchableEntitiesFromSource extracts the `entity:` value of every
-// searchBranches element — the module's one entity table, parsed rather than
-// copied, so a branch added or withdrawn reaches this gate on its own.
-func searchableEntitiesFromSource(t *testing.T) []string {
+// Which searchBranches elements a gate asks about: every one, or only those a
+// context read can anchor on.
+type branchSelection bool
+
+const (
+	everyBranch branchSelection = false
+	anchorsOnly branchSelection = true
+)
+
+// searchableEntitiesFromSource extracts the `entity:` value of each
+// searchBranches element the selection admits — the module's one entity table,
+// parsed rather than copied, so a branch added or withdrawn reaches the gates
+// on its own.
+func searchableEntitiesFromSource(t *testing.T, selection branchSelection) []string {
 	t.Helper()
 	file, err := gatekit.ParseFile(searchBranchFile, 0)
 	if err != nil {
@@ -122,7 +134,7 @@ func searchableEntitiesFromSource(t *testing.T) []string {
 			if !ok || len(vs.Names) != 1 || vs.Names[0].Name != "searchBranches" {
 				continue
 			}
-			entities = append(entities, branchEntities(t, vs.Values)...)
+			entities = append(entities, branchEntities(t, vs.Values, selection)...)
 		}
 	}
 	if len(entities) == 0 {
@@ -133,7 +145,7 @@ func searchableEntitiesFromSource(t *testing.T) []string {
 
 // branchEntities reads the `entity: "…"` field out of each element of a
 // searchBranches composite literal.
-func branchEntities(t *testing.T, values []ast.Expr) []string {
+func branchEntities(t *testing.T, values []ast.Expr, selection branchSelection) []string {
 	t.Helper()
 	var out []string
 	for _, value := range values {
@@ -151,7 +163,7 @@ func branchEntities(t *testing.T, values []ast.Expr) []string {
 			// no neighbours to return. Skipped here rather than listed in the
 			// contract enum, because a client naming one would be asking for
 			// the context of something that has none.
-			if branchIsTextOnly(branch) {
+			if selection == anchorsOnly && branchIsTextOnly(branch) {
 				continue
 			}
 			for _, field := range branch.Elts {

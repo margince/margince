@@ -42,42 +42,8 @@
   min-width: 0;
 }
 .pn-route-blocked .pn-route-who,
-.pn-route-blocked .pn-meter {
+.pn-route-blocked .strength-meter {
   opacity: 0.6;
-}
-/* The strength bucket as three bars and its word. The word is the fact; the
-   bars are for a reader scanning the column. */
-.pn-meter {
-  display: grid;
-  gap: var(--space-1);
-  justify-items: start;
-}
-.pn-meter-bars {
-  display: flex;
-  gap: var(--space-1);
-  align-items: flex-end;
-  height: 14px;
-}
-.pn-meter-bars i {
-  display: block;
-  width: 5px;
-  border-radius: var(--r-xs);
-  corner-shape: round;
-  background: var(--borderStrong);
-}
-.pn-meter-bars i:nth-child(1) {
-  height: 6px;
-}
-.pn-meter-bars i:nth-child(2) {
-  height: 10px;
-}
-.pn-meter-bars i:nth-child(3) {
-  height: 14px;
-}
-.pn-meter[data-band="strong"] i,
-.pn-meter[data-band="moderate"] i:nth-child(-n + 2),
-.pn-meter[data-band="weak"] i:nth-child(1) {
-  background: var(--accent);
 }
 /* The strength band beside whom an edge joins, in the map's edge detail. */
 .pn-band {
@@ -400,7 +366,7 @@
   .pn-route-line {
     grid-template-columns: auto auto minmax(0, 1fr);
   }
-  .pn-route-line > .pn-meter,
+  .pn-route-line > .strength-meter,
   .pn-route-line > .btn {
     grid-column: 3;
   }

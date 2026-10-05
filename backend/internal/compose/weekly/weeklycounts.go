@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // sqlUnbounded is what an unnarrowed reader's scope renders to.
@@ -109,8 +110,9 @@ func countWeek(ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end time.
 // Both the weekly counts and the funnel scorecard use the arrival cohort and
 // the same closing instant. A missing breach stamp does not prove an SLA target.
 const (
-	responseRecordedInWeekSQL = `l.first_response_at < $%[2]d`
-	breachRecordedInWeekSQL   = `l.sla_breached_at < $%[2]d`
+	nonImportedLeadSQL        = "NOT starts_with(COALESCE(l.source_system, ''), '" + provenance.ReservedSourceSystemPrefix + "')"
+	responseRecordedInWeekSQL = `l.first_response_at < $%[2]d AND ` + nonImportedLeadSQL
+	breachRecordedInWeekSQL   = `l.sla_breached_at < $%[2]d AND ` + nonImportedLeadSQL
 )
 
 // countWeekLeads counts how the week's inbound leads were answered.
@@ -142,7 +144,7 @@ func countWeekLeads(
 	}
 	// One window expression, three counts over it.
 	const arrived = `COALESCE(l.routed_at, l.created_at) >= $%[1]d
-		      AND COALESCE(l.routed_at, l.created_at) < $%[2]d`
+		      AND COALESCE(l.routed_at, l.created_at) < $%[2]d AND ` + nonImportedLeadSQL
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
 		SELECT
 		  (SELECT count(*) FROM lead l

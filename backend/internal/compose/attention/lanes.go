@@ -293,6 +293,8 @@ type NoticeCase struct {
 	// would prompt a reader with nowhere to go.
 	ContactID ids.UUID
 	DueAt     time.Time
+	// OpenedAt is when the duty was recorded; see classifyLegalDeadline.
+	OpenedAt time.Time
 }
 
 // Briefing is the overnight brief's queue for the acting rep, best-ranked

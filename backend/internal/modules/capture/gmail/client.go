@@ -115,7 +115,8 @@ type Message struct {
 	// names: a system label is its name (INBOX, SENT, CATEGORY_PROMOTIONS) and
 	// a user label is an opaque "Label_<n>". They ride the same messages.get
 	// response FiledAsSent is read from, so they cost no extra call.
-	Labels []string
+	Labels     []string
+	ReceivedAt time.Time // Gmail's internalDate (see internalDate); zero when none
 }
 
 // API is the read-only Gmail surface the connector uses. All calls take a
@@ -322,8 +323,9 @@ func (a *httpAPI) History(ctx context.Context, accessToken, startHistoryID strin
 
 func (a *httpAPI) GetRaw(ctx context.Context, accessToken, msgID string) (Message, error) {
 	var out struct {
-		Raw      string   `json:"raw"`
-		LabelIDs []string `json:"labelIds"` //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
+		Raw          string   `json:"raw"`
+		LabelIDs     []string `json:"labelIds"`     //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
+		InternalDate string   `json:"internalDate"` //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
 	}
 	q := url.Values{"format": {"RAW"}}
 	status, err := a.get(ctx, accessToken, "/messages/"+url.PathEscape(msgID), q, &out, maxRawMessageBytes)
@@ -342,7 +344,10 @@ func (a *httpAPI) GetRaw(ctx context.Context, accessToken, msgID string) (Messag
 	if err != nil {
 		return Message{}, fmt.Errorf("gmail: decoding raw message %s: %w", msgID, ErrUnreachable)
 	}
-	return Message{RFC822: decoded, FiledAsSent: hasSentLabel(out.LabelIDs), Labels: out.LabelIDs}, nil
+	return Message{
+		RFC822: decoded, FiledAsSent: hasSentLabel(out.LabelIDs), Labels: out.LabelIDs,
+		ReceivedAt: internalDate(out.InternalDate),
+	}, nil
 }
 
 // hasSentLabel reports whether Gmail filed this message under SENT — the
@@ -427,7 +432,9 @@ func classifyStatus(resp *http.Response, op string, body []byte) error {
 	switch {
 	case resp.StatusCode == http.StatusTooManyRequests,
 		resp.StatusCode == http.StatusForbidden && googleconn.RateLimitBody(body):
-		return &connector.RateLimitedError{RetryAfter: rateLimitWait(resp, body)}
+		return &connector.RateLimitedError{
+			RetryAfter: rateLimitWait(resp, body), Reason: googleconn.RateLimitReason(body), Status: resp.StatusCode,
+		}
 	case resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden:
 		return &connector.ProviderError{
 			Op: op, Status: resp.StatusCode, Reason: googleconn.Reason(body), Class: ErrAuthRejected,

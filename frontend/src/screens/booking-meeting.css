@@ -1,0 +1,72 @@
+/* The meeting page: the meeting itself, and beside it for the host where the
+   invitation is on its way. Tokens only (make ds-purity). */
+
+.bookmeet {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+  gap: var(--gapCards);
+  align-items: start;
+}
+.bookmeet-host {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 20rem);
+}
+
+.bookmeet-main {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.bookmeet-head {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+}
+
+.bookmeet-video {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
+.bookmeet-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-3);
+}
+.bookmeet-step {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+.bookmeet-step svg {
+  inline-size: var(--controlIcon);
+  block-size: var(--controlIcon);
+  flex: none;
+}
+.bookmeet-step-done svg {
+  color: var(--successText);
+}
+.bookmeet-step-active svg {
+  color: var(--infoText);
+}
+.bookmeet-step-failed svg {
+  color: var(--dangerText);
+}
+.bookmeet-step-waiting {
+  color: var(--textSecondary);
+}
+
+.bookmeet-help {
+  margin-top: var(--space-4);
+}
+
+@media (max-width: 760px) {
+  .bookmeet-host {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

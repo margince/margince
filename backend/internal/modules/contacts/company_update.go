@@ -208,12 +208,14 @@ func renamesInPatch(p *storekit.Patch) bool {
 }
 
 // lockCompanyNameWritesForEdit takes the name lock when — and only when — this edit
-// writes a name.
+// writes a name or the domain set.
 //
-// Only a rename needs it, and only a rename should pay for it: the key is
+// Only those need it, and only those should pay for it: the key is
 // workspace-wide, so taking it for an owner change would serialize every
-// company write behind an edit that cannot create a duplicate. It is taken
-// ahead of the patch's row lock, per the ordering rule on lockCompanyNameWrites.
+// company write behind an edit that cannot create a duplicate. A domain claim
+// files the companies named after the domain (fileNameDomainTwins), which is a
+// name read. It is taken ahead of the patch's row lock, per the ordering rule
+// on lockCompanyNameWrites.
 //
 // And ahead of the READ, because the read is what the rename is judged against.
 // Taken after it, a concurrent rename landing in between left `current` holding
@@ -221,7 +223,7 @@ func renamesInPatch(p *storekit.Patch) bool {
 // before-image said the name had not moved, and the provenance stamp was
 // skipped for an edit that really did change the name.
 func lockCompanyNameWritesForEdit(ctx context.Context, tx pgx.Tx, in UpdateCompanyInput) error {
-	if !renamesACompany(in) {
+	if !renamesACompany(in) && in.Domains == nil {
 		return nil
 	}
 	return lockCompanyNameWrites(ctx, tx)

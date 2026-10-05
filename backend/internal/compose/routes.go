@@ -65,7 +65,7 @@ func contractAPI(srv Server, pool *pgxpool.Pool, identitySvc *identity.Service) 
 	// to remove.
 	registry := registryWithGate(InstallationDB(pool), gate, srv.replyDrafter, srv.send,
 		companyEnricher{}, srv.retrievalEmbedder, nil, importsFor(&srv),
-		meetingBriefReader(srv.meetingBriefSvc), srv.log, registryFeatures{lists: srv.listsEnabled, reporting: srv.reportingEnabled},
+		meetingBriefReader(srv.meetingBriefSvc), srv.log, registryFeatures{lists: srv.listsEnabled},
 		agents.WithVolumeCharger(srv.volumeMeter))
 	// The ADR-0055 admission layer and the MCP tool surface share one
 	// provider seam: agentGate's StageResolver reads exactly what the MCP
@@ -91,7 +91,6 @@ func contractAPI(srv Server, pool *pgxpool.Pool, identitySvc *identity.Service) 
 			// them after chi has matched, which is what makes chiRoutePattern
 			// able to answer at all.
 			srv.httpMetrics.Measure(chiRoutePattern),
-			reportingAvailability(srv.reportingEnabled),
 		},
 		// Keep query/path/header parse failures on the problem+json path:
 		// the generated default writes err.Error() as text/plain, an
@@ -263,6 +262,7 @@ func operationalMux(srv Server, pool *pgxpool.Pool, log *slog.Logger, identitySv
 	}
 	mountProviderPushWebhooks(mux, srv, log)
 	mountInbound(mux, identitySvc, log)
+	mountSecurityTxt(mux, srv.securityTxt)
 	return mux
 }
 

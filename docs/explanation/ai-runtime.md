@@ -24,9 +24,9 @@ the model runtime itself.
    (compiled task/tier/ladder)         (bound at boot, validated)               ▼
                                                                           provider adapter
    task cold_start                                                        (anthropic | openai |
-     ladder [cheap_cloud, premium]   ──walk on error/schema-fail──►       gemini | ollama |
-     on_budget_exhausted: degrade                                          vllm | openai_compatible
-                                                                           | fake)
+     ladder [cheap_cloud, premium]   ──walk on error/schema-fail──►       gemini | gemini_vertex |
+     on_budget_exhausted: degrade                                          ollama | vllm |
+                                                                           openai_compatible | fake)
 ```
 
 **Four principles hold this together:**
@@ -162,8 +162,9 @@ embeddings:    {provider: gemini}
   model runs: `eu_hosted` (partner-operated EU inference), `sovereign` (zero
   egress by construction), `cloud_frontier` (a vendor's cloud, wherever it
   serves). It constrains, it never leaks: under `eu_hosted` a lane on the
-  OpenRouter broker must pin EU-region hosts with `routing: {only: [...]}`, or
-  the config is refused, because an unpinned broker serves from any region.
+  OpenRouter broker must pin EU-region hosts (`only` on the connection's
+  `upstream`), as an unpinned broker serves from any region, and a `gemini_vertex` lane must name
+  an EU `location`, where Google processes the call — or the config is refused.
 - **No key ever lives in the binding.** A provider names only itself, and a stray
   `api_key:` is a *boot error* rather than a convenience. Where the key comes from
   depends on who is asking: a served installation resolves it from the **key
@@ -344,8 +345,8 @@ unless every check passes, in this order:
    ladder's `servableLadder` both read, unconditional today: #6396 reverted
    the ladder's narrowing pending #3351, and the lane follows suit.
 2. **The answer stands.** The state is secret-stripped and capped at 48,000
-   bytes, the call has 15 seconds, and the answer must clear the **site's
-   own** floor (the one its LLM path applies).
+   bytes, the call has the task's [decision timeout](ai-request-settings.md),
+   and the answer must clear the **site's own** floor (its LLM path's).
 
 No certification row is required — only the two checks above. [Certifying a
 site](../how-to/certify-a-decision-site.md) is advisory only, a measured
@@ -592,10 +593,10 @@ writing the case that certifies one:
 | Task contract (tasks, tiers, ladders, budget posture, status/sites/context/cost unit) | `backend/api/ai-tasks.yaml` → `tasks_gen.go` (via `tools/gen-aitasks`, `make gen`) |
 | Invocation-site census (which sites this build ships, and the case certifying each) | `internal/compose/aitaskregistry.go` (`NewTaskCensus`) · `internal/compose/aitasks` |
 | Runtime binding (tier → provider/model, profile) | the `ai.routing` setting — seeded from `seeds.ai_routing`, changed under Settings → AI. Shape declared under `$defs.aiRouting` in `config/margince.schema.json` |
-| BYOK keys | the key vault, set under Settings → AI → Model provider keys. The conventional environment variables (`GEMINI_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `OPENAI_COMPATIBLE_API_KEY`, `TYPESAFE_API_KEY`, `JEV_COMPATIBLE_API_KEY`) are read once, to seal a key into the vault on first boot |
+| BYOK keys | the key vault, set under Settings → AI → Model provider keys. The conventional environment variables (`GEMINI_API_KEY`, `GEMINI_VERTEX_SA_JSON`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `OPENAI_COMPATIBLE_API_KEY`, `TYPESAFE_API_KEY`, `JEV_COMPATIBLE_API_KEY`) are read once, to seal a key into the vault on first boot |
 | The gate | `internal/modules/ai` — `ai.Router` / `ai.NewLocalRouter`; `--ai-fake` flag |
 | Decision lane | `decisions:` in the routing setting · `Router.Decide` (`decideroute.go`) · certified rows in `decisioncert_gen.go` |
-| Providers | `anthropic`, `openai`, `gemini` (native) · `ollama`, `vllm`, `openai_compatible` · `fake` · decision lane only: `jev`, `jev_compatible` (`providerregistry.go`) |
+| Providers | `anthropic`, `openai`, `gemini`, `gemini_vertex` (native; `gemini_vertex` is the `gemini` wire on Vertex AI, bound by `location`) · `ollama`, `vllm`, `openai_compatible` · `fake` · decision lane only: `jev`, `jev_compatible` (`providerregistry.go`) |
 | Tracing | `ai_call` / `ai_call_payload` / `ai_call_config` (migrations `0088`, `0089`, `0100`, `0102`) |
 | Cost rates | `ai_model_rate` (per provider/model, effective-dated, micro-USD) · seeded by `SeedModelRates` |
 | Pricer (actuals) | `PriceCall` + `RateStore` (`internal/modules/ai`) → `/ai/usage` `cost_est_minor` |

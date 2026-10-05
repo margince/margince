@@ -12,11 +12,13 @@ package compose
 
 import (
 	"io"
+	"log/slog"
 	"sort"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/capturemetrics"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // writeCaptureMetrics renders one counter per traced outcome.
@@ -50,3 +52,7 @@ func WriteCaptureProcessMetrics(w io.Writer) {
 
 // writeCaptureSection is the fan-out's entry point.
 func (Server) writeCaptureSection(w io.Writer) { WriteCaptureProcessMetrics(w) }
+
+// rateLimitAttr is the reason and HTTP status of the rate limit err carries,
+// for the capture lanes' WARN lines; empty, and so omitted, for any other fault.
+func rateLimitAttr(err error) slog.Attr { return connector.RateLimitLogAttr(err) }

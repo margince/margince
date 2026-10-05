@@ -106,3 +106,34 @@ it("marks the days that belong to the month either side", () => {
     screen.getByRole("button", { name: "Tuesday, 25 August 2026" }).className,
   ).not.toContain("calendar-day-outside");
 });
+
+// A refused day stays in the grid and cannot be chosen, while the days either
+// side of it still can: the predicate is asked per day, not once per month.
+it("refuses the days the caller says cannot be chosen", async () => {
+  const user = userEvent.setup();
+  const chose = vi.fn();
+  render(
+    <Calendar
+      month={AUGUST_2026}
+      onMonthChange={() => {}}
+      selected=""
+      onSelect={chose}
+      today={TODAY}
+      locale="en"
+      refusal={(day) => (day === "2026-08-25" ? "nothing free" : undefined)}
+    />,
+  );
+
+  // The reason is in the name: struck through says it only to the eye.
+  const refused = screen.getByRole("button", {
+    name: "Tuesday, 25 August 2026, nothing free",
+  });
+  expect(refused).toHaveProperty("disabled", true);
+  await user.click(refused);
+  expect(chose).not.toHaveBeenCalled();
+
+  await user.click(
+    screen.getByRole("button", { name: "Wednesday, 26 August 2026" }),
+  );
+  expect(chose).toHaveBeenCalledWith("2026-08-26");
+});

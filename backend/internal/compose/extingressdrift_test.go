@@ -77,6 +77,8 @@ var waivedEnvelopeFields = gatekit.Waive(map[string]string{
 	"Fields": "the envelope's `any`. The published surface is typed instead — Record.Activity — so a unit cannot hand the sink a shape it does not switch on",
 	"DeliveredTo": "the receiving server's own delivery header, and it is a CORE judgement rather than a field to publish: the value is trusted only from a header position a sender could not have authored, which mailmap.TopDeliveredTo decides once. " +
 		"A unit supplying it would be supplying the conclusion instead of the evidence — and the conclusion adds an address to a seat's own self-set, which is the one thing a unit must not be able to assert. Empty from a unit means what it means everywhere: no trustworthy claim, so no alias is learned",
+	"ProviderReceivedAt": "a mailbox provider's own arrival time (Gmail's internalDate, Graph's receivedDateTime), which excuses a privacy notice for mail a mailbox already held before it was connected. " +
+		"Only the core mail connectors read it off a provider API they authenticate to. A unit-supplied time would be the unit's claim, and a backdated one would excuse a duty. Zero from a unit means no arrival time is known, so its mail never counts as already held",
 })
 
 // TestThePublishedRecordMirrorsTheCaptureEnvelope walks the core envelope and

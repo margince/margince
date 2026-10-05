@@ -23,7 +23,6 @@ for (const colorScheme of ["light", "dark"] satisfies ("light" | "dark")[]) {
         route.fulfill({
           json: meFixture({
             rowScope: "all",
-            settingsAvailability: { reporting: true },
             allow: {
               deal: ["read"],
               forecast: ["read"],

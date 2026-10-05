@@ -38,9 +38,19 @@ type providerDescriptor struct {
 	// vendorHosted marks an adapter whose omitted base_url is the vendor's own
 	// public API, which is what the routing preview calls cloud processing.
 	vendorHosted bool
+	// vendorBaseURL is that public API's address, the same constant the adapter
+	// defaults to — so a lift can write out "the vendor directly" for a lane
+	// whose provider now sits behind a gateway.
+	vendorBaseURL string
 	// public is whether the anonymous profile may name the adapter. The fake is
 	// a development mechanism, not a provider identity.
 	public bool
+	// pricedBy is the provider whose price sheet prices a model this one's own
+	// sheet does not: the same models behind another front door. Empty means
+	// an unpriced model stays unpriced.
+	pricedBy string
+	// priceSource is where the price sync reads this provider's prices.
+	priceSource priceSource
 	// defaultModel is the model an omitted model resolves to, for the adapters
 	// that have one.
 	defaultModel string
@@ -52,6 +62,13 @@ type providerDescriptor struct {
 	// held and calls without one otherwise: a self-hosted server needs none, so
 	// nothing that asks whether a binding can be served demands the key.
 	keyOptional bool
+	// serviceAccountKey marks an adapter whose keyEnv credential is a Google
+	// service-account JSON rather than an API key.
+	serviceAccountKey bool
+	// measuredBy is the provider whose certification records grade this one:
+	// an adapter sending the same request to the same weights through another
+	// host. Empty means its own records.
+	measuredBy string
 	// defaultEndpoint is the full decision endpoint an omitted base_url resolves
 	// to; empty means the binding must name one. A decision binding's base_url
 	// is the whole URL, posted to as written.
@@ -94,17 +111,20 @@ var providerRegistry = []providerDescriptor{
 	{
 		// The fake opens no socket, so its egress class is inert; it still
 		// declares one because every provider answers every question.
-		name: ProviderFake, caps: capChat, local: true, egress: egressPublicOnly,
+		priceSource: priceSource{kind: priceNotPublished},
+		name:        ProviderFake, caps: capChat, local: true, egress: egressPublicOnly,
 		servedSource: servedIdentitySourceResponse, carriage: carriesImagesAndPDF,
 		wildcardReason: "stands in for whichever binding named it, so it claims the wire's shape rather than a decoder",
 	},
 	{
-		name: providerAnthropic, caps: capChat, egress: egressPublicOnly, keyEnv: "ANTHROPIC_API_KEY",
-		servedSource: servedIdentitySourceResponse, vendorHosted: true, public: true,
+		priceSource: modelsDevSource("anthropic"),
+		name:        providerAnthropic, caps: capChat, egress: egressPublicOnly, keyEnv: "ANTHROPIC_API_KEY",
+		servedSource: servedIdentitySourceResponse, vendorHosted: true, vendorBaseURL: defaultAnthropicBaseURL, public: true,
 		carriage: anthropicCarries, thinkingFloor: anthropicTakesThinkingFloor, floorSkipsTools: true,
 	},
 	{
-		name: providerOllama, caps: capChat, local: true, egress: egressOperatorEndpoint,
+		priceSource: priceSource{kind: priceNotPublished},
+		name:        providerOllama, caps: capChat, local: true, egress: egressOperatorEndpoint,
 		servedSource: servedIdentitySourceResponse, defaultBaseURL: defaultOllamaBaseURL,
 		public: true, defaultModel: defaultOllamaModel, carriage: carriesImages,
 		wildcardReason: "serves whichever vision model the operator pulled",
@@ -116,7 +136,8 @@ var providerRegistry = []providerDescriptor{
 		// so no client either word selects carries a PDF in any configuration.
 		// The wire's shape is not the ambition of the wire's vendor: it is what
 		// this adapter can put on it.
-		name: providerVLLM, caps: capChat, local: true, egress: egressOperatorEndpoint,
+		priceSource: priceSource{kind: priceNotPublished},
+		name:        providerVLLM, caps: capChat, local: true, egress: egressOperatorEndpoint,
 		servedSource: servedIdentitySourceEcho, defaultBaseURL: defaultVLLMBaseURL,
 		public: true, defaultModel: defaultVLLMModel, carriage: carriesImages,
 		wildcardReason: "serves whichever model the operator loaded",
@@ -132,26 +153,39 @@ var providerRegistry = []providerDescriptor{
 		// jev_compatible as the only exceptions, so a future adapter cannot
 		// join them quietly. Its key
 		// variable is namespaced because it has no vendor convention.
-		name: providerOpenAICompatible, caps: capChat, egress: egressOperatorEndpoint,
+		priceSource: priceSource{kind: priceFromBroker},
+		name:        providerOpenAICompatible, caps: capChat, egress: egressOperatorEndpoint,
 		keyEnv: "OPENAI_COMPATIBLE_API_KEY", servedSource: servedIdentitySourceEcho,
 		public: true, carriage: carriesImages,
 		wildcardReason: "serves whichever vendor the operator pointed base_url at",
 		thinkingFloor:  openRouterTakesThinkingFloor, floorSkipsTools: true,
 	},
 	{
-		name: providerOpenAI, caps: capChat, egress: egressPublicOnly, keyEnv: "OPENAI_API_KEY",
-		servedSource: servedIdentitySourceResponse, vendorHosted: true, public: true,
+		priceSource: modelsDevSource("openai"),
+		name:        providerOpenAI, caps: capChat, egress: egressPublicOnly, keyEnv: "OPENAI_API_KEY",
+		servedSource: servedIdentitySourceResponse, vendorHosted: true, vendorBaseURL: defaultOpenAIBaseURL, public: true,
 		carriage: openAICarries, thinkingFloor: openaiTakesThinkingFloor,
 	},
 	{
-		name: providerGemini, caps: capChat, egress: egressPublicOnly, keyEnv: "GEMINI_API_KEY",
+		priceSource: modelsDevSource("google"),
+		name:        providerGemini, caps: capChat, egress: egressPublicOnly, keyEnv: "GEMINI_API_KEY",
+		servedSource: servedIdentitySourceResponse, vendorHosted: true, vendorBaseURL: defaultGeminiBaseURL, public: true,
+		carriage: geminiCarries, thinkingFloor: geminiTakesThinkingFloor,
+	},
+	{
+		// The Gemini wire served by Vertex AI. Its key is a service-account
+		// JSON, and its host is derived from the binding's location.
+		priceSource: modelsDevSource("google-vertex"),
+		name:        providerGeminiVertex, caps: capChat, egress: egressPublicOnly, keyEnv: "GEMINI_VERTEX_SA_JSON",
+		serviceAccountKey: true, measuredBy: providerGemini, pricedBy: providerGemini,
 		servedSource: servedIdentitySourceResponse, vendorHosted: true, public: true,
 		carriage: geminiCarries, thinkingFloor: geminiTakesThinkingFloor,
 	},
 	{
 		// TypeSafe's own API: a vendor cloud, so never local and never pinned
 		// to an EU host.
-		name: providerJev, caps: capDecision, egress: egressPublicOnly, keyEnv: "TYPESAFE_API_KEY",
+		priceSource: priceSource{kind: priceNotPublished},
+		name:        providerJev, caps: capDecision, egress: egressPublicOnly, keyEnv: "TYPESAFE_API_KEY",
 		servedSource: servedIdentitySourceResponse, vendorHosted: true, defaultEndpoint: defaultJevEndpoint,
 	},
 	{
@@ -161,7 +195,8 @@ var providerRegistry = []providerDescriptor{
 		// key, so the key is sent when held and never demanded. A broker names
 		// the dated snapshot it served and a bare server may hand the request
 		// back, so its served identity is graded per reply.
-		name: providerJevCompatible, caps: capDecision, egress: egressOperatorEndpoint,
+		priceSource: priceSource{kind: priceFromBroker},
+		name:        providerJevCompatible, caps: capDecision, egress: egressOperatorEndpoint,
 		keyEnv: "JEV_COMPATIBLE_API_KEY", keyOptional: true, servedSource: servedIdentityPerReply,
 		localByEndpoint: true,
 	},
@@ -181,6 +216,15 @@ func providerByName(name string) (providerDescriptor, bool) {
 func providerIsVendorHosted(name string) bool {
 	d, _ := providerByName(name)
 	return d.vendorHosted
+}
+
+// MeasuredBy is the provider whose certification records grade a binding on
+// provider: provider itself, unless the registry names another.
+func MeasuredBy(provider string) string {
+	if d, _ := providerByName(provider); d.measuredBy != "" {
+		return d.measuredBy
+	}
+	return provider
 }
 
 func providerDefaultModel(name string) string {

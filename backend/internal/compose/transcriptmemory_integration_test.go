@@ -44,7 +44,7 @@ func reworded(t *testing.T, summary string, line int) string {
 func (e *transcriptEnv) pendingProposals(t *testing.T) int {
 	t.Helper()
 	return e.WsCount(t, `SELECT count(*) FROM approval
-		 WHERE kind = 'transcript_proposal' AND status = 'pending'`)
+		 WHERE kind = 'commitment_task' AND status = 'pending'`)
 }
 
 // rejectFirst turns down the proposal a reading staged.

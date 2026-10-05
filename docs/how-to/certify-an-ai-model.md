@@ -18,6 +18,8 @@ budget, since Margince runs no inference of its own — never part of a request 
 See also [ai-runtime.md](../explanation/ai-runtime.md), [connect-a-cloud-model-provider.md](connect-a-cloud-model-provider.md), [add-an-ai-task.md](add-an-ai-task.md),
 [certify-a-decision-site.md](certify-a-decision-site.md) (the decisions lane) and [reference/ai-certification.md](../reference/ai-certification.md), the page these records render to.
 
+A `gemini_vertex` rung with no record of its own is graded by the `gemini` record for the same model under `cloud_frontier`: Vertex serves the same weights on the same wire, so it is sent the request that record measured. The page marks each such grade "measured on `gemini`", and a Vertex run, once paid for, grades its rungs instead.
+
 ## Prerequisites
 
 1. **What to certify, named outright** — one of two things, never a default:

@@ -45,12 +45,21 @@ import (
 // same working day.
 const waitingHorizonTTL = time.Hour
 
+// waitingHorizonFallbackTTL is how long the compiled horizon, standing in for a
+// measurement that ran out of time, is reused before the measurement is tried
+// again. Minutes, not an hour: the stand-in is not this installation's answer,
+// but a measurement that just failed is likely to fail again, and a read that
+// pays the statement budget for it twice (once per page) gets nothing.
+const waitingHorizonFallbackTTL = 5 * time.Minute
+
 // horizonMemo is one workspace's remembered horizon: what it was, the asOf it
-// was measured for, and when (by the store's clock) it was measured.
+// was measured for, when (by the store's clock) it was measured, and for how
+// long it holds.
 type horizonMemo struct {
 	days       int
 	asOf       time.Time
 	measuredAt time.Time
+	ttl        time.Duration
 }
 
 // horizonCache remembers the measured horizon per workspace.
@@ -91,7 +100,7 @@ func (c *horizonCache) lookup(ws ids.WorkspaceID, asOf, now time.Time) (int, boo
 		return 0, false
 	}
 	age := now.Sub(memo.measuredAt)
-	if age < 0 || age >= waitingHorizonTTL {
+	if age < 0 || age >= memo.ttl {
 		return 0, false
 	}
 	if skew := asOf.Sub(memo.asOf).Abs(); skew >= waitingHorizonTTL {
@@ -106,11 +115,22 @@ func (c *horizonCache) lookup(ws ids.WorkspaceID, asOf, now time.Time) (int, boo
 // wins and both values are correct. Measuring under the lock instead would
 // serialise every waiting read in the process behind one slow statement, which
 // is the cost this cache exists to remove.
-func (c *horizonCache) remember(ws ids.WorkspaceID, asOf, now time.Time, days int) {
+//
+// A fallback never displaces a measurement that is still good: a reader whose
+// measurement timed out must not replace what a concurrent reader measured.
+//
+// ttl is how long the entry holds: waitingHorizonTTL for a measurement,
+// waitingHorizonFallbackTTL for the compiled horizon that stood in for one.
+func (c *horizonCache) remember(ws ids.WorkspaceID, asOf, now time.Time, days int, ttl time.Duration) {
 	if c == nil {
 		return
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.memos[ws] = horizonMemo{days: days, asOf: asOf, measuredAt: now}
+	if held, ok := c.memos[ws]; ok && ttl == waitingHorizonFallbackTTL && held.ttl == waitingHorizonTTL {
+		if age := now.Sub(held.measuredAt); age >= 0 && age < held.ttl {
+			return
+		}
+	}
+	c.memos[ws] = horizonMemo{days: days, asOf: asOf, measuredAt: now, ttl: ttl}
 }

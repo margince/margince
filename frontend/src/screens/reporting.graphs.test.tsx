@@ -285,3 +285,39 @@ it("omits unassigned target columns for SDR outcomes", async () => {
     screen.getByText("34", { selector: ".stat-card-value" }),
   ).toBeVisible();
 });
+
+it("withholds stage-age marks for a small cohort without printing zero days", async () => {
+  const user = userEvent.setup({ delay: null });
+  const evaluation = {
+    ...reportingStoryEvaluation,
+    charts: reportingStoryEvaluation.charts
+      .filter((chart) => chart.kind === "stage_age")
+      .map((chart) => ({
+        ...chart,
+        points: chart.points.slice(0, 1).map((point) => ({
+          ...point,
+          value: null,
+          upper: null,
+          observations: 2,
+          status: "insufficient_sample",
+        })),
+      })),
+  } satisfies typeof reportingStoryEvaluation;
+  installFetchStub(reportingStoryRoutes(evaluation));
+  const { container } = render(
+    <StoryProviders>
+      <ReportingCharts evaluation={evaluation} onEvidence={() => {}} />
+    </StoryProviders>,
+  );
+  expect(
+    screen.getByRole("button", {
+      name: /Discovery: Median days —; 75th percentile —/,
+    }),
+  ).toBeVisible();
+  expect(container.querySelector(".report-chart-range-dot")).toBeNull();
+  expect(container.querySelector(".report-chart-range-band")).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Sample details" }));
+  expect(
+    screen.getByText(/Observations: 2 · Too few observations/),
+  ).toBeVisible();
+});

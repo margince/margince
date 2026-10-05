@@ -133,21 +133,35 @@ func ptr(b bool) *bool { return &b }
 // a syntax-only scan can tell the two apart exactly, which is the reason the
 // rename came with this gate.
 func TestOnlyTheResolverReadsTheTracePayloadsField(t *testing.T) {
+	assertOnlyTheResolverNames(t, "TracePayloadsSetting", "TracesPayloads")
+}
+
+// The same census for the reserved-domain rule: a second reader of the pointer
+// would answer false for the silent file and raise proposals the default
+// exists to keep out.
+func TestOnlyTheResolverReadsTheReservedDomainField(t *testing.T) {
+	assertOnlyTheResolverNames(t, "SkipReservedDomainProposalsSetting", "SkipsReservedDomainProposals")
+}
+
+// assertOnlyTheResolverNames fails for every reference to deployconfig.Capture's
+// pointer field outside the resolver function and this file.
+func assertOnlyTheResolverNames(t *testing.T, field, resolver string) {
+	t.Helper()
 	root, err := filepath.Abs("../../..")
 	if err != nil {
 		t.Fatalf("resolving the backend root: %v", err)
 	}
-	// The resolver's own file, and this one. Both NAME the field because one
-	// applies the default and the other tests that it does; every other file
-	// in the tree has the resolver to call instead.
+	// This file NAMES the field to test the default, and the resolver function
+	// applies it; everything else, the rest of the resolver's own file
+	// included, has the resolver to call instead.
 	//
 	// By path, not by basename: `capture.go` and `capture_test.go` exist in
 	// several packages here, and excluding them by name would let a real
 	// offender in any of them pass unread.
 	allowed := map[string]bool{
-		filepath.Join(root, "internal", "platform", "deployconfig", "capture.go"):      true,
 		filepath.Join(root, "internal", "platform", "deployconfig", "capture_test.go"): true,
 	}
+	resolverFile := filepath.Join(root, "internal", "platform", "deployconfig", "capture.go")
 
 	var offenders []string
 	walked := 0
@@ -165,18 +179,12 @@ func TestOnlyTheResolverReadsTheTracePayloadsField(t *testing.T) {
 			return fmt.Errorf("parsing %s: %w", path, parseErr)
 		}
 		walked++
-		ast.Inspect(file, func(n ast.Node) bool {
-			sel, ok := n.(*ast.SelectorExpr)
-			if !ok || sel.Sel == nil || sel.Sel.Name != "TracePayloadsSetting" {
-				return true
+		for _, decl := range file.Decls {
+			if fn, isFunc := decl.(*ast.FuncDecl); isFunc && path == resolverFile && fn.Name.Name == resolver {
+				continue
 			}
-			rel, relErr := filepath.Rel(root, path)
-			if relErr != nil {
-				rel = path
-			}
-			offenders = append(offenders, fmt.Sprintf("%s:%d", rel, fset.Position(sel.Pos()).Line))
-			return true
-		})
+			offenders = append(offenders, fieldReaders(fset, root, path, decl, field)...)
+		}
 		return nil
 	})
 	if err != nil {
@@ -188,10 +196,49 @@ func TestOnlyTheResolverReadsTheTracePayloadsField(t *testing.T) {
 		t.Fatalf("the walk parsed %d Go files, which is too few to have covered the tree", walked)
 	}
 	for _, o := range offenders {
-		t.Errorf("%s names deployconfig.Capture.TracePayloadsSetting. Call TracesPayloads() instead: "+
+		t.Errorf("%s names deployconfig.Capture.%s. Call %s() instead: "+
 			"the field is a pointer whose nil means the operator said nothing, and every reader "+
 			"that resolves it for itself is a second place the default lives — one of which will "+
-			"answer false for a file that never set the key", o)
+			"answer false for a file that never set the key", o, field, resolver)
+	}
+}
+
+// fieldReaders lists where decl selects field, as path:line relative to root.
+func fieldReaders(fset *token.FileSet, root, path string, decl ast.Decl, field string) []string {
+	var offenders []string
+	ast.Inspect(decl, func(n ast.Node) bool {
+		sel, ok := n.(*ast.SelectorExpr)
+		if !ok || sel.Sel == nil || sel.Sel.Name != field {
+			return true
+		}
+		rel, relErr := filepath.Rel(root, path)
+		if relErr != nil {
+			rel = path
+		}
+		offenders = append(offenders, fmt.Sprintf("%s:%d", rel, fset.Position(sel.Pos()).Line))
+		return true
+	})
+	return offenders
+}
+
+// The reserved-domain rule is on for a file that says nothing, and an explicit
+// false is the only way to turn it off.
+func TestReservedDomainProposalsAreSkippedUnlessTheFileSaysOtherwise(t *testing.T) {
+	for _, tc := range []struct {
+		file string
+		want bool
+	}{
+		{"version: 1\n", true},
+		{"version: 1\ncapture:\n  skip_reserved_domain_proposals: true\n", true},
+		{"version: 1\ncapture:\n  skip_reserved_domain_proposals: false\n", false},
+	} {
+		cfg, err := Load(writeTemp(t, tc.file), runtimeenv.Production)
+		if err != nil {
+			t.Fatalf("Load(%q): %v", tc.file, err)
+		}
+		if got := cfg.Capture.SkipsReservedDomainProposals(); got != tc.want {
+			t.Errorf("SkipsReservedDomainProposals() = %v for %q, want %v", got, tc.file, tc.want)
+		}
 	}
 }
 

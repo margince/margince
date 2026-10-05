@@ -48,6 +48,11 @@ type binding struct {
 	// into that digest would regenerate every stored brief in the installation
 	// through paid models on every key rotation.
 	credentialVersion string
+	// tierRouting is each broker tier's resolved routing, and sent memoizes
+	// the per-attempt snapshots built from it (snapshotFor). Both nil on a
+	// Router assembled without a RoutingConfig, which records configSnapshot.
+	tierRouting map[Tier]*OpenRouterRouting
+	sent        *sentSnapshots
 	// decisions is the bound decisions lane, nil when the config binds none —
 	// the state in which Decide is exactly CompleteStructured.
 	decisions *decisionLane
@@ -96,6 +101,7 @@ func (b binding) withConfig(cfg RoutingConfig, decisions *decisionLane) binding 
 	b.embedDims = embedDims
 	b.configSnapshot = newConfigSnapshot(cfg.sourceHash, embedDims)
 	b.configHash = b.configSnapshot.Hash
+	b.tierRouting, b.sent = brokerRouting(cfg), &sentSnapshots{}
 	b.credentialVersion = cfg.credentialVersion
 	return b
 }

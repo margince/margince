@@ -25,15 +25,11 @@ func (ReportScheduleSweepArgs) Kind() string { return "report_schedule_sweep" }
 func (ReportScheduleSweepArgs) FleetWide() {}
 
 type reportScheduleSweepWorker struct {
-	enabled bool
-	pool    *pgxpool.Pool
-	now     func() time.Time
+	pool *pgxpool.Pool
+	now  func() time.Time
 }
 
 func (w *reportScheduleSweepWorker) Work(ctx context.Context, _ *river.Job[ReportScheduleSweepArgs]) error {
-	if !w.enabled {
-		return nil
-	}
 	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.sweepWorkspace))
 }
 

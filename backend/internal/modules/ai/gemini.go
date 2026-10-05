@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -27,8 +28,7 @@ import (
 // match Google's wire (see the //nolint:tagliatelle markers).
 type geminiClient struct {
 	http         *http.Client
-	baseURL      string
-	apiKey       string
+	transport    geminiTransport
 	defaultModel string
 	// attachmentMIMEs is what THIS binding carries: the wire's own carriage,
 	// narrowed by any `input:` the operator declared (inputmodality.go).
@@ -213,47 +213,66 @@ func (c *geminiClient) Embed(ctx context.Context, req model.EmbedRequest) (model
 	if embedModel == "" {
 		embedModel = geminiEmbedModel
 	}
-	// One :embedContent call per input (spec §3.5's named endpoint). A large
-	// retrieval batch is therefore N sequential round-trips; folding onto
-	// :batchEmbedContents for a single call is a follow-up.
+	// One call per input, so a large retrieval batch is N sequential
+	// round-trips.
 	vectors := make([][]float32, 0, len(req.Inputs))
 	dims := 0
 	for _, input := range req.Inputs {
-		wire := geminiEmbedWire{
-			Model:                "models/" + embedModel,
-			Content:              geminiContent{Parts: []geminiPart{{Text: input}}},
-			OutputDimensionality: req.Dimensions, // 0 ⇒ omitted ⇒ provider default
-		}
-		payload, _, err := SendablePayload(ctx, wire, nil)
+		values, err := c.embedOne(ctx, embedModel, input, req.Dimensions)
 		if err != nil {
 			return model.Embeddings{}, err
-		}
-		body, err := c.post(ctx, "/models/"+embedModel+":embedContent", payload)
-		if err != nil {
-			return model.Embeddings{}, err
-		}
-		var out struct {
-			Embedding struct {
-				Values []float32 `json:"values"`
-			} `json:"embedding"`
-		}
-		decErr := json.NewDecoder(body).Decode(&out)
-		//craft:ignore swallowed-errors best-effort close of a response body already read to completion — the decode result decides the outcome
-		_ = body.Close()
-		if decErr != nil {
-			return model.Embeddings{}, fmt.Errorf("ai: gemini: decode embeddings: %w", decErr)
 		}
 		// Every vector must share one width — the store ranks against a fixed
 		// column, so a ragged batch (model/version skew) is a hard error, not a
 		// silently-advertised max.
 		if len(vectors) == 0 {
-			dims = len(out.Embedding.Values)
-		} else if len(out.Embedding.Values) != dims {
-			return model.Embeddings{}, fmt.Errorf("ai: gemini: embedding width skew: got %d, expected %d", len(out.Embedding.Values), dims)
+			dims = len(values)
+		} else if len(values) != dims {
+			return model.Embeddings{}, fmt.Errorf("ai: gemini: embedding width skew: got %d, expected %d", len(values), dims)
 		}
-		vectors = append(vectors, out.Embedding.Values)
+		vectors = append(vectors, values)
 	}
 	return model.Embeddings{Vectors: vectors, Dims: dims}, nil
+}
+
+// embedOne embeds one input. AI Studio serves :embedContent; Vertex AI has no
+// such verb and embeds through :predict, so its transport carries the call.
+func (c *geminiClient) embedOne(ctx context.Context, embedModel, input string, dims int) ([]float32, error) {
+	if vertex, ok := c.transport.(vertexTransport); ok {
+		return c.predictEmbedding(ctx, vertex, embedModel, input, dims)
+	}
+	payload, _, err := SendablePayload(ctx, geminiEmbedWire{
+		Model:                "models/" + embedModel,
+		Content:              geminiContent{Parts: []geminiPart{{Text: input}}},
+		OutputDimensionality: dims, // 0 ⇒ omitted ⇒ provider default
+	}, nil)
+	if err != nil {
+		return nil, err
+	}
+	var out struct {
+		Embedding struct {
+			Values []float32 `json:"values"`
+		} `json:"embedding"`
+	}
+	if err := c.postEmbed(ctx, c.transport.modelURL(embedModel, "embedContent"), payload, func(d *json.Decoder) error { return d.Decode(&out) }); err != nil {
+		return nil, err
+	}
+	return out.Embedding.Values, nil
+}
+
+// postEmbed posts one embedding request and hands its answer to decode.
+func (c *geminiClient) postEmbed(ctx context.Context, endpoint string, payload []byte, decode func(*json.Decoder) error) error {
+	body, err := c.post(ctx, endpoint, payload)
+	if err != nil {
+		return err
+	}
+	decErr := decode(json.NewDecoder(body))
+	//craft:ignore swallowed-errors best-effort close of a response body already read to completion — the decode result decides the outcome
+	_ = body.Close()
+	if decErr != nil {
+		return fmt.Errorf("ai: gemini: decode embeddings: %w", decErr)
+	}
+	return nil
 }
 
 func (c *geminiClient) Caps() model.Capabilities {
@@ -281,6 +300,11 @@ func (c *geminiClient) generate(ctx context.Context, req model.Request, stream b
 	if err != nil {
 		return nil, err
 	}
+	// Precedence: the request's own option, an admin's level for the task,
+	// then the binding's; a model that predates the field takes none.
+	if opts.ThinkingLevel == "" && geminiTakesThinkingLevel(genModel) && slices.Contains(geminiThinkingLevels, req.ThinkingLevel) {
+		opts.ThinkingLevel = req.ThinkingLevel
+	}
 	if opts.ThinkingLevel == "" {
 		opts.ThinkingLevel = c.thinkingLevel
 	}
@@ -300,9 +324,7 @@ func (c *geminiClient) generate(ctx context.Context, req model.Request, stream b
 	if err != nil {
 		return nil, err
 	}
-	// Paths are version-relative: the API version (/v1beta) lives in baseURL
-	// (defaultGeminiBaseURL), so a proxy override keeps the whole prefix in one place.
-	return c.post(ctx, "/models/"+genModel+":"+method+query, payload)
+	return c.post(ctx, c.transport.modelURL(genModel, method)+query, payload)
 }
 
 // geminiContents maps messages to the native contents array (assistant→model)
@@ -391,13 +413,15 @@ func geminiReadOptions(opts map[string]json.RawMessage) (geminiOptions, error) {
 	return o, nil
 }
 
-func (c *geminiClient) post(ctx context.Context, path string, payload []byte) (io.ReadCloser, error) {
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+path, bytes.NewReader(payload))
+func (c *geminiClient) post(ctx context.Context, endpoint string, payload []byte) (io.ReadCloser, error) {
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(payload))
 	if err != nil {
 		return nil, fmt.Errorf("ai: gemini: build request: %w", err)
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("x-goog-api-key", c.apiKey)
+	if err := c.transport.authorize(ctx, httpReq); err != nil {
+		return nil, fmt.Errorf("ai: gemini: %w", err)
+	}
 	resp, err := c.http.Do(httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("ai: gemini: %w", err)

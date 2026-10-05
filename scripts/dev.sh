@@ -1157,7 +1157,8 @@ up)
   # BYOK: the real model powers the /coldstart read-back when a cloud key is in
   # the environment, the offline fake otherwise. Secrets ride the ENVIRONMENT —
   # the api resolves each provider's key from its conventional env var
-  # (GEMINI_API_KEY / OPENAI_API_KEY / ANTHROPIC_API_KEY / OPENAI_COMPATIBLE_API_KEY)
+  # (GEMINI_API_KEY / GEMINI_VERTEX_SA_JSON / OPENAI_API_KEY / ANTHROPIC_API_KEY /
+  # OPENAI_COMPATIBLE_API_KEY / TYPESAFE_API_KEY)
   # at boot; the routing file names only providers, never a key. Sourcing
   # .env.local exports those vars, and the api/worker started below inherit them —
   # no key ever lands in a config file. Seed .env.local from the tracked template
@@ -1185,6 +1186,7 @@ up)
       anthropic)         _env="ANTHROPIC_API_KEY" ;;
       openai)            _env="OPENAI_API_KEY" ;;
       gemini)            _env="GEMINI_API_KEY" ;;
+      gemini_vertex)     _env="GEMINI_VERTEX_SA_JSON" ;;
       openai_compatible) _env="OPENAI_COMPATIBLE_API_KEY" ;;
       jev)               _env="TYPESAFE_API_KEY" ;;
     esac

@@ -53,7 +53,7 @@ func TestADrainThatFinishesIsNotEscalated(t *testing.T) {
 	lane := &fakeJobLane{}
 	logger, written := recordingLogger()
 
-	stopJobRunner(t.Context(), lane, logger)
+	stopJobRunner(t.Context(), lane, logger, time.Millisecond)
 
 	if lane.stopAndCancel != 0 {
 		t.Errorf("a drain that finished was escalated to StopAndCancel %d time(s); "+
@@ -70,7 +70,7 @@ func TestADrainThatOverrunsCancelsTheJobsStillRunning(t *testing.T) {
 	lane := &fakeJobLane{stopErr: context.DeadlineExceeded}
 	logger, written := recordingLogger()
 
-	stopJobRunner(t.Context(), lane, logger)
+	stopJobRunner(t.Context(), lane, logger, time.Millisecond)
 
 	if lane.stopAndCancel != 1 {
 		t.Fatalf("the drain overran and StopAndCancel was called %d time(s), want 1 — "+
@@ -88,7 +88,7 @@ func TestJobsThatSurviveBothStopsAreReportedAsAnError(t *testing.T) {
 	lane := &fakeJobLane{stopErr: context.DeadlineExceeded, cancelErr: errors.New("still working")}
 	logger, written := recordingLogger()
 
-	stopJobRunner(t.Context(), lane, logger)
+	stopJobRunner(t.Context(), lane, logger, time.Millisecond)
 
 	if !strings.Contains(written.String(), "level=ERROR") {
 		t.Errorf("this process is closing its connections under running jobs and said nothing at ERROR: %q", written.String())

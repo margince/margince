@@ -1,13 +1,12 @@
 # Operate sales reporting
 
-## Enable a pilot
+## Set up reporting
 
 1. Apply additive migrations using the normal deployment procedure. Back up the
    installation before deploying. Existing historical rows are not given invented
    event owners, rates or customer eligibility.
-2. Set `analytics.performance_enabled: true` in the deployment configuration and
-   restart both API and worker. The default is false. `/v1/me` advertises reporting
-   availability; the reporting routes, MCP evaluator and workers use this same gate.
+2. Reporting is available on every installation. API, MCP and workers use the same
+   evaluator; no deployment switch selects a different analytics implementation.
 3. Review role grants for `report_definition`, `report_edition`, `report_schedule`,
    `sales_target`, `reporting_framework` and `reporting_credit`. Data-object grants,
    field masks and team oversight still constrain the numbers. Read seats cannot mutate.
@@ -15,11 +14,22 @@
    Mappings are versioned and effective prospectively. Agree target metrics and
    calendar periods before setting commitments.
 5. Enable an `erase` retention policy for `report_edition` before enabling schedules.
-   Select at most 20 fixed team/pipeline capture contexts. The legacy workspace
-   forecast capture continues separately; configured contexts share its daily job.
+   Select at most 20 fixed team/pipeline capture contexts. Workspace and configured-context forecast captures share one daily job.
 6. Save a view, capture an edition, inspect a mark's evidence, export it and repeat
    under a narrower reader. Validate totals and business-timezone boundaries against
-   the same context before expanding the pilot.
+   the same context before widening access.
+
+## Upgrade from a flag-gated installation
+
+If reporting was disabled after a pilot, call `POST /v1/admin/reporting/pause`
+before upgrading and verify that schedules are disabled. Otherwise enabled
+schedules resume their bounded catch-up (up to twelve missed occurrences).
+Removing the retired configuration key does not pause a schedule.
+
+Older forecast captures without a population fingerprint cannot become a
+comparable reporting baseline. New captures establish history prospectively;
+no backfill invents a population for old observations. Historical down-migration
+errors may mention disabling the retired flag: use durable schedule pause instead.
 
 ## Understand the workers
 
@@ -37,20 +47,17 @@ through the operational job interface after correcting a removed team/pipeline.
 A new quarter or changed population needs compatible captures; it never falls back
 to a different team's history.
 
-## Pause or roll back
+## Pause schedules or roll back
 
-Before disabling reporting, an authorized human administrator can call
-`POST /v1/admin/reporting/pause`. It durably disables all reporting schedules and
-advances their versions. Verify the changed schedules and run history, then set
-`analytics.performance_enabled: false` and restart API and worker. Turning the flag
-back on does not resume those schedules; each needs an explicit decision.
+An authorized human administrator can call `POST /v1/admin/reporting/pause`.
+It durably disables all reporting schedules and advances their versions. Verify
+the changed schedules and run history. Each schedule needs an explicit decision
+to resume; restarting API or worker does not resume it.
 
 Keep the additive schema and stored editions during a code rollback. Do not reverse
 migrations to remove collected facts. Down migrations support an unused installation
-and refuse once the affected reporting data exists. While the feature is disabled, forecast's
-legacy workspace capture continues, but report generation and configured-context
-capture do not. Re-enabling may reveal a history gap; no backfill invents missed
-observations. Privacy erasure, SAR and retention remain active independently of the flag.
+and refuse once the affected reporting data exists. Daily forecast capture, privacy
+erasure, SAR and retention continue independently of paused reporting schedules.
 
 ## Investigate a discrepancy
 

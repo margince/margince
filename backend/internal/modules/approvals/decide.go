@@ -144,12 +144,11 @@ func (s *Service) runPrecheck(ctx context.Context, id ids.ApprovalID, approve bo
 	}
 	a, err := s.Get(ctx, id)
 	if err != nil {
-		// Not this function's refusal to make. The decision below re-reads the
-		// row under its own authority gate and answers about scope, existence
-		// and status there; answering here would decide the same question from
-		// the place with less context, and would turn a 404 into whatever this
-		// path happened to return.
-		return nil //nolint:nilerr // the decision re-reads and refuses properly
+		// Refused here too, with Get's own gated answer. Passing on would let a
+		// card that becomes decidable between this read and the decision be
+		// approved with its precheck never run, and an edit the precheck would
+		// refuse would land.
+		return err
 	}
 	check, ok := s.prechecks[a.Kind]
 	if !ok || !serverProposed(a) {
@@ -163,7 +162,7 @@ func (s *Service) runPrecheck(ctx context.Context, id ids.ApprovalID, approve bo
 }
 
 // countIfAContactDecided records the track record, and records nothing for an
-// automatic apply.
+// automatic apply or for a release an agent carried, which the human never saw.
 //
 // The counters are one contact's experience of one kind, and the clean-approval
 // column is the one a promotion offer is read from — so a pass running every
@@ -171,13 +170,13 @@ func (s *Service) runPrecheck(ctx context.Context, id ids.ApprovalID, approve bo
 // evidence that they keep agreeing, about proposals they never saw. The ladder
 // is climbed by decisions, not by the automation a previous rung enabled.
 func countIfAContactDecided(
-	ctx context.Context, tx pgx.Tx, userID ids.UUID, kind string,
+	ctx context.Context, tx pgx.Tx, p principal.Principal, kind string,
 	approve bool, edited json.RawMessage, by decider,
 ) error {
-	if by != decidedByContact {
+	if by != decidedByContact || p.Type == principal.PrincipalAgent {
 		return nil
 	}
-	return countDecisionTx(ctx, tx, userID, kind, decisionOutcomeOf(approve, edited))
+	return countDecisionTx(ctx, tx, p.UserID, kind, decisionOutcomeOf(approve, edited))
 }
 
 // landEditedPayload writes a modify-then-approve edit, and refuses the one kind
@@ -234,7 +233,7 @@ func (s *Service) decideInTx(ctx context.Context, tx pgx.Tx, p principal.Princip
 	// this module keeps everywhere. Before the status check, because what a
 	// credential may release is a question about the credential and not about
 	// how far this particular proposal has got.
-	if err := agentMayDecide(p, a, approve); err != nil {
+	if err := agentMayDecide(p, a, approve, s.ownReleaseFor(ctx, a)); err != nil {
 		return row{}, err
 	}
 	if st := a.effectiveStatus(s.now()); st != "pending" {
@@ -283,7 +282,7 @@ func (s *Service) decideInTx(ctx context.Context, tx pgx.Tx, p principal.Princip
 	// transaction as the decision it counts. A counter that could outlive a
 	// rolled-back approval would offer a rep autonomy on evidence of a decision
 	// they never made.
-	if err := countIfAContactDecided(ctx, tx, p.UserID, a.Kind, approve, edited, by); err != nil {
+	if err := countIfAContactDecided(ctx, tx, p, a.Kind, approve, edited, by); err != nil {
 		return row{}, err
 	}
 	// An approval's whole content is a state transition, so the images are the

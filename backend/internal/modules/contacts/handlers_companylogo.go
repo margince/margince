@@ -13,6 +13,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -115,18 +116,34 @@ func (h Handlers) streamLogoKey(w http.ResponseWriter, r *http.Request, id crmco
 	// Bytes known to be tight go out as stored: no read into memory, no
 	// decode, no pixel scan. That is every mark stored since PutLogo, and a
 	// legacy one once this process has checked it.
-	if tight {
+	if servedAsStored(tight, object.Size) {
 		writeLogo(w, r, id, etag, rc, object.Size, cacheControl)
 		return
 	}
 	h.streamLegacyLogo(w, r, companyID, id, slot, key, etag, rc, cacheControl, writeBack)
 }
 
+// servedAsStored reports whether a mark goes out unchanged rather than cropped.
+//
+// Tight bytes need no crop. Bytes too large to hold cannot have one: cropping is what
+// the legacy path adds, not what makes a logo displayable, so serving the original
+// beats reading MaxMarkBytes on every view of a record whose logo then never appears.
+func servedAsStored(tight bool, size int64) bool {
+	return tight || size > imagenorm.MaxMarkBytes
+}
+
 // streamLegacyLogo serves a mark stored before PutLogo trimmed at write time:
 // such an object may still carry the transparent square canvas older uploads
 // were given, so it is cropped here and the crop written back.
 func (h Handlers) streamLegacyLogo(w http.ResponseWriter, r *http.Request, companyID ids.CompanyID, id crmcontracts.Id, slot LogoSlot, key, etag string, rc io.ReadCloser, cacheControl string, writeBack bool) {
-	source, readErr := io.ReadAll(rc)
+	// Bounded although the caller already checked object.Size: the size is what the
+	// store reports, and this reads the bytes. Truncating would be the worse failure
+	// — a valid PNG with trailing bytes still decodes, so the crop would be written
+	// back and cached as tight — so one byte past the ceiling refuses instead.
+	source, readErr := io.ReadAll(io.LimitReader(rc, imagenorm.MaxMarkBytes+1))
+	if readErr == nil && len(source) > imagenorm.MaxMarkBytes {
+		readErr = fmt.Errorf("contacts: the stored mark at %s is larger than its reported size", key)
+	}
 	closeErr := rc.Close()
 	if closeErr != nil {
 		slog.WarnContext(r.Context(), "closing company logo reader", "err", closeErr)

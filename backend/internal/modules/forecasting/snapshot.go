@@ -257,16 +257,23 @@ func nullableInt(v int) *int {
 
 // SnapshotSide loads one snapshot's definition version and its per-deal rows.
 //
-// Gated on read: a snapshot is a record of what the workspace expected, and
-// reading one is reading the forecast.
+// Gated on read, then passed through the store's lens: a snapshot freezes the
+// workspace's figures, and its per-deal rows must not reach a caller who could
+// not have read those deals or that population live.
 func (s *Store) SnapshotSide(ctx context.Context, tx pgx.Tx, id ids.UUID) (snapshotSide, error) {
 	if err := auth.Require(ctx, "forecast", principal.ActionRead); err != nil {
 		return snapshotSide{}, err
 	}
+	if s.lens == nil {
+		return snapshotSide{}, errors.New("forecasting: no snapshot lens is bound, so a snapshot's rows cannot be narrowed")
+	}
 	var out snapshotSide
+	var scope Scope
 	err := tx.QueryRow(ctx,
-		`SELECT definition_version, period_start, period_end FROM forecast_snapshot WHERE id = $1`, id).
-		Scan(&out.DefinitionVersion, &out.PeriodStart, &out.PeriodEnd)
+		`SELECT definition_version, period_start, period_end, scope_kind, scope_id, pipeline_id, base_currency
+		 FROM forecast_snapshot WHERE id = $1`, id).
+		Scan(&out.DefinitionVersion, &out.PeriodStart, &out.PeriodEnd, &scope.Kind, &scope.ID,
+			&out.PipelineID, &out.BaseCurrency)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return snapshotSide{}, apperrors.ErrNotFound
 	}
@@ -322,6 +329,13 @@ func (s *Store) SnapshotSide(ctx context.Context, tx pgx.Tx, id ids.UUID) (snaps
 	if err != nil {
 		return snapshotSide{}, fmt.Errorf("forecasting: collecting the snapshot's contributions: %w", err)
 	}
+	out.Scope = scope
+	frozen := len(out.Contributions)
+	out.Contributions, err = s.lens(ctx, tx, scope, out.PipelineID, out.Contributions)
+	if err != nil {
+		return snapshotSide{}, err
+	}
+	out.Withheld = len(out.Contributions) < frozen
 	return out, nil
 }
 
@@ -372,5 +386,25 @@ func (s *Store) MovementTx(
 			Message: "a movement compares two readings of the same period",
 		}
 	}
+	if opening.Scope.Kind != closing.Scope.Kind || !sameID(opening.Scope.ID, closing.Scope.ID) ||
+		!sameID(opening.PipelineID, closing.PipelineID) {
+		return Movement{}, &values.ParseError{
+			Field: "from", Code: "populations_differ",
+			Message: "a movement compares two readings of the same scope and pipeline",
+		}
+	}
+	if opening.BaseCurrency != closing.BaseCurrency {
+		return Movement{}, &values.ParseError{
+			Field: "from", Code: "currencies_differ",
+			Message: "a movement compares two readings in the same base currency",
+		}
+	}
 	return Classify(reading, opening, closing), nil
+}
+
+func sameID(a, b *ids.UUID) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	return *a == *b
 }

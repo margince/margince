@@ -55,18 +55,7 @@ func (h Handlers) GetPublicSchedulingProfile(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	profile = h.store.brandSchedulingProfile(r.Context(), profile)
-	out := crmcontracts.PublicSchedulingProfile{
-		Title: profile.Title, Location: profile.Location,
-		DurationMinutes: profile.DurationMinutes, Enabled: profile.Enabled,
-	}
-	if profile.HostName != nil {
-		out.HostName = *profile.HostName
-	}
-	if profile.CompanyName != nil {
-		out.CompanyName = *profile.CompanyName
-	}
-	out.LogoUrl = profile.LogoUrl
-	httperr.WriteJSON(w, http.StatusOK, out)
+	httperr.WriteJSON(w, http.StatusOK, publicProfile(profile, nil))
 }
 
 // GetPublicMeetingInvitation withholds provider URLs from the guest projection.
@@ -81,8 +70,7 @@ func (h Handlers) GetPublicMeetingInvitation(w http.ResponseWriter, r *http.Requ
 		writeStoreErr(w, r, err)
 		return
 	}
-	out.CalendarUrl = nil
-	httperr.WriteJSON(w, http.StatusOK, out)
+	httperr.WriteJSON(w, http.StatusOK, guestInvitationView(out))
 }
 
 // ChangePublicMeetingInvitation limits guest authority to rescheduling and cancellation.
@@ -105,8 +93,7 @@ func (h Handlers) ChangePublicMeetingInvitation(w http.ResponseWriter, r *http.R
 		writeStoreErr(w, r, err)
 		return
 	}
-	out.CalendarUrl = nil
-	httperr.WriteJSON(w, http.StatusAccepted, out)
+	httperr.WriteJSON(w, http.StatusAccepted, guestInvitationView(out))
 }
 
 func (h Handlers) bookPublicInvitation(w http.ResponseWriter, r *http.Request, page BookingPage, req crmcontracts.BookPublicMeetingJSONRequestBody, contact ids.UUID, marketing MarketingOutcome, intent *publicBookingIntent) {
@@ -147,5 +134,5 @@ func writePublicInvitation(w http.ResponseWriter, out crmcontracts.MeetingInvita
 		End        time.Time                            `json:"end"`
 		Marketing  MarketingOutcome                     `json:"marketing"`
 		Invitation crmcontracts.MeetingInvitation       `json:"invitation"`
-	}{out.Status, out.Start, out.End, marketing, out})
+	}{out.Status, out.Start, out.End, marketing, guestInvitationView(out)})
 }

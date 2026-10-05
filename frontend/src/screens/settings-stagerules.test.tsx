@@ -67,6 +67,10 @@ const REPORT = {
 // A rule on the first transition; the second has none, which is the default
 // state of every transition in the product.
 const RULES = {
+  // The installation permits automation, so a switch reading `auto` means a deal
+  // actually moves. The cases at the bottom turn this off — which is the DEFAULT,
+  // and the state this screen used to render as though it were on.
+  automation_enabled: true,
   data: [
     {
       id: "r1",
@@ -327,5 +331,37 @@ describe("stage automation rules", () => {
     // Drawn only where it means something: a transition that proposes has no
     // automatic move to undo.
     expect(await screen.findByText(/Undo for 72 h/)).toBeTruthy();
+  });
+  it("says so when the installation has automation switched off", async () => {
+    // The default state of a fresh installation. Every switch below still reads
+    // what its rule asks for, and no deal moves, so the screen has to carry the
+    // reason — it is the only thing on the page that knows one exists.
+    const { fetchStub } = rulesStub({ ...RULES, automation_enabled: false });
+    vi.stubGlobal("fetch", fetchStub);
+    render(<StageAutomationCard />);
+
+    expect(
+      await screen.findByText(/Stage automation is switched off/),
+    ).toBeTruthy();
+    expect(
+      await screen.findByText(/No deal moves by itself while this is off/),
+    ).toBeTruthy();
+    // The CONFIGURED one, which is the case that matters: a transition somebody set
+    // to auto must still read auto while the installation is off, so an admin can
+    // see what they have asked for and what will happen once it is turned on.
+    expect(
+      await screen.findByRole("switch", { name: /Discovery → Negotiation/ }),
+    ).toBeTruthy();
+  });
+
+  it("says nothing about the kill switch when the installation permits automation", async () => {
+    const { fetchStub } = rulesStub();
+    vi.stubGlobal("fetch", fetchStub);
+    render(<StageAutomationCard />);
+
+    expect(
+      await screen.findByRole("switch", { name: /Negotiation → Contract/ }),
+    ).toBeTruthy();
+    expect(screen.queryByText(/Stage automation is switched off/)).toBeNull();
   });
 });

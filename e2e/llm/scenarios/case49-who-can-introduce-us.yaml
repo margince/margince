@@ -1,0 +1,77 @@
+# CASE 49 — Who can introduce us, and what is going cold.
+#
+# Four read-only tools that answer questions about relationships and evidence rather
+# than about one record, asked as one errand because a rep asks them together in
+# the car before a pipeline call: what was booked, which deals are thin, whether
+# the record supports a claim, and who could open a door.
+#
+# intro_path_to names the COLLEAGUE who knows somebody at an account. The
+# seeded route is Sofia Meier's, through Heike Brandt at Nordwind Armaturen; a
+# route through the caller themself is no introduction, which is why the activities
+# are written in Sofia's session and not the admin's.
+#
+# at_risk_relationships reads the shape of the relationships around open deals.
+# The seeded two (Körber Sensorik, 45 days quiet; Reply Deutschland, 75) are the
+# ones it flags; asking it replaces reading every deal.
+#
+# read_reporting is the standard reporting reading — the figure the product's
+# own reports show — beside forecast_readings, which answers a different question.
+#
+# search_report_evidence IS NOT REQUIRED, and this is the written ruling the lane
+# owes it. It checks a claim against the records behind a SAVED analytics run, a
+# route a model finds only by saving a run first. Across both candidates and six
+# runs, every model answered "do the logged inbound mails say price?" with
+# query_workspace or search_context instead, and cited the one seeded mail
+# (Körber's) correctly: the two neighbours are an equally honest engine for this
+# errand, so requiring the tool would grade the route taken and not the answer.
+# It stays in may_call, and criterion 4 holds what matters — a claim is checked
+# against the records and cited, never confirmed from memory.
+name: case49_who_can_introduce_us
+criteria: [1, 2, 3, 4]
+
+# WRITES: the author's own statement that this case changes the world. It is not
+# what decides the reset — the runner rebuilds whenever the LAST run dirtied the
+# world, because the assistant is offered the whole server and any run can write
+# regardless of what its file says. TestEveryWritingScenarioDeclaresThatItWrites
+# holds this line against the tools the case names.
+writes: true
+
+prompt: |
+  Pipeline call with my manager in twenty minutes, I am driving. What have we
+  booked this quarter — the figure the standard sales report on the Reporting page
+  gives, not your own sum?
+  Which open deals hang on a single contact or have gone quiet? She will say we are
+  losing on price: of the inbound email we have logged, how many actually say
+  that, and which? Most of it is German; cite what you find. And we want into
+  Nordwind Armaturen — does anyone on the team know someone there?
+
+must_call:
+  - intro_path_to
+  - at_risk_relationships
+  - read_reporting
+may_call:
+  - search_report_evidence
+  - search_records
+  - read_record
+  - list_records
+  - resolve_entities
+  - who_knows
+  - run_analytics_query
+  - describe_analytics_vocabulary
+  - describe_report_vocabulary
+  - forecast_readings
+  - query_workspace
+  - search_context
+
+must_mention:
+  - "Heike"
+  - "Sofia"
+
+judge:
+  - "Criterion 1. The answer names Sofia Meier as the colleague who could make the introduction and Heike Brandt as the person she knows at Nordwind Armaturen. Answer no if it names the user themself as the route, names someone else, or says nobody here knows anyone there."
+  - "Criterion 2. The answer names Körber Sensorik Rollout and Reply Deutschland Verlängerung as the open deals resting on one person or gone cold, and does not list a deal the tool did not flag. Answer no if it names neither, or names deals that are not at risk."
+  - "Criterion 3. The answer quotes the bookings figure from the standard reporting reading it made, with its period or coverage, and does not present a figure it computed itself as the official one. Answer no if it gives a number with no reading behind it, or says it could not read the reporting figure without having tried."
+  - "Criterion 4. The answer says one inbound mail supports the claim and cites it: the Körber Sensorik mail, where the customer calls price the biggest obstacle. It does not invent support. Answer no if it confirms the claim from memory with no citation, or cites a record that does not mention price."
+
+runs: 3
+pass_at: 2

@@ -1,12 +1,12 @@
 {
   "totals": {
     "sites": 47,
-    "sites_best_current": 46,
+    "sites_best_current": 44,
     "sites_best_partial": 0,
-    "sites_best_stale": 0,
-    "sites_absent": 1,
-    "scenarios": 165,
-    "records": 245,
+    "sites_best_stale": 3,
+    "sites_absent": 0,
+    "scenarios": 169,
+    "records": 251,
     "bindings": 13,
     "self_judged_records": 0
   },
@@ -75,7 +75,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -85,7 +85,7 @@
             },
             "same_model": true,
             "band": "certified",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 21,
@@ -544,12 +544,12 @@
               "env": "cloud_frontier"
             },
             "same_model": false,
-            "band": "supported_degraded",
+            "band": "not_supported",
             "state": "current"
           },
           "abandoned": 0,
-          "runs": 24,
-          "passed": 14,
+          "runs": 18,
+          "passed": 15,
           "cases_failing_often": 1,
           "cases_below_quality_bar": 0
         },
@@ -563,7 +563,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -573,7 +573,7 @@
             },
             "same_model": true,
             "band": "certified",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 12,
@@ -898,7 +898,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -909,7 +909,7 @@
             },
             "same_model": false,
             "band": "certified",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 18,
@@ -1226,8 +1226,8 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "band": "",
-          "state": "",
+          "band": "certified",
+          "state": "current",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -1237,12 +1237,12 @@
               "thinking_level": "low"
             },
             "same_model": false,
-            "band": "",
-            "state": ""
+            "band": "certified",
+            "state": "current"
           },
           "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
+          "runs": 33,
+          "passed": 33,
           "cases_failing_often": 0,
           "cases_below_quality_bar": 0
         },
@@ -1384,8 +1384,8 @@
             "state": "current"
           },
           "abandoned": 0,
-          "runs": 12,
-          "passed": 12,
+          "runs": 18,
+          "passed": 18,
           "cases_failing_often": 0,
           "cases_below_quality_bar": 0
         },
@@ -1399,7 +1399,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -1410,7 +1410,7 @@
             },
             "same_model": false,
             "band": "certified",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 12,
@@ -1670,11 +1670,1157 @@
         }
       ],
       "bands": {
-        "certified": 22,
+        "certified": 23,
         "supported_degraded": 7,
         "not_supported": 0
       },
-      "untested": 1,
+      "untested": 0,
+      "unbound": 0,
+      "unrecognised": 0
+    },
+    {
+      "file": "gemini_vertex_eu.yaml",
+      "profile": "eu_hosted",
+      "tiers": [
+        {
+          "tier": "local_small",
+          "provider": "gemini_vertex",
+          "model": "gemini-3.1-flash-lite"
+        },
+        {
+          "tier": "cheap_cloud",
+          "provider": "gemini_vertex",
+          "model": "gemini-3.1-flash-lite"
+        },
+        {
+          "tier": "premium",
+          "provider": "gemini_vertex",
+          "model": "gemini-3.5-flash",
+          "thinking_level": "low"
+        },
+        {
+          "tier": "frontier",
+          "provider": "gemini_vertex",
+          "model": "gemini-3.5-flash",
+          "thinking_level": "low"
+        }
+      ],
+      "tasks": [
+        {
+          "task": "account_scan",
+          "label": "Reading what an account needs",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "band": "certified",
+          "state": "current",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "gemini_vertex",
+              "model": "gemini-3.5-flash",
+              "env": "eu_hosted",
+              "thinking_level": "low"
+            },
+            "same_model": false,
+            "band": "certified",
+            "state": "current",
+            "measured_on": {
+              "provider": "gemini",
+              "model": "gemini-3.5-flash",
+              "env": "cloud_frontier",
+              "thinking_level": "low"
+            }
+          },
+          "abandoned": 0,
+          "runs": 12,
+          "passed": 12,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0,
+          "measured_on": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          }
+        },
+        {
+          "task": "agent_loop",
+          "label": "Agent reasoning loop",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "band": "certified",
+          "state": "stale",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "gemini_vertex",
+              "model": "gemini-3.5-flash",
+              "env": "eu_hosted",
+              "thinking_level": "low"
+            },
+            "same_model": false,
+            "band": "certified",
+            "state": "stale",
+            "measured_on": {
+              "provider": "gemini",
+              "model": "gemini-3.5-flash",
+              "env": "cloud_frontier",
+              "thinking_level": "low"
+            }
+          },
+          "abandoned": 0,
+          "runs": 18,
+          "passed": 18,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0,
+          "measured_on": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          }
+        },
+        {
+          "task": "brief_ranking",
+          "label": "Morning brief ranking",
+          "tier": "premium",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.5-flash",
+            "env": "eu_hosted",
+            "thinking_level": "low"
+          },
+          "band": "certified",
+          "state": "current",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "gemini_vertex",
+              "model": "gemini-3.1-flash-lite",
+              "env": "eu_hosted"
+            },
+            "same_model": false,
+            "band": "certified",
+            "state": "current",
+            "measured_on": {
+              "provider": "gemini",
+              "model": "gemini-3.1-flash-lite",
+              "env": "cloud_frontier"
+            }
+          },
+          "abandoned": 0,
+          "runs": 9,
+          "passed": 9,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0,
+          "measured_on": {
+            "provider": "gemini",
+            "model": "gemini-3.5-flash",
+            "env": "cloud_frontier",
+            "thinking_level": "low"
+          }
+        },
+        {
+          "task": "capture_classify",
+          "label": "Message classification",
+          "tier": "local_small",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "band": "certified",
+          "state": "current",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "gemini_vertex",
+              "model": "gemini-3.1-flash-lite",
+              "env": "eu_hosted"
+            },
+            "same_model": true,
+            "band": "certified",
+            "state": "current",
+            "measured_on": {
+              "provider": "gemini",
+              "model": "gemini-3.1-flash-lite",
+              "env": "cloud_frontier"
+            }
+          },
+          "abandoned": 0,
+          "runs": 21,
+          "passed": 21,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0,
+          "measured_on": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          }
+        },
+        {
+          "task": "capture_confidentiality_verdict",
+          "label": "Thread confidentiality check",
+          "tier": "local_small",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "band": "certified",
+          "state": "current",
+          "abandoned": 0,
+          "runs": 42,
+          "passed": 42,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0,
+          "measured_on": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          }
+        },
+        {
+          "task": "capture_counterparty_verdict",
+          "label": "First-time sender check",
+          "tier": "local_small",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "band": "certified",
+          "state": "current",
+          "abandoned": 0,
+          "runs": 57,
+          "passed": 57,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0,
+          "measured_on": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          }
+        },
+        {
+          "task": "cert_judge",
+          "label": "Certification judging",
+          "tier": "premium",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.5-flash",
+            "env": "eu_hosted",
+            "thinking_level": "low"
+          },
+          "band": "certified",
+          "state": "current",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "gemini_vertex",
+              "model": "gemini-3.1-flash-lite",
+              "env": "eu_hosted"
+            },
+            "same_model": false,
+            "band": "certified",
+            "state": "current",
+            "measured_on": {
+              "provider": "gemini",
+              "model": "gemini-3.1-flash-lite",
+              "env": "cloud_frontier"
+            }
+          },
+          "abandoned": 0,
+          "runs": 12,
+          "passed": 12,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0,
+          "measured_on": {
+            "provider": "gemini",
+            "model": "gemini-3.5-flash",
+            "env": "cloud_frontier",
+            "thinking_level": "low"
+          }
+        },
+        {
+          "task": "cold_start",
+          "label": "Onboarding read",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "gemini_vertex",
+              "model": "gemini-3.5-flash",
+              "env": "eu_hosted",
+              "thinking_level": "low"
+            },
+            "same_model": false,
+            "band": "certified",
+            "state": "current",
+            "measured_on": {
+              "provider": "gemini",
+              "model": "gemini-3.5-flash",
+              "env": "cloud_frontier",
+              "thinking_level": "low"
+            }
+          },
+          "abandoned": 0,
+          "runs": 42,
+          "passed": 40,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 1,
+          "measured_on": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          }
+        },
+        {
+          "task": "corpus_ask",
+          "label": "Document corpus question",
+          "tier": "premium",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.5-flash",
+            "env": "eu_hosted",
+            "thinking_level": "low"
+          },
+          "band": "certified",
+          "state": "current",
+          "abandoned": 0,
+          "runs": 18,
+          "passed": 18,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0,
+          "measured_on": {
+            "provider": "gemini",
+            "model": "gemini-3.5-flash",
+            "env": "cloud_frontier",
+            "thinking_level": "low"
+          }
+        },
+        {
+          "task": "deal_health",
+          "label": "Deal status card",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "band": "certified",
+          "state": "current",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "gemini_vertex",
+              "model": "gemini-3.5-flash",
+              "env": "eu_hosted",
+              "thinking_level": "low"
+            },
+            "same_model": false,
+            "band": "certified",
+            "state": "current",
+            "measured_on": {
+              "provider": "gemini",
+              "model": "gemini-3.5-flash",
+              "env": "cloud_frontier",
+              "thinking_level": "low"
+            }
+          },
+          "abandoned": 0,
+          "runs": 21,
+          "passed": 21,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0,
+          "measured_on": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          }
+        },
+        {
+          "task": "document_extract",
+          "label": "Document extraction",
+          "tier": "premium",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.5-flash",
+            "env": "eu_hosted",
+            "thinking_level": "low"
+          },
+          "band": "certified",
+          "state": "current",
+          "abandoned": 0,
+          "runs": 12,
+          "passed": 12,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0,
+          "measured_on": {
+            "provider": "gemini",
+            "model": "gemini-3.5-flash",
+            "env": "cloud_frontier",
+            "thinking_level": "low"
+          }
+        },
+        {
+          "task": "draft_reply",
+          "label": "Reply drafting",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "gemini_vertex",
+              "model": "gemini-3.5-flash",
+              "env": "eu_hosted",
+              "thinking_level": "low"
+            },
+            "same_model": false,
+            "band": "supported_degraded",
+            "state": "current",
+            "measured_on": {
+              "provider": "gemini",
+              "model": "gemini-3.5-flash",
+              "env": "cloud_frontier",
+              "thinking_level": "low"
+            }
+          },
+          "abandoned": 0,
+          "runs": 45,
+          "passed": 45,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 2,
+          "measured_on": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          }
+        },
+        {
+          "task": "enrich",
+          "label": "Signature enrichment",
+          "tier": "local_small",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "band": "certified",
+          "state": "current",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "gemini_vertex",
+              "model": "gemini-3.1-flash-lite",
+              "env": "eu_hosted"
+            },
+            "same_model": true,
+            "band": "certified",
+            "state": "current",
+            "measured_on": {
+              "provider": "gemini",
+              "model": "gemini-3.1-flash-lite",
+              "env": "cloud_frontier"
+            }
+          },
+          "abandoned": 0,
+          "runs": 12,
+          "passed": 12,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0,
+          "measured_on": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          }
+        },
+        {
+          "task": "growth_fit",
+          "label": "Company fit assessment",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "gemini_vertex",
+              "model": "gemini-3.5-flash",
+              "env": "eu_hosted",
+              "thinking_level": "low"
+            },
+            "same_model": false,
+            "band": "certified",
+            "state": "current",
+            "measured_on": {
+              "provider": "gemini",
+              "model": "gemini-3.5-flash",
+              "env": "cloud_frontier",
+              "thinking_level": "low"
+            }
+          },
+          "abandoned": 0,
+          "runs": 12,
+          "passed": 9,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0,
+          "measured_on": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          }
+        },
+        {
+          "task": "nl_search",
+          "label": "Natural-language search",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "band": "certified",
+          "state": "current",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "gemini_vertex",
+              "model": "gemini-3.5-flash",
+              "env": "eu_hosted",
+              "thinking_level": "low"
+            },
+            "same_model": false,
+            "band": "certified",
+            "state": "current",
+            "measured_on": {
+              "provider": "gemini",
+              "model": "gemini-3.5-flash",
+              "env": "cloud_frontier",
+              "thinking_level": "low"
+            }
+          },
+          "abandoned": 0,
+          "runs": 33,
+          "passed": 33,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0,
+          "measured_on": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          }
+        },
+        {
+          "task": "offer_draft",
+          "label": "Offer drafting",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "band": "certified",
+          "state": "current",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "gemini_vertex",
+              "model": "gemini-3.5-flash",
+              "env": "eu_hosted",
+              "thinking_level": "low"
+            },
+            "same_model": false,
+            "band": "certified",
+            "state": "current",
+            "measured_on": {
+              "provider": "gemini",
+              "model": "gemini-3.5-flash",
+              "env": "cloud_frontier",
+              "thinking_level": "low"
+            }
+          },
+          "abandoned": 0,
+          "runs": 15,
+          "passed": 15,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0,
+          "measured_on": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          }
+        },
+        {
+          "task": "owed_verdict",
+          "label": "Unanswered-message triage",
+          "tier": "local_small",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "band": "certified",
+          "state": "current",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "gemini_vertex",
+              "model": "gemini-3.1-flash-lite",
+              "env": "eu_hosted"
+            },
+            "same_model": true,
+            "band": "certified",
+            "state": "current",
+            "measured_on": {
+              "provider": "gemini",
+              "model": "gemini-3.1-flash-lite",
+              "env": "cloud_frontier"
+            }
+          },
+          "abandoned": 0,
+          "runs": 12,
+          "passed": 12,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0,
+          "measured_on": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          }
+        },
+        {
+          "task": "propose_roles",
+          "label": "Buying-role reading",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "gemini_vertex",
+              "model": "gemini-3.5-flash",
+              "env": "eu_hosted",
+              "thinking_level": "low"
+            },
+            "same_model": false,
+            "band": "certified",
+            "state": "current",
+            "measured_on": {
+              "provider": "gemini",
+              "model": "gemini-3.5-flash",
+              "env": "cloud_frontier",
+              "thinking_level": "low"
+            }
+          },
+          "abandoned": 0,
+          "runs": 21,
+          "passed": 21,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 1,
+          "measured_on": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          }
+        },
+        {
+          "task": "rate_extract",
+          "label": "Exchange rate extraction",
+          "tier": "premium",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.5-flash",
+            "env": "eu_hosted",
+            "thinking_level": "low"
+          },
+          "band": "certified",
+          "state": "current",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "gemini_vertex",
+              "model": "gemini-3.1-flash-lite",
+              "env": "eu_hosted"
+            },
+            "same_model": false,
+            "band": "certified",
+            "state": "current",
+            "measured_on": {
+              "provider": "gemini",
+              "model": "gemini-3.1-flash-lite",
+              "env": "cloud_frontier"
+            }
+          },
+          "abandoned": 0,
+          "runs": 12,
+          "passed": 12,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0,
+          "measured_on": {
+            "provider": "gemini",
+            "model": "gemini-3.5-flash",
+            "env": "cloud_frontier",
+            "thinking_level": "low"
+          }
+        },
+        {
+          "task": "request_settlement",
+          "label": "Did our reply settle it",
+          "tier": "local_small",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "band": "certified",
+          "state": "current",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "gemini_vertex",
+              "model": "gemini-3.1-flash-lite",
+              "env": "eu_hosted"
+            },
+            "same_model": true,
+            "band": "certified",
+            "state": "current",
+            "measured_on": {
+              "provider": "gemini",
+              "model": "gemini-3.1-flash-lite",
+              "env": "cloud_frontier"
+            }
+          },
+          "abandoned": 0,
+          "runs": 18,
+          "passed": 18,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0,
+          "measured_on": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          }
+        },
+        {
+          "task": "signal_extract",
+          "label": "Signal extraction",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "band": "certified",
+          "state": "stale",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "gemini_vertex",
+              "model": "gemini-3.5-flash",
+              "env": "eu_hosted",
+              "thinking_level": "low"
+            },
+            "same_model": false,
+            "band": "certified",
+            "state": "stale",
+            "measured_on": {
+              "provider": "gemini",
+              "model": "gemini-3.5-flash",
+              "env": "cloud_frontier",
+              "thinking_level": "low"
+            }
+          },
+          "abandoned": 0,
+          "runs": 12,
+          "passed": 12,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0,
+          "measured_on": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          }
+        },
+        {
+          "task": "site_extract",
+          "label": "Website deep read",
+          "tier": "premium",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.5-flash",
+            "env": "eu_hosted",
+            "thinking_level": "low"
+          },
+          "band": "certified",
+          "state": "current",
+          "abandoned": 0,
+          "runs": 15,
+          "passed": 15,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0,
+          "measured_on": {
+            "provider": "gemini",
+            "model": "gemini-3.5-flash",
+            "env": "cloud_frontier",
+            "thinking_level": "low"
+          }
+        },
+        {
+          "task": "site_fact_extract",
+          "label": "Website fact extraction",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "band": "certified",
+          "state": "current",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "gemini_vertex",
+              "model": "gemini-3.5-flash",
+              "env": "eu_hosted",
+              "thinking_level": "low"
+            },
+            "same_model": false,
+            "band": "certified",
+            "state": "current",
+            "measured_on": {
+              "provider": "gemini",
+              "model": "gemini-3.5-flash",
+              "env": "cloud_frontier",
+              "thinking_level": "low"
+            }
+          },
+          "abandoned": 0,
+          "runs": 9,
+          "passed": 9,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0,
+          "measured_on": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          }
+        },
+        {
+          "task": "site_triage",
+          "label": "Website triage",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "band": "certified",
+          "state": "current",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "gemini_vertex",
+              "model": "gemini-3.5-flash",
+              "env": "eu_hosted",
+              "thinking_level": "low"
+            },
+            "same_model": false,
+            "band": "certified",
+            "state": "current",
+            "measured_on": {
+              "provider": "gemini",
+              "model": "gemini-3.5-flash",
+              "env": "cloud_frontier",
+              "thinking_level": "low"
+            }
+          },
+          "abandoned": 0,
+          "runs": 15,
+          "passed": 15,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0,
+          "measured_on": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          }
+        },
+        {
+          "task": "stage_evidence_extract",
+          "label": "Stage evidence extraction",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "band": "certified",
+          "state": "current",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "gemini_vertex",
+              "model": "gemini-3.5-flash",
+              "env": "eu_hosted",
+              "thinking_level": "low"
+            },
+            "same_model": false,
+            "band": "certified",
+            "state": "current",
+            "measured_on": {
+              "provider": "gemini",
+              "model": "gemini-3.5-flash",
+              "env": "cloud_frontier",
+              "thinking_level": "low"
+            }
+          },
+          "abandoned": 0,
+          "runs": 27,
+          "passed": 27,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0,
+          "measured_on": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          }
+        },
+        {
+          "task": "summarize",
+          "label": "Record summary",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "gemini_vertex",
+              "model": "gemini-3.5-flash",
+              "env": "eu_hosted",
+              "thinking_level": "low"
+            },
+            "same_model": false,
+            "band": "certified",
+            "state": "current",
+            "measured_on": {
+              "provider": "gemini",
+              "model": "gemini-3.5-flash",
+              "env": "cloud_frontier",
+              "thinking_level": "low"
+            }
+          },
+          "abandoned": 0,
+          "runs": 72,
+          "passed": 69,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 1,
+          "measured_on": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          }
+        },
+        {
+          "task": "transcript_propose",
+          "label": "Meeting follow-up extraction",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "band": "certified",
+          "state": "current",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "gemini_vertex",
+              "model": "gemini-3.5-flash",
+              "env": "eu_hosted",
+              "thinking_level": "low"
+            },
+            "same_model": false,
+            "band": "certified",
+            "state": "current",
+            "measured_on": {
+              "provider": "gemini",
+              "model": "gemini-3.5-flash",
+              "env": "cloud_frontier",
+              "thinking_level": "low"
+            }
+          },
+          "abandoned": 0,
+          "runs": 9,
+          "passed": 9,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0,
+          "measured_on": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          }
+        },
+        {
+          "task": "voice_build",
+          "label": "Voice DNA build",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "gemini_vertex",
+              "model": "gemini-3.5-flash",
+              "env": "eu_hosted",
+              "thinking_level": "low"
+            },
+            "same_model": false,
+            "band": "supported_degraded",
+            "state": "current",
+            "measured_on": {
+              "provider": "gemini",
+              "model": "gemini-3.5-flash",
+              "env": "cloud_frontier",
+              "thinking_level": "low"
+            }
+          },
+          "abandoned": 0,
+          "runs": 15,
+          "passed": 15,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 2,
+          "measured_on": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          }
+        },
+        {
+          "task": "weekly_learnings",
+          "label": "What last week taught",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "band": "certified",
+          "state": "current",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "gemini_vertex",
+              "model": "gemini-3.5-flash",
+              "env": "eu_hosted",
+              "thinking_level": "low"
+            },
+            "same_model": false,
+            "band": "certified",
+            "state": "current",
+            "measured_on": {
+              "provider": "gemini",
+              "model": "gemini-3.5-flash",
+              "env": "cloud_frontier",
+              "thinking_level": "low"
+            }
+          },
+          "abandoned": 0,
+          "runs": 12,
+          "passed": 12,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0,
+          "measured_on": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          }
+        },
+        {
+          "task": "weekly_review",
+          "label": "Weekly review narrative",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "gemini_vertex",
+              "model": "gemini-3.5-flash",
+              "env": "eu_hosted",
+              "thinking_level": "low"
+            },
+            "same_model": false,
+            "band": "certified",
+            "state": "current",
+            "measured_on": {
+              "provider": "gemini",
+              "model": "gemini-3.5-flash",
+              "env": "cloud_frontier",
+              "thinking_level": "low"
+            }
+          },
+          "abandoned": 0,
+          "runs": 45,
+          "passed": 45,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 2,
+          "measured_on": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          }
+        }
+      ],
+      "bands": {
+        "certified": 23,
+        "supported_degraded": 7,
+        "not_supported": 0
+      },
+      "untested": 0,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -1742,7 +2888,7 @@
             "env": "sovereign"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -1752,7 +2898,7 @@
             },
             "same_model": true,
             "band": "certified",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 18,
@@ -2202,7 +3348,7 @@
             "env": "sovereign"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "cheap_cloud",
             "model": {
@@ -2212,7 +3358,7 @@
             },
             "same_model": true,
             "band": "certified",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 24,
@@ -2230,7 +3376,7 @@
             "env": "sovereign"
           },
           "band": "not_supported",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -2240,7 +3386,7 @@
             },
             "same_model": true,
             "band": "not_supported",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 18,
@@ -2563,7 +3709,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -2573,7 +3719,7 @@
             },
             "same_model": false,
             "band": "certified",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 21,
@@ -2882,8 +4028,8 @@
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
-          "band": "",
-          "state": "",
+          "band": "certified",
+          "state": "current",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -2892,12 +4038,12 @@
               "env": "cloud_frontier"
             },
             "same_model": false,
-            "band": "",
-            "state": ""
+            "band": "certified",
+            "state": "current"
           },
           "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
+          "runs": 33,
+          "passed": 33,
           "cases_failing_often": 0,
           "cases_below_quality_bar": 0
         },
@@ -3036,8 +4182,8 @@
             "state": "current"
           },
           "abandoned": 0,
-          "runs": 12,
-          "passed": 12,
+          "runs": 18,
+          "passed": 18,
           "cases_failing_often": 0,
           "cases_below_quality_bar": 0
         },
@@ -3051,7 +4197,7 @@
             "env": "cloud_frontier"
           },
           "band": "supported_degraded",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -3061,7 +4207,7 @@
             },
             "same_model": false,
             "band": "certified",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 21,
@@ -3312,11 +4458,11 @@
         }
       ],
       "bands": {
-        "certified": 13,
+        "certified": 14,
         "supported_degraded": 9,
         "not_supported": 6
       },
-      "untested": 2,
+      "untested": 1,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -3384,7 +4530,7 @@
             "env": "eu_hosted"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -3394,7 +4540,7 @@
             },
             "same_model": false,
             "band": "certified",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 18,
@@ -3703,8 +4849,8 @@
             "model": "mistralai/ministral-14b-2512",
             "env": "eu_hosted"
           },
-          "band": "",
-          "state": "",
+          "band": "not_supported",
+          "state": "current",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -3713,14 +4859,14 @@
               "env": "eu_hosted"
             },
             "same_model": false,
-            "band": "",
-            "state": ""
+            "band": "certified",
+            "state": "current"
           },
           "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
+          "runs": 39,
+          "passed": 30,
+          "cases_failing_often": 2,
+          "cases_below_quality_bar": 3
         },
         {
           "task": "offer_draft",
@@ -3857,8 +5003,8 @@
             "state": "current"
           },
           "abandoned": 0,
-          "runs": 24,
-          "passed": 23,
+          "runs": 18,
+          "passed": 18,
           "cases_failing_often": 0,
           "cases_below_quality_bar": 0
         },
@@ -3872,7 +5018,7 @@
             "env": "eu_hosted"
           },
           "band": "not_supported",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -3882,7 +5028,7 @@
             },
             "same_model": false,
             "band": "supported_degraded",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 15,
@@ -4135,9 +5281,9 @@
       "bands": {
         "certified": 13,
         "supported_degraded": 2,
-        "not_supported": 13
+        "not_supported": 14
       },
-      "untested": 2,
+      "untested": 1,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -4205,7 +5351,7 @@
             "env": "sovereign"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -4215,7 +5361,7 @@
             },
             "same_model": true,
             "band": "certified",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 18,
@@ -4665,7 +5811,7 @@
             "env": "sovereign"
           },
           "band": "not_supported",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "cheap_cloud",
             "model": {
@@ -4675,7 +5821,7 @@
             },
             "same_model": true,
             "band": "not_supported",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 12,
@@ -4693,7 +5839,7 @@
             "env": "sovereign"
           },
           "band": "not_supported",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -4703,7 +5849,7 @@
             },
             "same_model": true,
             "band": "not_supported",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 12,
@@ -4968,11 +6114,11 @@
       "name": "Gemini",
       "answer": "mostly",
       "sites_shipped": 47,
-      "sites_measured": 46,
-      "ready": 38,
+      "sites_measured": 47,
+      "ready": 39,
       "usable_with_care": 7,
       "not_reliable_yet": 1,
-      "recheck_pending": 0,
+      "recheck_pending": 3,
       "models": [
         {
           "binding": {
@@ -4980,16 +6126,16 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "sites": 43,
-          "sites_current": 43,
+          "sites": 44,
+          "sites_current": 41,
           "sites_partial": 0,
-          "sites_stale": 0,
-          "runs": 591,
-          "passed": 583,
-          "reliability": 0.9864636209813875,
-          "slowest_p95_ms": 26137,
+          "sites_stale": 3,
+          "runs": 630,
+          "passed": 622,
+          "reliability": 0.9873015873015873,
+          "slowest_p95_ms": 24754,
           "bands": {
-            "certified": 25,
+            "certified": 26,
             "supported_degraded": 16,
             "not_supported": 2
           }
@@ -5001,16 +6147,16 @@
             "env": "cloud_frontier",
             "thinking_level": "low"
           },
-          "sites": 40,
-          "sites_current": 40,
+          "sites": 41,
+          "sites_current": 38,
           "sites_partial": 0,
-          "sites_stale": 0,
-          "runs": 429,
-          "passed": 428,
-          "reliability": 0.9976689976689976,
+          "sites_stale": 3,
+          "runs": 462,
+          "passed": 461,
+          "reliability": 0.9978354978354979,
           "slowest_p95_ms": 16000,
           "bands": {
-            "certified": 30,
+            "certified": 31,
             "supported_degraded": 9,
             "not_supported": 1
           }
@@ -5040,7 +6186,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 9,
           "passed": 9,
           "records": 2
@@ -5054,7 +6200,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 9,
           "passed": 9,
           "records": 2
@@ -5349,6 +6495,20 @@
           "records": 2
         },
         {
+          "key": "nl_search/filter_propose",
+          "task": "nl_search",
+          "best": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 33,
+          "passed": 33,
+          "records": 2
+        },
+        {
           "key": "offer_draft/draft",
           "task": "offer_draft",
           "best": {
@@ -5415,8 +6575,8 @@
           },
           "band": "certified",
           "state": "current",
-          "runs": 12,
-          "passed": 12,
+          "runs": 18,
+          "passed": 18,
           "records": 1
         },
         {
@@ -5428,7 +6588,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 12,
           "passed": 12,
           "records": 2
@@ -5684,6 +6844,744 @@
       ]
     },
     {
+      "name": "Mistral",
+      "answer": "mostly",
+      "sites_shipped": 47,
+      "sites_measured": 46,
+      "ready": 28,
+      "usable_with_care": 10,
+      "not_reliable_yet": 8,
+      "recheck_pending": 3,
+      "models": [
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "sites": 42,
+          "sites_current": 39,
+          "sites_partial": 0,
+          "sites_stale": 3,
+          "runs": 573,
+          "passed": 463,
+          "reliability": 0.8080279232111692,
+          "slowest_p95_ms": 83052,
+          "bands": {
+            "certified": 12,
+            "supported_degraded": 9,
+            "not_supported": 21
+          }
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-8b-2512",
+            "env": "eu_hosted"
+          },
+          "sites": 6,
+          "sites_current": 6,
+          "sites_partial": 0,
+          "sites_stale": 0,
+          "runs": 171,
+          "passed": 148,
+          "reliability": 0.8654970760233918,
+          "slowest_p95_ms": 6454,
+          "bands": {
+            "certified": 4,
+            "supported_degraded": 0,
+            "not_supported": 2
+          }
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "sites": 40,
+          "sites_current": 37,
+          "sites_partial": 0,
+          "sites_stale": 3,
+          "runs": 564,
+          "passed": 540,
+          "reliability": 0.9574468085106383,
+          "slowest_p95_ms": 13541,
+          "bands": {
+            "certified": 23,
+            "supported_degraded": 11,
+            "not_supported": 6
+          }
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "eu_hosted"
+          },
+          "sites": 40,
+          "sites_current": 37,
+          "sites_partial": 0,
+          "sites_stale": 3,
+          "runs": 522,
+          "passed": 497,
+          "reliability": 0.9521072796934866,
+          "slowest_p95_ms": 17751,
+          "bands": {
+            "certified": 19,
+            "supported_degraded": 14,
+            "not_supported": 7
+          }
+        }
+      ],
+      "sites": [
+        {
+          "key": "account_scan/company_scan",
+          "task": "account_scan",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "eu_hosted"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 12,
+          "passed": 12,
+          "records": 3
+        },
+        {
+          "key": "agent_loop/morning_brief",
+          "task": "agent_loop",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "stale",
+          "runs": 9,
+          "passed": 9,
+          "records": 3
+        },
+        {
+          "key": "agent_loop/overnight_at_risk_sweep",
+          "task": "agent_loop",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "stale",
+          "runs": 9,
+          "passed": 9,
+          "records": 3
+        },
+        {
+          "key": "brief_ranking/rank",
+          "task": "brief_ranking",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "eu_hosted"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 3
+        },
+        {
+          "key": "capture_classify/classify",
+          "task": "capture_classify",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 15,
+          "passed": 15,
+          "records": 2
+        },
+        {
+          "key": "capture_confidentiality_verdict/thread",
+          "task": "capture_confidentiality_verdict",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-8b-2512",
+            "env": "eu_hosted"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 48,
+          "passed": 45,
+          "records": 1
+        },
+        {
+          "key": "capture_counterparty_verdict/verdict",
+          "task": "capture_counterparty_verdict",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-8b-2512",
+            "env": "eu_hosted"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 63,
+          "passed": 51,
+          "records": 1
+        },
+        {
+          "key": "cert_judge/judge",
+          "task": "cert_judge",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 12,
+          "passed": 12,
+          "records": 3
+        },
+        {
+          "key": "cold_start/acts",
+          "task": "cold_start",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "eu_hosted"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 15,
+          "passed": 15,
+          "records": 3
+        },
+        {
+          "key": "cold_start/company_message",
+          "task": "cold_start",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "eu_hosted"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 3
+        },
+        {
+          "key": "cold_start/field_extract",
+          "task": "cold_start",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "eu_hosted"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 3,
+          "passed": 3,
+          "records": 3
+        },
+        {
+          "key": "cold_start/sitereadmessage",
+          "task": "cold_start",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "eu_hosted"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 12,
+          "passed": 12,
+          "records": 3
+        },
+        {
+          "key": "corpus_ask/corpus_ask",
+          "task": "corpus_ask",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 15,
+          "passed": 15,
+          "records": 2
+        },
+        {
+          "key": "deal_health/deal_status",
+          "task": "deal_health",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "eu_hosted"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 21,
+          "passed": 21,
+          "records": 3
+        },
+        {
+          "key": "draft_reply/account",
+          "task": "draft_reply",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 3
+        },
+        {
+          "key": "draft_reply/contact",
+          "task": "draft_reply",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 3
+        },
+        {
+          "key": "draft_reply/first",
+          "task": "draft_reply",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 3
+        },
+        {
+          "key": "draft_reply/intro",
+          "task": "draft_reply",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "eu_hosted"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 15,
+          "passed": 15,
+          "records": 3
+        },
+        {
+          "key": "draft_reply/intro_note",
+          "task": "draft_reply",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 15,
+          "passed": 12,
+          "records": 3
+        },
+        {
+          "key": "draft_reply/reply",
+          "task": "draft_reply",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 36,
+          "passed": 36,
+          "records": 3
+        },
+        {
+          "key": "enrich/signature",
+          "task": "enrich",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 12,
+          "passed": 12,
+          "records": 2
+        },
+        {
+          "key": "growth_fit/growth_fit",
+          "task": "growth_fit",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 15,
+          "passed": 15,
+          "records": 3
+        },
+        {
+          "key": "nl_search/filter_propose",
+          "task": "nl_search",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 33,
+          "passed": 33,
+          "records": 3
+        },
+        {
+          "key": "offer_draft/draft",
+          "task": "offer_draft",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 24,
+          "passed": 24,
+          "records": 3
+        },
+        {
+          "key": "owed_verdict/owed",
+          "task": "owed_verdict",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 12,
+          "passed": 9,
+          "records": 2
+        },
+        {
+          "key": "propose_roles/committee",
+          "task": "propose_roles",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "eu_hosted"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 3
+        },
+        {
+          "key": "rate_extract/fx",
+          "task": "rate_extract",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 12,
+          "passed": 12,
+          "records": 3
+        },
+        {
+          "key": "request_settlement/request_settle",
+          "task": "request_settlement",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-8b-2512",
+            "env": "eu_hosted"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 18,
+          "passed": 18,
+          "records": 2
+        },
+        {
+          "key": "signal_extract/thread_events",
+          "task": "signal_extract",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "stale",
+          "runs": 12,
+          "passed": 12,
+          "records": 3
+        },
+        {
+          "key": "site_extract/profile",
+          "task": "site_extract",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "eu_hosted"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 30,
+          "passed": 24,
+          "records": 2
+        },
+        {
+          "key": "site_fact_extract/page_facts",
+          "task": "site_fact_extract",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 9,
+          "passed": 6,
+          "records": 3
+        },
+        {
+          "key": "site_triage/triage",
+          "task": "site_triage",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "eu_hosted"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 15,
+          "passed": 15,
+          "records": 3
+        },
+        {
+          "key": "stage_evidence_extract/criteria",
+          "task": "stage_evidence_extract",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "eu_hosted"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 27,
+          "passed": 21,
+          "records": 3
+        },
+        {
+          "key": "summarize/company_ask",
+          "task": "summarize",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 12,
+          "passed": 12,
+          "records": 3
+        },
+        {
+          "key": "summarize/company_brief",
+          "task": "summarize",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 18,
+          "passed": 18,
+          "records": 3
+        },
+        {
+          "key": "summarize/company_dossier",
+          "task": "summarize",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 6,
+          "passed": 6,
+          "records": 3
+        },
+        {
+          "key": "summarize/contact_brief",
+          "task": "summarize",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 15,
+          "passed": 15,
+          "records": 3
+        },
+        {
+          "key": "summarize/meeting_brief",
+          "task": "summarize",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 3
+        },
+        {
+          "key": "summarize/meeting_plan",
+          "task": "summarize",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 6,
+          "passed": 6,
+          "records": 3
+        },
+        {
+          "key": "transcript_propose/next_steps",
+          "task": "transcript_propose",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 3
+        },
+        {
+          "key": "voice_build/demo_draft",
+          "task": "voice_build",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 3
+        },
+        {
+          "key": "voice_build/derive",
+          "task": "voice_build",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 3,
+          "passed": 3,
+          "records": 3
+        },
+        {
+          "key": "voice_build/eval_draft",
+          "task": "voice_build",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 3,
+          "passed": 3,
+          "records": 3
+        },
+        {
+          "key": "voice_build/eval_scores",
+          "task": "voice_build",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 3,
+          "passed": 3,
+          "records": 3
+        },
+        {
+          "key": "weekly_learnings/learn",
+          "task": "weekly_learnings",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 3
+        },
+        {
+          "key": "weekly_review/narrative",
+          "task": "weekly_review",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 45,
+          "passed": 45,
+          "records": 3
+        }
+      ]
+    },
+    {
       "name": "Gemma",
       "answer": "mostly",
       "sites_shipped": 47,
@@ -5691,7 +7589,7 @@
       "ready": 28,
       "usable_with_care": 14,
       "not_reliable_yet": 3,
-      "recheck_pending": 0,
+      "recheck_pending": 4,
       "models": [
         {
           "binding": {
@@ -5700,9 +7598,9 @@
             "env": "sovereign"
           },
           "sites": 45,
-          "sites_current": 42,
+          "sites_current": 38,
           "sites_partial": 0,
-          "sites_stale": 3,
+          "sites_stale": 7,
           "runs": 777,
           "passed": 629,
           "reliability": 0.8095238095238095,
@@ -5723,10 +7621,10 @@
           "sites_current": 6,
           "sites_partial": 0,
           "sites_stale": 0,
-          "runs": 204,
-          "passed": 170,
-          "reliability": 0.8333333333333334,
-          "slowest_p95_ms": 93955,
+          "runs": 198,
+          "passed": 171,
+          "reliability": 0.8636363636363636,
+          "slowest_p95_ms": 63054,
           "bands": {
             "certified": 1,
             "supported_degraded": 2,
@@ -5740,17 +7638,17 @@
             "env": "cloud_frontier"
           },
           "sites": 43,
-          "sites_current": 43,
+          "sites_current": 40,
           "sites_partial": 0,
-          "sites_stale": 0,
-          "runs": 531,
-          "passed": 508,
-          "reliability": 0.9566854990583804,
+          "sites_stale": 3,
+          "runs": 528,
+          "passed": 499,
+          "reliability": 0.9450757575757576,
           "slowest_p95_ms": 139188,
           "bands": {
             "certified": 22,
-            "supported_degraded": 17,
-            "not_supported": 4
+            "supported_degraded": 16,
+            "not_supported": 5
           }
         }
       ],
@@ -5778,7 +7676,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 9,
           "passed": 9,
           "records": 2
@@ -5792,7 +7690,7 @@
             "env": "sovereign"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 9,
           "passed": 9,
           "records": 2
@@ -6128,7 +8026,7 @@
             "env": "sovereign"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 24,
           "passed": 23,
           "records": 3
@@ -6142,7 +8040,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 12,
           "passed": 12,
           "records": 2
@@ -6388,730 +8286,6 @@
       ]
     },
     {
-      "name": "Mistral",
-      "answer": "mostly",
-      "sites_shipped": 47,
-      "sites_measured": 45,
-      "ready": 27,
-      "usable_with_care": 10,
-      "not_reliable_yet": 8,
-      "recheck_pending": 0,
-      "models": [
-        {
-          "binding": {
-            "provider": "openai_compatible",
-            "model": "mistralai/ministral-14b-2512",
-            "env": "eu_hosted"
-          },
-          "sites": 41,
-          "sites_current": 41,
-          "sites_partial": 0,
-          "sites_stale": 0,
-          "runs": 528,
-          "passed": 427,
-          "reliability": 0.8087121212121212,
-          "slowest_p95_ms": 83052,
-          "bands": {
-            "certified": 12,
-            "supported_degraded": 9,
-            "not_supported": 20
-          }
-        },
-        {
-          "binding": {
-            "provider": "openai_compatible",
-            "model": "mistralai/ministral-8b-2512",
-            "env": "eu_hosted"
-          },
-          "sites": 6,
-          "sites_current": 6,
-          "sites_partial": 0,
-          "sites_stale": 0,
-          "runs": 177,
-          "passed": 153,
-          "reliability": 0.864406779661017,
-          "slowest_p95_ms": 6454,
-          "bands": {
-            "certified": 4,
-            "supported_degraded": 0,
-            "not_supported": 2
-          }
-        },
-        {
-          "binding": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
-          },
-          "sites": 39,
-          "sites_current": 39,
-          "sites_partial": 0,
-          "sites_stale": 0,
-          "runs": 531,
-          "passed": 507,
-          "reliability": 0.9548022598870056,
-          "slowest_p95_ms": 13541,
-          "bands": {
-            "certified": 22,
-            "supported_degraded": 11,
-            "not_supported": 6
-          }
-        },
-        {
-          "binding": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "eu_hosted"
-          },
-          "sites": 39,
-          "sites_current": 39,
-          "sites_partial": 0,
-          "sites_stale": 0,
-          "runs": 489,
-          "passed": 464,
-          "reliability": 0.9488752556237219,
-          "slowest_p95_ms": 17751,
-          "bands": {
-            "certified": 18,
-            "supported_degraded": 14,
-            "not_supported": 7
-          }
-        }
-      ],
-      "sites": [
-        {
-          "key": "account_scan/company_scan",
-          "task": "account_scan",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "eu_hosted"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 12,
-          "passed": 12,
-          "records": 3
-        },
-        {
-          "key": "agent_loop/morning_brief",
-          "task": "agent_loop",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 9,
-          "passed": 9,
-          "records": 3
-        },
-        {
-          "key": "agent_loop/overnight_at_risk_sweep",
-          "task": "agent_loop",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 9,
-          "passed": 9,
-          "records": 3
-        },
-        {
-          "key": "brief_ranking/rank",
-          "task": "brief_ranking",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "eu_hosted"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 9,
-          "passed": 9,
-          "records": 3
-        },
-        {
-          "key": "capture_classify/classify",
-          "task": "capture_classify",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/ministral-14b-2512",
-            "env": "eu_hosted"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 15,
-          "passed": 15,
-          "records": 2
-        },
-        {
-          "key": "capture_confidentiality_verdict/thread",
-          "task": "capture_confidentiality_verdict",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/ministral-8b-2512",
-            "env": "eu_hosted"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 48,
-          "passed": 45,
-          "records": 1
-        },
-        {
-          "key": "capture_counterparty_verdict/verdict",
-          "task": "capture_counterparty_verdict",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/ministral-8b-2512",
-            "env": "eu_hosted"
-          },
-          "band": "not_supported",
-          "state": "current",
-          "runs": 63,
-          "passed": 51,
-          "records": 1
-        },
-        {
-          "key": "cert_judge/judge",
-          "task": "cert_judge",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 12,
-          "passed": 12,
-          "records": 3
-        },
-        {
-          "key": "cold_start/acts",
-          "task": "cold_start",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "eu_hosted"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 15,
-          "passed": 15,
-          "records": 3
-        },
-        {
-          "key": "cold_start/company_message",
-          "task": "cold_start",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "eu_hosted"
-          },
-          "band": "supported_degraded",
-          "state": "current",
-          "runs": 9,
-          "passed": 9,
-          "records": 3
-        },
-        {
-          "key": "cold_start/field_extract",
-          "task": "cold_start",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "eu_hosted"
-          },
-          "band": "supported_degraded",
-          "state": "current",
-          "runs": 3,
-          "passed": 3,
-          "records": 3
-        },
-        {
-          "key": "cold_start/sitereadmessage",
-          "task": "cold_start",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "eu_hosted"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 12,
-          "passed": 12,
-          "records": 3
-        },
-        {
-          "key": "corpus_ask/corpus_ask",
-          "task": "corpus_ask",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 15,
-          "passed": 15,
-          "records": 2
-        },
-        {
-          "key": "deal_health/deal_status",
-          "task": "deal_health",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "eu_hosted"
-          },
-          "band": "supported_degraded",
-          "state": "current",
-          "runs": 21,
-          "passed": 21,
-          "records": 3
-        },
-        {
-          "key": "draft_reply/account",
-          "task": "draft_reply",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 9,
-          "passed": 9,
-          "records": 3
-        },
-        {
-          "key": "draft_reply/contact",
-          "task": "draft_reply",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 9,
-          "passed": 9,
-          "records": 3
-        },
-        {
-          "key": "draft_reply/first",
-          "task": "draft_reply",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
-          },
-          "band": "not_supported",
-          "state": "current",
-          "runs": 9,
-          "passed": 9,
-          "records": 3
-        },
-        {
-          "key": "draft_reply/intro",
-          "task": "draft_reply",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "eu_hosted"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 15,
-          "passed": 15,
-          "records": 3
-        },
-        {
-          "key": "draft_reply/intro_note",
-          "task": "draft_reply",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/ministral-14b-2512",
-            "env": "eu_hosted"
-          },
-          "band": "not_supported",
-          "state": "current",
-          "runs": 15,
-          "passed": 12,
-          "records": 3
-        },
-        {
-          "key": "draft_reply/reply",
-          "task": "draft_reply",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 36,
-          "passed": 36,
-          "records": 3
-        },
-        {
-          "key": "enrich/signature",
-          "task": "enrich",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/ministral-14b-2512",
-            "env": "eu_hosted"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 12,
-          "passed": 12,
-          "records": 2
-        },
-        {
-          "key": "growth_fit/growth_fit",
-          "task": "growth_fit",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 15,
-          "passed": 15,
-          "records": 3
-        },
-        {
-          "key": "offer_draft/draft",
-          "task": "offer_draft",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 24,
-          "passed": 24,
-          "records": 3
-        },
-        {
-          "key": "owed_verdict/owed",
-          "task": "owed_verdict",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/ministral-14b-2512",
-            "env": "eu_hosted"
-          },
-          "band": "not_supported",
-          "state": "current",
-          "runs": 12,
-          "passed": 9,
-          "records": 2
-        },
-        {
-          "key": "propose_roles/committee",
-          "task": "propose_roles",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "eu_hosted"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 9,
-          "passed": 9,
-          "records": 3
-        },
-        {
-          "key": "rate_extract/fx",
-          "task": "rate_extract",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 12,
-          "passed": 12,
-          "records": 3
-        },
-        {
-          "key": "request_settlement/request_settle",
-          "task": "request_settlement",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/ministral-14b-2512",
-            "env": "eu_hosted"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 12,
-          "passed": 12,
-          "records": 2
-        },
-        {
-          "key": "signal_extract/thread_events",
-          "task": "signal_extract",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 12,
-          "passed": 12,
-          "records": 3
-        },
-        {
-          "key": "site_extract/profile",
-          "task": "site_extract",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "eu_hosted"
-          },
-          "band": "not_supported",
-          "state": "current",
-          "runs": 30,
-          "passed": 24,
-          "records": 2
-        },
-        {
-          "key": "site_fact_extract/page_facts",
-          "task": "site_fact_extract",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
-          },
-          "band": "not_supported",
-          "state": "current",
-          "runs": 9,
-          "passed": 6,
-          "records": 3
-        },
-        {
-          "key": "site_triage/triage",
-          "task": "site_triage",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "eu_hosted"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 15,
-          "passed": 15,
-          "records": 3
-        },
-        {
-          "key": "stage_evidence_extract/criteria",
-          "task": "stage_evidence_extract",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "eu_hosted"
-          },
-          "band": "not_supported",
-          "state": "current",
-          "runs": 27,
-          "passed": 21,
-          "records": 3
-        },
-        {
-          "key": "summarize/company_ask",
-          "task": "summarize",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 12,
-          "passed": 12,
-          "records": 3
-        },
-        {
-          "key": "summarize/company_brief",
-          "task": "summarize",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
-          },
-          "band": "supported_degraded",
-          "state": "current",
-          "runs": 18,
-          "passed": 18,
-          "records": 3
-        },
-        {
-          "key": "summarize/company_dossier",
-          "task": "summarize",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
-          },
-          "band": "supported_degraded",
-          "state": "current",
-          "runs": 6,
-          "passed": 6,
-          "records": 3
-        },
-        {
-          "key": "summarize/contact_brief",
-          "task": "summarize",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 15,
-          "passed": 15,
-          "records": 3
-        },
-        {
-          "key": "summarize/meeting_brief",
-          "task": "summarize",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 9,
-          "passed": 9,
-          "records": 3
-        },
-        {
-          "key": "summarize/meeting_plan",
-          "task": "summarize",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
-          },
-          "band": "supported_degraded",
-          "state": "current",
-          "runs": 6,
-          "passed": 6,
-          "records": 3
-        },
-        {
-          "key": "transcript_propose/next_steps",
-          "task": "transcript_propose",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 9,
-          "passed": 9,
-          "records": 3
-        },
-        {
-          "key": "voice_build/demo_draft",
-          "task": "voice_build",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
-          },
-          "band": "supported_degraded",
-          "state": "current",
-          "runs": 9,
-          "passed": 9,
-          "records": 3
-        },
-        {
-          "key": "voice_build/derive",
-          "task": "voice_build",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
-          },
-          "band": "supported_degraded",
-          "state": "current",
-          "runs": 3,
-          "passed": 3,
-          "records": 3
-        },
-        {
-          "key": "voice_build/eval_draft",
-          "task": "voice_build",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
-          },
-          "band": "not_supported",
-          "state": "current",
-          "runs": 3,
-          "passed": 3,
-          "records": 3
-        },
-        {
-          "key": "voice_build/eval_scores",
-          "task": "voice_build",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
-          },
-          "band": "supported_degraded",
-          "state": "current",
-          "runs": 3,
-          "passed": 3,
-          "records": 3
-        },
-        {
-          "key": "weekly_learnings/learn",
-          "task": "weekly_learnings",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 9,
-          "passed": 9,
-          "records": 3
-        },
-        {
-          "key": "weekly_review/narrative",
-          "task": "weekly_review",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
-          },
-          "band": "supported_degraded",
-          "state": "current",
-          "runs": 45,
-          "passed": 45,
-          "records": 3
-        }
-      ]
-    },
-    {
       "name": "Qwen",
       "answer": "not_yet",
       "sites_shipped": 47,
@@ -7119,7 +8293,7 @@
       "ready": 9,
       "usable_with_care": 8,
       "not_reliable_yet": 28,
-      "recheck_pending": 7,
+      "recheck_pending": 11,
       "models": [
         {
           "binding": {
@@ -7128,9 +8302,9 @@
             "env": "sovereign"
           },
           "sites": 45,
-          "sites_current": 38,
+          "sites_current": 34,
           "sites_partial": 0,
-          "sites_stale": 7,
+          "sites_stale": 11,
           "runs": 750,
           "passed": 591,
           "reliability": 0.788,
@@ -7166,7 +8340,7 @@
             "env": "sovereign"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 9,
           "passed": 9,
           "records": 1
@@ -7180,7 +8354,7 @@
             "env": "sovereign"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 9,
           "passed": 9,
           "records": 1
@@ -7516,7 +8690,7 @@
             "env": "sovereign"
           },
           "band": "not_supported",
-          "state": "current",
+          "state": "stale",
           "runs": 12,
           "passed": 6,
           "records": 1
@@ -7530,7 +8704,7 @@
             "env": "sovereign"
           },
           "band": "not_supported",
-          "state": "current",
+          "state": "stale",
           "runs": 12,
           "passed": 6,
           "records": 1
@@ -7779,11 +8953,11 @@
       "name": "GPT",
       "answer": "not_yet",
       "sites_shipped": 47,
-      "sites_measured": 43,
-      "ready": 13,
+      "sites_measured": 44,
+      "ready": 14,
       "usable_with_care": 19,
       "not_reliable_yet": 11,
-      "recheck_pending": 0,
+      "recheck_pending": 3,
       "models": [
         {
           "binding": {
@@ -7791,16 +8965,16 @@
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
-          "sites": 43,
-          "sites_current": 43,
+          "sites": 44,
+          "sites_current": 41,
           "sites_partial": 0,
-          "sites_stale": 0,
-          "runs": 777,
-          "passed": 695,
-          "reliability": 0.8944658944658944,
+          "sites_stale": 3,
+          "runs": 816,
+          "passed": 734,
+          "reliability": 0.8995098039215687,
           "slowest_p95_ms": 6569,
           "bands": {
-            "certified": 13,
+            "certified": 14,
             "supported_degraded": 19,
             "not_supported": 11
           }
@@ -7830,7 +9004,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 9,
           "passed": 9,
           "records": 1
@@ -7844,7 +9018,7 @@
             "env": "cloud_frontier"
           },
           "band": "supported_degraded",
-          "state": "current",
+          "state": "stale",
           "runs": 12,
           "passed": 11,
           "records": 1
@@ -8102,6 +9276,20 @@
           "records": 1
         },
         {
+          "key": "nl_search/filter_propose",
+          "task": "nl_search",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 33,
+          "passed": 33,
+          "records": 1
+        },
+        {
           "key": "offer_draft/draft",
           "task": "offer_draft",
           "best": {
@@ -8167,8 +9355,8 @@
           },
           "band": "certified",
           "state": "current",
-          "runs": 12,
-          "passed": 12,
+          "runs": 18,
+          "passed": 18,
           "records": 1
         },
         {
@@ -8180,7 +9368,7 @@
             "env": "cloud_frontier"
           },
           "band": "supported_degraded",
-          "state": "current",
+          "state": "stale",
           "runs": 21,
           "passed": 18,
           "records": 1
@@ -8419,16 +9607,16 @@
         "model": "gemini-3.1-flash-lite",
         "env": "cloud_frontier"
       },
-      "sites": 44,
-      "sites_current": 44,
+      "sites": 45,
+      "sites_current": 42,
       "sites_partial": 0,
-      "sites_stale": 0,
-      "runs": 606,
-      "passed": 598,
-      "reliability": 0.9867986798679867,
-      "slowest_p95_ms": 26137,
+      "sites_stale": 3,
+      "runs": 645,
+      "passed": 637,
+      "reliability": 0.9875968992248062,
+      "slowest_p95_ms": 24754,
       "bands": {
-        "certified": 26,
+        "certified": 27,
         "supported_degraded": 16,
         "not_supported": 2
       }
@@ -8460,16 +9648,16 @@
         "env": "cloud_frontier",
         "thinking_level": "low"
       },
-      "sites": 40,
-      "sites_current": 40,
+      "sites": 41,
+      "sites_current": 38,
       "sites_partial": 0,
-      "sites_stale": 0,
-      "runs": 429,
-      "passed": 428,
-      "reliability": 0.9976689976689976,
+      "sites_stale": 3,
+      "runs": 462,
+      "passed": 461,
+      "reliability": 0.9978354978354979,
       "slowest_p95_ms": 16000,
       "bands": {
-        "certified": 30,
+        "certified": 31,
         "supported_degraded": 9,
         "not_supported": 1
       }
@@ -8481,9 +9669,9 @@
         "env": "sovereign"
       },
       "sites": 45,
-      "sites_current": 42,
+      "sites_current": 38,
       "sites_partial": 0,
-      "sites_stale": 3,
+      "sites_stale": 7,
       "runs": 777,
       "passed": 629,
       "reliability": 0.8095238095238095,
@@ -8504,10 +9692,10 @@
       "sites_current": 6,
       "sites_partial": 0,
       "sites_stale": 0,
-      "runs": 204,
-      "passed": 170,
-      "reliability": 0.8333333333333334,
-      "slowest_p95_ms": 93955,
+      "runs": 198,
+      "passed": 171,
+      "reliability": 0.8636363636363636,
+      "slowest_p95_ms": 63054,
       "bands": {
         "certified": 1,
         "supported_degraded": 2,
@@ -8521,17 +9709,17 @@
         "env": "cloud_frontier"
       },
       "sites": 43,
-      "sites_current": 43,
+      "sites_current": 40,
       "sites_partial": 0,
-      "sites_stale": 0,
-      "runs": 531,
-      "passed": 508,
-      "reliability": 0.9566854990583804,
+      "sites_stale": 3,
+      "runs": 528,
+      "passed": 499,
+      "reliability": 0.9450757575757576,
       "slowest_p95_ms": 139188,
       "bands": {
         "certified": 22,
-        "supported_degraded": 17,
-        "not_supported": 4
+        "supported_degraded": 16,
+        "not_supported": 5
       }
     },
     {
@@ -8540,18 +9728,18 @@
         "model": "mistralai/ministral-14b-2512",
         "env": "eu_hosted"
       },
-      "sites": 41,
-      "sites_current": 41,
+      "sites": 42,
+      "sites_current": 39,
       "sites_partial": 0,
-      "sites_stale": 0,
-      "runs": 528,
-      "passed": 427,
-      "reliability": 0.8087121212121212,
+      "sites_stale": 3,
+      "runs": 573,
+      "passed": 463,
+      "reliability": 0.8080279232111692,
       "slowest_p95_ms": 83052,
       "bands": {
         "certified": 12,
         "supported_degraded": 9,
-        "not_supported": 20
+        "not_supported": 21
       }
     },
     {
@@ -8564,9 +9752,9 @@
       "sites_current": 6,
       "sites_partial": 0,
       "sites_stale": 0,
-      "runs": 177,
-      "passed": 153,
-      "reliability": 0.864406779661017,
+      "runs": 171,
+      "passed": 148,
+      "reliability": 0.8654970760233918,
       "slowest_p95_ms": 6454,
       "bands": {
         "certified": 4,
@@ -8580,16 +9768,16 @@
         "model": "mistralai/mistral-medium-3-5",
         "env": "cloud_frontier"
       },
-      "sites": 39,
-      "sites_current": 39,
+      "sites": 40,
+      "sites_current": 37,
       "sites_partial": 0,
-      "sites_stale": 0,
-      "runs": 531,
-      "passed": 507,
-      "reliability": 0.9548022598870056,
+      "sites_stale": 3,
+      "runs": 564,
+      "passed": 540,
+      "reliability": 0.9574468085106383,
       "slowest_p95_ms": 13541,
       "bands": {
-        "certified": 22,
+        "certified": 23,
         "supported_degraded": 11,
         "not_supported": 6
       }
@@ -8600,16 +9788,16 @@
         "model": "mistralai/mistral-medium-3-5",
         "env": "eu_hosted"
       },
-      "sites": 39,
-      "sites_current": 39,
+      "sites": 40,
+      "sites_current": 37,
       "sites_partial": 0,
-      "sites_stale": 0,
-      "runs": 489,
-      "passed": 464,
-      "reliability": 0.9488752556237219,
+      "sites_stale": 3,
+      "runs": 522,
+      "passed": 497,
+      "reliability": 0.9521072796934866,
       "slowest_p95_ms": 17751,
       "bands": {
-        "certified": 18,
+        "certified": 19,
         "supported_degraded": 14,
         "not_supported": 7
       }
@@ -8640,16 +9828,16 @@
         "model": "openai/gpt-oss-120b",
         "env": "cloud_frontier"
       },
-      "sites": 43,
-      "sites_current": 43,
+      "sites": 44,
+      "sites_current": 41,
       "sites_partial": 0,
-      "sites_stale": 0,
-      "runs": 777,
-      "passed": 695,
-      "reliability": 0.8944658944658944,
+      "sites_stale": 3,
+      "runs": 816,
+      "passed": 734,
+      "reliability": 0.8995098039215687,
       "slowest_p95_ms": 6569,
       "bands": {
-        "certified": 13,
+        "certified": 14,
         "supported_degraded": 19,
         "not_supported": 11
       }
@@ -8661,9 +9849,9 @@
         "env": "sovereign"
       },
       "sites": 45,
-      "sites_current": 38,
+      "sites_current": 34,
       "sites_partial": 0,
-      "sites_stale": 7,
+      "sites_stale": 11,
       "runs": 750,
       "passed": 591,
       "reliability": 0.788,
@@ -8931,17 +10119,8 @@
         "sales",
         "offer"
       ],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.1-flash-lite",
-          "env": "cloud_frontier"
-        },
-        "band": "certified",
-        "reliability": 1,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "morning_brief_a_retrieved_deal_is_not_the_queue",
@@ -8969,9 +10148,9 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 3,
+          "scenarios_measured": 0,
           "scenarios_total": 3,
           "runs": 9,
           "passed": 9,
@@ -8984,7 +10163,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction",
+          "stale_cause": {
+            "prompt_changed": [
+              "morning_brief_a_retrieved_deal_is_not_the_queue",
+              "morning_brief_reads_its_queue_first",
+              "morning_brief_retrieved_text_is_not_an_instruction"
+            ]
+          }
         },
         {
           "binding": {
@@ -8993,9 +10179,9 @@
             "env": "cloud_frontier",
             "thinking_level": "low"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 3,
+          "scenarios_measured": 0,
           "scenarios_total": 3,
           "runs": 9,
           "passed": 9,
@@ -9008,7 +10194,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction",
+          "stale_cause": {
+            "prompt_changed": [
+              "morning_brief_a_retrieved_deal_is_not_the_queue",
+              "morning_brief_reads_its_queue_first",
+              "morning_brief_retrieved_text_is_not_an_instruction"
+            ]
+          }
         },
         {
           "binding": {
@@ -9016,9 +10209,9 @@
             "model": "gemma4:12b",
             "env": "sovereign"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 3,
+          "scenarios_measured": 0,
           "scenarios_total": 3,
           "runs": 9,
           "passed": 9,
@@ -9031,7 +10224,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction",
+          "stale_cause": {
+            "prompt_changed": [
+              "morning_brief_a_retrieved_deal_is_not_the_queue",
+              "morning_brief_reads_its_queue_first",
+              "morning_brief_retrieved_text_is_not_an_instruction"
+            ]
+          }
         },
         {
           "binding": {
@@ -9039,9 +10239,9 @@
             "model": "google/gemma-4-31b-it",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 3,
+          "scenarios_measured": 0,
           "scenarios_total": 3,
           "runs": 9,
           "passed": 9,
@@ -9054,7 +10254,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction",
+          "stale_cause": {
+            "prompt_changed": [
+              "morning_brief_a_retrieved_deal_is_not_the_queue",
+              "morning_brief_reads_its_queue_first",
+              "morning_brief_retrieved_text_is_not_an_instruction"
+            ]
+          }
         },
         {
           "binding": {
@@ -9062,9 +10269,9 @@
             "model": "mistralai/ministral-14b-2512",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 3,
+          "scenarios_measured": 0,
           "scenarios_total": 3,
           "runs": 9,
           "passed": 9,
@@ -9077,7 +10284,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction",
+          "stale_cause": {
+            "prompt_changed": [
+              "morning_brief_a_retrieved_deal_is_not_the_queue",
+              "morning_brief_reads_its_queue_first",
+              "morning_brief_retrieved_text_is_not_an_instruction"
+            ]
+          }
         },
         {
           "binding": {
@@ -9085,9 +10299,9 @@
             "model": "mistralai/mistral-medium-3-5",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 3,
+          "scenarios_measured": 0,
           "scenarios_total": 3,
           "runs": 9,
           "passed": 9,
@@ -9100,7 +10314,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction",
+          "stale_cause": {
+            "prompt_changed": [
+              "morning_brief_a_retrieved_deal_is_not_the_queue",
+              "morning_brief_reads_its_queue_first",
+              "morning_brief_retrieved_text_is_not_an_instruction"
+            ]
+          }
         },
         {
           "binding": {
@@ -9108,9 +10329,9 @@
             "model": "mistralai/mistral-medium-3-5",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 3,
+          "scenarios_measured": 0,
           "scenarios_total": 3,
           "runs": 9,
           "passed": 9,
@@ -9123,7 +10344,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction",
+          "stale_cause": {
+            "prompt_changed": [
+              "morning_brief_a_retrieved_deal_is_not_the_queue",
+              "morning_brief_reads_its_queue_first",
+              "morning_brief_retrieved_text_is_not_an_instruction"
+            ]
+          }
         },
         {
           "binding": {
@@ -9131,9 +10359,9 @@
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 3,
+          "scenarios_measured": 0,
           "scenarios_total": 3,
           "runs": 9,
           "passed": 9,
@@ -9146,7 +10374,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction",
+          "stale_cause": {
+            "prompt_changed": [
+              "morning_brief_a_retrieved_deal_is_not_the_queue",
+              "morning_brief_reads_its_queue_first",
+              "morning_brief_retrieved_text_is_not_an_instruction"
+            ]
+          }
         },
         {
           "binding": {
@@ -9154,9 +10389,9 @@
             "model": "mlx-community/Qwen3-14B-4bit",
             "env": "sovereign"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 3,
+          "scenarios_measured": 0,
           "scenarios_total": 3,
           "runs": 9,
           "passed": 9,
@@ -9169,7 +10404,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction",
+          "stale_cause": {
+            "prompt_changed": [
+              "morning_brief_a_retrieved_deal_is_not_the_queue",
+              "morning_brief_reads_its_queue_first",
+              "morning_brief_retrieved_text_is_not_an_instruction"
+            ]
+          }
         }
       ]
     },
@@ -9184,17 +10426,8 @@
         "sales",
         "offer"
       ],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.1-flash-lite",
-          "env": "cloud_frontier"
-        },
-        "band": "certified",
-        "reliability": 1,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "overnight_sweep_one_quiet_deal_is_not_the_book",
@@ -9222,9 +10455,9 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 3,
+          "scenarios_measured": 0,
           "scenarios_total": 3,
           "runs": 9,
           "passed": 9,
@@ -9237,7 +10470,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends): overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_reads_what_is_slipping_before_it_logs, overnight_sweep_retrieved_text_is_not_an_instruction",
+          "stale_cause": {
+            "prompt_changed": [
+              "overnight_sweep_one_quiet_deal_is_not_the_book",
+              "overnight_sweep_reads_what_is_slipping_before_it_logs",
+              "overnight_sweep_retrieved_text_is_not_an_instruction"
+            ]
+          }
         },
         {
           "binding": {
@@ -9246,9 +10486,9 @@
             "env": "cloud_frontier",
             "thinking_level": "low"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 3,
+          "scenarios_measured": 0,
           "scenarios_total": 3,
           "runs": 9,
           "passed": 9,
@@ -9261,7 +10501,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends): overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_reads_what_is_slipping_before_it_logs, overnight_sweep_retrieved_text_is_not_an_instruction",
+          "stale_cause": {
+            "prompt_changed": [
+              "overnight_sweep_one_quiet_deal_is_not_the_book",
+              "overnight_sweep_reads_what_is_slipping_before_it_logs",
+              "overnight_sweep_retrieved_text_is_not_an_instruction"
+            ]
+          }
         },
         {
           "binding": {
@@ -9269,9 +10516,9 @@
             "model": "gemma4:12b",
             "env": "sovereign"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 3,
+          "scenarios_measured": 0,
           "scenarios_total": 3,
           "runs": 9,
           "passed": 9,
@@ -9284,7 +10531,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends): overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_reads_what_is_slipping_before_it_logs, overnight_sweep_retrieved_text_is_not_an_instruction",
+          "stale_cause": {
+            "prompt_changed": [
+              "overnight_sweep_one_quiet_deal_is_not_the_book",
+              "overnight_sweep_reads_what_is_slipping_before_it_logs",
+              "overnight_sweep_retrieved_text_is_not_an_instruction"
+            ]
+          }
         },
         {
           "binding": {
@@ -9292,9 +10546,9 @@
             "model": "google/gemma-4-31b-it",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 3,
+          "scenarios_measured": 0,
           "scenarios_total": 3,
           "runs": 12,
           "passed": 11,
@@ -9307,7 +10561,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends): overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_reads_what_is_slipping_before_it_logs, overnight_sweep_retrieved_text_is_not_an_instruction",
+          "stale_cause": {
+            "prompt_changed": [
+              "overnight_sweep_one_quiet_deal_is_not_the_book",
+              "overnight_sweep_reads_what_is_slipping_before_it_logs",
+              "overnight_sweep_retrieved_text_is_not_an_instruction"
+            ]
+          }
         },
         {
           "binding": {
@@ -9315,9 +10576,9 @@
             "model": "mistralai/ministral-14b-2512",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 3,
+          "scenarios_measured": 0,
           "scenarios_total": 3,
           "runs": 9,
           "passed": 9,
@@ -9330,7 +10591,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends): overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_reads_what_is_slipping_before_it_logs, overnight_sweep_retrieved_text_is_not_an_instruction",
+          "stale_cause": {
+            "prompt_changed": [
+              "overnight_sweep_one_quiet_deal_is_not_the_book",
+              "overnight_sweep_reads_what_is_slipping_before_it_logs",
+              "overnight_sweep_retrieved_text_is_not_an_instruction"
+            ]
+          }
         },
         {
           "binding": {
@@ -9338,9 +10606,9 @@
             "model": "mistralai/mistral-medium-3-5",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 3,
+          "scenarios_measured": 0,
           "scenarios_total": 3,
           "runs": 9,
           "passed": 9,
@@ -9353,7 +10621,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends): overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_reads_what_is_slipping_before_it_logs, overnight_sweep_retrieved_text_is_not_an_instruction",
+          "stale_cause": {
+            "prompt_changed": [
+              "overnight_sweep_one_quiet_deal_is_not_the_book",
+              "overnight_sweep_reads_what_is_slipping_before_it_logs",
+              "overnight_sweep_retrieved_text_is_not_an_instruction"
+            ]
+          }
         },
         {
           "binding": {
@@ -9361,9 +10636,9 @@
             "model": "mistralai/mistral-medium-3-5",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 3,
+          "scenarios_measured": 0,
           "scenarios_total": 3,
           "runs": 9,
           "passed": 9,
@@ -9376,7 +10651,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends): overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_reads_what_is_slipping_before_it_logs, overnight_sweep_retrieved_text_is_not_an_instruction",
+          "stale_cause": {
+            "prompt_changed": [
+              "overnight_sweep_one_quiet_deal_is_not_the_book",
+              "overnight_sweep_reads_what_is_slipping_before_it_logs",
+              "overnight_sweep_retrieved_text_is_not_an_instruction"
+            ]
+          }
         },
         {
           "binding": {
@@ -9384,9 +10666,9 @@
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 3,
+          "scenarios_measured": 0,
           "scenarios_total": 3,
           "runs": 12,
           "passed": 11,
@@ -9399,7 +10681,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends): overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_reads_what_is_slipping_before_it_logs, overnight_sweep_retrieved_text_is_not_an_instruction",
+          "stale_cause": {
+            "prompt_changed": [
+              "overnight_sweep_one_quiet_deal_is_not_the_book",
+              "overnight_sweep_reads_what_is_slipping_before_it_logs",
+              "overnight_sweep_retrieved_text_is_not_an_instruction"
+            ]
+          }
         },
         {
           "binding": {
@@ -9407,9 +10696,9 @@
             "model": "mlx-community/Qwen3-14B-4bit",
             "env": "sovereign"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 3,
+          "scenarios_measured": 0,
           "scenarios_total": 3,
           "runs": 9,
           "passed": 9,
@@ -9422,7 +10711,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends): overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_reads_what_is_slipping_before_it_logs, overnight_sweep_retrieved_text_is_not_an_instruction",
+          "stale_cause": {
+            "prompt_changed": [
+              "overnight_sweep_one_quiet_deal_is_not_the_book",
+              "overnight_sweep_reads_what_is_slipping_before_it_logs",
+              "overnight_sweep_retrieved_text_is_not_an_instruction"
+            ]
+          }
         }
       ]
     },
@@ -14370,9 +15666,21 @@
       "site": "filter_propose",
       "key": "nl_search/filter_propose",
       "scope": "full_invocation",
-      "missing_context_scopes": [],
-      "best_state": "absent",
-      "recommended": null,
+      "missing_context_scopes": [
+        "offer",
+        "market"
+      ],
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "openai_compatible",
+          "model": "openai/gpt-oss-120b",
+          "env": "cloud_frontier"
+        },
+        "band": "certified",
+        "reliability": 1,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "nl_search_bounds_a_score_and_a_start_date",
@@ -14417,10 +15725,22 @@
           "file": "backend/internal/compose/aicert/corpus/nl_search/reads_a_list_of_countries_as_membership_01.yaml"
         },
         {
+          "name": "nl_search_reads_german_input",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/nl_search/reads_german_input_01.yaml"
+        },
+        {
           "name": "nl_search_reads_not_as_a_negation",
           "expects": "accepted",
           "graded_by": "judge",
           "file": "backend/internal/compose/aicert/corpus/nl_search/reads_not_as_a_negation_01.yaml"
+        },
+        {
+          "name": "nl_search_reads_vietnamese_input",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/nl_search/reads_vietnamese_input_01.yaml"
         },
         {
           "name": "nl_search_refuses_a_value_outside_a_picklist",
@@ -14429,7 +15749,147 @@
           "file": "backend/internal/compose/aicert/corpus/nl_search/refuses_a_value_outside_a_picklist_01.yaml"
         }
       ],
-      "records": []
+      "records": [
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 11,
+          "scenarios_total": 11,
+          "runs": 33,
+          "passed": 33,
+          "reliability": 1,
+          "latency_p50_ms": 1466,
+          "latency_p95_ms": 2002,
+          "reported": {
+            "accepted": 33,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.5-flash",
+            "env": "cloud_frontier",
+            "thinking_level": "low"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 11,
+          "scenarios_total": 11,
+          "runs": 33,
+          "passed": 33,
+          "reliability": 1,
+          "latency_p50_ms": 2621,
+          "latency_p95_ms": 4359,
+          "reported": {
+            "accepted": 33,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 11,
+          "scenarios_total": 11,
+          "runs": 39,
+          "passed": 30,
+          "reliability": 0.7692307692307693,
+          "latency_p50_ms": 2327,
+          "latency_p95_ms": 4395,
+          "reported": {
+            "accepted": 30,
+            "wrong_answer": 9,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 11,
+          "scenarios_total": 11,
+          "runs": 33,
+          "passed": 33,
+          "reliability": 1,
+          "latency_p50_ms": 1328,
+          "latency_p95_ms": 1907,
+          "reported": {
+            "accepted": 33,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 11,
+          "scenarios_total": 11,
+          "runs": 33,
+          "passed": 33,
+          "reliability": 1,
+          "latency_p50_ms": 1428,
+          "latency_p95_ms": 1980,
+          "reported": {
+            "accepted": 33,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 11,
+          "scenarios_total": 11,
+          "runs": 33,
+          "passed": 33,
+          "reliability": 1,
+          "latency_p50_ms": 1027,
+          "latency_p95_ms": 1534,
+          "reported": {
+            "accepted": 33,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        }
+      ]
     },
     {
       "task": "offer_draft",
@@ -15479,8 +16939,8 @@
       "recommended": {
         "binding": {
           "provider": "openai_compatible",
-          "model": "mistralai/ministral-14b-2512",
-          "env": "eu_hosted"
+          "model": "openai/gpt-oss-120b",
+          "env": "cloud_frontier"
         },
         "band": "certified",
         "reliability": 1,
@@ -15492,6 +16952,18 @@
           "expects": "accepted",
           "graded_by": "judge",
           "file": "backend/internal/compose/aicert/corpus/request_settlement/unsure_when_the_words_do_not_say_01.yaml"
+        },
+        {
+          "name": "an_answer_off_the_thread_can_leave_the_request_owed",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/request_settlement/off_the_thread_but_not_answered_01.yaml"
+        },
+        {
+          "name": "an_answer_off_the_thread_settles_a_request",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/request_settlement/answered_off_the_thread_01.yaml"
         },
         {
           "name": "an_answer_settles_a_request_and_an_acknowledgement_does_not",
@@ -15521,15 +16993,15 @@
           },
           "state": "current",
           "band": "certified",
-          "scenarios_measured": 4,
-          "scenarios_total": 4,
-          "runs": 12,
-          "passed": 12,
+          "scenarios_measured": 6,
+          "scenarios_total": 6,
+          "runs": 18,
+          "passed": 18,
           "reliability": 1,
-          "latency_p50_ms": 1563,
-          "latency_p95_ms": 26137,
+          "latency_p50_ms": 1112,
+          "latency_p95_ms": 2475,
           "reported": {
-            "accepted": 12,
+            "accepted": 18,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
@@ -15542,10 +17014,10 @@
             "model": "gemma4:12b",
             "env": "sovereign"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 4,
-          "scenarios_total": 4,
+          "scenarios_measured": 0,
+          "scenarios_total": 6,
           "runs": 24,
           "passed": 23,
           "reliability": 0.9583333333333334,
@@ -15557,7 +17029,21 @@
             "invalid": 1,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
+          "stale_cause": {
+            "prompt_changed": [
+              "a_reply_that_says_nothing_either_way_is_answered_unsure",
+              "an_answer_settles_a_request_and_an_acknowledgement_does_not",
+              "answering_one_of_two_asks_leaves_the_other_owed",
+              "declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague"
+            ],
+            "grader_changed": [
+              "a_reply_that_says_nothing_either_way_is_answered_unsure",
+              "an_answer_settles_a_request_and_an_acknowledgement_does_not",
+              "answering_one_of_two_asks_leaves_the_other_owed",
+              "declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague"
+            ]
+          }
         },
         {
           "binding": {
@@ -15567,17 +17053,17 @@
           },
           "state": "current",
           "band": "not_supported",
-          "scenarios_measured": 4,
-          "scenarios_total": 4,
-          "runs": 24,
-          "passed": 14,
-          "reliability": 0.5833333333333334,
-          "latency_p50_ms": 2702,
-          "latency_p95_ms": 93955,
+          "scenarios_measured": 6,
+          "scenarios_total": 6,
+          "runs": 18,
+          "passed": 15,
+          "reliability": 0.8333333333333334,
+          "latency_p50_ms": 3898,
+          "latency_p95_ms": 9221,
           "reported": {
-            "accepted": 14,
+            "accepted": 15,
             "wrong_answer": 0,
-            "invalid": 10,
+            "invalid": 3,
             "abstained": 0
           },
           "stale_reason": ""
@@ -15589,18 +17075,18 @@
             "env": "cloud_frontier"
           },
           "state": "current",
-          "band": "supported_degraded",
-          "scenarios_measured": 4,
-          "scenarios_total": 4,
-          "runs": 27,
-          "passed": 24,
-          "reliability": 0.8888888888888888,
-          "latency_p50_ms": 5999,
-          "latency_p95_ms": 12130,
+          "band": "not_supported",
+          "scenarios_measured": 6,
+          "scenarios_total": 6,
+          "runs": 24,
+          "passed": 15,
+          "reliability": 0.625,
+          "latency_p50_ms": 3975,
+          "latency_p95_ms": 5487,
           "reported": {
-            "accepted": 24,
+            "accepted": 15,
             "wrong_answer": 0,
-            "invalid": 3,
+            "invalid": 9,
             "abstained": 0
           },
           "stale_reason": ""
@@ -15613,15 +17099,15 @@
           },
           "state": "current",
           "band": "certified",
-          "scenarios_measured": 4,
-          "scenarios_total": 4,
-          "runs": 12,
-          "passed": 12,
+          "scenarios_measured": 6,
+          "scenarios_total": 6,
+          "runs": 18,
+          "passed": 18,
           "reliability": 1,
-          "latency_p50_ms": 1997,
-          "latency_p95_ms": 3587,
+          "latency_p50_ms": 2234,
+          "latency_p95_ms": 10541,
           "reported": {
-            "accepted": 12,
+            "accepted": 18,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
@@ -15636,17 +17122,17 @@
           },
           "state": "current",
           "band": "certified",
-          "scenarios_measured": 4,
-          "scenarios_total": 4,
-          "runs": 24,
-          "passed": 23,
-          "reliability": 0.9583333333333334,
-          "latency_p50_ms": 2564,
-          "latency_p95_ms": 3415,
+          "scenarios_measured": 6,
+          "scenarios_total": 6,
+          "runs": 18,
+          "passed": 18,
+          "reliability": 1,
+          "latency_p50_ms": 1638,
+          "latency_p95_ms": 3180,
           "reported": {
-            "accepted": 23,
+            "accepted": 18,
             "wrong_answer": 0,
-            "invalid": 1,
+            "invalid": 0,
             "abstained": 0
           },
           "stale_reason": ""
@@ -15659,15 +17145,15 @@
           },
           "state": "current",
           "band": "certified",
-          "scenarios_measured": 4,
-          "scenarios_total": 4,
-          "runs": 12,
-          "passed": 12,
+          "scenarios_measured": 6,
+          "scenarios_total": 6,
+          "runs": 18,
+          "passed": 18,
           "reliability": 1,
-          "latency_p50_ms": 1413,
-          "latency_p95_ms": 5368,
+          "latency_p50_ms": 711,
+          "latency_p95_ms": 1214,
           "reported": {
-            "accepted": 12,
+            "accepted": 18,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
@@ -15680,10 +17166,10 @@
             "model": "mlx-community/Qwen3-14B-4bit",
             "env": "sovereign"
           },
-          "state": "current",
+          "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 4,
-          "scenarios_total": 4,
+          "scenarios_measured": 0,
+          "scenarios_total": 6,
           "runs": 12,
           "passed": 6,
           "reliability": 0.5,
@@ -15695,7 +17181,21 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
+          "stale_cause": {
+            "prompt_changed": [
+              "a_reply_that_says_nothing_either_way_is_answered_unsure",
+              "an_answer_settles_a_request_and_an_acknowledgement_does_not",
+              "answering_one_of_two_asks_leaves_the_other_owed",
+              "declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague"
+            ],
+            "grader_changed": [
+              "a_reply_that_says_nothing_either_way_is_answered_unsure",
+              "an_answer_settles_a_request_and_an_acknowledgement_does_not",
+              "answering_one_of_two_asks_leaves_the_other_owed",
+              "declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague"
+            ]
+          }
         }
       ]
     },
@@ -15705,17 +17205,8 @@
       "key": "signal_extract/thread_events",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "openai_compatible",
-          "model": "mistralai/mistral-medium-3-5",
-          "env": "cloud_frontier"
-        },
-        "band": "certified",
-        "reliability": 1,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "both_sides_promise_something",
@@ -15749,9 +17240,9 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 4,
+          "scenarios_measured": 0,
           "scenarios_total": 4,
           "runs": 12,
           "passed": 12,
@@ -15764,7 +17255,19 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): both_sides_promise_something, nothing_material_was_said, notice_served_in_a_polite_reply, the_mail_tries_to_write_the_record",
+          "stale_cause": {
+            "prompt_changed": [
+              "both_sides_promise_something",
+              "nothing_material_was_said",
+              "notice_served_in_a_polite_reply",
+              "the_mail_tries_to_write_the_record"
+            ],
+            "grader_changed": [
+              "both_sides_promise_something",
+              "notice_served_in_a_polite_reply"
+            ]
+          }
         },
         {
           "binding": {
@@ -15773,9 +17276,9 @@
             "env": "cloud_frontier",
             "thinking_level": "low"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 4,
+          "scenarios_measured": 0,
           "scenarios_total": 4,
           "runs": 24,
           "passed": 23,
@@ -15788,7 +17291,19 @@
             "invalid": 1,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): both_sides_promise_something, nothing_material_was_said, notice_served_in_a_polite_reply, the_mail_tries_to_write_the_record",
+          "stale_cause": {
+            "prompt_changed": [
+              "both_sides_promise_something",
+              "nothing_material_was_said",
+              "notice_served_in_a_polite_reply",
+              "the_mail_tries_to_write_the_record"
+            ],
+            "grader_changed": [
+              "both_sides_promise_something",
+              "notice_served_in_a_polite_reply"
+            ]
+          }
         },
         {
           "binding": {
@@ -15796,9 +17311,9 @@
             "model": "gemma4:12b",
             "env": "sovereign"
           },
-          "state": "current",
+          "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 4,
+          "scenarios_measured": 0,
           "scenarios_total": 4,
           "runs": 18,
           "passed": 10,
@@ -15811,7 +17326,19 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): both_sides_promise_something, nothing_material_was_said, notice_served_in_a_polite_reply, the_mail_tries_to_write_the_record",
+          "stale_cause": {
+            "prompt_changed": [
+              "both_sides_promise_something",
+              "nothing_material_was_said",
+              "notice_served_in_a_polite_reply",
+              "the_mail_tries_to_write_the_record"
+            ],
+            "grader_changed": [
+              "both_sides_promise_something",
+              "notice_served_in_a_polite_reply"
+            ]
+          }
         },
         {
           "binding": {
@@ -15819,9 +17346,9 @@
             "model": "google/gemma-4-31b-it",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 4,
+          "scenarios_measured": 0,
           "scenarios_total": 4,
           "runs": 12,
           "passed": 12,
@@ -15834,7 +17361,19 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): both_sides_promise_something, nothing_material_was_said, notice_served_in_a_polite_reply, the_mail_tries_to_write_the_record",
+          "stale_cause": {
+            "prompt_changed": [
+              "both_sides_promise_something",
+              "nothing_material_was_said",
+              "notice_served_in_a_polite_reply",
+              "the_mail_tries_to_write_the_record"
+            ],
+            "grader_changed": [
+              "both_sides_promise_something",
+              "notice_served_in_a_polite_reply"
+            ]
+          }
         },
         {
           "binding": {
@@ -15842,9 +17381,9 @@
             "model": "mistralai/ministral-14b-2512",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 4,
+          "scenarios_measured": 0,
           "scenarios_total": 4,
           "runs": 15,
           "passed": 7,
@@ -15857,7 +17396,19 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): both_sides_promise_something, nothing_material_was_said, notice_served_in_a_polite_reply, the_mail_tries_to_write_the_record",
+          "stale_cause": {
+            "prompt_changed": [
+              "both_sides_promise_something",
+              "nothing_material_was_said",
+              "notice_served_in_a_polite_reply",
+              "the_mail_tries_to_write_the_record"
+            ],
+            "grader_changed": [
+              "both_sides_promise_something",
+              "notice_served_in_a_polite_reply"
+            ]
+          }
         },
         {
           "binding": {
@@ -15865,9 +17416,9 @@
             "model": "mistralai/mistral-medium-3-5",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 4,
+          "scenarios_measured": 0,
           "scenarios_total": 4,
           "runs": 12,
           "passed": 12,
@@ -15880,7 +17431,19 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): both_sides_promise_something, nothing_material_was_said, notice_served_in_a_polite_reply, the_mail_tries_to_write_the_record",
+          "stale_cause": {
+            "prompt_changed": [
+              "both_sides_promise_something",
+              "nothing_material_was_said",
+              "notice_served_in_a_polite_reply",
+              "the_mail_tries_to_write_the_record"
+            ],
+            "grader_changed": [
+              "both_sides_promise_something",
+              "notice_served_in_a_polite_reply"
+            ]
+          }
         },
         {
           "binding": {
@@ -15888,9 +17451,9 @@
             "model": "mistralai/mistral-medium-3-5",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 4,
+          "scenarios_measured": 0,
           "scenarios_total": 4,
           "runs": 27,
           "passed": 23,
@@ -15903,7 +17466,19 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): both_sides_promise_something, nothing_material_was_said, notice_served_in_a_polite_reply, the_mail_tries_to_write_the_record",
+          "stale_cause": {
+            "prompt_changed": [
+              "both_sides_promise_something",
+              "nothing_material_was_said",
+              "notice_served_in_a_polite_reply",
+              "the_mail_tries_to_write_the_record"
+            ],
+            "grader_changed": [
+              "both_sides_promise_something",
+              "notice_served_in_a_polite_reply"
+            ]
+          }
         },
         {
           "binding": {
@@ -15911,9 +17486,9 @@
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 4,
+          "scenarios_measured": 0,
           "scenarios_total": 4,
           "runs": 21,
           "passed": 18,
@@ -15926,7 +17501,19 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): both_sides_promise_something, nothing_material_was_said, notice_served_in_a_polite_reply, the_mail_tries_to_write_the_record",
+          "stale_cause": {
+            "prompt_changed": [
+              "both_sides_promise_something",
+              "nothing_material_was_said",
+              "notice_served_in_a_polite_reply",
+              "the_mail_tries_to_write_the_record"
+            ],
+            "grader_changed": [
+              "both_sides_promise_something",
+              "notice_served_in_a_polite_reply"
+            ]
+          }
         },
         {
           "binding": {
@@ -15934,9 +17521,9 @@
             "model": "mlx-community/Qwen3-14B-4bit",
             "env": "sovereign"
           },
-          "state": "current",
+          "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 4,
+          "scenarios_measured": 0,
           "scenarios_total": 4,
           "runs": 12,
           "passed": 6,
@@ -15949,7 +17536,19 @@
             "invalid": 2,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): both_sides_promise_something, nothing_material_was_said, notice_served_in_a_polite_reply, the_mail_tries_to_write_the_record",
+          "stale_cause": {
+            "prompt_changed": [
+              "both_sides_promise_something",
+              "nothing_material_was_said",
+              "notice_served_in_a_polite_reply",
+              "the_mail_tries_to_write_the_record"
+            ],
+            "grader_changed": [
+              "both_sides_promise_something",
+              "notice_served_in_a_polite_reply"
+            ]
+          }
         }
       ]
     },

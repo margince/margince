@@ -826,6 +826,174 @@ func (e AiModelRateLane) Valid() bool {
 	}
 }
 
+// Defines values for AiModelRateSource.
+const (
+	AiModelRateSourceCatalogue AiModelRateSource = "catalogue"
+	AiModelRateSourceManual    AiModelRateSource = "manual"
+	AiModelRateSourceSeed      AiModelRateSource = "seed"
+)
+
+// Valid indicates whether the value is a known member of the AiModelRateSource enum.
+func (e AiModelRateSource) Valid() bool {
+	switch e {
+	case AiModelRateSourceCatalogue:
+		return true
+	case AiModelRateSourceManual:
+		return true
+	case AiModelRateSourceSeed:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AiOpenRouterProviderDataCollection.
+const (
+	AiOpenRouterProviderDataCollectionAllow AiOpenRouterProviderDataCollection = "allow"
+	AiOpenRouterProviderDataCollectionDeny  AiOpenRouterProviderDataCollection = "deny"
+)
+
+// Valid indicates whether the value is a known member of the AiOpenRouterProviderDataCollection enum.
+func (e AiOpenRouterProviderDataCollection) Valid() bool {
+	switch e {
+	case AiOpenRouterProviderDataCollectionAllow:
+		return true
+	case AiOpenRouterProviderDataCollectionDeny:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AiOpenRouterProviderSort0.
+const (
+	AiOpenRouterProviderSort0Latency    AiOpenRouterProviderSort0 = "latency"
+	AiOpenRouterProviderSort0Price      AiOpenRouterProviderSort0 = "price"
+	AiOpenRouterProviderSort0Throughput AiOpenRouterProviderSort0 = "throughput"
+)
+
+// Valid indicates whether the value is a known member of the AiOpenRouterProviderSort0 enum.
+func (e AiOpenRouterProviderSort0) Valid() bool {
+	switch e {
+	case AiOpenRouterProviderSort0Latency:
+		return true
+	case AiOpenRouterProviderSort0Price:
+		return true
+	case AiOpenRouterProviderSort0Throughput:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AiOpenRouterReasoningEffort.
+const (
+	AiOpenRouterReasoningEffortHigh    AiOpenRouterReasoningEffort = "high"
+	AiOpenRouterReasoningEffortLow     AiOpenRouterReasoningEffort = "low"
+	AiOpenRouterReasoningEffortMax     AiOpenRouterReasoningEffort = "max"
+	AiOpenRouterReasoningEffortMedium  AiOpenRouterReasoningEffort = "medium"
+	AiOpenRouterReasoningEffortMinimal AiOpenRouterReasoningEffort = "minimal"
+	AiOpenRouterReasoningEffortNone    AiOpenRouterReasoningEffort = "none"
+	AiOpenRouterReasoningEffortXhigh   AiOpenRouterReasoningEffort = "xhigh"
+)
+
+// Valid indicates whether the value is a known member of the AiOpenRouterReasoningEffort enum.
+func (e AiOpenRouterReasoningEffort) Valid() bool {
+	switch e {
+	case AiOpenRouterReasoningEffortHigh:
+		return true
+	case AiOpenRouterReasoningEffortLow:
+		return true
+	case AiOpenRouterReasoningEffortMax:
+		return true
+	case AiOpenRouterReasoningEffortMedium:
+		return true
+	case AiOpenRouterReasoningEffortMinimal:
+		return true
+	case AiOpenRouterReasoningEffortNone:
+		return true
+	case AiOpenRouterReasoningEffortXhigh:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AiOpenRouterSortBy.
+const (
+	AiOpenRouterSortByLatency    AiOpenRouterSortBy = "latency"
+	AiOpenRouterSortByPrice      AiOpenRouterSortBy = "price"
+	AiOpenRouterSortByThroughput AiOpenRouterSortBy = "throughput"
+)
+
+// Valid indicates whether the value is a known member of the AiOpenRouterSortBy enum.
+func (e AiOpenRouterSortBy) Valid() bool {
+	switch e {
+	case AiOpenRouterSortByLatency:
+		return true
+	case AiOpenRouterSortByPrice:
+		return true
+	case AiOpenRouterSortByThroughput:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AiOpenRouterSortPartition.
+const (
+	AiOpenRouterSortPartitionModel AiOpenRouterSortPartition = "model"
+	AiOpenRouterSortPartitionNone  AiOpenRouterSortPartition = "none"
+)
+
+// Valid indicates whether the value is a known member of the AiOpenRouterSortPartition enum.
+func (e AiOpenRouterSortPartition) Valid() bool {
+	switch e {
+	case AiOpenRouterSortPartitionModel:
+		return true
+	case AiOpenRouterSortPartitionNone:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AiOpenRouterUpstreamDataCollection.
+const (
+	AiOpenRouterUpstreamDataCollectionAllow AiOpenRouterUpstreamDataCollection = "allow"
+	AiOpenRouterUpstreamDataCollectionDeny  AiOpenRouterUpstreamDataCollection = "deny"
+)
+
+// Valid indicates whether the value is a known member of the AiOpenRouterUpstreamDataCollection enum.
+func (e AiOpenRouterUpstreamDataCollection) Valid() bool {
+	switch e {
+	case AiOpenRouterUpstreamDataCollectionAllow:
+		return true
+	case AiOpenRouterUpstreamDataCollectionDeny:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AiPriceSyncRunTrigger.
+const (
+	AiPriceSyncRunTriggerManual    AiPriceSyncRunTrigger = "manual"
+	AiPriceSyncRunTriggerScheduled AiPriceSyncRunTrigger = "scheduled"
+)
+
+// Valid indicates whether the value is a known member of the AiPriceSyncRunTrigger enum.
+func (e AiPriceSyncRunTrigger) Valid() bool {
+	switch e {
+	case AiPriceSyncRunTriggerManual:
+		return true
+	case AiPriceSyncRunTriggerScheduled:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AiProfileInferenceMode.
 const (
 	AiProfileInferenceModeCloud       AiProfileInferenceMode = "cloud"
@@ -887,6 +1055,7 @@ func (e AiProfileName) Valid() bool {
 const (
 	AiProfileProvidersAnthropic        AiProfileProviders = "anthropic"
 	AiProfileProvidersGemini           AiProfileProviders = "gemini"
+	AiProfileProvidersGeminiVertex     AiProfileProviders = "gemini_vertex"
 	AiProfileProvidersOllama           AiProfileProviders = "ollama"
 	AiProfileProvidersOpenai           AiProfileProviders = "openai"
 	AiProfileProvidersOpenaiCompatible AiProfileProviders = "openai_compatible"
@@ -899,6 +1068,8 @@ func (e AiProfileProviders) Valid() bool {
 	case AiProfileProvidersAnthropic:
 		return true
 	case AiProfileProvidersGemini:
+		return true
+	case AiProfileProvidersGeminiVertex:
 		return true
 	case AiProfileProvidersOllama:
 		return true
@@ -934,15 +1105,34 @@ func (e AiProfileState) Valid() bool {
 	}
 }
 
+// Defines values for AiProviderKeyStatusCredentialKind.
+const (
+	AiProviderKeyStatusCredentialKindApiKey         AiProviderKeyStatusCredentialKind = "api_key"
+	AiProviderKeyStatusCredentialKindServiceAccount AiProviderKeyStatusCredentialKind = "service_account"
+)
+
+// Valid indicates whether the value is a known member of the AiProviderKeyStatusCredentialKind enum.
+func (e AiProviderKeyStatusCredentialKind) Valid() bool {
+	switch e {
+	case AiProviderKeyStatusCredentialKindApiKey:
+		return true
+	case AiProviderKeyStatusCredentialKindServiceAccount:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AiProviderKeyTestResultReason.
 const (
-	AiProviderKeyTestResultReasonAuthFailed     AiProviderKeyTestResultReason = "auth_failed"
-	AiProviderKeyTestResultReasonNoEndpoint     AiProviderKeyTestResultReason = "no_endpoint"
-	AiProviderKeyTestResultReasonNoKey          AiProviderKeyTestResultReason = "no_key"
-	AiProviderKeyTestResultReasonNotPublished   AiProviderKeyTestResultReason = "not_published"
-	AiProviderKeyTestResultReasonProfileForbids AiProviderKeyTestResultReason = "profile_forbids"
-	AiProviderKeyTestResultReasonRateLimited    AiProviderKeyTestResultReason = "rate_limited"
-	AiProviderKeyTestResultReasonUnreachable    AiProviderKeyTestResultReason = "unreachable"
+	AiProviderKeyTestResultReasonAuthFailed       AiProviderKeyTestResultReason = "auth_failed"
+	AiProviderKeyTestResultReasonNoEndpoint       AiProviderKeyTestResultReason = "no_endpoint"
+	AiProviderKeyTestResultReasonNoKey            AiProviderKeyTestResultReason = "no_key"
+	AiProviderKeyTestResultReasonNotPublished     AiProviderKeyTestResultReason = "not_published"
+	AiProviderKeyTestResultReasonPermissionDenied AiProviderKeyTestResultReason = "permission_denied"
+	AiProviderKeyTestResultReasonProfileForbids   AiProviderKeyTestResultReason = "profile_forbids"
+	AiProviderKeyTestResultReasonRateLimited      AiProviderKeyTestResultReason = "rate_limited"
+	AiProviderKeyTestResultReasonUnreachable      AiProviderKeyTestResultReason = "unreachable"
 )
 
 // Valid indicates whether the value is a known member of the AiProviderKeyTestResultReason enum.
@@ -955,6 +1145,8 @@ func (e AiProviderKeyTestResultReason) Valid() bool {
 	case AiProviderKeyTestResultReasonNoKey:
 		return true
 	case AiProviderKeyTestResultReasonNotPublished:
+		return true
+	case AiProviderKeyTestResultReasonPermissionDenied:
 		return true
 	case AiProviderKeyTestResultReasonProfileForbids:
 		return true
@@ -997,6 +1189,30 @@ const (
 func (e AiRunSummaryCurrency) Valid() bool {
 	switch e {
 	case AiRunSummaryCurrencyUSD:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AiTaskOverrideThinking.
+const (
+	AiTaskOverrideThinkingHigh    AiTaskOverrideThinking = "high"
+	AiTaskOverrideThinkingLow     AiTaskOverrideThinking = "low"
+	AiTaskOverrideThinkingMedium  AiTaskOverrideThinking = "medium"
+	AiTaskOverrideThinkingMinimal AiTaskOverrideThinking = "minimal"
+)
+
+// Valid indicates whether the value is a known member of the AiTaskOverrideThinking enum.
+func (e AiTaskOverrideThinking) Valid() bool {
+	switch e {
+	case AiTaskOverrideThinkingHigh:
+		return true
+	case AiTaskOverrideThinkingLow:
+		return true
+	case AiTaskOverrideThinkingMedium:
+		return true
+	case AiTaskOverrideThinkingMinimal:
 		return true
 	default:
 		return false
@@ -1361,6 +1577,7 @@ func (e AssignmentSubjectKind) Valid() bool {
 const (
 	AssistantConfiguredModelProviderAssistantModelProviderAnthropic        AssistantConfiguredModelProvider = "anthropic"
 	AssistantConfiguredModelProviderAssistantModelProviderGemini           AssistantConfiguredModelProvider = "gemini"
+	AssistantConfiguredModelProviderAssistantModelProviderGeminiVertex     AssistantConfiguredModelProvider = "gemini_vertex"
 	AssistantConfiguredModelProviderAssistantModelProviderOllama           AssistantConfiguredModelProvider = "ollama"
 	AssistantConfiguredModelProviderAssistantModelProviderOpenAI           AssistantConfiguredModelProvider = "openai"
 	AssistantConfiguredModelProviderAssistantModelProviderOpenAICompatible AssistantConfiguredModelProvider = "openai_compatible"
@@ -1373,6 +1590,8 @@ func (e AssistantConfiguredModelProvider) Valid() bool {
 	case AssistantConfiguredModelProviderAssistantModelProviderAnthropic:
 		return true
 	case AssistantConfiguredModelProviderAssistantModelProviderGemini:
+		return true
+	case AssistantConfiguredModelProviderAssistantModelProviderGeminiVertex:
 		return true
 	case AssistantConfiguredModelProviderAssistantModelProviderOllama:
 		return true
@@ -1475,6 +1694,7 @@ func (e AssistantProfileName) Valid() bool {
 const (
 	AssistantProfileProvidersAnthropic        AssistantProfileProviders = "anthropic"
 	AssistantProfileProvidersGemini           AssistantProfileProviders = "gemini"
+	AssistantProfileProvidersGeminiVertex     AssistantProfileProviders = "gemini_vertex"
 	AssistantProfileProvidersOllama           AssistantProfileProviders = "ollama"
 	AssistantProfileProvidersOpenai           AssistantProfileProviders = "openai"
 	AssistantProfileProvidersOpenaiCompatible AssistantProfileProviders = "openai_compatible"
@@ -1487,6 +1707,8 @@ func (e AssistantProfileProviders) Valid() bool {
 	case AssistantProfileProvidersAnthropic:
 		return true
 	case AssistantProfileProvidersGemini:
+		return true
+	case AssistantProfileProvidersGeminiVertex:
 		return true
 	case AssistantProfileProvidersOllama:
 		return true
@@ -9559,6 +9781,30 @@ func (e ForecastShareScopeKind) Valid() bool {
 	}
 }
 
+// Defines values for ForecastSnapshotRefTrigger.
+const (
+	ForecastSnapshotRefTriggerCall        ForecastSnapshotRefTrigger = "call"
+	ForecastSnapshotRefTriggerDaily       ForecastSnapshotRefTrigger = "daily"
+	ForecastSnapshotRefTriggerPeriodClose ForecastSnapshotRefTrigger = "period_close"
+	ForecastSnapshotRefTriggerRecheck     ForecastSnapshotRefTrigger = "recheck"
+)
+
+// Valid indicates whether the value is a known member of the ForecastSnapshotRefTrigger enum.
+func (e ForecastSnapshotRefTrigger) Valid() bool {
+	switch e {
+	case ForecastSnapshotRefTriggerCall:
+		return true
+	case ForecastSnapshotRefTriggerDaily:
+		return true
+	case ForecastSnapshotRefTriggerPeriodClose:
+		return true
+	case ForecastSnapshotRefTriggerRecheck:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ForecastSufficiencyAbsent.
 const (
 	ForecastSufficiencyAbsentSufficiencyAbsenceInsufficientBasis   ForecastSufficiencyAbsent = "insufficient_basis"
@@ -10978,6 +11224,24 @@ func (e MeetingBriefSectionKind) Valid() bool {
 	}
 }
 
+// Defines values for MeetingInvitationProvider.
+const (
+	MeetingInvitationProviderGcal     MeetingInvitationProvider = "gcal"
+	MeetingInvitationProviderGraphcal MeetingInvitationProvider = "graphcal"
+)
+
+// Valid indicates whether the value is a known member of the MeetingInvitationProvider enum.
+func (e MeetingInvitationProvider) Valid() bool {
+	switch e {
+	case MeetingInvitationProviderGcal:
+		return true
+	case MeetingInvitationProviderGraphcal:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MeetingInvitationReminderStatus.
 const (
 	MeetingInvitationReminderStatusOff         MeetingInvitationReminderStatus = "off"
@@ -12361,6 +12625,54 @@ func (e ProviderConnectionStatus) Valid() bool {
 	}
 }
 
+// Defines values for ProviderLocationJurisdiction.
+const (
+	ProviderLocationJurisdictionEu     ProviderLocationJurisdiction = "eu"
+	ProviderLocationJurisdictionGlobal ProviderLocationJurisdiction = "global"
+	ProviderLocationJurisdictionOther  ProviderLocationJurisdiction = "other"
+	ProviderLocationJurisdictionUs     ProviderLocationJurisdiction = "us"
+)
+
+// Valid indicates whether the value is a known member of the ProviderLocationJurisdiction enum.
+func (e ProviderLocationJurisdiction) Valid() bool {
+	switch e {
+	case ProviderLocationJurisdictionEu:
+		return true
+	case ProviderLocationJurisdictionGlobal:
+		return true
+	case ProviderLocationJurisdictionOther:
+		return true
+	case ProviderLocationJurisdictionUs:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ProviderLocationListUnavailable.
+const (
+	ProviderLocationListUnavailableNoKey          ProviderLocationListUnavailable = "no_key"
+	ProviderLocationListUnavailableNotPublished   ProviderLocationListUnavailable = "not_published"
+	ProviderLocationListUnavailableProfileForbids ProviderLocationListUnavailable = "profile_forbids"
+	ProviderLocationListUnavailableUnreachable    ProviderLocationListUnavailable = "unreachable"
+)
+
+// Valid indicates whether the value is a known member of the ProviderLocationListUnavailable enum.
+func (e ProviderLocationListUnavailable) Valid() bool {
+	switch e {
+	case ProviderLocationListUnavailableNoKey:
+		return true
+	case ProviderLocationListUnavailableNotPublished:
+		return true
+	case ProviderLocationListUnavailableProfileForbids:
+		return true
+	case ProviderLocationListUnavailableUnreachable:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ProviderRunSkipReason.
 const (
 	ProviderRunSkipReasonAlreadyFresh              ProviderRunSkipReason = "already_fresh"
@@ -12472,6 +12784,24 @@ func (e ProviderRunTrigger) Valid() bool {
 	case ProviderRunTriggerManual:
 		return true
 	case ProviderRunTriggerScheduledRefresh:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PublicSchedulingProfileVideoApp.
+const (
+	PublicSchedulingProfileVideoAppGoogleMeet     PublicSchedulingProfileVideoApp = "google_meet"
+	PublicSchedulingProfileVideoAppMicrosoftTeams PublicSchedulingProfileVideoApp = "microsoft_teams"
+)
+
+// Valid indicates whether the value is a known member of the PublicSchedulingProfileVideoApp enum.
+func (e PublicSchedulingProfileVideoApp) Valid() bool {
+	switch e {
+	case PublicSchedulingProfileVideoAppGoogleMeet:
+		return true
+	case PublicSchedulingProfileVideoAppMicrosoftTeams:
 		return true
 	default:
 		return false
@@ -13990,6 +14320,45 @@ func (e SchedulingProfileProvider) Valid() bool {
 	}
 }
 
+// Defines values for SearchResponseTypesWithMore.
+const (
+	SearchResponseTypesWithMoreActivity      SearchResponseTypesWithMore = "activity"
+	SearchResponseTypesWithMoreCompany       SearchResponseTypesWithMore = "company"
+	SearchResponseTypesWithMoreContact       SearchResponseTypesWithMore = "contact"
+	SearchResponseTypesWithMoreDeal          SearchResponseTypesWithMore = "deal"
+	SearchResponseTypesWithMoreLead          SearchResponseTypesWithMore = "lead"
+	SearchResponseTypesWithMoreOfferTemplate SearchResponseTypesWithMore = "offer_template"
+	SearchResponseTypesWithMoreProduct       SearchResponseTypesWithMore = "product"
+	SearchResponseTypesWithMoreProject       SearchResponseTypesWithMore = "project"
+	SearchResponseTypesWithMoreTag           SearchResponseTypesWithMore = "tag"
+)
+
+// Valid indicates whether the value is a known member of the SearchResponseTypesWithMore enum.
+func (e SearchResponseTypesWithMore) Valid() bool {
+	switch e {
+	case SearchResponseTypesWithMoreActivity:
+		return true
+	case SearchResponseTypesWithMoreCompany:
+		return true
+	case SearchResponseTypesWithMoreContact:
+		return true
+	case SearchResponseTypesWithMoreDeal:
+		return true
+	case SearchResponseTypesWithMoreLead:
+		return true
+	case SearchResponseTypesWithMoreOfferTemplate:
+		return true
+	case SearchResponseTypesWithMoreProduct:
+		return true
+	case SearchResponseTypesWithMoreProject:
+		return true
+	case SearchResponseTypesWithMoreTag:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SearchResultTrustTier.
 const (
 	SearchResultTrustTierSearchResultTrustTierAuthoritative SearchResultTrustTier = "authoritative"
@@ -14227,6 +14596,21 @@ func (e SendMessageRequestCommunicationContext) Valid() bool {
 	case SendMessageRequestCommunicationContextReplyToInbound:
 		return true
 	case SendMessageRequestCommunicationContextRequestedFollowup:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ServiceStatusStatus.
+const (
+	ServiceStatusStatusOk ServiceStatusStatus = "ok"
+)
+
+// Valid indicates whether the value is a known member of the ServiceStatusStatus enum.
+func (e ServiceStatusStatus) Valid() bool {
+	switch e {
+	case ServiceStatusStatusOk:
 		return true
 	default:
 		return false
@@ -18009,15 +18393,20 @@ const (
 	WorklistReasonKindBelowMaterial      WorklistReasonKind = "below_material"
 	WorklistReasonKindBlocksCustomerWork WorklistReasonKind = "blocks_customer_work"
 	WorklistReasonKindBuyerWroteLast     WorklistReasonKind = "buyer_wrote_last"
+	WorklistReasonKindChampionUnknown    WorklistReasonKind = "champion_unknown"
 	WorklistReasonKindClosingSoon        WorklistReasonKind = "closing_soon"
 	WorklistReasonKindDueToday           WorklistReasonKind = "due_today"
+	WorklistReasonKindEarlierRequests    WorklistReasonKind = "earlier_requests"
 	WorklistReasonKindExpectedRevenue    WorklistReasonKind = "expected_revenue"
+	WorklistReasonKindFirstAsked         WorklistReasonKind = "first_asked"
 	WorklistReasonKindLegalDeadline      WorklistReasonKind = "legal_deadline"
 	WorklistReasonKindMaterial           WorklistReasonKind = "material"
 	WorklistReasonKindMeetingSoon        WorklistReasonKind = "meeting_soon"
 	WorklistReasonKindMeetingUnprepared  WorklistReasonKind = "meeting_unprepared"
 	WorklistReasonKindNoChampion         WorklistReasonKind = "no_champion"
+	WorklistReasonKindNoNextStep         WorklistReasonKind = "no_next_step"
 	WorklistReasonKindNoReplyHistory     WorklistReasonKind = "no_reply_history"
+	WorklistReasonKindOpenedOverdue      WorklistReasonKind = "opened_overdue"
 	WorklistReasonKindOutcomeUnrecorded  WorklistReasonKind = "outcome_unrecorded"
 	WorklistReasonKindOverdue            WorklistReasonKind = "overdue"
 	WorklistReasonKindPinned             WorklistReasonKind = "pinned"
@@ -18047,11 +18436,17 @@ func (e WorklistReasonKind) Valid() bool {
 		return true
 	case WorklistReasonKindBuyerWroteLast:
 		return true
+	case WorklistReasonKindChampionUnknown:
+		return true
 	case WorklistReasonKindClosingSoon:
 		return true
 	case WorklistReasonKindDueToday:
 		return true
+	case WorklistReasonKindEarlierRequests:
+		return true
 	case WorklistReasonKindExpectedRevenue:
+		return true
+	case WorklistReasonKindFirstAsked:
 		return true
 	case WorklistReasonKindLegalDeadline:
 		return true
@@ -18063,7 +18458,11 @@ func (e WorklistReasonKind) Valid() bool {
 		return true
 	case WorklistReasonKindNoChampion:
 		return true
+	case WorklistReasonKindNoNextStep:
+		return true
 	case WorklistReasonKindNoReplyHistory:
+		return true
+	case WorklistReasonKindOpenedOverdue:
 		return true
 	case WorklistReasonKindOutcomeUnrecorded:
 		return true
@@ -18114,6 +18513,7 @@ func (e WorklistSourceUnavailableReason) Valid() bool {
 
 // Defines values for WorklistValueKind.
 const (
+	WorklistValueKindCount WorklistValueKind = "count"
 	WorklistValueKindDate  WorklistValueKind = "date"
 	WorklistValueKindDays  WorklistValueKind = "days"
 	WorklistValueKindLevel WorklistValueKind = "level"
@@ -18125,6 +18525,8 @@ const (
 // Valid indicates whether the value is a known member of the WorklistValueKind enum.
 func (e WorklistValueKind) Valid() bool {
 	switch e {
+	case WorklistValueKindCount:
+		return true
 	case WorklistValueKindDate:
 		return true
 	case WorklistValueKindDays:
@@ -18451,6 +18853,75 @@ func (e DeleteAiModelRateParamsLane) Valid() bool {
 	case DeleteAiModelRateParamsLaneDecisions:
 		return true
 	case DeleteAiModelRateParamsLaneEmbeddings:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetAiCallStatsParamsWindow.
+const (
+	GetAiCallStatsParamsWindowN24h GetAiCallStatsParamsWindow = "24h"
+	GetAiCallStatsParamsWindowN30d GetAiCallStatsParamsWindow = "30d"
+	GetAiCallStatsParamsWindowN7d  GetAiCallStatsParamsWindow = "7d"
+)
+
+// Valid indicates whether the value is a known member of the GetAiCallStatsParamsWindow enum.
+func (e GetAiCallStatsParamsWindow) Valid() bool {
+	switch e {
+	case GetAiCallStatsParamsWindowN24h:
+		return true
+	case GetAiCallStatsParamsWindowN30d:
+		return true
+	case GetAiCallStatsParamsWindowN7d:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetAiCallStatsParamsGroup.
+const (
+	GetAiCallStatsParamsGroupModel          GetAiCallStatsParamsGroup = "model"
+	GetAiCallStatsParamsGroupProvider       GetAiCallStatsParamsGroup = "provider"
+	GetAiCallStatsParamsGroupServedProvider GetAiCallStatsParamsGroup = "served_provider"
+	GetAiCallStatsParamsGroupTask           GetAiCallStatsParamsGroup = "task"
+	GetAiCallStatsParamsGroupTier           GetAiCallStatsParamsGroup = "tier"
+)
+
+// Valid indicates whether the value is a known member of the GetAiCallStatsParamsGroup enum.
+func (e GetAiCallStatsParamsGroup) Valid() bool {
+	switch e {
+	case GetAiCallStatsParamsGroupModel:
+		return true
+	case GetAiCallStatsParamsGroupProvider:
+		return true
+	case GetAiCallStatsParamsGroupServedProvider:
+		return true
+	case GetAiCallStatsParamsGroupTask:
+		return true
+	case GetAiCallStatsParamsGroupTier:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetAiTaskFlowParamsWindow.
+const (
+	GetAiTaskFlowParamsWindowN24h GetAiTaskFlowParamsWindow = "24h"
+	GetAiTaskFlowParamsWindowN30d GetAiTaskFlowParamsWindow = "30d"
+	GetAiTaskFlowParamsWindowN7d  GetAiTaskFlowParamsWindow = "7d"
+)
+
+// Valid indicates whether the value is a known member of the GetAiTaskFlowParamsWindow enum.
+func (e GetAiTaskFlowParamsWindow) Valid() bool {
+	switch e {
+	case GetAiTaskFlowParamsWindowN24h:
+		return true
+	case GetAiTaskFlowParamsWindowN30d:
+		return true
+	case GetAiTaskFlowParamsWindowN7d:
 		return true
 	default:
 		return false
@@ -21371,6 +21842,7 @@ type AiCall struct {
 	// ErrorSentinel Stable failure code; null on success. New codes are added as failure classes are told apart, so read an unrecognized one as "some failure" rather than refusing it.
 	// The three codes a 429 produces are worth naming, because they have different remedies and an operator reads this to choose one. `provider_quota` — the account is out of budget or over its quota, which a human tops up. `provider_throttled` — an ordinary burst limit, which clears by itself. `provider_refused` — the provider turned the call away and said nothing about why, so the model was never reached and no claim is made about the cause.
 	// Two codes are outcomes rather than failures: a model was reached and decided. `output_withheld` — the provider declined to deliver the answer: a refusal, a safety or recitation stop, a content filter, a blocked prompt. `request_rejected` — the provider's own error code named the request malformed, which is a defect on the calling side.
+	// `timeout` — the attempt's deadline stopped it: the task's model call timeout on a ladder attempt, its decision model timeout on a decision attempt. A failure like `provider_error`, named apart so a slow host can be told from a broken one. A caller's own cancellation is never a timeout.
 	// `provider_error` is the FALLBACK: a provider failure naming none of those. It covers a connection or TLS fault and a non-429 server error as well as a call the model answered badly, so it says the provider failed and nothing about how far the request got.
 	ErrorSentinel *string `json:"error_sentinel,omitempty"`
 
@@ -21418,7 +21890,7 @@ type AiCall struct {
 type AiCallAttempt struct {
 	Attempt int `json:"attempt"`
 
-	// AttemptReason Why this attempt ran — one of provider_error, schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder. Or one of decision_below_floor, decision_error, decision_off_enum, decision_state_too_large, decision_uncertified, decision_local_only — the decision attempt before this walk did not stand, and why. Read an unrecognized reason as "some reason" rather than refusing it.
+	// AttemptReason Why this attempt ran — one of provider_error, timeout (the attempt before stopped at its deadline), schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder. Or one of decision_below_floor, decision_error, decision_off_enum, decision_state_too_large, decision_uncertified, decision_local_only — the decision attempt before this walk did not stand, and why. Read an unrecognized reason as "some reason" rather than refusing it.
 	AttemptReason string `json:"attempt_reason"`
 
 	// DecisionChoice The label a decision attempt was answered with, whether or not it stood; absent on every other kind and on a decision attempt that got no answer.
@@ -21478,6 +21950,33 @@ type AiCallListResponse struct {
 	Tasks []string `json:"tasks"`
 }
 
+// AiCallStats defines model for AiCallStats.
+type AiCallStats struct {
+	Group  string           `json:"group"`
+	Rows   []AiCallStatsRow `json:"rows"`
+	Window string           `json:"window"`
+}
+
+// AiCallStatsRow defines model for AiCallStatsRow.
+type AiCallStatsRow struct {
+	Calls int64 `json:"calls"`
+
+	// CostMicrousd USD micro-units, priced at each call's day.
+	CostMicrousd int64 `json:"cost_microusd"`
+	Failed       int64 `json:"failed"`
+
+	// Key The group value: a provider, model id, upstream host, tier or task. Empty when the attempts carried none (a host a direct vendor does not report).
+	Key       string `json:"key"`
+	P50Ms     int64  `json:"p50_ms"`
+	P95Ms     int64  `json:"p95_ms"`
+	Timeouts  int64  `json:"timeouts"`
+	TokensIn  int64  `json:"tokens_in"`
+	TokensOut int64  `json:"tokens_out"`
+
+	// Unpriced Calls that spent tokens no rate prices; their cost is not in cost_microusd.
+	Unpriced int64 `json:"unpriced"`
+}
+
 // AiCallSummary One terminal model call from the ai_call trace (AIRT-SCHEMA-2).
 type AiCallSummary struct {
 	CacheHit     bool `json:"cache_hit"`
@@ -21493,6 +21992,7 @@ type AiCallSummary struct {
 	// ErrorSentinel Stable failure code; null on success. New codes are added as failure classes are told apart, so read an unrecognized one as "some failure" rather than refusing it.
 	// The three codes a 429 produces are worth naming, because they have different remedies and an operator reads this to choose one. `provider_quota` — the account is out of budget or over its quota, which a human tops up. `provider_throttled` — an ordinary burst limit, which clears by itself. `provider_refused` — the provider turned the call away and said nothing about why, so the model was never reached and no claim is made about the cause.
 	// Two codes are outcomes rather than failures: a model was reached and decided. `output_withheld` — the provider declined to deliver the answer: a refusal, a safety or recitation stop, a content filter, a blocked prompt. `request_rejected` — the provider's own error code named the request malformed, which is a defect on the calling side.
+	// `timeout` — the attempt's deadline stopped it: the task's model call timeout on a ladder attempt, its decision model timeout on a decision attempt. A failure like `provider_error`, named apart so a slow host can be told from a broken one. A caller's own cancellation is never a timeout.
 	// `provider_error` is the FALLBACK: a provider failure naming none of those. It covers a connection or TLS fault and a non-429 server error as well as a call the model answered badly, so it says the provider failed and nothing about how far the request got.
 	ErrorSentinel *string `json:"error_sentinel,omitempty"`
 
@@ -21538,7 +22038,8 @@ type AiDecisionSummary struct {
 // one. It serves a task only when certified for that site and when its endpoint
 // reaches no further than the task's own bindings.
 type AiDecisionsBinding struct {
-	// BaseUrl The FULL decision endpoint URL, posted to as written. Optional for jev (default https://api.typesafe.ai/v1/systemone); required for jev_compatible, e.g. https://openrouter.ai/api/alpha/decisions or http://127.0.0.1:8767/v1/systemone.
+	// BaseUrl The decision provider's endpoint as resolved from `providers` (the FULL URL, posted to as written; jev defaults to https://api.typesafe.ai/v1/systemone). On write it is accepted only when empty or equal to the provider's; a different one is a 422 `moved_to_provider`.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	BaseUrl *string `json:"base_url,omitempty"`
 
 	// Model The decision model id, e.g. jev-1.13.0 on jev or typesafe/jev-1.13 on OpenRouter.
@@ -21558,7 +22059,10 @@ type AiDeferredWork struct {
 
 // AiEmbeddingsBinding defines model for AiEmbeddingsBinding.
 type AiEmbeddingsBinding struct {
-	// BaseUrl Endpoint override; empty means the provider default.
+	// BaseUrl On a tier, the provider's host as resolved from `providers`; on write it is accepted
+	// only when empty or equal to the provider's, and a different one is a 422
+	// `moved_to_provider`. On the embeddings lane it is a live override: a separate
+	// embeddings server for that lane alone. Empty means the provider's host.
 	BaseUrl *string `json:"base_url,omitempty"`
 
 	// Dimensions The vector width the provider is asked to emit. Omit (or 0) for the compiled
@@ -21570,19 +22074,32 @@ type AiEmbeddingsBinding struct {
 	// the adapter already has and can never widen it. Omit for the provider's own answer.
 	Input *[]string `json:"input,omitempty"`
 
+	// Location On a tier, the `gemini_vertex` provider's location as resolved from `providers`; on write
+	// it is accepted only when empty or equal to the provider's, and a different one is a 422
+	// `moved_to_provider`. On the embeddings lane it is a live override: Vertex serves an
+	// embedding model at fewer locations than a chat model, so the lane may sit elsewhere.
+	// Refused on every provider but `gemini_vertex`.
+	Location *string `json:"location,omitempty"`
+
 	// Model The provider-native model id.
 	Model string `json:"model"`
 
 	// Provider The adapter serving this tier: fake | anthropic | ollama | vllm | openai_compatible
-	// | openai | gemini. The credential is never part of this document.
+	// | openai | gemini | gemini_vertex. The credential is never part of this document.
 	Provider string `json:"provider"`
 
-	// Routing Upstream-selection preferences for an openai_compatible binding pointed at
-	// OpenRouter; refused on any other binding, and on the embeddings lane every
-	// preference but only, ignore and allow_fallbacks is refused. Absent means the
-	// product default (reliability over price); an empty object means no preferences
-	// (the broker's own price-weighted routing). The two are different choices and a
-	// client must not turn one into the other.
+	// Routing How an openai_compatible binding pointed at OpenRouter serves its model, in OpenRouter's
+	// own request shape: `provider` (which hosts and how) and `reasoning` (how hard the model
+	// thinks). Refused on any other binding; on the embeddings lane only the connection's keys
+	// are accepted. Absent means the product
+	// default (reliability over price); an empty object means no preferences (the broker's own
+	// price-weighted routing). The two are different choices and a client must not turn one
+	// into the other. The keys that say which hosts may read a request (only, ignore,
+	// allow_fallbacks, zdr, data_collection, enforce_distillable_text) belong to the provider
+	// (`AiOpenRouterUpstream`): on a tier they are accepted only when equal to the provider's,
+	// and refused otherwise, each by its path. `GET /ai/routing/schema` describes every field.
+	// The flat keys are the older spelling, still read; a response writes `provider` and
+	// `reasoning`.
 	Routing *AiOpenRouterRouting `json:"routing,omitempty"`
 
 	// ThinkingLevel How deeply a gemini tier thinks when the request names no level of its own.
@@ -21604,14 +22121,20 @@ type AiEmbeddingsBindingThinkingLevel string
 
 // AiFeatureRoute defines model for AiFeatureRoute.
 type AiFeatureRoute struct {
-	BudgetExempt      bool              `json:"budget_exempt"`
+	BudgetExempt bool `json:"budget_exempt"`
+
+	// Decides The task declares a decision form, so a decision model may answer it first and its decision timeout applies.
+	Decides           *bool             `json:"decides,omitempty"`
 	DecisionCandidate *AiRouteCandidate `json:"decision_candidate,omitempty"`
 
 	// DecisionFirst The decision lane answers this feature first: bound, certified for one of its sites, and — for a feature whose data must stay on this installation — a local provider.
 	DecisionFirst bool `json:"decision_first"`
 
 	// DecisionSkipReason Why a feature that declares a decision form is not answered by the decision lane; absent when it is, and for a feature with no decision form.
-	DecisionSkipReason  *string            `json:"decision_skip_reason,omitempty"`
+	DecisionSkipReason *string `json:"decision_skip_reason,omitempty"`
+
+	// Defaults What a task's calls are sent with.
+	Defaults            *AiTaskSettings    `json:"defaults,omitempty"`
 	DisplayName         string             `json:"display_name"`
 	EffectiveCandidates []AiRouteCandidate `json:"effective_candidates"`
 	ExecutionMode       string             `json:"execution_mode"`
@@ -21620,7 +22143,39 @@ type AiFeatureRoute struct {
 	Impact           string             `json:"impact"`
 	LeadingTier      string             `json:"leading_tier"`
 	NormalCandidates []AiRouteCandidate `json:"normal_candidates"`
-	Task             string             `json:"task"`
+
+	// Overrides An admin's settings for one task. An absent field keeps the product's own value.
+	Overrides *AiTaskOverride `json:"overrides,omitempty"`
+
+	// Summary What the task does, in plain words.
+	Summary *string `json:"summary,omitempty"`
+	Task    string  `json:"task"`
+}
+
+// AiFieldError One refused input, the shape a 422's details.errors carries.
+type AiFieldError struct {
+	Code string `json:"code"`
+
+	// Field The path of the refused key.
+	Field string `json:"field"`
+
+	// Message What is wrong and what to write instead.
+	Message string `json:"message"`
+}
+
+// AiFlowStep defines model for AiFlowStep.
+type AiFlowStep struct {
+	// Answered Logical calls this step answered.
+	Answered int64 `json:"answered"`
+	Attempts int64 `json:"attempts"`
+	Decision bool  `json:"decision"`
+
+	// GaveUp Why the walk moved past this step, by sentinel (timeout, provider_error) or the next attempt's reason (decision_below_floor, …).
+	GaveUp   map[string]int64 `json:"gave_up"`
+	Model    string           `json:"model"`
+	P50Ms    int64            `json:"p50_ms"`
+	Provider string           `json:"provider"`
+	Tier     string           `json:"tier"`
 }
 
 // AiHealth defines model for AiHealth.
@@ -21647,6 +22202,12 @@ type AiModelRate struct {
 	ModelId       string          `json:"model_id"`
 	OutputPerMtok string          `json:"output_per_mtok"`
 	Provider      string          `json:"provider"`
+
+	// Source Who wrote this price. `manual` was typed into the sheet and the daily sync never
+	// rewrites it; `catalogue` was read from models.dev or OpenRouter by the sync; `seed` was
+	// planted when the installation was provisioned. Removing a model's price hands it back
+	// to the sync.
+	Source AiModelRateSource `json:"source"`
 }
 
 // AiModelRateLane What the model is FOR. A property of the model rather than of this dated row: the
@@ -21656,6 +22217,12 @@ type AiModelRate struct {
 // carries one too.
 type AiModelRateLane string
 
+// AiModelRateSource Who wrote this price. `manual` was typed into the sheet and the daily sync never
+// rewrites it; `catalogue` was read from models.dev or OpenRouter by the sync; `seed` was
+// planted when the installation was provisioned. Removing a model's price hands it back
+// to the sync.
+type AiModelRateSource string
+
 // AiModelRateListResponse defines model for AiModelRateListResponse.
 type AiModelRateListResponse struct {
 	Data []AiModelRate `json:"data"`
@@ -21663,6 +22230,12 @@ type AiModelRateListResponse struct {
 
 // AiModelRateProviderRefresh defines model for AiModelRateProviderRefresh.
 type AiModelRateProviderRefresh struct {
+	// Added Models priced for the first time today.
+	Added int `json:"added"`
+
+	// Kept Models whose price was set by hand, which the sync never rewrites.
+	Kept int `json:"kept"`
+
 	// Models Model ids written this run.
 	Models []string `json:"models"`
 
@@ -21671,7 +22244,8 @@ type AiModelRateProviderRefresh struct {
 	// publishes no price to read; `not_listed` means a bound model is absent from the
 	// catalogue altogether, so its id may be misspelt; `unreachable` means the catalogue
 	// could not be read;
-	// `not_bound` means nothing this provider serves is bound or on the sheet.
+	// `not_bound` means nothing this provider serves is bound or on the sheet;
+	// `not_configured` means the provider holds no usable key, so the sync did not touch it.
 	Outcome string `json:"outcome"`
 
 	// Provider The provider as the routing document spells it.
@@ -21692,15 +22266,182 @@ type AiModelRateRefreshReport struct {
 	Providers []AiModelRateProviderRefresh `json:"providers"`
 }
 
-// AiOpenRouterRouting Upstream-selection preferences for an openai_compatible binding pointed at
-// OpenRouter; refused on any other binding, and on the embeddings lane every
-// preference but only, ignore and allow_fallbacks is refused. Absent means the
-// product default (reliability over price); an empty object means no preferences
-// (the broker's own price-weighted routing). The two are different choices and a
-// client must not turn one into the other.
+// AiOpenRouterPercentiles defines model for AiOpenRouterPercentiles.
+type AiOpenRouterPercentiles struct {
+	P50 *float64 `json:"p50,omitempty"`
+	P75 *float64 `json:"p75,omitempty"`
+	P90 *float64 `json:"p90,omitempty"`
+	P99 *float64 `json:"p99,omitempty"`
+}
+
+// AiOpenRouterPrice The most a request may cost, in USD per million prompt or completion tokens, or per request or image.
+type AiOpenRouterPrice struct {
+	Completion *float64 `json:"completion,omitempty"`
+	Image      *float64 `json:"image,omitempty"`
+	Prompt     *float64 `json:"prompt,omitempty"`
+	Request    *float64 `json:"request,omitempty"`
+}
+
+// AiOpenRouterProvider OpenRouter's `provider` request object, sent as written. Every key is optional; GET /ai/routing/schema documents each.
+type AiOpenRouterProvider struct {
+	// AllowFallbacks Whether the broker may switch hosts on failure. Set on the provider.
+	AllowFallbacks *bool `json:"allow_fallbacks,omitempty"`
+
+	// DataCollection Whether hosts that may store prompts are allowed. Set on the provider.
+	DataCollection *AiOpenRouterProviderDataCollection `json:"data_collection,omitempty"`
+
+	// EnforceDistillableText Only models whose output may train other models. Set on the provider.
+	EnforceDistillableText *bool `json:"enforce_distillable_text,omitempty"`
+
+	// Ignore Upstream slugs excluded; a hard filter. Set on the provider.
+	Ignore *[]string `json:"ignore,omitempty"`
+
+	// MaxPrice The most a request may cost, in USD per million prompt or completion tokens, or per request or image.
+	MaxPrice *AiOpenRouterPrice `json:"max_price,omitempty"`
+
+	// Only Upstream slugs allowed; a hard filter. Set on the provider.
+	Only *[]string `json:"only,omitempty"`
+
+	// Order Host slugs to try first, in this order.
+	Order *[]string `json:"order,omitempty"`
+
+	// PreferredMaxLatency Seconds, one number or per percentile; a soft preference.
+	PreferredMaxLatency *AiOpenRouterProvider_PreferredMaxLatency `json:"preferred_max_latency,omitempty"`
+
+	// PreferredMinThroughput Tokens per second, one number or per percentile; a soft preference.
+	PreferredMinThroughput *AiOpenRouterProvider_PreferredMinThroughput `json:"preferred_min_throughput,omitempty"`
+
+	// Quantizations Serving precisions allowed (bf16, fp16, fp8, fp4, int8 …); a hard filter.
+	Quantizations *[]string `json:"quantizations,omitempty"`
+
+	// RequireParameters Keep the request off hosts that lack any parameter it carries.
+	RequireParameters *bool `json:"require_parameters,omitempty"`
+
+	// Sort price | throughput | latency, or {by, partition}. Reorders rather than filters, and disables load balancing.
+	Sort *AiOpenRouterProvider_Sort `json:"sort,omitempty"`
+
+	// Zdr Zero data retention only. Set on the provider.
+	Zdr *bool `json:"zdr,omitempty"`
+}
+
+// AiOpenRouterProviderDataCollection Whether hosts that may store prompts are allowed. Set on the provider.
+type AiOpenRouterProviderDataCollection string
+
+// AiOpenRouterProviderPreferredMaxLatency0 defines model for .
+type AiOpenRouterProviderPreferredMaxLatency0 = float64
+
+// AiOpenRouterProvider_PreferredMaxLatency Seconds, one number or per percentile; a soft preference.
+type AiOpenRouterProvider_PreferredMaxLatency struct {
+	union json.RawMessage
+}
+
+// AiOpenRouterProviderPreferredMinThroughput0 defines model for .
+type AiOpenRouterProviderPreferredMinThroughput0 = float64
+
+// AiOpenRouterProvider_PreferredMinThroughput Tokens per second, one number or per percentile; a soft preference.
+type AiOpenRouterProvider_PreferredMinThroughput struct {
+	union json.RawMessage
+}
+
+// AiOpenRouterProviderSort0 defines model for AiOpenRouterProvider.Sort.0.
+type AiOpenRouterProviderSort0 string
+
+// AiOpenRouterProvider_Sort price | throughput | latency, or {by, partition}. Reorders rather than filters, and disables load balancing.
+type AiOpenRouterProvider_Sort struct {
+	union json.RawMessage
+}
+
+// AiOpenRouterReasoning OpenRouter's `reasoning` request object. effort and max_tokens are two spellings of one budget; write one.
+type AiOpenRouterReasoning struct {
+	Effort  *AiOpenRouterReasoningEffort `json:"effort,omitempty"`
+	Enabled *bool                        `json:"enabled,omitempty"`
+
+	// Exclude Think, but leave the reasoning out of the answer.
+	Exclude   *bool `json:"exclude,omitempty"`
+	MaxTokens *int  `json:"max_tokens,omitempty"`
+}
+
+// AiOpenRouterReasoningEffort defines model for AiOpenRouterReasoning.Effort.
+type AiOpenRouterReasoningEffort string
+
+// AiOpenRouterRouting How an openai_compatible binding pointed at OpenRouter serves its model, in OpenRouter's
+// own request shape: `provider` (which hosts and how) and `reasoning` (how hard the model
+// thinks). Refused on any other binding; on the embeddings lane only the connection's keys
+// are accepted. Absent means the product
+// default (reliability over price); an empty object means no preferences (the broker's own
+// price-weighted routing). The two are different choices and a client must not turn one
+// into the other. The keys that say which hosts may read a request (only, ignore,
+// allow_fallbacks, zdr, data_collection, enforce_distillable_text) belong to the provider
+// (`AiOpenRouterUpstream`): on a tier they are accepted only when equal to the provider's,
+// and refused otherwise, each by its path. `GET /ai/routing/schema` describes every field.
+// The flat keys are the older spelling, still read; a response writes `provider` and
+// `reasoning`.
 type AiOpenRouterRouting struct {
+	// AllowFallbacks Older spelling of provider.allow_fallbacks.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	AllowFallbacks *bool `json:"allow_fallbacks,omitempty"`
+
+	// Ignore Older spelling of provider.ignore.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	Ignore *[]string `json:"ignore,omitempty"`
+
+	// Only Older spelling of provider.only.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	Only *[]string `json:"only,omitempty"`
+
+	// PreferredMaxLatencyP90 Older spelling of provider.preferred_max_latency.p90, in seconds.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	PreferredMaxLatencyP90 *float64 `json:"preferred_max_latency_p90,omitempty"`
+
+	// Provider OpenRouter's `provider` request object, sent as written. Every key is optional; GET /ai/routing/schema documents each.
+	Provider *AiOpenRouterProvider `json:"provider,omitempty"`
+
+	// Quantizations Older spelling of provider.quantizations.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	Quantizations *[]string `json:"quantizations,omitempty"`
+
+	// Reasoning OpenRouter's `reasoning` request object. effort and max_tokens are two spellings of one budget; write one.
+	Reasoning *AiOpenRouterReasoning `json:"reasoning,omitempty"`
+
+	// ReasoningEffort Older spelling of reasoning.effort.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	ReasoningEffort *string `json:"reasoning_effort,omitempty"`
+
+	// RequireParameters Older spelling of provider.require_parameters.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	RequireParameters *bool `json:"require_parameters,omitempty"`
+
+	// Sort Older spelling of provider.sort.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	Sort *string `json:"sort,omitempty"`
+}
+
+// AiOpenRouterSort defines model for AiOpenRouterSort.
+type AiOpenRouterSort struct {
+	By AiOpenRouterSortBy `json:"by"`
+
+	// Partition none sorts across every model of a fallback list at once.
+	Partition *AiOpenRouterSortPartition `json:"partition,omitempty"`
+}
+
+// AiOpenRouterSortBy defines model for AiOpenRouterSort.By.
+type AiOpenRouterSortBy string
+
+// AiOpenRouterSortPartition none sorts across every model of a fallback list at once.
+type AiOpenRouterSortPartition string
+
+// AiOpenRouterUpstream Which OpenRouter hosts may serve this provider's requests, for every lane on it: a
+// residency pin lives here. Accepted on `openai_compatible` with an OpenRouter host only.
+// How one model is served (sort, quantizations, …) stays on the tier's `routing`.
+type AiOpenRouterUpstream struct {
 	// AllowFallbacks Override the broker's host fallback. False is a real choice, distinct from absent.
 	AllowFallbacks *bool `json:"allow_fallbacks,omitempty"`
+
+	// DataCollection deny keeps every request off hosts that may store or train on prompts.
+	DataCollection *AiOpenRouterUpstreamDataCollection `json:"data_collection,omitempty"`
+
+	// EnforceDistillableText Only models whose licence allows their output to train other models.
+	EnforceDistillableText *bool `json:"enforce_distillable_text,omitempty"`
 
 	// Ignore Upstream slugs excluded; a hard filter.
 	Ignore *[]string `json:"ignore,omitempty"`
@@ -21708,21 +22449,38 @@ type AiOpenRouterRouting struct {
 	// Only Upstream slugs allowed; a hard filter.
 	Only *[]string `json:"only,omitempty"`
 
-	// PreferredMaxLatencyP90 Seconds; hosts above it are deprioritized, never removed. Omit to leave unset.
-	PreferredMaxLatencyP90 *float64 `json:"preferred_max_latency_p90,omitempty"`
-
-	// Quantizations Serving precisions allowed (bf16, fp16, fp8, fp4, int8 …); a hard filter.
-	Quantizations *[]string `json:"quantizations,omitempty"`
-
-	// ReasoningEffort none | minimal | low | medium | high | xhigh | max. Unset leaves each host its own default.
-	ReasoningEffort *string `json:"reasoning_effort,omitempty"`
-
-	// RequireParameters Keep the request off hosts that lack any parameter it carries. False is a real choice, distinct from absent.
-	RequireParameters *bool `json:"require_parameters,omitempty"`
-
-	// Sort price | throughput | latency. Reorders rather than filters, and disables load balancing.
-	Sort *string `json:"sort,omitempty"`
+	// Zdr Zero data retention: only hosts that keep no copy of the prompt or the answer may serve a request.
+	Zdr *bool `json:"zdr,omitempty"`
 }
+
+// AiOpenRouterUpstreamDataCollection deny keeps every request off hosts that may store or train on prompts.
+type AiOpenRouterUpstreamDataCollection string
+
+// AiPriceSync defines model for AiPriceSync.
+type AiPriceSync struct {
+	// AutoSync Whether the daily job syncs model prices.
+	AutoSync bool            `json:"auto_sync"`
+	LastRun  *AiPriceSyncRun `json:"last_run,omitempty"`
+}
+
+// AiPriceSyncChange defines model for AiPriceSyncChange.
+type AiPriceSyncChange struct {
+	AutoSync bool `json:"auto_sync"`
+}
+
+// AiPriceSyncRun defines model for AiPriceSyncRun.
+type AiPriceSyncRun struct {
+	RanAt time.Time `json:"ran_at"`
+
+	// Report The outcome of a catalogue refresh, one entry per provider this build knows.
+	Report AiModelRateRefreshReport `json:"report"`
+
+	// Trigger `manual` was an admin pressing Refresh now; `scheduled` the daily job.
+	Trigger AiPriceSyncRunTrigger `json:"trigger"`
+}
+
+// AiPriceSyncRunTrigger `manual` was an admin pressing Refresh now; `scheduled` the daily job.
+type AiPriceSyncRunTrigger string
 
 // AiProfile defines model for AiProfile.
 type AiProfile struct {
@@ -21752,10 +22510,13 @@ type AiProfileProviders string
 // AiProfileState defines model for AiProfile.State.
 type AiProfileState string
 
-// AiProviderKeyInput defines model for AiProviderKeyInput.
+// AiProviderKeyInput Exactly one of the two fields, the one the vendor's `credential_kind` names. The server refuses neither, both, or the other one with a 422.
 type AiProviderKeyInput struct {
 	// ApiKey The vendor credential. WRITE-ONLY — no response in this contract returns it, and the setting that records it holds an opaque vault reference rather than these bytes.
 	ApiKey *string `json:"api_key,omitempty"`
+
+	// ServiceAccountJson A Google service-account key file's whole contents, for `gemini_vertex`. WRITE-ONLY, exactly as `api_key` is. Its `project_id` is the project every call is billed to.
+	ServiceAccountJson *string `json:"service_account_json,omitempty"`
 }
 
 // AiProviderKeyList defines model for AiProviderKeyList.
@@ -21768,15 +22529,27 @@ type AiProviderKeyStatus struct {
 	// Configured Whether a credential is held. A screen reads this to offer "add" or "rotate"; it says nothing about whether the key still works, which only the vendor can answer.
 	Configured bool `json:"configured"`
 
+	// CredentialKind Which field of `AiProviderKeyInput` this vendor takes: `service_account` is a service-account key file (`service_account_json`), `api_key` is a pasted key. A property of the vendor, not of what is stored.
+	CredentialKind AiProviderKeyStatusCredentialKind `json:"credential_kind"`
+
 	// EnvVar The variable the same key may arrive in. Named so an operator can see which export seeded a vendor; the names follow each vendor's own convention, which is why they carry no MARGINCE_ prefix.
 	EnvVar string `json:"env_var"`
 
 	// Optional Whether the adapter calls without a key when none is held. `jev_compatible` is: a decision server on the operator's own host needs none, so the key is sent when held and an absent one is not a gap to fix.
 	Optional bool `json:"optional"`
 
+	// PricedBy The provider whose prices this one's calls take for a model its own price sheet does not list: `gemini` for `gemini_vertex`, which serves the same models. A price written for this provider overrides it. Absent for a provider whose unpriced models stay unpriced.
+	PricedBy *string `json:"priced_by,omitempty"`
+
 	// Provider The routing name of the vendor, the same string a binding uses.
 	Provider string `json:"provider"`
+
+	// Usable Whether this vendor can be called as the installation stands: a key is held, the adapter calls without one, or it takes no key. The daily price sync reads this same answer to decide which vendors it prices.
+	Usable bool `json:"usable"`
 }
+
+// AiProviderKeyStatusCredentialKind Which field of `AiProviderKeyInput` this vendor takes: `service_account` is a service-account key file (`service_account_json`), `api_key` is a pasted key. A property of the vendor, not of what is stored.
+type AiProviderKeyStatusCredentialKind string
 
 // AiProviderKeyTestResult One vendor's answer to the stored credential. On a pass, `ok` is true, `key_confirmed` says whether the vendor checked the key, and `model_count` is present only when the test listed models. On a failure, `reason` names why, and never in the vendor's own words.
 type AiProviderKeyTestResult struct {
@@ -21792,12 +22565,30 @@ type AiProviderKeyTestResult struct {
 	// Provider The routing name of the vendor that was asked.
 	Provider string `json:"provider"`
 
-	// Reason Why the test did not pass, present only when `ok` is false. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the installation profile forbids reaching this vendor at all. `not_published` — this build cannot ask the vendor anything (an unknown adapter). `no_endpoint` — an OpenAI-wire vendor that no binding gives a host yet. `auth_failed` — the vendor refused the credential. `rate_limited` — the vendor is throttling this credential; it may still be valid. `unreachable` — the vendor did not answer, or answered with something else.
+	// Reason Why the test did not pass, present only when `ok` is false. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the installation profile forbids reaching this vendor at all. `not_published` — this build cannot ask the vendor anything (an unknown adapter). `no_endpoint` — an OpenAI-wire vendor that has no host set on the provider yet. `auth_failed` — the vendor refused the credential. `permission_denied` — the vendor accepted the credential and refused the call: the account lacks a role or has not enabled the API (for Vertex AI, `roles/aiplatform.user` and the Vertex AI API). `rate_limited` — the vendor is throttling this credential; it may still be valid. `unreachable` — the vendor did not answer, or answered with something else.
 	Reason *AiProviderKeyTestResultReason `json:"reason,omitempty"`
 }
 
-// AiProviderKeyTestResultReason Why the test did not pass, present only when `ok` is false. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the installation profile forbids reaching this vendor at all. `not_published` — this build cannot ask the vendor anything (an unknown adapter). `no_endpoint` — an OpenAI-wire vendor that no binding gives a host yet. `auth_failed` — the vendor refused the credential. `rate_limited` — the vendor is throttling this credential; it may still be valid. `unreachable` — the vendor did not answer, or answered with something else.
+// AiProviderKeyTestResultReason Why the test did not pass, present only when `ok` is false. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the installation profile forbids reaching this vendor at all. `not_published` — this build cannot ask the vendor anything (an unknown adapter). `no_endpoint` — an OpenAI-wire vendor that has no host set on the provider yet. `auth_failed` — the vendor refused the credential. `permission_denied` — the vendor accepted the credential and refused the call: the account lacks a role or has not enabled the API (for Vertex AI, `roles/aiplatform.user` and the Vertex AI API). `rate_limited` — the vendor is throttling this credential; it may still be valid. `unreachable` — the vendor did not answer, or answered with something else.
 type AiProviderKeyTestResultReason string
+
+// AiProviderSettings One provider's configuration. An entry no lane binds is held to its shape only, so a
+// host can be set before anything is bound to it.
+type AiProviderSettings struct {
+	// BaseUrl Where the provider is reached. Required on `openai_compatible` while a lane binds it, and on `jev_compatible` while the decisions lane binds it (the FULL decision endpoint, posted to as written). Optional elsewhere; empty means the adapter's compiled default.
+	BaseUrl *string `json:"base_url,omitempty"`
+
+	// Location The Vertex AI location a `gemini_vertex` provider is served from, which is where Google
+	// processes the call: `eu`, `us`, `global`, or a region such as `europe-west4`. Required
+	// while a lane binds `gemini_vertex`, and refused on every other provider. Moving it asks
+	// Google about each bound model at the new location first; one it does not serve is a 422.
+	Location *string `json:"location,omitempty"`
+
+	// Upstream Which OpenRouter hosts may serve this provider's requests, for every lane on it: a
+	// residency pin lives here. Accepted on `openai_compatible` with an OpenRouter host only.
+	// How one model is served (sort, quantizations, …) stays on the tier's `routing`.
+	Upstream *AiOpenRouterUpstream `json:"upstream,omitempty"`
+}
 
 // AiRouteCandidate defines model for AiRouteCandidate.
 type AiRouteCandidate struct {
@@ -21821,7 +22612,15 @@ type AiRouting struct {
 
 	// Profile The location ladder (§4). `sovereign` means zero egress by construction: a cloud
 	// provider on any tier is refused, and so is a local provider pointed at another host.
+	// `eu_hosted` promises EU inference: a broker lane must pin EU-region hosts, and a
+	// `gemini_vertex` lane must name an EU location.
 	Profile AiRoutingProfile `json:"profile"`
+
+	// Providers Provider name to what that provider is configured with, independent of any lane: its
+	// host and the broker's upstream pins. Every lane binding a provider reads them from
+	// here. A client that omits the field keeps the stored entries; one that sends it owns
+	// the map, so an entry it leaves out is removed.
+	Providers *map[string]AiProviderSettings `json:"providers,omitempty"`
 
 	// Tiers Tier name to the model bound on it. Empty means no models are bound.
 	Tiers map[string]AiTierBinding `json:"tiers"`
@@ -21829,13 +22628,28 @@ type AiRouting struct {
 
 // AiRoutingProfile The location ladder (§4). `sovereign` means zero egress by construction: a cloud
 // provider on any tier is refused, and so is a local provider pointed at another host.
+// `eu_hosted` promises EU inference: a broker lane must pin EU-region hosts, and a
+// `gemini_vertex` lane must name an EU location.
 type AiRoutingProfile string
+
+// AiRoutingEffective What each tier will send OpenRouter once saved, the connection's keys and the product default merged in. Only tiers whose binding sends a block.
+type AiRoutingEffective struct {
+	Tiers map[string]AiOpenRouterRouting `json:"tiers"`
+}
 
 // AiRoutingPreview defines model for AiRoutingPreview.
 type AiRoutingPreview struct {
-	CurrentVersion string           `json:"current_version"`
-	Features       []AiFeatureRoute `json:"features"`
-	UnusedTiers    []string         `json:"unused_tiers"`
+	CurrentVersion string `json:"current_version"`
+
+	// Effective What each tier will send OpenRouter once saved, the connection's keys and the product default merged in. Only tiers whose binding sends a block.
+	Effective *AiRoutingEffective `json:"effective,omitempty"`
+
+	// Errors Every key the save would refuse, by its path in the routing document
+	// (tiers.cheap_cloud.routing.provider.sort.by). Absent when the draft is valid; when
+	// present, features are judged with each refused tier routing left as stored.
+	Errors      *[]AiFieldError  `json:"errors,omitempty"`
+	Features    []AiFeatureRoute `json:"features"`
+	UnusedTiers []string         `json:"unused_tiers"`
 }
 
 // AiRunModelUsage One task, route, and served-model slice within a correlated AI run.
@@ -21924,9 +22738,65 @@ type AiStatus struct {
 	UnusedTiers          *[]string        `json:"unused_tiers,omitempty"`
 }
 
+// AiTaskFlow defines model for AiTaskFlow.
+type AiTaskFlow struct {
+	// Steps The decision model first, then each tier in ladder order.
+	Steps []AiFlowStep `json:"steps"`
+	Task  string       `json:"task"`
+
+	// Total Logical calls in the window, cache hits excluded.
+	Total int64 `json:"total"`
+
+	// Unanswered Logical calls whose last attempt failed.
+	Unanswered int64  `json:"unanswered"`
+	Window     string `json:"window"`
+}
+
+// AiTaskOverride An admin's settings for one task. An absent field keeps the product's own value.
+type AiTaskOverride struct {
+	// AttemptTimeoutMs How long one model call on the ladder may take before the next tier is tried.
+	AttemptTimeoutMs *int `json:"attempt_timeout_ms,omitempty"`
+
+	// DecisionTimeoutMs How long the decision model may take before the task falls back to its ladder. Decision tasks only.
+	DecisionTimeoutMs *int `json:"decision_timeout_ms,omitempty"`
+
+	// Thinking The exact level every site of the task is sent at. Outranks the binding and the site floor; a model with no thinking control ignores it.
+	Thinking *AiTaskOverrideThinking `json:"thinking,omitempty"`
+}
+
+// AiTaskOverrideThinking The exact level every site of the task is sent at. Outranks the binding and the site floor; a model with no thinking control ignores it.
+type AiTaskOverrideThinking string
+
+// AiTaskOverrides Every task's override, keyed by task id.
+type AiTaskOverrides map[string]AiTaskOverride
+
+// AiTaskOverridesPreview defines model for AiTaskOverridesPreview.
+type AiTaskOverridesPreview struct {
+	// Effective What each task would be sent with.
+	Effective map[string]AiTaskSettings `json:"effective"`
+
+	// Errors Every field the save would refuse, by its path (<task>.<field>).
+	Errors *[]AiFieldError `json:"errors,omitempty"`
+
+	// Stale Stored overrides for tasks this installation no longer runs; calls ignore them.
+	Stale []string `json:"stale"`
+}
+
+// AiTaskSettings What a task's calls are sent with.
+type AiTaskSettings struct {
+	AttemptTimeoutMs  int `json:"attempt_timeout_ms"`
+	DecisionTimeoutMs int `json:"decision_timeout_ms"`
+
+	// Thinking Absent when no level is chosen: the binding and the site floor decide.
+	Thinking *string `json:"thinking,omitempty"`
+}
+
 // AiTierBinding defines model for AiTierBinding.
 type AiTierBinding struct {
-	// BaseUrl Endpoint override; empty means the provider default.
+	// BaseUrl On a tier, the provider's host as resolved from `providers`; on write it is accepted
+	// only when empty or equal to the provider's, and a different one is a 422
+	// `moved_to_provider`. On the embeddings lane it is a live override: a separate
+	// embeddings server for that lane alone. Empty means the provider's host.
 	BaseUrl *string `json:"base_url,omitempty"`
 
 	// Input What the bound model may be GIVEN, in the accepted-modality vocabulary. On the
@@ -21934,19 +22804,32 @@ type AiTierBinding struct {
 	// the adapter already has and can never widen it. Omit for the provider's own answer.
 	Input *[]string `json:"input,omitempty"`
 
+	// Location On a tier, the `gemini_vertex` provider's location as resolved from `providers`; on write
+	// it is accepted only when empty or equal to the provider's, and a different one is a 422
+	// `moved_to_provider`. On the embeddings lane it is a live override: Vertex serves an
+	// embedding model at fewer locations than a chat model, so the lane may sit elsewhere.
+	// Refused on every provider but `gemini_vertex`.
+	Location *string `json:"location,omitempty"`
+
 	// Model The provider-native model id.
 	Model string `json:"model"`
 
 	// Provider The adapter serving this tier: fake | anthropic | ollama | vllm | openai_compatible
-	// | openai | gemini. The credential is never part of this document.
+	// | openai | gemini | gemini_vertex. The credential is never part of this document.
 	Provider string `json:"provider"`
 
-	// Routing Upstream-selection preferences for an openai_compatible binding pointed at
-	// OpenRouter; refused on any other binding, and on the embeddings lane every
-	// preference but only, ignore and allow_fallbacks is refused. Absent means the
-	// product default (reliability over price); an empty object means no preferences
-	// (the broker's own price-weighted routing). The two are different choices and a
-	// client must not turn one into the other.
+	// Routing How an openai_compatible binding pointed at OpenRouter serves its model, in OpenRouter's
+	// own request shape: `provider` (which hosts and how) and `reasoning` (how hard the model
+	// thinks). Refused on any other binding; on the embeddings lane only the connection's keys
+	// are accepted. Absent means the product
+	// default (reliability over price); an empty object means no preferences (the broker's own
+	// price-weighted routing). The two are different choices and a client must not turn one
+	// into the other. The keys that say which hosts may read a request (only, ignore,
+	// allow_fallbacks, zdr, data_collection, enforce_distillable_text) belong to the provider
+	// (`AiOpenRouterUpstream`): on a tier they are accepted only when equal to the provider's,
+	// and refused otherwise, each by its path. `GET /ai/routing/schema` describes every field.
+	// The flat keys are the older spelling, still read; a response writes `provider` and
+	// `reasoning`.
 	Routing *AiOpenRouterRouting `json:"routing,omitempty"`
 
 	// ThinkingLevel How deeply a gemini tier thinks when the request names no level of its own.
@@ -21994,6 +22877,9 @@ type AiUsage struct {
 			// Task capture_classify, enrich, summarize, …
 			Task            string  `json:"task"`
 			TaskDisplayName *string `json:"task_display_name,omitempty"`
+
+			// TaskSummary What the task does, in plain words, for a reader deciding what it costs.
+			TaskSummary *string `json:"task_summary,omitempty"`
 
 			// Tier local_small, cheap_cloud, premium, frontier, local_large, or decide (the decision-model lane).
 			Tier      string `json:"tier"`
@@ -22338,7 +23224,7 @@ type Approval struct {
 	ExpiresAt *time.Time         `json:"expires_at,omitempty"`
 	Id        openapi_types.UUID `json:"id"`
 
-	// Kind coldstart | send_email | advance_deal | promote_lead | overnight | transcript_proposal.
+	// Kind Examples: coldstart | send_email | advance_deal | promote_lead | overnight | deal_follow_up | transcript_proposal | commitment_task.
 	Kind       string              `json:"kind"`
 	OnBehalfOf *openapi_types.UUID `json:"on_behalf_of,omitempty"`
 
@@ -23124,6 +24010,16 @@ type AttentionCounts struct {
 type AttentionDealFacts struct {
 	AmountMinor *int64 `json:"amount_minor,omitempty"`
 
+	// ChampionUnknown `true` when an imported deal leaves its champion unsaid: no seat the caller
+	// can read holds the champion role, whether no seat was recorded, a seat is
+	// withheld from the caller, or the seats carry other roles. The source system
+	// may have had no such role, so this is not a finding that nobody is carrying
+	// the deal. Never sent beside `no_champion`, and `false` is never sent.
+	//
+	// Absent on a deal created here, on a deal whose champion is named, and when
+	// the server did not assess coverage.
+	ChampionUnknown *bool `json:"champion_unknown,omitempty"`
+
 	// CloseDateProvisional True when the close date has not been confirmed by a colleague.
 	CloseDateProvisional *bool   `json:"close_date_provisional,omitempty"`
 	Currency             *string `json:"currency,omitempty"`
@@ -23140,7 +24036,10 @@ type AttentionDealFacts struct {
 	// So absence does not mean "covered". It means this endpoint is making no claim,
 	// and a client MUST NOT read it as one. See `WorklistDealFacts.no_champion`,
 	// which carries the same fact out under the same rule.
-	NoChampion *bool               `json:"no_champion,omitempty"`
+	NoChampion *bool `json:"no_champion,omitempty"`
+
+	// NoNextStep `true` when the deal carries no open task of its own, so nothing is planned to move it. Never `false`: absent means a step is planned or the server did not check.
+	NoNextStep *bool               `json:"no_next_step,omitempty"`
 	OwnerId    *openapi_types.UUID `json:"owner_id,omitempty"`
 
 	// StageId The deal's current stage.
@@ -23344,9 +24243,10 @@ type AttentionItem struct {
 	// acting on one task each overwrite the other and neither is told.
 	Version *RowVersion `json:"version,omitempty"`
 
-	// WithContact Whose record a `meeting` row's brief is read on. Sent only for
-	// `source: meeting`, and only where the meeting names a contact this caller may
-	// see.
+	// WithContact Who a meeting is with: the first attendee by name who holds no seat here, is not
+	// employed by the installation's own company, and is a contact this caller may
+	// see. Sent by `source: meeting` and `source: meeting_outcome`. On a `meeting`
+	// row it is also whose record the brief is read on.
 	//
 	// It is not the row's SUBJECT, which is the meeting itself — the row is about
 	// the appointment, and the brief happens to be reached through somebody's page:
@@ -23911,7 +24811,9 @@ type AvailableModelLane string
 // AvailableModelList One vendor's own answer about what it serves.
 // An empty `models` with NO `unavailable` is a vendor that answered and serves nothing — a local runner with no model pulled onto it is the ordinary case. It is a different state from a vendor that could not be asked, which always sets `unavailable`, and a client that folded the two would tell a reader to paste a key they already have.
 type AvailableModelList struct {
-	Models []AvailableModel `json:"models"`
+	// Complete True when `models` is exactly what the asked place serves — a `gemini_vertex` list, each model asked of the location — so a client offers nothing beside it. Absent or false for a vendor's own list, which may lag a model the vendor shipped since.
+	Complete *bool            `json:"complete,omitempty"`
+	Models   []AvailableModel `json:"models"`
 
 	// Provider The routing name of the vendor that was asked.
 	Provider string `json:"provider"`
@@ -23919,11 +24821,11 @@ type AvailableModelList struct {
 	// RankedBy The measure the order came from, in words a screen can print, and absent when the list is in the vendor's own order. "Top ten" is meaningless without it, and a vendor's raw list arrives in no useful order at all: a first-time admin choosing among four hundred ids needs to be told what made ten of them the ten.
 	RankedBy *string `json:"ranked_by,omitempty"`
 
-	// Unavailable Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter, or the decision endpoint's host, publishes no list. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — an OpenAI-wire binding names no host, so there is no address to ask.
+	// Unavailable Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter, or the decision endpoint's host, publishes no list. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — the provider has no host set, so there is no address to ask; or, for a `model` probe, the location does not serve that model.
 	Unavailable *AvailableModelListUnavailable `json:"unavailable,omitempty"`
 }
 
-// AvailableModelListUnavailable Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter, or the decision endpoint's host, publishes no list. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — an OpenAI-wire binding names no host, so there is no address to ask.
+// AvailableModelListUnavailable Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter, or the decision endpoint's host, publishes no list. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — the provider has no host set, so there is no address to ask; or, for a `model` probe, the location does not serve that model.
 type AvailableModelListUnavailable string
 
 // BackfillPreview The scope before the spend (ADR-0063/ADR-0020): what starting this window would touch and roughly cost. An estimate, labeled as such — actual spend is metered per task.
@@ -26148,7 +27050,7 @@ type Company360Health struct {
 	DaysSinceLastInbound *int       `json:"days_since_last_inbound,omitempty"`
 	LastMeetingAt        *time.Time `json:"last_meeting_at,omitempty"`
 
-	// OpenCommitments Open `commitment_made` signals — things one side said they would do. Null when the caller cannot read signals.
+	// OpenCommitments Commitments either side made with the contacts at this account, read out of conversations, still owed and not yet a task. Null when the caller cannot read contacts and activities.
 	OpenCommitments *int `json:"open_commitments,omitempty"`
 
 	// Payment Whether they pay, and on time. Absent on an account with no finance connection or too few settled invoices to say — which is different from paying badly.
@@ -31122,6 +32024,42 @@ type DealStatus string
 // DealWonWithoutContractReason Why this deal was won with no contract behind it (ADR-0109 §6). NULL on a won deal that HAS one — the two are distinguishable, which is what makes "how many won deals have no paper, and why" answerable. Cleared on reopen and on any transition away from won.
 type DealWonWithoutContractReason string
 
+// DealCommitment defines model for DealCommitment.
+type DealCommitment struct {
+	// Body What was committed to, in the language of the reader.
+	Body        string             `json:"body"`
+	ContactId   openapi_types.UUID `json:"contact_id"`
+	ContactName string             `json:"contact_name"`
+
+	// DueAt Absent when the conversation named no day.
+	DueAt *time.Time `json:"due_at,omitempty"`
+
+	// Id The id of the claim, which `POST /claims/{id}/settle` takes.
+	Id openapi_types.UUID `json:"id"`
+
+	// OccurredAt When it was said.
+	OccurredAt time.Time `json:"occurred_at"`
+
+	// SourceActivityId The captured activity it was read from.
+	SourceActivityId openapi_types.UUID `json:"source_activity_id"`
+
+	// SourceKind The kind of activity it was read from (`email`, `meeting`, …), so a client opens it in the reader that kind needs.
+	SourceKind string `json:"source_kind"`
+
+	// SourceQuote The words it was read from, verbatim.
+	SourceQuote string `json:"source_quote"`
+}
+
+// DealCommitments defines model for DealCommitments.
+type DealCommitments struct {
+	// Complete False when a commitment was left out because its contact or its message is outside what the caller may read.
+	Complete bool             `json:"complete"`
+	Data     []DealCommitment `json:"data"`
+
+	// HasMore True when more open commitments exist than the most urgent ones returned.
+	HasMore bool `json:"has_more"`
+}
+
 // DealCoverage defines model for DealCoverage.
 type DealCoverage struct {
 	DealId  openapi_types.UUID        `json:"deal_id"`
@@ -33060,6 +33998,9 @@ type ForecastReadings struct {
 	// ScopeLimited True when deals the caller cannot read were left out. A BOOLEAN and never a count: a count of what somebody may not read is itself a statement about how much of it there is, so the reader is told the figure is partial and not by how much.
 	ScopeLimited *bool `json:"scope_limited,omitempty"`
 
+	// Snapshots The frozen states of this period and population, newest first: the ten most recent plus the period's first, so a reader has both the latest and the "since the period opened" anchor. These are the ids `getForecastMovement` takes in `from` and `to`. Only whole-pipeline snapshots are listed; one restricted to a single pipeline covers a different population. Empty when nothing was frozen, and always empty for `managed_teams`, which nothing is frozen against.
+	Snapshots *[]ForecastSnapshotRef `json:"snapshots,omitempty"`
+
 	// Sufficiency Whether the open pipeline supports the reference landing, and what the reference is.
 	// NOT a target. Margince has no target model: `basis` names where the reference came from so a reader can disagree with the basis rather than with the arithmetic, and the reference is always from OUTSIDE the current projection — a coverage figure divided by a target derived from the same pipeline is always fine and says nothing.
 	Sufficiency *ForecastSufficiency `json:"sufficiency,omitempty"`
@@ -33098,6 +34039,18 @@ type ForecastShareKind string
 
 // ForecastShareScopeKind defines model for ForecastShare.ScopeKind.
 type ForecastShareScopeKind string
+
+// ForecastSnapshotRef One frozen forecast, by the handle a movement read takes.
+type ForecastSnapshotRef struct {
+	Id      openapi_types.UUID `json:"id"`
+	TakenAt time.Time          `json:"taken_at"`
+
+	// Trigger Why it was taken.
+	Trigger ForecastSnapshotRefTrigger `json:"trigger"`
+}
+
+// ForecastSnapshotRefTrigger Why it was taken.
+type ForecastSnapshotRefTrigger string
 
 // ForecastSufficiency Whether the open pipeline supports the reference landing, and what the reference is.
 // NOT a target. Margince has no target model: `basis` names where the reference came from so a reader can disagree with the basis rather than with the arithmetic, and the reference is always from OUTSIDE the current projection — a coverage figure divided by a target derived from the same pipeline is always fine and says nothing.
@@ -33674,7 +34627,10 @@ type ImportRunReport struct {
 	//
 	// Today the only link a delimited file carries is a contact's employer,
 	// named by a company column the mapping points at `company`.
-	Links    *ImportRunLinks    `json:"links,omitempty"`
+	Links *ImportRunLinks `json:"links,omitempty"`
+
+	// Mapping `{source column → target field}` as the run was staged with it, after validation — the same shape the create request's `mapping` takes. A report says where each column went, not only how many rows landed. Absent for a run that carries no mapping.
+	Mapping  *map[string]string `json:"mapping,omitempty"`
 	RowsRead int                `json:"rows_read"`
 	RunId    openapi_types.UUID `json:"run_id"`
 
@@ -35807,17 +36763,29 @@ type MeetingBriefSectionKind string
 
 // MeetingInvitation defines model for MeetingInvitation.
 type MeetingInvitation struct {
-	CalendarUrl     *string                          `json:"calendar_url,omitempty"`
-	End             time.Time                        `json:"end"`
-	Id              openapi_types.UUID               `json:"id"`
-	Location        string                           `json:"location"`
-	ManagementToken *string                          `json:"management_token,omitempty"`
-	ReminderStatus  *MeetingInvitationReminderStatus `json:"reminder_status,omitempty"`
-	Start           time.Time                        `json:"start"`
-	Status          MeetingInvitationStatus          `json:"status"`
-	Subject         string                           `json:"subject"`
-	Version         int64                            `json:"version"`
+	CalendarUrl     *string            `json:"calendar_url,omitempty"`
+	End             time.Time          `json:"end"`
+	Id              openapi_types.UUID `json:"id"`
+	Location        string             `json:"location"`
+	ManagementToken *string            `json:"management_token,omitempty"`
+
+	// Provider The calendar provider that holds the event. Omitted on guest reads.
+	Provider       *MeetingInvitationProvider       `json:"provider,omitempty"`
+	ReminderStatus *MeetingInvitationReminderStatus `json:"reminder_status,omitempty"`
+	Start          time.Time                        `json:"start"`
+	Status         MeetingInvitationStatus          `json:"status"`
+	Subject        string                           `json:"subject"`
+	Version        int64                            `json:"version"`
+
+	// VideoCall A video call link was requested for this meeting.
+	VideoCall *bool `json:"video_call,omitempty"`
+
+	// VideoUrl The join link the calendar created. Absent until the calendar accepts the invitation, or when it could not create one.
+	VideoUrl *string `json:"video_url,omitempty"`
 }
+
+// MeetingInvitationProvider The calendar provider that holds the event. Omitted on guest reads.
+type MeetingInvitationProvider string
 
 // MeetingInvitationReminderStatus defines model for MeetingInvitation.ReminderStatus.
 type MeetingInvitationReminderStatus string
@@ -35845,6 +36813,9 @@ type MeetingInvitationRequest struct {
 	Location      string              `json:"location"`
 	Start         time.Time           `json:"start"`
 	Subject       string              `json:"subject"`
+
+	// VideoCall Add a video call link from the connected calendar. Absent follows the host's profile setting.
+	VideoCall *bool `json:"video_call,omitempty"`
 }
 
 // MeetingPlan The preparation plan: what to DO in the room, as against `sections`, which is what is
@@ -36051,6 +37022,26 @@ type MeetingPlanUnknown struct {
 // MeetingPlanUnknownKind Which gap this is. A closed vocabulary so a surface can order and label them, and so a writer cannot invent an eighth.
 type MeetingPlanUnknownKind string
 
+// MeetingProposal defines model for MeetingProposal.
+type MeetingProposal struct {
+	CreatedAt       time.Time `json:"created_at"`
+	DurationMinutes int       `json:"duration_minutes"`
+	ExpiresAt       time.Time `json:"expires_at"`
+
+	// Id The proposal's activity id; archive it to withdraw the link.
+	Id openapi_types.UUID `json:"id"`
+
+	// Options The offered times. Empty for a personal link where the guest picks any open time.
+	Options []struct {
+		End   time.Time `json:"end"`
+		Start time.Time `json:"start"`
+	} `json:"options"`
+	Subject string `json:"subject"`
+
+	// Url The personal link, for copying or resending.
+	Url string `json:"url"`
+}
+
 // MeetingProposalRequest defines model for MeetingProposalRequest.
 type MeetingProposalRequest struct {
 	AttendeeEmail   openapi_types.Email `json:"attendee_email"`
@@ -36063,6 +37054,9 @@ type MeetingProposalRequest struct {
 		Start time.Time `json:"start"`
 	} `json:"options"`
 	Subject string `json:"subject"`
+
+	// VideoCall Add a video call link when the guest books. Absent follows the host's profile setting.
+	VideoCall *bool `json:"video_call,omitempty"`
 }
 
 // MergeTagsRequest defines model for MergeTagsRequest.
@@ -36810,7 +37804,7 @@ type Offer struct {
 	// OfferNumber Human-facing Angebot number, minted server-side, unique per workspace (with revision).
 	OfferNumber *string `json:"offer_number,omitempty"`
 
-	// PdfAssetRef Rendered PDF ref, set by renderOffer (B-E03.22/WP7).
+	// PdfAssetRef Rendered PDF ref, set by renderOffer. Null, as are buyer_company_id and buyer_snapshot, for a reader who cannot open the buyer company; cleared when a draft's buyer changes.
 	PdfAssetRef *string `json:"pdf_asset_ref,omitempty"`
 
 	// Revision Bumped when a sent offer is regenerated; the prior revision becomes superseded.
@@ -37162,6 +38156,19 @@ type OpenDealRoomThreadRequest struct {
 	// DocumentId The room document the thread is about. Omit for a room-level exchange.
 	DocumentId *openapi_types.UUID `json:"document_id,omitempty"`
 
+	// RequestId An id the CLIENT mints for this attempt, so a repeated delivery of the
+	// same attempt lands once.
+	//
+	// Repeating an attempt answers with the SAME thread rather than an error: a
+	// double-click, a mobile retry and a proxy replay are one attempt arriving
+	// twice. Scoped to the room, so an id only has to be unique within the one
+	// being written to. Omit it and no deduplication applies.
+	//
+	// Mint it fresh per attempt rather than deriving it from the message —
+	// saying the same thing twice on purpose is allowed, and a key derived from
+	// the text would refuse the second one.
+	RequestId *openapi_types.UUID `json:"request_id,omitempty"`
+
 	// RequiredChange Only with a document. Marks the thread as one the seller still owes an answer on.
 	RequiredChange *bool `json:"required_change,omitempty"`
 
@@ -37435,8 +38442,21 @@ type PopulationNarrowed string
 
 // PostDealRoomCommentRequest defines model for PostDealRoomCommentRequest.
 type PostDealRoomCommentRequest struct {
-	Body   string  `json:"body"`
-	Source *string `json:"source,omitempty"`
+	Body string `json:"body"`
+
+	// RequestId An id the CLIENT mints for this attempt, so a repeated delivery of the
+	// same attempt lands once.
+	//
+	// Repeating an attempt answers with the SAME thread rather than an error: a
+	// double-click, a mobile retry and a proxy replay are one attempt arriving
+	// twice. Scoped to the room, so an id only has to be unique within the one
+	// being written to. Omit it and no deduplication applies.
+	//
+	// Mint it fresh per attempt rather than deriving it from the message —
+	// saying the same thing twice on purpose is allowed, and a key derived from
+	// the text would refuse the second one.
+	RequestId *openapi_types.UUID `json:"request_id,omitempty"`
+	Source    *string             `json:"source,omitempty"`
 }
 
 // PreferenceCenter The buyer-facing preference center's per-purpose view (B-E11.32): each tracked consent purpose
@@ -38199,6 +39219,38 @@ type ProviderCredits struct {
 	ReadAt *time.Time      `json:"read_at,omitempty"`
 }
 
+// ProviderLocation defines model for ProviderLocation.
+type ProviderLocation struct {
+	// DisplayName Google's own label, or this build's for a multi-region Google did not list.
+	DisplayName string `json:"display_name"`
+
+	// Id The string a binding's `location` names, exactly as Google spells it.
+	Id string `json:"id"`
+
+	// Jurisdiction Whose law the processing happens under, by this build's policy: `eu` exactly when `resident`, `global` for the endpoint that may process anywhere, `us` for the US multi-region and US regions, and `other` for everything else — London and Zürich among them.
+	Jurisdiction ProviderLocationJurisdiction `json:"jurisdiction"`
+
+	// Resident Whether Google keeps ML processing at this location inside the EU, which is what the `eu_hosted` profile admits. This build's list, never Google's: a location Google adds is not resident until this build names it.
+	Resident bool `json:"resident"`
+}
+
+// ProviderLocationJurisdiction Whose law the processing happens under, by this build's policy: `eu` exactly when `resident`, `global` for the endpoint that may process anywhere, `us` for the US multi-region and US regions, and `other` for everything else — London and Zürich among them.
+type ProviderLocationJurisdiction string
+
+// ProviderLocationList Where one vendor can process a call. An empty `locations` always carries `unavailable`.
+type ProviderLocationList struct {
+	Locations []ProviderLocation `json:"locations"`
+
+	// Provider The routing name of the vendor that was asked.
+	Provider string `json:"provider"`
+
+	// Unavailable Why the list is empty, when it is. Absent means the vendor answered. `no_key` — no service-account key is held. `not_published` — this vendor has no location to choose. `unreachable` — Google was asked and did not answer. `profile_forbids` — the profile is `sovereign`, which forbids asking Google at all.
+	Unavailable *ProviderLocationListUnavailable `json:"unavailable,omitempty"`
+}
+
+// ProviderLocationListUnavailable Why the list is empty, when it is. Absent means the vendor answered. `no_key` — no service-account key is held. `not_published` — this vendor has no location to choose. `unreachable` — Google was asked and did not answer. `profile_forbids` — the profile is `sovereign`, which forbids asking Google at all.
+type ProviderLocationListUnavailable string
+
 // ProviderLookupBacklog How much of the installation is still waiting to be looked up once, and whether the sweep is moving. A count without the paused flag reads as progress that has stalled; the two together say whether waiting is the right thing to do.
 type ProviderLookupBacklog struct {
 	// Paused True when nothing will be queued right now — the posture is off, the connection is not usable, or the day's run ceiling is spent. A remaining count that is not falling is explained by this rather than by a stuck sweep.
@@ -38408,7 +39460,13 @@ type PublicSchedulingProfile struct {
 	// LogoUrl Absolute public logo URL when the public origin is configured; otherwise relative to the API origin.
 	LogoUrl *string `json:"logo_url,omitempty"`
 	Title   string  `json:"title"`
+
+	// VideoApp Present when new meetings get a video call link from the host's calendar.
+	VideoApp *PublicSchedulingProfileVideoApp `json:"video_app,omitempty"`
 }
+
+// PublicSchedulingProfileVideoApp Present when new meetings get a video call link from the host's calendar.
+type PublicSchedulingProfileVideoApp string
 
 // PutOnboardingStateRequest defines model for PutOnboardingStateRequest.
 type PutOnboardingStateRequest struct {
@@ -40453,16 +41511,31 @@ type SchedulingProfile struct {
 	ReplaceLink   *bool                     `json:"replace_link,omitempty"`
 	Slug          *string                   `json:"slug,omitempty"`
 	Title         string                    `json:"title"`
+
+	// VideoCall Add a video call link from the connected calendar (Google Meet or Microsoft Teams) to new meetings. Absent means on.
+	VideoCall *bool `json:"video_call,omitempty"`
 }
 
 // SchedulingProfileProvider defines model for SchedulingProfile.Provider.
 type SchedulingProfileProvider string
 
+// SearchHitEmployer A company a contact currently works at, by any current employment — the same reading as the company's own roster, not only the contact's primary employer.
+type SearchHitEmployer struct {
+	CompanyId   openapi_types.UUID `json:"company_id"`
+	CompanyName string             `json:"company_name"`
+}
+
 // SearchResponse defines model for SearchResponse.
 type SearchResponse struct {
 	Data []SearchResult `json:"data"`
 	Page PageInfo       `json:"page"`
+
+	// TypesWithMore On a `per_type` answer only: the types that matched more hits than the page carries for them. Absent on a ranked answer, whose `page.has_more` says the same thing for the list as a whole.
+	TypesWithMore *[]SearchResponseTypesWithMore `json:"types_with_more,omitempty"`
 }
+
+// SearchResponseTypesWithMore defines model for SearchResponse.TypesWithMore.
+type SearchResponseTypesWithMore string
 
 // SearchResult defines model for SearchResult.
 type SearchResult struct {
@@ -40476,6 +41549,9 @@ type SearchResult struct {
 	// IsPartner For a `company` hit only: whether the account carries a LIVE partner programme. True when a partner record exists and has not been retired, false when it was checked and carries none. Null on every other hit type, and null when the marker was not taken — a caller who may not read partner programmes gets null rather than false, because null means UNKNOWN while false would tell them this account is not a partner. A client renders the partner marker, with a route to the company's partner record, on `true` alone.
 	IsPartner *bool `json:"is_partner,omitempty"`
 
+	// LogoUrl For a `company` hit only: the company's logo, the same URL its record carries as `Company.logo_url`. Absent when it has none, and on every other hit type.
+	LogoUrl *string `json:"logo_url,omitempty"`
+
 	// Score Relevance score.
 	Score   *float32 `json:"score,omitempty"`
 	Snippet *string  `json:"snippet,omitempty"`
@@ -40486,6 +41562,9 @@ type SearchResult struct {
 	// TrustTier Provenance tier of the underlying record. EVERY hit this server returns carries `authoritative`, with no exception: search reads the store the record lives in, so a hit is never a copy of somebody else's. `external` and `unverified` are declared for connector-sourced rows and nothing emits either yet, and `null` means UNKNOWN rather than authoritative — this field is never guessed. A client must accept all four and must not expect any but the first.
 	TrustTier *SearchResultTrustTier `json:"trust_tier,omitempty"`
 	Type      SearchResultType       `json:"type"`
+
+	// WorksAt On a `contact` hit found through `with_employees`: the company it currently works at that the query matched, which is why the hit is here — the contact's own text did not match. When the contact works at several matching companies, the best-matching one. Null on every other hit, a contact the query matched by its own text included.
+	WorksAt *SearchHitEmployer `json:"works_at,omitempty"`
 }
 
 // SearchResultTrustTier Provenance tier of the underlying record. EVERY hit this server returns carries `authoritative`, with no exception: search reads the store the record lives in, so a hit is never a copy of somebody else's. `external` and `unverified` are declared for connector-sourced rows and nothing emits either yet, and `null` means UNKNOWN rather than authoritative — this field is never guessed. A client must accept all four and must not expect any but the first.
@@ -41031,6 +42110,14 @@ type SendMessageRequest struct {
 // objected, so naming one here is refused (422 `invalid`).
 type SendMessageRequestCommunicationContext string
 
+// ServiceStatus The fixed answer of `GET /status`.
+type ServiceStatus struct {
+	Status ServiceStatusStatus `json:"status"`
+}
+
+// ServiceStatusStatus defines model for ServiceStatus.Status.
+type ServiceStatusStatus string
+
 // SetActivityAudienceRequest defines model for SetActivityAudienceRequest.
 type SetActivityAudienceRequest struct {
 	// Audience Who may read an activity's content — see Activity.audience.
@@ -41265,7 +42352,7 @@ type SettingsAvailability struct {
 	// Lists True when Live Lists and Shortlists are on (`lists.enabled`, on by default). False when an operator has switched them off: the `/lists` routes answer 404, no agent tool reaches them, and no screen offers them.
 	Lists *bool `json:"lists,omitempty"`
 
-	// Reporting Whether analytics.performance_enabled makes saved reporting available.
+	// Reporting Reporting is always available. Retained for compatibility with older clients.
 	Reporting *bool `json:"reporting,omitempty"`
 }
 
@@ -42473,7 +43560,15 @@ type TransitionPolicyMode string
 
 // TransitionPolicyList defines model for TransitionPolicyList.
 type TransitionPolicyList struct {
-	Data []TransitionPolicy `json:"data"`
+	// AutomationEnabled Whether this installation permits stage automation at all
+	// (`deals.stage_autopilot_enabled`). It defaults to FALSE, and while it is
+	// off every transition is forced to `propose` regardless of its own rule.
+	//
+	// A rule's `mode` therefore describes what was asked for, not what will
+	// happen: read both before telling somebody a transition moves deals by
+	// itself.
+	AutomationEnabled bool               `json:"automation_enabled"`
+	Data              []TransitionPolicy `json:"data"`
 }
 
 // TransitionRef One transition, named by the stages at its two ends. Both must belong
@@ -43174,7 +44269,14 @@ type UpdateOfferLineItemRequestBillingModel string
 
 // UpdateOfferRequest Header-field patch; allowed only while status=draft (422 offer_not_draft otherwise). Totals are derived and not settable (422).
 type UpdateOfferRequest struct {
-	BuyerCompanyId       *openapi_types.UUID    `json:"buyer_company_id,omitempty"`
+	BuyerCompanyId *openapi_types.UUID `json:"buyer_company_id,omitempty"`
+
+	// Currency Refused while the draft carries priced lines. A line's price is an integer with no
+	// unit of its own, so moving the currency would leave every one of them where it is
+	// and read it in the new one — a silent reprice of a document a buyer will sign.
+	// Remove the lines and re-enter them in the new currency, or start a new offer in it.
+	// Changing the currency on a draft with no priced lines is free, and re-sending the
+	// currency the offer already holds is not a change.
 	Currency             *string                `json:"currency,omitempty"`
 	IntroText            *string                `json:"intro_text,omitempty"`
 	TemplateId           *openapi_types.UUID    `json:"template_id,omitempty"`
@@ -44809,7 +45911,14 @@ type WorklistComparisonComparator string
 // moments are the READER's, filled under their own grants; each is absent
 // where the reader may not have it, which is not the same as unnamed or never.
 type WorklistContactFacts struct {
-	Id openapi_types.UUID `json:"id"`
+	// Employer Where the contact works today, so a meeting row says which account the
+	// meeting was with. Sent on `meeting` and `meeting_outcome` rows only: every
+	// other row's title already names its record.
+	//
+	// Absent where the contact has no current employer, or where this caller may
+	// not read the employment or the company. Absent never means "works nowhere".
+	Employer *ContactEmployer   `json:"employer,omitempty"`
+	Id       openapi_types.UUID `json:"id"`
 
 	// Label The contact's display name. Absent when the caller may not read the contact.
 	Label *string `json:"label,omitempty"`
@@ -44912,7 +46021,9 @@ type WorklistDealFacts struct {
 	//
 	// Absence therefore says nothing either way. A client MUST NOT render it as
 	// "nobody is carrying this", and MUST NOT render it as "somebody is": the four
-	// cases are indistinguishable on the wire by design.
+	// cases are indistinguishable in this field by design. An imported deal whose
+	// readable committee names no champion carries `champion_unknown` in the item's
+	// `because` instead, which says so without telling those cases apart.
 	NoChampion     *bool               `json:"no_champion,omitempty"`
 	OwnerId        *openapi_types.UUID `json:"owner_id,omitempty"`
 	QuietDays      *int                `json:"quiet_days,omitempty"`
@@ -45190,6 +46301,14 @@ type WorklistItem struct {
 	// EmailSummary The canonical email row, on a `customer_waiting` row whose message is an EMAIL this reader may read. The waiting lane spans email and channel messages, and only an email has an email's shape — a chat drawn as one would carry a mail icon and an email's access badge over a message that never travelled on one. Null on a channel message, null on every other source, and null when the message's content is not this reader's, though such a message produces no waiting row at all. A client renders the canonical row when this is present and falls back to `title` when it is not.
 	EmailSummary *EmailSummary `json:"email_summary,omitempty"`
 
+	// Host Who hosted the meeting a `meeting` or `meeting_outcome` row is about: the
+	// seat whose calendar it came off. `kind` is always `user`.
+	//
+	// A fact about the meeting, kept apart from `owner`, which says who answers
+	// for the row. Absent where no calendar claims the meeting. `label` follows
+	// `WorklistOwner.label`: absent where this caller may not resolve the name.
+	Host *WorklistOwner `json:"host,omitempty"`
+
 	// Id The owning record's id, as its own endpoint spells it.
 	Id string `json:"id"`
 
@@ -45326,8 +46445,10 @@ type WorklistItem struct {
 	// WithContact Whose record a `meeting` row's brief is read on, carried out from
 	// `AttentionItem.with_contact`.
 	//
-	// Sent only for `source: meeting`, and only where the meeting names a contact
-	// this caller may see. It is not the row's SUBJECT — the row is about the
+	// Sent for `source: meeting` and `source: meeting_outcome`, and only where the
+	// meeting names a contact this caller may see. On a `meeting_outcome` row no
+	// move opens a brief, so the field only says who the meeting was with, as
+	// `contact` does. It is not the row's SUBJECT — the row is about the
 	// appointment — and it exists because the brief is not a page of its own: it
 	// opens as `?prep=<activity>` on a contact's record, so the address needs both
 	// ids and the subject carries only one.
@@ -45796,6 +46917,8 @@ type WorklistSummary struct {
 // rather than pre-formatted because the reader's language and notation are the
 // client's to apply.
 type WorklistValue struct {
+	// Count How many of something, such as earlier requests folded into one card.
+	Count    *int              `json:"count,omitempty"`
 	Currency *string           `json:"currency,omitempty"`
 	Date     *time.Time        `json:"date,omitempty"`
 	Days     *int              `json:"days,omitempty"`
@@ -46365,13 +47488,44 @@ type ListAiModelRatesParams struct {
 
 // ListAvailableModelsParams defines parameters for ListAvailableModels.
 type ListAvailableModelsParams struct {
-	// Tier The lane being edited, named as the routing document names it (`premium`, `embeddings`, …). It selects WHICH stored binding supplies the host, for the installation that binds one vendor at two — a broker on one lane and a self-hosted gateway on another, which the routing validator permits. Omitted, or naming a lane bound to some other vendor, the host falls back to any binding on this vendor and then to the adapter's own default.
+	// Tier The lane being edited, named as the routing document names it (`premium`, `embeddings`, …). A vendor's host is set once, on the provider (`providers` in the routing document), so this matters only for `embeddings`, which may name a server of its own. Every other value asks the provider's host, and a vendor with none set asks the adapter's own default.
 	Tier *string `form:"tier,omitempty" json:"tier,omitempty"`
 
 	// Top Return only the best N under the vendor's own published measure, and name that measure in `ranked_by`. For the surface that has to OFFER a choice rather than accept one: a routing form binds an id its reader already knows, while a first run puts a shortlist in front of somebody who has never seen these names, and four hundred rows is not a shortlist.
 	// Omitted, the vendor's whole list comes back in the vendor's own order. A vendor that publishes no such measure cannot honour this: it answers with the full list and no `ranked_by`, rather than inventing an order and calling it a ranking.
 	Top *int `form:"top,omitempty" json:"top,omitempty"`
+
+	// Location The Vertex AI location being edited, for `gemini_vertex` only — which models are served differs by location, and the location is where Google processes the call. Omitted, the lane's stored location is used. Under the `eu_hosted` profile a location outside the EU answers `profile_forbids` before any credential is used. Ignored by every other vendor.
+	Location *string `form:"location,omitempty" json:"location,omitempty"`
+
+	// Model Probe ONE model instead of listing: `gemini_vertex` asks the location whether it serves this id (one `countTokens` call, or one `embedContent` when `tier` is `embeddings`). The answer lists just that model when it is served, `unavailable: no_endpoint` when the location does not serve it, and `unreachable` when Google could not be asked. Every other vendor answers `not_published`: it has no per-location availability to probe.
+	Model *string `form:"model,omitempty" json:"model,omitempty"`
 }
+
+// GetAiCallStatsParams defines parameters for GetAiCallStats.
+type GetAiCallStatsParams struct {
+	Window   *GetAiCallStatsParamsWindow `form:"window,omitempty" json:"window,omitempty"`
+	Group    *GetAiCallStatsParamsGroup  `form:"group,omitempty" json:"group,omitempty"`
+	Provider *string                     `form:"provider,omitempty" json:"provider,omitempty"`
+	Model    *string                     `form:"model,omitempty" json:"model,omitempty"`
+	Tier     *string                     `form:"tier,omitempty" json:"tier,omitempty"`
+	Task     *string                     `form:"task,omitempty" json:"task,omitempty"`
+}
+
+// GetAiCallStatsParamsWindow defines parameters for GetAiCallStats.
+type GetAiCallStatsParamsWindow string
+
+// GetAiCallStatsParamsGroup defines parameters for GetAiCallStats.
+type GetAiCallStatsParamsGroup string
+
+// GetAiTaskFlowParams defines parameters for GetAiTaskFlow.
+type GetAiTaskFlowParams struct {
+	Task   string                     `form:"task" json:"task"`
+	Window *GetAiTaskFlowParamsWindow `form:"window,omitempty" json:"window,omitempty"`
+}
+
+// GetAiTaskFlowParamsWindow defines parameters for GetAiTaskFlow.
+type GetAiTaskFlowParamsWindow string
 
 // ListAiCallsParams defines parameters for ListAiCalls.
 type ListAiCallsParams struct {
@@ -46390,6 +47544,18 @@ type ListAiCallsParams struct {
 
 	// Task Filter to one task (capture_classify, enrich, …).
 	Task *string `form:"task,omitempty" json:"task,omitempty"`
+
+	// Provider Filter to calls that ended on one provider (openai_compatible, gemini, …).
+	Provider *string `form:"provider,omitempty" json:"provider,omitempty"`
+
+	// Model Filter to calls that ended on one configured model id.
+	Model *string `form:"model,omitempty" json:"model,omitempty"`
+
+	// ServedProvider Filter to calls a broker served from one upstream host.
+	ServedProvider *string `form:"served_provider,omitempty" json:"served_provider,omitempty"`
+
+	// Tier Filter to calls that ended on one tier.
+	Tier *string `form:"tier,omitempty" json:"tier,omitempty"`
 }
 
 // GetAiUsageParams defines parameters for GetAiUsage.
@@ -50961,6 +52127,11 @@ type GetMeetingAvailabilityParams struct {
 	To   time.Time `form:"to" json:"to"`
 }
 
+// ListMeetingProposalsParams defines parameters for ListMeetingProposals.
+type ListMeetingProposalsParams struct {
+	ContactId openapi_types.UUID `form:"contact_id" json:"contact_id"`
+}
+
 // CreateMeetingProposalParams defines parameters for CreateMeetingProposal.
 type CreateMeetingProposalParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
@@ -50987,6 +52158,12 @@ type SearchParams struct {
 
 	// Types Restrict to these object types (default all).
 	Types *[]SearchParamsTypes `form:"types,omitempty" json:"types,omitempty"`
+
+	// PerType Answer GROUPED instead of as one ranked list: up to this many hits of EACH type, each type's best first. Relevance is not comparable across types — a message naming an account ten times outranks the account itself — so a short ranked list can hold nothing but messages, while a grouped answer carries every type that matched. `data` holds each type's hits together, best first. The page is the whole answer, so it takes no `cursor` and no `limit`; `types_with_more` names the types holding more than it carries, and asking again without `per_type`, with `types` set to one of them, pages through the rest.
+	PerType *int `form:"per_type,omitempty" json:"per_type,omitempty"`
+
+	// WithEmployees Also find the contacts who currently work at a company the query matches, each carrying that company as `works_at`. A contact the query matches by its own text is returned once, as itself; one found only through its employer ranks after every contact matched by its own text. Staff are read from the best-matching companies only, as many as a grouped page can show (20), so a word matching hundreds of accounts reaches the contacts at its strongest matches rather than at all of them. It needs the caller to read contacts, companies and the employment between them, and finds no one through the installation's own company or through a query using the websearch operators (`or`, `-word`, quotes), where `-acme` would reach every other company in the workspace. Honoured by both page shapes, so a contact a grouped page shows is also on the ranked list narrowed to `types=contact`.
+	WithEmployees *bool `form:"with_employees,omitempty" json:"with_employees,omitempty"`
 
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
@@ -51931,14 +53108,26 @@ type PreviewAiBudgetJSONRequestBody = AiBudgetChange
 // RecordAIFeedbackJSONRequestBody defines body for RecordAIFeedback for application/json ContentType.
 type RecordAIFeedbackJSONRequestBody = AIFeedbackInput
 
+// ReplaceAiPriceSyncJSONRequestBody defines body for ReplaceAiPriceSync for application/json ContentType.
+type ReplaceAiPriceSyncJSONRequestBody = AiPriceSyncChange
+
 // SetAiProviderKeyJSONRequestBody defines body for SetAiProviderKey for application/json ContentType.
 type SetAiProviderKeyJSONRequestBody = AiProviderKeyInput
+
+// SetAiProviderSettingsJSONRequestBody defines body for SetAiProviderSettings for application/json ContentType.
+type SetAiProviderSettingsJSONRequestBody = AiProviderSettings
 
 // ReplaceAiRoutingJSONRequestBody defines body for ReplaceAiRouting for application/json ContentType.
 type ReplaceAiRoutingJSONRequestBody = AiRouting
 
 // PreviewAiRoutingJSONRequestBody defines body for PreviewAiRouting for application/json ContentType.
 type PreviewAiRoutingJSONRequestBody = AiRouting
+
+// ReplaceAiTaskOverridesJSONRequestBody defines body for ReplaceAiTaskOverrides for application/json ContentType.
+type ReplaceAiTaskOverridesJSONRequestBody = AiTaskOverrides
+
+// PreviewAiTaskOverridesJSONRequestBody defines body for PreviewAiTaskOverrides for application/json ContentType.
+type PreviewAiTaskOverridesJSONRequestBody = AiTaskOverrides
 
 // ExplainAnalyticsCellJSONRequestBody defines body for ExplainAnalyticsCell for application/json ContentType.
 type ExplainAnalyticsCellJSONRequestBody = AnalyticsExplainRequest
@@ -62582,6 +63771,192 @@ func (a UpdateProjectRequest) MarshalJSON() ([]byte, error) {
 	return json.Marshal(object)
 }
 
+// AsAiOpenRouterProviderPreferredMaxLatency0 returns the union data inside the AiOpenRouterProvider_PreferredMaxLatency as a AiOpenRouterProviderPreferredMaxLatency0
+func (t AiOpenRouterProvider_PreferredMaxLatency) AsAiOpenRouterProviderPreferredMaxLatency0() (AiOpenRouterProviderPreferredMaxLatency0, error) {
+	var body AiOpenRouterProviderPreferredMaxLatency0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromAiOpenRouterProviderPreferredMaxLatency0 overwrites any union data inside the AiOpenRouterProvider_PreferredMaxLatency as the provided AiOpenRouterProviderPreferredMaxLatency0
+func (t *AiOpenRouterProvider_PreferredMaxLatency) FromAiOpenRouterProviderPreferredMaxLatency0(v AiOpenRouterProviderPreferredMaxLatency0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeAiOpenRouterProviderPreferredMaxLatency0 performs a merge with any union data inside the AiOpenRouterProvider_PreferredMaxLatency, using the provided AiOpenRouterProviderPreferredMaxLatency0
+func (t *AiOpenRouterProvider_PreferredMaxLatency) MergeAiOpenRouterProviderPreferredMaxLatency0(v AiOpenRouterProviderPreferredMaxLatency0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsAiOpenRouterPercentiles returns the union data inside the AiOpenRouterProvider_PreferredMaxLatency as a AiOpenRouterPercentiles
+func (t AiOpenRouterProvider_PreferredMaxLatency) AsAiOpenRouterPercentiles() (AiOpenRouterPercentiles, error) {
+	var body AiOpenRouterPercentiles
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromAiOpenRouterPercentiles overwrites any union data inside the AiOpenRouterProvider_PreferredMaxLatency as the provided AiOpenRouterPercentiles
+func (t *AiOpenRouterProvider_PreferredMaxLatency) FromAiOpenRouterPercentiles(v AiOpenRouterPercentiles) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeAiOpenRouterPercentiles performs a merge with any union data inside the AiOpenRouterProvider_PreferredMaxLatency, using the provided AiOpenRouterPercentiles
+func (t *AiOpenRouterProvider_PreferredMaxLatency) MergeAiOpenRouterPercentiles(v AiOpenRouterPercentiles) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t AiOpenRouterProvider_PreferredMaxLatency) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *AiOpenRouterProvider_PreferredMaxLatency) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsAiOpenRouterProviderPreferredMinThroughput0 returns the union data inside the AiOpenRouterProvider_PreferredMinThroughput as a AiOpenRouterProviderPreferredMinThroughput0
+func (t AiOpenRouterProvider_PreferredMinThroughput) AsAiOpenRouterProviderPreferredMinThroughput0() (AiOpenRouterProviderPreferredMinThroughput0, error) {
+	var body AiOpenRouterProviderPreferredMinThroughput0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromAiOpenRouterProviderPreferredMinThroughput0 overwrites any union data inside the AiOpenRouterProvider_PreferredMinThroughput as the provided AiOpenRouterProviderPreferredMinThroughput0
+func (t *AiOpenRouterProvider_PreferredMinThroughput) FromAiOpenRouterProviderPreferredMinThroughput0(v AiOpenRouterProviderPreferredMinThroughput0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeAiOpenRouterProviderPreferredMinThroughput0 performs a merge with any union data inside the AiOpenRouterProvider_PreferredMinThroughput, using the provided AiOpenRouterProviderPreferredMinThroughput0
+func (t *AiOpenRouterProvider_PreferredMinThroughput) MergeAiOpenRouterProviderPreferredMinThroughput0(v AiOpenRouterProviderPreferredMinThroughput0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsAiOpenRouterPercentiles returns the union data inside the AiOpenRouterProvider_PreferredMinThroughput as a AiOpenRouterPercentiles
+func (t AiOpenRouterProvider_PreferredMinThroughput) AsAiOpenRouterPercentiles() (AiOpenRouterPercentiles, error) {
+	var body AiOpenRouterPercentiles
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromAiOpenRouterPercentiles overwrites any union data inside the AiOpenRouterProvider_PreferredMinThroughput as the provided AiOpenRouterPercentiles
+func (t *AiOpenRouterProvider_PreferredMinThroughput) FromAiOpenRouterPercentiles(v AiOpenRouterPercentiles) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeAiOpenRouterPercentiles performs a merge with any union data inside the AiOpenRouterProvider_PreferredMinThroughput, using the provided AiOpenRouterPercentiles
+func (t *AiOpenRouterProvider_PreferredMinThroughput) MergeAiOpenRouterPercentiles(v AiOpenRouterPercentiles) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t AiOpenRouterProvider_PreferredMinThroughput) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *AiOpenRouterProvider_PreferredMinThroughput) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsAiOpenRouterProviderSort0 returns the union data inside the AiOpenRouterProvider_Sort as a AiOpenRouterProviderSort0
+func (t AiOpenRouterProvider_Sort) AsAiOpenRouterProviderSort0() (AiOpenRouterProviderSort0, error) {
+	var body AiOpenRouterProviderSort0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromAiOpenRouterProviderSort0 overwrites any union data inside the AiOpenRouterProvider_Sort as the provided AiOpenRouterProviderSort0
+func (t *AiOpenRouterProvider_Sort) FromAiOpenRouterProviderSort0(v AiOpenRouterProviderSort0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeAiOpenRouterProviderSort0 performs a merge with any union data inside the AiOpenRouterProvider_Sort, using the provided AiOpenRouterProviderSort0
+func (t *AiOpenRouterProvider_Sort) MergeAiOpenRouterProviderSort0(v AiOpenRouterProviderSort0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsAiOpenRouterSort returns the union data inside the AiOpenRouterProvider_Sort as a AiOpenRouterSort
+func (t AiOpenRouterProvider_Sort) AsAiOpenRouterSort() (AiOpenRouterSort, error) {
+	var body AiOpenRouterSort
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromAiOpenRouterSort overwrites any union data inside the AiOpenRouterProvider_Sort as the provided AiOpenRouterSort
+func (t *AiOpenRouterProvider_Sort) FromAiOpenRouterSort(v AiOpenRouterSort) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeAiOpenRouterSort performs a merge with any union data inside the AiOpenRouterProvider_Sort, using the provided AiOpenRouterSort
+func (t *AiOpenRouterProvider_Sort) MergeAiOpenRouterSort(v AiOpenRouterSort) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t AiOpenRouterProvider_Sort) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *AiOpenRouterProvider_Sort) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
 // AsColdStartRequest0 returns the union data inside the ColdStartRequest as a ColdStartRequest0
 func (t ColdStartRequest) AsColdStartRequest0() (ColdStartRequest0, error) {
 	var body ColdStartRequest0
@@ -63160,6 +64535,12 @@ type ServerInterface interface {
 	// Preview an allowance change (ai_budget read/update).
 	// (POST /ai/budget/preview)
 	PreviewAiBudget(w http.ResponseWriter, r *http.Request)
+	// Call figures over a window, grouped — calls, failures, timeouts, latency, tokens and cost (ai_diagnostics read).
+	// (GET /ai/call-stats)
+	GetAiCallStats(w http.ResponseWriter, r *http.Request, params GetAiCallStatsParams)
+	// Which step of one task's route answered its calls over a window (ai_diagnostics read).
+	// (GET /ai/call-stats/flow)
+	GetAiTaskFlow(w http.ResponseWriter, r *http.Request, params GetAiTaskFlowParams)
 	// The AI call trace — every terminal model call, newest first.
 	// (GET /ai/calls)
 	ListAiCalls(w http.ResponseWriter, r *http.Request, params ListAiCallsParams)
@@ -63172,6 +64553,12 @@ type ServerInterface interface {
 	// Whether the model lanes are answering.
 	// (GET /ai/health)
 	GetAiHealth(w http.ResponseWriter, r *http.Request)
+	// Whether model prices sync daily, and what the last sync did (ai_model_rate read).
+	// (GET /ai/price-sync)
+	GetAiPriceSync(w http.ResponseWriter, r *http.Request)
+	// Turn the daily model price sync on or off (ai_model_rate update).
+	// (PUT /ai/price-sync)
+	ReplaceAiPriceSync(w http.ResponseWriter, r *http.Request)
 	// Authenticated AI configuration posture for transparent human-facing workspaces.
 	// (GET /ai/profile)
 	GetAiProfile(w http.ResponseWriter, r *http.Request)
@@ -63187,6 +64574,12 @@ type ServerInterface interface {
 	// Ask one vendor whether the stored credential works (admin/ops).
 	// (POST /ai/provider-keys/{provider}/test)
 	TestAiProviderKey(w http.ResponseWriter, r *http.Request, provider string)
+	// Where one vendor can process a call (admin/ops).
+	// (GET /ai/provider-locations/{provider})
+	ListProviderLocations(w http.ResponseWriter, r *http.Request, provider string)
+	// Set one provider's host, upstream pins and location (admin/ops).
+	// (PUT /ai/provider-settings/{provider})
+	SetAiProviderSettings(w http.ResponseWriter, r *http.Request, provider string)
 	// The tier-to-model binding this installation runs on (admin/ops).
 	// (GET /ai/routing)
 	GetAiRouting(w http.ResponseWriter, r *http.Request)
@@ -63196,9 +64589,21 @@ type ServerInterface interface {
 	// Preview affected features without calling a model (ai_routing read/update and ai_budget read).
 	// (POST /ai/routing/preview)
 	PreviewAiRouting(w http.ResponseWriter, r *http.Request)
+	// The JSON Schema of the routing document, with a description and documentation link per OpenRouter field (ai_routing read).
+	// (GET /ai/routing/schema)
+	GetAiRoutingSchema(w http.ResponseWriter, r *http.Request)
 	// Read AI administration status (ai_diagnostics and ai_budget read).
 	// (GET /ai/status)
 	GetAiStatus(w http.ResponseWriter, r *http.Request)
+	// Read the per-task thinking level and timeouts (ai_routing read).
+	// (GET /ai/task-overrides)
+	GetAiTaskOverrides(w http.ResponseWriter, r *http.Request)
+	// Replace the per-task overrides installation-wide (ai_routing update). Every role applies them within a minute.
+	// (PUT /ai/task-overrides)
+	ReplaceAiTaskOverrides(w http.ResponseWriter, r *http.Request)
+	// Judge a draft of the overrides without saving it (ai_routing read and update).
+	// (POST /ai/task-overrides/preview)
+	PreviewAiTaskOverrides(w http.ResponseWriter, r *http.Request)
 	// AI usage + budget — the spend is never invisible.
 	// (GET /ai/usage)
 	GetAiUsage(w http.ResponseWriter, r *http.Request, params GetAiUsageParams)
@@ -64147,6 +65552,9 @@ type ServerInterface interface {
 	// Accept a recorded automatic deal change.
 	// (POST /deals/{id}/applied-changes/{changeId}/accept)
 	AcceptAppliedDealChange(w http.ResponseWriter, r *http.Request, id Id, changeId openapi_types.UUID, params AcceptAppliedDealChangeParams)
+	// What the customer committed to that this deal waits on.
+	// (GET /deals/{id}/commitments)
+	GetDealCommitments(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Who covers this deal, and what is wrong with how it is covered.
 	// (GET /deals/{id}/coverage)
 	GetDealCoverage(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
@@ -65014,6 +66422,9 @@ type ServerInterface interface {
 	// Configure and activate the caller's booking page.
 	// (PUT /scheduling/profile)
 	PutSchedulingProfile(w http.ResponseWriter, r *http.Request)
+	// List the acting host's open proposals and personal links for one contact.
+	// (GET /scheduling/proposals)
+	ListMeetingProposals(w http.ResponseWriter, r *http.Request, params ListMeetingProposalsParams)
 	// Create a personal, expiring invitation without reserving time or sending mail.
 	// (POST /scheduling/proposals)
 	CreateMeetingProposal(w http.ResponseWriter, r *http.Request, params CreateMeetingProposalParams)
@@ -65083,6 +66494,9 @@ type ServerInterface interface {
 	// Edit a criterion's label, kind, requiredness, hint or position.
 	// (PATCH /stages/{id}/exit-criteria/{criterion_id})
 	UpdateStageExitCriterion(w http.ResponseWriter, r *http.Request, id Id, criterionId openapi_types.UUID, params UpdateStageExitCriterionParams)
+	// Anonymous reachability probe for external uptime monitors.
+	// (GET /status)
+	GetStatus(w http.ResponseWriter, r *http.Request)
 	// List tags.
 	// (GET /tags)
 	ListTags(w http.ResponseWriter, r *http.Request, params ListTagsParams)
@@ -65590,6 +67004,18 @@ func (_ Unimplemented) PreviewAiBudget(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Call figures over a window, grouped — calls, failures, timeouts, latency, tokens and cost (ai_diagnostics read).
+// (GET /ai/call-stats)
+func (_ Unimplemented) GetAiCallStats(w http.ResponseWriter, r *http.Request, params GetAiCallStatsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Which step of one task's route answered its calls over a window (ai_diagnostics read).
+// (GET /ai/call-stats/flow)
+func (_ Unimplemented) GetAiTaskFlow(w http.ResponseWriter, r *http.Request, params GetAiTaskFlowParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // The AI call trace — every terminal model call, newest first.
 // (GET /ai/calls)
 func (_ Unimplemented) ListAiCalls(w http.ResponseWriter, r *http.Request, params ListAiCallsParams) {
@@ -65611,6 +67037,18 @@ func (_ Unimplemented) RecordAIFeedback(w http.ResponseWriter, r *http.Request) 
 // Whether the model lanes are answering.
 // (GET /ai/health)
 func (_ Unimplemented) GetAiHealth(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Whether model prices sync daily, and what the last sync did (ai_model_rate read).
+// (GET /ai/price-sync)
+func (_ Unimplemented) GetAiPriceSync(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Turn the daily model price sync on or off (ai_model_rate update).
+// (PUT /ai/price-sync)
+func (_ Unimplemented) ReplaceAiPriceSync(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -65644,6 +67082,18 @@ func (_ Unimplemented) TestAiProviderKey(w http.ResponseWriter, r *http.Request,
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Where one vendor can process a call (admin/ops).
+// (GET /ai/provider-locations/{provider})
+func (_ Unimplemented) ListProviderLocations(w http.ResponseWriter, r *http.Request, provider string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Set one provider's host, upstream pins and location (admin/ops).
+// (PUT /ai/provider-settings/{provider})
+func (_ Unimplemented) SetAiProviderSettings(w http.ResponseWriter, r *http.Request, provider string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // The tier-to-model binding this installation runs on (admin/ops).
 // (GET /ai/routing)
 func (_ Unimplemented) GetAiRouting(w http.ResponseWriter, r *http.Request) {
@@ -65662,9 +67112,33 @@ func (_ Unimplemented) PreviewAiRouting(w http.ResponseWriter, r *http.Request) 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// The JSON Schema of the routing document, with a description and documentation link per OpenRouter field (ai_routing read).
+// (GET /ai/routing/schema)
+func (_ Unimplemented) GetAiRoutingSchema(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Read AI administration status (ai_diagnostics and ai_budget read).
 // (GET /ai/status)
 func (_ Unimplemented) GetAiStatus(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Read the per-task thinking level and timeouts (ai_routing read).
+// (GET /ai/task-overrides)
+func (_ Unimplemented) GetAiTaskOverrides(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Replace the per-task overrides installation-wide (ai_routing update). Every role applies them within a minute.
+// (PUT /ai/task-overrides)
+func (_ Unimplemented) ReplaceAiTaskOverrides(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Judge a draft of the overrides without saving it (ai_routing read and update).
+// (POST /ai/task-overrides/preview)
+func (_ Unimplemented) PreviewAiTaskOverrides(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -67564,6 +69038,12 @@ func (_ Unimplemented) AcceptAppliedDealChange(w http.ResponseWriter, r *http.Re
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// What the customer committed to that this deal waits on.
+// (GET /deals/{id}/commitments)
+func (_ Unimplemented) GetDealCommitments(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Who covers this deal, and what is wrong with how it is covered.
 // (GET /deals/{id}/coverage)
 func (_ Unimplemented) GetDealCoverage(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
@@ -69298,6 +70778,12 @@ func (_ Unimplemented) PutSchedulingProfile(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// List the acting host's open proposals and personal links for one contact.
+// (GET /scheduling/proposals)
+func (_ Unimplemented) ListMeetingProposals(w http.ResponseWriter, r *http.Request, params ListMeetingProposalsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Create a personal, expiring invitation without reserving time or sending mail.
 // (POST /scheduling/proposals)
 func (_ Unimplemented) CreateMeetingProposal(w http.ResponseWriter, r *http.Request, params CreateMeetingProposalParams) {
@@ -69433,6 +70919,12 @@ func (_ Unimplemented) ArchiveStageExitCriterion(w http.ResponseWriter, r *http.
 // Edit a criterion's label, kind, requiredness, hint or position.
 // (PATCH /stages/{id}/exit-criteria/{criterion_id})
 func (_ Unimplemented) UpdateStageExitCriterion(w http.ResponseWriter, r *http.Request, id Id, criterionId openapi_types.UUID, params UpdateStageExitCriterionParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Anonymous reachability probe for external uptime monitors.
+// (GET /status)
+func (_ Unimplemented) GetStatus(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -71736,6 +73228,32 @@ func (siw *ServerInterfaceWrapper) ListAvailableModels(w http.ResponseWriter, r 
 		return
 	}
 
+	// ------------- Optional query parameter "location" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "location", r.URL.Query(), &params.Location, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "location"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "location", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "model" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "model", r.URL.Query(), &params.Model, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "model"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "model", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListAvailableModels(w, r, provider, params)
 	}))
@@ -71807,6 +73325,162 @@ func (siw *ServerInterfaceWrapper) PreviewAiBudget(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
+// GetAiCallStats operation middleware
+func (siw *ServerInterfaceWrapper) GetAiCallStats(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetAiCallStatsParams
+
+	// ------------- Optional query parameter "window" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "window", r.URL.Query(), &params.Window, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "window"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "window", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "group" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "group", r.URL.Query(), &params.Group, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "group"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "group", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "provider" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "provider", r.URL.Query(), &params.Provider, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "provider"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "model" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "model", r.URL.Query(), &params.Model, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "model"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "model", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "tier" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "tier", r.URL.Query(), &params.Tier, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tier"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tier", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "task" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "task", r.URL.Query(), &params.Task, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "task"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "task", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAiCallStats(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAiTaskFlow operation middleware
+func (siw *ServerInterfaceWrapper) GetAiTaskFlow(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetAiTaskFlowParams
+
+	// ------------- Required query parameter "task" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "task", r.URL.Query(), &params.Task, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "task"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "task", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "window" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "window", r.URL.Query(), &params.Window, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "window"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "window", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAiTaskFlow(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListAiCalls operation middleware
 func (siw *ServerInterfaceWrapper) ListAiCalls(w http.ResponseWriter, r *http.Request) {
 
@@ -71857,6 +73531,58 @@ func (siw *ServerInterfaceWrapper) ListAiCalls(w http.ResponseWriter, r *http.Re
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "task"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "task", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "provider" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "provider", r.URL.Query(), &params.Provider, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "provider"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "model" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "model", r.URL.Query(), &params.Model, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "model"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "model", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "served_provider" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "served_provider", r.URL.Query(), &params.ServedProvider, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "served_provider"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "served_provider", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "tier" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "tier", r.URL.Query(), &params.Tier, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tier"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tier", Err: err})
 		}
 		return
 	}
@@ -71935,6 +73661,46 @@ func (siw *ServerInterfaceWrapper) GetAiHealth(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetAiHealth(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAiPriceSync operation middleware
+func (siw *ServerInterfaceWrapper) GetAiPriceSync(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAiPriceSync(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ReplaceAiPriceSync operation middleware
+func (siw *ServerInterfaceWrapper) ReplaceAiPriceSync(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReplaceAiPriceSync(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -72080,6 +73846,70 @@ func (siw *ServerInterfaceWrapper) TestAiProviderKey(w http.ResponseWriter, r *h
 	handler.ServeHTTP(w, r)
 }
 
+// ListProviderLocations operation middleware
+func (siw *ServerInterfaceWrapper) ListProviderLocations(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", chi.URLParam(r, "provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListProviderLocations(w, r, provider)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetAiProviderSettings operation middleware
+func (siw *ServerInterfaceWrapper) SetAiProviderSettings(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", chi.URLParam(r, "provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetAiProviderSettings(w, r, provider)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetAiRouting operation middleware
 func (siw *ServerInterfaceWrapper) GetAiRouting(w http.ResponseWriter, r *http.Request) {
 
@@ -72140,6 +73970,26 @@ func (siw *ServerInterfaceWrapper) PreviewAiRouting(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// GetAiRoutingSchema operation middleware
+func (siw *ServerInterfaceWrapper) GetAiRoutingSchema(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAiRoutingSchema(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetAiStatus operation middleware
 func (siw *ServerInterfaceWrapper) GetAiStatus(w http.ResponseWriter, r *http.Request) {
 
@@ -72151,6 +74001,66 @@ func (siw *ServerInterfaceWrapper) GetAiStatus(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetAiStatus(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAiTaskOverrides operation middleware
+func (siw *ServerInterfaceWrapper) GetAiTaskOverrides(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAiTaskOverrides(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ReplaceAiTaskOverrides operation middleware
+func (siw *ServerInterfaceWrapper) ReplaceAiTaskOverrides(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReplaceAiTaskOverrides(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PreviewAiTaskOverrides operation middleware
+func (siw *ServerInterfaceWrapper) PreviewAiTaskOverrides(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewAiTaskOverrides(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -86343,6 +88253,40 @@ func (siw *ServerInterfaceWrapper) AcceptAppliedDealChange(w http.ResponseWriter
 	handler.ServeHTTP(w, r)
 }
 
+// GetDealCommitments operation middleware
+func (siw *ServerInterfaceWrapper) GetDealCommitments(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetDealCommitments(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetDealCoverage operation middleware
 func (siw *ServerInterfaceWrapper) GetDealCoverage(w http.ResponseWriter, r *http.Request) {
 
@@ -98188,6 +100132,45 @@ func (siw *ServerInterfaceWrapper) PutSchedulingProfile(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
+// ListMeetingProposals operation middleware
+func (siw *ServerInterfaceWrapper) ListMeetingProposals(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListMeetingProposalsParams
+
+	// ------------- Required query parameter "contact_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "contact_id", r.URL.Query(), &params.ContactId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "contact_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "contact_id", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListMeetingProposals(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // CreateMeetingProposal operation middleware
 func (siw *ServerInterfaceWrapper) CreateMeetingProposal(w http.ResponseWriter, r *http.Request) {
 
@@ -98274,6 +100257,32 @@ func (siw *ServerInterfaceWrapper) Search(w http.ResponseWriter, r *http.Request
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "types"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "types", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "per_type" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "per_type", r.URL.Query(), &params.PerType, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "per_type"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "per_type", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "with_employees" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "with_employees", r.URL.Query(), &params.WithEmployees, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "with_employees"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "with_employees", Err: err})
 		}
 		return
 	}
@@ -99396,6 +101405,20 @@ func (siw *ServerInterfaceWrapper) UpdateStageExitCriterion(w http.ResponseWrite
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateStageExitCriterion(w, r, id, criterionId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetStatus operation middleware
+func (siw *ServerInterfaceWrapper) GetStatus(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetStatus(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -102984,6 +105007,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/ai/budget/preview", wrapper.PreviewAiBudget)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/ai/call-stats", wrapper.GetAiCallStats)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/ai/call-stats/flow", wrapper.GetAiTaskFlow)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/calls", wrapper.ListAiCalls)
 	})
 	r.Group(func(r chi.Router) {
@@ -102994,6 +105023,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/health", wrapper.GetAiHealth)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/ai/price-sync", wrapper.GetAiPriceSync)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/ai/price-sync", wrapper.ReplaceAiPriceSync)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/profile", wrapper.GetAiProfile)
@@ -103011,6 +105046,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/ai/provider-keys/{provider}/test", wrapper.TestAiProviderKey)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/ai/provider-locations/{provider}", wrapper.ListProviderLocations)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/ai/provider-settings/{provider}", wrapper.SetAiProviderSettings)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/routing", wrapper.GetAiRouting)
 	})
 	r.Group(func(r chi.Router) {
@@ -103020,7 +105061,19 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/ai/routing/preview", wrapper.PreviewAiRouting)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/ai/routing/schema", wrapper.GetAiRoutingSchema)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/status", wrapper.GetAiStatus)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/ai/task-overrides", wrapper.GetAiTaskOverrides)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/ai/task-overrides", wrapper.ReplaceAiTaskOverrides)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/ai/task-overrides/preview", wrapper.PreviewAiTaskOverrides)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/usage", wrapper.GetAiUsage)
@@ -103971,6 +106024,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/deals/{id}/applied-changes/{changeId}/accept", wrapper.AcceptAppliedDealChange)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/deals/{id}/commitments", wrapper.GetDealCommitments)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/deals/{id}/coverage", wrapper.GetDealCoverage)
 	})
 	r.Group(func(r chi.Router) {
@@ -104838,6 +106894,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Put(options.BaseURL+"/scheduling/profile", wrapper.PutSchedulingProfile)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/scheduling/proposals", wrapper.ListMeetingProposals)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/scheduling/proposals", wrapper.CreateMeetingProposal)
 	})
 	r.Group(func(r chi.Router) {
@@ -104905,6 +106964,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/stages/{id}/exit-criteria/{criterion_id}", wrapper.UpdateStageExitCriterion)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/status", wrapper.GetStatus)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/tags", wrapper.ListTags)

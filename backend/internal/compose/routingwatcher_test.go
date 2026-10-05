@@ -121,3 +121,23 @@ func TestAWatcherWithNothingToRebindIsInert(t *testing.T) {
 	nothing.Recheck(context.Background())
 	nothing.Run(context.Background())
 }
+
+// The overrides ride the same tick as the binding, so the same rule holds: an
+// unchanged revision publishes nothing, and a changed one reaches the Router.
+func TestTaskOverridesAreAdoptedOnlyWhenTheyChange(t *testing.T) {
+	w, router := watcherServing(t, routingFixture(t, "steady"))
+	if w.adoptTaskOverrides(context.Background(), ai.TaskOverrides{}) {
+		t.Error("republished an empty set over the empty set the Router starts with")
+	}
+
+	next := ai.TaskOverrides{ai.TaskCaptureClassify: {Thinking: "low"}}
+	if !w.adoptTaskOverrides(context.Background(), next) {
+		t.Fatal("a changed set of overrides was not adopted")
+	}
+	if router.TaskOverridesRevision() != next.Revision() {
+		t.Errorf("the Router serves revision %q, want %q", router.TaskOverridesRevision(), next.Revision())
+	}
+	if w.adoptTaskOverrides(context.Background(), ai.TaskOverrides{ai.TaskCaptureClassify: {Thinking: "low"}}) {
+		t.Error("republished an equal set; the revision is over the value, not the map's identity")
+	}
+}

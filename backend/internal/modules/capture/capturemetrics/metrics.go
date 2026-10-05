@@ -89,6 +89,7 @@ type requestKey struct{ provider, op, result string }
 type collector struct {
 	mu          sync.Mutex
 	requests    map[requestKey]uint64
+	rateLimited map[requestKey]uint64
 	requestTime map[pair]*httpserver.Histogram
 	messages    map[pair]uint64
 	stages      map[pair]*httpserver.Histogram
@@ -99,7 +100,7 @@ type collector struct {
 
 func newCollector() *collector {
 	return &collector{
-		requests: map[requestKey]uint64{}, requestTime: map[pair]*httpserver.Histogram{},
+		requests: map[requestKey]uint64{}, rateLimited: map[requestKey]uint64{}, requestTime: map[pair]*httpserver.Histogram{},
 		messages: map[pair]uint64{}, stages: map[pair]*httpserver.Histogram{},
 		pages: map[pair]uint64{}, snoozed: map[pair]float64{}, retryAfter: map[string]float64{},
 	}
@@ -113,6 +114,9 @@ var shared = newCollector()
 // the status and the error the client returned, and its wall time.
 func ObserveRequest(provider, op string, status int, err error, elapsed time.Duration) {
 	shared.observeRequest(provider, op, requestResult(status, err), elapsed)
+	if limited, ok := errors.AsType[*connector.RateLimitedError](err); ok {
+		shared.observeRateLimit(provider, op, connector.RateLimitReasonLabel(limited.Reason))
+	}
 }
 
 // requestResult folds a call's outcome into the result vocabulary. A 404 is
@@ -157,6 +161,12 @@ func (c *collector) observeRequest(provider, op, result string, elapsed time.Dur
 	defer c.mu.Unlock()
 	c.requests[requestKey{provider: provider, op: op, result: result}]++
 	observeLocked(c.requestTime, pair{provider: provider, value: op}, requestBounds, elapsed)
+}
+
+func (c *collector) observeRateLimit(provider, op, reason string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.rateLimited[requestKey{provider: provider, op: op, result: reason}]++
 }
 
 func (c *collector) observeMessage(provider, outcome string) {

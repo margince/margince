@@ -56,8 +56,9 @@ function useLineRecords(lineId: string, since: string, open: boolean) {
 }
 
 /**
- * The line's About cell when it stands for more than one record: the summary,
- * and the control that opens the list.
+ * A line's record count, as the control that opens every record it stands
+ * for. A link rather than a boxed button: it is a way in, standing in the
+ * line's text, and the one boxed verb a line carries is Undo.
  */
 export function LineRecordsOpener({
   line,
@@ -69,7 +70,9 @@ export function LineRecordsOpener({
   const titleId = useId();
   return (
     <>
-      <Button onClick={() => setOpen(true)}>{summary}</Button>
+      <Button variant="link" onClick={() => setOpen(true)}>
+        {summary}
+      </Button>
       <Modal
         open={open}
         onClose={() => setOpen(false)}

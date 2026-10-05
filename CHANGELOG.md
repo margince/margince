@@ -16,7 +16,18 @@ when it has content.
 
 ### Added
 
-- Opt-in visual analytics for sellers and managers: bookings trends, pipeline
+- Model prices sync themselves: once a day (and on **Refresh model prices**) every
+  provider with a usable key is re-priced from models.dev or OpenRouter, newly
+  listed chat and embedding models the catalogue prices are added, and a price you set
+  by hand is kept. The new **Model prices** card under Settings → AI shows when it
+  last ran and what changed, and can turn the daily sync off.
+- `web.security_txt` in `margince.yaml` publishes an RFC 9116
+  `/.well-known/security.txt` naming the operator's security contact. Unset, the
+  path is a 404. Route it to the api by its exact path.
+- `GET /v1/status`: an anonymous, fixed-body reachability probe for external
+  uptime monitors. It does no dependency work; `/healthz` and `/readyz` stay
+  internal.
+- Visual analytics for sellers and managers: bookings trends, pipeline
   stages and age, SDR outcomes, target attainment, forecast composition and
   captured movement, with permission-checked evidence and CSV export.
 - Saved report revisions, weekly/monthly schedules and dated editions retain
@@ -25,6 +36,13 @@ when it has content.
 
 - Mail history: setup and Settings share a dropdown through ten years, show the
   preview start date, and qualify capped message and cost estimates.
+- Undo reaches what Margince did on its own. A record it created can be
+  archived again, an archived contact, company or deal can be brought back, a
+  lead it promoted can be demoted, and the fields a mail signature or a website
+  filled on a contact can be cleared. Each is one **Undo** on the record's
+  history and on the "Since your last brief" panel, which now lists what was
+  created and archived, one line per job, kind of record and day. A decision
+  waiting there offers **Decide** instead of saying it cannot be undone.
 - Mailbox imports report where their time goes on `/metrics`: every Gmail API
   call by op and result, each message's fetch, parse, transaction and
   follow-up time, pages and waits by cause, and the fleet's runs and progress.
@@ -46,13 +64,38 @@ when it has content.
 
 ### Changed
 
+- Analytics uses one reporting implementation across the web, API, MCP and workers.
+  The old performance screen and rollout switch are removed. Existing
+  `analytics.performance_enabled` configuration is accepted but ignored.
+  Installations that disabled reporting after a pilot must pause schedules before
+  upgrading to avoid resuming enabled schedules; see [the reporting upgrade guide](docs/how-to/operate-reporting.md#upgrade-from-a-flag-gated-installation).
+
 - **`/metrics` on the api is closed by default.** It requires `--metrics-token`
   as a Bearer credential. A deployment whose scraper discovers its targets by
   annotation and cannot carry one sets `--metrics-access=open`, where the port is
   already contained. An installation that scraped the api's `/metrics` without a
   token must set one of the two on upgrade, or its scrapes answer 401.
 
+- **The web tier answers 404 for a file it does not have.** A path with a dot in
+  its last segment, or a dot-segment such as `/.env`, gets a plain-text 404
+  instead of the app shell under a 200. Extensionless app routes are unchanged.
+- The api and the web tier add `Permissions-Policy` (every powerful feature
+  denied except `clipboard-write` for the app's own origin),
+  `Cross-Origin-Opener-Policy: same-origin` and
+  `Cross-Origin-Resource-Policy: same-origin`, and nginx no longer sends its
+  version. `robots.txt` refuses the common AI crawlers by name.
+
 ### Fixed
+
+- **A sweep's `_failed` gauges read the last run that ENDED, not the newest row.**
+  `margince_sweep_workspaces_failed` and `margince_sweep_units_failed` took their
+  outcome from the most recent child of a pass, and a periodic pass has a pending or
+  running next tick almost all of the time — so a tick that exhausted its attempts
+  read as healthy for as long as a successor existed, and
+  `margince_sweep_workspaces_failed{sweep="owed_verdict"}` sat at 0 while
+  `margince_job_discarded` rose once an hour. Coverage still counts a pending child
+  (the pass reached that tenant); only the outcome waits for a row in a terminal
+  state. A later `completed` run still supersedes an earlier failure.
 
 - Mobile record action bars and truncated contact deal-room lists keep their
   explanatory text inset from the surface edge. The unchecked Forecast story
@@ -85,6 +128,12 @@ when it has content.
   recent email history. Source-linked reminders reconcile without duplicates;
   accepting or completing one updates request state across the deal and email
   views. Background deal refresh updates facts without model calls.
+- **An offer's PDF is no longer served to a reader who cannot open its buyer
+  company.** The PDF prints the buyer's legal block, which the offer already
+  withheld from that reader along with the buyer's id. For them the offer reads
+  as never rendered, a PDF they rendered themselves included, and its download
+  answers 404. Changing a draft's buyer removes its PDF, which printed the
+  previous one.
 
 ## [0.0.1] - 2026-09-10
 

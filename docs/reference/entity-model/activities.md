@@ -110,6 +110,7 @@ The 25 tables owned by `activities`, as the migrations build them. [Back to the 
 - `activity_retention_class_stamped` — `CHECK (((retention_class IS NULL) = (retention_class_at IS NULL)))`
 - `activity_source_author_needs_a_source` — `CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))`
 - `activity_task_fields` — `CHECK (((kind = 'task') OR ((due_at IS NULL) AND (assignee_id IS NULL) AND (is_done = false) AND (remind_at IS NULL))))`
+- `activity_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
@@ -635,6 +636,7 @@ The 25 tables owned by `activities`, as the migrations build them. [Back to the 
 
 **Rules**
 
+- `attachment_byte_size_js_safe` — `CHECK (((byte_size >= '-9007199254740991'::bigint) AND (byte_size <= '9007199254740991'::bigint)))`
 - `attachment_category_check` — `CHECK ((category = ANY (ARRAY['contract', 'offer', 'legal', 'email_attachment', 'message_attachment', 'other'])))`
 - `attachment_doc_state_check` — `CHECK ((doc_state = ANY (ARRAY['draft', 'current', 'final', 'superseded'])))`
 - `attachment_entity_type_check` — `CHECK ((entity_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'activity', 'project', 'relationship', 'partner'])))`
@@ -776,6 +778,7 @@ The 25 tables owned by `activities`, as the migrations build them. [Back to the 
 
 - `mail_draft_anchor_type` — `CHECK ((anchor_type = ANY (ARRAY['activity', 'contact', 'company', 'deal', 'lead', 'project'])))`
 - `mail_draft_one_per_anchor` — `UNIQUE (author_id, anchor_type, anchor_id)`
+- `mail_draft_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
@@ -799,7 +802,7 @@ The 25 tables owned by `activities`, as the migrations build them. [Back to the 
 | `management_hash` | `text` | yes | Required `text`. |
 | `management_ref` | `text` | yes | Required `text`. |
 | `next_attempt_at` | `timestamp with time zone` | yes | Required `timestamp with time zone`, defaulting to `now()`. |
-| `provider` | `text` | yes | One of `gcal`, `graphcal`. |
+| `provider` | `text` | yes | The calendar provider that holds the event. |
 | `public_intent` | `jsonb` |  | Optional `jsonb`. |
 | `receipt` | `jsonb` |  | Optional `jsonb`. |
 | `reminder_status` | `text` | yes | One of `off`, `pending`, `queued`, `unavailable`. |
@@ -822,6 +825,7 @@ The 25 tables owned by `activities`, as the migrations build them. [Back to the 
 - `meeting_invitation_provider_check` — `CHECK ((provider = ANY (ARRAY['gcal', 'graphcal'])))`
 - `meeting_invitation_reminder_status_check` — `CHECK ((reminder_status = ANY (ARRAY['off', 'pending', 'queued', 'unavailable'])))`
 - `meeting_invitation_status_check` — `CHECK ((status = ANY (ARRAY['pending', 'confirmed', 'rescheduling', 'canceling', 'needs_attention', 'canceled', 'erased'])))`
+- `meeting_invitation_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
@@ -912,6 +916,7 @@ The 25 tables owned by `activities`, as the migrations build them. [Back to the 
 - `scheduled_send_principal_kind` — `CHECK ((principal_kind = ANY (ARRAY['human', 'agent'])))`
 - `scheduled_send_released_shape` — `CHECK ((((status = 'released') AND (activity_id IS NOT NULL) AND (delivery_id IS NOT NULL)) OR ((status <> 'released') AND (activity_id IS NULL) AND (delivery_id IS NULL))))`
 - `scheduled_send_status` — `CHECK ((status = ANY (ARRAY['scheduled', 'released', 'cancelled', 'held'])))`
+- `scheduled_send_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 

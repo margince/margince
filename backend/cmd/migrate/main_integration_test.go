@@ -334,7 +334,7 @@ func TestUpAppliesAnExtensionNamespaceAndTheRiverIndex(t *testing.T) {
 	}()
 
 	var out bytes.Buffer
-	if err := up(ctx, conn, dsn, core, custom, []dbmigrate.Namespace{probe}, &out); err != nil {
+	if err := up(ctx, conn, dsn, core, custom, []dbmigrate.Namespace{probe}, defaultStatementCeiling, &out); err != nil {
 		t.Fatalf("up: %v", err)
 	}
 	if !strings.Contains(out.String(), namespace+" (1 declared)") {
@@ -349,7 +349,7 @@ func TestUpAppliesAnExtensionNamespaceAndTheRiverIndex(t *testing.T) {
 	// Idempotent: the second run must apply nothing at all, extension lane
 	// included, and must not fail re-creating the index.
 	out.Reset()
-	if err := up(ctx, conn, dsn, core, custom, []dbmigrate.Namespace{probe}, &out); err != nil {
+	if err := up(ctx, conn, dsn, core, custom, []dbmigrate.Namespace{probe}, defaultStatementCeiling, &out); err != nil {
 		t.Fatalf("second up: %v", err)
 	}
 	if !strings.Contains(out.String(), "applied 0 core+custom+extension + 0 river") {

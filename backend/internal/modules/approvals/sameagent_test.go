@@ -23,8 +23,12 @@ func connected(connection ids.UUID, staged, calling ids.UUID) (row, principal.Pr
 		PassportID:   &stagedID,
 		ConnectionID: &connection,
 	}
+	human := ids.NewV7()
+	a.OnBehalfOf = ptr(ids.From[ids.UserKind](human))
 	p := principal.Principal{
 		Type:         principal.PrincipalAgent,
+		UserID:       human,
+		OnBehalfOf:   human,
 		PassportID:   calling,
 		ConnectionID: connection,
 		Scopes:       principal.NewScopeSet(principal.ScopeWrite),
@@ -36,17 +40,22 @@ func connected(connection ids.UUID, staged, calling ids.UUID) (row, principal.Pr
 // stable: refreshing spends the token and mints a replacement under the same
 // grant, so an agent that waits out one access-token lifetime presents a
 // different passport with the same authority. Compared on the passport alone,
-// that agent releases the confirm-first call it staged itself.
-func TestARotatedCredentialDoesNotReleaseWhatItStaged(t *testing.T) {
+// that agent releases the irreversible call it staged itself.
+func TestARotatedCredentialDoesNotReleaseTheIrreversibleCallItStaged(t *testing.T) {
 	connection := ids.NewV7()
 	a, rotated := connected(connection, ids.NewV7(), ids.NewV7())
 
-	err := agentMayDecide(rotated, a, true)
+	err := agentMayDecide(rotated, a, true, ownReleaseRefused)
 	if err == nil {
 		t.Fatal("a credential released the proposal it staged, having done nothing but refresh its token")
 	}
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("refused with %v, want a permission denial", err)
+	}
+	// An undoable change it may release, rotated or not: the human it acts for
+	// could, and the rule binds the human.
+	if err := agentMayDecide(rotated, a, true, ownReleaseAllowed); err != nil {
+		t.Fatalf("a connected credential was refused the undoable change it staged for its human: %v", err)
 	}
 }
 

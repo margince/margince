@@ -264,6 +264,7 @@ func placementFixtureServer(t *testing.T) (*httptest.Server, func() []byte) {
 var placementReaders = map[string]func([]byte) ([]wireTurn, error){
 	providerOpenAI:           readOpenAIResponses,
 	providerGemini:           readGemini,
+	providerGeminiVertex:     readGemini,
 	providerAnthropic:        readAnthropic,
 	providerOllama:           readOllama,
 	providerOpenAICompatible: readOpenAICompat,
@@ -319,7 +320,7 @@ func TestEveryAdapterPlacesAnAttachmentOnTheSameTurn(t *testing.T) {
 			defer srv.Close()
 
 			for name, read := range placementReaders {
-				client, err := selectLocalBrain(placementBinding(name, srv.URL), allCloudKeys())
+				client, err := selectLocalBrain(placementBinding(name, srv.URL), allCloudKeys(t))
 				if err != nil {
 					t.Fatalf("%s: %v", name, err)
 				}

@@ -1,12 +1,17 @@
 import type { BrowserContext, Page } from "@playwright/test";
 import { type GrantSpec, meFixture } from "../src/app/mefixture";
+import { bookingInvitation, bookingProfile } from "../src/screens/book.testkit";
 import {
   briefEmpty,
   briefManager,
   briefOmitted,
   briefWithPlan,
 } from "../src/screens/meetingbrief/fixtures";
-import { bookingInvitation, bookingProfile } from "../src/screens/book.testkit";
+import {
+  reportingStoryCatalog,
+  reportingStoryEvaluation,
+  reportingStoryFramework,
+} from "../src/screens/reporting.fixtures";
 import { aiAdminFixture } from "./ai-admin-fixture";
 import { type MockProject, projectMock } from "./projectmock";
 
@@ -23,6 +28,8 @@ const MEETING_ACTIVITY = "3f7c1a90-0000-4000-8000-00000000a001";
 // this list forgot fails loudly here, which is how the omission gets noticed.
 // Extend it when a new AC needs a new object.
 const E2E_ADMIN_GRANTS: GrantSpec = {
+  report_definition: ["read"],
+  reporting_framework: ["read"],
   // The four records the specs WRITE: the deal edit and its project pick, the
   // lead's edit, ladder, inline rows and promotion, the project a spec creates
   // and moves through its phases, and the note the lead page's composer logs.
@@ -439,19 +446,7 @@ export const automationCatalog = [
 // The report answers the Analytics sections read, keyed by the report the
 // screen asks for.
 //
-// Each carries the ALIASES its card reads, because a card looking for
-// `median_days` on a row that carries `raw_minor` renders its empty state and a
-// sweep over that tab then measures this file rather than the screen.
-//
-// The values are chosen so an honest ABSENCE is on screen beside a real number:
-// stage-age's second row has too few deals for a median, and projects-gone-quiet
-// answers nothing at all. A fixture where every cell holds a figure cannot show
-// that the screen says "Too few to say" rather than "0".
-//
-// And every OTHER card carries its figures, which matters as much: win-loss
-// draws the same DaysCell, so a fixture omitting its medians puts "Too few to
-// say" on screen for a reason the test is not about — and an assertion looking
-// for those words then passes whatever stage-age does.
+// Each result uses the aliases its report card requests.
 export const reportFixtures: Record<string, unknown> = {
   // The Analytics stage table's own request: one CONVERTED row per stage, under
   // the aliases REPORT_AGGREGATES asks for, and a handle naming those same
@@ -482,63 +477,6 @@ export const reportFixtures: Record<string, unknown> = {
         weighted_minor: 1_920_000,
         deal_count: 2,
         priced_deals: 2,
-      },
-    ],
-    total_rows: 2,
-    as_of: "2026-03-04T09:00:00Z",
-    timezone: "Europe/Berlin",
-    base_currency: "EUR",
-  },
-  // Stage ids are the SHARED pipeline's, not invented ones: StageAgeTable joins
-  // them to `stages` for the name, and an id matching nothing renders every row
-  // as "unknown stage" — a table that looks populated and names no stage.
-  "stage-age": {
-    report: "stage-age",
-    plan: { group_by: ["stage_id"] },
-    columns: ["stage_id", "deal_count", "median_days", "p75_days"],
-    rows: [
-      // The measured stage carries its own drill-through handle, the unmeasured
-      // one none: a row the server sent without one draws no trigger.
-      {
-        stage_id: "s1",
-        deal_count: 6,
-        median_days: 12,
-        p75_days: 21,
-        derivation_url:
-          "/v1/reports/stage-age/derivation?by=stage_id&agg=count::deal_count&stage_id=s1",
-      },
-      // Under the sample floor: the server answers null and the card must say
-      // so in words rather than drawing a zero.
-      {
-        stage_id: "s2",
-        deal_count: 2,
-        median_days: null,
-        p75_days: null,
-      },
-    ],
-    total_rows: 2,
-    as_of: "2026-03-04T09:00:00Z",
-    timezone: "Europe/Berlin",
-    base_currency: "EUR",
-  },
-  "win-loss": {
-    report: "win-loss",
-    plan: { group_by: ["status"] },
-    columns: ["status", "deal_count", "raw_minor", "median_days", "p75_days"],
-    rows: [
-      {
-        status: "won",
-        deal_count: 7,
-        raw_minor: 4_200_000,
-        median_days: 34,
-        p75_days: 61,
-      },
-      {
-        status: "lost",
-        deal_count: 4,
-        raw_minor: 9_100_000,
-        median_days: 22,
-        p75_days: 40,
       },
     ],
     total_rows: 2,
@@ -614,7 +552,7 @@ export const reportFixtures: Record<string, unknown> = {
 // the frame they were cut in. One record is masked out, so the notice that says
 // so is on screen wherever the drawer is swept.
 export const derivationFixture = {
-  report: "stage-age",
+  report: "pipeline-current",
   definition: "Anzahl offener Deals in der Phase Qualify",
   plan: { group_by: ["stage_id"] },
   columns: ["label", "amount_base_minor"],
@@ -730,11 +668,24 @@ export const auditEntries = [
 // One provider keyed and one not, so the route the 390px and axe sweeps visit
 // renders BOTH row states. A list of only-configured or only-empty rows would
 // leave half the card's markup unvisited by the very sweeps that exist to see
-// it. `env_var` is required by AiProviderKeyStatus.
+// it. `env_var`, `optional` and `credential_kind` are required by
+// AiProviderKeyStatus.
 export const aiProviderKeys = {
   providers: [
-    { provider: "gemini", configured: true, env_var: "GEMINI_API_KEY" },
-    { provider: "anthropic", configured: false, env_var: "ANTHROPIC_API_KEY" },
+    {
+      provider: "gemini",
+      configured: true,
+      env_var: "GEMINI_API_KEY",
+      optional: false,
+      credential_kind: "api_key",
+    },
+    {
+      provider: "anthropic",
+      configured: false,
+      env_var: "ANTHROPIC_API_KEY",
+      optional: false,
+      credential_kind: "api_key",
+    },
   ],
 };
 
@@ -846,6 +797,36 @@ export const aiUsage = {
     currency: "USD",
   },
 };
+
+// The call figures every provider row and tier popover reads. `rows` is
+// required by AiCallStats, so the catch-all's `{data,page}` throws mid-render
+// and takes the whole AI entry down with it. One row per provider and tier the
+// fixtures above bind, with failures and timeouts, so the widest form of each
+// line is what the 390px and axe sweeps see.
+const callStatsRow = (key: string) => ({
+  key,
+  calls: 1_284,
+  failed: 37,
+  timeouts: 12,
+  p50_ms: 940,
+  p95_ms: 4_200,
+  tokens_in: 1_284_000,
+  tokens_out: 212_000,
+  cost_microusd: 12_480_000,
+  unpriced: 3,
+});
+
+export function aiCallStats(group: string | null) {
+  const keys: Record<string, string[]> = {
+    provider: aiProviderKeys.providers.map((p) => p.provider),
+    tier: ["local_small", "cheap_cloud", "premium"],
+  };
+  return {
+    window: "7d",
+    group: group ?? "provider",
+    rows: (keys[group ?? "provider"] ?? []).map(callStatsRow),
+  };
+}
 
 // Two terminal calls, one clean and one that retried and degraded — the second
 // is what puts a badge column and an error sentinel into the widest row, which
@@ -1607,6 +1588,17 @@ export async function mockApi(
     }
     if (path === "/contacts/p-new") {
       return json({ ...anna, id: "p-new", full_name: "Peter Neu" });
+    }
+    // The contact the search fixture finds through Brandt, so opening that hit
+    // lands on its own record.
+    if (path === "/contacts/p-jonas") {
+      return json({
+        ...anna,
+        id: "p-jonas",
+        full_name: "Jonas Weiß",
+        title: "Fleet manager",
+        emails: [],
+      });
     }
     if (path === "/companies" && method === "POST") {
       const body = route.request().postDataJSON();
@@ -2423,11 +2415,20 @@ export async function mockApi(
       }
       return json(existing);
     }
-    if (path === "/scheduling/profile" || path === "/public/booking/host-1/profile") {
-      return json({ ...bookingProfile, slug: "host-1", public_url: "https://crm.example.test/#/book/host-1" });
+    if (
+      path === "/scheduling/profile" ||
+      path === "/public/booking/host-1/profile"
+    ) {
+      return json({
+        ...bookingProfile,
+        slug: "host-1",
+        public_url: "https://crm.example.test/#/book/host-1",
+      });
     }
     if (path === "/scheduling/calendars") {
-      return json([{ id: "primary", name: "Work calendar", writable: true, primary: true }]);
+      return json([
+        { id: "primary", name: "Work calendar", writable: true, primary: true },
+      ]);
     }
     if (path === "/public/meeting/guest-booking") {
       return json({ ...bookingInvitation, ...publicSlots[0] });
@@ -2460,7 +2461,20 @@ export async function mockApi(
           409,
         );
       }
-      return json({ start: body.start, end: body.end, booking: "pending", invitation: { ...bookingInvitation, start: body.start, end: body.end, management_token: "guest-booking" } }, 201);
+      return json(
+        {
+          start: body.start,
+          end: body.end,
+          booking: "pending",
+          invitation: {
+            ...bookingInvitation,
+            start: body.start,
+            end: body.end,
+            management_token: "guest-booking",
+          },
+        },
+        201,
+      );
     }
     if (path === "/availability") {
       return json({
@@ -2496,6 +2510,23 @@ export async function mockApi(
           title: "Brandt Automotive",
           score: 0.86,
         },
+        // A contact found only through the company the word named, and only
+        // for a caller that asked for employees, as the server answers.
+        ...(q.includes("brandt") &&
+        url.searchParams.get("with_employees") === "true"
+          ? [
+              {
+                type: "contact",
+                id: "p-jonas",
+                title: "Jonas Weiß",
+                score: 0.5,
+                works_at: {
+                  company_id: "o-brandt",
+                  company_name: "Brandt Automotive",
+                },
+              },
+            ]
+          : []),
         { type: "deal", id: "d-fleet", title: "Fleet renewal", score: 0.8 },
         {
           type: "product",
@@ -2573,13 +2604,13 @@ export async function mockApi(
         base_currency: "EUR",
       });
     }
+    if (path === "/analytics/framework") return json(reportingStoryFramework);
+    if (path === "/analytics/metrics") return json(reportingStoryCatalog);
+    if (path === "/analytics/evaluate") return json(reportingStoryEvaluation);
     // The report a caller ASKED for, not one shape for all of them.
     //
     // Every report answered `deals-by-stage`'s columns before this, so the
-    // Performance and Delivery sections received rows whose fields they do not
-    // read: a stage-age card looking for `median_days` on a row carrying
-    // `raw_minor` renders its empty state, and a sweep over those tabs proves
-    // the fixture rather than the screen.
+    // Delivery sections received rows whose fields they do not read.
     // Refused the way the server refuses it: a grouping dimension the request
     // names without binding, as a value or as `isnull`, explains no one cell.
     if (path.startsWith("/reports/") && path.endsWith("/derivation")) {
@@ -2757,6 +2788,24 @@ export async function mockApi(
     }
     if (path === "/ai/calls" && method === "GET") {
       return json(aiCalls);
+    }
+    if (path === "/ai/call-stats") {
+      return json(aiCallStats(url.searchParams.get("group")));
+    }
+    if (path === "/ai/call-stats/flow") {
+      return json({
+        task: url.searchParams.get("task"),
+        window: "7d",
+        total: 0,
+        unanswered: 0,
+        steps: [],
+      });
+    }
+    if (path === "/ai/task-overrides" && method === "GET") {
+      return json({});
+    }
+    if (path === "/ai/routing/schema") {
+      return json({});
     }
     if (path === "/admin/job-health") {
       return json(jobHealth);

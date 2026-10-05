@@ -30,25 +30,56 @@ describe("the commitments view renders what it was given", () => {
   it("says how late an overdue promise is, not merely that it is late", () => {
     const el = root();
     render(el, commitmentsFixture.data, []);
-    expect(texts(el, ".state-overdue")).toEqual([
-      "7d overdue",
-      "overdue today",
-    ]);
+    expect(texts(el, ".late")).toEqual(["7 days overdue", "Overdue today"]);
   });
 
   it("reads zero whole days as overdue TODAY rather than as zero days", () => {
     // Hours past its date is late by no whole days, which is not the same as
-    // not being late — and "0d overdue" reads as neither.
+    // not being late — and "0 days overdue" reads as neither.
     const el = root();
     render(el, commitmentsFixture.data, []);
-    expect(el.textContent).not.toContain("0d overdue");
-    expect(el.textContent).toContain("overdue today");
+    expect(el.textContent).not.toContain("0 days overdue");
+    expect(el.textContent).toContain("Overdue today");
   });
 
-  it("says a promise nobody owns is unowned rather than leaving a blank", () => {
+  it("says a promise nobody owns is unassigned rather than leaving a blank", () => {
     const el = root();
     render(el, commitmentsFixture.data, []);
-    expect(el.textContent).toContain("unowned");
+    expect(texts(el, ".unowned")).toEqual(["Unassigned"]);
+    expect(el.querySelector(".panel-foot")?.textContent).toContain(
+      "1 unassigned",
+    );
+  });
+
+  it("never calls a conversation promise unassigned, because it was never handed to anyone", () => {
+    const el = root();
+    render(
+      el,
+      {
+        commitments: [
+          {
+            subject: "Send the pricing",
+            source: "conversation",
+            quote: "I'll send the pricing on Friday",
+            state: "upcoming",
+          },
+        ],
+      },
+      [],
+    );
+    expect(el.querySelector(".unowned")).toBeNull();
+    expect(el.textContent).toContain("from a conversation");
+    expect(el.querySelector(".quote")?.textContent).toBe(
+      "“I'll send the pricing on Friday”",
+    );
+  });
+
+  it("counts the overdue promises in the foot, as the app's attention list does", () => {
+    const el = root();
+    render(el, commitmentsFixture.data, []);
+    expect(el.querySelector(".panel-foot .badge-danger")?.textContent).toBe(
+      "2 overdue",
+    );
   });
 
   it("shows an undated promise as having no due date, never as overdue", () => {
@@ -61,15 +92,15 @@ describe("the commitments view renders what it was given", () => {
       },
       [],
     );
-    expect(el.querySelector(".state-undated")?.textContent).toBe("undated");
-    expect(el.querySelector(".state-overdue")).toBeNull();
+    expect(el.textContent).toContain("Undated");
+    expect(el.querySelector(".late")).toBeNull();
     expect(el.textContent).toContain("no due date");
   });
 
   it("names the instant the states were judged against", () => {
     const el = root();
     render(el, commitmentsFixture.data, []);
-    expect(el.querySelector(".meta")?.textContent).toContain(
+    expect(el.querySelector(".panel-foot")?.textContent).toContain(
       "judged as of 2026-06-10",
     );
   });
@@ -80,36 +111,29 @@ describe("the commitments view renders what it was given", () => {
     expect(el.querySelector(".empty")?.textContent).toMatch(
       /nothing is outstanding/i,
     );
-    expect(el.querySelectorAll(".row")).toHaveLength(0);
+    expect(el.querySelectorAll(".panel-row")).toHaveLength(0);
   });
 
   it("stops claiming the queue is everything when the sweep hit its bound", () => {
     const el = root();
     render(el, commitmentsFixture.data, [{ code: "sweep_truncated" }]);
-    const meta = el.querySelector(".meta")?.textContent ?? "";
-    expect(meta).toMatch(/more are outstanding/i);
-    expect(meta).not.toMatch(/oldest promise first/i);
+    const foot = el.querySelector(".panel-foot")?.textContent ?? "";
+    expect(foot).toMatch(/more are outstanding/i);
+    expect(foot).not.toMatch(/most overdue first/i);
+    expect(el.querySelector(".panel-head")?.textContent).toContain(
+      "at least 4",
+    );
   });
 
-  it("renders a state the seam has not published yet without colouring it wrongly", () => {
+  it("renders a state the seam has not published yet in its own word, without the lateness ink", () => {
     const el = root();
     render(
       el,
       { commitments: [{ subject: "Something", state: "escalated" }] },
       [],
     );
-    expect(el.querySelector(".state-escalated")).toBeNull();
+    expect(el.querySelector(".late")).toBeNull();
     expect(el.textContent).toContain("escalated");
-  });
-
-  it("does not read a state name off the prototype chain", () => {
-    const el = root();
-    render(
-      el,
-      { commitments: [{ subject: "Something", state: "constructor" }] },
-      [],
-    );
-    expect(el.querySelector(".state-constructor")).toBeNull();
   });
 
   it("names the record a promise is about, and falls to the id where there is no name", () => {

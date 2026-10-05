@@ -157,6 +157,7 @@ func TestTheWorkerMetricsAreProcessLocalAndReServeNoFleetGauge(t *testing.T) {
 		"margince_capture_outcomes_total",
 		"margince_connector_requests_total",
 		"margince_connector_request_duration_seconds",
+		"margince_connector_rate_limited_total",
 		"margince_capture_backfill_stage_seconds",
 		"margince_capture_backfill_snooze_seconds_total",
 	} {
@@ -204,9 +205,11 @@ func TestTheWorkerSurfaceSetsTheSameBrowserFacingHeadersAsTheApi(t *testing.T) {
 			t.Errorf("closing the response body: %v", err)
 		}
 		for header, want := range map[string]string{
-			"X-Content-Type-Options": "nosniff",
-			"X-Frame-Options":        "DENY",
-			"Referrer-Policy":        "no-referrer",
+			"X-Content-Type-Options":       "nosniff",
+			"X-Frame-Options":              "DENY",
+			"Referrer-Policy":              "no-referrer",
+			"Cross-Origin-Opener-Policy":   "same-origin",
+			"Cross-Origin-Resource-Policy": "same-origin",
 		} {
 			if got := resp.Header.Get(header); got != want {
 				t.Errorf("GET %s: %s = %q, want %q", path, header, got, want)

@@ -85,6 +85,10 @@ func dsrItem(request DSRCase, asOf time.Time) crmcontracts.AttentionItem {
 // invite a client to filter it out; the obstacle is read on the contact's page.
 func noticeCaseItem(owed NoticeCase, asOf time.Time) crmcontracts.AttentionItem {
 	item := legalDeadlineItem(owed.ID, owed.Rule, owed.DueAt, sourceNoticeCase, asOf)
+	if !owed.OpenedAt.IsZero() {
+		opened := owed.OpenedAt
+		item.OccurredAt = &opened
+	}
 	item.Subject = subjectOf("contact", owed.ContactID)
 	if owed.OwnerID != nil {
 		owner := openapi_types.UUID(*owed.OwnerID)

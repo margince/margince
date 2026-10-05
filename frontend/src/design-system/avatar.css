@@ -1,0 +1,112 @@
+/* Avatar — a record's round chip and its mesh. A COMPONENT sheet: atoms.tsx
+ * imports it for `Avatar`, and the standalone MCP App views import it through
+ * mcp-apps/view.css, so a colleague is the same chip in a host's panel. */
+
+/* The chip's own chrome. Its SIZE is a rung below, never here: four rendered
+   sizes — 20, 28, 44 and 76 — already existed in three different stylesheets
+   for a component whose prop surface admitted two, so the scale is declared
+   once and picked by the `size` prop rather than by whatever context a caller
+   happened to drop the chip into. */
+.avatar {
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: var(--accentMed);
+  color: var(--accentText);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  /* The monogram is two letters standing in for a record, not prose, so it
+     takes the heading face at its smallest rung — declared HERE rather than per
+     rung, because a chip that changed its type with its diameter would tell a
+     reader the same two letters were two different kinds of thing. Inheriting
+     was not neutral either: the initials wore whatever the row around them was
+     set in, so the same contact was one size in a list and another in a card. */
+  font: var(--fontHeadingXXSmall);
+}
+
+/* The smallest rung, and the default: every list row, every name a chip sits
+   beside, the account block in the rail. A dense list table draws its chips
+   smaller still, and does it from its own sheet — see `.lt-table.dense .avatar`
+   in listtable.css — because density is the table's decision and not a rung of
+   this scale. */
+.avatar-sm {
+  width: 28px;
+  height: 28px;
+}
+/* A record header. */
+.avatar-md {
+  width: 44px;
+  height: 44px;
+}
+/* A WIDE record header, where the chip is the page's own mark rather than a
+   marker beside a name. Sized to sit beside the name rather than to tower over
+   it: the record's name is the largest thing on the page, and a mark that
+   outweighs it makes the page look like a profile picture with a caption. */
+.avatar-lg {
+  width: 46px;
+  height: 46px;
+}
+/* The mark of a record PAGE: the one picture in the head, beside a name set
+   at the record rung. Sized to the reference's 72, which reads as the page's
+   own mark rather than as a large list avatar — at 56 beside a 44px name it
+   was the smaller of the two things naming the record. Round like every other
+   rung: a company and a contact are one kind of chip. */
+.avatar-xl {
+  width: 72px;
+  height: 72px;
+}
+
+/* An avatar beside its label on one line — a list cell, a search hit, a node
+   row. The label keeps the baseline it had before the mark joined it. */
+/* display:flex, not inline-flex. An inline flex box takes its baseline from its
+ * first item, and a chip showing a logo has no text in it — so its baseline is
+ * its bottom edge, which pushed the label up and grew the row. Out of the inline
+ * formatting context the row centres and every row is the same height. */
+.avatar-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+/* The record's own ground: blob B over blob A over a base tint, each blob
+   fading to nothing, placed and sized by the numbers Avatar passes inline. It
+   comes AFTER the base rule, which it overrides at the same specificity. */
+.avatar-mesh {
+  background:
+    radial-gradient(
+      calc(var(--avatar-b-size) * 1%) calc(var(--avatar-b-size) * 1%) at
+        calc(var(--avatar-bx) * 1%) calc(var(--avatar-by) * 1%),
+      var(--avatarBlobB),
+      transparent
+    ),
+    radial-gradient(
+      calc(var(--avatar-a-size) * 1%) calc(var(--avatar-a-size) * 1%) at
+        calc(var(--avatar-ax) * 1%) calc(var(--avatar-ay) * 1%),
+      var(--avatarBlobA),
+      transparent
+    ),
+    var(--avatarGround);
+  color: var(--avatarInk);
+}
+
+/* A resolved logo sits ON the chip, on a neutral ground and never on a mesh:
+   the initials wait there until the logo paints, and a wide wordmark then
+   letterboxes inside the same circle — `contain` plus the inset keeps the mark
+   padded and never stretched. */
+.avatar-has-logo {
+  position: relative;
+  background: var(--bgCard);
+  color: var(--textSecondary);
+}
+
+.avatar-img {
+  position: absolute;
+  inset: 2px;
+  width: calc(100% - 4px);
+  height: calc(100% - 4px);
+  object-fit: contain;
+  border-radius: var(--r-full);
+  corner-shape: round;
+}

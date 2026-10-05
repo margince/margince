@@ -76,7 +76,7 @@ func streamWires(t *testing.T) map[string]streamWire {
 	compatFailed := sse(`{"error":{"message":"upstream went away"},"choices":[{"delta":{"content":""},"finish_reason":"error"}]}`)
 	compatWithheld := sse(`{"choices":[{"delta":{"content":""},"finish_reason":"content_filter","native_finish_reason":"SAFETY"}]}`) +
 		sse("[DONE]")
-	return map[string]streamWire{
+	wires := map[string]streamWire{
 		"openai": {
 			provider: providerOpenAI, contentType: "text/event-stream",
 			body: func(chunks []string, ending streamEnding) string {
@@ -151,6 +151,11 @@ func streamWires(t *testing.T) map[string]streamWire {
 			failed: `{"error":"model runner has unexpectedly stopped"}` + "\n",
 		},
 	}
+	// Vertex streams the same generateContent chunks; only the host and the key differ.
+	vertex := wires["gemini"]
+	vertex.provider = providerGeminiVertex
+	wires["gemini_vertex"] = vertex
+	return wires
 }
 
 // anthropicStreamBody is the Messages SSE stream: the stop_reason arrives on
@@ -188,7 +193,7 @@ func (w streamWire) stream(t *testing.T, body string) model.TokenStream {
 		}
 	}))
 	t.Cleanup(srv.Close)
-	client, err := selectLocalBrain(ProviderConfig{Provider: w.provider, BaseURL: srv.URL, Model: "m"}, allCloudKeys())
+	client, err := selectLocalBrain(ProviderConfig{Provider: w.provider, BaseURL: srv.URL, Model: "m"}, allCloudKeys(t))
 	if err != nil {
 		t.Fatalf("building the %s adapter: %v", w.provider, err)
 	}
@@ -365,7 +370,7 @@ func TestAnthropicStreamedCompleteReportsAMidReplyFailure(t *testing.T) {
 	handler, _ := replyWith(t, wire.contentType, wire.body(streamedChunks[:1], endDropped)+wire.failed)
 	srv := httptest.NewServer(handler)
 	t.Cleanup(srv.Close)
-	client, err := selectLocalBrain(ProviderConfig{Provider: providerAnthropic, BaseURL: srv.URL, Model: "m"}, allCloudKeys())
+	client, err := selectLocalBrain(ProviderConfig{Provider: providerAnthropic, BaseURL: srv.URL, Model: "m"}, allCloudKeys(t))
 	if err != nil {
 		t.Fatalf("building the anthropic adapter: %v", err)
 	}

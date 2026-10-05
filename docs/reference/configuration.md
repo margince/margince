@@ -63,6 +63,11 @@ Operational endpoints (served next to `/v1`):
   configured; the secret vault when a keyvault is configured; the
   customfields schema pool when `--schema-dsn` is set) must pass within
   2s, else 503 naming the unready dependency.
+- `/v1/status` — reachability, for external uptime monitors: an anonymous
+  fixed `200 {"status":"ok"}` that does no dependency work and discloses
+  nothing. It lives under `/v1`, so it is routed wherever the api is (and
+  answers 503 before bootstrap); point an internet-facing check here, never
+  at `/healthz` or `/readyz`.
 - `/metrics` — Prometheus text format: the **HTTP section** below,
   `margince_outbox_unpublished`, `margince_relay_published_total`,
   the **connection-pool section** below, the AI router's counters, and the
@@ -213,9 +218,9 @@ not the fleet.
 | `margince_job_cancelled` | `kind`, `workspace_id` | stopped deliberately, attempts unspent — counted apart from discarded because the operator story differs, not because it is less dead. The sweep pair counts either as a workspace missed |
 | `margince_job_oldest_queued_age_seconds` | `queue`, `workspace_id` | how long the oldest runnable-and-unclaimed job has waited |
 | `margince_sweep_workspaces` | `sweep` | workspaces with a surviving child of that fleet pass |
-| `margince_sweep_workspaces_failed` | `sweep` | those whose MOST RECENT child is discarded or cancelled |
+| `margince_sweep_workspaces_failed` | `sweep` | those whose most recent child THAT ENDED is discarded or cancelled. A pending or running next tick is not an outcome, and reading one as the pass's verdict is what let an hourly discard report as healthy |
 | `margince_sweep_units` | `sweep`, `unit` | the same reading one grain down, for the dispatchers that fan out per **connection** or per **build**: units with a surviving child |
-| `margince_sweep_units_failed` | `sweep`, `unit` | those whose MOST RECENT child is discarded or cancelled |
+| `margince_sweep_units_failed` | `sweep`, `unit` | those whose most recent child THAT ENDED is discarded or cancelled, for the reason the workspace pair above gives |
 | `margince_job_failures` | `kind`, `class` | failing work (retryable or discarded) by WHAT went wrong — the same class the failure list shows. `unclassified` is a failure whose recorded text nothing recognises, which is what an outage nobody has enumerated looks like. Cancelled work is not here: a deliberate stop is not an outage |
 
 `margince_job_failures` is the one that makes an outage alertable rather than
@@ -414,6 +419,7 @@ messages and `fetch`/`parse` stages are not counted.
 |---|---|---|
 | `margince_connector_requests_total` | `provider`, `op`, `result` | every Gmail API call; `op` is `list`, `get_metadata` (a message's headers), `get_raw` (a full download), `history`, `token` (an OAuth token refresh or exchange) or `other`, `result` is `ok`, `rate_limited`, `auth`, `unreachable`, `not_found` or `error` |
 | `margince_connector_request_duration_seconds` | `provider`, `op` | histogram of the same calls' wall time |
+| `margince_connector_rate_limited_total` | `provider`, `op`, `reason` | the `result="rate_limited"` calls again, by which of Google's limits was met: `userRateLimitExceeded` (per user), `rateLimitExceeded`, `quotaExceeded` (project quota), `dailyLimitExceeded`, `limitExceeded`, `concurrent` (Google's "Too many concurrent requests for user"), `other` for a code outside that set, or `unspecified` when the body named none. The same reason and the HTTP `status` ride the `capture backfill page deferred` and `capture connection sync failed` WARN lines |
 | `margince_capture_backfill_messages_total` | `provider`, `outcome` | one per message settled: the capture trace's outcome (`captured`, `internal`, `suppressed`, `deferred`, `fault`), else `skipped`; `refused` when the capture refused it and the page walked past, `failed` when its failure ended the page |
 | `margince_capture_backfill_stage_seconds` | `provider`, `stage` | histogram per fetch attempt or per message: `fetch_headers` (the headers read every listed message gets first), `fetch` (the RAW download, only for messages the headers did not settle), `parse`, `sink` (the capture transaction), `ensure` (counterparty, project and merge-staging work after it) |
 | `margince_capture_backfill_pages_total` | `provider`, `result` | pages by `ok`, `rate_limited`, `unreachable`, `token_rejected` (Gmail refused the page token; the run walks its window again once) or `failed` |
@@ -497,6 +503,7 @@ api's boot line says so; `cmd/worker` is load-bearing for E10 retry. See
 | `--deepread-max-pages` | `MARGINCE_DEEPREAD_MAX_PAGES` | `0` (= built-in 60) | deep-read crawl page cap |
 | `--deepread-max-bytes` | `MARGINCE_DEEPREAD_MAX_BYTES` | `0` (= built-in 32 MiB) | deep-read crawl aggregate byte cap |
 | `--deepread-wall` | `MARGINCE_DEEPREAD_WALL` | `0` (= built-in 4m) | deep-read crawl wall clock |
+| `--job-drain-window` | `MARGINCE_JOB_DRAIN_WINDOW` | `20s` | how long a job already running at shutdown is given to finish before its context is cancelled. Must be positive. The pod's termination grace period has to cover it plus 5s and teardown — see [Stopping the worker](#stopping-the-worker) |
 | `--observe-addr` | `MARGINCE_OBSERVE_ADDR` | — (off) | address to serve this worker's `/healthz`, `/readyz` and `/metrics` on, e.g. `127.0.0.1:9101`. Empty serves nothing — see below |
 | `--observe-pprof` | `MARGINCE_OBSERVE_PPROF` | `false` | `true` also serves Go's `net/http/pprof` profiles under `/debug/pprof/` on that same listener; requires `--observe-addr`. Enable temporarily — see below |
 
@@ -647,6 +654,43 @@ embedding lane simply do not start; the relay, retention, the event-triggered
 workflow dispatch (`cg:workflows`), and the clock time-scan always run.
 Shutdown is graceful: in-flight subscriber handlers finish their ack before
 the process exits.
+
+### Stopping the worker
+
+`SIGTERM` (or `SIGINT`) stops the worker in this order, and the times add up to
+the budget a supervisor has to allow:
+
+1. **The job runner stops fetching at once.** No job is claimed after the
+   signal; anything still queued is left for the other replicas, or for this
+   one's next start.
+2. **Every job already running keeps going for `--job-drain-window`** (default
+   `20s`), with its context intact. A job that finishes inside the window
+   completes normally — it is not retried and does not run twice.
+3. **A job still running when the window ends has its context cancelled**, and
+   the worker waits up to a further **5s** for it to return. River records the
+   interrupted attempt and retries it; the failure is classed `interrupted`
+   rather than unclassified.
+4. The event lanes, the bus and the database pool are closed, and the process
+   exits.
+
+So the worker needs `--job-drain-window` + 5s, plus a few seconds of teardown,
+between `SIGTERM` and `SIGKILL`. On Kubernetes that is the pod's
+`terminationGracePeriodSeconds`: **set it at or above the drain window plus
+10s.** The default window fits the common 30s default exactly; raising the
+window means raising the grace period with it, or the pod is killed before the
+cancel step and the interrupted jobs' goroutines are cut off mid-write rather
+than returning:
+
+```yaml
+spec:
+  terminationGracePeriodSeconds: 30   # >= --job-drain-window (20s) + 10s
+```
+
+A deployment whose jobs routinely run longer than the window — a long crawl, a
+large import — sees them interrupted at every rollout and run again on another
+replica. That is safe (River retries them), but it is wasted work; size the
+window, and the grace period with it, to the jobs this installation actually
+runs.
 
 ## AI payload capture and its window (api, worker)
 
@@ -983,6 +1027,7 @@ place keeps the api reading a password file that is no longer written. Use
 | `MARGINCE_AICERT_RESUME` | — | `make e2e-ai` | directory for the resume journal: every scored run is appended to it as it is scored, so a run cut short by a dropped connection is restarted without paying for the runs it already made. A journaled run is replayed only for the same task and scenario, and only on the same candidate binding, judge, profile, corpus version, scenario stamp, BINARY and repeat index, within six hours — anything else is measured again. The binary is in that list because a stamp covers the requests, never the code that judges the replies. One run owns a resume directory at a time, held by a lock file. Empty turns it off, which forces a run to measure everything fresh. Surfaced as `RESUME=`, on by default. |
 | `MARGINCE_AICERT_STALE_ONLY` | `1` | `make e2e-ai` | `0` re-measures a model whose committed record is already current for this build; anything else skips it before any paid call, so a sweep pays only for what is missing or stale. "Current" is the judgement `make e2e-ai-report` prints. Surfaced as `STALE_ONLY=`, on by default. |
 | `MARGINCE_ANTHROPIC_KEY` | — | `ai` package smoke test | BYOK Anthropic key for the live Anthropic smoke test. Distinct from `ANTHROPIC_API_KEY`, which is what the **runtime** reads for a bound `anthropic` provider. |
+| `MARGINCE_VERTEX_SA_FILE` | — | `ai` package smoke test (`-tags livesmoke`) | path to a Google service-account key file for the live Vertex smoke test; the run fails rather than skips without it. Distinct from `GEMINI_VERTEX_SA_JSON`, which the **runtime** reads and which holds the file's contents, not a path. |
 | `MARGINCE_BENCH_TIER` | — | `make bench-perf` | the PERF-3/PERF-7 seed tier the perfbench suite builds — `smb` (default) or `mid_market`. An unrecognized value fails the bench loudly. |
 | `MARGINCE_BENCH_RECORD` | — | `make bench-perf` | set to `1` to let the PERF-3/PERF-7 tier harness WRITE its record into `docs/reference/perfbench/`, which `make perfdoc` renders into the published budgets page. Off by default because a scheduled job runs the same suite weekly (`make bench-perf-check`), and a machine must never write its own numbers into the tree. The by-hand `bench-record`/`bench-capture`/`bench-mobile` targets need no switch — nothing but a human runs them. |
 | `MARGINCE_AITASK_DIR` | — | `worker aitask` | working directory for the `ai-probe` debug loop's artifacts (flag `--work-dir`, default the gitignored `.tmp/aitask/`). A fetched page carries whatever the source carried, so this stays out of the tree. |
@@ -1205,6 +1250,18 @@ colleagues. The hourly sweep deletes payloads with the rows carrying them, an
 erased subject's address is never written whatever the posture says, and an
 Art. 17 request inside the window reaches what is already there.
 
+`capture.skip_reserved_domain_proposals` (default `true`) keeps a sender on an
+RFC 2606 reserved name out of the contact review queue: `example.com`,
+`example.net` and `example.org` with their subdomains, and anything under
+`.test`, `.example`, `.invalid` or `.localhost`. Their mail is still captured
+and stays on the timeline. Only the `capture_counterparty` proposal ("is this a
+contact worth keeping?") is not raised, so no approval and no notification
+appear for it. The review sweep closes such a sender's open question as
+`rejected` instead of asking it. Proposals raised before the setting took
+effect stay open; reject them in the decision queue as usual. Set it to `false`
+only for an installation that deliberately runs a test mailbox and wants those
+senders proposed.
+
 `company_context.rollout` is the ordered server-side company-context capability:
 `off` disables context reads, injection, and the new onboarding surface; `read`
 enables the canonical read model and Company Context settings; `tasks` also
@@ -1287,6 +1344,43 @@ What the block does **not** decide is which routes may carry a file at all. That
 list is declared in source (`internal/compose/bodyceiling.go`) and is what keeps
 a route carrying no file from obtaining the wider bound by sending a multipart
 header; adding to it is a code change with two fitness gates over it.
+
+### security.txt
+
+The `web.security_txt` block publishes an [RFC 9116](https://www.rfc-editor.org/rfc/rfc9116)
+file at `/.well-known/security.txt`, the place a security researcher looks for
+whom to tell about a vulnerability. The contact is the **operator's**: whoever
+runs this installation, not whoever writes the software. Nothing is
+compiled in, so an installation without the block answers that path with 404.
+
+```yaml
+web:
+  security_txt:
+    contact:                      # required, one or more
+      - mailto:security@example.org
+      - https://example.org/report-a-vulnerability
+    expires: "2030-01-01T00:00:00Z"   # required, RFC 3339
+    policy: https://example.org/disclosure-policy   # optional
+    preferred_languages: [en, de]                   # optional
+```
+
+| Key | Rule | Renders as |
+|---|---|---|
+| `contact` | at least one `mailto:`, `https:` or `tel:` URI | one `Contact:` line each, in order |
+| `expires` | required; an RFC 3339 date-time | `Expires:`, in UTC |
+| `policy` | optional; an `https:` URL | `Policy:` |
+| `preferred_languages` | optional; language tags such as `en` or `de-CH` | one `Preferred-Languages:` line, comma-separated |
+
+A value that breaks a rule is a boot error naming the key. An `expires` that has
+already passed, or that is more than a year away (RFC 9116 recommends less), is
+a boot **warning**: the api keeps serving the file, because RFC 9116 leaves the
+staleness judgement to the reader, but the log says to move the date.
+
+The api serves the file, since it holds this configuration, as
+`text/plain; charset=utf-8`. Route `/.well-known/security.txt` to the api by
+that exact path (see Routing in [deployment.md](../deployment.md)). If the
+ingress leaves it on the web service instead, the web tier answers 404, the same
+as an installation with no file.
 
 ### License
 
@@ -1383,10 +1477,15 @@ currency sheet (worker role). A refresh never writes a rate directly — it stag
 before it applies. It is read only by the worker (the api enqueues the job; the
 worker fetches and stages).
 
-Model prices are not configured here. **Refresh model prices** (Settings → AI)
-reads OpenRouter's public model list and writes today's price for each
-OpenRouter-hosted model the installation binds, in the request itself; every
-provider that publishes no price list is set by hand on the sheet.
+Model prices are not configured here. They sync daily from public catalogues
+(Settings → AI → **Model prices**): anthropic, openai, gemini and gemini_vertex,
+when their key is usable, are priced from models.dev; the OpenRouter-hosted models
+the installation binds, and the `openai_compatible` rows on the sheet while
+something is bound there, from OpenRouter's list. Every other provider keeps the
+prices set by hand. A chat or embedding model a key lists is added when models.dev
+prices it in the same lane; a price set by hand is never rewritten. Turning
+**Auto-sync daily** off stops the daily job; **Refresh model prices** still runs
+it on demand.
 
 | field | default | effect |
 |---|---|---|
@@ -1448,8 +1547,20 @@ construction, naming what is missing.
 | `openai_compatible` | `OPENAI_COMPATIBLE_API_KEY` | **required** | BYOK cloud, generic OpenAI wire (OpenAI, Mistral, DeepSeek, Groq, Together, OpenRouter, …) |
 | `openai` | `OPENAI_API_KEY` | optional (default `api.openai.com`) | BYOK cloud, native Responses API |
 | `gemini` | `GEMINI_API_KEY` | optional (default `generativelanguage.googleapis.com/v1beta`) | BYOK cloud, native `generateContent` |
+| `gemini_vertex` | `GEMINI_VERTEX_SA_JSON` (the service-account key file's JSON) | **refused** — the host follows from `location` | BYOK cloud, the `gemini` wire served by Vertex AI; **`location` required**, and an EU one under `eu_hosted` |
 | `jev` | `TYPESAFE_API_KEY` | optional (default `https://api.typesafe.ai/v1/systemone`, the FULL endpoint) | decisions lane only; TypeSafe's own API |
 | `jev_compatible` | `JEV_COMPATIBLE_API_KEY` (**optional**: sent when held, never demanded) | **required**, the FULL endpoint | decisions lane only; any server on the Jev wire — OpenRouter (`https://openrouter.ai/api/alpha/decisions`, key = your OpenRouter key) or a self-hosted server (`http://127.0.0.1:8767/v1/systemone`, usually keyless) |
+
+`base_url` and `location` are the PROVIDER's, set once under `providers:` —
+`providers.<name>.base_url`, `providers.gemini_vertex.location`, and for an
+OpenRouter host `providers.openai_compatible.upstream` (`only`, `ignore`,
+`allow_fallbacks`) — and every lane binding that provider reads them. In the app
+they are the fields on the provider's sheet, or
+`PUT /v1/ai/provider-settings/{provider}`. The embeddings lane alone may carry
+its own `base_url`, `location` or upstream pins, overriding the provider's for
+that lane. A tier or decisions lane that still writes one — the older spelling —
+is lifted onto its provider when the provider names none; on a write that
+disagrees with the provider's, `PUT /ai/routing` answers 422 `moved_to_provider`.
 
 A decision provider's `base_url` is the whole endpoint URL and is posted to as
 written; nothing is appended.
@@ -1460,6 +1571,21 @@ appends `/v1/chat/completions` (or `/v1/responses`), so a base ending in `/v1`
 would double it (`…/v1/v1/…` → 404). Use `https://api.mistral.ai`, not
 `https://api.mistral.ai/v1`. `gemini` is the mirror: its default base keeps the
 `/v1beta` segment and the paths are version-relative.
+
+`location` belongs to `gemini_vertex` only, set on the provider (and optionally
+overridden on `embeddings:`), and refused on any other provider. It names the Vertex AI
+location that serves the call and processes the prompt: `eu`, `us`, `global`, or
+a region such as `europe-west4`. The API host follows from it, so no `base_url`
+is accepted. Under `profile: eu_hosted` it must be `eu` or an EU region
+(`europe-west1`, `-west3`, `-west4`, `-west8`, `-west9`, `-west10`, `-west12`,
+`-north1`, `-north2`, `-central2`, `-southwest1`); London `europe-west2`, Zürich `europe-west6`,
+`global` and `us` are refused. Saving a `gemini_vertex` binding asks Google
+whether the location serves the model and refuses it with a 422 if not; so does
+moving the provider's location, for every bound model.
+The key is a service account's JSON key file, whose account holds
+`roles/aiplatform.user`; `GEMINI_VERTEX_SA_JSON` carries the file's contents,
+not a path. [how-to/connect-a-cloud-model-provider.md](../how-to/connect-a-cloud-model-provider.md) §5
+walks through it.
 
 #### What a binding can be handed (documents, scans, photographed forms)
 
@@ -1521,8 +1647,7 @@ A chat tier may declare the input modalities its model accepts:
 
 ```yaml
 premium:
-  provider: openai_compatible
-  base_url: https://openrouter.ai/api
+  provider: openai_compatible        # host on providers.openai_compatible
   model: mistralai/mistral-large-2512
   input: [text, image]
 ```
@@ -1738,8 +1863,7 @@ Two operator gotchas, verified against current vendor docs:
 
 ## Sales reporting
 
-`analytics.performance_enabled` (default `false`) enables governed sales reporting
-in both API and worker. It controls availability, the metric MCP tool, scheduled
-editions and configured forecast captures. The legacy analytics and workspace
-forecast continue when disabled. [Operate reporting](../how-to/operate-reporting.md)
-covers pilot setup, durable pause, history gaps and rollback.
+Reporting is always available in the API, web UI, MCP tools and workers.
+The retired `analytics.performance_enabled` key is accepted but ignored so existing
+configuration files still load; remove it from operator files. [Operate reporting](../how-to/operate-reporting.md)
+covers setup, durable schedule pause and rollback.

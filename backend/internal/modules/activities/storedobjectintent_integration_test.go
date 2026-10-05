@@ -150,3 +150,31 @@ func seedAttachmentRow(t *testing.T, e *sendEnv, key string) {
 		t.Fatalf("seeding the attachment row: %v", err)
 	}
 }
+
+// A key of a kind this sweep does not own is left alone, however old it is.
+//
+// Nothing records a non-attachment kind today, which is what makes this the moment to
+// hold it: the writer who records the second kind finds the rule already here rather
+// than discovering that the reaper deleted their live file.
+func TestAKindThisSweepDoesNotOwnIsNeverOffered(t *testing.T) {
+	e := setupSend(t)
+	provisional(t, e, "ws/knowledge/a-live-document", 2*ProvisionalObjectGrace)
+	provisional(t, e, "ws/attachment/orphan", 2*ProvisionalObjectGrace)
+	store, ctx := systemStore(e)
+
+	orphans, err := store.ListOrphanedObjects(ctx, time.Now().UTC().Add(-ProvisionalObjectGrace), 50)
+	if err != nil {
+		t.Fatalf("ListOrphanedObjects: %v", err)
+	}
+
+	for _, o := range orphans {
+		if o.StorageKey == "ws/knowledge/a-live-document" {
+			t.Errorf("a knowledge key was offered to the reaper: this sweep checks the "+
+				"attachment table, which holds no row for any other kind, so offering one "+
+				"is offering a live file (%+v)", orphans)
+		}
+	}
+	if len(orphans) != 1 || orphans[0].StorageKey != "ws/attachment/orphan" {
+		t.Fatalf("got %+v, want only the attachment key whose row never arrived", orphans)
+	}
+}

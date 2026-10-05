@@ -27,6 +27,7 @@ import (
 // alongside would be a row of anonymous booleans at each call site.
 func (h Handlers) meResponse(ctx context.Context, id Identity) crmcontracts.MeResponse {
 	adminPasswordLink := h.canIssuePasswordLink(ctx, id)
+	reportingAvailable := true
 	roles := id.Roles
 	if roles == nil {
 		roles = []string{}
@@ -66,7 +67,7 @@ func (h Handlers) meResponse(ctx context.Context, id Identity) crmcontracts.MeRe
 			CompanyContext:   h.companyContextAvailable,
 			EmbeddingReindex: h.embedReindexAvailable,
 			Lists:            &h.listsAvailable,
-			Reporting:        &h.reportingAvailable,
+			Reporting:        &reportingAvailable,
 		},
 	}
 }

@@ -24,7 +24,7 @@
 1160 frontend/src/screens/onboarding-conversation/company-act.tsx
 1106 frontend/src/design-system/conformance.test.ts
 1178 frontend/src/screens/onboarding-conversation/company-act.test.tsx
-1016 frontend/src/screens/contactpage.tsx
+1015 frontend/src/screens/contactpage.tsx
 1200 frontend/src/screens/privacy.test.tsx
 1171 frontend/src/screens/contactprovider.test.tsx
 1001 frontend/src/screens/worklist.row.tsx
@@ -34,7 +34,7 @@
 1312 frontend/src/screens/company-context.tsx
 1328 frontend/src/screens/listquery.test.tsx
 1385 frontend/src/screens/listquery.tsx
-1317 frontend/src/screens/offers.tsx
+1306 frontend/src/screens/offers.tsx
 1365 frontend/src/app/agentrail.test.tsx
 1504 frontend/src/screens/onboarding-conversation/confirm-card.tsx
 1436 frontend/src/design-system/listtable.test.tsx
@@ -95,7 +95,7 @@
 831 frontend/src/screens/record360/spine.tsx
 547 frontend/src/screens/relationships.tsx
 855 frontend/src/screens/onboarding-gate.tsx
-852 frontend/src/screens/worklist.copy.ts
+836 frontend/src/screens/worklist.copy.ts
 846 frontend/src/screens/common.tsx
 883 frontend/src/screens/leadvocab.tsx
 894 frontend/src/screens/onboarding-conversation/voice-scenes.tsx

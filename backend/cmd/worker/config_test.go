@@ -6,6 +6,7 @@ package main
 import (
 	"strings"
 	"testing"
+	"time"
 )
 
 // TestFxBootstrapCurrenciesFallsBackToTheDefault pins the fresh-install
@@ -179,5 +180,51 @@ func TestObservePprofIsParsedStrictlyAndNeedsAListener(t *testing.T) {
 		t.Error("MARGINCE_OBSERVE_PPROF=true with no MARGINCE_OBSERVE_ADDR was accepted; there is no listener to serve it on")
 	} else if !strings.Contains(err.Error(), "MARGINCE_OBSERVE_ADDR") {
 		t.Errorf("the error does not name the missing listener: %v", err)
+	}
+}
+
+// The drain window is part of a budget the operator sizes the pod's grace
+// period against, so its default is pinned, the environment can move it, a
+// value that does not parse fails the boot, and zero — River's hard stop — is
+// refused rather than taken.
+func TestTheJobDrainWindowIsBoundedAndConfigurable(t *testing.T) {
+	base := []string{"--dsn", "postgres://localhost/x"}
+	cfg, err := parseWorkerFlags(base)
+	if err != nil {
+		t.Fatalf("parseWorkerFlags: %v", err)
+	}
+	if cfg.jobDrainWindow != defaultJobDrainWindow {
+		t.Errorf("default drain window = %s, want %s", cfg.jobDrainWindow, defaultJobDrainWindow)
+	}
+	// The declared item spells the default as a literal, because the docs gate
+	// reads it from source; it has to be the constant the flag uses.
+	for _, item := range workerUnflaggedItems() {
+		if item.Name == jobDrainWindowEnv && item.Default != defaultJobDrainWindow.String() {
+			t.Errorf("%s declares default %q, the flag defaults to %s", jobDrainWindowEnv, item.Default, defaultJobDrainWindow)
+		}
+	}
+	if budget := defaultJobDrainWindow + jobCancelWindow; budget > 25*time.Second {
+		t.Errorf("the default drain plus cancel windows come to %s, which leaves no teardown room inside a 30s termination grace period", budget)
+	}
+
+	t.Setenv(jobDrainWindowEnv, "45s")
+	cfg, err = parseWorkerFlags(base)
+	if err != nil {
+		t.Fatalf("%s=45s: %v", jobDrainWindowEnv, err)
+	}
+	if cfg.jobDrainWindow != 45*time.Second {
+		t.Errorf("%s=45s produced %s", jobDrainWindowEnv, cfg.jobDrainWindow)
+	}
+
+	t.Setenv(jobDrainWindowEnv, "a while")
+	if _, err := parseWorkerFlags(base); err == nil || !strings.Contains(err.Error(), jobDrainWindowEnv) {
+		t.Errorf("an unparseable %s must fail the boot naming the variable, got %v", jobDrainWindowEnv, err)
+	}
+
+	t.Setenv(jobDrainWindowEnv, "")
+	for _, v := range []string{"0s", "-1s"} {
+		if _, err := parseWorkerFlags(append(append([]string{}, base...), "--job-drain-window="+v)); err == nil {
+			t.Errorf("--job-drain-window=%s was accepted; it would make every shutdown cancel running jobs at once", v)
+		}
 	}
 }

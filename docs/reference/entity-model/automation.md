@@ -37,6 +37,7 @@ The 3 tables owned by `automation`, as the migrations build them. [Back to the e
 - `automation_origin_check` — `CHECK ((origin = ANY (ARRAY['catalog', 'agent_authored'])))`
 - `automation_paused_reason_check` — `CHECK ((paused_reason = ANY (ARRAY['list_archived', 'list_invalid', 'list_unavailable', 'burst'])))`
 - `automation_tier_check` — `CHECK ((tier = ANY (ARRAY['auto_execute', 'confirmation_required'])))`
+- `automation_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 

@@ -70,17 +70,6 @@
   color: var(--textPrimary);
 }
 
-.pref-save-bar {
-  position: sticky;
-  bottom: 16px;
-  margin-top: var(--space-6);
-  background: var(--bgElevated);
-  border: 1px solid var(--borderStrong);
-  border-radius: var(--r-md);
-  box-shadow: var(--shadow-pop);
-  padding: var(--space-4);
-}
-
 .pref-not-saved {
   color: var(--textPrimary);
 }

@@ -237,18 +237,15 @@ The AI group in Settings has four pages: **AI usage**,
 **Model routing** — which model serves each kind of work, presented by activity
 rather than by tier. What you see is the current policy; **AI call log** is what
 actually ran. Shared bindings sit under Advanced, and changing one can move
-several activities at once. Prices name input and output cost per million tokens
-separately, rather than one unexplained arrow, and a tier name proves nothing
-about where data is processed or what it costs — read the binding. Each row in
-**AI tasks** names the tier the task runs on, and **View calls** opens the
-**AI call log** narrowed to that task.
+several activities at once. Prices show input and output cost per million
+tokens, and a tier name proves nothing about where data is processed or what it
+costs — read the binding. Each row in **AI tasks** names its tier, and **View
+calls** opens the **AI call log** narrowed to that task.
 
-Changes take effect without a restart: a running process picks up a saved
-binding within about a minute, and a call already in flight keeps the one it
-started with.
+Changes take effect within about a minute; a call in flight keeps its binding.
 
-**Provider keys** — your own keys for whichever provider you use. Margince can
-also run entirely against a local model with no cloud key at all.
+**Providers** — each provider's key, and where it is reached: a host, OpenRouter
+hosts, or a Vertex location. See [AI providers](ai-providers.md).
 
 **Automations** — the trigger-and-action catalogue. Three rules watch a Live
 List and, when a record joins or leaves it, add a task, notify the rule's owner,

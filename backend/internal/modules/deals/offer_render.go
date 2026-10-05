@@ -288,3 +288,20 @@ func (s *Store) SetPdfAssetRef(ctx context.Context, id ids.OfferID, ref string, 
 	}
 	return out, oldRef, nil
 }
+
+// retireRenderingOnBuyerChange drops the stored rendering when an edit gives the
+// offer a different buyer, and answers the ref it dropped for the caller to
+// reclaim once the write commits. The PDF prints the buyer it was rendered for,
+// while withholdUnreadableBuyer judges the ref by the buyer the offer names now —
+// kept, the old buyer's document would be handed out under the new buyer's
+// visibility.
+func retireRenderingOnBuyerChange(p *storekit.Patch, current crmcontracts.Offer, buyer ids.CompanyID) (retired *string) {
+	if current.PdfAssetRef == nil {
+		return nil
+	}
+	if current.BuyerCompanyId != nil && ids.UUID(*current.BuyerCompanyId) == buyer.UUID {
+		return nil
+	}
+	p.Set("pdf_asset_ref", current.PdfAssetRef, nil)
+	return current.PdfAssetRef
+}

@@ -1,0 +1,5 @@
+{"type": "system", "subtype": "init", "tools": ["mcp__margince__list_approvals", "mcp__margince__relink_thread", "mcp__margince__search_context"]}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__search_context", "input": {"query": "Kolbenpumpe KP-300 Lieferverzug"}}]}}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__relink_thread", "input": {"thread_key": "seed-kp300-delay", "entity_type": "company", "entity_id": "co-rhoen", "replace_existing_of_type": true}}]}}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__list_approvals", "input": {}}]}}
+{"type": "result", "subtype": "success", "is_error": false, "result": "Done — the whole Kolbenpumpe KP-300 thread is now filed under Rhön Hydraulik and no longer on Kieler Pumpenwerk's timeline."}

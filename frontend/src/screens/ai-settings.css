@@ -91,6 +91,29 @@
   padding-block: var(--space-4);
 }
 
+/* A provider's own settings, under its key: separated from the key row by a
+   hairline, because they answer a different question (where, not who). */
+.ai-provider-settings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--borderSubtle);
+}
+
+/* A known service's host, read rather than typed: the URL may be long and is
+   allowed to break anywhere rather than push the sheet wider. */
+.ai-provider-host {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.ai-provider-settings-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--gapActions);
+}
+
 .ai-sheet-section + .ai-sheet-section {
   border-top: 1px solid var(--borderSubtle);
 }
@@ -163,6 +186,20 @@
 .ai-key-entry > :first-child {
   flex: 1 1 16rem;
   min-width: 0;
+}
+
+/* A key file's verbs sit under its box rather than beside it, at their own
+ * width: the box is too tall to share a line with them. */
+.ai-key-verbs {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.ai-key-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
 }
 
 /* Air between a credential's reading and the field it opens. Without it the
@@ -345,4 +382,251 @@
   .ai-modelchain-arrow {
     justify-self: start;
   }
+}
+
+/* One vendor's line of the last price sync: name in the providers' column, then what the run did. */
+.ai-price-sync-line {
+  display: grid;
+  grid-template-columns: 14rem minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* On a phone the vendor's name sits above what the run did for it. */
+@media (max-width: 720px) {
+  .ai-price-sync-line {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* A section head that carries dials or links on its trailing edge: the title
+ * and what acts on it on one line, wrapping under it on a narrow sheet. */
+.ai-figures-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-3);
+}
+
+.ai-figures-dials {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.ai-figures {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* A count that is a failure, in the danger ink: a figure, not a message. */
+.ai-figures-bad {
+  color: var(--dangerText);
+}
+
+/* The connection's privacy rules: four ticks in two columns, then the lists. */
+.ai-openrouter-settings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--borderSubtle);
+}
+
+.ai-openrouter-toggles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--space-3);
+}
+
+.ai-openrouter-toggle {
+  align-items: flex-start;
+}
+
+.ai-openrouter-help {
+  display: block;
+}
+
+/* The serving editor beside its field reference; the summary under both. */
+.ai-serving {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.ai-serving-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: var(--space-4);
+}
+
+.ai-serving-summary {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+@media (max-width: 720px) {
+  .ai-serving-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.ai-serving-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gapActions);
+}
+
+.ai-serving-note {
+  margin: 0;
+}
+
+.ai-serving-problems {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.ai-serving-lines {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ai-serving-lines li {
+  display: grid;
+  grid-template-columns: 9rem minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-2);
+}
+
+.ai-serving-lines li > span:last-child {
+  display: flex;
+  flex-direction: column;
+}
+
+.ai-serving-reference {
+  max-height: 24rem;
+  overflow: auto;
+  padding: var(--space-3);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-sm);
+}
+
+.ai-serving-reference dl {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.ai-serving-reference dd {
+  margin: 0;
+}
+
+/* A task's outcome: the headline, the bar, then one card per step. */
+.ai-outcome {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.ai-outcome-headline {
+  margin: 0;
+}
+
+.ai-outcome-steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ai-outcome-step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-sm);
+}
+
+.ai-outcome-big {
+  font-weight: var(--fontWeightMedium);
+}
+
+.ai-outcome-passed,
+.ai-latency-near {
+  color: var(--warningText);
+}
+
+/* Latency against the timeout: two marks and a limit line on one track. */
+.ai-latency {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ai-latency-title {
+  font-weight: var(--fontWeightMedium);
+}
+
+.ai-latency-track {
+  position: relative;
+  height: var(--space-3);
+  border-radius: var(--r-sm);
+  background: var(--bgChip);
+}
+
+.ai-latency-mark {
+  position: absolute;
+  top: 50%;
+  width: var(--space-2);
+  height: var(--space-2);
+  border-radius: 50%;
+  corner-shape: round;
+  background: var(--accent);
+  transform: translate(-50%, -50%);
+}
+
+.ai-latency-p95 {
+  border-radius: 0;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.ai-latency-limit {
+  position: absolute;
+  top: calc(var(--space-1) * -1);
+  bottom: calc(var(--space-1) * -1);
+  width: 2px;
+  background: var(--danger);
+}
+
+.ai-latency-caption {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.ai-task-facts {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+}
+
+.ai-task-facts dd {
+  margin: 0;
 }

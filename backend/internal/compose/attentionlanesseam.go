@@ -122,7 +122,9 @@ func (a attentionAtRisk) Quiet(ctx context.Context) ([]attention.RiskyDeal, bool
 			ExpectedCloseDate:    deal.ExpectedCloseDate,
 			CloseDateProvisional: deal.CloseDateProvisional,
 			ForecastCategory:     deal.ForecastCategory,
-			NoChampion:           noChampionOf(cover, deal.DealID),
+			NoChampion:           cover.noChampion(deal.DealID),
+			ChampionUnknown:      cover.championUnknown(deal.DealID),
+			NoNextStep:           deal.NoOpenNextStep,
 		})
 	}
 	return risky, cut, nil

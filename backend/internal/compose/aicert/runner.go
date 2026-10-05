@@ -155,9 +155,13 @@ func validateBindings(cfg RunnerConfig, tasks []ai.Task, log *slog.Logger) error
 	// its text in the EU. A ROUTING= run met it when its file was parsed.
 	if cfg.Profile == ai.ProfileEUHosted {
 		if gap := ai.EURegionPinGap(cfg.Binding); gap != "" {
-			return fmt.Errorf("the candidate %s:%s would be filed under eu_hosted, but %s — pin it with "+
-				"UPSTREAM='{\"only\":[\"<vendor>/eu\"]}' (MARGINCE_AICERT_UPSTREAM), or run it as PROFILE=cloud_frontier",
-				cfg.Binding.Provider, cfg.Binding.Model, gap)
+			// A gap on a binding no broker fronts is a Vertex location.
+			remedy := "pin it with UPSTREAM='{\"only\":[\"<vendor>/eu\"]}' (MARGINCE_AICERT_UPSTREAM)"
+			if !ai.UpstreamPreferencesApply(cfg.Binding) {
+				remedy = "bind an EU location"
+			}
+			return fmt.Errorf("the candidate %s:%s would be filed under eu_hosted, but %s — %s, or run it as PROFILE=cloud_frontier",
+				cfg.Binding.Provider, cfg.Binding.Model, gap, remedy)
 		}
 	}
 	return refuseSelfJudgedTasks(cfg, tasks)

@@ -59,8 +59,9 @@ const (
 	// reserved import namespace (provenance.ReservedSourceSystem), which only a
 	// declared importer may write.
 	AcquiredCRMMigration = "crm_migration"
-	// AcquiredMailboxHistory is somebody a seat had already written to from a
-	// company mailbox before that mailbox was connected. The correspondence was
+	// AcquiredMailboxHistory is somebody a company mailbox already held mail
+	// with before that mailbox was connected: a seat wrote to them, or a
+	// received message named them on To or Cc. The correspondence was
 	// the controller's before this system read it, so reading it opens no
 	// notice duty: the crm_migration reasoning, for a mailbox.
 	AcquiredMailboxHistory = "mailbox_history"

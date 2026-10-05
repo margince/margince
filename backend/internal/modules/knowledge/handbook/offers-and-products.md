@@ -34,6 +34,7 @@ Also called: email the proposal, issue the quote.
 
 ### How do I print or download an offer?
 To print an offer or save it as a file, open the offer and choose **Render PDF**, then **View PDF** once it appears, and print or download the PDF from your browser. Margince has no separate print button. The PDF carries the offer's intro text, lines, totals and terms text, plus the template's header and footer.
+**View PDF** does not appear when the offer's buyer is a company you cannot open, because the stored PDF may print its name — even for a PDF you rendered yourself. Changing a draft's buyer removes its PDF; render it again for the new buyer.
 Also called: print a quote, offer PDF, download the proposal, export an offer.
 
 ### What happens after I send an offer?
@@ -41,7 +42,7 @@ After an offer is sent, Margince waits for you to record the buyer's answer; the
 - **Accept** — "Mark this offer as accepted?" The deal value and currency are updated to match this offer.
 - **Reject** — "Mark this offer as rejected?", with an optional **Reason (optional)**.
 - **Regenerate revision** — starts the next revision as a fresh draft for a counter-offer or change.
-An accepted or rejected offer has no further buttons. **Render PDF** stays available in every state, and **View PDF** appears once a PDF has been rendered.
+An accepted or rejected offer has no further buttons. **Render PDF** stays available in every state, and **View PDF** appears once a PDF has been rendered, unless the offer's buyer is a company you cannot open.
 Also called: the customer said yes, quote declined, revise the quote.
 
 ## What an offer holds

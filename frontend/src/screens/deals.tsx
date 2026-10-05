@@ -119,6 +119,7 @@ import { DealIdentityFacts, DealSubtitle } from "./deal360/dealheaderfacts";
 import { DealHistoryTab } from "./deal360/dealhistorytab";
 import { DealPulse } from "./deal360/dealpulse";
 import { DealRoomTab } from "./deal360/dealroomtab";
+import { DealWatchCard } from "./deal360/dealwatchcard";
 import { OutcomeReviewPanel } from "./deal360/outcomereview";
 import { useDealCoverage } from "./deal360/usedealcoverage";
 import { DealBulkBar } from "./dealbulk";
@@ -2718,10 +2719,8 @@ function DealOverviewPane({
           project, is offered that project once. Nothing else here asks. */}
       <StartDeliveryPrompt deal={deal} />
       {/* ONE READING, IN PARTS: the call with the deal's thread, the move the
-          briefing names, the brief itself, and under them the two sections a
-          reader consults rather than reads — what is on the table, and who is
-          in the room. The buying committee sits beside the offers rather than
-          at the foot of the page, because the two are the deal's two sides. */}
+          briefing names, then what is on the table beside who is in the room
+          (the deal's two sides), then what the customer committed to. */}
       <RecordReading>
         <DealStatusCardPanel
           dealId={deal.id}
@@ -2752,6 +2751,7 @@ function DealOverviewPane({
             refusedReasonId={refusedReasonId}
           />
         </RecordReadingPair>
+        <DealWatchCard dealId={deal.id} onOpenEmail={onOpenEmail} />
       </RecordReading>
       <DealBrief
         brief={deal.description}

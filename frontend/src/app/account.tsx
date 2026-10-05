@@ -462,7 +462,7 @@ function AccountPanel({
       <hr />
       <a
         className="acctrow"
-        href={routeHash({ screen: "book" })}
+        href={routeHash({ screen: "settings", id: "meetings" })}
         role="menuitem"
         {...seat(BOOKING_SEAT)}
         onClick={onDismiss}

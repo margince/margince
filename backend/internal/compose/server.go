@@ -95,10 +95,6 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	}
 	srv.applySendPath(pool)
 	srv.publishListsAvailability(pool)
-	srv.authHandlers = srv.WithReportingAvailable(srv.reportingEnabled)
-	if srv.reportingEnabled {
-		srv.reportMetrics = srv.service
-	}
 	// The tool registry is built HERE, after the options, on the Server that is
 	// actually served — so every engine an option installed is one the tools can
 	// reach. The rebuild each option performs keeps a half-configured Server
@@ -182,7 +178,8 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// deliberately left unbounded here.
 		searchHandlers: search.NewHandlers(
 			InstallationDB(pool).Bounded(database.CallerPredicateBudget),
-			collections.CountTagReachBatch, activities.EmailSummariesByIDBatch, contacts.LivePartnerCompaniesBatch),
+			collections.CountTagReachBatch, activities.EmailSummariesByIDBatch, contacts.LivePartnerCompaniesBatch,
+			contacts.CompanyLogoURLsBatch),
 		// Constructed, not merely embedded: the handler carries no nil-pool
 		// branch, so the zero value would panic on the first authenticated
 		// read rather than answer anything at all.

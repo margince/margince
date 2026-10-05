@@ -3938,6 +3938,28 @@
           "scope_limited": {
             "type": "boolean"
           },
+          "snapshots": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "taken_at": {
+                  "type": "string"
+                },
+                "trigger": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "taken_at",
+                "trigger"
+              ]
+            }
+          },
           "timezone": {
             "type": "string"
           },
@@ -3961,6 +3983,7 @@
           "period_start",
           "priced_count",
           "scope_kind",
+          "snapshots",
           "timezone",
           "weighted_minor",
           "won_minor"
@@ -4439,6 +4462,9 @@
           "management_token": {
             "type": "string"
           },
+          "provider": {
+            "type": "string"
+          },
           "reminder_status": {
             "type": "string"
           },
@@ -4453,6 +4479,12 @@
           },
           "version": {
             "type": "integer"
+          },
+          "video_call": {
+            "type": "boolean"
+          },
+          "video_url": {
+            "type": "string"
           }
         },
         "required": [
@@ -5292,6 +5324,25 @@
                 "id": {
                   "type": "string",
                   "format": "uuid"
+                },
+                "owner": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "is_you": {
+                      "type": "boolean"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "is_you"
+                  ]
                 },
                 "record_type": {
                   "type": "string"
@@ -8079,6 +8130,12 @@
                   "offered"
                 ]
               },
+              "mapping": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
               "rows_read": {
                 "type": "integer"
               },
@@ -9040,6 +9097,25 @@
           "id": {
             "type": "string",
             "format": "uuid"
+          },
+          "owner": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "is_you": {
+                "type": "boolean"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "is_you"
+            ]
           },
           "record_type": {
             "type": "string"
@@ -10379,6 +10455,25 @@
                 "id": {
                   "type": "string",
                   "format": "uuid"
+                },
+                "owner": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "is_you": {
+                      "type": "boolean"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "is_you"
+                  ]
                 },
                 "record_type": {
                   "type": "string"

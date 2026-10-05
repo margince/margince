@@ -55,6 +55,7 @@ The 2 tables owned by `signals`, as the migrations build them. [Back to the enti
 - `signal_severity_check` — `CHECK ((severity = ANY (ARRAY['info', 'warn', 'urgent'])))`
 - `signal_source_channel_check` — `CHECK ((source_channel = ANY (ARRAY['derived', 'inbound', 'web', 'social', 'deal_room_engagement'])))`
 - `signal_status_check` — `CHECK ((status = ANY (ARRAY['open', 'acknowledged', 'resolved', 'dismissed'])))`
+- `signal_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 - `signal_visibility_check` — `CHECK ((visibility = ANY (ARRAY['workspace', 'owner'])))`
 
 **Indexes**

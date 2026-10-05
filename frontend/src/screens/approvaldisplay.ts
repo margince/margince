@@ -285,6 +285,19 @@ export const DISPLAY_FIELDS: Readonly<Record<string, readonly DisplayField[]>> =
       // it here rather than opening the task afterwards to add one.
       { field: "due_date", label: "approval.field.due_date", as: "date" },
     ],
+    // A promise read out of a meeting or a mail thread. The party is who made
+    // it, as the conversation names them; accepting a promise nobody could be
+    // named for makes it the reader's own task.
+    commitment_task: [
+      {
+        field: "summary",
+        label: "approval.field.step",
+        as: "prose",
+        lead: true,
+      },
+      { field: "party", label: "approval.field.owner", as: "text" },
+      { field: "due_date", label: "approval.field.due_date", as: "date" },
+    ],
     // An automation composed this reply. Subject and body are the draft the card
     // already renders; `intent` is why the rule fired.
     held_draft: [

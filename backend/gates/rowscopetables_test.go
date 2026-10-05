@@ -486,7 +486,17 @@ const (
 	// already found through their sharing (ListLists, GetList); it answers only
 	// for the ids it was handed, so it names no list the reader could not find.
 	//
-	// 113: consent.revokeOverrideAdmittedTx asks whether the vouch being revoked
+	// 113: contacts.nameDomainClaimant is the dedupe ladder's rival for a company
+	// named after a domain, the sibling of exactCompanyByDomain above it and
+	// unscoped for the same reason: the ladder scores every company in the
+	// installation, and the id it finds becomes a review row, never a response.
+	//
+	// 114: contacts.OpenDuplicateCompanyPairsTx is system-only and hands Deal
+	// Scout the open company pairs, so it can withdraw a suggestion raised twice
+	// for one business. The ids select suggestions to supersede; a rep sees a
+	// suggestion only through deals' visibility clause.
+	//
+	// 115: consent.revokeOverrideAdmittedTx asks whether the vouch being revoked
 	// belongs to the contact named or to the survivor a merge folded it into. A
 	// vouch chain spans records by construction (a merge copies the vouch
 	// onto the survivor and leaves the original on the predecessor, linked by
@@ -496,5 +506,5 @@ const (
 	// and its survivor in the same transaction, so the caller was shown to reach
 	// every record the question can resolve to. The read hands back no
 	// reference: the only row returned is the FOR UPDATE row's decided_by_level.
-	modulesTierUnscopedCeiling = 113
+	modulesTierUnscopedCeiling = 115
 )

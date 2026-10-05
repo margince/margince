@@ -187,26 +187,17 @@ func classifyIntroduction(item crmcontracts.AttentionItem, asOf time.Time) ranke
 	}
 }
 
-// classifyLegalDeadline ranks both compliance clocks by the same deadline.
-// Subject requests remain unassigned; disclosure duties carry the responsible
-// officer, falling back to their contact owner. Ownerless duties remain
-// available in the unassigned view.
-func classifyLegalDeadline(item crmcontracts.AttentionItem, asOf time.Time) ranked {
-	// Seven days is the agenda preparation window, not a change to the legal deadline.
-	level := levelRoutine
-	if item.DueAt != nil && item.DueAt.Sub(asOf) <= 7*24*time.Hour {
-		level = levelWaiting
+// earlierRequests is the evidence a conversation card carries for the requests
+// folded into it: how many, and when the first arrived. Nothing for a single
+// message.
+func earlierRequests(waiting WaitingCustomer) []crmcontracts.WorklistReason {
+	if waiting.EarlierRequests == 0 {
+		return nil
 	}
-	row := base(item, level, "system", "legal_deadline_missed")
-	stampDeadline(&row, item.DueAt, asOf)
-	row.Because = []crmcontracts.WorklistReason{reason("legal_deadline", nil)}
-	return ranked{
-		ownerRef:   ownerFromAssignee(item.AssigneeId),
-		owner:      assigneeID(item.AssigneeId),
-		item:       row,
-		deadlineAt: deadlineOf(item.DueAt),
-		overdue:    overdueAt(item.DueAt, asOf),
-		occurredAt: occurredOf(item, asOf),
+	count, first := waiting.EarlierRequests, waiting.FirstAskedAt
+	return []crmcontracts.WorklistReason{
+		reason("earlier_requests", &crmcontracts.WorklistValue{Kind: "count", Count: &count}),
+		reason("first_asked", &crmcontracts.WorklistValue{Kind: "date", Date: &first}),
 	}
 }
 
@@ -288,6 +279,7 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 		reason("buyer_wrote_last", nil),
 		reason("waiting_days", daysValue(days)),
 	}
+	because = append(because, earlierRequests(waiting)...)
 	if stale {
 		because = append(because, reason("stale", nil))
 	}

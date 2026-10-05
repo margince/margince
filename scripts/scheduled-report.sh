@@ -598,9 +598,13 @@ Three things this is NOT, each of which has looked like a regression before:
 
 There is no standing failure to dismiss this against. Case 6 — asked about past
 account-manager changes, the assistant repeating a note's wrong month in its own
-voice — was the one, and it was fixed: it passes 3 of 3 on \`claude-opus-5\`, this
-lane's default model. So a case 6 failure here is a REGRESSION of that fix and
-the transcript is worth reading closely, not a known finding to be filed away.
+voice — was the one, and it was fixed: it passed 3 of 3 on \`claude-opus-5\`.
+This job now drives \`claude-sonnet-5-5\` over the claude CLI, on a stack
+whose search ranks by word overlap (no embedding key reaches the runner). No
+committed verdict was measured that way: the coverage page's numbers come from
+the neutral bridge on a semantic search. So a failure here is not yet a
+REGRESSION — re-run the case locally on a semantic stack (the how-to's section
+2) before calling it one, and read this run's transcript for what differed.
 
 Nothing else is standing either. Every scenario in this lane is expected to pass,
 and this issue means one did not."\

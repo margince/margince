@@ -448,8 +448,8 @@ func TestCompanyComputed_AnUnrepresentableDeal_RefusesOneFigureNotTheRecord(t *t
 	pipeline, open := pipelineFixtureFor(e.Admin(), t, e.Deals)
 	companyID := e.SeedCompany(t, "Overflow Logistics", nil)
 
-	// The largest rate the column can hold, against an amount near the top of
-	// its own range. Neither is a number anyone would type on purpose — which
+	// The largest rate the column can hold, against the largest amount the
+	// column accepts. Neither is a number anyone would type on purpose — which
 	// is the point: a data-entry mistake is precisely the input that must not
 	// be able to take a record offline.
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -468,8 +468,11 @@ func TestCompanyComputed_AnUnrepresentableDeal_RefusesOneFigureNotTheRecord(t *t
 		amount   int64
 		currency string
 	}{
-		// Converts to roughly 9.2e27, which no bigint holds.
-		{"Unrepresentable deal", 9_200_000_000_000_000_000, "JPY"},
+		// The largest amount the column now accepts, against the largest rate:
+		// 9.0e15 × 1e10 converts to roughly 9.0e25, which no bigint holds. The
+		// incident was always the VIEW'S CAST rather than the stored figure, so
+		// bounding the column to the wire's range does not reach it.
+		{"Unrepresentable deal", 9_007_199_254_740_991, "JPY"},
 		// And one in the installation's own base currency (harnessinstallation.go
 		// seeds EUR), so a partial total has something to be partial ABOUT — a
 		// test where nothing converts would pass on a view that refused
@@ -496,7 +499,7 @@ func TestCompanyComputed_AnUnrepresentableDeal_RefusesOneFigureNotTheRecord(t *t
 
 	_, count, found := directOpenPipelineRead(e.Admin(), t, e, companyID)
 	if !found {
-		t.Fatal("the view returned no row for a company with two open deals")
+		t.Fatal("the view returned no row for a company with open deals")
 	}
 	if count != 2 {
 		t.Errorf("open_deal_count = %d, want 2 — a deal that cannot be priced is still a deal", count)
@@ -531,21 +534,50 @@ func TestCompanyComputed_AnUnrepresentableDeal_RefusesOneFigureNotTheRecord(t *t
 // representable deals can add to a figure no bigint holds — and the reader
 // scans that column into an int64. The record would have been unreadable
 // because the deals are large rather than because one of them is.
+//
+// The set is larger than it was. Each amount is now capped at the wire-safe
+// bound, so reaching past bigint takes a thousand deals instead of two — the
+// bound removed the pair, not the class.
 func TestCompanyComputed_ATotalThatCannotBeRepresented_RefusesTheFigure(t *testing.T) {
 	e := Setup(t)
 	pipeline, open := pipelineFixtureFor(e.Admin(), t, e.Deals)
 	companyID := e.SeedCompany(t, "Big Numbers GmbH", nil)
 
-	// Two deals, each a legal bigint, whose sum is not. No conversion is
-	// involved — both are in the installation's own currency — so this is the
+	// Deals each a legal bigint, whose SUM is not. No conversion is involved —
+	// every one is in the installation's own currency — so this is the
 	// aggregate's bound and nothing else.
-	for _, amount := range []int64{9_000_000_000_000_000_000, 9_000_000_000_000_000_000} {
-		if _, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
-			Name: "Large deal", AmountMinor: Int64Ptr(amount), Currency: StrPtr("EUR"),
-			PipelineID: pipeline, StageID: open, CompanyID: companyIDPtr(companyIDOf(companyID)), Source: "manual",
-		}); err != nil {
-			t.Fatalf("seeding a large deal: %v", err)
-		}
+	//
+	// It takes 1025 of them now. Each amount is capped at the wire-safe bound
+	// (deal_amount_minor_js_safe), so two no longer add past bigint the way two
+	// unbounded ones did: 1025 × (2^53−1) is the first multiple that clears
+	// 2^63−1. The guard is unchanged and still necessary — a sum is computed in
+	// numeric and read back into an int64 — it just needs a set rather than a
+	// pair to reach.
+	const (
+		perDeal   = int64(9_007_199_254_740_991)
+		dealCount = 1025
+	)
+	first, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
+		Name: "Large deal", AmountMinor: Int64Ptr(perDeal), Currency: StrPtr("EUR"),
+		PipelineID: pipeline, StageID: open, CompanyID: companyIDPtr(companyIDOf(companyID)), Source: "manual",
+	})
+	if err != nil {
+		t.Fatalf("seeding a large deal: %v", err)
+	}
+	// The rest copy that row rather than repeating the create: what this test
+	// needs is a thousand rows in the view's scan, and the shape of one of them
+	// came from the real writer above.
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(e.Admin(), `
+			INSERT INTO deal (name, amount_minor, currency, status, pipeline_id, stage_id,
+			                  company_id, source, captured_by)
+			SELECT name, amount_minor, currency, status, pipeline_id, stage_id,
+			       company_id, source, captured_by
+			  FROM deal, generate_series(1, $2) WHERE id = $1`,
+			ids.UUID(first.Id), dealCount-1)
+		return err
+	}); err != nil {
+		t.Fatalf("seeding the rest of the set: %v", err)
 	}
 
 	company, err := e.Contacts.GetCompany(e.Admin(), companyIDOf(companyID), storekit.IncludeArchived)
@@ -556,18 +588,19 @@ func TestCompanyComputed_ATotalThatCannotBeRepresented_RefusesTheFigure(t *testi
 
 	minor, count, priced, found := directOpenPipelineReadPriced(e.Admin(), t, e, companyID)
 	if !found {
-		t.Fatal("the view returned no row for a company with two open deals")
+		t.Fatal("the view returned no row for a company with open deals")
 	}
-	if count != 2 {
-		t.Errorf("open_deal_count = %d, want 2", count)
+	if count != dealCount {
+		t.Errorf("open_deal_count = %d, want %d", count, dealCount)
 	}
-	// BOTH deals reached the sum, which is what makes this a test about the
-	// AGGREGATE. Without it the case passes on a view where neither converted:
-	// a null total and a non-computable field look identical whether the sum
+	// EVERY deal reached the sum, which is what makes this a test about the
+	// AGGREGATE. Without it the case passes on a view where none converted: a
+	// null total and a non-computable field look identical whether the sum
 	// overflowed or nothing was priced at all.
-	if priced != 2 {
-		t.Fatalf("priced_deal_count = %d, want 2 — both deals are in the installation's own currency, so "+
-			"a lower count means this test is measuring something other than the sum's bound", priced)
+	if priced != dealCount {
+		t.Fatalf("priced_deal_count = %d, want %d — every deal is in the installation's own "+
+			"currency, so a lower count means this test is measuring something other than "+
+			"the sum's bound", priced, dealCount)
 	}
 	if minor != nil {
 		t.Errorf("open_pipeline_minor_base = %d, want NULL — a sum that does not fit is not a sum", *minor)

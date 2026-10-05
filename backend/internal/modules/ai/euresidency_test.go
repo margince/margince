@@ -29,13 +29,15 @@ func TestIsEURegionHostAdmitsOnlyARegionVariant(t *testing.T) {
 
 // An eu_hosted config that the broker may serve outside the EU is refused at
 // the parser, on a chat tier and on the embeddings lane alike, whether the
-// config arrived as a file or through the settings store.
+// config arrived as a file or through the settings store. A tier's pin reaches
+// the lanes on its provider; the embeddings lane's own pin reaches no tier.
 func TestAnEUHostedBrokerLaneMustPinAnEURegion(t *testing.T) {
 	t.Parallel()
 	const pinned = "{provider: openai_compatible, model: m, base_url: 'https://openrouter.ai/api', routing: {only: [mistral/eu]}}"
 	const embedPinned = "{provider: openai_compatible, model: e, base_url: 'https://openrouter.ai/api', routing: {only: [mistral/eu]}}"
+	const native = "{provider: gemini, model: g}"
 	doc := func(profile, premium, embeddings string) string {
-		return "profile: " + profile + "\ntiers:\n  cheap_cloud: " + pinned + "\n  premium: " + premium + "\nembeddings: " + embeddings + "\n"
+		return "profile: " + profile + "\ntiers:\n  premium: " + premium + "\nembeddings: " + embeddings + "\n"
 	}
 	for name, tc := range map[string]struct {
 		yaml string
@@ -54,11 +56,17 @@ func TestAnEUHostedBrokerLaneMustPinAnEURegion(t *testing.T) {
 			"`only:` admits mistral,",
 		},
 		"an unpinned embeddings lane": {
-			doc("eu_hosted", pinned, "{provider: openai_compatible, model: e, base_url: 'https://openrouter.ai/api'}"),
+			doc("eu_hosted", native, "{provider: openai_compatible, model: e, base_url: 'https://openrouter.ai/api'}"),
 			"the embeddings lane under profile eu_hosted",
 		},
 		"every lane pinned":                {doc("eu_hosted", pinned, embedPinned), ""},
 		"a host the broker does not front": {doc("eu_hosted", "{provider: openai_compatible, model: m, base_url: 'https://inference.example.eu'}", embedPinned), ""},
+		"an unpinned embeddings lane served under its tier's pin": {
+			doc("eu_hosted", pinned, "{provider: openai_compatible, model: e, base_url: 'https://openrouter.ai/api'}"), "",
+		},
+		"a direct-vendor tier beside a pinned broker embeddings lane": {
+			doc("eu_hosted", "{provider: openai_compatible, model: m, base_url: 'https://api.mistral.ai'}", embedPinned), "",
+		},
 		"the same unpinned lane under cloud_frontier": {
 			doc("cloud_frontier", "{provider: openai_compatible, model: m, base_url: 'https://openrouter.ai/api'}",
 				"{provider: openai_compatible, model: e, base_url: 'https://openrouter.ai/api'}"), "",
@@ -105,7 +113,7 @@ func TestAStoredEUHostedBrokerLaneWithNoPreferencesIsRefused(t *testing.T) {
 // refused on the way in.
 func TestAStoredEUHostedBrokerLaneLoadsButIsRefusedOnWrite(t *testing.T) {
 	t.Parallel()
-	pinned := &OpenRouterRouting{Only: []string{"mistral/eu"}}
+	pinned := &OpenRouterRouting{Provider: OpenRouterProvider{Only: []string{"mistral/eu"}}}
 	broker := ProviderConfig{Provider: providerOpenAICompatible, Model: "m", BaseURL: "https://openrouter.ai/api"}
 	embed := broker
 	embed.Routing = pinned
@@ -123,5 +131,25 @@ func TestAStoredEUHostedBrokerLaneLoadsButIsRefusedOnWrite(t *testing.T) {
 	}
 	if err := validateStoredRouting(cfg); err == nil {
 		t.Error("validateStoredRouting accepted the unpinned lane a settings write must refuse")
+	}
+}
+
+// OpenRouter's EU address processes every request inside the EU and routes it
+// only to providers there, so a lane on it is EU-resident with no pins; the
+// global address still needs them.
+func TestOpenRoutersEUAddressIsResidentWithoutPins(t *testing.T) {
+	doc := func(host string) string {
+		return "profile: eu_hosted\nproviders:\n  openai_compatible: {base_url: '" + host + "'}\n" +
+			"tiers:\n  premium: {provider: openai_compatible, model: m}\n" +
+			"embeddings: {provider: openai_compatible, model: e}\n"
+	}
+	if _, err := ParseRouting([]byte(doc("https://eu.openrouter.ai/api"))); err != nil {
+		t.Errorf("a lane on OpenRouter's EU address was refused under eu_hosted: %v", err)
+	}
+	if _, err := ParseRouting([]byte(doc("https://openrouter.ai/api"))); err == nil || !strings.Contains(err.Error(), "EU") {
+		t.Errorf("an unpinned lane on OpenRouter's global address: err = %v, want the EU residency refusal", err)
+	}
+	if gap := EURegionPinGap(ProviderConfig{Provider: providerOpenAICompatible, Model: "m", BaseURL: "https://EU.OpenRouter.ai/api/"}); gap != "" {
+		t.Errorf("EURegionPinGap on the EU address = %q, want none", gap)
 	}
 }

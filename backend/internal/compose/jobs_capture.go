@@ -327,8 +327,8 @@ func (w *captureSyncWorker) Work(ctx context.Context, job *river.Job[CaptureSync
 		return jobs.FaultContext(ctx, err)
 	}
 	if err := w.registry.SyncOnce(wsCtx, conn); err != nil {
-		w.log.WarnContext(ctx, "capture connection sync failed",
-			"connection", job.Args.ConnectionID, "provider", job.Args.Provider, "err", err)
+		w.log.WarnContext(ctx, "capture connection sync failed", "connection", job.Args.ConnectionID,
+			"provider", job.Args.Provider, "err", err, rateLimitAttr(err))
 	}
 	return nil
 }

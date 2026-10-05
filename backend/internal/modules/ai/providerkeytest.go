@@ -39,6 +39,9 @@ const (
 	KeyTestNoEndpoint KeyTestReason = "no_endpoint"
 	// KeyTestAuthFailed means the vendor refused the credential.
 	KeyTestAuthFailed KeyTestReason = "auth_failed"
+	// KeyTestPermissionDenied means the vendor accepted the credential and
+	// refused the call: a missing role or an API the account has not enabled.
+	KeyTestPermissionDenied KeyTestReason = "permission_denied"
 	// KeyTestRateLimited means the vendor is throttling the credential, which
 	// says nothing about whether it is valid.
 	KeyTestRateLimited KeyTestReason = "rate_limited"
@@ -93,9 +96,8 @@ func (s *RoutingStore) TestProviderKey(ctx context.Context, provider string) (Ke
 
 // probeProviderKey is the test itself, over a routing document already read.
 //
-// The host comes from boundProviderConfig with no lane: a key belongs to the
-// vendor, not to one tier, so whichever stored binding names the vendor — or
-// the adapter's default — is where it is tried.
+// The host is the provider's: a key belongs to the vendor, not to one lane, so
+// it is tried where the provider is configured, or at the adapter's default.
 func probeProviderKey(
 	ctx context.Context,
 	cfg RoutingConfig,
@@ -111,7 +113,14 @@ func probeProviderKey(
 	if isDecisionProvider(provider) {
 		return probeDecisionKey(ctx, cfg, provider, keys, build.decider)
 	}
-	client, err := build.brain(boundProviderConfig(cfg, provider, ""), keys)
+	binding := providerConfigFor(cfg, provider, "")
+	// A Vertex key is tested on Google's global host, which the model list
+	// reaches whatever location a lane names: a key is the project's, not one
+	// location's.
+	if provider == providerGeminiVertex {
+		binding.Location = vertexMetadataLocation
+	}
+	client, err := build.brain(binding, keys)
 	if err != nil {
 		out.Reason = keyTestRefusal(unavailableFor(err))
 		return out
@@ -125,7 +134,7 @@ func probeProviderKey(
 	defer cancel()
 	models, err := lister.ListModels(asked)
 	if err != nil {
-		out.Reason = keyTestFailure(err)
+		out.Reason = vendorKeyTestFailure(provider, err)
 		return out
 	}
 	out.OK, out.ModelCount, out.Counted = true, len(models), true
@@ -156,7 +165,7 @@ func probeDecisionKey(
 	defer cancel()
 	count, counted, err := client.probeKey(asked, provider)
 	if err != nil {
-		out.Reason = keyTestFailure(err)
+		out.Reason = vendorKeyTestFailure(provider, err)
 		return out
 	}
 	out.OK, out.ModelCount, out.Counted = true, count, counted
@@ -185,13 +194,23 @@ func keyTestRefusal(state ModelAvailability) KeyTestReason {
 // geminiKeyInvalid is the ErrorInfo reason Google APIs give a bad API key.
 const geminiKeyInvalid = "API_KEY_INVALID"
 
-// keyTestFailure reads a vendor's refusal. Only the status is trusted: 401 and
-// 403 are the credential, 429 is the vendor's throttle, and everything else —
+// keyTestFailure reads a vendor's refusal. Only the status is trusted: 401 is
+// the credential, 403 the account's permissions, 429 the throttle, and else —
 // a timeout, a 5xx, a 404 from a host that is not the vendor — is unreachable.
 //
 // Gemini is the exception: it answers an invalid key with 400 and names it
 // API_KEY_INVALID in the error's structured details. The code, not the status,
 // decides — a 400 from a proxy in front of it is not a refused key.
+// vendorKeyTestFailure keeps a 403 a refused key at an endpoint an operator runs:
+// only a named vendor's 403 reliably means the key was accepted.
+func vendorKeyTestFailure(provider string, err error) KeyTestReason {
+	reason := keyTestFailure(err)
+	if d, _ := providerByName(provider); reason == KeyTestPermissionDenied && d.egress == egressOperatorEndpoint {
+		return KeyTestAuthFailed
+	}
+	return reason
+}
+
 func keyTestFailure(err error) KeyTestReason {
 	var refused *listStatusError
 	if !errors.As(err, &refused) {
@@ -202,8 +221,10 @@ func keyTestFailure(err error) KeyTestReason {
 		return KeyTestAuthFailed
 	}
 	switch refused.status {
-	case http.StatusUnauthorized, http.StatusForbidden:
+	case http.StatusUnauthorized:
 		return KeyTestAuthFailed
+	case http.StatusForbidden:
+		return KeyTestPermissionDenied
 	case http.StatusTooManyRequests:
 		return KeyTestRateLimited
 	default:

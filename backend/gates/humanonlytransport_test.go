@@ -89,6 +89,9 @@ var humanOnlyWithoutASession = gatekit.Waive(map[string]string{
 	"resetPassword":        "redeeming that reset token, still before any session exists",
 	"getAuthCapabilities":  "which authentication methods are operational, read by the login screen before anybody has signed in",
 	"getAssistantProfile":  "the public identity and posture of the AI presence, shown before sign-in",
+
+	// Read by machines that hold no seat and never will.
+	"getStatus": "the reachability probe an external uptime monitor calls: a fixed body, no work, nothing disclosed",
 })
 
 // aDealRoomSession is the scheme the buyer's own room authenticates with.

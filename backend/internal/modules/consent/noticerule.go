@@ -82,9 +82,10 @@ func DutyFor(acquisitionKind string) (NoticeDuty, bool) {
 	// not a new acquisition. Opening a case per migrated contact put a whole
 	// portal on the Focus list as overdue disclosures nobody owed.
 	//
-	// Mailbox history is the same move for a mailbox: somebody a seat wrote to
-	// before the mailbox was connected was already in the company's mail, and
-	// reading it here is not a new acquisition.
+	// Mailbox history is the same move for a mailbox: somebody a seat wrote to,
+	// or a received message named on To or Cc, before the mailbox was connected
+	// was already in the company's mail, and reading it here is not a new
+	// acquisition.
 	case "crm_migration", "mailbox_history":
 		return NoticeDuty{}, false
 

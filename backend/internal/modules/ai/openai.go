@@ -246,6 +246,13 @@ func (c *openaiClient) post(ctx context.Context, path string, req model.Request,
 	if err != nil {
 		return nil, err
 	}
+	if def, reasons := openaiDefaultEffort(wire.Model); effort == "" && reasons && req.ThinkingLevel != "" {
+		effort = req.ThinkingLevel
+		// The floor's own rule: a none-default family does not take minimal.
+		if def == effortNone && effort == effortMinimal {
+			effort = effortLow
+		}
+	}
 	if effort == "" {
 		effort = openaiEffortFor(wire.Model, req.ThinkingFloor)
 	}

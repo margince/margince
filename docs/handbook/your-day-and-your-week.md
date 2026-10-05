@@ -72,6 +72,10 @@ The review is written on the Monday after the week and then **Frozen**; there is
 
 ## The Worklist
 
+A lead record does not enter the Worklist by being created, imported or assigned.
+A planned task linked to a lead or an inbound request can enter through the task
+or waiting-message queue. Choose prospects in **Leads**, then schedule outreach.
+
 The Worklist is one ranked list. **The order is the server's**, and the screen
 never re-sorts it.
 

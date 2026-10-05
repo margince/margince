@@ -149,3 +149,117 @@ func TestMailAnotherSeatSentIsNotTheImportersHistory(t *testing.T) {
 		t.Errorf("mail another seat sent made the contact %q, want %q", kind, AcquiredUnknownLegacy)
 	}
 }
+
+// copiedOn is a message the rep's mailbox RECEIVED from somebody else that
+// named the address on Cc. dated is its Date header, which the sender writes;
+// arrived is when the provider says it reached the rep's mailbox.
+func (e *dedupeEnv) copiedOn(
+	ctx context.Context, t *testing.T, email string, dated, arrived time.Time, bulk bool,
+) EnsureCounterpartyInput {
+	t.Helper()
+	activityID := ids.New[ids.ActivityKind]()
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO activity (id, kind, subject, direction, occurred_at, source_system, source_id, source,
+			                      captured_by, counterparty_email, bulk_mail_attested)
+			VALUES ($1, 'email', 'hi', 'inbound', $2, 'gmail', $3, 'gmail:seed', 'connector:gmail',
+			        'sender@elsewhere.test', $4)`,
+			activityID, dated, activityID.String(), bulk); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO activity_participant (activity_id, role, address)
+			VALUES ($1, 'from', 'sender@elsewhere.test'), ($1, 'cc', $2)`, activityID, email); err != nil {
+			return err
+		}
+		_, err := tx.Exec(ctx, `
+			INSERT INTO capture_import (activity_id, user_id, provider_received_at) VALUES ($1, $2, $3)`,
+			activityID, e.rep, arrived)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	return EnsureCounterpartyInput{
+		Email: email, Domain: "elsewhere.test",
+		OwnerID: e.rep, ActivityID: activityID,
+		Source: "gmail:" + activityID.String(), CapturedBy: "agent:capture_counterparty_verdict",
+	}
+}
+
+// Somebody a third party copied on mail the rep's mailbox already held before it
+// was connected was already in the company's correspondence.
+func TestSomebodyCopiedOnMailTheMailboxAlreadyHeldIsMailboxHistory(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	e.connectMailbox(ctx, t, time.Now().Add(-24*time.Hour))
+	old := time.Now().AddDate(-3, 0, 0)
+	in := e.copiedOn(ctx, t, "copied@elsewhere.test", old, old, false)
+
+	if kind := e.ensuredKind(ctx, t, in); kind != AcquiredMailboxHistory {
+		t.Errorf("an address on Cc of mail received three years before the connection is %q, want %q",
+			kind, AcquiredMailboxHistory)
+	}
+}
+
+// The same message arriving after the connection is a new acquisition.
+func TestSomebodyCopiedOnMailReceivedAfterConnectingStaysUnknown(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	e.connectMailbox(ctx, t, time.Now().Add(-48*time.Hour))
+	recent := time.Now().Add(-time.Hour)
+	in := e.copiedOn(ctx, t, "copiednew@elsewhere.test", recent, recent, false)
+
+	if kind := e.ensuredKind(ctx, t, in); kind != AcquiredUnknownLegacy {
+		t.Errorf("an address on Cc of mail received after the connection is %q, want %q", kind, AcquiredUnknownLegacy)
+	}
+}
+
+// A sender can write any Date header. Only the provider's arrival time counts,
+// so a backdated message that arrived after the connection excuses nothing.
+func TestABackdatedHeaderDoesNotMakeReceivedMailHistory(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	e.connectMailbox(ctx, t, time.Now().Add(-48*time.Hour))
+	in := e.copiedOn(ctx, t, "backdated@elsewhere.test", time.Now().AddDate(-5, 0, 0), time.Now().Add(-time.Hour), false)
+
+	if kind := e.ensuredKind(ctx, t, in); kind != AcquiredUnknownLegacy {
+		t.Errorf("a message dated years back that arrived after the connection made the contact %q, want %q",
+			kind, AcquiredUnknownLegacy)
+	}
+}
+
+// A list copying everybody is not correspondence the company held with them.
+func TestBulkMailTheMailboxAlreadyHeldDoesNotMakeHistory(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	e.connectMailbox(ctx, t, time.Now().Add(-24*time.Hour))
+	old := time.Now().AddDate(-2, 0, 0)
+	in := e.copiedOn(ctx, t, "listed@elsewhere.test", old, old, true)
+
+	if kind := e.ensuredKind(ctx, t, in); kind != AcquiredUnknownLegacy {
+		t.Errorf("bulk mail held before the connection made the contact %q, want %q", kind, AcquiredUnknownLegacy)
+	}
+}
+
+// Somebody the seat copied on its own mail is as much a correspondent as the
+// one it was addressed to: the company's mailbox held them both.
+func TestSomebodyWeCopiedBeforeTheMailboxWasConnectedIsMailboxHistory(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	e.connectMailbox(ctx, t, time.Now().Add(-24*time.Hour))
+	in := e.sentBy(ctx, t, e.rep, "addressed@history.test", time.Now().AddDate(-3, 0, 0))
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `
+			INSERT INTO activity_participant (activity_id, role, address) VALUES ($1, 'cc', 'copied@history.test')`,
+			in.ActivityID)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	in.Email = "copied@history.test"
+
+	if kind := e.ensuredKind(ctx, t, in); kind != AcquiredMailboxHistory {
+		t.Errorf("an address the seat copied three years before the connection is %q, want %q",
+			kind, AcquiredMailboxHistory)
+	}
+}

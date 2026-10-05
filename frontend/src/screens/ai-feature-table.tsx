@@ -2,29 +2,31 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
-import { routeHash } from "../app/router";
-import { hashWithParams } from "../app/urlstate";
-import { Badge } from "../design-system/atoms";
+import { Badge, Button } from "../design-system/atoms";
 import { CellStack } from "../design-system/cellstack";
 import { DataTable } from "../design-system/datatable";
 import { useT } from "../i18n";
 import { decisionSkipLabel, tierLabel } from "./ai-decision-labels";
 import { decisionFirstOrder } from "./ai-feature-order";
 import { TaskState } from "./ai-lane-state";
+import { TaskName } from "./ai-task-name";
 import { ModelChain, ModelRef, TermChip } from "./ai-terms";
-import { CALL_TASK_PARAM } from "./aicalls";
-import { settingsHref } from "./settingsrouting";
+import { CALL_TASK_PARAM, callsHrefFor } from "./aicalls";
 
 type Feature = components["schemas"]["AiFeatureRoute"];
 
-// Read-only by design: a task's tier is fixed by the task contract, and the
-// binding a tier names is edited on the Model tiers card.
+// A task's tier is fixed by the task contract, and the binding a tier names is
+// edited on the Model tiers card. `onEdit` opens a task's own request settings:
+// with it the table is the AI tasks card's, which keeps its figures in the
+// sheet and says only which rows an admin customised.
 export function AiFeatureTable({
   rows,
   health,
   canTrace = false,
+  onEdit,
 }: Readonly<{
   rows: Feature[];
+  onEdit?: (row: Feature) => void;
   // Present for a reader who may see how the lanes answer.
   health?: components["schemas"]["AiHealth"];
   // The trace answers on `ai_diagnostics:read` alone (ai/callread.go), so a
@@ -85,12 +87,21 @@ export function AiFeatureTable({
             const changed = impact(row);
             return (
               <CellStack>
-                <span>{row.display_name}</span>
-                <span className="t-caption">
-                  {row.task} · {row.execution_mode}
+                <span title={row.task}>
+                  <TaskName name={row.display_name} summary={row.summary} />
                 </span>
+                {onEdit ? null : (
+                  <span className="t-caption">
+                    {row.task} · {row.execution_mode}
+                  </span>
+                )}
                 {row.decision_first ? (
                   <Badge>{t("aiTasks.decisionFirst")}</Badge>
+                ) : null}
+                {onEdit &&
+                row.overrides &&
+                Object.keys(row.overrides).length > 0 ? (
+                  <Badge tone="accent">{t("aiTasks.custom")}</Badge>
                 ) : null}
                 <TaskState
                   health={health}
@@ -119,7 +130,9 @@ export function AiFeatureTable({
           render: (row: Feature) => (
             <CellStack>
               <TermChip term="tier">{tierLabel(row.leading_tier, t)}</TermChip>
-              {canTrace ? (
+              {/* An editable row reaches its calls from its sheet; the
+                  embeddings row has no sheet, so it keeps the link. */}
+              {canTrace && (!onEdit || row.defaults === undefined) ? (
                 <a className="link-button t-caption" href={callsHref(row.task)}>
                   {t("aiTasks.viewCalls")}
                 </a>
@@ -141,6 +154,26 @@ export function AiFeatureTable({
             </>
           ),
         },
+        ...(onEdit
+          ? [
+              {
+                key: "edit",
+                header: t("aiTasks.settings"),
+                align: "end" as const,
+                // The embeddings lane is not a task an admin tunes: it has no
+                // ladder, thinking or timeout of its own.
+                render: (row: Feature) =>
+                  row.defaults === undefined ? null : (
+                    <Button
+                      onClick={() => onEdit(row)}
+                      aria-label={`${t("aiRouting.edit")} ${row.display_name}`}
+                    >
+                      {t("aiRouting.edit")}
+                    </Button>
+                  ),
+              },
+            ]
+          : []),
       ]}
     />
   );
@@ -148,8 +181,5 @@ export function AiFeatureTable({
 
 /** The call trace narrowed to one task: where a task row sends its reader. */
 function callsHref(task: string): string {
-  return hashWithParams(
-    routeHash(settingsHref("model-calls")),
-    new Map([[CALL_TASK_PARAM, task]]),
-  );
+  return callsHrefFor({ [CALL_TASK_PARAM]: task });
 }

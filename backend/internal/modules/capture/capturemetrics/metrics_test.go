@@ -46,6 +46,7 @@ func TestEveryFamilyIsDeclaredBeforeItsFirstSample(t *testing.T) {
 	fresh(t)
 	mustContain(t, render(),
 		"# TYPE margince_connector_requests_total counter",
+		"# TYPE margince_connector_rate_limited_total counter",
 		"# TYPE margince_connector_request_duration_seconds histogram",
 		"# TYPE margince_capture_backfill_messages_total counter",
 		"# TYPE margince_capture_backfill_stage_seconds histogram",
@@ -63,12 +64,33 @@ func TestARequestIsCountedByItsResultAndTimedByItsOp(t *testing.T) {
 	mustContain(t, render(),
 		`margince_connector_requests_total{provider="gmail",op="get_raw",result="ok"} 1`,
 		`margince_connector_requests_total{provider="gmail",op="get_raw",result="rate_limited"} 1`,
+		`margince_connector_rate_limited_total{provider="gmail",op="get_raw",reason="unspecified"} 1`,
 		`margince_connector_request_duration_seconds_bucket{provider="gmail",op="get_raw",le="0.25"} 0`,
 		`margince_connector_request_duration_seconds_bucket{provider="gmail",op="get_raw",le="0.5"} 1`,
 		`margince_connector_request_duration_seconds_bucket{provider="gmail",op="get_raw",le="+Inf"} 2`,
 		`margince_connector_request_duration_seconds_sum{provider="gmail",op="get_raw"} 1.3`,
 		`margince_connector_request_duration_seconds_count{provider="gmail",op="get_raw"} 2`,
 	)
+}
+
+func TestARateLimitIsCountedUnderTheLimitItNamed(t *testing.T) {
+	fresh(t)
+	ObserveRequest("gmail", OpList, http.StatusForbidden,
+		fmt.Errorf("list: %w", &connector.RateLimitedError{Reason: "userRateLimitExceeded", Status: http.StatusForbidden}), time.Second)
+	ObserveRequest("gmail", OpList, http.StatusTooManyRequests,
+		&connector.RateLimitedError{Reason: "notInTheSet"}, time.Second)
+	ObserveRequest("gmail", OpList, http.StatusTooManyRequests, &connector.RateLimitedError{}, time.Second)
+	ObserveRequest("gmail", OpList, http.StatusOK, nil, time.Second)
+
+	out := render()
+	mustContain(t, out,
+		`margince_connector_rate_limited_total{provider="gmail",op="list",reason="userRateLimitExceeded"} 1`,
+		`margince_connector_rate_limited_total{provider="gmail",op="list",reason="other"} 1`,
+		`margince_connector_rate_limited_total{provider="gmail",op="list",reason="unspecified"} 1`,
+	)
+	if strings.Contains(out, `rate_limited_total{provider="gmail",op="list",reason="ok"`) {
+		t.Errorf("a successful call was counted as rate limited:\n%s", out)
+	}
 }
 
 func TestARequestResultNamesWhatARetryWouldChange(t *testing.T) {

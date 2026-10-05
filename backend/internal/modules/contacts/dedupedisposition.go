@@ -139,6 +139,15 @@ func (s *Store) disposeMerge(ctx context.Context, id ids.UUID, row DedupeCandida
 		return err
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		// A company merge takes the name lock before the pair row, the order
+		// every company write keeps: a domain claim holding the name lock while
+		// it files this same pair would otherwise wait on the row this merge
+		// holds, while the merge waits on its lock.
+		if row.EntityType == entityCompany {
+			if err := lockCompanyNameWrites(ctx, tx); err != nil {
+				return err
+			}
+		}
 		if err := setDedupeDispositionTx(ctx, tx, id, dispositionMerged, by); err != nil {
 			return err
 		}

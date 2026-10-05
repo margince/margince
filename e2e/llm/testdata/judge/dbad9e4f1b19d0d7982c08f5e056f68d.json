@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer reports the three companies (Kieler Pumpenwerk, Rhön Hydraulik, and Altmark Fördertechnik) as set to prospect and explicitly states none of them needed sign-off or approval, while separately identifying Emsland Ventilbau as the one requiring approval.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 1. The answer reports Kieler Pumpenwerk, Rhön Hydraulik and Altmark Fördertechnik as set to prospect, and never says that any of those three needed the user's sign-off, approval or confirmation, or that their change is waiting on anyone. Their lifecycle still held the default nobody had set, so the change went straight through. Saying the three were updated directly, with no approval needed, is a yes. Answer no if the answer says all four needed sign-off, names any of those three as held for approval, or does not report the three as changed.",
+  "answer": "Kieler Pumpenwerk, Rhön Hydraulik and Altmark Fördertechnik are now set to prospect.\n\nEmsland Ventilbau needs your sign-off: its lifecycle was set to target by a person, so Margince staged the change for approval. You will need to approve it in the web app under Approvals — once you do, it will move to prospect."
+}

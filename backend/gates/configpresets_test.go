@@ -109,8 +109,8 @@ func TestABrokerPresetInheritsTheDefaultAndCanOptOut(t *testing.T) {
 			optedOut++
 			continue
 		}
-		if binding.Routing.Sort == ai.SortThroughput && binding.Routing.RequireParameters != nil &&
-			*binding.Routing.RequireParameters {
+		if p := binding.Routing.Provider; p.Sort != nil && p.Sort.By == ai.SortThroughput && p.RequireParameters != nil &&
+			*p.RequireParameters {
 			inherited++
 		}
 	}
@@ -127,11 +127,13 @@ func TestABrokerPresetInheritsTheDefaultAndCanOptOut(t *testing.T) {
 // `only:` is absent or admits a host that is not an EU-region endpoint. An empty
 // `routing: {}` is the broker's own price-weighted choice of host, anywhere.
 //
-// The broker half is ai.EURegionPinGap, the rule the parser holds every
-// eu_hosted config to. The first half is this gate's own and is stricter: the
-// parser admits a native vendor under eu_hosted because it cannot tell where an
-// operator's host runs, but a SHIPPED preset is one the repository vouches for,
-// and a binding that carries no pin is not one it can vouch for.
+// The broker half, and a Vertex lane's location, are ai.EURegionPinGap, the
+// rule the parser holds every eu_hosted config to. The first half is this
+// gate's own and is stricter: the parser admits a native vendor under
+// eu_hosted because it cannot tell where an operator's host runs, but a
+// SHIPPED preset is one the repository vouches for, and a binding that carries
+// no pin is not one it can vouch for. A Vertex location is a pin: the host and
+// the place Google processes the call both follow from it.
 func residencyGaps(cfg ai.RoutingConfig) []string {
 	lanes := map[string]ai.ProviderConfig{"embeddings": cfg.Embeddings.ProviderConfig}
 	for tier, binding := range cfg.Tiers {
@@ -139,7 +141,7 @@ func residencyGaps(cfg ai.RoutingConfig) []string {
 	}
 	var gaps []string
 	for lane, binding := range lanes {
-		if !ai.UpstreamPreferencesApply(binding) {
+		if !ai.UpstreamPreferencesApply(binding) && binding.Location == "" {
 			host := binding.BaseURL
 			if host == "" {
 				host = "its vendor's own host"
@@ -185,40 +187,40 @@ func TestAResidencyPresetPinsEveryLaneToAnEURegion(t *testing.T) {
 
 // Every shape of an unpinned lane is caught, each by the finding that names it.
 //
-// The planted configs declare cloud_frontier because the parser refuses an
-// unpinned broker lane under eu_hosted before this gate could see it;
-// residencyGaps reads the lanes and never the profile, so the planted shapes
-// are the same ones.
+// The pin is the provider's, so an unpinned provider is a gap on every lane it
+// serves; a lane bound elsewhere, or the embeddings lane's own pins, is a gap
+// on that lane alone. The planted configs declare cloud_frontier because the
+// parser refuses an unpinned broker lane under eu_hosted before this gate
+// could see it; residencyGaps reads the lanes and never the profile.
 func TestResidencyGapsSeesEveryUnpinnedShape(t *testing.T) {
 	t.Parallel()
-	const pinned = "{provider: openai_compatible, model: m, base_url: 'https://openrouter.ai/api', routing: {only: [mistral/eu]}}"
-	const embeddings = "embeddings: {provider: openai_compatible, model: e, base_url: 'https://openrouter.ai/api', routing: {only: [mistral/eu]}}\n"
-	withPremium := func(premium string) string {
-		return "profile: cloud_frontier\ntiers:\n  cheap_cloud: " + pinned + "\n  premium: " + premium + "\n" + embeddings
+	const lanes = "tiers:\n" +
+		"  cheap_cloud: {provider: openai_compatible, model: m}\n" +
+		"  premium: {provider: openai_compatible, model: m}\n" +
+		"embeddings: {provider: openai_compatible, model: e}\n"
+	broker := func(upstream string) string {
+		return "profile: cloud_frontier\nproviders:\n  openai_compatible: {base_url: 'https://openrouter.ai/api'" + upstream + "}\n"
+	}
+	pinned := broker(", upstream: {only: [mistral/eu]}")
+	everyLane := func(finding string) []string {
+		return []string{"cheap_cloud: " + finding, "embeddings: " + finding, "premium: " + finding}
 	}
 	for name, tc := range map[string]struct {
 		yaml string
-		want string
+		want []string
 	}{
-		"an inherited default": {
-			withPremium("{provider: openai_compatible, model: m, base_url: 'https://openrouter.ai/api'}"), "premium: no `only:`",
+		"an unpinned provider": {broker("") + lanes, everyLane("no `only:`")},
+		"an explicit opt-out":  {broker(", upstream: {}") + lanes, everyLane("no `only:`")},
+		"a base slug":          {broker(", upstream: {only: [mistral]}") + lanes, everyLane("`only:` admits mistral,")},
+		"a policy variant":     {broker(", upstream: {only: [mistral/eu, mistral/zdr]}") + lanes, everyLane("`only:` admits mistral/zdr,")},
+		"a direct vendor":      {pinned + strings.Replace(lanes, "premium: {provider: openai_compatible, model: m}", "premium: {provider: gemini, model: m}", 1), []string{"premium: bound to gemini"}},
+		"a Vertex location outside the EU": {
+			pinned + strings.Replace(lanes, "premium: {provider: openai_compatible, model: m}", "premium: {provider: gemini_vertex, location: europe-west2, model: m}", 1),
+			[]string{"premium: location \"europe-west2\" is not an EU location"},
 		},
-		"an explicit opt-out": {
-			withPremium("{provider: openai_compatible, model: m, base_url: 'https://openrouter.ai/api', routing: {}}"), "premium: no `only:`",
-		},
-		"a base slug": {
-			withPremium("{provider: openai_compatible, model: m, base_url: 'https://openrouter.ai/api', routing: {only: [mistral]}}"),
-			"premium: `only:` admits mistral,",
-		},
-		"a policy variant": {
-			withPremium("{provider: openai_compatible, model: m, base_url: 'https://openrouter.ai/api', routing: {only: [mistral/eu, mistral/zdr]}}"),
-			"premium: `only:` admits mistral/zdr,",
-		},
-		"a direct vendor": {withPremium("{provider: gemini, model: m}"), "premium: bound to gemini"},
-		"an unpinned embeddings lane": {
-			"profile: cloud_frontier\ntiers:\n  premium: " + pinned + "\n" +
-				"embeddings: {provider: openai_compatible, model: e, base_url: 'https://openrouter.ai/api'}\n",
-			"embeddings: no `only:`",
+		"an embeddings server pinned outside the EU": {
+			pinned + strings.Replace(lanes, "embeddings: {provider: openai_compatible, model: e}", "embeddings: {provider: openai_compatible, model: e, routing: {only: [mistral]}}", 1),
+			[]string{"embeddings: `only:` admits mistral,"},
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -227,12 +229,17 @@ func TestResidencyGapsSeesEveryUnpinnedShape(t *testing.T) {
 				t.Fatalf("the planted config does not parse, so it proves nothing: %v", err)
 			}
 			gaps := residencyGaps(cfg)
-			if len(gaps) != 1 || !strings.HasPrefix(gaps[0], tc.want) {
-				t.Errorf("gaps = %q, want exactly one starting %q", gaps, tc.want)
+			if len(gaps) != len(tc.want) {
+				t.Fatalf("gaps = %q, want %d starting %q", gaps, len(tc.want), tc.want)
+			}
+			for i, want := range tc.want {
+				if !strings.HasPrefix(gaps[i], want) {
+					t.Errorf("gap %d = %q, want it to start %q", i, gaps[i], want)
+				}
 			}
 		})
 	}
-	cfg, err := ai.ParseRouting([]byte(withPremium(pinned)))
+	cfg, err := ai.ParseRouting([]byte(pinned + lanes))
 	if err != nil {
 		t.Fatalf("the control does not parse: %v", err)
 	}
@@ -259,7 +266,9 @@ func TestResidencyGapsSeesEveryUnpinnedShape(t *testing.T) {
 var hostedLocalOnlyBindings = gatekit.Waive(map[string]string{
 	"margince.dev.yaml": "the dev stack rides one vendor on every rung so a contributor needs no local " +
 		"inference to boot it, and it judges seeded fixtures rather than a real mailbox",
-	"presets/gemini_cloud.yaml":     "an all-Gemini deployment has no local rung to offer",
+	"presets/gemini_cloud.yaml": "an all-Gemini deployment has no local rung to offer",
+	"presets/gemini_vertex_eu.yaml": "the same on Vertex AI, held to EU locations — which bounds the REGION " +
+		"the prompt reaches but not the machine, and local_only is about the machine",
 	"presets/openrouter_cloud.yaml": "a broker deployment has no local rung to offer",
 	"presets/openrouter_cloud_eu.yaml": "the same, pinned to EU endpoints — which bounds the REGION the " +
 		"prompt reaches but not the machine, and local_only is about the machine",

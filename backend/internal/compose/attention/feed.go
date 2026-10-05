@@ -162,6 +162,9 @@ type Service struct {
 	// contactTouch is OPTIONAL in the same way: nil means a row names its
 	// contact and not when either side last wrote.
 	contactTouch ContactTouch
+	// employers is OPTIONAL in the same way: nil means a meeting row names who
+	// it was with and not which account they work for.
+	employers ContactEmployers
 	// dealMoves is OPTIONAL in the same way: nil means a deal row names its
 	// problem and no step, which is what every deal row did before this seam.
 	dealMoves DealMoves
@@ -198,10 +201,6 @@ type Service struct {
 	namedTeams  NamedTeams
 	weeklyPlans WeeklyPlans
 	planRows    []ranked
-	// leads is the inbound leads still owed a first reply. Optional in the
-	// ordinary way: nil is a feed that does not read leads at all, which the
-	// queue reports as an absent source rather than as an empty one.
-	leads LeadResponses
 	// overdueLoad is the team board's COUNTING reader for tasks, beside the
 	// bounded listing reader the ranked queue uses. Required BY THE BOARD —
 	// teamLoad refuses without it — and read by nothing else, so a feed

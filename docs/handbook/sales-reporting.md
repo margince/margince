@@ -2,7 +2,7 @@
 
 ## Where do I start my sales review?
 
-Open **Analytics → Performance** when your administrator has enabled sales reporting.
+Open **Analytics → Performance**.
 Choose **Sales** for sales won, pipeline stages, sales by salesperson and time in stage, or
 **SDR** for confirmed meetings held and accepted opportunities. Choose your record
 scope and period. Stage charts require a single pipeline. A rep's personal scope
