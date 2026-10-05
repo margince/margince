@@ -24,7 +24,7 @@ const (
 	indexKey = "ai:provider-health-index"
 	// keyTTL lets a status nobody refreshes or clears (a process that died
 	// while the provider was down) disappear on its own.
-	keyTTL = time.Hour
+	keyTTL = 30 * time.Minute
 )
 
 // Redis reads and writes provider statuses in one Redis.

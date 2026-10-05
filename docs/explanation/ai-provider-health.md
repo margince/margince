@@ -74,7 +74,7 @@ message telling the user to contact their system administrator
 a view shared between the API and the worker through Redis: every process
 publishes its status changes and the request reads the merged view, where the worst or
 blocking status wins, so an outage only the worker saw still shows. Without Redis a
-process shows only its own view. Keys expire after about an hour, so a status is
+process shows only its own view. Keys expire after about half an hour, so a status is
 refreshed every 10 minutes while the provider stays unhealthy. It is not a probe. Settings → AI models marks the
 provider and Settings → System health shows the **AI provider status** card. Work an outage already parked
 is reopened by an operator:
