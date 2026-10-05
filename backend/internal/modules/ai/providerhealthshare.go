@@ -147,7 +147,7 @@ func (s *healthSharer) load(ctx context.Context) map[string]model.ProviderHealth
 // report lists the providers that are not OK in this process or in any other
 // that shares its status, by name.
 func (b *providerBook) report(ctx context.Context) []ProviderHealthEntry {
-	return mergeProviderHealth(b.snapshot(), b.sharer.load(ctx))
+	return mergeProviderHealth(b.snapshot(), b.sharer.load(ctx)) //nolint:contextcheck // snapshot reads memory; the Redis write it may queue runs on the drain goroutine, which owns its own deadline by design
 }
 
 // mergeProviderHealth keeps one entry per provider. A blocking status beats a

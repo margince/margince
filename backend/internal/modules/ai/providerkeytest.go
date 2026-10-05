@@ -96,7 +96,7 @@ func (s *RoutingStore) TestProviderKey(ctx context.Context, provider string) (Ke
 		// The vendor just answered with this key: whatever the tracker holds
 		// against the provider is out of date, and waiting for the next call to
 		// find that out would keep a fixed provider reported down.
-		sharedProviderHealth.forget(provider)
+		sharedProviderHealth.forget(provider) //nolint:contextcheck // the clear is queued and written by the drain goroutine, which owns its own deadline by design
 	}
 	return tested, nil
 }
