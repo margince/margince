@@ -267,11 +267,9 @@ function EmailBody({
   }
   return (
     <div className="emaildetail__body">
-      <Parties
-        presentation={presentation}
-        formatWhen={formatWhen}
-        renderRecords={renderRecords}
-      />
+      <EmailEnvelope presentation={presentation} formatWhen={formatWhen}>
+        <FiledUnder presentation={presentation} render={renderRecords} />
+      </EmailEnvelope>
       <EmailText body={presentation.body ?? ""} />
       <Attachments files={presentation.attachments} />
     </div>
@@ -417,21 +415,22 @@ function PartyLine({
 }
 
 /**
- * The envelope: who the message was with, when it was sent, and what it is
- * filed against — everything a reader wants BEFORE the words.
+ * The envelope: who the message was with and when it was sent — everything a
+ * reader wants BEFORE the words, as one block above them.
  *
- * These facts used to be scattered under the body, so on a message longer than
- * a screen the date arrived after the reader had finished reading. They are
- * one block above it because they are one kind of thing.
+ * Exported because every reading of a message draws it: `EmailDetail` adds its
+ * filing line as `children`, and `SourceEmailPanel` draws it bare, so a task's
+ * source mail names its sender rather than leaving the quoted history's header
+ * lines as the only ones on screen.
  */
-function Parties({
+export function EmailEnvelope({
   presentation,
   formatWhen,
-  renderRecords,
+  children,
 }: Readonly<{
   presentation: EmailPresentation;
   formatWhen: (iso: string) => string;
-  renderRecords?: (presentation: EmailPresentation) => ReactNode;
+  children?: ReactNode;
 }>) {
   const t = useT();
   return (
@@ -458,7 +457,7 @@ function Parties({
           {t("email.detail.bccWithheld")}
         </p>
       )}
-      <FiledUnder presentation={presentation} render={renderRecords} />
+      {children}
     </div>
   );
 }

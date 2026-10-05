@@ -108,6 +108,10 @@ func (s *Store) captureEmailRequest(ctx context.Context, tx pgx.Tx, messageID, u
 	if err != nil {
 		return err
 	}
-	_, _, err = s.LogActivityTx(ctx, tx, emailRequestTaskInput(source, userID, asOf))
+	request, err := emailRequestTask(ctx, tx, source, userID, asOf)
+	if err != nil {
+		return err
+	}
+	_, _, err = s.LogActivityTx(ctx, tx, request)
 	return err
 }
