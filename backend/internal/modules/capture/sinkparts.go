@@ -201,6 +201,35 @@ func (s *Sink) recordParts(
 	return nil
 }
 
+// keepParts stores a new activity's files, or for a private message names them
+// on rows without bytes, and returns the record without the parts it withheld.
+func (s *Sink) keepParts(
+	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
+	rec connector.NormalizedRecord, fields ActivityFields,
+) (connector.NormalizedRecord, error) {
+	private, verdict, err := messageIsPrivateTx(ctx, tx, rec, fields)
+	if err != nil {
+		return rec, err
+	}
+	var withheldParts []connector.Part
+	if private {
+		withheldParts = rec.Parts
+		var withheld int
+		rec, withheld = stripPersonalParts(rec)
+		if err := s.personalPartsWithheld(ctx, tx, rec, withheld, verdict); err != nil {
+			return rec, err
+		}
+	}
+	staged, err := s.stageParts(ctx, rec)
+	if err != nil {
+		return rec, err
+	}
+	if err := s.recordParts(ctx, tx, activityID, rec, fields, staged); err != nil {
+		return rec, err
+	}
+	return rec, s.recordWithheldParts(ctx, tx, activityID, rec, fields, withheldParts)
+}
+
 // recordWithheldParts names the files a private message carried, on rows with
 // no bytes behind them, so its owner still sees what was attached.
 func (s *Sink) recordWithheldParts(
