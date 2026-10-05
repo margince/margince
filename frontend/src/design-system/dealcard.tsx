@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { ListPlus, Mail, Send, Sparkles } from "lucide-react";
+import { ListPlus, Mail, MailPlus, Send, Sparkles } from "lucide-react";
 import type { ReactNode } from "react";
 import { calendarDay, middayInstant } from "../format/calendarday";
 import {
@@ -255,20 +255,26 @@ function DealCardFoot({
   }
   return (
     <span className="deal-foot">
-      {deal.stalled && (
-        <span className="deal-stall">
-          <Badge tone="warning">{t("deal.stalledBadge")}</Badge>
-          {/* How long it has sat is the size of the stall, and only then: on a
-              healthy card the number is a fact nobody acts on. */}
-          <span className="deal-age">{formatDuration(deal.ageMs, locale)}</span>
-        </span>
-      )}
-      {deal.lastEmail && (
-        <DealMailChip mail={deal.lastEmail} aside={mailAside?.(deal)} />
-      )}
-      {deal.singleThreaded && (
-        <Badge tone="danger">{t("deal.singleThreaded")}</Badge>
-      )}
+      {/* The facts wrap inside their own box, so a card with every alarm at
+          once still holds its verbs at the trailing edge of the first line. */}
+      <span className="deal-foot-facts">
+        {deal.stalled && (
+          <span className="deal-stall">
+            <Badge tone="warning">{t("deal.stalledBadge")}</Badge>
+            {/* How long it has sat is the size of the stall, and only then: on
+                a healthy card the number is a fact nobody acts on. */}
+            <span className="deal-age">
+              {formatDuration(deal.ageMs, locale)}
+            </span>
+          </span>
+        )}
+        {deal.lastEmail && (
+          <DealMailChip mail={deal.lastEmail} aside={mailAside?.(deal)} />
+        )}
+        {deal.singleThreaded && (
+          <Badge tone="danger">{t("deal.singleThreaded")}</Badge>
+        )}
+      </span>
       {verbs && <DealCardVerbs actions={actions} />}
     </span>
   );
@@ -299,7 +305,10 @@ function DealCardVerbs({ actions }: Readonly<{ actions: DealCardActions }>) {
           inline
           variant="ghost"
           label={t("contact.action.email")}
-          icon={<Mail aria-hidden="true" />}
+          // Not the bare envelope: the mail chip beside it draws that glyph
+          // for mail RECEIVED, and one glyph on one line for two things is a
+          // reader pressing the wrong one.
+          icon={<MailPlus aria-hidden="true" />}
           onClick={actions.onEmail}
         />
       )}

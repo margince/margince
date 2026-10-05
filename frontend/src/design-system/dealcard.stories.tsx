@@ -32,9 +32,10 @@ function boardDeal(extra?: Partial<BoardDeal>): BoardDeal {
   };
 }
 
-// The card in each reading it has, at the board's own column width: the slots
-// stay level from card to card, and only a card that needs the reader carries
-// colour. Every card here is handed all three verbs.
+// Each state a card can be in, at the board's own column width: the slots stay
+// level from card to card, and only a card that needs the reader carries
+// colour. Every card is handed the verbs the deals board would give it, so an
+// archived one gets the summary alone.
 const verbs = {
   onSummary: () => undefined,
   onEmail: () => undefined,
@@ -94,7 +95,7 @@ function StatesColumn() {
             deal={{ ...deal, id: label }}
             href="#/deals/d2"
             zone="Europe/Berlin"
-            actions={verbs}
+            actions={deal.archived ? { onSummary: verbs.onSummary } : verbs}
           />
         </div>
       ))}

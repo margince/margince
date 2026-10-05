@@ -445,12 +445,19 @@
    of the line still opens the deal like every other part of the card. */
 .deal-card .deal-foot {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-1) var(--space-3);
+  align-items: flex-start;
+  gap: var(--space-3);
   margin-top: var(--space-1);
   padding-top: var(--space-2);
   border-top: 1px solid var(--paneEdge);
+}
+.deal-card .deal-foot-facts {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  min-width: 0;
 }
 .deal-card .deal-stall {
   display: inline-flex;
@@ -487,8 +494,8 @@
   position: relative;
   z-index: 1;
   display: inline-flex;
+  flex: none;
   gap: var(--gapActions);
-  margin-inline-start: auto;
 }
 /* Bare glyphs, with the ground coming back under the pointer: a ground and an
    edge on every verb is sixty buttons on a column of twenty cards, where the
