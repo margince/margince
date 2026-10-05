@@ -15,23 +15,34 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// ClaimOnTask is one open claim a task stands for, and the contact it is filed
+// on, which is the record settling it writes.
+type ClaimOnTask struct {
+	ID      ids.UUID
+	Contact ids.UUID
+}
+
 // OpenClaimsOnTask lists the open claims a task stands for. A claim and the
 // task an extracted commitment became settle together, and this is the claim
 // half of that question.
-func (s *Store) OpenClaimsOnTask(ctx context.Context, taskID ids.UUID) ([]ids.UUID, error) {
+func (s *Store) OpenClaimsOnTask(ctx context.Context, taskID ids.UUID) ([]ClaimOnTask, error) {
 	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
 		return nil, err
 	}
-	var out []ids.UUID
+	var out []ClaimOnTask
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
-			SELECT id FROM conversation_claim
+			SELECT id, contact_id FROM conversation_claim
 			 WHERE task_activity_id = $1 AND status = 'open' AND archived_at IS NULL
 			 ORDER BY id`, taskID)
 		if err != nil {
 			return fmt.Errorf("read the claims on a task: %w", err)
 		}
-		out, err = pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+		out, err = pgx.CollectRows(rows, func(row pgx.CollectableRow) (ClaimOnTask, error) {
+			var c ClaimOnTask
+			err := row.Scan(&c.ID, &c.Contact)
+			return c, err
+		})
 		return err
 	})
 	return out, err

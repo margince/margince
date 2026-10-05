@@ -15,21 +15,28 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // keptCommitment is a colleague's commitment in a meeting with one customer:
 // a task for the colleague, and a claim on the customer pointing at it.
 type keptCommitment struct {
 	*transcriptEnv
-	task, claim ids.UUID
-	settle      *CommitmentSettleTrigger
+	task, claim, customer ids.UUID
+	settle                *CommitmentSettleTrigger
 }
 
 func seedKeptCommitment(t *testing.T) keptCommitment {
 	t.Helper()
 	e := setupTranscript(t)
 	e.WsExec(t, `UPDATE app_user SET display_name = 'Priya Raman' WHERE id = $1`, e.Rep2)
-	linkInes(t, e)
+	// Stored roles, because the settle asks the authority the seat really
+	// holds rather than a permission set bound onto a test context.
+	e.GrantRole(t, e.Rep2, "rep")
+	e.GrantRole(t, e.Rep3, "rep")
+	e.GrantRole(t, e.AdminUser, "admin")
+	ines := linkInes(t, e)
+	e.WsExec(t, `UPDATE contact SET owner_id = $2 WHERE id = $1`, ines, e.Rep2)
 	e.read(t, cannedBrain{reply: ownedReply(t, "Priya Raman", 0.9)})
 	task, err := ids.Parse(e.wsString(t, `SELECT id::text FROM activity WHERE kind = 'task'`))
 	if err != nil {
@@ -40,7 +47,7 @@ func seedKeptCommitment(t *testing.T) keptCommitment {
 		t.Fatalf("want the claim on the customer pointing at the task: %v", err)
 	}
 	return keptCommitment{
-		transcriptEnv: e, task: task, claim: claim,
+		transcriptEnv: e, task: task, claim: claim, customer: ines,
 		settle: NewCommitmentSettleTrigger(e.Pool, slog.Default()),
 	}
 }
@@ -138,5 +145,41 @@ func TestDismissingOrReopeningSettlesNothingElse(t *testing.T) {
 	kept.deliver(t, kept.newest(t, eventActivityUpdated, `envelope->'entity'->>'id' = $2`, kept.task.String()))
 	if got := kept.claimStatus(t); got != claimStatusDone {
 		t.Errorf("reopening the task moved its kept commitment to %q", got)
+	}
+}
+
+// Settling a commitment does not complete a task the person settling it could
+// not change themselves: someone who may update contacts but no activity keeps
+// their hands off the colleague's task.
+func TestSettlingACommitmentLeavesATaskTheSettlerMayNotChange(t *testing.T) {
+	k := seedKeptCommitment(t)
+	k.WsExec(t, `DELETE FROM role_assignment WHERE user_id = $1`, k.Rep3)
+	key := "claims-only-" + k.Rep3.String()
+	k.WsExec(t, `INSERT INTO role (key, name, permissions) VALUES ($1, 'Claims only', $2::jsonb)`,
+		key, `{"objects":{"contact":{"read":true,"update":true}},"row_scope":"all"}`)
+	k.WsExec(t, `INSERT INTO role_assignment (role_id, user_id) SELECT r.id, $1 FROM role r WHERE r.key = $2`,
+		k.Rep3, key)
+	settler := k.As(k.Rep3, []ids.UUID{k.Team2}, principal.Permissions{
+		RoleKeys: []string{key}, RowScope: principal.RowScopeAll,
+		Objects: map[string]principal.ObjectGrant{"contact": {Read: true, Update: true}},
+	})
+	if err := k.Contacts.SettleConversationClaim(settler, k.claim, claimStatusDone); err != nil {
+		t.Fatalf("settling the commitment: %v", err)
+	}
+	k.deliver(t, k.newest(t, eventClaimChanged, `envelope->'payload'->>'claim_id' = $2`, k.claim.String()))
+	if got := k.taskDone(t); got != "false" {
+		t.Errorf("someone with no activity grant completed a task by settling its commitment")
+	}
+}
+
+// Ticking a task does not settle a commitment on a contact the person ticking
+// it may not update.
+func TestTickingATaskLeavesACommitmentOnAContactTheyMayNotUpdate(t *testing.T) {
+	k := seedKeptCommitment(t)
+	k.WsExec(t, `UPDATE contact SET owner_id = $2 WHERE id = $1`, k.customer, k.Rep3)
+	k.setDone(t, true)
+	k.deliver(t, k.newest(t, eventActivityUpdated, `envelope->'entity'->>'id' = $2`, k.task.String()))
+	if got := k.claimStatus(t); got != "open" {
+		t.Errorf("ticking a task settled a commitment on a contact the rep may not update (status %q)", got)
 	}
 }

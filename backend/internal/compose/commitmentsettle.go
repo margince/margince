@@ -14,6 +14,15 @@ package compose
 // The two halves live in two modules that may not import each other, which
 // is why the edge sits in compose.
 //
+// WHOSE RIGHT IT IS. The write runs as the product, but only after asking the
+// person who caused the event whether they could make it themselves: ticking
+// a task you hold must not settle a claim on a contact you may not update, and
+// settling a claim must not complete a colleague's task you may not change.
+// A human answers for themselves, an agent or connector for the human it acts
+// for; an agent acting for nobody settles nothing. A change the product made
+// itself is followed, because the product's own passes are what the rules
+// above already govern.
+//
 // Each reaction is a no-op when the other side is already done, so the pair
 // cannot loop: completing the task emits activity.updated, which finds the
 // claim already done and writes nothing. Reopening a task leaves its claim
@@ -24,13 +33,21 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"log/slog"
+	"strings"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -47,15 +64,20 @@ const claimStatusDone = "done"
 
 // CommitmentSettleTrigger keeps a commitment and its task settled together.
 type CommitmentSettleTrigger struct {
-	claims *contacts.Store
-	tasks  *activities.Store
-	log    *slog.Logger
+	pool     *pgxpool.Pool
+	claims   *contacts.Store
+	tasks    *activities.Store
+	identity *identity.Service
+	log      *slog.Logger
 }
 
 // NewCommitmentSettleTrigger builds the consumer over the installation's stores.
 func NewCommitmentSettleTrigger(pool *pgxpool.Pool, log *slog.Logger) *CommitmentSettleTrigger {
 	db := InstallationDB(pool)
-	return &CommitmentSettleTrigger{claims: contacts.NewStore(db), tasks: activities.NewStore(db), log: log}
+	return &CommitmentSettleTrigger{
+		pool: pool, claims: contacts.NewStore(db), tasks: activities.NewStore(db),
+		identity: identity.NewService(pool), log: log,
+	}
 }
 
 // HandleEvent routes one envelope. An event this consumer does not act on
@@ -72,39 +94,110 @@ func (t *CommitmentSettleTrigger) HandleEvent(ctx context.Context, env events.En
 		if !t.readPayload(ctx, env, &payload) || payload.ChangedFields.IsDone == nil || !*payload.ChangedFields.IsDone {
 			return nil
 		}
-		return t.settleClaimsOf(ctx, env.Entity.ID)
+		return t.settleClaimsOf(ctx, env.Actor, env.Entity.ID)
 	case eventClaimChanged:
 		var payload crmcontracts.PublicEventConversationClaimChanged
 		if !t.readPayload(ctx, env, &payload) || payload.Status != claimStatusDone {
 			return nil
 		}
-		return t.completeTaskOf(ctx, ids.UUID(payload.ClaimId))
+		return t.completeTaskOf(ctx, env.Actor, ids.UUID(payload.ClaimId))
 	}
 	return nil
 }
 
-// settleClaimsOf settles every open claim a completed task stands for.
-func (t *CommitmentSettleTrigger) settleClaimsOf(ctx context.Context, taskID ids.UUID) error {
+// settleClaimsOf settles every open claim a completed task stands for, on
+// each contact the person who completed it could update.
+func (t *CommitmentSettleTrigger) settleClaimsOf(ctx context.Context, by events.Actor, taskID ids.UUID) error {
 	claims, err := t.claims.OpenClaimsOnTask(ctx, taskID)
 	if err != nil {
 		return err
 	}
 	for _, claim := range claims {
-		if err := t.claims.SettleConversationClaim(ctx, claim, claimStatusDone); err != nil {
+		allowed, err := t.originMayWrite(ctx, by, string(recordTypeContact), claim.Contact)
+		if err != nil {
+			return err
+		}
+		if !allowed {
+			continue
+		}
+		if err := t.claims.SettleConversationClaim(ctx, claim.ID, claimStatusDone); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-// completeTaskOf completes the task a claim settled as done became, if any.
-func (t *CommitmentSettleTrigger) completeTaskOf(ctx context.Context, claimID ids.UUID) error {
+// completeTaskOf completes the task a claim settled as done became, if the
+// person who settled the claim could complete that task themselves.
+func (t *CommitmentSettleTrigger) completeTaskOf(ctx context.Context, by events.Actor, claimID ids.UUID) error {
 	task, status, err := t.claims.ClaimTask(ctx, claimID)
 	if err != nil || task == nil || status != claimStatusDone {
 		return err
 	}
+	allowed, err := t.originMayWrite(ctx, by, string(recordTypeActivity), *task)
+	if err != nil || !allowed {
+		return err
+	}
 	_, err = t.tasks.CompleteTask(ctx, ids.From[ids.ActivityKind](*task))
 	return err
+}
+
+// originMayWrite asks whether whoever caused the event could change this row
+// themselves: the object grant to update it and write authority over the row,
+// asked as them.
+func (t *CommitmentSettleTrigger) originMayWrite(
+	ctx context.Context, by events.Actor, table string, id ids.UUID,
+) (bool, error) {
+	if by.Type == string(principal.PrincipalSystem) {
+		return true, nil
+	}
+	seat, ok := originSeat(by)
+	if !ok {
+		return false, nil
+	}
+	ws, err := t.identity.InstallationWorkspace(ctx)
+	if err != nil {
+		return false, err
+	}
+	ctx = principal.WithWorkspaceID(ctx, ws.UUID)
+	rbac, seatType, err := t.identity.EffectiveAuthority(ctx, ws.UUID, seat)
+	if errors.Is(err, apperrors.ErrNotFound) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("commitment settle: resolving who caused the change: %w", err)
+	}
+	asThem := principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: principal.HumanIDPrefix + seat.String(), UserID: seat,
+		SeatType: seatType, TeamIDs: rbac.TeamIDs, Permissions: rbac.Permissions,
+	})
+	if err := auth.Require(asThem, table, principal.ActionUpdate); err != nil {
+		return false, nil
+	}
+	err = database.WithWorkspaceTx(asThem, t.pool, func(tx pgx.Tx) error {
+		// An activity's write rule is its own: its audience, not an owner.
+		if table == string(recordTypeActivity) {
+			return auth.EnsureActivityWritableIn(asThem, tx, id, true)
+		}
+		return auth.EnsureWritableLive(asThem, tx, table, id)
+	})
+	if errors.Is(err, apperrors.ErrPermissionDenied) || errors.Is(err, apperrors.ErrNotFound) {
+		return false, nil
+	}
+	return err == nil, err
+}
+
+// originSeat is the human behind an event's actor: the human themselves, or
+// the one an agent or connector acted for.
+func originSeat(by events.Actor) (ids.UUID, bool) {
+	if by.Type == string(principal.PrincipalHuman) {
+		seat, err := ids.Parse(strings.TrimPrefix(by.ID, principal.HumanIDPrefix))
+		return seat, err == nil
+	}
+	if by.OnBehalfOf != nil {
+		return *by.OnBehalfOf, true
+	}
+	return ids.UUID{}, false
 }
 
 // readPayload decodes an envelope's payload. One that will not decode is
