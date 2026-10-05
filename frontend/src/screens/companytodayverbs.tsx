@@ -13,7 +13,7 @@ import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
 import { stable } from "../format/collate";
 import type { useT } from "../i18n";
-import { citationOpensRecord } from "./companycitations";
+import { citationOpensRecord } from "./record360";
 import "./record360/record360.css";
 
 type Company360 = components["schemas"]["Company360"];

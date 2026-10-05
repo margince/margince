@@ -205,24 +205,39 @@ function ownChip(cited: Cited, isOpenable: boolean): CitationChip {
       };
 }
 
-// The citation kinds that open a RECEIPT rather than a record page. Only these
-// can be stepped through, because only these render in the drawer.
-const RECEIPT_CITATIONS = new Set(["fact", "profile_field"]);
+// The citation kinds that open a RECEIPT, not a screen: where the value came
+// from and what could not be recorded. Only these can be stepped through.
+const RECEIPT_CITATIONS = new Set<string>(["fact", "profile_field"]);
+function opensReceipt(kind: string): kind is CitedSibling["entityType"] {
+  return RECEIPT_CITATIONS.has(kind);
+}
 
-// The citation kinds that route to a record of their own. `deal` and `contact`
-// open their screens; `fact` and `profile_field` open their receipt instead —
-// where the value came from, when it was read, and what could not be recorded.
-//
-// `activity` is not here, and `company` is not either, for two different
-// reasons. An activity lives in a timeline and has no route; what it CAN open
-// is the message itself, decided per row by `emailOf` below. A company
-// citation is usually the page the reader is already on.
-const ROUTABLE_CITATIONS = new Set([
-  "deal",
-  "contact",
-  "fact",
-  "profile_field",
-]);
+// The citation kinds with a screen of their own. Not `activity`, which opens
+// its message per row (`emailOf`), nor `company`, usually the current page.
+const ROUTABLE_CITATIONS = new Set<string>(["deal", "contact"]);
+export function citationOpensRecord(kind: string): boolean {
+  return ROUTABLE_CITATIONS.has(kind);
+}
+
+type CitationDoors = {
+  onOpenRecord?: (entityType: string, entityId: string) => void;
+  onOpenReceipt?: OpenReceipt;
+  siblings: readonly CitedSibling[];
+};
+
+// What pressing a chip does, or undefined where the host has no door for its
+// kind: the one answer the chip's openability and its click both read.
+function doorOf(kind: CitedKind, id: string, doors: CitationDoors) {
+  const { onOpenRecord, onOpenReceipt, siblings } = doors;
+  if (opensReceipt(kind)) {
+    const cited = { entityType: kind, entityId: id };
+    return onOpenReceipt && (() => onOpenReceipt(cited, siblings));
+  }
+  if (onOpenRecord && citationOpensRecord(kind)) {
+    return () => onOpenRecord(kind, id);
+  }
+  return undefined;
+}
 
 /**
  * The message behind a citation, when there is one this reader may open.
@@ -250,6 +265,12 @@ export type CitedSibling = {
   entityId: string;
 };
 
+/** Opens one cited receipt, with the sentence's receipts to step through. */
+export type OpenReceipt = (
+  cited: CitedSibling,
+  siblings: readonly CitedSibling[],
+) => void;
+
 // The sentence's receipt-bearing citations, once each, in the order it cites
 // them. Mapped here at the one place that knows both shapes: the wire is
 // snake_case and the drawer's CitedRecord is not.
@@ -258,14 +279,11 @@ function dedupeCited(evidence: readonly Cited[]): CitedSibling[] {
   const out: CitedSibling[] = [];
   for (const each of evidence) {
     const key = `${each.entity_type}:${each.entity_id}`;
-    if (!RECEIPT_CITATIONS.has(each.entity_type) || seen.has(key)) {
+    if (!opensReceipt(each.entity_type) || seen.has(key)) {
       continue;
     }
     seen.add(key);
-    out.push({
-      entityType: each.entity_type as "fact" | "profile_field",
-      entityId: each.entity_id,
-    });
+    out.push({ entityType: each.entity_type, entityId: each.entity_id });
   }
   return out;
 }
@@ -328,6 +346,7 @@ function chipLabel(chip: CitationChip, t: Translator, locale: Locale): string {
 export function Citations({
   evidence,
   onOpenRecord,
+  onOpenReceipt,
   onOpenEmail,
   nameOf,
 }: Readonly<{
@@ -342,19 +361,10 @@ export function Citations({
   // itself. Answers undefined for a record it does not know, which falls back
   // to the kind exactly as before.
   nameOf?: (entityType: CitedKind, entityId: string) => string | undefined;
-  onOpenRecord?: (
-    entityType: string,
-    entityId: string,
-    siblings?: readonly CitedSibling[],
-  ) => void;
-  /**
-   * Opens one message in the host's own email drawer.
-   *
-   * Beside `onOpenRecord` rather than folded into it: a message is not a record
-   * with a route, it is a drawer the host already mounts for its timeline, and
-   * a host that mounts none passes nothing here. The citation then renders the
-   * message as prose instead of as a control that does nothing.
-   */
+  onOpenRecord?: (entityType: string, entityId: string) => void;
+  // The receipt and email drawers are the host's: one that mounts neither
+  // passes nothing, and those chips render as prose rather than dead controls.
+  onOpenReceipt?: OpenReceipt;
   onOpenEmail?: (activityId: string) => void;
 }>) {
   const t = useT();
@@ -374,20 +384,15 @@ export function Citations({
   // thread would otherwise draw the message four times — and, because the key
   // is the activity id, draw it four times under one React key.
   const messages = dedupeMessages(named);
+  // THIS sentence's receipts, once each, in its order: the drawer's prev/next
+  // walks the sentence the reader is looking at, and finds its place by id.
+  const siblings = dedupeCited(evidence);
+  const doors = { onOpenRecord, onOpenReceipt, siblings };
   const chips = citationChips(
     named.filter((cited) => !emailOf(cited)),
-    (cited) =>
-      Boolean(onOpenRecord) && ROUTABLE_CITATIONS.has(cited.entity_type),
+    (cited) => Boolean(doorOf(cited.entity_type, cited.entity_id, doors)),
     (entityType) => RECEIPT_CITATIONS.has(entityType),
   );
-  // THIS sentence's citations, in the order it cites them, so the receipt's
-  // prev/next walks the sentence the reader is actually looking at. The order
-  // belongs to the sentence, which is why it is passed from here rather than
-  // rebuilt in the drawer.
-  // Deduplicated, because the stepper finds its position by id: a sentence
-  // citing the same fact twice would leave `findIndex` returning the first
-  // occurrence forever, and Next would never move past it.
-  const siblings = dedupeCited(evidence);
   if (chips.length === 0 && messages.length === 0) {
     return null;
   }
@@ -415,7 +420,7 @@ export function Citations({
       })}
       {chips.map((chip) => {
         const open = chip.openable
-          ? () => onOpenRecord?.(chip.entityType, chip.entityId, siblings)
+          ? doorOf(chip.entityType, chip.entityId, doors)
           : undefined;
         if (chip.quote || chip.at || chip.origin) {
           return (
@@ -512,6 +517,7 @@ const NATURE_LABELS: Record<
 export function SentenceList({
   sentences,
   onOpenRecord,
+  onOpenReceipt,
   onOpenEmail,
   nameOf,
   citations = "per-sentence",
@@ -519,6 +525,7 @@ export function SentenceList({
 }: Readonly<{
   sentences: BriefSentence[];
   onOpenRecord?: (entityType: string, entityId: string) => void;
+  onOpenReceipt?: OpenReceipt;
   /** Opens one cited message; see `Citations`. */
   onOpenEmail?: (activityId: string) => void;
   // The record's own name for a citation the writer could not name — see
@@ -551,6 +558,15 @@ export function SentenceList({
   const [lead, ...rest] = leadWithJudgement
     ? judgementFirst(sentences)
     : [undefined, ...sentences];
+  const citationsFor = (evidence: readonly Cited[]) => (
+    <Citations
+      evidence={evidence}
+      nameOf={nameOf}
+      onOpenRecord={onOpenRecord}
+      onOpenReceipt={onOpenReceipt}
+      onOpenEmail={onOpenEmail}
+    />
+  );
   return (
     <>
       {lead ? (
@@ -559,14 +575,7 @@ export function SentenceList({
               lines under it keep theirs, where a suggestion sits beside a
               fact and the word is what tells them apart. */}
           {lead.text}
-          {citations === "per-sentence" && (
-            <Citations
-              evidence={lead.evidence}
-              nameOf={nameOf}
-              onOpenRecord={onOpenRecord}
-              onOpenEmail={onOpenEmail}
-            />
-          )}
+          {citations === "per-sentence" && citationsFor(lead.evidence)}
         </p>
       ) : null}
       <ul className="co-brief-lines">
@@ -577,24 +586,12 @@ export function SentenceList({
           <li key={index}>
             <NatureBadge sentence={sentence} />
             {sentence.text}
-            {citations === "per-sentence" && (
-              <Citations
-                evidence={sentence.evidence}
-                nameOf={nameOf}
-                onOpenRecord={onOpenRecord}
-                onOpenEmail={onOpenEmail}
-              />
-            )}
+            {citations === "per-sentence" && citationsFor(sentence.evidence)}
           </li>
         ))}
         {citations === "collected" && (
           <li className="co-brief-sources">
-            <Citations
-              evidence={sentences.flatMap((sentence) => sentence.evidence)}
-              nameOf={nameOf}
-              onOpenRecord={onOpenRecord}
-              onOpenEmail={onOpenEmail}
-            />
+            {citationsFor(sentences.flatMap((sentence) => sentence.evidence))}
           </li>
         )}
       </ul>

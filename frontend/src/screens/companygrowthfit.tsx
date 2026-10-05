@@ -12,7 +12,12 @@ import { formatDateTime, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { throwProblem } from "./common";
-import { type BriefSentence, SentenceList, WrittenBy } from "./record360";
+import {
+  type BriefSentence,
+  type OpenReceipt,
+  SentenceList,
+  WrittenBy,
+} from "./record360";
 // The row and card shapes this file draws — co-rowlink, co-row-meta, co-card —
 // are defined in company360.css. Imported HERE rather than left to the caller:
 // it works today only because the company record page pulls that stylesheet in
@@ -65,10 +70,12 @@ const BAND_TONES: Partial<Record<Band, "success" | "warning">> = {
 export function GrowthFitPanel({
   companyId,
   onOpenRecord,
+  onOpenReceipt,
   onOpenEmail,
 }: Readonly<{
   companyId: string;
   onOpenRecord?: (entityType: string, entityId: string) => void;
+  onOpenReceipt?: OpenReceipt;
   // Opens a cited message in the page's email drawer; see `Citations`.
   onOpenEmail?: (activityId: string) => void;
 }>) {
@@ -182,6 +189,7 @@ export function GrowthFitPanel({
           <GrowthFitReasons
             fit={readable}
             onOpenRecord={onOpenRecord}
+            onOpenReceipt={onOpenReceipt}
             onOpenEmail={onOpenEmail}
           />
         </>
@@ -294,10 +302,12 @@ function GrowthFitVerdict({ fit }: Readonly<{ fit: GrowthFit }>) {
 function GrowthFitReasons({
   fit,
   onOpenRecord,
+  onOpenReceipt,
   onOpenEmail,
 }: Readonly<{
   fit: GrowthFit;
   onOpenRecord?: (entityType: string, entityId: string) => void;
+  onOpenReceipt?: OpenReceipt;
   // Opens a cited message in the page's email drawer; see `Citations`.
   onOpenEmail?: (activityId: string) => void;
 }>) {
@@ -342,6 +352,7 @@ function GrowthFitReasons({
               <SentenceList
                 sentences={group.sentences ?? []}
                 onOpenRecord={onOpenRecord}
+                onOpenReceipt={onOpenReceipt}
                 onOpenEmail={onOpenEmail}
               />
             </div>
@@ -356,6 +367,7 @@ function GrowthFitReasons({
               <SentenceList
                 sentences={group.sentences}
                 onOpenRecord={onOpenRecord}
+                onOpenReceipt={onOpenReceipt}
                 onOpenEmail={onOpenEmail}
               />
             </GrowthFitRow>

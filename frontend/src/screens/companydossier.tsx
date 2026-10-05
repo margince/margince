@@ -9,7 +9,7 @@ import { formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { throwProblem } from "./common";
-import { SentenceList, WrittenBy } from "./record360";
+import { type OpenReceipt, SentenceList, WrittenBy } from "./record360";
 
 type Dossier = components["schemas"]["CompanyDossier"];
 type SectionKind = Dossier["sections"][number]["kind"];
@@ -40,11 +40,13 @@ const SECTION_LABELS: Record<SectionKind, MessageKey> = {
 export function DossierPanel({
   companyId,
   onOpenRecord,
+  onOpenReceipt,
   onOpenEmail,
   nameOf,
 }: Readonly<{
   companyId: string;
   onOpenRecord?: (entityType: string, entityId: string) => void;
+  onOpenReceipt?: OpenReceipt;
   // Opens a cited message in the page's email drawer; see `Citations`.
   onOpenEmail?: (activityId: string) => void;
   // The account's own names for the records this prose cites, from the page
@@ -172,6 +174,7 @@ export function DossierPanel({
               (section) => section.sentences,
             )}
             onOpenRecord={onOpenRecord}
+            onOpenReceipt={onOpenReceipt}
             onOpenEmail={onOpenEmail}
             citations="collected"
             // The block's own read leads it. The facts underneath are already

@@ -53,6 +53,7 @@ import {
   EvidenceSources,
   FoundMove,
   fromCitations,
+  type OpenReceipt,
   SentenceList,
   WrittenBy,
 } from "./record360";
@@ -412,11 +413,13 @@ const QUESTIONS: readonly Question[] = Object.keys({
 export function AskSection({
   companyId,
   onOpenRecord,
+  onOpenReceipt,
   onOpenEmail,
   projects,
 }: Readonly<{
   companyId: string;
   onOpenRecord?: (entityType: string, entityId: string) => void;
+  onOpenReceipt?: OpenReceipt;
   // Opens a cited message in the page's email drawer; see `Citations`.
   onOpenEmail?: (activityId: string) => void;
   // The account's projects, as the page read them. Offered as a picker
@@ -515,6 +518,7 @@ export function AskSection({
             <SentenceList
               sentences={readable.sentences}
               onOpenRecord={onOpenRecord}
+              onOpenReceipt={onOpenReceipt}
               onOpenEmail={onOpenEmail}
               // Gathered under the prose, not trailing each clause: an answer
               // is one reply to one question, and a chip after every sentence
@@ -1521,6 +1525,7 @@ export function useSuggestionsBody({
   companyId,
   view,
   onOpenRecord,
+  onOpenReceipt,
   onOpenEmail,
   onPerform,
   advice,
@@ -1529,6 +1534,7 @@ export function useSuggestionsBody({
   companyId: string;
   view?: Company360;
   onOpenRecord?: (entityType: string, entityId: string) => void;
+  onOpenReceipt?: OpenReceipt;
   // Opens a cited message in the page's email drawer. A rule that fired on an
   // unanswered mail names that mail as its grounds, and the reader's next act
   // is to read it.
@@ -1693,6 +1699,7 @@ export function useSuggestionsBody({
           sources={fromCitations(suggestion.evidence)}
           nameOf={nameOf}
           onOpenRecord={onOpenRecord}
+          onOpenReceipt={onOpenReceipt}
           onOpenEmail={onOpenEmail}
         />
       }
@@ -1750,24 +1757,16 @@ function proposesAStep(suggestion: Suggestion): boolean {
  * moves too, and neither is a task; drawing them here would make this a second
  * copy of the advice card under a heading that says otherwise.
  */
-export function ProposedNextSteps({
-  companyId,
-  view,
-  onOpenRecord,
-  onOpenEmail,
-}: Readonly<{
-  companyId: string;
-  view?: Company360;
-  onOpenRecord?: (entityType: string, entityId: string) => void;
-  onOpenEmail?: (activityId: string) => void;
-}>) {
-  const body = useSuggestionsBody({
-    companyId,
-    view,
-    onOpenRecord,
-    onOpenEmail,
-    keep: proposesAStep,
-  });
+export function ProposedNextSteps(
+  props: Readonly<{
+    companyId: string;
+    view?: Company360;
+    onOpenRecord?: (entityType: string, entityId: string) => void;
+    onOpenReceipt?: OpenReceipt;
+    onOpenEmail?: (activityId: string) => void;
+  }>,
+) {
+  const body = useSuggestionsBody({ ...props, keep: proposesAStep });
   if (!body.ready) {
     return null;
   }

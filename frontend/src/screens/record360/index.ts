@@ -13,6 +13,8 @@ export {
   type CitedKind,
   type CitedSibling,
   citationChips,
+  citationOpensRecord,
+  type OpenReceipt,
   SentenceList,
   WrittenBy,
   type WrittenByWriter,

@@ -15,6 +15,7 @@ import { CompanyFactsPanel } from "./companyfactspanel";
 import { useCompanyReadOnlyReason } from "./companyheader";
 import { SidecarFieldRow } from "./companyraildetails";
 import { useCompanyProfileFields } from "./evidenceverdict";
+import type { OpenReceipt } from "./record360";
 
 type Company = components["schemas"]["Company"];
 type ProfileFieldKey = components["parameters"]["ProfileFieldKey"];
@@ -69,6 +70,7 @@ export function CompanyProfileForm({
   onOpenHistory,
   nameOf,
   onOpenRecord,
+  onOpenReceipt,
   onOpenEmail,
   tools,
 }: Readonly<{
@@ -81,6 +83,7 @@ export function CompanyProfileForm({
   // overview's, so a chip cited in either place lands in the same drawer.
   nameOf?: (entityType: string, entityId: string) => string | undefined;
   onOpenRecord?: (entityType: string, entityId: string) => void;
+  onOpenReceipt?: OpenReceipt;
   onOpenEmail?: (activityId: string) => void;
   // The account's own tooling — custom fields, group rollup, the site read,
   // the technical profile. Passed in rather than built here: they are the
@@ -116,6 +119,7 @@ export function CompanyProfileForm({
         companyId={company.id}
         nameOf={nameOf}
         onOpenRecord={onOpenRecord}
+        onOpenReceipt={onOpenReceipt}
         onOpenEmail={onOpenEmail}
       />
       {reason && (

@@ -11,6 +11,7 @@ import {
   Citations,
   type Cited,
   citationChips,
+  type OpenReceipt,
   SentenceList,
 } from "./citations";
 
@@ -167,11 +168,115 @@ describe("Citations", () => {
   it("groups several receipts of one kind under a count", () => {
     // fact/profile_field are openable AND grouped: the chip opens the first and
     // the drawer's stepper reaches the rest, so the count must survive.
-    renderCitations(
-      [cited("fact", "f-1", "Headcount"), cited("fact", "f-2", "Revenue")],
-      true,
+    render(
+      <LocaleProvider initial="en">
+        <Citations
+          evidence={[
+            cited("fact", "f-1", "Headcount"),
+            cited("fact", "f-2", "Revenue"),
+          ]}
+          onOpenReceipt={vi.fn()}
+        />
+      </LocaleProvider>,
     );
     expect(screen.getByRole("button", { name: "2 facts" })).toBeTruthy();
+  });
+});
+
+// A host that routes a deal may have no receipt drawer, and a fact chip there
+// must not be a button that does nothing.
+describe("which door a chip opens", () => {
+  const evidence = [
+    cited("deal", "d-1", "Fleet renewal 2027"),
+    cited("contact", "c-1", "Anna Weber"),
+    cited("fact", "f-1"),
+    cited("profile_field", "p-1"),
+    cited("fact", "f-1"),
+  ];
+
+  function renderDoors(doors: {
+    onOpenRecord?: (entityType: string, entityId: string) => void;
+    onOpenReceipt?: OpenReceipt;
+  }) {
+    render(
+      <LocaleProvider initial="en">
+        <Citations
+          evidence={evidence}
+          onOpenRecord={doors.onOpenRecord}
+          onOpenReceipt={doors.onOpenReceipt}
+        />
+      </LocaleProvider>,
+    );
+  }
+
+  it("opens a deal and a contact through the record door alone", async () => {
+    const user = userEvent.setup();
+    const onOpenRecord = vi.fn();
+    renderDoors({ onOpenRecord });
+
+    await user.click(
+      screen.getByRole("button", { name: "Fleet renewal 2027" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Anna Weber" }));
+    expect(onOpenRecord.mock.calls).toEqual([
+      ["deal", "d-1"],
+      ["contact", "c-1"],
+    ]);
+    expect(screen.getByText("fact").tagName).toBe("SPAN");
+    expect(screen.getByText("profile field").tagName).toBe("SPAN");
+    expect(screen.getAllByRole("button")).toHaveLength(2);
+  });
+
+  it("opens a fact and a profile field through the receipt door with the sentence's receipts", async () => {
+    const user = userEvent.setup();
+    const onOpenRecord = vi.fn();
+    const onOpenReceipt = vi.fn();
+    renderDoors({ onOpenRecord, onOpenReceipt });
+
+    await user.click(screen.getByRole("button", { name: "fact" }));
+    await user.click(screen.getByRole("button", { name: "profile field" }));
+    const receipts = [
+      { entityType: "fact", entityId: "f-1" },
+      { entityType: "profile_field", entityId: "p-1" },
+    ];
+    expect(onOpenReceipt.mock.calls).toEqual([
+      [{ entityType: "fact", entityId: "f-1" }, receipts],
+      [{ entityType: "profile_field", entityId: "p-1" }, receipts],
+    ]);
+    expect(onOpenRecord).not.toHaveBeenCalled();
+  });
+
+  it("offers a receipted fact's receipt from its popover only where the host has the drawer", async () => {
+    const user = userEvent.setup();
+    const onOpenReceipt = vi.fn();
+    const receipted: Cited = {
+      ...cited("fact", "f-1", "Headcount"),
+      quote: "We are 240 people across three offices.",
+      origin: "Website",
+    };
+    render(
+      <LocaleProvider initial="en">
+        <Citations evidence={[receipted]} onOpenRecord={vi.fn()} />
+      </LocaleProvider>,
+    );
+    await user.click(screen.getByRole("button", { name: "Headcount" }));
+    expect(
+      screen.getByText("We are 240 people across three offices."),
+    ).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Open record" })).toBeNull();
+    cleanup();
+
+    render(
+      <LocaleProvider initial="en">
+        <Citations evidence={[receipted]} onOpenReceipt={onOpenReceipt} />
+      </LocaleProvider>,
+    );
+    await user.click(screen.getByRole("button", { name: "Headcount" }));
+    await user.click(screen.getByRole("button", { name: "Open record" }));
+    expect(onOpenReceipt).toHaveBeenCalledWith(
+      { entityType: "fact", entityId: "f-1" },
+      [{ entityType: "fact", entityId: "f-1" }],
+    );
   });
 });
 
@@ -297,7 +402,7 @@ describe("a citation's receipt", () => {
     ).toBeTruthy();
 
     await user.click(screen.getByRole("button", { name: "Open record" }));
-    expect(open).toHaveBeenCalledWith("deal", "d-1", []);
+    expect(open).toHaveBeenCalledWith("deal", "d-1");
   });
 });
 

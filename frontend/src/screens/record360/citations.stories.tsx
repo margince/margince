@@ -37,10 +37,9 @@ function sentence(text: string, evidence: Cited[]) {
   return { text, evidence };
 }
 
-// A no-op: these stories are about what the chips SAY, and a page that opens a
-// record is a different surface. Passing it is what makes the routable kinds
-// render as buttons, which is half of what there is to look at.
+// No-ops: a passed door is what draws its kinds as buttons.
 const openRecord = () => undefined;
+const openReceipt = () => undefined;
 
 export const Named: Story = {
   render: () => (
@@ -88,6 +87,26 @@ export const Counted: Story = {
             cite("activity", "a-3", "Retrofit timing"),
           ]),
           sentence("Their headcount and revenue both came from the profile.", [
+            cite("fact", "f-1", "Headcount"),
+            cite("fact", "f-2", "Revenue"),
+          ]),
+        ]}
+        onOpenRecord={openRecord}
+        onOpenReceipt={openReceipt}
+      />
+    </StoryProviders>
+  ),
+};
+
+export const NoReceiptDrawer: Story = {
+  render: () => (
+    // A host that routes deals but mounts no receipt drawer — the deal page,
+    // the meeting brief: the deal is a button and the facts are prose.
+    <StoryProviders>
+      <SentenceList
+        sentences={[
+          sentence("The renewal rests on their headcount and revenue.", [
+            cite("deal", "d-1", "Fleet renewal 2027"),
             cite("fact", "f-1", "Headcount"),
             cite("fact", "f-2", "Revenue"),
           ]),

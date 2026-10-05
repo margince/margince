@@ -41,6 +41,7 @@ import {
   MomentEvidence,
   momentIsARow,
   momentKicker,
+  type OpenReceipt,
   type StandingTone,
   TodayPanel,
   TodoRow,
@@ -122,23 +123,20 @@ type TodayReadingInputs = Readonly<{
   failed: boolean;
   // Opens the pre-meeting brief for the day's meeting.
   onPrepareMeeting?: (activityId: string) => void;
-  // Starting a message from the account: opens the composer anchored on the
-  // account and its recipient.
+  // Opens the composer anchored on the account and its recipient.
   onDraftTo?: (contactId: string) => void;
   onOpenRecord?: (entityType: string, entityId: string) => void;
-  // Opens a cited message in the page's email drawer. A suggestion resting on
-  // an unanswered mail names that mail, and reading it is the reader's move.
+  // Open a cited receipt or mail in the page's drawers. A suggestion resting
+  // on an unanswered mail names that mail, and reading it is the reader's move.
+  onOpenReceipt?: OpenReceipt;
   onOpenEmail?: (activityId: string) => void;
   // Performing a suggestion's own action. The composer, the deal and the
   // task form all live above this brief.
   onPerform?: (action: SuggestionAction) => void;
-  // Opens a named task's own detail modal, switching to the Tasks tab first
-  // where the modal lives. The moment's own destination sends a reader to the
-  // record's receipt, not to the task itself — this is the leading card's own
-  // fallback, for the ordinary case of a task already on the account's list.
+  // Opens a named task's detail modal on the Tasks tab, where it lives: the
+  // leading card's fallback when the moment names no record to open.
   onOpenTask?: (activityId: string) => void;
-  // Opens the header's Log-activity drawer. The leading card's second verb,
-  // beside whichever one answers what is owed.
+  // The header's Log-activity drawer: the leading card's second verb.
   onLogActivity?: () => void;
   // The reader's scan of the account, when the page holds one: its merged
   // advice replaces the 360's own rows, a read in flight draws the pending
@@ -154,6 +152,7 @@ export function useTodayReading({
   onPrepareMeeting,
   onDraftTo,
   onOpenRecord,
+  onOpenReceipt,
   onOpenEmail,
   onPerform,
   onOpenTask,
@@ -171,6 +170,7 @@ export function useTodayReading({
     companyId,
     view,
     onOpenRecord,
+    onOpenReceipt,
     onOpenEmail,
     onPerform,
     advice: scan
