@@ -53,8 +53,8 @@ type ReplyRecipient struct {
 	// falls back to the familiar form rather than to a guess.
 	LastName string
 	// FiledAddress is the reachable primary email of the one contact a note is
-	// filed on, never a seat's. Empty on anything else, including a note filed
-	// on several contacts: there the rep chooses.
+	// filed on, never a seat's or a shared mailbox's. Empty on anything else,
+	// including a note filed on several contacts: there the rep chooses.
 	FiledAddress string
 }
 
@@ -164,12 +164,13 @@ func (s *Store) ReplyRecipientFor(ctx context.Context, id ids.ActivityID) (Reply
 		// recipient would greet "steireif Partnernet," which is worse than
 		// either. The empty recipient is already this type's documented answer
 		// for "no name", and the floor opens without one.
-		if mailrole.GreetsNobody(out.FullName, address) {
+		shared := mailrole.GreetsNobody(out.FullName, address)
+		if shared {
 			out = ReplyRecipient{}
 		}
 		// With no participants every candidate is a linked contact this caller
 		// may read, so exactly one is the only unambiguous addressee.
-		if activity.Kind != crmcontracts.ActivityKindNote || !unattended || candidates != 1 {
+		if shared || activity.Kind != crmcontracts.ActivityKindNote || !unattended || candidates != 1 {
 			return nil
 		}
 		out.FiledAddress, err = filedAddress(ctx, tx, address)

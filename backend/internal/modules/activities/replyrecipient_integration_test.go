@@ -684,3 +684,18 @@ func TestANoteFiledOnTwoContactsLeavesTheChoiceToTheRep(t *testing.T) {
 		t.Errorf("address = %q, want empty — two contacts on one note is not one addressee", got.Address)
 	}
 }
+
+func TestANoteFiledOnASharedMailboxOffersNoAddress(t *testing.T) {
+	e := setupSend(t)
+	ctx := e.as(principal.RowScopeAll)
+	// One readable contact, so only the shared-mailbox verdict keeps the
+	// role address out of the To field.
+	mailbox := e.seedNamedContact(t, "Buyer Sales")
+	e.seedContactEmail(t, mailbox, "info@buyer.test")
+	note := e.noteFiledOn(ctx, t, ActivityLinkInput{EntityType: "contact", EntityID: mailbox})
+
+	got := recipientOf(ctx, t, e.handlers(ourDomain{suffix: "@demo.test"}), note)
+	if got.Address != "" {
+		t.Errorf("address = %q, want empty — a shared mailbox is nobody a rep replies to by default", got.Address)
+	}
+}
