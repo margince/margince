@@ -170,6 +170,13 @@ func (h Handlers) RenderOffer(w http.ResponseWriter, r *http.Request, id crmcont
 		preparedVersion = *ingredients.Offer.Version
 	}
 	key := fmt.Sprintf("offers/%s/%s/%d/%s.pdf", storekit.MustWorkspace(r.Context()), ids.UUID(id), revision, ids.NewV7())
+	// Declared before the bytes exist. The reclaim below covers the refusals the
+	// store raises itself; this covers the ones it cannot classify, where the
+	// comment there is explicit that an orphan is the safer answer than deleting.
+	if err := h.store.RecordOfferPdfIntent(r.Context(), key); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	if err := h.blob.Put(r.Context(), key, bytes.NewReader(pdfBytes), int64(len(pdfBytes)), "application/pdf"); err != nil {
 		httperr.Write(w, r, err)
 		return
