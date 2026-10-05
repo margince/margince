@@ -96,13 +96,13 @@ func (t *CommitmentSettleTrigger) HandleEvent(ctx context.Context, env events.En
 	switch env.Type {
 	case eventActivityUpdated:
 		var payload crmcontracts.PublicEventActivityUpdated
-		if !t.readPayload(ctx, env, &payload) || payload.ChangedFields.IsDone == nil || !*payload.ChangedFields.IsDone {
+		if !readSettlePayload(ctx, t.log, env, &payload) || payload.ChangedFields.IsDone == nil || !*payload.ChangedFields.IsDone {
 			return nil
 		}
 		return t.settleClaimsOf(ctx, env.Actor, env.Entity.ID)
 	case eventClaimChanged:
 		var payload crmcontracts.PublicEventConversationClaimChanged
-		if !t.readPayload(ctx, env, &payload) || payload.Status != claimStatusDone {
+		if !readSettlePayload(ctx, t.log, env, &payload) || payload.Status != claimStatusDone {
 			return nil
 		}
 		return t.completeTaskOf(ctx, env.Actor, ids.UUID(payload.ClaimId))
@@ -163,15 +163,15 @@ func (t *CommitmentSettleTrigger) completeTaskOf(ctx context.Context, by events.
 // with the authority they hold now, or the product when nobody is behind it.
 // It answers false for an agent or connector acting for nobody.
 func (t *CommitmentSettleTrigger) actingAs(ctx context.Context, by events.Actor) (context.Context, bool, error) {
-	seat, ok := originSeat(by)
-	if !ok {
-		return ctx, by.Type == string(principal.PrincipalSystem), nil
-	}
 	ws, err := t.identity.InstallationWorkspace(ctx)
 	if err != nil {
 		return nil, false, err
 	}
 	ctx = principal.WithWorkspaceID(ctx, ws.UUID)
+	seat, ok := originSeat(by)
+	if !ok {
+		return ctx, by.Type == string(principal.PrincipalSystem), nil
+	}
 	rbac, seatType, err := t.identity.EffectiveAuthority(ctx, ws.UUID, seat)
 	if errors.Is(err, apperrors.ErrNotFound) {
 		return nil, false, nil
@@ -221,11 +221,13 @@ func originSeat(by events.Actor) (ids.UUID, bool) {
 	return ids.UUID{}, false
 }
 
-// readPayload decodes an envelope's payload. One that will not decode is
+// readSettlePayload decodes an envelope's payload. One that will not decode is
 // logged and skipped: redelivering it would fail the same way forever.
-func (t *CommitmentSettleTrigger) readPayload(ctx context.Context, env events.Envelope, into any) bool {
+func readSettlePayload[P crmcontracts.PublicEventActivityUpdated | crmcontracts.PublicEventConversationClaimChanged](
+	ctx context.Context, log *slog.Logger, env events.Envelope, into *P,
+) bool {
 	if err := json.Unmarshal(env.Payload, into); err != nil {
-		t.log.WarnContext(ctx, "commitment settle: unreadable payload",
+		log.WarnContext(ctx, "commitment settle: unreadable payload",
 			"event", env.EventID.String(), "type", env.Type, "err", err)
 		return false
 	}

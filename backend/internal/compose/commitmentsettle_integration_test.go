@@ -8,11 +8,14 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -54,7 +57,7 @@ func seedKeptCommitment(t *testing.T) keptCommitment {
 
 // newest is the most recent outbox envelope of a type matching where, as the
 // subscriber would have decoded it off the bus.
-func (k keptCommitment) newest(t *testing.T, eventType, where string, arg any) events.Envelope {
+func (k keptCommitment) newest(t *testing.T, eventType, where, arg string) events.Envelope {
 	t.Helper()
 	raw := k.wsString(t, `SELECT envelope::text FROM event_outbox
 		WHERE envelope->>'type' = $1 AND `+where+` ORDER BY seq DESC LIMIT 1`, eventType, arg)
@@ -230,5 +233,98 @@ func TestAnOldSettlementDoesNotOverruleALaterChangeToTheTask(t *testing.T) {
 	k.deliver(t, settled)
 	if got := k.taskDone(t); got != "false" {
 		t.Errorf("a settlement older than the task's last change completed it")
+	}
+}
+
+// An event nobody can answer for changes nothing, and neither does one the
+// consumer cannot read: an agent acting for nobody, a seat that no longer
+// exists, a payload that will not decode, an event of another type.
+func TestATickNobodyAnswersForSettlesNothing(t *testing.T) {
+	k := seedKeptCommitment(t)
+	k.setDone(t, true)
+	ticked := k.newest(t, eventActivityUpdated, `envelope->'entity'->>'id' = $2`, k.task.String())
+	unknown := ids.NewV7()
+	cases := map[string]func(events.Envelope) events.Envelope{
+		"an agent acting for nobody": func(env events.Envelope) events.Envelope {
+			env.Actor = events.Actor{Type: string(principal.PrincipalAgent), ID: "agent:somebody"}
+			return env
+		},
+		"a seat that does not exist": func(env events.Envelope) events.Envelope {
+			env.Actor = events.Actor{Type: string(principal.PrincipalHuman), ID: principal.HumanIDPrefix + unknown.String()}
+			return env
+		},
+		"a payload that will not decode": func(env events.Envelope) events.Envelope {
+			env.Payload = json.RawMessage(`"not an object"`)
+			return env
+		},
+		"an event of another type": func(env events.Envelope) events.Envelope {
+			env.Type = "activity.created"
+			return env
+		},
+	}
+	for name, rewrite := range cases {
+		t.Run(name, func(t *testing.T) {
+			k.deliver(t, rewrite(ticked))
+			if got := k.claimStatus(t); got != "open" {
+				t.Errorf("%s settled the commitment (status %q)", name, got)
+			}
+		})
+	}
+}
+
+// The product acting for nobody is followed: a system tick settles the
+// commitment it stands for.
+func TestASystemTickSettlesTheCommitment(t *testing.T) {
+	k := seedKeptCommitment(t)
+	k.setDone(t, true)
+	ticked := k.newest(t, eventActivityUpdated, `envelope->'entity'->>'id' = $2`, k.task.String())
+	ticked.Actor = events.Actor{Type: string(principal.PrincipalSystem), ID: "system:sweep"}
+	k.deliver(t, ticked)
+	if got := k.claimStatus(t); got != "done" {
+		t.Errorf("a system tick left the commitment %q, want done", got)
+	}
+}
+
+// Completing is asked only of a live, open task: a task already done or gone
+// is left alone without an error, and a record that is no task is refused.
+func TestCompletingATaskAnswersForWhatTheTaskIsNow(t *testing.T) {
+	k := seedKeptCommitment(t)
+	ctx := k.Admin()
+	task := ids.From[ids.ActivityKind](k.task)
+	later := time.Now().Add(time.Hour)
+
+	if _, err := k.Activities.CompleteTask(ctx, k.activity, later); !errors.Is(err, apperrors.ErrConflict) {
+		t.Errorf("completing a conversation as a task answered %v, want a conflict", err)
+	}
+	if done, err := k.Activities.CompleteTask(ctx, task, later); err != nil || !done {
+		t.Fatalf("completing the open task answered %v, %v; want it completed", done, err)
+	}
+	if done, err := k.Activities.CompleteTask(ctx, task, later); err != nil || done {
+		t.Errorf("completing a done task answered %v, %v; want nothing to do", done, err)
+	}
+	k.WsExec(t, `UPDATE activity SET archived_at = now() WHERE id = $1`, k.task)
+	if done, err := k.Activities.CompleteTask(ctx, task, later); err != nil || done {
+		t.Errorf("completing an archived task answered %v, %v; want nothing to do", done, err)
+	}
+}
+
+// Reading the claims a task stands for, or the task a claim became, needs
+// contact read; a claim that is gone has no task.
+func TestTheClaimTaskReadsNeedContactRead(t *testing.T) {
+	k := seedKeptCommitment(t)
+	blind := k.As(k.Rep2, []ids.UUID{k.Team1}, principal.Permissions{
+		RoleKeys: []string{"rep"},
+		Objects:  map[string]principal.ObjectGrant{"activity": {Read: true}},
+	})
+	if _, err := k.Contacts.OpenClaimsOnTask(blind, k.task); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("listing a task's claims without contact read answered %v, want permission denied", err)
+	}
+	if _, _, _, err := k.Contacts.ClaimTask(blind, k.claim); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("reading a claim's task without contact read answered %v, want permission denied", err)
+	}
+	k.WsExec(t, `UPDATE conversation_claim SET archived_at = now() WHERE id = $1`, k.claim)
+	task, _, _, err := k.Contacts.ClaimTask(k.Admin(), k.claim)
+	if err != nil || task != nil {
+		t.Errorf("an archived claim answered task %v, %v; want none", task, err)
 	}
 }
