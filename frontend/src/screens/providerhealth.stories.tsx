@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { meFixture } from "../app/mefixture";
+import { type GrantSpec, meFixture } from "../app/mefixture";
 import { ProviderHealthCard } from "./providerhealth";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
@@ -18,7 +18,7 @@ type Story = StoryObj<typeof ProviderHealthCard>;
 
 function story(
   providers: unknown[],
-  allow: Record<string, string[]> = { ai_diagnostics: ["read"] },
+  allow: GrantSpec = { ai_diagnostics: ["read"] },
 ) {
   return () => {
     installFetchStub({
