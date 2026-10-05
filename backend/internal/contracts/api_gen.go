@@ -26002,6 +26002,13 @@ type CaptureSettings struct {
 	// excluded (cold start reads it). Default is ON (the testing posture).
 	AutoEnrich bool `json:"auto_enrich"`
 
+	// AutoEnrichDailyCap The installation-wide ceiling on AUTOMATIC website reads started in one UTC day.
+	// Company auto-enrichment and domain triage spend it from one counter. It paces and only
+	// paces: concurrency is bounded by the deep-read worker pool and model spend by the AI
+	// budget. Read at the top of every sweep and on every capture, so a change applies
+	// without a restart. Default 500.
+	AutoEnrichDailyCap int `json:"auto_enrich_daily_cap"`
+
 	// MailSharing The workspace's capture-sharing posture, ON by default: captured correspondence is
 	// readable by every colleague who can see the contact. Switched OFF, everything captured
 	// FROM THEN ON is held to its participants and the capturing member — already-captured
@@ -26042,6 +26049,10 @@ type CaptureSettings struct {
 	// "Workspace" here is the storage tenant, not the word the product shows a reader —
 	// the surface calls it the company's default.
 	SignatureEnrich bool `json:"signature_enrich"`
+
+	// SiteRead What one website read may fetch. Read when a read starts, so a change applies to the next
+	// one. An automatic read also runs under its own lower page ceiling.
+	SiteRead SiteReadLimits `json:"site_read"`
 }
 
 // CaptureSourceEntry One capture provenance id that is not a transport, as the directory publishes it.
@@ -34968,6 +34979,12 @@ type InstallationSettings struct {
 	// Name The company's display name.
 	Name string `json:"name"`
 
+	// OauthAccessTokenTtlMinutes How long the access token an MCP connector's OAuth handshake mints lives, in minutes —
+	// for the code exchange and every refresh rotation alike. 30 days by default, at most
+	// 90. A change applies to the next token minted; tokens already issued keep the expiry
+	// they were issued with.
+	OauthAccessTokenTtlMinutes int `json:"oauth_access_token_ttl_minutes"`
+
 	// SignInProviders Every external sign-in provider this deployment holds credentials for, and whether
 	// the installation currently offers it on the login screen. The list is what the
 	// DEPLOYMENT makes possible: an admin can turn one off, but cannot add one, because
@@ -42670,6 +42687,19 @@ type SignalWarmth struct {
 // SignalWarmthRouting The real routing branch — warm signals surface in the warm room, cold ones queue separately.
 type SignalWarmthRouting string
 
+// SiteReadLimits What one website read may fetch. Read when a read starts, so a change applies to the next
+// one. An automatic read also runs under its own lower page ceiling.
+type SiteReadLimits struct {
+	// MaxMib Mebibytes one read may hold, summed over its pages. Default 32.
+	MaxMib int `json:"max_mib"`
+
+	// MaxPages Pages one read may fetch. Default 60.
+	MaxPages int `json:"max_pages"`
+
+	// WallSeconds Seconds one crawl may run before it stops and extracts what it has. Default 240.
+	WallSeconds int `json:"wall_seconds"`
+}
+
 // SiteReadPage One page the crawl fetched.
 type SiteReadPage struct {
 	Kind SiteReadPageKind `json:"kind"`
@@ -43762,6 +43792,9 @@ type UpdateCaptureSettingsRequest struct {
 	// AutoEnrich Toggle captured-company auto-enrichment.
 	AutoEnrich *bool `json:"auto_enrich,omitempty"`
 
+	// AutoEnrichDailyCap Set the daily ceiling on automatic website reads.
+	AutoEnrichDailyCap *int `json:"auto_enrich_daily_cap,omitempty"`
+
 	// MailSharing Toggle the workspace mail-sharing posture; affects correspondence captured from now on — mail, and chat on a transport whose credential belongs to one member.
 	MailSharing *bool `json:"mail_sharing,omitempty"`
 
@@ -43770,6 +43803,15 @@ type UpdateCaptureSettingsRequest struct {
 
 	// SignatureEnrich Toggle the tenant-wide default for reading contact details out of captured mail — its signature and any attached vCard. A mailbox that set its own switch keeps it.
 	SignatureEnrich *bool `json:"signature_enrich,omitempty"`
+
+	// SiteReadMaxMib Set the size limit of one website read, in MiB.
+	SiteReadMaxMib *int `json:"site_read_max_mib,omitempty"`
+
+	// SiteReadMaxPages Set the page limit of one website read.
+	SiteReadMaxPages *int `json:"site_read_max_pages,omitempty"`
+
+	// SiteReadWallSeconds Set the time limit of one website crawl, in seconds.
+	SiteReadWallSeconds *int `json:"site_read_wall_seconds,omitempty"`
 }
 
 // UpdateCompanyFactRequest The correction path the fact store never had — without it the page can render a confirmed state nothing is able to produce.
@@ -44135,6 +44177,9 @@ type UpdateInstallationSettingsRequest struct {
 
 	// Name Rename the company.
 	Name *string `json:"name,omitempty"`
+
+	// OauthAccessTokenTtlMinutes Set how long a connector's access token lives, in minutes. Reaches the next token minted.
+	OauthAccessTokenTtlMinutes *int `json:"oauth_access_token_ttl_minutes,omitempty"`
 
 	// OidcGroupRoleMap Directory groups that GRANT roles at corporate sign-in. Each key is a group
 	// exactly as the IdP spells it in the ID token's `groups` claim; each value is

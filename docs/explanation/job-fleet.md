@@ -157,7 +157,7 @@ type WorkOnly[T river.JobArgs] interface {
     Work(context.Context, *river.Job[T]) error
 }
 
-func Govern[T river.JobArgs](w WorkOnly[T], s Spec, supplied time.Duration) river.Worker[T]
+func Govern[T river.JobArgs](w WorkOnly[T], s Spec) river.Worker[T]
 ```
 
 `Govern` wraps the worker in a type River reaches **only** through `Work`, so any option method the
@@ -174,19 +174,17 @@ one-minute cap it would have been cancelled mid-pass nightly and left a permanen
 the one obligation whose whole point is auditability. Nothing was broken enough to notice: a
 cancelled job and a job that never had enough time look identical from the outside.
 
-So `timeout` has no default and **absence is not one of its forms**. It takes exactly one of four:
+So `timeout` has no default and **absence is not one of its forms**. It takes exactly one of three:
 
 | Form | Meaning |
 |---|---|
 | `2m` | a literal wall clock |
 | `{derived: c, value: 4h, reason: …}` | computed from a Go constant elsewhere in the tree. `value` is what `Govern` hands River, and the census proves the two still agree — so the declaration tracks the constant instead of freezing a copy. Used only where the constant is read by something other than the census's own lookup table, or the check compares the file against a private copy of itself |
-| `{operator: Field}` | computed at registration from a `JobRunnerConfig` dial; not knowable in the file at all (`site_deep_read` is the only one today) |
 | `{none: true, reason: …}` | a deliberate absence. `TimeoutPolicy.Duration` yields `-1`, which takes the row out of River's rescuer (its stuck-job reaper) on purpose — the pass is bounded by a backlog rather than a wall clock |
 
 `declaredTimeoutSeconds` never publishes zero on `/metrics`: zero is River's silent minute wearing
 the digits of a deliberate absence, and telling those two apart is what the declaration is for. A
-deliberate absence is `-1`; an operator-supplied wall clock is reported as *unstated* and its label
-is omitted rather than guessed.
+deliberate absence is `-1`.
 
 Two more gates hold the same line at boot, because neither the union nor `Govern` can see a
 hand-edited generated file or a fixture registering into a throwaway `*river.Workers`:

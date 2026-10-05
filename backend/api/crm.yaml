@@ -27739,7 +27739,7 @@ components:
       description: |
         The installation's identity and reporting basis (ADR-0090). Read by every role,
         changed only by admin/ops.
-      required: [name, timezone, base_currency, base_language, fiscal_year_start_month, dead_work_banner_hours, forecast_forward_measure, base_currency_locked, max_upload_bytes, sign_in_providers]
+      required: [name, timezone, base_currency, base_language, fiscal_year_start_month, dead_work_banner_hours, oauth_access_token_ttl_minutes, forecast_forward_measure, base_currency_locked, max_upload_bytes, sign_in_providers]
       properties:
         name:
           type: string
@@ -27830,6 +27830,15 @@ components:
             a file too large is refused before it is sent instead of after. The ceiling bounds
             the whole request, part framing included, which is why a client should leave a
             little room rather than compare a file against it exactly.
+        oauth_access_token_ttl_minutes:
+          type: integer
+          minimum: 5
+          maximum: 129600
+          description: |
+            How long the access token an MCP connector's OAuth handshake mints lives, in minutes —
+            for the code exchange and every refresh rotation alike. 30 days by default, at most
+            90. A change applies to the next token minted; tokens already issued keep the expiry
+            they were issued with.
         dead_work_banner_hours:
           type: integer
           minimum: 1
@@ -27946,6 +27955,11 @@ components:
             It creates no accounts: an email nobody invited is refused exactly as
             before, whether they have groups or not. Omit the field to leave the map unchanged; send an
             empty object to clear it; sending a map replaces the whole stored map.
+        oauth_access_token_ttl_minutes:
+          type: integer
+          minimum: 5
+          maximum: 129600
+          description: Set how long a connector's access token lives, in minutes. Reaches the next token minted.
         dead_work_banner_hours:
           type: integer
           minimum: 1
@@ -28350,8 +28364,20 @@ components:
       description: |
         The workspace-shared capture posture (ADR-0072, CAP-PARAM-7). Read by every role,
         changed only by admin/ops.
-      required: [auto_enrich, mail_sharing, shared_posture_allowed, signature_enrich]
+      required: [auto_enrich, mail_sharing, shared_posture_allowed, signature_enrich, auto_enrich_daily_cap, site_read]
       properties:
+        auto_enrich_daily_cap:
+          type: integer
+          minimum: 1
+          maximum: 20000
+          description: |
+            The installation-wide ceiling on AUTOMATIC website reads started in one UTC day.
+            Company auto-enrichment and domain triage spend it from one counter. It paces and only
+            paces: concurrency is bounded by the deep-read worker pool and model spend by the AI
+            budget. Read at the top of every sweep and on every capture, so a change applies
+            without a restart. Default 500.
+        site_read:
+          $ref: '#/components/schemas/SiteReadLimits'
         mail_sharing:
           type: boolean
           description: |
@@ -29311,11 +29337,27 @@ components:
           type: boolean
           description: Toggle whether contacts are looked up automatically for the free details.
 
+    SiteReadLimits:
+      type: object
+      additionalProperties: false
+      description: |
+        What one website read may fetch. Read when a read starts, so a change applies to the next
+        one. An automatic read also runs under its own lower page ceiling.
+      required: [max_pages, max_mib, wall_seconds]
+      properties:
+        max_pages: { type: integer, description: 'Pages one read may fetch. Default 60.' }
+        max_mib: { type: integer, description: 'Mebibytes one read may hold, summed over its pages. Default 32.' }
+        wall_seconds: { type: integer, description: 'Seconds one crawl may run before it stops and extracts what it has. Default 240.' }
+
     UpdateCaptureSettingsRequest:
       type: object
       description: A sparse capture-settings patch (admin/ops).
       properties:
         auto_enrich: { type: boolean, description: Toggle captured-company auto-enrichment. }
+        auto_enrich_daily_cap: { type: integer, minimum: 1, maximum: 20000, description: 'Set the daily ceiling on automatic website reads.' }
+        site_read_max_pages: { type: integer, minimum: 1, maximum: 200, description: 'Set the page limit of one website read.' }
+        site_read_max_mib: { type: integer, minimum: 1, maximum: 128, description: 'Set the size limit of one website read, in MiB.' }
+        site_read_wall_seconds: { type: integer, minimum: 30, maximum: 600, description: 'Set the time limit of one website crawl, in seconds.' }
         mail_sharing: { type: boolean, description: 'Toggle the workspace mail-sharing posture; affects correspondence captured from now on — mail, and chat on a transport whose credential belongs to one member.' }
         signature_enrich: { type: boolean, description: 'Toggle the tenant-wide default for reading contact details out of captured mail — its signature and any attached vCard. A mailbox that set its own switch keeps it.' }
         shared_posture_allowed: { type: boolean, description: 'Allow a seat to put their mailbox in the `shared` posture. Off by default; see CaptureSettings.shared_posture_allowed for what turning it on asserts.' }

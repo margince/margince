@@ -67,6 +67,7 @@ import { viewerZone } from "../format/timezone";
 import { LOCALES, type Locale, localeNameKey, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { AcquisitionSourcesCard } from "./acquisitionsources";
+import { AgentConnectionsCard } from "./agent-token-settings";
 import { AiBudgetCard } from "./ai-admin";
 import { ModelPricesCard } from "./ai-price-sync";
 import { AiProviderKeysCard } from "./ai-provider-keys";
@@ -82,7 +83,7 @@ import { BriefDeliveryRows } from "./briefdelivery";
 import { CaptureActivityTab } from "./capture-activity";
 import { OwnerIdentitiesCard } from "./capture-owner-identities";
 import { CaptureSendersCard } from "./capture-senders";
-import { CaptureSettingsCard } from "./capture-settings";
+import { CaptureSettingsCard, WebsiteReadingCard } from "./capture-settings";
 import { CaptureHealthCard } from "./capturehealth";
 import {
   LoadMoreButton,
@@ -151,11 +152,6 @@ import "./settings.css";
 import { ProvidersStat } from "./ai-settings";
 import type { SettingsPageId } from "./settingscatalog";
 import { SettingsBoundary, SettingsHome } from "./settingshome";
-// The catalog, the addresses and the visibility predicate moved to
-// ./settingsnav so `src/app/**` can read them without pulling in every card.
-// Re-exported here because this module's own consumers — the tests, the stories,
-// the testkit — ask for both halves, and splitting their imports would be churn
-// that proves nothing.
 import {
   ADMIN_SEGMENT,
   SETTINGS_SCREEN,
@@ -242,6 +238,7 @@ export function tabContent(id: SettingsPageId): ReactNode {
       return (
         <>
           <SignInMethodsCard />
+          <AgentConnectionsCard />
           <OAuthAppCard provider="google" />
           <OAuthAppCard provider="microsoft" />
         </>
@@ -306,6 +303,7 @@ export function tabContent(id: SettingsPageId): ReactNode {
               then the two judgements that read it. */}
           <OwnDomainsCard />
           <CaptureSettingsCard />
+          <WebsiteReadingCard />
           <ConsumerMailDomainsCard />
           {/* Last, because it is the OUTCOME of the three above rather than a
               fourth rule: which domains ended up refused a company, and whether

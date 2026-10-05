@@ -315,9 +315,6 @@ type JobRunnerConfig struct {
 	// then settles its domain from what the workspace already knows rather than
 	// leaving the question open forever.
 	DeepReadTriageBrain completer
-	// DeepReadCaps bounds each deep-read crawl; the zero value takes the
-	// compose defaults (CrawlCaps.withDefaults).
-	DeepReadCaps CrawlCaps
 	// Blobstore holds the logo bytes a deep read resolves from the site it
 	// crawls (A55). Nil is a worker role with no object store: reads still
 	// run and still land their facts, and every company keeps the monogram
