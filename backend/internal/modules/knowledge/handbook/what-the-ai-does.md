@@ -24,7 +24,7 @@ To fill deal fields from a file, open the company's **Documents** tab, file the 
 Also called: extract from contract, read a PDF, parse an offer.
 
 ### What happens to my mail and enrichment while the AI provider is down?
-While an AI provider is down, out of credit or rejecting its key, Margince stops calling it, and mail questions and company enrichment wait and try again at the next check, without using up their attempts, including the first call that finds the credit gone or the key refused.
+While an AI provider is down, out of credit or rejecting its key, Margince stops calling it, and mail questions and company enrichment wait and try again at the next check, without using up their attempts, including the call that first finds the credit gone, the key refused or the host unreachable.
 Requests you make yourself fail at once with a message to contact your system administrator.
 Your administrator sees the cause under **Settings**, **System health**, in **AI provider status**.
 Also called: AI outage, no credit, mail stuck unsure, enrichment stopped.

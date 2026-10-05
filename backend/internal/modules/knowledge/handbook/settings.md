@@ -329,7 +329,7 @@ reading and emptying the installation are no longer three buttons on one screen.
 - **Background jobs** — "Queued background jobs and failed jobs by owner."
   Admin and Ops.
 - **AI provider status** — whether each AI provider is answering, as the server
-  and the background worker have seen it. See [AI providers](ai-providers.md).
+  and the background worker have seen it, merged into one view. See [AI providers](ai-providers.md).
 - **Mail capture checks** — whether mail capture's background repair passes keep
   up: when each last succeeded, how many contacts and threads are waiting in
   each mailbox, and how many filed meetings are held back across the whole

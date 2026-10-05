@@ -16,7 +16,7 @@ Open **Settings** → **System health** and read the **AI provider status** card
 `GET /v1/ai/provider-health`. Only providers that are not answering normally are
 listed; an empty list is the healthy answer. The view is merged
 from the calls of the API and the worker, so an outage only the worker saw shows too;
-without Redis it is the serving process's own.
+without Redis a process shows only its own view. The worst status wins.
 
 | Health | Fix |
 |---|---|
@@ -30,7 +30,8 @@ without Redis it is the serving process's own.
 An out-of-credit or unauthorized provider is probed every 15 minutes; a down one at
 30 seconds doubling to 5 minutes. A successful **Test** on the key clears the
 provider's failures at once; saving a key or the routing clears them at the next
-routing recheck, about every 30 seconds. Work that was deferred needs nothing from you once the probe succeeds.
+routing recheck, about every 30 seconds. Only one probe runs at a time; calls during it
+are refused and told to retry shortly, without being charged. Work that was deferred needs nothing from you once the probe succeeds.
 
 ## 3. Reopen what the outage parked
 

@@ -17,8 +17,9 @@ on it instead of re-reading error text.
 `out_of_credit` and `unauthorized` trip on **one** failure, because nothing but an
 operator changes them, and are probed again every 15 minutes. `down` trips at once
 on an unreachable host, or after three consecutive 5xx, and is probed at 30 seconds
-doubling to 5 minutes. A probe holds a one-minute lease, so one call probes and the
-others are refused with a retry moment still ahead. One success clears any state, and
+doubling to 5 minutes. Only one probe runs at a time and it holds its slot for the longest
+call, five minutes; other calls during it are refused untraced and uncharged, told to
+retry shortly. One success clears any state, and
 so does a successful key test (`POST /ai/provider-keys/{provider}/test`) at once. A
 key or routing save clears it at the next routing recheck, about every 30 seconds in
 each process, and a provider removed from routing is cleared too.
@@ -30,6 +31,12 @@ always does). A plain 403, a moderation flag or a model not enabled for the proj
 the message's own, and is still charged. The classification is `providerFaultOf` in
 `budget.go`.
 
+**A refusal is read by its text.** A 400 or 403 marks the key rejected only when its
+text says so (`api key not valid`, `invalid api key`, `reported as leaked`,
+`authentication`), never for a vendor's "does not have permission" refusal for one
+model. An empty balance is recognised from a 402 or from text such as `credit balance
+is too low`.
+
 **Health belongs to the provider, not to a tier.** Every tier bound to one provider
 sees the same state, so the failure of one tier's call blocks the others and one
 fixed key unblocks them all.
@@ -39,7 +46,7 @@ the ladder escalates to the next rung as before, and a rung that is merely busy
 never marks its provider blocked. Only a quota 429 means the account is empty.
 
 **The router skips a blocked rung with no call.** No request leaves the process, no
-timeout is waited out and nothing is charged or traced (`attemptLadder` in
+timeout is waited out and nothing is charged or traced as a provider error (`attemptLadder` in
 `tracing.go`, `serveAttempt` in `router.go`). When every rung is blocked the router
 returns `ErrProviderDown` carrying the provider, its health and the moment of the
 next probe.
@@ -48,9 +55,10 @@ next probe.
 covers both: the attempt is refunded, the item waits until the retry moment and the
 pass stops, so an outage no longer parks senders as unsure or spends the attempts of
 enrichment and River jobs. The call that trips an out-of-credit or rejected-key status
-is refunded too: it returns a deferral that keeps the cause, so an interactive user
-gets the reason-specific 503 on the first call. A 5xx or a timeout needs three in a
-row, so the tripping call there is charged. A failure that is the message's own still
+is refunded too, as is a call that finds the host unreachable (down trips at once)
+and every failed probe while blocked: each returns a deferral that keeps the cause, so
+an interactive user gets the reason-specific 503 on the first call. Only the first two
+5xx or timeouts of a run of three are charged, being ordinary failures. A failure that is the message's own still
 charges the item, because it would fail on a healthy provider too.
 
 An embedding for a blocked provider is refused untraced with `ai.ErrProviderDown`,
@@ -63,11 +71,21 @@ message telling the user to contact their system administrator
 (`internal/compose/modelfailure`). Nobody waits out a timeout to learn the same.
 
 `GET /ai/provider-health` lists the providers that are not answering normally, from
-a view shared between the API and the worker through a Redis key: every process
-publishes its changes and the request reads the merged view, so an outage only the
-worker saw still shows. Without Redis it shows the serving process's own view. It is
-not a probe. Settings → AI models marks the
+a view shared between the API and the worker through Redis: every process
+publishes its status changes and the request reads the merged view, where the worst or
+blocking status wins, so an outage only the worker saw still shows. Without Redis a
+process shows only its own view. Keys expire after about an hour, so a status is
+refreshed every 10 minutes while the provider stays unhealthy. It is not a probe. Settings → AI models marks the
 provider and Settings → System health shows the **AI provider status** card. Work an outage already parked
 is reopened by an operator:
 [recover-after-a-provider-outage.md](../how-to/recover-after-a-provider-outage.md).
 The budget's own deferral is above, under *The monthly budget* in [ai-runtime.md](ai-runtime.md).
+
+## What is not covered
+
+- A stream that opens cleanly but fails in-band is not seen as a provider failure.
+- An in-flight call on a superseded key can re-trip the provider after a fix.
+- A probe cut short by the caller's own deadline counts as a failed probe.
+- Other processes do not brake on the shared status; it is for display.
+- Voice builds and website reads deferred by an outage are still labelled as a
+  budget deferral (tracked in a follow-up).

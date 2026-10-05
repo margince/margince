@@ -26,8 +26,11 @@ when it has content.
   A rejected key or an empty balance is read from the vendor's reply text, not only
   its status code, and the call that first meets one is refunded and fails with the
   specific reason. A successful key test clears the provider's state at once, and the
-  status is shared between the API and the worker, so Settings shows an outage only
-  the worker saw.
+  status is shared between the API and the worker through Redis (the worst status
+  wins; without Redis a process shows only its own), so Settings shows an outage only
+  the worker saw. A call that finds the host unreachable and every failed probe while
+  blocked are refunded, one probe runs at a time, and a vendor's "does not have
+  permission" refusal no longer marks the key rejected.
 - Model prices sync themselves: once a day (and on **Refresh model prices**) every
   provider with a usable key is re-priced from models.dev or OpenRouter, newly
   listed chat and embedding models the catalogue prices are added, and a price you set

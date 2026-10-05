@@ -10833,8 +10833,11 @@ export interface paths {
          *     its credential, in name order. A provider that is answering normally is not listed, so an
          *     empty list is the healthy answer.
          *
-         *     This is the view of the process serving the request, learned from the calls it made: it
-         *     is not a probe and not a shared record. The list never contains a key, a host or the
+         *     The API and the worker each publish their status changes to Redis and this reads the merged
+         *     view, where the worst or blocking status wins, so an outage only the worker saw still shows.
+         *     Without Redis a process shows only its own view. Shared entries expire after about an
+         *     hour unless refreshed every 10 while the provider is unhealthy. It is learned from real
+         *     calls, not a probe. The list never contains a key, a host or the
          *     provider's own message text. It is admitted through the same grant as `/ai/health`.
          */
         get: operations["getAiProviderHealth"];
