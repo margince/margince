@@ -77,15 +77,16 @@ func TestAPersonRetentionPolicyActsOnContactsAfterTheRename(t *testing.T) {
 	t.Run("a contact rule an admin added since is the one that stands", func(t *testing.T) {
 		reset()
 		if _, err := conn.Exec(ctx, `
-			INSERT INTO retention_policy (object_type, category, retain_days, action)
-			VALUES ('person', 'no_consent_no_deal', 730, 'anonymize'),
-			       ('contact', 'no_consent_no_deal', 400, 'archive')`); err != nil {
+			INSERT INTO retention_policy (object_type, category, retain_days, action, lawful_basis)
+			VALUES ('person', 'no_consent_no_deal', 730, 'anonymize', 'storage_limitation'),
+			       ('contact', 'no_consent_no_deal', 400, 'archive', 'legal_obligation')`); err != nil {
 			t.Fatalf("seeding both rows: %v", err)
 		}
 		replayMigration(t, conn, contactRetentionMigration)
 		got := noConsentRows(t, conn)
-		if len(got) != 1 || got[0].objectType != "contact" || got[0].days != 400 || got[0].action != "archive" {
-			t.Fatalf("after the migration: %+v, want only the admin's contact rule (400 days, archive)", got)
+		if len(got) != 1 || got[0].objectType != "contact" || got[0].days != 400 || got[0].action != "archive" ||
+			got[0].basis == nil || *got[0].basis != "legal_obligation" {
+			t.Fatalf("after the migration: %+v, want only the admin's contact rule (400 days, archive, legal_obligation)", got)
 		}
 	})
 }
