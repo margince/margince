@@ -104,7 +104,7 @@ func TestCaptureAutoEnrichSweepTriggersADeepReadForACapturedCompany(t *testing.T
 
 	// ...at the housekeeping priority (River's lowest tier) — a boot-time fan-out
 	// across every due company must never queue ahead of a live, human-started read
-	// sharing deep_read's two workers. Scoped to THIS dossier's own job by
+	// sharing deep_read's workers. Scoped to THIS dossier's own job by
 	// site_read_id: sweepWorkspace also runs sweepDomainTriage unconditionally
 	// before the auto-enrich loop, which can enqueue its own site_deep_read row
 	// for an unrelated domain in the same pass — an unscoped query naming only

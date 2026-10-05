@@ -47,6 +47,8 @@ describe("settingsSearch", () => {
     ["csv", "import"],
     ["licence", "seats"],
     ["stage", "pipelines"],
+    ["token", "authentication"],
+    ["limit", "capture"],
   ] as const)("finds the page that owns %s", (query, page) => {
     expect(ids(query)).toContain(page);
   });

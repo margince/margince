@@ -11,7 +11,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { type Locale, LocaleProvider, translate } from "../i18n";
-import { CaptureSettingsCard } from "./capture-settings";
+import { CaptureSettingsCard, WebsiteReadingCard } from "./capture-settings";
 
 // The Settings → Integrations capture-settings toggle: reads the auto-enrich
 // posture for every role, but only admin/ops can change it — the server stays
@@ -166,4 +166,131 @@ describe("a settings read refused without a problem body", () => {
       await screen.findByText(translate("de", "common.errorNoCause")),
     ).toBeTruthy();
   });
+});
+
+// The full capture-settings record, which the website-reads card reads more of
+// than the posture card does.
+function readingBackend(allow: GrantSpec) {
+  let state = {
+    auto_enrich: true,
+    mail_sharing: true,
+    shared_posture_allowed: false,
+    signature_enrich: true,
+    auto_enrich_daily_cap: 500,
+    site_read: { max_pages: 60, max_mib: 32, wall_seconds: 240 },
+  };
+  const patches: unknown[] = [];
+  const fetchMock = vi.fn(
+    async (input: RequestInfo | URL, init?: RequestInit) => {
+      const req =
+        input instanceof Request ? input : new Request(String(input), init);
+      if (req.url.endsWith("/v1/me")) {
+        return jsonResponse(meFixture({ allow }));
+      }
+      if (req.url.includes("/capture/settings")) {
+        if (req.method === "PATCH") {
+          const patch = (await req.json()) as Record<string, number>;
+          patches.push(patch);
+          state = {
+            ...state,
+            auto_enrich_daily_cap:
+              patch.auto_enrich_daily_cap ?? state.auto_enrich_daily_cap,
+            site_read: {
+              max_pages: patch.site_read_max_pages ?? state.site_read.max_pages,
+              max_mib: patch.site_read_max_mib ?? state.site_read.max_mib,
+              wall_seconds:
+                patch.site_read_wall_seconds ?? state.site_read.wall_seconds,
+            },
+          };
+        }
+        return jsonResponse(state);
+      }
+      throw new Error(`unexpected request: ${req.method} ${req.url}`);
+    },
+  );
+  return { fetchMock, patches };
+}
+
+describe("WebsiteReadingCard", () => {
+  it("saves a new daily cap on Enter", async () => {
+    const backend = readingBackend(CAPTURE_EDITOR);
+    vi.stubGlobal("fetch", backend.fetchMock);
+    const user = userEvent.setup();
+    render(<WebsiteReadingCard />);
+
+    const cap =
+      await screen.findByTestId<HTMLInputElement>("capture-daily-cap");
+    expect(cap.value).toBe("500");
+    await user.clear(cap);
+    await user.type(cap, "5000{Enter}");
+
+    await waitFor(() =>
+      expect(backend.patches).toEqual([{ auto_enrich_daily_cap: 5000 }]),
+    );
+  });
+
+  it("refuses a cap past the ceiling without sending it", async () => {
+    const backend = readingBackend(CAPTURE_EDITOR);
+    vi.stubGlobal("fetch", backend.fetchMock);
+    const user = userEvent.setup();
+    render(<WebsiteReadingCard />);
+
+    const cap =
+      await screen.findByTestId<HTMLInputElement>("capture-daily-cap");
+    await user.clear(cap);
+    await user.type(cap, "20001{Enter}");
+
+    expect(
+      await screen.findByText(
+        translate("en", "captureReading.dailyCap.refusal"),
+      ),
+    ).toBeTruthy();
+    expect(backend.patches).toEqual([]);
+  });
+
+  it("shows the limits read-only to a seat without the update grant", async () => {
+    vi.stubGlobal("fetch", readingBackend({}).fetchMock);
+    render(<WebsiteReadingCard />);
+
+    const pages = await screen.findByTestId<HTMLInputElement>(
+      "capture-read-max-pages",
+    );
+    expect(pages.value).toBe("60");
+    expect(pages.disabled).toBe(true);
+    expect(
+      screen.getByText(translate("en", "captureSettings.adminOnly")),
+    ).toBeTruthy();
+  });
+
+  // Each row writes its own wire field and refuses on its own bounds: a row
+  // wired to its neighbour's property would save into the wrong setting.
+  it.each([
+    ["capture-read-max-pages", "site_read_max_pages", "120", "201", "maxPages"],
+    ["capture-read-max-mib", "site_read_max_mib", "64", "129", "maxMiB"],
+    ["capture-read-wall", "site_read_wall_seconds", "300", "29", "wall"],
+  ] as const)(
+    "%s saves %s and refuses past its bounds",
+    async (testId, property, ok, bad, copy) => {
+      const backend = readingBackend(CAPTURE_EDITOR);
+      vi.stubGlobal("fetch", backend.fetchMock);
+      const user = userEvent.setup();
+      render(<WebsiteReadingCard />);
+
+      const box = await screen.findByTestId<HTMLInputElement>(testId);
+      await user.clear(box);
+      await user.type(box, `${bad}{Enter}`);
+      expect(
+        await screen.findByText(
+          translate("en", `captureReading.${copy}.refusal`),
+        ),
+      ).toBeTruthy();
+      expect(backend.patches).toEqual([]);
+
+      await user.clear(box);
+      await user.type(box, `${ok}{Enter}`);
+      await waitFor(() =>
+        expect(backend.patches).toEqual([{ [property]: Number(ok) }]),
+      );
+    },
+  );
 });

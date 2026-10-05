@@ -321,12 +321,6 @@ func baseComposeOptions(ctx context.Context, cfg apiConfig, capCfg compose.Captu
 		// gate is on.
 		opts = append(opts, compose.WithMCPResource(strings.TrimSuffix(cfg.publicBaseURL, "/")+"/mcp"))
 	}
-	// An operator-shortened access token, applied to both mints of a
-	// connection's life. Zero is "not configured", which keeps the passport
-	// default — declared by omission, never a silent guess.
-	if cfg.oauthAccessTokenTTL != 0 {
-		opts = append(opts, compose.WithOAuthAccessTokenTTL(cfg.oauthAccessTokenTTL))
-	}
 	// The channel-connection surface needs no public origin of its own: Telegram
 	// ingress polls, so nothing is ever told where to reach this installation.
 	// It must precede kvOpts below, which hands it the vault it seals with.
@@ -342,13 +336,6 @@ func baseComposeOptions(ctx context.Context, cfg apiConfig, capCfg compose.Captu
 	}
 	opts = append(opts, blobOpts...)
 
-	// The refusal half of the auto-enrich daily cap: this role spends it too
-	// (an approval accept can queue a domain-triage read), so a typo fails the
-	// boot here; compose resolves the value where it is spent, from the same
-	// process environment, which is fixed at exec.
-	if _, err := compose.AutoEnrichDailyCapFromEnv(config.FromOS); err != nil {
-		return nil, nil, nil, fmt.Errorf("api: %w", err)
-	}
 	kvOpts, err := keyvaultOptions(pool, vault, stdout)
 	if err != nil {
 		return nil, nil, nil, err

@@ -18741,6 +18741,13 @@ export interface components {
              */
             max_upload_bytes: number;
             /**
+             * @description How long the access token an MCP connector's OAuth handshake mints lives, in minutes —
+             *     for the code exchange and every refresh rotation alike. 30 days by default, at most
+             *     90. A change applies to the next token minted; tokens already issued keep the expiry
+             *     they were issued with.
+             */
+            oauth_access_token_ttl_minutes: number;
+            /**
              * @description How far back the maintenance banner looks before it calls dead work a problem, in
              *     hours. 24 by default, bounded above by River's own seven-day retention — a window
              *     past that cannot narrow anything, since every terminal row still there is inside it.
@@ -18849,6 +18856,8 @@ export interface components {
             oidc_group_role_map?: {
                 [key: string]: string;
             };
+            /** @description Set how long a connector's access token lives, in minutes. Reaches the next token minted. */
+            oauth_access_token_ttl_minutes?: number;
             /**
              * @description How far back the maintenance banner looks before it calls dead work a problem, in
              *     hours. 24 by default, bounded above by River's own seven-day retention — a window
@@ -19114,6 +19123,15 @@ export interface components {
          *     changed only by admin/ops.
          */
         CaptureSettings: {
+            /**
+             * @description The installation-wide ceiling on AUTOMATIC website reads started in one UTC day.
+             *     Company auto-enrichment and domain triage spend it from one counter. It paces and only
+             *     paces: concurrency is bounded by the deep-read worker pool and model spend by the AI
+             *     budget. Read at the top of every sweep and on every capture, so a change applies
+             *     without a restart. Default 500.
+             */
+            auto_enrich_daily_cap: number;
+            site_read: components["schemas"]["SiteReadLimits"];
             /**
              * @description The workspace's capture-sharing posture, ON by default: captured correspondence is
              *     readable by every colleague who can see the contact. Switched OFF, everything captured
@@ -19768,10 +19786,30 @@ export interface components {
             /** @description Toggle whether contacts are looked up automatically for the free details. */
             automatic_lookup?: boolean;
         };
+        /**
+         * @description What one website read may fetch. Read when a read starts, so a change applies to the next
+         *     one. An automatic read also runs under its own lower page ceiling.
+         */
+        SiteReadLimits: {
+            /** @description Pages one read may fetch. Default 60. */
+            max_pages: number;
+            /** @description Mebibytes one read may hold, summed over its pages. Default 32. */
+            max_mib: number;
+            /** @description Seconds one crawl may run before it stops and extracts what it has. Default 240. */
+            wall_seconds: number;
+        };
         /** @description A sparse capture-settings patch (admin/ops). */
         UpdateCaptureSettingsRequest: {
             /** @description Toggle captured-company auto-enrichment. */
             auto_enrich?: boolean;
+            /** @description Set the daily ceiling on automatic website reads. */
+            auto_enrich_daily_cap?: number;
+            /** @description Set the page limit of one website read. */
+            site_read_max_pages?: number;
+            /** @description Set the size limit of one website read, in MiB. */
+            site_read_max_mib?: number;
+            /** @description Set the time limit of one website crawl, in seconds. */
+            site_read_wall_seconds?: number;
             /** @description Toggle the workspace mail-sharing posture; affects correspondence captured from now on — mail, and chat on a transport whose credential belongs to one member. */
             mail_sharing?: boolean;
             /** @description Toggle the tenant-wide default for reading contact details out of captured mail — its signature and any attached vCard. A mailbox that set its own switch keeps it. */

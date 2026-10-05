@@ -9390,6 +9390,37 @@ export const de = {
   "captureSettings.removeFailed": "Ausschluss nicht entfernt",
   "captureSettings.addFailed": "Ausschluss nicht hinzugefügt",
   "captureSettings.updateFailed": "Einstellung nicht geändert",
+  "captureReading.title": "Website-Lesevorgänge",
+  "captureReading.sub":
+    "Wie viel Margince von Unternehmenswebsites liest. Eine Änderung gilt ab dem nächsten Lesevorgang.",
+  "captureReading.dailyCap.label": "Automatische Lesevorgänge pro Tag",
+  "captureReading.dailyCap.help":
+    "Lesevorgänge, die niemand angestoßen hat, über alle Unternehmen, 1 bis 20.000 pro Tag.",
+  "captureReading.dailyCap.refusal":
+    "Gib eine ganze Zahl von 1 bis 20.000 ein.",
+  "captureReading.maxPages.label": "Seiten pro Lesevorgang",
+  "captureReading.maxPages.help":
+    "Höchstzahl der Seiten eines Lesevorgangs, 1 bis 200 (automatische Lesevorgänge enden bei 12).",
+  "captureReading.maxPages.refusal":
+    "Gib eine ganze Zahl von 1 bis 200 Seiten ein.",
+  "captureReading.maxMiB.label": "Größe pro Lesevorgang (MiB)",
+  "captureReading.maxMiB.help":
+    "Höchstmenge an Daten eines Lesevorgangs über alle Seiten, 1 bis 128 MiB.",
+  "captureReading.maxMiB.refusal": "Gib eine ganze Zahl von 1 bis 128 MiB ein.",
+  "captureReading.wall.label": "Lesedauer (Sekunden)",
+  "captureReading.wall.help":
+    "Längste Dauer eines Lesevorgangs, bevor er das Gefundene behält, 30 bis 600 Sekunden.",
+  "captureReading.wall.refusal":
+    "Gib eine ganze Zahl von 30 bis 600 Sekunden ein.",
+  "agentConnections.title": "Agent-Verbindungen",
+  "agentConnections.sub":
+    "Wie lange ein Passport für MCP-Verbindungen gültig ist, bevor eine Erneuerung nötig ist. Eine Änderung gilt ab dem nächsten ausgestellten Passport.",
+  "agentConnections.adminOnly": "Nur Admins und Operations können das ändern.",
+  "agentConnections.ttl.label": "Passport-Laufzeit (Minuten)",
+  "agentConnections.ttl.help": "Ganze Minuten, 5 bis 129.600 (90 Tage).",
+  "agentConnections.ttl.refusal":
+    "Gib eine ganze Zahl von 5 bis 129.600 Minuten ein.",
+  "agentConnections.updateFailed": "Einstellung nicht geändert",
   "captureSettings.adminOnly": "Nur Admins und Operations können das ändern.",
 
   "ownDomains.companyTitle": "Unternehmensdomains",
