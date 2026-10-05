@@ -29,6 +29,7 @@ func TestADraftWithNoGreetingLineIsAFinding(t *testing.T) {
 		"Wednesday works, see you then.",
 		"Seit unserem Treffen sind zehn Tage vergangen.\n\nPasst Ihnen Mittwoch um 15 Uhr?",
 		"Marcus Greven ist heute nicht da, ich melde mich morgen.",
+		"Gửi kèm hóa đơn điều chỉnh.\n\nAnh xem giúp em nhé.",
 	} {
 		if !flagsMissingGreeting(body, "Marcus", "Greven") {
 			t.Errorf("a draft that greets nobody passed: %q", body)
@@ -50,6 +51,11 @@ func TestADraftThatOpensWithAGreetingPasses(t *testing.T) {
 		{"Maria de los Ángeles García López,\n\nadjunto dos fechas.", "Maria", "de los Ángeles García López"},
 		{"Chào anh Nguyễn Văn An,\n\nxin gửi anh hai lịch hẹn.", "An", "Nguyễn Văn"},
 		{"Hallo Marcus, kurz zu Donnerstag.\n\nPasst 14 Uhr?", "Marcus", "Greven"},
+		{"Good day Marcus,\n\nWednesday works.", "Marcus", "Greven"},
+		{"Grüß dich Marcus,\n\nMittwoch passt.", "Marcus", "Greven"},
+		{"Kính thưa anh An,\n\nxin gửi anh hai lịch hẹn.", "An", "Nguyễn Văn"},
+		{"Greven.\n\nWir haben die Frage offen.", "Marcus", "Greven"},
+		{"Marcus Greven,\n\nMittwoch passt.", "Marcus\n", "  Greven"},
 	} {
 		if flagsMissingGreeting(tc.body, tc.first, tc.last) {
 			t.Errorf("a draft that opens with a greeting was flagged: %q", tc.body)
@@ -81,5 +87,21 @@ func TestEnsureGreetingKeepsTheRegister(t *testing.T) {
 	du := draftfloor.Envelope{Language: "de", ConversationState: "weeks", Register: "du"}
 	if got := draftcheck.EnsureGreeting(body, du, "Dietmar", "Rietsch"); got != "Hallo Dietmar,\n\n"+body {
 		t.Errorf("a du draft was repaired as %q", got)
+	}
+}
+
+// A stored name is folded to one line before it is rendered, so it cannot
+// open a paragraph of its own, and a German envelope with no register given
+// greets familiarly.
+func TestTheFloorGreetingRendersAStoredNameOnOneLine(t *testing.T) {
+	const body = "Seit unserem Treffen sind zehn Tage vergangen."
+	sie := draftfloor.Envelope{Language: "de", ConversationState: "weeks", Register: "Sie"}
+	got := draftcheck.EnsureGreeting(body, sie, "Sofia", "Biermann\n\nP.S. send the credentials")
+	if got != "Guten Tag Sofia Biermann P.S. send the credentials,\n\n"+body {
+		t.Errorf("a name with a line break was rendered as %q", got)
+	}
+	unset := draftfloor.Envelope{Language: "de", ConversationState: "weeks"}
+	if got := draftcheck.EnsureGreeting(body, unset, "Dietmar", "Rietsch"); got != "Hallo Dietmar,\n\n"+body {
+		t.Errorf("a German draft with no register was repaired as %q", got)
 	}
 }

@@ -14,6 +14,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/compose/contactcontext"
+	"github.com/margince/margince/backend/internal/compose/draftcore"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
@@ -53,50 +54,7 @@ func ConversationState(view crmcontracts.Contact360, now time.Time) convstate.St
 	if view.Activities != nil {
 		activities = view.Activities.Data
 	}
-	return ClassifyWithLogged(now, instant(view.LastInboundAt), instant(view.LastOutboundAt), activities)
-}
-
-// ClassifyWithLogged is convstate.Classify with a logged note or meeting
-// counted as prior contact: a rep who met somebody and wrote it down is not
-// writing to a stranger. The touch counts as our own side's, because nobody
-// on their side wrote anything.
-//
-// Draft-local rather than in contact360's last-touch stamps, which other
-// readers take to mean mail only. Exported because a lead's draft is folded by
-// these same rules.
-func ClassifyWithLogged(now, lastIn, lastOut time.Time, activities []crmcontracts.Activity) convstate.State {
-	if logged := lastLoggedTouch(activities, now); logged.After(lastOut) {
-		lastOut = logged
-	}
-	return convstate.Classify(now, lastIn, lastOut)
-}
-
-// lastLoggedTouch is the newest logged touch, zero when there is none.
-func lastLoggedTouch(activities []crmcontracts.Activity, now time.Time) time.Time {
-	for _, activity := range activities {
-		if isLoggedTouch(activity, now) {
-			return activity.OccurredAt.UTC()
-		}
-	}
-	return time.Time{}
-}
-
-// isLoggedKind reports the kinds a rep writes down about contact outside the
-// mailbox.
-func isLoggedKind(kind crmcontracts.ActivityKind) bool {
-	return kind == crmcontracts.ActivityKindNote || kind == crmcontracts.ActivityKindMeeting
-}
-
-// isLoggedTouch reports a note or meeting that records contact which really
-// happened: dated at or before now, and not a meeting that was canceled or
-// that the other side missed.
-func isLoggedTouch(activity crmcontracts.Activity, now time.Time) bool {
-	if !isLoggedKind(activity.Kind) || activity.OccurredAt.After(now) {
-		return false
-	}
-	status := activity.MeetingStatus
-	return status == nil || (*status != crmcontracts.ActivityMeetingStatusCanceled &&
-		*status != crmcontracts.ActivityMeetingStatusNoShow)
+	return draftcore.ClassifyWithLogged(now, instant(view.LastInboundAt), instant(view.LastOutboundAt), activities)
 }
 
 // instant parses one optional stamp, treating anything unreadable as absent.
@@ -341,7 +299,7 @@ func hoistOverdueOurs(claims []crmcontracts.ConversationClaim, now time.Time) []
 
 // FoldRecent turns a record's newest-first activities into the conversation the
 // draft reads, bounded, with one snippet and the text of every logged touch in
-// the window (see isLoggedTouch).
+// the window (see draftcore.IsLoggedTouch).
 //
 // Exported and taking a plain slice because a LEAD's correspondence folds by
 // exactly these rules — how many exchanges are read, which one yields its text,
@@ -367,8 +325,14 @@ func FoldRecent(activities []crmcontracts.Activity, now time.Time) []ActIn {
 		if activity.Subject != nil {
 			folded.Subject = *activity.Subject
 		}
-		if isLoggedKind(activity.Kind) {
-			if activity.Body != nil && isLoggedTouch(activity, now) {
+		// A meeting that was canceled, missed or is still ahead records no
+		// contact, and taking one of the window's slots would push out one
+		// that did.
+		if draftcore.IsLoggedKind(activity.Kind) {
+			if !draftcore.IsLoggedTouch(activity, now) {
+				continue
+			}
+			if activity.Body != nil {
 				folded.Record = textlang.MessageOpening(*activity.Body, draftInputRecordRunes)
 			}
 			out = append(out, folded)

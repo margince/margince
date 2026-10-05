@@ -202,12 +202,13 @@ func (d replyDrafter) completeChecked(ctx context.Context, site draftSystem, dat
 		func(draft replyDraft) (string, bool) { return draft.Subject, data.Threaded() },
 		draftRetryLog{log: d.logger()},
 	)
-	return data.greeted(draft), err
+	return draft, err
 }
 
 // greeted is the draft with the floor's greeting added if it still opens
-// without one. Applied wherever a reply draft is settled, including after the
-// voice sanitizer, because the critic retry bypasses the correction loop.
+// without one. Applied once a reply draft is settled, after every voice check
+// and after the voice signal is recorded, so neither judges or learns from a
+// line the model did not write.
 func (data replyActivityData) greeted(draft replyDraft) replyDraft {
 	draft.Body = draftcheck.EnsureGreeting(draft.Body, data.Envelope, data.Recipient, data.RecipientLastName)
 	return draft

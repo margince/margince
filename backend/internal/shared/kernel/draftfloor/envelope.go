@@ -5,7 +5,6 @@ package draftfloor
 
 import (
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
@@ -132,15 +131,16 @@ func (e Envelope) At() time.Time {
 }
 
 // Greeting renders the opening line in this envelope's language, band and
-// register. A formal German draft greets by full name where "Herr" or "Frau"
-// would go, because no gender is ever known; without a surname, or in any
-// other register or language, it is the familiar Greeting.
+// register. A Sie draft greets by full name where "Herr" or "Frau" would go,
+// because no gender is ever known; without a surname, or in any other register
+// or language, it is the familiar Greeting. Both names are folded to one line
+// first, so a stored name cannot open a paragraph of its own.
 func (e Envelope) Greeting(firstName, lastName string) string {
-	lastName = strings.TrimSpace(lastName)
-	if e.Lang() != textlang.German || e.Register == string(textlang.RegisterDu) || lastName == "" {
+	firstName, lastName = NameLine(firstName), NameLine(lastName)
+	if e.Lang() != textlang.German || e.Register != string(textlang.RegisterSie) || lastName == "" {
 		return Greeting(e.Lang(), e.Band(), firstName)
 	}
-	return fill(formalGermanGreeting, strings.TrimSpace(strings.TrimSpace(firstName)+" "+lastName))
+	return fill(formalGermanGreeting, NameLine(firstName+" "+lastName))
 }
 
 // formalGermanGreeting is the Sie opening the shared drafting rules prescribe.

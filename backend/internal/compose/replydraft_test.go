@@ -480,3 +480,22 @@ func TestAnUngreetedReplyIsServedWithTheFloorGreeting(t *testing.T) {
 		t.Errorf("body = %q, want it to open %q", draft.Body, want)
 	}
 }
+
+// The greeting repair runs after the voice floor, so a canned opener the model
+// wrote is still caught at the start of its own text rather than hidden behind
+// the floor's greeting line.
+func TestAGreetingRepairDoesNotHideACannedOpenerFromTheVoiceFloor(t *testing.T) {
+	violating := model.Response{Text: `{"subject":"Re: plan","body":"Here's the thing: the plan holds and we ship on Monday."}`}
+	plain := model.Response{Text: `{"subject":"Re: plan","body":"Hi Anna,\n\nA plain professional reply."}`}
+	brain := &sequencedBrainStub{responses: []model.Response{violating, violating, violating, plain}}
+	drafter := replyDrafter{brain: brain}
+
+	draft, version, _, err := drafter.completeVoiced(context.Background(), ids.NewV7(),
+		replyActivityData{Subject: "plan", Thread: "inbound_mail", Recipient: "Anna"}, testVoiceContext())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if version != nil || draft.Body != "Hi Anna,\n\nA plain professional reply." {
+		t.Errorf("served %q (voice version %v), want the plain fallback", draft.Body, version)
+	}
+}

@@ -107,6 +107,13 @@ func (d replyDrafter) DraftFirstEmail(ctx context.Context, intent string) (strin
 // draftvoice.Violations and draftvoice.Sanitize, so this one decides only what
 // to do when the floor trips.
 func (d replyDrafter) completeFirstVoiced(ctx context.Context, data replyActivityData, voice draftvoice.Context) (replyDraft, error) {
+	draft, err := d.firstVoicedDraft(ctx, data, voice)
+	return data.greeted(draft), err
+}
+
+// firstVoicedDraft is completeFirstVoiced before the greeting repair, so the
+// voice floor judges the model's own text.
+func (d replyDrafter) firstVoicedDraft(ctx context.Context, data replyActivityData, voice draftvoice.Context) (replyDraft, error) {
 	if !voice.OK {
 		return d.completeChecked(ctx, firstDraftSystem, data, nil)
 	}
@@ -125,7 +132,6 @@ func (d replyDrafter) completeFirstVoiced(ctx context.Context, data replyActivit
 		}
 	}
 	draft.Subject, draft.Body = draftvoice.Sanitize(draft.Subject, draft.Body)
-	draft = data.greeted(draft)
 	// The sanitizer edits text, so the floor and the shape are re-checked on
 	// what would actually be served.
 	if len(voiceDraftViolations(draft)) > 0 || validateReplyDraft(draft) != nil {

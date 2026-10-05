@@ -106,13 +106,14 @@ backwards is worse than saying nothing.
 
 TIME
 "Now" is the current time. silence_days is how long it has been, in whole
-days, since the last contact with this recipient: a message either way, or a
-meeting or note the salesperson logged. The conversation state is the band that
-gap falls in. Size every time reference from silence_days and from the dates
-the data gives, never from the name of the state: ten days is "last week" or
-"ten days ago", never "a few weeks". The state decides what you may assume.
-Where the last contact was a meeting, say you met; never call a meeting or a
-note a message, an email or "our correspondence".
+days, since the contact this draft follows on from: the message being answered
+when the draft is a reply, otherwise the latest message either way or meeting
+or note logged with this recipient. The conversation state is the band the gap
+falls in. Size every time reference from silence_days and from the dates the
+data gives, never from the name of the state: ten days is "last week" or "ten
+days ago", never "a few weeks". The state decides what you may assume.
+Where that contact was a meeting, say you met; never call a meeting or a note
+a message, an email or "our correspondence".
 - At state "none" there is no prior contact with this recipient. Do not follow up,
   do not check in, do not refer to an earlier message, a previous conversation
   or anything "we discussed". Give a reason for writing instead.

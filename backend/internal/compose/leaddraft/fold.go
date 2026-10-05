@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/contactdraft"
+	"github.com/margince/margince/backend/internal/compose/draftcore"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
@@ -129,7 +130,7 @@ func lastEachWay(activities []crmcontracts.Activity) (inbound, outbound time.Tim
 // (backend/internal/compose/leaddraft/fold_test.go)
 func ConversationState(activities []crmcontracts.Activity, now time.Time) convstate.State {
 	inbound, outbound := lastEachWay(activities)
-	return contactdraft.ClassifyWithLogged(now, inbound, outbound, activities)
+	return draftcore.ClassifyWithLogged(now, inbound, outbound, activities)
 }
 
 func deref(s *string) string {

@@ -13,6 +13,7 @@ import (
 // without one once the correction retry is spent, so no draft is served
 // ungreeted. A body that greets is returned unchanged.
 func EnsureGreeting(body string, envelope draftfloor.Envelope, firstName, lastName string) string {
+	firstName, lastName = draftfloor.NameLine(firstName), draftfloor.NameLine(lastName)
 	if !missingGreeting(body, firstName, lastName) {
 		return body
 	}
@@ -25,15 +26,17 @@ func EnsureGreeting(body string, envelope draftfloor.Envelope, firstName, lastNa
 // different defect with its own rule.
 var greetingOpeners = []string{
 	"hi", "hello", "hey", "dear", "good morning", "good afternoon", "good evening",
-	"hallo", "guten tag", "guten morgen", "guten abend", "sehr geehrte",
-	"sehr geehrter", "liebe", "lieber", "moin", "servus", "grüß gott", "grüezi",
-	"xin chào", "chào", "kính gửi", "thân gửi", "gửi",
+	"good day", "hallo", "guten tag", "guten morgen", "guten abend", "sehr geehrte",
+	"sehr geehrter", "liebe", "lieber", "moin", "servus", "grüß gott", "grüss gott",
+	"grüß dich", "grüss dich", "grüezi", "xin chào", "chào", "kính gửi", "kính thưa",
+	"thân gửi",
 }
 
 // missingGreeting reports a body whose first line does not greet anybody.
 //
 // A first line greets when it opens on a greeting word, or on the recipient's
-// own name followed by a comma or an exclamation mark ("Greven,"). A run-on
+// own name followed by a comma, an exclamation mark or the full stop
+// SplitGreetingLine also accepts ("Greven,"). A run-on
 // greeting still counts: RuleUnbrokenBlock is the rule for a greeting with no
 // line of its own.
 func missingGreeting(body, firstName, lastName string) bool {
@@ -51,15 +54,16 @@ func missingGreeting(body, firstName, lastName string) bool {
 }
 
 // opensOnName reports a line that starts with one of the recipient's names,
-// whole, and then a comma or an exclamation mark.
+// whole, and then a comma, an exclamation mark or a full stop.
 func opensOnName(line, firstName, lastName string) bool {
-	full := strings.TrimSpace(firstName + " " + lastName)
+	firstName, lastName = draftfloor.NameLine(firstName), draftfloor.NameLine(lastName)
+	full := draftfloor.NameLine(firstName + " " + lastName)
 	for _, name := range []string{full, firstName, lastName} {
 		name = strings.ToLower(strings.TrimSpace(name))
 		if name == "" || !strings.HasPrefix(line, name) {
 			continue
 		}
-		if rest := line[len(name):]; strings.HasPrefix(rest, ",") || strings.HasPrefix(rest, "!") {
+		if rest := line[len(name):]; rest != "" && strings.ContainsRune(",!.", rune(rest[0])) {
 			return true
 		}
 	}
