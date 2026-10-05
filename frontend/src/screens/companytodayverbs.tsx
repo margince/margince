@@ -79,6 +79,7 @@ export function momentVerb({
     !onOpenRecord ||
     destination?.entity_type == null ||
     destination.entity_id == null ||
+    // The press goes through the page's citation router, which opens only these kinds.
     !citationOpensRecord(destination.entity_type)
   ) {
     return fallback;

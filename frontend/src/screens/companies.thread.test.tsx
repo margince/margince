@@ -49,16 +49,17 @@ function render(ui: ReactNode) {
   );
 }
 
-const SUBJECTS: Record<string, string> = {
-  "a-new": "About capacity",
-  "a-old": "About scope",
+const MESSAGES: Record<string, { subject: string; at: string }> = {
+  "a-new": { subject: "About capacity", at: "2026-05-30T09:00:00Z" },
+  "a-old": { subject: "About scope", at: "2026-05-20T09:00:00Z" },
 };
 
-function mail(id: string, at: string, links: unknown[] = []) {
+function mail(id: string, links: unknown[] = []) {
+  const { subject, at } = MESSAGES[id];
   return {
     id,
     kind: "email",
-    subject: SUBJECTS[id],
+    subject,
     occurred_at: at,
     direction: "inbound",
     is_done: false,
@@ -67,7 +68,7 @@ function mail(id: string, at: string, links: unknown[] = []) {
       activity_id: id,
       occurred_at: at,
       version: 1,
-      subject: SUBJECTS[id],
+      subject,
       preview: "Can you hold the price until Friday?",
       counterparty: "Dana Buyer",
       direction: "inbound",
@@ -86,8 +87,8 @@ function presentation(id: string) {
   return {
     id,
     lifecycle: "delivered",
-    occurred_at: "2026-05-30T09:00:00Z",
-    summary: mail(id, "2026-05-30T09:00:00Z").email_summary,
+    occurred_at: MESSAGES[id].at,
+    summary: mail(id).email_summary,
     body: "Can you hold the price until Friday?",
     thread_key: null,
     from: [{ address: "dana@acme.test", display_name: "Dana Buyer" }],
@@ -126,10 +127,8 @@ function drawAccount() {
         ...company360,
         activities: {
           data: [
-            mail("a-new", "2026-05-30T09:00:00Z", [
-              { entity_type: "deal", entity_id: "d-7" },
-            ]),
-            mail("a-old", "2026-05-20T09:00:00Z"),
+            mail("a-new", [{ entity_type: "deal", entity_id: "d-7" }]),
+            mail("a-old"),
           ],
           page: { has_more: false, next_cursor: null },
         },
@@ -156,7 +155,7 @@ describe("the account overview's thread opens the messages it names", () => {
     const drawer = await screen.findByRole("dialog", { name: "About scope" });
     expect(
       await within(drawer).findByText(
-        formatDateTime("2026-05-30T09:00:00Z", "en", RECORD_ZONE),
+        formatDateTime(MESSAGES["a-old"].at, "en", RECORD_ZONE),
       ),
     ).toBeTruthy();
   });
