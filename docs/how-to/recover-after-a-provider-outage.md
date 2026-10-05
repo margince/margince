@@ -52,7 +52,7 @@ time on the **AI provider status** card, not wider.
 
 It reopens two kinds of work, each back to zero attempts and due at once: sender
 questions retired to unsure for want of a verdict inside the window, which also
-withdraws their standing review offer and skips any a person already decided; and
+withdraws their standing review offer and skips any someone already decided; and
 company enrichments that ran out of attempts or failed inside the window, skipping
 archived companies and ones with a site read already done. Each reopen writes an
 audit row. A repeat run finds nothing new.
