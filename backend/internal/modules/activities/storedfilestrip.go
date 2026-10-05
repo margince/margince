@@ -107,7 +107,7 @@ func (s *Store) WithholdStoredFilesTx(ctx context.Context, tx pgx.Tx, files []St
 	for _, f := range files {
 		tag, err := tx.Exec(ctx, `
 			UPDATE attachment SET storage_key = '', checksum = NULL, bytes_withheld = true
-			 WHERE id = $1 AND storage_key = $2 AND NOT bytes_withheld`, f.ID, f.Key)
+			 WHERE id = $1 AND storage_key = $2 AND NOT bytes_withheld AND archived_at IS NULL`, f.ID, f.Key)
 		if err != nil {
 			return fmt.Errorf("activities: withholding a stored file: %w", err)
 		}

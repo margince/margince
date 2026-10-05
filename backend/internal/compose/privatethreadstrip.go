@@ -21,7 +21,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -54,7 +53,7 @@ func (s *privateThreadStripper) StripWorkspace(ctx context.Context, windows capt
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: "system:private-thread-strip",
 	})
-	var due []ids.UUID
+	var due []capture.PrivateThreadMessage
 	if err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
 		var err error
 		due, err = capture.SelectPrivateThreadFilesDueTx(ctx, tx, windows, statutoryFloor(), privateThreadStripBatch)
@@ -62,9 +61,9 @@ func (s *privateThreadStripper) StripWorkspace(ctx context.Context, windows capt
 	}); err != nil {
 		return 0, fmt.Errorf("verdict: finding personal-thread mail whose files are due: %w", err)
 	}
-	for i, activity := range due {
+	for i, message := range due {
 		if err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
-			return s.stripMessage(ctx, tx, activity)
+			return s.stripMessage(ctx, tx, message)
 		}); err != nil {
 			return i, fmt.Errorf("verdict: withholding a personal-thread message's files: %w", err)
 		}
@@ -72,8 +71,8 @@ func (s *privateThreadStripper) StripWorkspace(ctx context.Context, windows capt
 	return len(due), nil
 }
 
-func (s *privateThreadStripper) stripMessage(ctx context.Context, tx pgx.Tx, activity ids.UUID) error {
-	files, err := s.files.StoredFilesOfMessageTx(ctx, tx, activity)
+func (s *privateThreadStripper) stripMessage(ctx context.Context, tx pgx.Tx, message capture.PrivateThreadMessage) error {
+	files, err := s.files.StoredFilesOfMessageTx(ctx, tx, message.Activity)
 	if err != nil || len(files) == 0 {
 		return err
 	}
@@ -81,8 +80,10 @@ func (s *privateThreadStripper) stripMessage(ctx context.Context, tx pgx.Tx, act
 	for _, f := range files {
 		bodies = append(bodies, capture.StoredBody{Ordinal: f.Ordinal, Key: f.Key, Body: f.Body})
 	}
-	if err := capture.WithholdStoredOriginalTx(ctx, tx, activity, bodies); err != nil {
-		return err
+	if message.RawCapture != nil {
+		if err := capture.WithholdStoredOriginalTx(ctx, tx, *message.RawCapture, bodies); err != nil {
+			return err
+		}
 	}
 	return s.files.WithholdStoredFilesTx(ctx, tx, files)
 }

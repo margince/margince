@@ -37,9 +37,16 @@ import (
 // colleague also imported is theirs too and is left alone. So, as the purge
 // leaves them, is mail under a hold, inside the statutory floor, or named by an
 // open data-subject request: withholding bytes cannot be undone either.
+// PrivateThreadMessage is one message whose files are due, and the stored
+// original it was read from, if any.
+type PrivateThreadMessage struct {
+	Activity   ids.UUID
+	RawCapture *ids.UUID
+}
+
 func SelectPrivateThreadFilesDueTx(
 	ctx context.Context, tx pgx.Tx, windows PersonalPurgeWindows, floor StatutoryFloor, limit int,
-) ([]ids.UUID, error) {
+) ([]PrivateThreadMessage, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
 		return nil, err
 	}
@@ -53,7 +60,7 @@ func SelectPrivateThreadFilesDueTx(
 	args = append(args, limit)
 	limitAt := "$" + strconv.Itoa(len(args))
 	rows, err := tx.Query(ctx, `
-		SELECT a.id
+		SELECT a.id, a.raw_capture_id
 		  FROM activity a
 		  JOIN capture_thread_verdict v
 		    ON v.thread_key = a.thread_key AND v.user_id::text = split_part(a.captured_by, ':', 3)
@@ -78,13 +85,13 @@ func SelectPrivateThreadFilesDueTx(
 		return nil, fmt.Errorf("capture: selecting private-thread mail whose files are due: %w", err)
 	}
 	defer rows.Close()
-	var out []ids.UUID
+	var out []PrivateThreadMessage
 	for rows.Next() {
-		var id ids.UUID
-		if err := rows.Scan(&id); err != nil {
+		var m PrivateThreadMessage
+		if err := rows.Scan(&m.Activity, &m.RawCapture); err != nil {
 			return nil, fmt.Errorf("capture: reading private-thread mail whose files are due: %w", err)
 		}
-		out = append(out, id)
+		out = append(out, m)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("capture: reading private-thread mail whose files are due: %w", err)
@@ -108,20 +115,16 @@ type StoredBody struct {
 // moved to, so it is first restored from the bodies given, then withheld like
 // any other. The row is stamped slimmed either way, so the slim sweep does not
 // read it again.
-func WithholdStoredOriginalTx(ctx context.Context, tx pgx.Tx, activityID ids.UUID, files []StoredBody) error {
+func WithholdStoredOriginalTx(ctx context.Context, tx pgx.Tx, rawCaptureID ids.UUID, files []StoredBody) error {
 	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
 		return err
 	}
 	if len(files) == 0 {
 		return nil
 	}
-	var rawID ids.UUID
 	var payload []byte
-	err := tx.QueryRow(ctx, `
-		SELECT rc.id, rc.payload FROM raw_capture rc
-		  JOIN activity a ON a.raw_capture_id = rc.id
-		 WHERE a.id = $1
-		   FOR UPDATE OF rc`, activityID).Scan(&rawID, &payload)
+	err := tx.QueryRow(ctx,
+		`SELECT payload FROM raw_capture WHERE id = $1 FOR UPDATE`, rawCaptureID).Scan(&payload)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil
 	}
@@ -157,7 +160,7 @@ func WithholdStoredOriginalTx(ctx context.Context, tx pgx.Tx, activityID ids.UUI
 	}
 	if _, err := tx.Exec(ctx, `
 		UPDATE raw_capture SET payload = $2::jsonb, parts_slimmed_at = now() WHERE id = $1`,
-		rawID, rewritten); err != nil {
+		rawCaptureID, rewritten); err != nil {
 		return fmt.Errorf("capture: writing the withheld original: %w", err)
 	}
 	return nil
