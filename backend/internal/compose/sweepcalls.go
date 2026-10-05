@@ -55,14 +55,18 @@ func sweepPaused(err error) bool {
 	return ai.IsDeferral(err) || errors.Is(err, ai.ErrUnconfiguredModel)
 }
 
+// verdictRetryBackoff spaces a verdict row that failed for a reason it may
+// outlive (a provider blip, a malformed reply, a validator rejection).
+const verdictRetryBackoff = 30 * time.Minute
+
 // deferralBackoff is how long a deferred row waits before it is due again. A
 // blocked provider names its own next probe and the row honours it exactly;
-// a budget stop keeps the lane's fixed spacing, because its window boundary
-// is a month away and one pass must not park work that long.
-func deferralBackoff(err error, fixed time.Duration) time.Duration {
+// a budget stop keeps the fixed spacing, because its window boundary is a
+// month away and one pass must not park work that long.
+func deferralBackoff(err error) time.Duration {
 	var down *ai.ProviderDownError
 	if errors.As(err, &down) {
 		return max(time.Until(down.RetryAfter), 0)
 	}
-	return fixed
+	return verdictRetryBackoff
 }

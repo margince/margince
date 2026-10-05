@@ -38,9 +38,6 @@ import (
 const (
 	// confidentialityClaimSize is how many threads one pass leases at a time.
 	confidentialityClaimSize = 8
-	// confidentialityRetryBackoff spaces a thread that failed for a reason it
-	// may outlive — a provider blip, a validator rejection.
-	confidentialityRetryBackoff = 30 * time.Minute
 	// confidentialityCatchUpCap bounds one pass so a large backlog drains over
 	// several cycles rather than holding one workspace's budget for all of it.
 	confidentialityCatchUpCap = 40
@@ -170,7 +167,7 @@ func (e *ConfidentialityVerdictEngine) judgeClaimed(
 		applied += n
 		if err != nil {
 			deferred := ai.IsDeferral(err)
-			backoff := deferralBackoff(err, confidentialityRetryBackoff)
+			backoff := deferralBackoff(err)
 			if deferErr := e.threads.Defer(ctx, row, backoff,
 				"the confidentiality verdict could not be completed", deferred); deferErr != nil {
 				releaseUnreached(claimed[i+1:], backoff)

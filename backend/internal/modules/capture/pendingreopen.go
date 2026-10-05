@@ -21,6 +21,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// Audit before/after image keys for the ledger columns a reopen rewrites.
+const (
+	columnAttempts = "attempts"
+	columnStatus   = "status"
+)
+
 // ExhaustedReason is what RetireExhausted records for a row retired for lack
 // of an answer, which is what separates a row to reopen from one the model DID
 // judge and could not hold with confidence.
@@ -135,8 +141,8 @@ func (s *PendingStore) ReopenParkedTx(ctx context.Context, tx pgx.Tx, id ids.UUI
 		return fmt.Errorf("capture: disposition %s was not the unsure row this transaction locked", id)
 	}
 	_, err = storekit.AuditWithEvidence(ctx, tx, "update", pendingObject, id,
-		map[string]any{"status": PendingStatusUnsure, "attempts": PendingMaxAttempts, "disposition_reason": ExhaustedReason},
-		map[string]any{"status": PendingStatusPending, "attempts": 0},
+		map[string]any{columnStatus: PendingStatusUnsure, columnAttempts: PendingMaxAttempts, "disposition_reason": ExhaustedReason},
+		map[string]any{columnStatus: PendingStatusPending, columnAttempts: 0},
 		map[string]any{"reopened_window_from": w.From, "reopened_window_to": w.To})
 	if err != nil {
 		return fmt.Errorf("capture: auditing the reopening of disposition %s: %w", id, err)

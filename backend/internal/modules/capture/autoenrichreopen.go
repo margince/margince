@@ -105,8 +105,8 @@ func (s *AutoEnrichStore) ReopenEnrichment(ctx context.Context, w ReopenWindow, 
 			return err
 		}
 		if _, err := storekit.AuditWithEvidence(ctx, tx, "update", enrichStateObject, companyID,
-			map[string]any{"attempts": attempts, "last_outcome": outcome},
-			map[string]any{"attempts": 0, "last_outcome": nil},
+			map[string]any{columnAttempts: attempts, "last_outcome": outcome},
+			map[string]any{columnAttempts: 0, "last_outcome": nil},
 			map[string]any{"reopened_window_from": w.From, "reopened_window_to": w.To}); err != nil {
 			return err
 		}

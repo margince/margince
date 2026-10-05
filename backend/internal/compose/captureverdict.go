@@ -52,9 +52,6 @@ const (
 	// verdictCreateFloor is what a CREATING answer needs, and it is higher —
 	// see clearsItsFloor for why the two mistakes are not the same size.
 	verdictCreateFloor = 0.85
-	// verdictRetryBackoff spaces a row that failed for a reason it may outlive
-	// (a provider fault, a malformed reply).
-	verdictRetryBackoff = 30 * time.Minute
 	// verdictCatchUpCap bounds one pass so a large backlog is drained over
 	// several cycles rather than in one unbounded run.
 	verdictCatchUpCap = 200
@@ -243,7 +240,7 @@ func (e *CounterpartyVerdictEngine) judgeClaimed(
 			// writes, so it is charged — otherwise content crafted to break the
 			// answer would be re-judged forever at one paid call a time.
 			deferred := ai.IsDeferral(err)
-			backoff := deferralBackoff(err, verdictRetryBackoff)
+			backoff := deferralBackoff(err)
 			if deferErr := e.pending.Defer(ctx, row, backoff,
 				"the verdict could not be completed", deferred); deferErr != nil {
 				releaseUnreached(claimed[i+1:], backoff)

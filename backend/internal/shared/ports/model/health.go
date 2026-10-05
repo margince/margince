@@ -10,15 +10,17 @@ import "time"
 // layer above brakes on it instead of re-deriving it from error strings.
 type ProviderHealth string
 
+// The states of a provider; ProviderHealth says what each means for a caller.
 const (
+	// HealthOK means the provider is serving.
 	HealthOK ProviderHealth = "ok"
-	// HealthDegraded: calls fail or time out intermittently, but some still pass.
+	// HealthDegraded means calls fail or time out intermittently, but some still pass.
 	HealthDegraded ProviderHealth = "degraded"
-	// HealthDown: nothing is getting through (unreachable, or a 5xx run).
+	// HealthDown means nothing is getting through: unreachable, or a 5xx run.
 	HealthDown ProviderHealth = "down"
-	// HealthOutOfCredit: the account is empty; only an operator fixes it.
+	// HealthOutOfCredit means the account is empty; only an operator fixes it.
 	HealthOutOfCredit ProviderHealth = "out_of_credit"
-	// HealthUnauthorized: the key is revoked or invalid; only an operator fixes it.
+	// HealthUnauthorized means the key is revoked or invalid; only an operator fixes it.
 	HealthUnauthorized ProviderHealth = "unauthorized"
 )
 
@@ -46,4 +48,5 @@ func (s ProviderHealthStatus) Blocked(now time.Time) bool {
 // reports OK, so nothing brakes on it.
 type NoHealth struct{}
 
+// Health reports OK: a client that does not track itself brakes nothing.
 func (NoHealth) Health() ProviderHealthStatus { return ProviderHealthStatus{Health: HealthOK} }

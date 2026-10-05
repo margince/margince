@@ -284,6 +284,7 @@ type trackedClient struct {
 	tracker  *providerTracker
 }
 
+//nolint:ireturn // the wrapper is handed to every caller as the Client it stands in for
 func trackClient(c model.Client, provider string, book *providerBook) model.Client {
 	return &trackedClient{Client: c, provider: provider, tracker: book.tracker(provider)}
 }
@@ -304,6 +305,7 @@ func (c *trackedClient) Complete(ctx context.Context, req model.Request) (model.
 	return resp, err
 }
 
+//nolint:ireturn // Stream passes the adapter's TokenStream through unchanged
 func (c *trackedClient) Stream(ctx context.Context, req model.Request) (model.TokenStream, error) {
 	if err := c.admit(); err != nil {
 		return nil, err

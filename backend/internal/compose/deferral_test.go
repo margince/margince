@@ -17,14 +17,14 @@ func TestDeferralBackoffWaitsForTheProvidersProbeNotTheFixedSpacing(t *testing.T
 	const fixed = 30 * time.Minute
 	down := &ai.ProviderDownError{Provider: "acme", Health: model.HealthDown, RetryAfter: time.Now().Add(time.Hour)}
 
-	if got := deferralBackoff(fmt.Errorf("wrapped: %w", down), fixed); got < 59*time.Minute || got > time.Hour {
+	if got := deferralBackoff(fmt.Errorf("wrapped: %w", down)); got < 59*time.Minute || got > time.Hour {
 		t.Errorf("provider outage backoff = %v, want the hour until its probe", got)
 	}
-	if got := deferralBackoff(ai.ErrBudgetDeferred, fixed); got != fixed {
+	if got := deferralBackoff(ai.ErrBudgetDeferred); got != fixed {
 		t.Errorf("budget stop backoff = %v, want the lane's fixed %v", got, fixed)
 	}
 	past := &ai.ProviderDownError{Provider: "acme", Health: model.HealthDown, RetryAfter: time.Now().Add(-time.Minute)}
-	if got := deferralBackoff(past, fixed); got != 0 {
+	if got := deferralBackoff(past); got != 0 {
 		t.Errorf("a probe already due backs off %v, want none", got)
 	}
 }
