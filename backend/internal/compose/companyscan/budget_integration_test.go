@@ -38,7 +38,7 @@ func TestBudgetRecoveryPreservesTheAccountScanRequest(t *testing.T) {
 		if !claimed {
 			t.Fatal("fixture did not claim the scan")
 		}
-		if err := deferBudget(ctx, tx, running.claim(), next); err != nil {
+		if err := deferRead(ctx, tx, running.claim(), next, "budget_deferred"); err != nil {
 			return err
 		}
 		deferred, _, err = load(ctx, tx, ids.From[ids.UserKind](e.Rep1), ids.From[ids.CompanyKind](company))
