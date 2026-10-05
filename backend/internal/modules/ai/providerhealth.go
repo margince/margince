@@ -346,6 +346,3 @@ func blockedProvider(b *binding, ladder []Tier, now time.Time) *ProviderDownErro
 	}
 	return first
 }
-
-// ProviderHealth lists every provider that is not answering normally.
-func (r *Router) ProviderHealth() []ProviderHealthEntry { return sharedProviderHealth.snapshot() }
