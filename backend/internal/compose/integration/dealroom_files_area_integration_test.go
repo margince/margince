@@ -171,3 +171,49 @@ func TestARepCannotShareATeammatesLimitedAudienceMailAttachment(t *testing.T) {
 		t.Fatalf("sharing a teammate's limited-audience attachment = %d, want 404", status)
 	}
 }
+
+// A file kept from private mail by name only has no bytes for a buyer to
+// download, so it is not in the deal's Files area and the room refuses it.
+func TestAWithheldMailFileCannotBePutInADealRoom(t *testing.T) {
+	blob := blobstore.NewMemory()
+	e := apptest.SetupAppWithOptions(t, compose.WithBlobstore(blob))
+	e.BootstrapWorkspace(t)
+	room := openRoomWithABuyer(t, e)
+	var roomRow AnyMap
+	if status := e.Call(t, "GET", "/v1/deal-rooms/"+room.roomID, nil, nil, &roomRow); status != http.StatusOK {
+		t.Fatalf("room = %d", status)
+	}
+	dealID, _ := roomRow["deal_id"].(string)
+	var email AnyMap
+	if status := e.Call(t, "POST", "/v1/activities", AnyMap{
+		"kind": "email", "subject": "Private", "direction": "inbound",
+	}, nil, &email); status != http.StatusCreated {
+		t.Fatalf("log email = %d %v", status, email)
+	}
+	activityID, _ := email["id"].(string)
+	if status := e.Call(t, "POST", "/v1/activities/"+activityID+"/relink", AnyMap{
+		"entity_type": "deal", "entity_id": dealID,
+	}, nil, nil); status != http.StatusOK {
+		t.Fatalf("link the email to the deal = %d", status)
+	}
+	ctx := captureContext(t, e)
+	store := activities.NewStore(e.DB()).WithBlobstore(blob)
+	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		return store.RecordWithheldFiles(ctx, tx, ids.From[ids.ActivityKind](ids.MustParse(activityID)),
+			activities.CapturedFileSource{System: "imap", MessageID: "private-" + activityID, CapturedBy: "connector:imap", Category: "email_attachment"},
+			[]activities.WithheldFile{{PartID: "1", Filename: "payslip.pdf", ContentType: "application/pdf", ByteSize: 4096}})
+	}); err != nil {
+		t.Fatalf("record the withheld file: %v", err)
+	}
+	var attachmentID string
+	if err := e.Pool.QueryRow(context.Background(),
+		`SELECT id FROM attachment WHERE entity_type = 'activity' AND entity_id = $1`, activityID).Scan(&attachmentID); err != nil {
+		t.Fatalf("read the withheld file: %v", err)
+	}
+
+	if status := e.Call(t, "POST", "/v1/deal-rooms/"+room.roomID+"/documents", AnyMap{
+		"attachment_id": attachmentID, "group_key": "legal", "source": "manual",
+	}, nil, nil); status != http.StatusNotFound {
+		t.Fatalf("adding a withheld file to the room = %d, want 404", status)
+	}
+}

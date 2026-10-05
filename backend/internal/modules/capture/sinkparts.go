@@ -213,10 +213,8 @@ func (s *Sink) keepParts(
 	}
 	var withheldParts []connector.Part
 	if private {
-		withheldParts = rec.Parts
-		var withheld int
-		rec, withheld = stripPersonalParts(rec)
-		if err := s.personalPartsWithheld(ctx, tx, rec, withheld, verdict); err != nil {
+		rec, withheldParts = stripPersonalParts(rec)
+		if err := s.personalPartsWithheld(ctx, tx, rec, len(withheldParts), verdict); err != nil {
 			return rec, err
 		}
 	}

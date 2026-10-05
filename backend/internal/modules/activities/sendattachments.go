@@ -116,6 +116,21 @@ func (e *EmptyAttachmentError) FieldFault() (field, code, message string) {
 	return "attachment_ids", "empty_attachment", e.Error()
 }
 
+// WithheldAttachmentError names a file recorded from private mail by name only:
+// there are no bytes to send.
+type WithheldAttachmentError struct{ Filename string }
+
+func (e *WithheldAttachmentError) Error() string {
+	return fmt.Sprintf(
+		"%q came with private mail and was not kept, so it cannot be sent; remove it from this message",
+		e.Filename)
+}
+
+// FieldFault names the field the caller must correct.
+func (e *WithheldAttachmentError) FieldFault() (field, code, message string) {
+	return "attachment_ids", "withheld_attachment", e.Error()
+}
+
 // boundAttachmentIDs collapses repeats and refuses a set larger than one
 // message may carry.
 //
@@ -171,6 +186,11 @@ func (s *Store) resolveAttachments(ctx context.Context, attachmentIDs []ids.UUID
 		}
 		if meta.ByteSize == nil || *meta.ByteSize <= 0 {
 			return nil, &EmptyAttachmentError{Filename: meta.Filename}
+		}
+		// Refused here, where the sender can act on it: a file named on a private
+		// message has a size and no bytes, and would fail only at delivery.
+		if meta.BytesWithheld != nil && *meta.BytesWithheld {
+			return nil, &WithheldAttachmentError{Filename: meta.Filename}
 		}
 		out = append(out, OutboundFile{
 			AttachmentID: id,

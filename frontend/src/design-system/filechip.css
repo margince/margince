@@ -59,8 +59,8 @@
     color var(--dur-state) var(--ease-out);
 }
 
-/* A file recorded by name only: the same card, quieter, and still under the
-   pointer, because there is nothing behind it to open. */
+/* A file recorded by name only: the same card, quieter, and with no hover
+   change, because there is nothing behind it to open. */
 .file-chip-withheld {
   border-style: dashed;
   color: var(--textSecondary);

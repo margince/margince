@@ -204,7 +204,7 @@ func (s *Store) OpenAttachment(ctx context.Context, id ids.UUID) (crmcontracts.A
 		if err := ensureAttachmentParentVisible(ctx, tx, entityType, entityID); err != nil {
 			return err
 		}
-		// After the gates, so the refusal tells an outsider nothing.
+		// After the gates, so it tells an outsider nothing; cf. refuseWithheldBytes.
 		if withheld {
 			return ErrBytesWithheld
 		}
