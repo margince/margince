@@ -176,6 +176,9 @@ func repairOneMeeting(ctx context.Context, tx pgx.Tx, c replayCandidate, payload
 		if err := capture.StampSeatsPastTheCap(ctx, tx, c.activityID, c.kind, true, parties.Withheld); err != nil {
 			return "", err
 		}
+		if err := activities.RetireSupersededAttendeesTx(ctx, tx, c.activityID); err != nil {
+			return "", err
+		}
 		return repairCappedSeats, nil
 	}
 	if len(parties.Participants) == 0 {

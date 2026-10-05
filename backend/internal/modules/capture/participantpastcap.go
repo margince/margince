@@ -11,7 +11,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -37,7 +36,9 @@ func StampSeatsPastTheCap(
 ) error {
 	// Unattested, the list is a sender's text, and binding a seat from it is the
 	// forged edge StampFurtherParticipants refuses for the same reason.
-	if !partyListIsAttested || !relstrength.IsParticipantKind(kind) || len(withheld) == 0 {
+	// Meetings only: a seat on an invitation attended it, which is the case the
+	// decision covers. A crowded mail list stays refused whole.
+	if !partyListIsAttested || kind != "meeting" || len(withheld) == 0 {
 		return nil
 	}
 	addresses := make([]string, 0, len(withheld))
