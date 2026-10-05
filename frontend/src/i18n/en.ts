@@ -573,6 +573,8 @@ export const en = {
   "aiAdmin.coverage":
     "Counts cover durable website reads, company scans and voice builds only. They do not count every scheduled AI pass or guarantee that a request is still eligible to run.",
   "aiAdmin.unavailable": "Unavailable",
+  "aiAdmin.providerWaiting":
+    "Waiting for the AI provider: {waiting}. It resumes by itself when the provider answers.",
   "aiAdmin.impact.blocked": "Waiting on allowance",
   "aiAdmin.impact.model": "Different model selected",
   "aiAdmin.impact.decision": "Decision model changed",

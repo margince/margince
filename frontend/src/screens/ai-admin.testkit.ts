@@ -50,7 +50,13 @@ export const status: components["schemas"]["AiStatus"] = {
   task_contract_hash: "fixture",
   features: [feature],
   deferred_work: [
-    { carrier: "site_read", unit: "reads", available: true, count: 3 },
+    {
+      carrier: "site_read",
+      unit: "reads",
+      available: true,
+      count: 3,
+      waiting_on_provider: 2,
+    },
     { carrier: "company_scan", unit: "scans", available: false },
     { carrier: "voice_build", unit: "builds", available: true, count: 0 },
   ],

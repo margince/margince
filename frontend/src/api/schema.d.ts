@@ -21578,6 +21578,11 @@ export interface components {
             available: boolean;
             /** Format: int64 */
             count?: number;
+            /**
+             * Format: int64
+             * @description Work waiting for the AI provider to answer, not for the budget. It resumes by itself at the provider's next probe, and a budget raise does not change it; `count` holds only what a raise would resume.
+             */
+            waiting_on_provider?: number;
         };
         AiStatus: {
             /** Format: date-time */

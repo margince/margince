@@ -581,6 +581,8 @@ export const vi = {
   "aiAdmin.coverage":
     "Chỉ đếm các lần đọc website, quét tài khoản và tạo giọng văn được lưu bền vững. Không bao gồm mọi lượt AI theo lịch và không đảm bảo yêu cầu vẫn đủ điều kiện chạy.",
   "aiAdmin.unavailable": "Không khả dụng",
+  "aiAdmin.providerWaiting":
+    "Đang chờ nhà cung cấp AI: {waiting}. Công việc tự chạy tiếp khi nhà cung cấp phản hồi.",
   "aiAdmin.impact.blocked": "Chờ hạn mức",
   "aiAdmin.impact.model": "Đã chọn mô hình khác",
   "aiAdmin.impact.decision": "Đã đổi mô hình quyết định",

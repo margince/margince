@@ -31089,6 +31089,13 @@ components:
         unit: { type: string }
         available: { type: boolean }
         count: { type: integer, format: int64 }
+        waiting_on_provider:
+          type: integer
+          format: int64
+          description: >-
+            Work waiting for the AI provider to answer, not for the budget. It resumes by
+            itself at the provider's next probe, and a budget raise does not change it;
+            `count` holds only what a raise would resume.
     AiStatus:
       type: object
       required: [observed_at, budget, routing_version, task_contract_hash, features, deferred_work, deferred_work_coverage]

@@ -87,5 +87,14 @@ The budget's own deferral is above, under *The monthly budget* in [ai-runtime.md
 - A probe cut short by the caller's own deadline counts as a failed probe.
 - While a provider is blocked only its probe is heard: a call admitted before the block that finishes later neither restores the provider nor re-arms the backoff.
 - Other processes do not brake on the shared status; it is for display.
-- Voice builds and website reads deferred by an outage are still labelled as a
-  budget deferral (tracked in a follow-up).
+- A website read or voice build waiting for the provider keeps the status code
+  `budget_deferred`, which its CHECK constraint requires; only its status detail
+  (`shared/kernel/providerwait`) tells the two waits apart.
+
+## Where a provider wait is counted
+
+Settings → AI's waiting-work list shows two numbers per carrier. `count` is what
+an allowance raise would resume, and the budget recovery pass wakes only that.
+`waiting_on_provider` is work waiting for the provider's next probe, which
+resumes by itself. A company scan is told apart by `degrade_reason =
+'provider_deferred'`; a site read and a voice build by the detail they write.

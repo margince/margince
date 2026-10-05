@@ -30,7 +30,10 @@ when it has content.
   wins; without Redis a process shows only its own), so Settings shows an outage only
   the worker saw. A call that finds the host unreachable and every failed probe while
   blocked are refunded, one probe runs at a time, and a vendor's "does not have
-  permission" refusal no longer marks the key rejected.
+  permission" refusal no longer marks the key rejected. Settings → AI's "Recorded
+  work waiting on the allowance" counts only what an allowance raise would resume;
+  website reads, account scans and voice builds waiting for a provider are shown
+  as their own "Waiting for the AI provider" number and resume by themselves.
 - Model prices sync themselves: once a day (and on **Refresh model prices**) every
   provider with a usable key is re-priced from models.dev or OpenRouter, newly
   listed chat and embedding models the catalogue prices are added, and a price you set

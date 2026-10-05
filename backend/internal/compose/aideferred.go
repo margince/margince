@@ -23,20 +23,21 @@ func aiDeferredWork(pool *pgxpool.Pool) func(context.Context) ([]crmcontracts.Ai
 		if err := auth.Require(ctx, "ai_diagnostics", principal.ActionRead); err != nil {
 			return nil, err
 		}
-		sources := []struct{ table, query, unit string }{
-			{"site_read", "SELECT count(*) FROM site_read WHERE " + contacts.BudgetDeferredSiteReads, "website_reads"},
-			{"company_scan", "SELECT count(*) FROM company_scan WHERE " + companyscan.BudgetDeferredScans, "account_scans"},
-			{"voice_build", "SELECT count(*) FROM voice_build WHERE " + ai.BudgetDeferredVoiceBuilds, "voice_builds"},
+		sources := []struct{ table, unit, budget, provider string }{
+			{"site_read", "website_reads", contacts.BudgetDeferredSiteReads, contacts.ProviderDeferredSiteReads},
+			{"company_scan", "account_scans", companyscan.BudgetDeferredScans, companyscan.ProviderDeferredScans},
+			{"voice_build", "voice_builds", ai.BudgetDeferredVoiceBuilds, ai.ProviderDeferredVoiceBuilds},
 		}
 		out := make([]crmcontracts.AiDeferredWork, 0, len(sources))
 		for _, source := range sources {
 			line := crmcontracts.AiDeferredWork{Carrier: source.table, Unit: source.unit}
 			err := InstallationDB(pool).Tx(ctx, func(tx pgx.Tx) error {
-				var count int64
-				if err := tx.QueryRow(ctx, source.query).Scan(&count); err != nil {
+				var count, waiting int64
+				if err := tx.QueryRow(ctx, "SELECT count(*) FILTER (WHERE "+source.budget+"), count(*) FILTER (WHERE "+source.provider+") FROM "+source.table).Scan(&count, &waiting); err != nil {
 					return err
 				}
 				line.Count = &count
+				line.WaitingOnProvider = &waiting
 				line.Available = true
 				return nil
 			})

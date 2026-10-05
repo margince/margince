@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/providerwait"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -250,7 +251,7 @@ func evaluatedPredecessorVersion(predecessor *ai.VoiceProfileVersion) int {
 // reader needs to know whether to wait for a month or for the provider.
 func voiceDeferralDetail(err error) string {
 	if errors.Is(err, ai.ErrProviderDown) {
-		return "The AI provider is not answering; the build resumes when it is back."
+		return providerwait.Detail
 	}
 	return "The monthly AI budget is exhausted; the build resumes in the next window."
 }

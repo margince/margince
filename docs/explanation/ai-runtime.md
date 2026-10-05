@@ -264,8 +264,8 @@ lives in; the queue job kind that resumes it is spelled differently for the
 first two (`site_deep_read`, `account_scan`) and identically for the third
 (`voice_build`). Each carrier has its own "budget-deferred" predicate
 (`contacts.BudgetDeferredSiteReads`, `companyscan.BudgetDeferredScans`,
-`ai.BudgetDeferredVoiceBuilds`), and its count is what Settings → AI's
-waiting-work list shows — gated on `ai_diagnostics:read`, separate from the
+`ai.BudgetDeferredVoiceBuilds`; a provider wait is excluded), and its count is what
+Settings → AI's waiting-work list shows — gated on `ai_diagnostics:read`, separate from the
 `ai_budget:read` needed to see the allowance itself, so a budget-only editor
 can preview an allowance change without gaining an `ai_diagnostics` or
 `ai_routing` grant.

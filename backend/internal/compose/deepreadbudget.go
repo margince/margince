@@ -13,8 +13,10 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/providerwait"
 )
 
 func (w *siteDeepReadWorker) Work(ctx context.Context, job *river.Job[SiteDeepReadArgs]) (workErr error) {
@@ -59,7 +61,11 @@ func (w *siteDeepReadWorker) deferForBudget(ctx context.Context, readID ids.UUID
 	}
 	tctx, cancel := terminalCtx(ctx)
 	defer cancel()
-	if err := w.contacts.DeferSiteRead(tctx, readID, until); err != nil {
+	detail := contacts.SiteReadBudgetDetail
+	if errors.Is(cause, ai.ErrProviderDown) {
+		detail = providerwait.Detail
+	}
+	if err := w.contacts.DeferSiteRead(tctx, readID, until, detail); err != nil {
 		return true, errors.Join(cause, fmt.Errorf("recording the deferral on the dossier: %w", err))
 	}
 	return true, cause

@@ -22076,6 +22076,9 @@ type AiDeferredWork struct {
 	Carrier   string `json:"carrier"`
 	Count     *int64 `json:"count,omitempty"`
 	Unit      string `json:"unit"`
+
+	// WaitingOnProvider Work waiting for the AI provider to answer, not for the budget. It resumes by itself at the provider's next probe, and a budget raise does not change it; `count` holds only what a raise would resume.
+	WaitingOnProvider *int64 `json:"waiting_on_provider,omitempty"`
 }
 
 // AiEmbeddingsBinding defines model for AiEmbeddingsBinding.

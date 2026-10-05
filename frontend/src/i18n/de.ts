@@ -591,6 +591,8 @@ export const de = {
   "aiAdmin.coverage":
     "Die Zahlen umfassen nur dauerhaft gespeicherte Website-Lesevorgänge, Unternehmensscans und Aufbauvorgänge von Stilprofilen. Nicht jeder geplante KI-Lauf wird gezählt, und die Zahlen garantieren nicht, dass eine Anfrage noch ausgeführt werden darf.",
   "aiAdmin.unavailable": "Nicht verfügbar",
+  "aiAdmin.providerWaiting":
+    "Wartet auf den KI-Anbieter: {waiting}. Die Arbeit läuft von selbst weiter, sobald er antwortet.",
   "aiAdmin.impact.blocked": "Wartet auf Kontingent",
   "aiAdmin.impact.model": "Anderes Modell gewählt",
   "aiAdmin.impact.decision": "Entscheidungsmodell geändert",
