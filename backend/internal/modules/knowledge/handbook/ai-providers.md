@@ -136,11 +136,11 @@ Also called: is the AI down, AI outage, model provider health, AI provider statu
 
 ### What does "Out of credit", "Key rejected", "Unreachable" or "Degraded" mean on an AI provider?
 "Out of credit" means the provider account has no credit or quota left, so top it up; "Key rejected" means the provider refused the API key, so replace it under **Providers**; "Unreachable" means the provider's host is not answering, so check its status page and host; "Degraded" means some requests fail but calls still go through.
-Margince checks again by itself, and saving a key checks at once. The first three stop calls until then.
+Margince checks again by itself; a successful key **Test** clears it at once, and saving a key within about 30 seconds. The first three stop calls until then.
 Also called: provider badge, provider status, credit exhausted, 401, API key refused.
 
 ### What does a provider badge on AI models mean?
 A badge next to a provider under **Providers** means Margince has found it not answering: **Out of credit**, **Key rejected**, **Unreachable** or **Degraded**.
-Fix the cause named on **Settings**, then **System health**, in the **AI provider status** card; saving a new key under **Providers** checks again at once.
-A provider is not marked for being slow: a rate-limit reply makes Margince try the next model, not stop.
+Fix the cause named on **Settings**, then **System health**, in the **AI provider status** card; testing a new key under **Providers** clears it at once.
+A rate-limit reply does not mark a provider: Margince tries the next model. Only three timeouts in a row mark it **Degraded**.
 Also called: provider status, provider down, API key refused, out of credit.

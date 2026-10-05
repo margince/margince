@@ -23,6 +23,11 @@ when it has content.
   attempts, and an interactive request fails fast with a message to contact the
   system administrator. `worker reopen-parked --from … --to … [--dry-run]` reopens
   the sender questions and company enrichments an earlier outage parked.
+  A rejected key or an empty balance is read from the vendor's reply text, not only
+  its status code, and the call that first meets one is refunded and fails with the
+  specific reason. A successful key test clears the provider's state at once, and the
+  status is shared between the API and the worker, so Settings shows an outage only
+  the worker saw.
 - Model prices sync themselves: once a day (and on **Refresh model prices**) every
   provider with a usable key is re-priced from models.dev or OpenRouter, newly
   listed chat and embedding models the catalogue prices are added, and a price you set

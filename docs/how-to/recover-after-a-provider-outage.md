@@ -14,8 +14,9 @@ queue with no judgement, and company enrichments that ran out of attempts.
 
 Open **Settings** → **System health** and read the **AI provider status** card, or call
 `GET /v1/ai/provider-health`. Only providers that are not answering normally are
-listed; an empty list is the healthy answer. The view is the serving process's own,
-learned from its calls, so check the worker's too when the two could differ.
+listed; an empty list is the healthy answer. The view is merged
+from the calls of the API and the worker, so an outage only the worker saw shows too;
+without Redis it is the serving process's own.
 
 | Health | Fix |
 |---|---|
@@ -27,8 +28,9 @@ learned from its calls, so check the worker's too when the two could differ.
 ## 2. Fix it and let the probe run
 
 An out-of-credit or unauthorized provider is probed every 15 minutes; a down one at
-30 seconds doubling to 5 minutes. Saving a key, or saving the routing, probes at
-once. Work that was deferred needs nothing from you once the probe succeeds.
+30 seconds doubling to 5 minutes. A successful **Test** on the key clears the
+provider's failures at once; saving a key or the routing clears them at the next
+routing recheck, about every 30 seconds. Work that was deferred needs nothing from you once the probe succeeds.
 
 ## 3. Reopen what the outage parked
 

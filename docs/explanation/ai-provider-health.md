@@ -11,15 +11,24 @@ on it instead of re-reading error text.
 | `ok` | answering | no |
 | `degraded` | three timeouts in a row; some calls still pass | no |
 | `down` | host unreachable, or three 5xx in a row | yes |
-| `out_of_credit` | the account is empty (402, or a 429 that names quota) | yes |
-| `unauthorized` | the key is revoked or invalid (401, 403) | yes |
+| `out_of_credit` | the account is empty (402, or a 400, 403, 429 or other 4xx whose text says the balance is empty) | yes |
+| `unauthorized` | the key is revoked or invalid (401, or a 400 or 403 whose text names the key) | yes |
 
 `out_of_credit` and `unauthorized` trip on **one** failure, because nothing but an
 operator changes them, and are probed again every 15 minutes. `down` trips at once
 on an unreachable host, or after three consecutive 5xx, and is probed at 30 seconds
-doubling to 5 minutes. Saving a key or the routing forgets the provider's state, so
-the next call is the probe and a fixed key is felt immediately. One success clears
-any state. The classification is `providerFaultOf` in `budget.go`.
+doubling to 5 minutes. A probe holds a one-minute lease, so one call probes and the
+others are refused with a retry moment still ahead. One success clears any state, and
+so does a successful key test (`POST /ai/provider-keys/{provider}/test`) at once. A
+key or routing save clears it at the next routing recheck, about every 30 seconds in
+each process, and a provider removed from routing is cleared too.
+
+The status codes alone do not decide. A 401 always marks the key unauthorized, but a
+400 or 403 does so only when its text names the key or credential, and a 400, 403 or
+other 4xx marks the account empty only when its text says the balance is empty (402
+always does). A plain 403, a moderation flag or a model not enabled for the project is
+the message's own, and is still charged. The classification is `providerFaultOf` in
+`budget.go`.
 
 **Health belongs to the provider, not to a tier.** Every tier bound to one provider
 sees the same state, so the failure of one tier's call blocks the others and one
@@ -38,8 +47,15 @@ next probe.
 **A lane treats it as a deferral, exactly like the budget stop.** `IsDeferral`
 covers both: the attempt is refunded, the item waits until the retry moment and the
 pass stops, so an outage no longer parks senders as unsure or spends the attempts of
-enrichment and River jobs. A failure that is the message's own still charges the
-item, because it would fail on a healthy provider too.
+enrichment and River jobs. The call that trips an out-of-credit or rejected-key status
+is refunded too: it returns a deferral that keeps the cause, so an interactive user
+gets the reason-specific 503 on the first call. A 5xx or a timeout needs three in a
+row, so the tripping call there is charged. A failure that is the message's own still
+charges the item, because it would fail on a healthy provider too.
+
+An embedding for a blocked provider is refused untraced with `ai.ErrProviderDown`,
+not wrapped as an embed-lane failure. Search reindex callers see it like any other
+embed failure and retry on their own schedule.
 
 **An interactive request fails fast.** It returns a 503 with a specific code,
 `provider_out_of_credit`, `provider_unauthorized` or `provider_unavailable`, and a
@@ -47,8 +63,10 @@ message telling the user to contact their system administrator
 (`internal/compose/modelfailure`). Nobody waits out a timeout to learn the same.
 
 `GET /ai/provider-health` lists the providers that are not answering normally, from
-the view of the process serving the request. It is not a probe and not a shared
-record, so two processes can disagree for a moment. Settings → AI models marks the
+a view shared between the API and the worker through a Redis key: every process
+publishes its changes and the request reads the merged view, so an outage only the
+worker saw still shows. Without Redis it shows the serving process's own view. It is
+not a probe. Settings → AI models marks the
 provider and Settings → System health shows the **AI provider status** card. Work an outage already parked
 is reopened by an operator:
 [recover-after-a-provider-outage.md](../how-to/recover-after-a-provider-outage.md).
