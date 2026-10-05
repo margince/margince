@@ -85,6 +85,10 @@ const (
 	kindTranscriptProposal = "transcript_proposal"
 )
 
+// retiredKinds are governed for reading and refused for approving: see
+// kindTranscriptProposal.
+var retiredKinds = map[string]bool{kindTranscriptProposal: true}
+
 // KindScheduledSendHeld is the card a stopped scheduled message raises for the
 // rep who scheduled it (ADR-0104 §5). Exported because compose stages it and
 // registers both its effects: the message lives in activities and the inbox

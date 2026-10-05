@@ -265,6 +265,18 @@ export const DISPLAY_FIELDS: Readonly<Record<string, readonly DisplayField[]>> =
       },
       { field: "to_stage_name", label: "approval.field.to_stage", as: "text" },
     ],
+    // Retired: nothing stages it, but cards already decided under it read
+    // with the layout they were decided in.
+    transcript_proposal: [
+      {
+        field: "summary",
+        label: "approval.field.step",
+        as: "prose",
+        lead: true,
+      },
+      { field: "owner", label: "approval.field.owner", as: "text" },
+      { field: "due_date", label: "approval.field.due_date", as: "date" },
+    ],
     // A promise read out of a meeting or a mail thread. The party is who made
     // it, as the conversation names them; accepting a promise nobody could be
     // named for makes it the reader's own task.

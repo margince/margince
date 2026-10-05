@@ -10,12 +10,14 @@ package compose
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -251,5 +253,19 @@ func TestADecidedRetiredTranscriptCardStaysReadable(t *testing.T) {
 		        now() + interval '1 day', now(), 'activity', $3)`, e.Rep1, e.activity.UUID)
 	if _, err := e.svc.Get(e.ctx, ids.From[ids.ApprovalKind](id)); err != nil {
 		t.Errorf("the rep cannot open a card decided under the retired kind: %v", err)
+	}
+}
+
+// A pending card of the retired kind is refused on approval: nothing would
+// apply it, and a recorded yes that does nothing would read as done.
+func TestAPendingRetiredTranscriptCardCannotBeApproved(t *testing.T) {
+	e := setupTranscript(t)
+	id := integration.SeedIDRow(t, e.owner, `INSERT INTO approval
+		(id, kind, status, proposed_by, on_behalf_of, proposed_change, diff_hash, expires_at,
+		 target_entity_type, target_entity_id)
+		VALUES ($1, 'transcript_proposal', 'pending', 'agent:transcript-proposer', $2, '{}', 'retired-2',
+		        now() + interval '1 day', 'activity', $3)`, e.Rep1, e.activity.UUID)
+	if _, err := e.svc.Decide(e.ctx, ids.From[ids.ApprovalKind](id), true, nil); !errors.Is(err, apperrors.ErrConflict) {
+		t.Errorf("approving a retired card: err = %v, want a conflict", err)
 	}
 }
