@@ -153,6 +153,7 @@ func (d replyDrafter) DraftEmailWithProvenance(ctx context.Context, anchor ids.U
 		Stored:  activityLanguage(activity),
 		Body:    body,
 		Subject: topic,
+		Purpose: intent,
 	}, state)
 	recipient, surname := d.recipientName(ctx, ids.From[ids.ActivityKind](anchor))
 

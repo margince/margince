@@ -123,7 +123,7 @@ func (s *Service) Draft(
 		return crmcontracts.CompanyEmailDraft{}, err
 	}
 	envelope := s.envelope.Resolve(ctx,
-		draftfloor.Written{Body: contactdraft.CorrespondenceTextOf(activities)},
+		draftfloor.Written{Body: contactdraft.CorrespondenceTextOf(activities), Purpose: req.Intent},
 		ConversationState(activities, s.envelope.Now()))
 	in := FromLead(lead, activities, req.Intent, envelope)
 	// Loaded after the lead read, so a caller who may not see this lead is
