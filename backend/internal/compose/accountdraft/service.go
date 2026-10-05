@@ -140,12 +140,12 @@ func (s *Service) WithEnvelope(resolver *draftfloor.Resolver) *Service {
 // account we have corresponded with for a year that we are writing for the
 // first time, which is as false as the "just following up" this program set out
 // to remove, only in the other direction.
-func (s *Service) envelopeFor(ctx context.Context, view crmcontracts.Company360) draftfloor.Envelope {
+func (s *Service) envelopeFor(ctx context.Context, view crmcontracts.Company360, req Request) draftfloor.Envelope {
 	// The account's own correspondence, already bounded and scoped by the view.
 	// No stored language: an account history is many messages, and the language
 	// of whichever one sorted first is not the language of the exchange.
 	return s.envelope.Resolve(ctx,
-		draftfloor.Written{Body: CorrespondenceText(view)},
+		draftfloor.Written{Body: CorrespondenceText(view), Rewrite: req.RewriteOf, Purpose: req.Intent},
 		ConversationState(view, s.envelope.Now()))
 }
 
@@ -173,7 +173,7 @@ func (s *Service) Draft(
 	if err != nil {
 		return crmcontracts.CompanyEmailDraft{}, err
 	}
-	req.Envelope = s.envelopeFor(ctx, view)
+	req.Envelope = s.envelopeFor(ctx, view, req)
 	in, err := FromView(view, req)
 	if err != nil {
 		return crmcontracts.CompanyEmailDraft{}, err

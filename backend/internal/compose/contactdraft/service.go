@@ -128,7 +128,7 @@ func (s *Service) Draft(
 		return crmcontracts.CompanyEmailDraft{}, err
 	}
 	req.Envelope = s.envelope.Resolve(ctx,
-		draftfloor.Written{Body: CorrespondenceText(view)},
+		draftfloor.Written{Body: CorrespondenceText(view), Rewrite: req.RewriteOf, Purpose: req.Intent},
 		ConversationState(view, s.envelope.Now()))
 	in := FromView(view, req)
 	// A project the caller can see but this contact is not part of is not a

@@ -35,6 +35,12 @@ type Clock func() time.Time
 // lives in identity, and this package is reached by every drafting surface.
 type BaseLanguage func(ctx context.Context) string
 
+// UserLanguage answers the language the calling rep reads the app in, or ""
+// when they never chose one. It sits above the installation's language: the
+// rep is the one who sends the draft, so their own language is the better
+// guess for a contact who has never written.
+type UserLanguage func(ctx context.Context) string
+
 // Resolver assembles the envelope every drafting surface is handed.
 //
 // It is one type rather than a method on each service because the fallbacks are
@@ -45,6 +51,7 @@ type BaseLanguage func(ctx context.Context) string
 type Resolver struct {
 	sender Sender
 	base   BaseLanguage
+	user   UserLanguage
 	now    Clock
 	logger *slog.Logger
 }
@@ -62,6 +69,13 @@ func (r *Resolver) WithSender(sender Sender) *Resolver {
 // between the correspondence's own text and the hard default.
 func (r *Resolver) WithBaseLanguage(base BaseLanguage) *Resolver {
 	r.base = base
+	return r
+}
+
+// WithUserLanguage binds the calling rep's own app language, the tier between
+// the typed purpose and the installation's language.
+func (r *Resolver) WithUserLanguage(user UserLanguage) *Resolver {
+	r.user = user
 	return r
 }
 
@@ -104,6 +118,14 @@ type Written struct {
 	Body string
 	// Subject is the fallback text, read only when the body says nothing.
 	Subject string
+	// Rewrite is the draft being rewritten, read after the correspondence and
+	// before the purpose: "make it shorter" must not change its language.
+	Rewrite string
+	// Purpose is what the rep typed to ask for the draft. It is read only
+	// when the correspondence says nothing: a contact's own language beats
+	// the rep's, but a rep who typed English to a contact who never wrote
+	// wants English back.
+	Purpose string
 }
 
 // Resolve assembles the envelope from what the draft is written into and where
@@ -114,10 +136,11 @@ type Written struct {
 // draft unsigned (DRAFT-AC-E-6) — a drafting screen that errors because it
 // could not work out a greeting is worse than a draft the rep edits.
 //
-// The ladder is stored, then the text, then the installation's own language,
-// then English. The base-language tier is what answers a first message, which
-// has no correspondence at all to read: its only text is the rep's typed
-// intent, far too short to clear the detector's bar.
+// The ladder is stored, then the correspondence, then the draft being
+// rewritten, then the rep's typed purpose, then the rep's own app language,
+// then the installation's language, then English. A purpose too short to clear
+// the detector's bar falls to the rep's app language, which is why that tier
+// sits above the installation's.
 func (r *Resolver) Resolve(ctx context.Context, written Written, state convstate.State) Envelope {
 	now := r.Now()
 	name, email := r.actor(ctx)
@@ -131,7 +154,19 @@ func (r *Resolver) Resolve(ctx context.Context, written Written, state convstate
 	// corrected after construction would leave a German register on an English
 	// envelope, or drop one the other way.
 	return NewEnvelopeWithRegister(r.language(ctx, written),
-		textlang.DetectRegister(written.Body), state, now, name, email)
+		register(written), state, now, name, email)
+}
+
+// register reads the same texts as the language ladder, in the same order, so
+// a rewrite or a first message with no correspondence keeps the du or Sie its
+// own text uses.
+func register(written Written) textlang.Register {
+	for _, text := range []string{written.Body, written.Rewrite, written.Purpose} {
+		if found := textlang.DetectRegister(text); found != textlang.RegisterUnknown {
+			return found
+		}
+	}
+	return textlang.RegisterUnknown
 }
 
 // language walks the ladder, taking the first tier that names a language this
@@ -146,13 +181,16 @@ func (r *Resolver) language(ctx context.Context, written Written) textlang.Lang 
 	if textlang.Known(written.Stored) {
 		return textlang.Lang(written.Stored)
 	}
-	var base string
+	var user, base string
+	if r != nil && r.user != nil {
+		user = r.user(ctx)
+	}
 	if r != nil && r.base != nil {
 		base = r.base(ctx)
 	}
-	// The same ladder the footer under a sent message walks. Shared, so a
-	// draft and the footer beneath it cannot pick two languages for one mail.
-	return textlang.FirstKnown([]string{written.Body, written.Subject}, base)
+	// The helper the footer under a sent message walks too, so the two cannot
+	// disagree about how a text or a fallback is judged.
+	return textlang.FirstKnown([]string{written.Body, written.Subject, written.Rewrite, written.Purpose}, user, base)
 }
 
 // actor names the acting human, or nobody.
