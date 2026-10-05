@@ -5,6 +5,7 @@ package partslim_test
 
 import (
 	"bytes"
+	"encoding/base64"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/capture/partslim"
@@ -26,6 +27,10 @@ func TestWithholdPartsRemovesTheBytesAndKeepsTheBody(t *testing.T) {
 		if !bytes.Contains(out, []byte(kept)) {
 			t.Errorf("the withheld original lost %q", kept)
 		}
+	}
+	notice := base64.StdEncoding.EncodeToString([]byte("This part was not kept"))[:20]
+	if !bytes.Contains(out, []byte(notice)) {
+		t.Error("the withheld part has no notice body, so a reader decoding it sees nothing or noise")
 	}
 	if partslim.IsSlimmed(out) {
 		t.Error("a withheld part reads as a slimmed one, so a restore would try to fetch bytes that were never kept")
@@ -56,5 +61,47 @@ func TestHeadersOnlyKeepsNothingOfAnUnsplittableOriginal(t *testing.T) {
 	out := partslim.HeadersOnly([]byte("Subject: no blank line anywhere JVBERi0xLjQ="))
 	if bytes.Contains(out, []byte("JVBERi0xLjQ=")) {
 		t.Errorf("an unsplittable original kept its bytes: %q", out)
+	}
+	if !bytes.Contains(out, []byte(partslim.PartWithheldHeader+": all")) {
+		t.Errorf("an unsplittable original lost the marker saying why it is empty: %q", out)
+	}
+}
+
+// A file sent 7bit is in the original verbatim. A base64 copy of it planted in
+// the visible body must not be taken for the part: the splice would remove the
+// copy and keep the file.
+func TestWithholdPartsDoesNotTakeABase64CopyForASevenBitFile(t *testing.T) {
+	file := []byte("payslip: salary 4200 EUR, account DE00 1234")
+	raw := []byte("MIME-Version: 1.0\r\n" +
+		"Content-Type: multipart/mixed; boundary=\"b1\"\r\n\r\n" +
+		"--b1\r\nContent-Type: text/plain\r\n\r\n" +
+		base64.StdEncoding.EncodeToString(file) + "\r\n" +
+		"--b1\r\nContent-Type: text/plain\r\nContent-Disposition: attachment; filename=\"p.txt\"\r\n" +
+		"Content-Transfer-Encoding: 7bit\r\n\r\n" + string(file) + "\r\n--b1--\r\n")
+	out, located := partslim.WithholdParts(raw, []partslim.WithheldPart{{Ordinal: 1, Body: file}})
+	if located {
+		t.Error("a base64 copy in the visible body was reported as the 7bit part")
+	}
+	if bytes.Contains(out, file) {
+		t.Errorf("the 7bit file survived in the original: %q", out)
+	}
+}
+
+// The same trap with the copy in a part that does declare base64: the header
+// check admits it, so only the bytes surviving the splice can catch it.
+func TestWithholdPartsCatchesASevenBitFileThatSurvivesTheSplice(t *testing.T) {
+	file := []byte("payslip: salary 4200 EUR, account DE00 1234")
+	raw := []byte("MIME-Version: 1.0\r\n" +
+		"Content-Type: multipart/mixed; boundary=\"b1\"\r\n\r\n" +
+		"--b1\r\nContent-Type: application/octet-stream\r\nContent-Transfer-Encoding: base64\r\n\r\n" +
+		base64.StdEncoding.EncodeToString(file) + "\r\n" +
+		"--b1\r\nContent-Type: text/plain\r\nContent-Transfer-Encoding: 7bit\r\n\r\n" +
+		string(file) + "\r\n--b1--\r\n")
+	out, located := partslim.WithholdParts(raw, []partslim.WithheldPart{{Ordinal: 1, Body: file}})
+	if located {
+		t.Error("the splice removed the decoy and reported the 7bit file located")
+	}
+	if bytes.Contains(out, file) {
+		t.Errorf("the 7bit file survived in the original: %q", out)
 	}
 }

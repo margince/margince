@@ -11,7 +11,8 @@ import (
 	"strconv"
 )
 
-// PartWithheldHeader marks a part whose bytes capture never kept. Not under
+// PartWithheldHeader marks bytes capture never kept: one part (`part:N`), or
+// the whole message body (`all`) when no part could be cut out alone. Not under
 // partFieldPrefix: a restore reads that run as a stanza to fetch, and there is
 // nothing to fetch here.
 const PartWithheldHeader = "X-Margince-Withheld-Part"
@@ -51,7 +52,16 @@ func WithholdParts(raw []byte, parts []WithheldPart) ([]byte, bool) {
 	if err != nil {
 		return HeadersOnly(raw), false
 	}
-	return applySplices(raw, ordered), true
+	out := applySplices(raw, ordered)
+	// A part sent 7bit or 8bit is in the original verbatim, and a base64 copy
+	// of it elsewhere could have been the one located. Its bytes surviving the
+	// splice say so.
+	for _, part := range parts {
+		if len(part.Body) > 0 && bytes.Contains(out, part.Body) {
+			return HeadersOnly(raw), false
+		}
+	}
+	return out, true
 }
 
 func withholdSplice(raw []byte, ordinal int, body []byte) (splice, error) {
@@ -64,6 +74,9 @@ func withholdSplice(raw []byte, ordinal int, body []byte) (splice, error) {
 	if err != nil {
 		return splice{}, err
 	}
+	if !declaresBase64(raw[:header.fieldsEnd]) {
+		return splice{}, ErrPartNotLocated
+	}
 	field := concat([]byte(PartWithheldHeader+": "+PartIdentity(ordinal)+"; bytes="+
 		strconv.Itoa(len(body))), header.eol)
 	return splice{
@@ -73,6 +86,21 @@ func withholdSplice(raw []byte, ordinal int, body []byte) (splice, error) {
 			wrapBase64WithEOL([]byte(base64.StdEncoding.EncodeToString([]byte(partWithheldNotice))),
 				base64WrapWidth, eol)),
 	}, nil
+}
+
+// declaresBase64 reports whether the MIME header block ending the given bytes
+// says its body is base64. The block runs from the part's boundary line, so a
+// header written into an earlier part's text does not count.
+func declaresBase64(upToFieldsEnd []byte) bool {
+	start := bytes.LastIndex(upToFieldsEnd, []byte("\n--"))
+	block := upToFieldsEnd[start+1:]
+	for _, line := range bytes.Split(block, []byte("\n")) {
+		name, value, found := bytes.Cut(bytes.TrimSpace(line), []byte(":"))
+		if found && bytes.EqualFold(bytes.TrimSpace(name), []byte("Content-Transfer-Encoding")) {
+			return bytes.EqualFold(bytes.TrimSpace(value), []byte("base64"))
+		}
+	}
+	return false
 }
 
 // errSplicesOverlap says two parts resolved to one region, so one was located

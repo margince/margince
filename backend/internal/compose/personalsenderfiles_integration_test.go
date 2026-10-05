@@ -12,6 +12,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"fmt"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -47,10 +48,13 @@ func fromAddress(rec connector.NormalizedRecord, address string) connector.Norma
 func judgeSenderPersonal(ctx context.Context, t *testing.T, db *database.DB, firstSourceID, address string) {
 	t.Helper()
 	if err := db.Tx(ctx, func(tx pgx.Tx) error {
-		_, err := tx.Exec(ctx, `
+		tag, err := tx.Exec(ctx, `
 			INSERT INTO capture_pending_counterparty (email, activity_id, owner_id, status, kind, resolved_at)
 			SELECT $3, a.id, $2, 'noise', 'personal', now()
 			  FROM activity a WHERE a.source_id = $1`, firstSourceID, captureSeatID, address)
+		if err == nil && tag.RowsAffected() != 1 {
+			err = fmt.Errorf("the first message %s was not captured, so no verdict was seeded", firstSourceID)
+		}
 		return err
 	}); err != nil {
 		t.Fatalf("judging the sender personal: %v", err)
@@ -172,6 +176,10 @@ func TestACorrespondenceContactsFilesSurviveAPersonalVerdict(t *testing.T) {
 	}
 	if files := filesFor(ctx, t, db, "msg-contact-"+tag); len(files) != 1 {
 		t.Errorf("stored %d files for a correspondence contact, want 1", len(files))
+	}
+	encoded := base64.StdEncoding.EncodeToString(onePDF().Body)
+	if raw := storedOriginal(ctx, t, db, "msg-contact-"+tag); !bytes.Contains(raw, []byte(encoded)) {
+		t.Error("the stored original lost a correspondence contact's attachment")
 	}
 }
 

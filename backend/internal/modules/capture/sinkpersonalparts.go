@@ -103,7 +103,7 @@ func senderIsPersonalTx(
 		          AND c.archived_at IS NULL)
 		     AND NOT EXISTS (
 		       SELECT 1 FROM contact_email pe JOIN contact pr ON pr.id = pe.contact_id
-		        WHERE pe.email = $2 AND pr.archived_at IS NULL
+		        WHERE pe.email = $2 AND pr.archived_at IS NULL AND pe.archived_at IS NULL
 		          AND pe.from_correspondence))`,
 		seat, address, PendingStatusNoise, KindPersonal).Scan(&personal); err != nil {
 		return false, fmt.Errorf("capture: reading whether this sender is a personal correspondent: %w", err)
