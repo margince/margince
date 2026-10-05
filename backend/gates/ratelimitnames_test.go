@@ -5,7 +5,7 @@
 
 package gates
 
-// A rate limiter's NAME is its bucket. Every limiter counts into a store the
+// A rate limiter's name is its bucket. Every limiter counts into a store the
 // replicas of a role share, keyed by `ratelimit:<name>:<key>`, so two limiters
 // that name the same thing are not two ceilings of the configured size — they
 // are one ceiling, spent by both, and the login budget an installation thinks

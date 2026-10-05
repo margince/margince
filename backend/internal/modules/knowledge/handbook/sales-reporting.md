@@ -12,8 +12,8 @@ Sales won follows the selected close period and the current deal owner. Reassign
 a deal moves its live sales and target results to the new owner; saved snapshots
 keep the owner and results captured then. Open pipeline and stage age describe
 the current pipeline, with their expected-close window printed beside the chart.
-Salesperson targets use the containing month or fiscal quarter, with that period's own
-actual. Changing the event period does not turn today's pipeline into history.
+A salesperson's target is for the month or fiscal quarter that contains the period
+you chose, compared with that month's or quarter's actual. Changing the event period does not turn today's pipeline into history.
 
 “This month” and “This quarter” follow the installation’s calendar and reset when
 that period begins. The dates beside the figures identify the period measured.
@@ -37,9 +37,14 @@ Stage-age records stay within the selected reporting scope.
 - **Stage age:** median and 75th percentile for current open deals. Small cohorts
   are withheld. A percentile describes the population; it is not a stalled-deal alarm.
 - **SDR outcomes:** weekly held meetings and accepted opportunities, counted
-  separately. Older confirmed meetings without attribution history use their
-  current host and customer links; the metric’s coverage details explain this fallback. Acceptance stays credited to the originating SDR after ownership
-  transfers. These two series are not a conversion rate.
+  separately. Older meetings are credited to their current host; the metric’s
+  coverage details say when this applies. An accepted opportunity stays credited
+  to the SDR who created it after the deal changes owner. These two series are not
+  a conversion rate.
+- **Sales and SDR summaries:** period totals above their trends. Target progress
+  appears only for assigned targets; SDRs without targets see totals without a
+  quota column. Exact amounts, timezones and attribution remain available in
+  reporting details.
 - **Forecast:** won, supported open and additional upside are separate segments.
   The manager's forecast is a separate marker. Movement uses stored captures with their
   actual dates; a new context needs two captures before it can show movement.
@@ -62,14 +67,15 @@ still signs in and is checked against present-day permissions.
 ## How do I keep a weekly or monthly edition?
 
 Open a saved report and choose **Save snapshot**, or configure a weekly or monthly
-schedule with a timezone, day and time. **Activate schedule** starts it; **Save paused** keeps it inactive. Scheduled snapshots cover the previous completed period and appear in the report; they are not sent by email. Scheduling requires an edition-retention
-policy and a fixed, permitted scope. The schedule pins the report revision you chose.
+schedule with a timezone, day and time. **Activate schedule** starts it; **Save paused** keeps it inactive. Scheduled snapshots cover the previous completed period and appear in the report; they are not sent by email.
+To schedule a report, it needs a retention policy for editions and a fixed scope you
+are allowed to see. Ask an administrator if either is missing. The schedule pins the report revision you chose.
 Editing the live report does not silently change that schedule. When its settings differ, choose **Use current report settings** to update the schedule.
 
 Expand **History and schedules** for run history. It distinguishes queued, running, complete, partial, failed, skipped
 and suspended runs. Use the shown reason to correct a failed run and retry it.
-A schedule stops when its accountable owner loses the necessary access. After
-correcting access, explicitly resume it. Pausing survives a restart.
+A schedule stops when its owner loses the necessary access. Fix the access, then
+resume the schedule. A paused schedule stays paused until someone resumes it.
 
 Select an edition in the history to see the values, targets, graphs and evidence
 captured then. Later source edits do not recalculate it. Privacy erasure and retention
@@ -84,15 +90,12 @@ or accepted opportunities. Select the owner or team, pipeline where supported, a
 month or fiscal quarter. Choose a year and starting month; only valid fiscal-quarter months are offered. Each revision needs a reason. Filter the list by active/retired status and starting month. The team commitment stays
 independent of individual allocations; the difference is shown as **Unallocated** or **Overallocated**.
 
-Use the report's CSV export for its current readings, or export a selected frozen
+Use **Export CSV**, beside **Save report**, for the report's current readings, or export a selected frozen
 edition for its archived readings. Exports respect the same permissions and coverage
 as the screen. For a bespoke analysis, open **More analysis → Custom reports** or ask your connected AI
 to use Margince's governed reporting tools.
 
-The Sales and SDR summaries show period totals above their trends. Target progress appears only for assigned targets; SDRs without targets see totals without a quota column. Exact amounts, timezones and attribution remain available in reporting details. Export CSV is beside Save report.
-
 Metric definitions are available to readers. Administrators open **Reporting setup** separately to configure qualification stages and daily pipeline history.
-
 
 ## Why can Weekly figures differ?
 
@@ -101,6 +104,5 @@ The lead funnel counts recorded status transitions for the rep’s leads during 
 week; it is a different population and date basis from meetings hosted during the
 week. Older partial transitions are excluded from that funnel.
 
-Saved reports keep their metric versions. When using MCP, compare those versions
-with the catalog before applying its current definitions to an older edition.
-Weekly comparisons also require matching metric versions.
+Saved reports keep the metric definitions they were made with, and Weekly
+compares figures only when their definitions match.

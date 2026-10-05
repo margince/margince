@@ -5,7 +5,7 @@
 
 package gates
 
-// A LIST THAT CAN BE CUT SAYS WHERE IT WAS CUT.
+// A list that can be cut says where it was cut.
 //
 // A route declaring `limit` and nothing else answers the first page and says
 // nothing about the rest. That is not a slow answer — it is a complete-looking

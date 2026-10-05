@@ -5,7 +5,7 @@
 
 package gates
 
-// ONE lock order over the lead and the contact it was promoted into.
+// One lock order over the lead and the contact it was promoted into.
 //
 // Two writers hold both rows. MergeContact locks the contacts (LockPair) and then
 // repoints lead.promoted_contact_id, so it goes contact -> lead. DemoteLead used

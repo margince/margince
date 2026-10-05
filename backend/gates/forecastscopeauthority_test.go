@@ -5,7 +5,7 @@
 
 package gates
 
-// Every forecasting store entry point that RECORDS against a scope asks whether
+// Every forecasting store entry point that records against a scope asks whether
 // its caller answers for that scope.
 //
 // The object grant and the scope are different questions, and the module asked

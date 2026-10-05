@@ -1,14 +1,14 @@
 # Certify a decision site
 
 A bound `decisions:` lane answers every site its local-only rule admits as
-soon as it is bound — no certification row is required to serve, the same as
-any other task's ladder rung. Certification is **advisory**: it measures a
+soon as it is bound. Like any other task's ladder rung, it needs no
+certification row to serve. Certification is **advisory**: it measures a
 (task, site, provider, model) binding's real accuracy against graded scenarios
 and writes a record to the generated table
-`backend/internal/modules/ai/decisioncert_gen.go`, which is what an operator
-(and, later, an admin surface) reads before trusting a binding — it is not
-consulted by `Router.Decide`. This page is how a record gets there, and what
-happens to it when the site changes. What the lane is and when it falls back:
+`backend/internal/modules/ai/decisioncert_gen.go`. An operator (and, later, an
+admin surface) reads that table before trusting a binding; `Router.Decide` does
+not consult it. Below: how a record gets there, and what happens to it when the
+site changes. What the lane is and when it falls back:
 [ai-runtime.md](../explanation/ai-runtime.md#the-decision-lane). The ordinary
 LLM certification this rides on: [certify-an-ai-model.md](certify-an-ai-model.md).
 
@@ -18,8 +18,8 @@ own key.
 ## 1. Point a run at a config with a `decisions:` lane
 
 A decision leg runs only under `ROUTING=`, and only when that config binds the
-lane. No shipped preset binds one — `openrouter_cloud.yaml` carries the block
-commented out — so copy a preset into the gitignored `.tmp/` and uncomment it:
+lane. No shipped preset binds one (`openrouter_cloud.yaml` carries the block
+commented out), so copy a preset into the gitignored `.tmp/` and uncomment it:
 
 ```bash
 mkdir -p .tmp && cp config/presets/openrouter_cloud.yaml .tmp/openrouter_cloud_decisions.yaml
@@ -47,7 +47,7 @@ TypeSafe's own API (`provider: jev`, `model: jev-1.13.0`, key
 `TYPESAFE_API_KEY`) needs a record of its own.
 
 The lane is checked against the file's profile before any paid call, with the
-rule a live config meets. The LLM leg runs exactly as it would without the lane
+rule a live config meets. The LLM leg runs as it would without the lane
 and writes its usual record. Then every scenario whose site has a decision form
 is asked of the lane `RUNS` times, with no judge: the answer is a closed label,
 and the site's own gate plus the scenario's expected label grade it.
@@ -64,16 +64,16 @@ Each site gets its own record beside the task's LLM record:
 with `"kind": "decision"` and the **configured** model, which is what the
 runtime keys on. Its `decision` block counts:
 
-- `kept`, `kept_correct`, `kept_wrong` — answers the site's gate accepted, and
+- `kept`, `kept_correct`, `kept_wrong`: answers the site's gate accepted, and
   how many of those were right;
-- `fallbacks`, `fallback_rate`, `fallback_by_reason` — runs the ladder would
+- `fallbacks`, `fallback_rate`, `fallback_by_reason`: runs the ladder would
   have answered, keyed by the attempt reason without its `decision_` prefix;
-- `served_pass_rate` — kept-correct runs plus the LLM record's pass rate on
+- `served_pass_rate`: kept-correct runs plus the LLM record's pass rate on
   the runs that fell back: what the site would serve end to end;
-- `min_kept_confidence` — a diagnostic, never a floor.
+- `min_kept_confidence`: a diagnostic, never a floor.
 
-The verdict is stricter than the LLM's band rule: **`certified` only when no
-kept answer was wrong in any run and at least one was kept.** A fallback is
+The verdict is stricter than the LLM's band rule: a record is `certified` only
+when no kept answer was wrong in any run and at least one was kept. A fallback is
 never wrong, so the fallback rate is reported and does not decide the verdict.
 
 `make e2e-ai-report` prints a second table for decision records, and
@@ -90,9 +90,9 @@ writes a row into `decisioncert_gen.go` for every decision record that is
 certified and whose scenario stamps match this build, with the record's path as
 a comment on its row. Regenerate the certification page too
 (`cd backend && go test ./internal/compose/aicert/ -run TestAICertificationPage -update-ai-cert`),
-and commit the record, the table and the page together. The lane already
-answers the site whether or not this row exists — landing it only updates what
-the certification page and a future admin surface report about the binding.
+and commit the record, the table and the page together. The lane answers the
+site whether or not this row exists. The row changes only what the
+certification page and a future admin surface report about the binding.
 
 ## 4. When the site changes: re-certify or drop
 
@@ -105,12 +105,12 @@ criterion leaves the LLM record current.
 Change any of the three and the record goes stale. `make gen` then drops its
 row, and until you commit that the drift check fails naming the record:
 `… went stale (…) and loses its row: re-certify it or delete the record`.
-That row is reporting only now — the lane keeps serving the site either way —
-so this stops the certification page from silently claiming an out-of-date
-measurement, not from silently switching the lane off. Choose one:
+The row is for reporting. The lane serves the site either way, so a stale
+record can only make the certification page claim an out-of-date measurement.
+Choose one:
 
-- **Re-certify** — rerun §1 for that task and commit the new record and table.
-- **Drop** — delete the record and commit the regenerated table. The
+- **Re-certify**: rerun step 1 for that task and commit the new record and table.
+- **Drop**: delete the record and commit the regenerated table. The
   certification page then lists the site as not measured; the lane still
   serves it.
 

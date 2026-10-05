@@ -5,7 +5,8 @@
 
 package gates
 
-// Environment-variable contract fitness functions. Four obligations, all
+// The MARGINCE_* variables the code reads, .env.example names, configuration.md
+// names and an entrypoint requires agree with each other. Four obligations, all
 // derived from the tree rather than a maintained list:
 //
 //  1. every MARGINCE_* var the Go code reads is named in

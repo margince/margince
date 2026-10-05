@@ -5,7 +5,7 @@
 
 package gates
 
-// A day-count bound published in the contract and enforced in Go is ONE rule
+// A day-count bound published in the contract and enforced in Go is one rule
 // with two spellings, so it is held here.
 //
 // The two halves fail in opposite and equally quiet directions. Widen the Go

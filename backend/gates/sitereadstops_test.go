@@ -5,7 +5,7 @@
 
 package gates
 
-// A website read that stopped is classified TWICE, and both answers reach the
+// A website read that stopped is classified twice, and both answers reach the
 // same reader.
 //
 // The server decides it to word the activity rail — "I've read the company

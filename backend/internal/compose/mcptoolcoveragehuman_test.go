@@ -53,17 +53,15 @@ func trustVerdict(held, tried, cases int) string {
 }
 
 func writeCoverageIntro(p *strings.Builder, r mcpToolCoverage) {
-	p.WriteString("This page tells you which AI assistant can do which everyday job in Margince — " +
-		"logging a call, preparing for a meeting, tidying up records — once it is connected to " +
-		"Margince. Every result was measured by having the real assistant do the job several " +
-		"times on a test company and checking what it did and what it said, not promised by anyone.\n\n")
+	p.WriteString("Which AI assistant can do which everyday job in Margince (logging a call, preparing " +
+		"for a meeting, tidying up records) once it is connected to Margince. Every result was " +
+		"measured by having the real assistant do the job several times on a test company and " +
+		"checking what it did and what it said.\n\n")
 	p.WriteString("<details>\n<summary>How this page is made</summary>\n\n")
 	p.WriteString(r.Note + "\n\n")
-	p.WriteString("**This page is generated, and an edit made here is lost.** The lane that produces " +
-		"its results is `make e2e-llm`; it is paid and opt-in, so a result changes only when " +
-		"someone runs it and commits the verdict. [ai-certification.md](ai-certification.md) " +
-		"answers a different question — whether a model can do one AI feature — and is worth " +
-		"reading beside this one.\n\n</details>\n\n")
+	p.WriteString("The lane that produces its results is `make e2e-llm`; it is paid and opt-in, so a " +
+		"result changes only when someone runs it and commits the verdict. For whether a model can " +
+		"do one AI feature, see [ai-certification.md](ai-certification.md).\n\n</details>\n\n")
 }
 
 func writeCoverageAssistants(p *strings.Builder, r mcpToolCoverage) {
@@ -80,13 +78,13 @@ func writeCoverageAssistants(p *strings.Builder, r mcpToolCoverage) {
 			m.CasesRecorded, len(r.Cases), trustVerdict(m.CasesHeld, m.CasesRecorded, len(r.Cases)),
 			plainWords(m, titles))
 	}
-	p.WriteString("\n**Yes** means it was reliable on every job we tried. **Mostly** means at least 80 in every " +
-		"100. **Not yet** means fewer. **Not enough tested yet** means we tried it on under half " +
-		"the jobs, so we do not say. *Reliably* means it got the job right in most of its tries — " +
+	p.WriteString("\nAn assistant rated **Yes** was reliable on every job we tried. One rated **Mostly** was " +
+		"reliable on at least 80 in every 100, and one rated **Not yet** on fewer. We say **Not enough " +
+		"tested yet** when we tried it on under half the jobs.\n\n*Reliably* means it got the job right in most of its tries: " +
 		"each job is tried several times, because an assistant does not answer the same way twice.\n\n")
 	p.WriteString("**How we connected it** matters. *Claude Code CLI* and *Codex CLI* are each vendor's own " +
-		"assistant, with its own instructions; the *neutral harness* gives every model the same " +
-		"tools and the same instructions, so only there is one model compared with another.\n\n")
+		"assistant, with its own instructions. The *neutral harness* gives every model the same " +
+		"tools and the same instructions, so it is the only route that compares one model with another.\n\n")
 }
 
 func plainWords(m modelCoverage, titles map[string]string) string {
@@ -111,7 +109,7 @@ func plainWords(m modelCoverage, titles map[string]string) string {
 func writeCoverageJobs(p *strings.Builder, r mcpToolCoverage) {
 	p.WriteString("## What can it do for me?\n\n")
 	p.WriteString("One row per everyday job, one column per assistant. ✅ did it reliably, ❌ not reliably " +
-		"yet, — not tried yet. What a good answer must do is in the second column.\n\n")
+		"yet, and a dash means not tried yet. What a good answer must do is in the second column.\n\n")
 	header := "| Job | What a good answer does |"
 	rule := "|---|---|"
 	for _, m := range r.Models {
@@ -140,7 +138,7 @@ func plainCriteria(caseName string, numbers []int, catalog []criterionRow) strin
 		}
 	}
 	if len(out) == 0 {
-		return "—"
+		return "-"
 	}
 	return strings.Join(out, "<br>")
 }
@@ -154,7 +152,7 @@ func jobMark(c caseRow, model string) string {
 			return "❌"
 		}
 	}
-	return "—"
+	return "-"
 }
 
 func caseTitles(cases []caseRow) map[string]string {

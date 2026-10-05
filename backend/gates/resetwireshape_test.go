@@ -5,7 +5,8 @@
 
 package gates
 
-// The reset-data 200 body as a fitness function.
+// The reset-data 200 body has the keys the contract's required list names, in
+// the hand-written resetDataResponse struct.
 //
 // The contract declares that response INLINE, so oapi-codegen synthesizes no Go
 // type for it and the drift gate has nothing to compare: the hand-written

@@ -1,31 +1,30 @@
 # What is kept, what is destroyed
 
-This page answers four questions: what Margince keeps, for how long, what a
-delete actually destroys, and how you get data in and out of the system. Read it
-before you promise anything to a customer or an auditor.
+What Margince keeps, for how long, what a delete destroys, and how you get data
+in and out. Read it before you promise anything to a customer or an auditor.
 
 ## The general rule: deleting in Margince archives
 
 **In Margince, removing a contact, company, deal, lead or project never destroys
 it.** Removal is an archive: the record leaves the live lists, becomes read-only,
 and is still stored, with its history and audit trail. Margince has no delete
-button for records. Data is destroyed in exactly two ways: a retention policy
+button for records. Data is destroyed in only two ways: a retention policy
 whose action is anonymise or erase, and a fulfilled erasure request. Files and
 knowledge documents are the exception: those can be deleted outright.
 
 ## Getting data out, getting data in, and removing records
 
 ### How do I export my data from Margince?
-To export or download records from Margince — for example all your contacts — open **Filters and views** in the sidebar, build a filter, then choose **Export CSV** or **Export JSON**.
+To export or download records from Margince (for example all your contacts), open **Filters and views** in the sidebar, build a filter, then choose **Export CSV** or **Export JSON**.
 1. Open **Filters and views**.
 2. Pick the **Record type**: **Contacts**, **Companies** or **Deals**.
 3. Choose **Add clause** and complete at least one clause. The export buttons appear once the filter is complete.
 4. Choose **Export CSV** or **Export JSON**. The file downloads.
-The export holds only rows you can see, and every export is written to the audit log. Agents cannot export.
+The export holds only records you can see, and every export is written to the audit log. Agents cannot export.
 Also called: download, get my data out, backup, extract to Excel or spreadsheet.
 
 ### How do I get all of my company's data out of Margince?
-Margince has a whole-company export bundle (a ZIP of one CSV per record type, relational JSON and manifests), but the app has no button for it. A signed-in human with the installation-settings update permission, which the Admin and Ops roles hold by default, downloads it from the API (`GET /exports/bundle`); agents cannot. It is row-scoped to that user and audited. For everyday exports use **Filters and views → Export CSV**.
+Margince has a whole-company export bundle (a ZIP of one CSV per record type, plus files describing how records link), but the app has no button for it yet. Ask whoever runs your installation to download it for you. Only an administrator or operations user can have it made, agents cannot, and it holds only what that user can see. Every download is audited. For everyday exports use **Filters and views → Export CSV**.
 Also called: full export, data handover, migrate away, leave Margince.
 
 ### How do I import contacts from a spreadsheet?
@@ -40,11 +39,11 @@ Also called: upload a CSV, bulk import, Excel import.
 
 ### How do I undo an import?
 To undo a CSV import in Margince, open **Settings → Data import** and choose **Undo import ({rows} rows)** on the import result.
-Undo archives the rows that import created (a lead is disqualified), unless someone edited them since. Those are listed under "Kept because they were edited after the import:". Rows the import only updated are not changed back. If the undo stops partway, choose **Continue undo**. When done it says **Import undone**.
+Undo archives the records that import created (a lead is disqualified), unless someone edited them since. Those are listed under "Kept because they were edited after the import:". Records the import only updated are not changed back. If the undo stops partway, choose **Continue undo**. When done it says **Import undone**.
 Also called: reverse an import, roll back an upload.
 
 ### How do I delete a contact permanently?
-Margince has no delete button for a contact: **More actions → Archive** hides it but keeps it. To destroy a contact's data for good, an administrator fulfils an **erasure** request in **Settings → Privacy and retention → Privacy requests** (see below). Companies, deals, leads and projects have no delete button either; an erasure request always names a contact. A lead's data is destroyed only by the **Leads that never converted** rule or with the contact it belongs to; a deal is only ever archived, never destroyed; companies and projects have no retention scope at all.
+Margince has no delete button for a contact: **More actions → Archive** hides it but keeps it. To destroy a contact's data for good, an administrator fulfils an **erasure** request in **Settings → Privacy and retention → Privacy requests** (see below). Companies, deals, leads and projects have no delete button either; an erasure request always names a contact. A lead's data is destroyed only by the **Leads that never converted** rule (when set to anonymise) or with the contact it belongs to. A deal is only ever archived, never destroyed. Companies and projects have no retention rule at all.
 Also called: remove a contact, hard delete, purge, wipe.
 
 ### How do I handle a GDPR erasure request?
@@ -57,11 +56,11 @@ This cannot be undone. A contact inside a statutory retention window is refused 
 Also called: right to be forgotten, Art. 17, delete my data, data subject request, DSR.
 
 ### How do I answer a data access request?
-To log a GDPR access request, an administrator opens **Settings → Privacy and retention → Privacy requests**, chooses **New request**, sets **Kind** to **access**, fills **Subject reference** and **Due**, and chooses **Open request**. The app says: "An access request is fulfilled manually: record what you sent in the resolution. This system does not assemble or export the data for you." Gather the data (or have the package assembled, see below), send it, then write the **Resolution** and choose **Fulfill**.
+To log a GDPR access request, an administrator opens **Settings → Privacy and retention → Privacy requests** and chooses **New request**. Set **Kind** to **access**, fill **Subject reference** and **Due**, and choose **Open request**. The app says: "An access request is fulfilled manually: record what you sent in the resolution. This system does not assemble or export the data for you." Gather the data (or have the package assembled, see below), send it, then write the **Resolution** and choose **Fulfill**.
 Also called: subject access request, SAR, Art. 15, what do you hold about me.
 
 ### How do I archive a record?
-To archive a contact or company, open it and choose **More actions → Archive**, then confirm "Archive this record? You can bring it back from its history." For a deal, choose **Archive deal**; for a project, **Archive project**. Leads are not archived: choose **Disqualify**. To see archived rows on a list, choose **Show archived**.
+To archive a contact or company, open it and choose **More actions → Archive**, then confirm "Archive this record? You can bring it back from its history." For a deal, choose **Archive deal**; for a project, **Archive project**. Leads are not archived: choose **Disqualify**. To see archived records on a list, choose **Show archived**.
 Also called: hide, remove, retire a record.
 
 ### How do I restore an archived record?
@@ -77,14 +76,13 @@ To pause a rule, turn **Enabled** off; **Delete policy** removes it entirely.
 Also called: data retention, retention period, auto-delete.
 
 ### How do I record a contact's consent?
-To record consent, or to mark a contact as do-not-contact for a purpose, open the contact, find the **Communication permissions** panel and choose **Manage consent and proof history**; in the drawer choose **Record consent** for a purpose, or **Withdraw**. A purpose that needs double opt-in cannot be recorded by staff; choose **Ask them to confirm their details** on the same panel to mail the contact a private link instead. Purposes are added in **Settings → Privacy and retention → Consent purposes → Add purpose**.
+To record consent, or to mark a contact as do-not-contact for a purpose, open the contact, find the **Communication permissions** panel and choose **Manage consent and proof history**. In the drawer choose **Record consent** for a purpose, or **Withdraw**. A purpose that needs double opt-in cannot be recorded by staff; choose **Ask them to confirm their details** on the same panel to mail the contact a private link instead. Purposes are added in **Settings → Privacy and retention → Consent purposes → Add purpose**.
 Also called: opt-in, opt-out, do not contact, unsubscribe someone, marketing permission, GDPR consent.
 
 ## Archive is not delete
 
-Across the whole product, ordinary removal is **soft**. Archiving sets a date on
-the record; the record stays fetchable. It leaves the live lists. It does not
-cease to exist.
+Across the whole product, ordinary removal keeps the record. An archived record
+leaves the live lists, but you can still open it.
 
 Some examples of the difference in the product's own words:
 
@@ -97,48 +95,41 @@ Some examples of the difference in the product's own words:
   This archives {source}." Both values survive a merge; choosing a side decides
   which record stands and which value is shown first.
 
-## A new company starts with six retention rules
+## A new company starts with retention rules
 
-Margince does not ship empty here. A new company is created with six retention
-rules already in place, so it is compliant with storage limitation from the
-first day rather than after someone remembers to configure it. All six are
-editable.
+A new company starts with these retention rules already in place. You can edit
+all of them.
 
 | What it covers | Kept for | Then |
 |---|---|---|
-| Leads that never converted | 365 days | Anonymize |
+| Leads that never converted | 365 days | Archive |
 | All captured activity | 1095 days (3 years) | Archive |
 | Call transcripts | 365 days | Erase |
 | Contacts with no consent and no deal | 730 days (2 years) | Anonymize |
 | Lost deals | 1825 days (5 years) | Archive |
 | AI call payloads | 365 days | Erase |
+| Stored message originals | 730 days (2 years) | Erase |
+| Daily record of material deals at risk | 90 days | Erase |
 
-Two more scopes exist that you can write a rule for, and both are deliberately
-left empty:
+**Won deals** and **Saved report editions** can also have a rule, but start
+with none. Margince takes no view on when your company should stop keeping a
+won deal; that is your decision.
 
-- **Won deals.** The product takes no view on when your company should stop
-  keeping a won deal. That is your decision, not its default.
-- **Stored originals.** Capture keeps the original of every message it filed,
-  separately from the timeline entry it became. Until you write a rule here,
-  nothing ages those originals out on their own; they are only reached when
-  the activity they belong to is reached, or by an erasure. On a busy mailbox
-  they are usually the largest thing in the database, so this is the rule worth
-  writing first.
-
-  What it may destroy is bounded by the activity it belongs to: an original is
-  never destroyed while the correspondence it is the original *of* is held under
-  the statutory floor, and the timeline entry stays standing so the same message
-  cannot be captured again.
+**Stored message originals** are the copies capture keeps of every message it
+filed, separately from the timeline entry each became. On a busy mailbox they
+take the most storage. An original is never destroyed while its correspondence
+is held under the statutory retention floor. The timeline entry stays, so the
+same message cannot be captured again.
 
 If you delete every rule, the screen tells you what that means: "No retention
 policy yet. Nothing in this installation ages out." One fixed window still
 runs with no policy: AI embedding call traces age out after 90 days (below).
 
 ### What each retention window counts from
-The start of a retention window matters more than readers expect. **Leads** and
-**contacts** count from when the record was created. **Captured activity** and
-**call transcripts** count from the message's own date: when it was sent or
-received, not when it was filed. **Deals** count from when the deal was closed.
+**Leads** and **contacts** count from when the record was created. **Captured
+activity** and **call transcripts** count from the message's own date: when it
+was sent or received, not when it was filed. **Deals** count from when the deal
+was closed.
 
 ### The three retention actions
 
@@ -149,10 +140,10 @@ destroyed and the record survives; and **Erase**, where the data is destroyed.
 The app draws the line for you: "Archive keeps the record. Anonymize and erase
 destroy data and are held back in retain-only mode."
 
-Anonymise is **not** erase-minus-a-detail. The two clear different things. An
-erasure also reaches the raw captured messages, the attachments those messages
-carried, the contact's lead rows and scores, their unsubscribe tokens and their
-Deal Room seats. Anonymising leaves all of those.
+Anonymise and erase clear different things. An erasure also reaches the
+original captured messages, the attachments those messages
+carried, the contact's leads and scores, their unsubscribe links and their Deal Room
+seats. Anonymising leaves all of those.
 
 ### What anonymise and erase actually do
 **Anonymising a lead** replaces the name with "Anonymized Lead", clears the
@@ -164,9 +155,8 @@ addresses, phone numbers, social handles and channel identities. No suppression
 entry is written: the contact may lawfully come back.
 
 **Erasing a call transcript** clears the body and replaces the subject with
-"Erased", and purges the attachments (the bytes, not just the rows). It
-deliberately keeps who the meeting was with and when. The record of the meeting
-survives and its content goes, because who it was with *is* the record.
+"Erased", and deletes the attachment files themselves. It keeps who the meeting
+was with and when: the record of the meeting stays and its content goes.
 
 ### Writing your own retention rule
 
@@ -178,29 +168,32 @@ Each scope carries **at most one** rule: "A policy for this scope already
 exists; each scope has at most 1 rule. Edit the existing policy instead." There
 is no stacking, and you cannot re-point an existing rule at a different scope.
 
-Not every combination is allowed, because only some have anything to execute
-them: there is no way to archive an AI call payload, or to anonymise an
-activity. The legal pairs are: erase or anonymise a contact, archive or erase
-an activity, archive a deal, erase an AI call payload, erase a stored original,
-and anonymise a lead.
+Not every combination is allowed: there is no way to archive an AI call
+payload, or to anonymise an activity. The allowed pairs are:
+
+- erase or anonymise a contact;
+- archive or erase an activity;
+- archive a deal;
+- archive or anonymise a lead;
+- erase an AI call payload, a stored message original, a daily record of
+  material deals at risk, or a saved report edition.
 
 A rule can carry an optional **Lawful basis** (the Article 6 basis the window is
-argued from), recorded for whoever audits the row later. The six seeded rules
-all carry "storage limitation".
+argued from), recorded for whoever audits the rule later. The rules a new
+company starts with all carry "storage limitation".
 
-Rules act **nightly**, and a live one shows as "Acting nightly". Each pass
-handles up to 200 records per rule, so the first run against years of backlog
-drains over several nights rather than in one.
+Rules act **nightly**, and a live one shows as "Acting nightly". Each night
+handles up to 200 records per rule, so a backlog of years takes several nights
+to clear.
 
 ### One window nobody can change
 
-AI embedding call traces are kept for **90 days**, fixed. It is an operational
-cap that runs with or without a policy, and no administrator can edit it.
+AI embedding call traces are kept for **90 days**, fixed. This runs with or
+without a policy, and no administrator can edit it.
 
 ### Turning a retention policy off, versus deleting it
 
-Turning a retention policy off and deleting it are different, and the app is
-careful about it.
+Turning a retention policy off and deleting it are different.
 
 - **Enabled off**: the rule pauses and keeps its window. Nothing in that scope
   ages out while it is off, and the window is still there when you turn it back
@@ -223,17 +216,17 @@ than looking active. It will not act until the mode is turned off.
 
 ### Who can change retention
 Only an **Admin** or **Ops** user can change retention. Everyone else cannot
-even read the rules, and the app says why rather than hiding the section: "Only
+even read the rules, and the app says why: "Only
 an administrator or operations user can see retention policies. They set what
 this installation keeps for everyone."
 
 ## Privacy requests
 
 The privacy request queue, **Settings → Privacy and retention → Privacy
-requests**, holds "Data subject requests with their statutory deadlines". Reaching it takes
-the **privacy request** grant, because the queue names whoever asked; the grant
-is seeded to admins and can be delegated on its own, without member
-administration.
+requests**, holds "Data subject requests with their statutory deadlines". Only
+administrators can open it by default, because the queue names whoever asked.
+An administrator can give that access to someone else on its own, without
+letting them manage members.
 
 A request has a kind (access, rectify or erasure), a subject, an assignee, a due
 date, and a resolution. It moves through **In progress** and is closed by
@@ -244,26 +237,21 @@ date, and a resolution. It moves through **In progress** and is closed by
 reopened; a new concern needs a new request."
 
 If two colleagues open the same request, the second is told "Someone else
-decided this request first. Review the current state below." rather than being
-allowed to decide it twice.
+decided this request first. Review the current state below."
 
-### Access requests: by hand in the app, a package through the API
+### Access requests
 
-The screen states it without softening:
+The screen says:
 
 > An access request is fulfilled manually: record what you sent in the
-> resolution. **This system does not assemble or export the data for you.**
+> resolution. This system does not assemble or export the data for you.
 
-There is no "download everything about this contact" button in the app, but the
-product does assemble the Art. 15 package: the contact's record, their
-correspondence, their consent history, and the evidence of why the contact exists
-at all. It is served by `GET /data-subject-requests/{id}/package`, which nothing
-in the interface calls yet, so reaching it means calling that endpoint directly.
+There is no "download everything about this contact" button in the app, but
+Margince can assemble the Art. 15 package: the contact's record, their
+correspondence, their consent history, and the evidence of why the contact
+exists at all. Ask whoever runs your installation to download it for you.
 
-- **It is privileged twice.** Reaching the request takes the **privacy request**
-  grant and a human; assembling the package also takes the **contact delete**
-  grant over an unbounded row scope, and a human again, so no agent passport can
-  assemble one.
+- **Only an administrator can have it assembled.** Agents cannot.
 - **It answers access requests only**, never erasure or rectification.
 - **It does not close the request.** Mark it fulfilled yourself once you have
   actually sent it, and record what you sent in the resolution.
@@ -274,8 +262,8 @@ An erasure request **must name a contact in this company**: "An erasure request
 must name a contact in this company, because fulfilling it erases that record. A
 free-text subject cannot be erased."
 
-Fulfilling one is deliberately hard to do by accident. You type **ERASE** to
-confirm, and the warning is exact:
+Fulfilling one is hard to do by accident. You type **ERASE** to confirm, and
+the warning reads:
 
 > This permanently erases the contact across the whole system: record, captured
 > activity and derived values. It cannot be undone. The erasure itself is
@@ -286,25 +274,22 @@ The confirm button reads **Erase and suppress**.
 ## When erasure does not win: the retention floor
 
 Sometimes the law requires keeping something that a data subject has asked you
-to delete. Margince handles this as a visible, named state rather than a silent
-partial success.
+to delete. Margince then shows the record as held, with the reason.
 
 When an erasure hits a statutory retention obligation, you see **Blocked by
 legal hold**:
 
 > This contact is inside a statutory retention window, so erasure does not take
-> precedence here (Art. 17(3)(b)). **The block applies to every role, including
-> administrators, with no override.** The attempt was audited.
-
-There is no administrator who can force it. That is the point.
+> precedence here (Art. 17(3)(b)). The block applies to every role, including
+> administrators, with no override. The attempt was audited.
 
 ### Restricted records
 
 **Restricted records** are what a statutory retention obligation holds after an
 erasure: "which record, why and until when." Held records are hidden from every
-ordinary view, unchangeable, redacted now — identifiers are removed immediately,
-and the screen reports how many fields were removed — and erased when the window
-closes. The correspondence itself is hidden "so that it is not read."
+ordinary view and cannot be changed. Their identifiers are removed at once, and
+the screen reports how many fields were removed. They are erased when the
+window closes. The correspondence itself is hidden "so that it is not read."
 
 The record kinds that can be held this way are Email, Call, Meeting and Message,
 under a class the app calls **Commercial correspondence**.
@@ -321,7 +306,7 @@ before doing it:
 > this obligation suspended is still open, so releasing completes it. This
 > cannot be undone.
 
-Release is not "make it usable again". Release is "finish the deletion". Every
+Releasing finishes the deletion; the record does not come back into use. Every
 decision here is recorded in the audit trail with your name and your stated
 reason.
 
@@ -341,17 +326,15 @@ contact you can **Record consent** or **Withdraw** consent for a purpose.
 
 A purpose that requires **double opt-in** cannot be recorded by staff at all.
 Only the contact can confirm one, by opening a single-use link mailed to their
-own recorded address: use **Ask them to confirm their details**. This is the
-point of double opt-in: a confirmation an employee can complete on the
-contact's behalf is not evidence that the contact agreed.
+own recorded address: use **Ask them to confirm their details**. A confirmation
+an employee could complete for the contact would not prove the contact agreed.
 
 The default is **deny**. A purpose with no record for a contact is not consent.
 
 Every consent change is written to a **Proof log** that records who did it and
-how: a Human, an Agent, the System, or a Connector, or honestly "actor not
-recorded" and "source not recorded" where nothing is known. Consent is a claim
-you may one day have to defend, so the product keeps the evidence rather than
-just the current state.
+how: a Human, an Agent, the System, or a Connector. Where nothing is known, it
+says "actor not recorded" and "source not recorded". You may one day have to
+prove consent, so Margince keeps the evidence along with the current state.
 
 Agents cannot write consent at all; see [What the AI does](what-the-ai-does.md).
 
@@ -378,22 +361,20 @@ There are two exports, and they answer different questions.
 #### The list export
 
 On **Filters and views** you press **Export CSV** or **Export JSON**; those are
-the only two formats. The screen offers three record types: **contacts,
-companies and deals**. The export API also accepts leads and projects. You
-export either a filtered slice or a saved view.
+the only two formats. The screen offers **contacts, companies and deals**. You
+export either a filtered set or a saved view.
 
-**It exports only what you can see**: the rows go through exactly the same
-visibility rules as the list on your screen. **It is human-only**: an agent
-cannot export. **Every export writes an audit entry**, so someone can always
-find out who took a copy of what, and when.
+**It exports only what you can see**, by the same rules as the list on your
+screen. Only a human can export; an agent cannot. **Every export is audited**,
+so someone can always find out who took a copy of what, and when.
 
-It is a record export, not a contact dossier: everything about one individual
-is the subject-access package above.
+For everything about one individual, use the access-request package above.
 
 #### The whole-workspace bundle
 
-The installation's data handover: every object as CSV, the relationships as
-JSON, and manifests describing both, in the open `margince-export/1` format —
-the export for "give us our data", whether for a migration, an audit or a
-portability request. It is admin and ops only, audited, and row-scoped to whoever
-asks. No screen offers it yet: it is served by `GET /exports/bundle`.
+The installation's data handover: every record as CSV, how they link as JSON,
+and files describing both, in the open `margince-export/1` format. It is the
+export for "give us our data", whether for a migration, an audit or a
+portability request. Only admin and ops users can have it made, it holds only
+what they can see, and it is audited. No screen offers it yet; ask whoever runs
+your installation to download it for you.

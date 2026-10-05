@@ -162,7 +162,7 @@ func columnSentence(schema *emSchema, table *emTable, column emColumn, contract 
 		return described
 	}
 	if fk, ok := table.singleColumnFKs[column.name]; ok {
-		return fmt.Sprintf("Points at `%s.%s` — %s.", fk.parent, fk.parentColumn, onDeleteMeaning(fk.onDelete))
+		return fmt.Sprintf("Points at `%s.%s`.", fk.parent, fk.parentColumn)
 	}
 	if derived := fromOwnChecks(table, column); derived != "" {
 		return derived
@@ -170,7 +170,7 @@ func columnSentence(schema *emSchema, table *emTable, column emColumn, contract 
 	if house := houseSentence(column); house != "" {
 		return house
 	}
-	return plainSentence(column)
+	return ""
 }
 
 // fromOwnChecks reads the CHECKs that describe this column and no other.
@@ -183,10 +183,10 @@ func fromOwnChecks(table *emTable, column emColumn) string {
 			return "One of " + joinEnum(values) + "."
 		}
 		if m := checkConstant.FindStringSubmatch(check.def); m != nil && m[1] == column.name {
-			return fmt.Sprintf("Always `%s` — the column exists for the values it may hold later.", m[2])
+			return fmt.Sprintf("Always `%s`: the column exists for the values it may hold later.", m[2])
 		}
 		if m := checkLength.FindStringSubmatch(check.def); m != nil && m[1] == column.name {
-			return fmt.Sprintf("%s `%s`, at most %s characters.", requiredWord(column), column.dataType, m[2])
+			return fmt.Sprintf("At most %s characters.", m[2])
 		}
 	}
 	return ""
@@ -255,19 +255,14 @@ func namesIdentifier(def, name string) bool {
 	}
 }
 
-func plainSentence(column emColumn) string {
-	sentence := fmt.Sprintf("%s `%s`.", requiredWord(column), column.dataType)
-	if column.def != "" {
-		sentence = strings.TrimSuffix(sentence, ".") + fmt.Sprintf(", defaulting to `%s`.", column.def)
+// typeCell is a column's type and, when it has one, its default. The default
+// sits here rather than in the description so an undescribed column reads as
+// one: its last cell is empty.
+func typeCell(column emColumn) string {
+	if column.def == "" {
+		return "`" + column.dataType + "`"
 	}
-	return sentence
-}
-
-func requiredWord(column emColumn) string {
-	if column.notNull {
-		return "Required"
-	}
-	return "Optional"
+	return fmt.Sprintf("`%s`, default `%s`", column.dataType, column.def)
 }
 
 func onDeleteMeaning(action string) string {

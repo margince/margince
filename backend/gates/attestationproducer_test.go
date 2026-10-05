@@ -5,7 +5,8 @@
 
 package gates
 
-// Attestation-minting fitness function (ADR-0072 §1). The T1
+// The only call that mints outbound correspondence attestation,
+// WithOwnerAttestation, stays in one place. The T1
 // correspondence-positive gate spares an address from transactional
 // suppression, and its whole safety rests on connector.Counterparty's
 // outbound attestation being something a connector cannot state for itself.

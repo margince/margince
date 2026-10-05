@@ -16,7 +16,7 @@
 --      workspace bootstrap, so real workspaces keep the honest "no rate → 422,
 --      never rate=1" behaviour.
 --   2. The RBAC demo fixture the sharing/roles surfaces need: two non-admin
---      seats (Rep One, team-scoped; Rep Two, own-scoped), the DACH Sales team,
+--      seats (Rep One, own-scoped on the team; Rep Two, own-scoped with no team), the DACH Sales team,
 --      their role assignments, and admin-ownership of the API-seeded records so
 --      row scope actually restricts them. See the demo-accounts manifest below.
 --
@@ -32,7 +32,7 @@
 -- DEMO-ACCOUNTS-BEGIN
 -- workspace demo-workspace  ·  password (all three): demo-password-123
 -- admin@demo.test   admin       — sees every record
--- rep@demo.test     rep         — team-scoped (team DACH Sales)
+-- rep@demo.test     rep         — own-scoped, member of team DACH Sales
 -- rep2@demo.test    individual  — own-scoped, no team (sees only what's shared)
 -- DEMO-ACCOUNTS-END
 
@@ -171,8 +171,8 @@ BEGIN
   -- A seat with no role_assignment has NO permissions — every object check
   -- (pipeline.read, deal.read, …) fails closed, so Rep One can't even load a
   -- list, let alone see a record shared with them. Assign the 'rep' system role
-  -- (seeded at workspace bootstrap): team-scoped read/write, so Rep One sees the
-  -- team's records plus whatever is explicitly shared. Idempotent via NOT EXISTS
+  -- (seeded at workspace bootstrap): own-scoped read/write, so Rep One sees their
+  -- own records plus whatever is explicitly shared. Idempotent via NOT EXISTS
   -- (role_assignment's uniqueness is an expression index over COALESCE(team_id)).
   INSERT INTO role_assignment (role_id, user_id)
   SELECT r.id, rep_id
@@ -183,9 +183,8 @@ BEGIN
         WHERE ra.user_id = rep_id AND ra.role_id = r.id AND ra.team_id IS NULL
       );
 
-  -- An own-scoped counterpart to the team-scoped 'rep': identical object reach,
-  -- narrower row scope, so a holder sees ONLY their own records plus whatever is
-  -- explicitly shared with them. Cloned from 'rep' (object grants stay in
+  -- An own-scoped counterpart to 'rep' with identical object reach, so a holder
+  -- sees only their own records plus whatever is explicitly shared with them. Cloned from 'rep' (object grants stay in
   -- lockstep) with row_scope overridden to 'own'. Not a system role — it exists
   -- so the individual demo seat (Rep Two, below) makes record sharing OBSERVABLE:
   -- with no team and no owned records, a grant is the sole reason a record shows.

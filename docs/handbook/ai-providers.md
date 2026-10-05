@@ -32,7 +32,7 @@ location to repeat on each model tier.
 To add or replace a provider's key in Margince, open the provider's sheet and
 choose **Add** (or **Replace**) under **Connection**, paste the key, and choose
 **Save key**.
-The key is never shown again, to anyone: Margince keeps it sealed and only says
+The key is never shown again, to anyone. Margince keeps it sealed and only says
 whether one is held. **Test** asks the vendor whether it accepts the key.
 **Remove** deletes the key; every kind of work bound to that provider stops
 until a new one is saved.
@@ -46,7 +46,7 @@ These three reach their vendor's own service, so they ask for nothing else.
 To connect OpenRouter, or any service that speaks the OpenAI interface, open the
 **OpenAI-compatible** sheet, add the service's key, pick it under **Service**,
 and choose **Save connection**.
-- A listed service — OpenRouter, Mistral, Together, Groq, DeepSeek — fills its
+- A listed service (OpenRouter, Mistral, Together, Groq, DeepSeek) fills its
   own host, shown under the choice.
 - For any other, choose **Other OpenAI-compatible service** and fill in **Host**
   with its address without a version at the end: `https://api.mistral.ai`, not
@@ -58,7 +58,8 @@ its editor, and cannot be saved until the host is set here.
 To keep OpenRouter's processing inside the EU, choose **OpenRouter (EU)** under
 **Service** on the **OpenAI-compatible** sheet. Requests then go to OpenRouter's
 EU address, which processes them only inside the EU and sends them only to
-providers there; it counts as EU inference under the **eu_hosted** profile.
+providers there. It counts as EU processing when your installation requires EU
+hosting, which the screen calls the **eu_hosted** profile.
 It needs an OpenRouter Business or Enterprise plan, and only EU-eligible models
 are served there.
 
@@ -83,8 +84,8 @@ If **Test** says Google accepted the key but refused the call, the service
 account is missing the **Vertex AI User** role or the project has not enabled
 the Vertex AI API.
 The **Location** is where Google processes every call: **eu**, the EU
-multi-region, keeps processing in the EU and is the usual choice. Under the
-**eu_hosted** profile, only EU locations can be chosen.
+multi-region, keeps processing in the EU and is the usual choice. When your
+installation requires EU hosting, only EU locations can be chosen.
 Changing the location asks Google whether it serves every model you have bound
 on Gemini on Vertex AI. If one is not served there, the change is refused and
 names the model.
@@ -100,9 +101,9 @@ Settings → AI shows when they last synced and what changed for each provider.
 Anthropic, OpenAI, Google Gemini and Gemini on Vertex AI are priced from
 models.dev when their key is usable; the OpenRouter models a model tier uses are
 priced from OpenRouter's own list. Other providers keep the prices you set. A new
-chat or embedding model your key lists is added when models.dev prices it in the
-same lane. A price you set by hand is never changed by
-the sync; remove it to hand the model back. Turn **Auto-sync daily** off to
+chat or embedding model your key lists is added when models.dev prices it as the
+same kind of model. A price you set by hand is never changed by the sync; remove it to
+hand the model back. Turn **Auto-sync daily** off to
 stop the daily run, or choose **Refresh model prices** to run it now.
 Gemini on Vertex AI lists its models only for a location a model tier uses, so
 it adds new models once one of its models is bound.

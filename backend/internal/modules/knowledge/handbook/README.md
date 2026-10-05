@@ -1,7 +1,7 @@
 # The Margince handbook
 
-How to operate Margince day to day. Written for whoever **uses** the product
-— a rep, an account owner, a delivery lead, an administrator. No code, no API: a
+How to operate Margince day to day. Written for whoever uses the product: a
+rep, an account owner, a delivery lead, an administrator. All you need is a
 sign-in and the app.
 
 Start at [What Margince is](what-margince-is.md) and read on. Each page stands on
@@ -51,123 +51,108 @@ Records, deals and mail in Margince, by page:
 
 ## The pages
 
-- **[What Margince is](what-margince-is.md)** — what the product is for, the
-  three ways it differs from other CRMs, getting around the sidebar, search and
-  the command palette, asking the handbook, and a glossary of other words for
-  the same thing.
-- **[Contacts, companies, leads, deals and projects](records.md)** — the five
-  kinds of record, what each holds, and which connections between them are
-  required and which are not. Creating, editing, reassigning, linking and
-  merging contacts and companies; archiving and why nothing is deleted; notes
-  and tasks; custom fields; tags; and how to put a single change back from a
-  record's history.
-- **[Leads, deals and projects](leads-deals-and-projects.md)** — creating and
+- [What Margince is](what-margince-is.md): what the product is for, the three
+  ways it differs from other CRMs, getting around the sidebar, search and the
+  command palette, asking the handbook, and a glossary of other words for the
+  same thing.
+- [Contacts, companies, leads, deals and projects](records.md): the five kinds
+  of record, what each holds, and which connections between them are required.
+  Creating, editing, reassigning, linking and merging contacts and companies;
+  archiving and why nothing is deleted; notes and tasks; custom fields; tags;
+  and how to put a single change back from a record's history.
+- [Leads, deals and projects](leads-deals-and-projects.md): creating and
   editing a lead and changing its owner, the lead ladder, what qualifying a lead
-  actually does, reversing and disqualifying, creating and editing a deal (value,
-  currency, close date, company, project, owner), and creating, editing,
+  does, reversing and disqualifying. Creating and editing a deal (value,
+  currency, close date, company, project, owner). Creating, editing,
   reassigning and closing a project, what a project page shows, starting
   delivery, and choosing a name that gives a readable key.
-- **[Lists, filters and views](lists-filters-and-views.md)** — working the
-  list screens: searching, filtering by owner, company, stage or tag, sorting,
-  table and board, showing archived records, saving and opening views, bulk
-  selection and bulk reassign, detailed filters on Filters and views, filters
-  proposed from plain words, Live Lists and Shortlists (sharing, stewards, why a
-  record is on a list, the 15-minute check, acting on members, automations),
-  and exporting what a filter or a list finds.
-- **[The pipeline](the-pipeline.md)** — stages and what they mean, moving a deal,
+- [Lists, filters and views](lists-filters-and-views.md): searching, filtering
+  by owner, company, stage or tag, sorting, table and board, showing archived
+  records, saving and opening views, and bulk selection and bulk reassign.
+  Detailed filters on Filters and views, and filters proposed from plain words.
+  Live Lists and Shortlists (sharing, stewards, why a record is on a list, the
+  15-minute check, acting on members, automations), and exporting what a filter
+  or a list finds.
+- [The pipeline](the-pipeline.md): stages and what they mean, moving a deal,
   what closing does and what winning requires, the outcome review, where a deal
   came from, reopening, the 60-day stalled rule, stage automation, and how to
   read the weighted numbers.
-- **[Partners and commission](partners.md)** — making a company a partner,
-  what each partner field means, the partner list, crediting a partner on a
-  deal, and approving, paying and reversing commission.
-- **[Connecting your mailbox and calendar](connecting-mail-and-calendars.md)** —
+- [Partners and commission](partners.md): making a company a partner, what
+  each partner field means, the partner list, crediting a partner on a deal,
+  and approving, paying and reversing commission.
+- [Connecting your mailbox and calendar](connecting-mail-and-calendars.md):
   connecting Gmail, Outlook, an IMAP mailbox or a calendar, what to do when a
   mailbox stops syncing, reconnecting and disconnecting, and importing your
   older mail.
-- **[Capture](capture.md)** — how email, calendar and chat get in; what happens
-  to a message step by step; the exact rules that file it against the right
-  contact, deal and project; what happens when nothing matches; and what capture
-  refuses to store.
-- **[Your day and your week](your-day-and-your-week.md)** — the Worklist's
-  bands and how a row earns its place, pinning, snoozing and what each verb
-  reaches, the frozen weekly review, planning a week, and what a team lead sees.
-- **[Performance and saved reports](sales-reporting.md)** — graphs, targets, scheduled editions, comparisons and exports.
-- **[Analytics and forecasting](analytics.md)** — the six report sections, what
-  each number covers and how to open the rows behind it, forecast calls, the
-  projected landing, and the pipeline-needed figure that is deliberately not a
-  target.
-- **[Writing and sending mail](sending-mail.md)** — the composer, replying to
-  one message in a thread, filing a send under a project, drafting in
-  your voice, the purpose picker and the consent check, what a send refuses and
-  what it only warns about, scheduling one for later, and what the recipient
+- [Capture](capture.md): how email, calendar and chat get in; what happens to a
+  message step by step; the rules that file it against the right contact, deal
+  and project; what happens when nothing matches; and what capture refuses to
+  store.
+- [Your day and your week](your-day-and-your-week.md): the Worklist's bands and
+  why a row appears there, pinning, snoozing and what each verb reaches, the
+  frozen weekly review, planning a week, and what a team lead sees.
+- [Performance and saved reports](sales-reporting.md): graphs, targets, scheduled editions, comparisons and exports.
+- [Analytics and forecasting](analytics.md): the report sections, what each
+  number covers and how to open the deals behind it, forecast calls, the
+  projected landing, and the pipeline-needed figure, which is not a target.
+- [Writing and sending mail](sending-mail.md): the composer, replying to one
+  message in a thread, filing a send under a project, and drafting in your
+  voice. The purpose picker and the consent check, what a send refuses and what
+  it only warns about, scheduling one for later, and what the recipient
   controls from their own preference page.
-- **[Who can see an email](who-can-see-an-email.md)** — record visibility
-  against a message's own audience, the nine reasons one is held and which a
-  verdict can clear, the three mailbox postures, the company floor, and how to
-  share a thread.
-- **[What the AI does, and what it does not](what-the-ai-does.md)** — what the
-  AI produces for you: drafts, document reads, the overnight brief, and how
-  every derived claim carries its evidence.
-- **[AI providers](ai-providers.md)** — what each provider needs: a key, a
-  host for an OpenAI-compatible service or decision model, OpenRouter's hosts
-  for EU residency, and a location for Gemini on Vertex AI.
-- **[Agents, passports and what they may do](agents-and-passports.md)** — the
-  two tiers and where the line actually falls, why sending is not held behind a
-  confirmation and what protects it instead, the rule that human edits win field
+- [Who can see an email](who-can-see-an-email.md): record visibility against a
+  message's own audience, the nine reasons one is held and which a verdict can
+  clear, the three mailbox postures, the company floor, and how to share a
+  thread.
+- [What the AI does, and what it does not](what-the-ai-does.md): what the AI
+  produces for you: drafts, document reads, the overnight brief, and how every
+  derived claim carries its evidence.
+- [AI providers](ai-providers.md): what each provider needs: a key, a host for
+  an OpenAI-compatible service or decision model, OpenRouter's hosts for EU
+  residency, and a location for Gemini on Vertex AI.
+- [Agents, passports and what they may do](agents-and-passports.md): the two
+  tiers and where the line falls, and why sending is not held behind a
+  confirmation and what protects it instead. The rule that your edits win field
   by field, what an agent is refused outright, and passports.
-- **[Approvals](approvals.md)** — what a staged action looks like, the kinds that
+- [Approvals](approvals.md): what a staged action looks like, the kinds that
   reach the inbox, how to accept, edit or reject one, who is allowed to decide,
   the 72-hour expiry and the one kind that never expires.
-- **[Offers and the rate card](offers-and-products.md)** — what an offer holds,
-  how its money is worked out, the four verbs and what each locks, recurring
-  lines, and why a rate-card change never rewrites an offer you already sent.
-- **[Contracts and invoices](contracts-and-invoices.md)** — the two value bases
-  and why they are never summed, why a status is never inferred from a date,
+- [Offers and the rate card](offers-and-products.md): what an offer holds, how
+  its money is worked out, the four verbs and what each locks, recurring lines,
+  and why a rate-card change never rewrites an offer you already sent.
+- [Contracts and invoices](contracts-and-invoices.md): the two value bases and
+  why they are never summed, why a status is never inferred from a date,
   renewing and cancelling, what counts as a signed win, and the finance mirror.
-- **[Deal Rooms](deal-rooms.md)** — the buyer-facing page for one deal: what a
-  room holds, the five states and why Close is not a freeze, personal one-time
+- [Deal Rooms](deal-rooms.md): the buyer-facing page for one deal: what a room
+  holds, the five states and why Close is not a freeze, personal one-time
   links, what a buyer never sees, and what an agent may not touch.
-- **[Documents and files](documents-and-files.md)** — documents on a company,
-  contact or deal, files a deal picks up from its email, having a file read for deal fields,
-  and document sets you can ask questions of. Every size limit, with its number.
-- **[What is kept, what is destroyed](retention-exports-and-deletion.md)** — the
-  six retention rules a new company starts with, archive versus delete,
-  erasure and what it cascades to, the statutory floor no administrator can
-  override, consent, the audit trail, and what you can export.
-- **[Seats, roles and who can see what](seats-roles-and-access.md)** — full and
-  read seats, the six roles, why reading a customer record ignores row scope,
-  who can see one record, teams, sharing, inviting and removing colleagues, and
-  what a refusal looks like.
-- **[Relationships, introductions and research](relationships-and-research.md)** —
+- [Documents and files](documents-and-files.md): documents on a company,
+  contact or deal, files a deal picks up from its email, having a file read for
+  deal fields, and document sets you can ask questions of. Every size limit,
+  with its number.
+- [What is kept, what is destroyed](retention-exports-and-deletion.md): the six
+  retention rules a new company starts with, archive versus delete, erasure and
+  what it cascades to, the statutory floor no administrator can override,
+  consent, the audit trail, and what you can export.
+- [Seats, roles and who can see what](seats-roles-and-access.md): full and read
+  seats, the six roles, why reading a customer record ignores row scope, who can
+  see one record, teams, sharing, inviting and removing colleagues, and what a
+  refusal looks like.
+- [Relationships, introductions and research](relationships-and-research.md):
   who here already knows somebody and how that is measured, asking a colleague
   for a warm introduction and the four answers they can give, and what a website
   read will and will not do.
-- **[Your own settings](your-own-settings.md)** — changing your password,
-  display name, language and theme, your email signature and bookable hours,
-  your writing voice, your agent passports, your mailbox connections, and what
-  the last 24 hours of your mail turned into.
-- **[Settings](settings.md)** — how to open Settings, every settings page and
-  which one you need, whose state each changes, and which permission opens it.
+- [Your own settings](your-own-settings.md): changing your password, display
+  name, language and theme, your email signature and bookable hours, your
+  writing voice, your agent passports, your mailbox connections, and what the
+  last 24 hours of your mail turned into.
+- [Settings](settings.md): how to open Settings, every settings page and which
+  one you need, whose state each changes, and which permission opens it.
 
-## Related reading
-
-Two end-to-end walkthroughs sit in the repository's `user-guide/` directory —
-one ERP rollout followed from first conversation to close, and one partner deal
-followed from introduction to the money it earns. Read those once; come back
-here for one answer.
-
-This handbook links nowhere outside its own folder, on purpose: each page is a
-self-contained document, so the whole folder can be uploaded to a knowledge base
-as a corpus and every cross-reference still resolves. Names above are written
-out rather than linked for that reason.
-
-## A note on how this handbook is written
+## How this handbook is written
 
 Where the product refuses to do something, this handbook says so and says why.
-Those refusals are not gaps — they are most of what makes Margince trustworthy,
-and a handbook that listed only features would misrepresent it.
 
-Where a number is stated here, it is the number the product actually uses. Where
-a screen in the app and this handbook disagree, the handbook says which one
+Where a number is stated here, it is the number the product uses. Where a
+screen in the app and this handbook disagree, the handbook says which one
 describes the behaviour you will get.

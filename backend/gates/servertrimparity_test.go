@@ -5,7 +5,7 @@
 
 package gates
 
-// The browser and the server must agree on which values are EMPTY, or a form
+// The browser and the server must agree on which values are empty, or a form
 // refuses what the save would have taken.
 //
 // Two agreements exist here, one character apart. `activities.subjectSpace` is

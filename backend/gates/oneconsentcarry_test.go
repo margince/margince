@@ -5,8 +5,8 @@
 
 package gates
 
-// The consent carry — what happens to a retiring record's consent when another
-// record survives it — is spelled once inside the contacts module.
+// The consent carry (what happens to a retiring record's consent when another
+// record survives it) is spelled once inside the contacts module.
 //
 // It was spelled three times: a contact merge, a lead merge, and a lead's
 // promotion to a contact, each with its own copy of one CTE differing only in a

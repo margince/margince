@@ -22,7 +22,7 @@ make db-up
 This starts a `pgvector/pgvector:pg16` container on port 15432 and a
 `redis:7` container on port 16379, waits for Postgres to accept
 connections, and applies `scripts/db-init.sql` (which creates the
-runtime app role — the API never runs as the schema owner).
+runtime app role, so the API never runs as the schema owner).
 
 ## 2. Apply the migrations
 
@@ -43,38 +43,43 @@ make dev
 `make dev` brings up the infra, re-runs db-up + migrate, and boots `cmd/api`
 with the app-role DSN, behind the app on `:8080`. By default
 the outbox relay runs inline in the api process, so this one command is a
-complete install; it returns when ready and the servers run in the
-background — stop them with `make dev-stop`.
+complete install. It returns when ready and the servers run in the
+background; stop them with `make dev-stop`.
 
 One installation serves one company: on its first boot
 against the empty database, the api bootstraps the company and admin
 user from the deployment config `config/margince.yaml`. `make dev` seeds
 that file (and the admin password file) from
 [`config/margince.example.yaml`](../../config/margince.example.yaml) on first
-run and then **leaves it** — edit it freely; delete it to reset. There is no
+run and then leaves it alone: edit it freely, or delete it to reset. There is no
 bootstrap screen or endpoint: no request creates a workspace.
 
 ## 4. Log in
 
-Open <http://localhost:8080> — the web UI, and the only URL you need (it
-proxies `/v1` through to the api behind it) — and log in with the seeded admin (`admin@demo.test` /
-`demo-password-123` — the password `make seed-dev` chose when it completed the
-admin's first login; the operator-supplied one in the example config is refused
-everywhere until it is replaced). First login lands in the
-**cold start**: a full-screen gate asks for your website (or "Enter the details
-yourself"), a read theatre shows the crawl as it happens, and a dossier lets you
-review every field and fact before anything is written. A rail beside it narrates
-where you are — Read · Confirm · Voice · Ready · Connect. It is resumable and
-skippable, and explained in
-[explanation/company-context.md](../explanation/company-context.md). After
-that you have contacts, leads, the deal board, and the activity timeline —
-empty, because `make dev` boots a cold installation on purpose: what you see
-is what a first customer sees. Run `make seed-dev` against the running stack
-when you want demo records (idempotent, re-runnable).
+Open <http://localhost:8080>. It serves the web UI and proxies `/v1` to the
+api behind it, so it is the only URL you need.
 
-Prefer the API? Log in and reuse the session. The `crm_session` cookie is `Secure`, so pull it out of
-the login response rather than relying on curl's jar; the server resolves its singleton company
-itself — no header selects a tenant:
+Sign in as `admin@demo.test` with `operator-supplied-first-password` (from
+`config/margince-admin-password`). The app asks you to set a new password
+before anything else works. To skip that step, run `make seed-dev` first: it
+completes the admin's first login and sets the password to `demo-password-123`.
+
+The first login opens the **cold start**. It asks for your website (or "Enter
+the details yourself"), shows the crawl as it reads the site, and lets you
+review every field and fact before anything is written. A rail beside it shows
+where you are: Read · Confirm · Voice · Ready · Connect. You can resume or skip
+it; [explanation/company-context.md](../explanation/company-context.md)
+explains it.
+
+After that you have contacts, leads, the deal board and the activity timeline,
+all empty. `make dev` boots a cold installation so you see what a first
+customer sees. Run `make seed-dev` against the running stack when you want demo
+records (it is idempotent and safe to re-run).
+
+Prefer the API? Log in and reuse the session. The example uses the
+`make seed-dev` password. The `crm_session` cookie is `Secure`, so pull it out
+of the login response instead of relying on curl's jar. The server resolves its
+singleton company itself, and no header selects a tenant:
 
 ```sh
 SESSION=$(curl -sS -D - -o /dev/null http://localhost:8080/v1/auth/login \
@@ -85,7 +90,7 @@ SESSION=$(curl -sS -D - -o /dev/null http://localhost:8080/v1/auth/login \
 curl http://localhost:8080/v1/me --cookie "crm_session=$SESSION"
 ```
 
-(An agent uses a passport instead of a session — see [how-to/mint-a-passport.md](../how-to/mint-a-passport.md).)
+(An agent uses a passport instead of a session; see [how-to/mint-a-passport.md](../how-to/mint-a-passport.md).)
 
 ## 5. Verify your setup
 
@@ -102,12 +107,12 @@ make test-integration
 
 runs the real-Postgres lane: cross-tenant isolation gates, the governed-agent-writes loop,
 and the HTTP end-to-end sales flow. It fails loudly when the database is
-missing — it never skips.
+missing and never skips.
 
 ## Where next
 
-- **Contributing to the backend? Start here:**
-  [explanation/backend-onboarding.md](../explanation/backend-onboarding.md) — the orientation hub (map,
+- Contributing to the backend? Start at
+  [explanation/backend-onboarding.md](../explanation/backend-onboarding.md), the orientation hub (map,
   reading order, how to add an endpoint or a migration).
 - Connect an AI agent: [how-to/mint-a-passport.md](../how-to/mint-a-passport.md),
   then [how-to/connect-an-mcp-client.md](../how-to/connect-an-mcp-client.md).

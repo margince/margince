@@ -106,7 +106,7 @@ func docsPageCeiling(rel string) int {
 // keeps that a ratchet tooth rather than four spare slots — the swap above is
 // still open, and a re-measure that freed pages without lowering the pin would
 // widen it.
-const waivedPageBudget = 6
+const waivedPageBudget = 4
 
 const (
 	docsWaiverFile = "../scripts/docs-page-length-waivers.txt"

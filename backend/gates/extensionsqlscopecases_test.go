@@ -5,11 +5,10 @@
 
 package gates
 
-// The SQL-scope gate's own test, driven with SYNTHETIC unit sources rather than
-// the tree — the real units are supposed to pass, so a gate proven only by
-// "extensions/ is currently clean" is one that keeps passing after it stops
-// working. A fixture unit could not carry these either: a fixture naming a core
-// table would have to fail the gate to prove anything.
+// The SQL-scope gate's own test, driven with synthetic unit sources rather than
+// the tree, because the real units are supposed to pass. A fixture unit could
+// not carry these either: a fixture naming a core table would have to fail the
+// gate to prove anything.
 //
 // The gate has a second way to read green that a clean tree hides completely:
 // seeing no SQL at all. Every case therefore pins how many table references were

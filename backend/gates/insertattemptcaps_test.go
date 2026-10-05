@@ -5,11 +5,10 @@
 
 package gates
 
-// An insert that names no MaxAttempts does not run without a retry ladder — it
-// runs on River's default of 25, on attempt-to-the-fourth backoff, which
-// reaches days. Nobody chooses that ladder; a site simply omits the field and
-// gets it, which is how vcard_ingest shipped riding it for hours on a
-// deterministic failure.
+// An insert that names no MaxAttempts still has a retry ladder: River's default
+// of 25, on attempt-to-the-fourth backoff, which reaches days. Nobody chooses
+// that ladder; a site simply omits the field and gets it, which is how
+// vcard_ingest shipped riding it for hours on a deterministic failure.
 //
 // The contract cannot close this. api/jobs.yaml publishes max_attempts for the
 // two owners that can APPLY one — a fan-out child, whose helper reads it off

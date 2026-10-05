@@ -1,10 +1,7 @@
 # Connecting your mailbox and calendar
 
 Capture reads mail and meetings only from a mailbox or calendar you connect.
-This page is how to connect Gmail, Outlook, an IMAP mailbox or a calendar,
-what each connection shows you, how to reconnect or disconnect one, and how
-to import your older mail. What happens to a message once it arrives is in
-[Capture](capture.md).
+What happens to a message once it arrives is in [Capture](capture.md).
 
 ### How do I connect my Gmail or Outlook mailbox?
 To connect your Gmail or Outlook mailbox to Margince, open **Settings → Connections**, press **Add connector**, and choose **Connect** beside **Gmail** or **Outlook**.
@@ -47,19 +44,18 @@ not connected yet.
 | **IMAP mailbox** | "Any other mail host, using an app password. Capture only." | No |
 | **Telegram** | One bot for the whole company. An administrator connects it, not you. | Yes |
 
-A mailbox connected before sending existed **cannot be upgraded in place**. The
-provider only grants sending on a fresh connection, so you have to reconnect.
-The mailbox shows **Capture only, no sending** and says so, rather than letting a
-send fail mysteriously.
+A mailbox connected before sending existed cannot be upgraded in place. The
+provider grants sending only on a fresh connection, so you have to reconnect.
+Until then the mailbox shows **Capture only, no sending**.
 
 ### What each connection shows you
 Each connected mailbox or calendar shows one status:
 
-- **Capturing** — working
-- **Pending confirmation** — not yet confirmed live
-- **Needs reconnect** — "The provider rejected the stored credentials. Reconnect
+- **Capturing**: working
+- **Pending confirmation**: not yet confirmed live
+- **Needs reconnect**: "The provider rejected the stored credentials. Reconnect
   to resume."
-- **Sync error** — with a plain reason: being throttled, unreachable, or a
+- **Sync error**: with a plain reason, such as being throttled, unreachable, or a
   history window that expired. Most of these say "nothing is lost" or retry
   automatically.
 - **Disconnected**
@@ -75,7 +71,7 @@ When emails stop coming into Margince, open **Settings → Connections** and rea
 Also called: mailbox not syncing, emails stopped coming in, Gmail disconnected, sync broken.
 
 ### How do I reconnect a mailbox?
-To reconnect a mailbox in Margince — for example when Gmail stopped syncing — open **Settings → Connections** and press **Reconnect** on the mailbox, then approve access again.
+To reconnect a mailbox in Margince (for example when Gmail stopped syncing), open **Settings → Connections** and press **Reconnect** on the mailbox, then approve access again.
 1. Open **Settings**, then **Connections**.
 2. Find the mailbox marked **Needs reconnect** or **Capture only, no sending**.
 3. Press **Reconnect** and approve every permission. An IMAP mailbox reopens the **Connect IMAP mailbox** form instead.
@@ -87,26 +83,17 @@ To disconnect a mailbox from Margince, open **Settings → Connections**, press 
 1. Open **Settings**, then **Connections**.
 2. Press **Disconnect** on the mailbox or calendar.
 3. Confirm with **Disconnect**.
-Capture stops at once and the stored credential is deleted. Everything already captured stays in the CRM.
+Capture stops at once and Margince forgets its access to the mailbox. Everything already captured stays in the CRM, and reconnecting asks for permission again.
+Google or Microsoft may still list Margince under your account's connected apps. Remove it there too to end access fully.
 Also called: remove my mailbox, stop email sync, unlink Gmail.
-
-### Disconnecting
-
-> This deletes the stored credential for this mailbox. Capture stops
-> immediately; captured records stay in the CRM, and reconnecting asks for
-> permission again.
-
-Note the honest footnote: Google or Microsoft may still list Margince under your
-account's third-party access or connected apps. Remove it there too if you want
-access fully revoked.
 
 ### An agent can never connect a mailbox for you
 
-Connecting a mailbox is a human-only action. An agent granting itself read access
-to a colleague's personal mail is exactly what this product does not allow.
+Only you can connect your mailbox. An agent cannot.
 
-A connection also cannot exceed the colleague who made it. If your permissions are
-reduced later, the connection's reach is reduced with them on its next poll.
+A connection also cannot reach further than the colleague who made it. If your
+permissions are reduced later, the connection's reach is reduced with them on
+its next check.
 
 ### How do I import my old emails?
 To import your old emails into Margince, open **Settings → Connections** and use **Import mailbox history** under the connected mailbox: choose an **Import window** and press **Start import**.
@@ -120,27 +107,25 @@ Also called: backfill, import past mail, sync old emails, email history.
 
 Importing mailbox history is a one-time backward scan offered when you connect a
 mailbox. You choose a window: **3 months, 6 months, 1 year, 2 years, 3 years, 5
-years, 7 years or 10 years** — or skip it. Six months is the default.
+years, 7 years or 10 years**, or skip it. Six months is the default.
 
-Before it runs, it counts. The count reads message ids only, not bodies, and
-gives you the number of messages in the window and an estimated AI cost. It
-counts exactly up to 20,000 messages; a larger mailbox is reported as a floor
-("At least {count} messages in that period") rather than a made-up estimate.
+Before it runs, it counts the messages in the window, without reading their
+contents, and shows an estimated AI cost. It counts up to 20,000 messages; a
+larger mailbox is reported as "At least {count} messages in that period".
 
 You can stop it: "Stopped. Everything captured so far is kept."
 
 The window can only be **widened** later, never narrowed: "A wider window
-already ran for this mailbox. The import window can only be widened." And when
-the progress bar fills, the import is finished but the AI work is not —
+already ran for this mailbox. The import window can only be widened." When the
+progress bar fills, the import is finished but the AI work is not:
 classification runs hourly and enrichment daily afterwards.
 
-**Everything it brings in is held to begin with.** A new mailbox is *Held until
-classified*, so a backfill of five years of mail does not put five years of mail
-in front of your colleagues: each thread stays with whoever was on it
-until a classifier judges it ordinary business. That is also true of the records
-the import mints — a contact created from a thread nothing has judged yet is
-yours alone until the verdict clears it.
+**Imported mail starts out held.** A new mailbox is *Held until
+classified*, so importing five years of mail does not show it to your
+colleagues. Each thread stays with whoever was on it until a classifier judges
+it ordinary business. The same holds for contacts the import creates: a contact
+from a thread nothing has judged yet is yours alone until the verdict clears it.
 
-Which means a backfill is worth watching in two places once it finishes:
+Once an import finishes, check two places:
 **Senders**, for what was concluded about each address it saw, and **Held
 threads**, for the threads still held. Both are under Settings → Connections.
