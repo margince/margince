@@ -199,6 +199,11 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 		cancel()
 		if callErr != nil {
 			lastErr, lastTier = callErr, t
+			// A rung whose provider is blocked made no call: it is skipped, not
+			// traced or metered as a failure of this request.
+			if errors.Is(callErr, ErrProviderDown) {
+				continue
+			}
 			// A refused account is the operator's to fix, and only the rung
 			// that hit it knows so. The walk keeps just `lastErr`, so an
 			// escalation overwrites that refusal with whatever the rung above
@@ -254,6 +259,9 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 			r.cache.put(key, wsID, b.generation, out, t)
 		}
 		return out, t, true, nil
+	}
+	if errors.Is(lastErr, ErrProviderDown) {
+		return model.Response{}, lastTier, false, lastErr
 	}
 	if lastErr != nil {
 		// lastTier names the rung whose failure the caller sees, so the

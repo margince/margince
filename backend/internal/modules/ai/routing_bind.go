@@ -179,11 +179,11 @@ func (cfg RoutingConfig) buildClients() (map[Tier]model.Client, model.Client, er
 		if err != nil {
 			return nil, nil, fmt.Errorf("ai: tier %s: %w", tier, err)
 		}
-		clients[tier] = client
+		clients[tier] = trackClient(client, binding.Provider, sharedProviderHealth)
 	}
 	embedder, err := SelectBrain(cfg.Embeddings.ProviderConfig, cfg.keys)
 	if err != nil {
 		return nil, nil, fmt.Errorf("ai: embeddings lane: %w", err)
 	}
-	return clients, embedder, nil
+	return clients, trackClient(embedder, cfg.Embeddings.Provider, sharedProviderHealth), nil
 }

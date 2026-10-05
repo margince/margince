@@ -65,13 +65,18 @@ var errProviderRefused = errors.New("ai: the configured AI provider turned the c
 // naming a reason invented here. Guessing "out of budget" from a bare 429 is
 // what told an operator with unspent credit to go raise a spending limit.
 //
+// Statuses that say the provider itself is failing — 402, 401/403, 5xx — carry
+// the sentinel the health tracker reads (providerFaultOf); any other status is
+// returned as it came.
+//
 // Every 429 carries errProviderRefused, so "did we reach the model?" is one
-// question with one answer whatever the cause turned out to be; any other status
-// is returned as it came. A caller that needs the cause asks for the specific
-// sentinel on top.
+// question with one answer whatever the cause turned out to be. A caller that needs the cause asks for the specific sentinel on top.
 func providerRefusal(resp *http.Response, limitSource string, err error) error {
-	if resp == nil || resp.StatusCode != http.StatusTooManyRequests {
+	if resp == nil {
 		return err
+	}
+	if resp.StatusCode != http.StatusTooManyRequests {
+		return providerFaultOf(resp.StatusCode, err)
 	}
 	refused := fmt.Errorf("%w: %w", errProviderRefused, err)
 	switch refusalKind(limitSource, err.Error(), retryafter.Of(resp)) {
@@ -185,3 +190,17 @@ const (
 // the trailing window gets flagged for a routing fix (§1.3) — the L2 analogue
 // of "manual entry is a smell".
 const premiumShareAlarmThreshold = 0.20
+
+// providerFaultOf tags the statuses that mean the provider is failing for
+// every caller, so the health tracker reads a sentinel rather than a message.
+func providerFaultOf(status int, err error) error {
+	switch {
+	case status == http.StatusPaymentRequired:
+		return fmt.Errorf("%w: %w", ErrProviderQuota, err)
+	case status == http.StatusUnauthorized, status == http.StatusForbidden:
+		return fmt.Errorf("%w: %w", ErrProviderUnauthorized, err)
+	case status >= http.StatusInternalServerError:
+		return fmt.Errorf("%w: %w", ErrProviderUnavailable, err)
+	}
+	return err
+}

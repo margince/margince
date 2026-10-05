@@ -27,6 +27,7 @@ import (
 // HTTP only, mirroring anthropic.go; no vendor SDK. Field tags are camelCase to
 // match Google's wire (see the //nolint:tagliatelle markers).
 type geminiClient struct {
+	model.NoHealth
 	http         *http.Client
 	transport    geminiTransport
 	defaultModel string

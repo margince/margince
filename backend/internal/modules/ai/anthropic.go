@@ -23,6 +23,7 @@ import (
 // customer's). stdlib HTTP only: the vendor wire format is small enough
 // that an SDK would cost more in dependency surface than it saves.
 type anthropicClient struct {
+	model.NoHealth
 	http         *http.Client
 	baseURL      string
 	apiKey       string

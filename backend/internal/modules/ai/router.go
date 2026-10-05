@@ -206,6 +206,10 @@ func (r *Router) serveAttempt(ctx context.Context, lc *logicalCall, task Task, l
 		// return below.
 		return model.Response{}, RouteInfo{}, budgetErr
 	}
+	if downErr := blockedProvider(b, ladder, r.now()); downErr != nil {
+		// Like a budget deferral: no call was made, so nothing is traced.
+		return model.Response{}, RouteInfo{}, downErr
+	}
 	if req.SecretStripper == nil {
 		req.SecretStripper = r.stripper
 	}
