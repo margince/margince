@@ -87,6 +87,13 @@ when it has content.
 
 ### Fixed
 
+- **The contacts-without-consent retention rule acts again on installations seeded
+  before people were renamed contacts.** Their stored rule kept the old
+  `person/no_consent_no_deal` scope, which the nightly evaluator has no selector
+  for, so it was skipped every night while Settings → Privacy listed it as acting.
+  A migration carries it over to `contact/no_consent_no_deal` with its window and
+  action unchanged; where an admin has already added the contact rule, theirs stands.
+
 - **A sweep's `_failed` gauges read the last run that ENDED, not the newest row.**
   `margince_sweep_workspaces_failed` and `margince_sweep_units_failed` took their
   outcome from the most recent child of a pass, and a periodic pass has a pending or
