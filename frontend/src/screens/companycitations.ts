@@ -24,8 +24,6 @@ export function citationOpensRecord(entityType: string): boolean {
   return entityType === "deal" || entityType === "contact";
 }
 
-// An activity opens the MESSAGE, in the account page's own email drawer.
-//
 // The kinds a receipt can be written for. Narrowing HERE rather than asserting
 // at the fetch is what keeps the modal's contract honest: a kind that grows a
 // receipt upstream fails to compile until this decision learns about it.

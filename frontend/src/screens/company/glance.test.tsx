@@ -67,31 +67,29 @@ describe("the folded thread on the account's 360", () => {
     };
   }
 
-  function drawThread(onOpenRecord?: (kind: string, id: string) => void) {
+  function drawThread(onOpenEmail?: (activityId: string) => void) {
     return render(
       <LocaleProvider initial="en">
         <ThreadFold
           view={threadView()}
           loading={false}
-          onOpenRecord={onOpenRecord}
+          onOpenEmail={onOpenEmail}
         />
       </LocaleProvider>,
     );
   }
 
-  it("opens the message it shows, through the page's own router", async () => {
+  it("opens the message it shows, through the page's email door", async () => {
     const user = userEvent.setup();
-    const onOpenRecord = vi.fn();
-    drawThread(onOpenRecord);
+    const onOpenEmail = vi.fn();
+    drawThread(onOpenEmail);
 
     // The row is a control, not a paragraph — the distinction the defect erased.
     const row = screen.getByRole("button", { name: /Re: the renewal quote/ });
     expect(row.getAttribute("aria-haspopup")).toBe("dialog");
     await user.click(row);
 
-    // The same door every cited chip on this account takes, so the fold cannot
-    // drift from the spine beside it.
-    expect(onOpenRecord).toHaveBeenCalledWith("activity", EMAIL_ID);
+    expect(onOpenEmail).toHaveBeenCalledWith(EMAIL_ID);
   });
 
   it("still draws the message when the host mounts no reader", () => {
