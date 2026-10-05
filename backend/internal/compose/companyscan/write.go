@@ -149,8 +149,9 @@ func (e *LaneError) Error() string { return "account scan lane: " + e.Cause.Erro
 func (e *LaneError) Unwrap() error { return e.Cause }
 
 // Read asks the model and returns the grounded findings. A lane that breaks
-// is returned as *LaneError; a budget deferral as the typed error the job
-// carrier snoozes on; no lane or nothing to read as the deterministic floor.
+// is returned as *LaneError; a deferral (ai.IsDeferral: a budget stop or a
+// provider outage) as the typed error the job carrier snoozes on; no lane or
+// nothing to read as the deterministic floor.
 func Read(
 	ctx context.Context, lane Completer, companyID ids.CompanyID, in Input, lang string,
 ) ([]crmcontracts.Company360Suggestion, crmcontracts.WrittenBy, error) {

@@ -40,7 +40,8 @@ type ExtractPass struct {
 	// more backlog behind it. The first passes over an installation's history
 	// are expected to sit here for a few hours.
 	AtCap bool
-	// Deferred says the workspace's model budget stopped the pass early.
+	// Deferred says the pass stopped early because the workspace's model budget
+	// ran out or the provider is not answering.
 	Deferred bool
 	// OutOfTime says the pass ran up against its own deadline and stopped
 	// while conversations were still owed a reading.

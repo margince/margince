@@ -14,6 +14,7 @@ import (
 	"context"
 	"io"
 	"log/slog"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -22,6 +23,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/approvals"
 	capturemod "github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -205,6 +207,49 @@ func TestReopenParkedReopensOnlyWhatTheWindowParkedAndNobodyDecided(t *testing.T
 	}
 	if again != (compose.ParkedWork{}) {
 		t.Fatalf("a second run reopened %+v, want nothing", again)
+	}
+}
+
+// The offer-expiry sweep leaves the row unsure with a link to an offer nobody
+// can answer; that is no reason to leave the sender parked for good.
+func TestReopenParkedReopensASenderWhoseOfferExpired(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	seedParkedSenders(t, env)
+	var offer ids.UUID
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), `
+			SELECT proposal_id FROM capture_pending_counterparty
+			 WHERE email = 'offered@stranger.example'`).Scan(&offer)
+	}); err != nil {
+		t.Fatalf("seed: the offered sender has no review offer: %v", err)
+	}
+	svc := approvals.NewService(e.DB())
+	if err := e.DB().Tx(e.Admin(), func(tx pgx.Tx) error {
+		withdrawn, err := svc.WithdrawInTx(e.Admin(), tx, ids.From[ids.ApprovalKind](offer), "expired for the test")
+		if err == nil && !withdrawn {
+			t.Error("the offer was not live to expire; the fixture proves nothing")
+		}
+		return err
+	}); err != nil {
+		t.Fatalf("expiring the offer: %v", err)
+	}
+
+	got, err := compose.NewProviderRecovery(e.Pool).Reopen(context.Background(), outageWindow(), 0)
+	if err != nil {
+		t.Fatalf("Reopen: %v", err)
+	}
+	if got.Counterparties != 2 {
+		t.Fatalf("reopened %d sender questions, want 2 (plain, and offered whose offer expired)", got.Counterparties)
+	}
+	if r := ledgerOf(t, e, "offered@stranger.example"); r.status != "pending" {
+		t.Fatalf("offered = %+v, want pending", r)
+	}
+	if n := countRows(t, e, `
+		SELECT count(*) FROM audit_log
+		 WHERE entity_type = 'capture_pending_counterparty' AND evidence ? 'reopened_window_from'
+		   AND (before->>'attempts')::int = `+strconv.Itoa(capturemod.PendingMaxAttempts)); n != 2 {
+		t.Fatalf("%d reopen audits record the attempts the row really held, want 2", n)
 	}
 }
 

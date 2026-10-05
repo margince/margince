@@ -235,7 +235,10 @@ func (f *faultyEnrichBrain) Complete(context.Context, model.Request) (model.Resp
 
 func TestSignatureEnrichAbsorbsModelFailures(t *testing.T) {
 	e := integration.Setup(t)
+	// Two due candidates, so a pass that kept walking after a deferral asks
+	// twice and a stop asks once.
 	seedEnrichContact(t, e, "flaky@acme.example", "Thanks,\nFlaky Contact\nCOO\n+49 30 1111111")
+	seedEnrichContact(t, e, "flakier@acme.example", "Thanks,\nFlakier Contact\nCFO\n+49 30 2222222")
 
 	t.Run("garbage output fails the candidate, not the pass", func(t *testing.T) {
 		brain := &faultyEnrichBrain{garbage: true}
@@ -271,7 +274,7 @@ func TestSignatureEnrichAbsorbsModelFailures(t *testing.T) {
 			t.Fatalf("an outage must not be an error: %v", err)
 		}
 		if brain.calls != 1 {
-			t.Fatalf("model calls = %d, want 1 — the outage must end the pass", brain.calls)
+			t.Fatalf("model calls = %d, want 1 — the outage must end the pass, not walk the second candidate", brain.calls)
 		}
 	})
 }

@@ -37,6 +37,9 @@ func runReopenParked(ctx context.Context, pool *pgxpool.Pool, args []string, std
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
+	if fs.NArg() > 0 {
+		return fmt.Errorf("reopen-parked: unexpected argument %q; every option is a --flag", fs.Arg(0))
+	}
 	window, err := parseReopenWindow(*from, *to)
 	if err != nil {
 		return err

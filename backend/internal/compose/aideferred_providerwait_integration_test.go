@@ -11,12 +11,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
+	"github.com/margince/margince/backend/internal/shared/kernel/providerwait"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -57,6 +60,27 @@ var (
 	outage    = &ai.ProviderDownError{Provider: "acme", Health: model.HealthDown, RetryAfter: farFuture}
 	exhausted = &ai.BudgetDeferralError{Task: ai.TaskSiteExtract, NextAttemptAt: farFuture}
 )
+
+// The CHECK constraints forbid a NULL detail on a deferred row today, so the
+// only way to prove NotClause keeps one is to evaluate it against a NULL.
+func TestNotClauseKeepsARowWhoseDetailIsNull(t *testing.T) {
+	e := integration.Setup(t)
+	var kept, matched int
+	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if err := tx.QueryRow(context.Background(),
+			`SELECT count(*) FROM (SELECT NULL::text AS status_detail) r WHERE `+providerwait.NotClause).Scan(&kept); err != nil {
+			return err
+		}
+		return tx.QueryRow(context.Background(),
+			`SELECT count(*) FROM (SELECT NULL::text AS status_detail) r WHERE `+providerwait.Clause).Scan(&matched)
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if kept != 1 || matched != 0 {
+		t.Fatalf("a NULL detail: NotClause kept %d, Clause matched %d, want 1 and 0", kept, matched)
+	}
+}
 
 // A website read deferred for a provider outage is the provider's to resume,
 // so a budget raise neither counts nor wakes it; one deferred for the budget

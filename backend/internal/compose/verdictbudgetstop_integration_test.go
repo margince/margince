@@ -35,10 +35,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
-// brokeBrain is the workspace with no budget left: every ask is deferred before
-// it reaches a model. It stands in for the spend guard rather than for a
-// provider, which is why it returns the sentinel and not a transport error —
-// the two take opposite branches, and only this one refunds.
+// brokeBrain is a model that defers every ask before it reaches a provider.
+// Unset, it is the workspace with no budget left and answers the budget
+// sentinel; with err set it answers that error instead, such as a provider
+// outage, which a deferral stops the pass on the same way.
 type brokeBrain struct {
 	calls int
 	// onAsk runs before the refusal, so a case can change the world underneath

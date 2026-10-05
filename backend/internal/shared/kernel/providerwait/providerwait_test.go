@@ -25,3 +25,11 @@ func TestPredicatesAreBuiltFromDetail(t *testing.T) {
 		}
 	}
 }
+
+// A row with no detail waits on the budget, so NotClause must keep it. A plain
+// `<>` would be NULL for that row and drop it from the budget count.
+func TestNotClauseKeepsARowWithNoDetail(t *testing.T) {
+	if !strings.Contains(providerwait.NotClause, "IS DISTINCT FROM") {
+		t.Fatalf("NotClause = %q, which would drop a row whose status_detail is NULL", providerwait.NotClause)
+	}
+}

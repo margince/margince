@@ -33,7 +33,8 @@ func aiDeferredWork(pool *pgxpool.Pool) func(context.Context) ([]crmcontracts.Ai
 			line := crmcontracts.AiDeferredWork{Carrier: source.table, Unit: source.unit}
 			err := InstallationDB(pool).Tx(ctx, func(tx pgx.Tx) error {
 				var count, waiting int64
-				if err := tx.QueryRow(ctx, "SELECT count(*) FILTER (WHERE "+source.budget+"), count(*) FILTER (WHERE "+source.provider+") FROM "+source.table).Scan(&count, &waiting); err != nil {
+				if err := tx.QueryRow(ctx, "SELECT count(*) FILTER (WHERE "+source.budget+"), count(*) FILTER (WHERE "+source.provider+
+					") FROM "+source.table+" WHERE ("+source.budget+") OR ("+source.provider+")").Scan(&count, &waiting); err != nil {
 					return err
 				}
 				line.Count = &count

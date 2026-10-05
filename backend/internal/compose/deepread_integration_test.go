@@ -41,6 +41,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/providerwait"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -409,6 +410,9 @@ func TestDeepReadProviderOutageSnoozesUntilTheProbe(t *testing.T) {
 	}
 	if deferred.Status != "deferred" || deferred.NextAttemptAt == nil || !deferred.NextAttemptAt.Equal(probe) {
 		t.Fatalf("dossier after an outage = %+v, want deferred until the probe", deferred)
+	}
+	if deferred.StatusDetail == nil || *deferred.StatusDetail != providerwait.Detail {
+		t.Fatalf("status_detail = %v, want the provider wait, not a budget wait", deferred.StatusDetail)
 	}
 }
 

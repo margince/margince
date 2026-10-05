@@ -53,12 +53,17 @@ func (w ReopenWindow) Validate() error {
 
 // parkedByExhaustion selects the rows RetireExhausted ended inside the window.
 // A human's decision moves a row out of `unsure` (or stamps it as the owner's),
-// so neither can match; the count, the list and the lock below share this text,
-// so the count an operator sees is the set the reopen acts on.
+// so neither can match, and an offer a human decided but whose effect has not
+// landed yet is no match either. An offer that merely expired still leaves the
+// row recoverable. The count, the list and the lock below share this text, so
+// the count an operator sees is the set the reopen acts on.
 const parkedByExhaustion = `
 	status = 'unsure' AND disposition_reason = $1 AND attempts >= $2
 	AND NOT resolved_by_owner
-	AND resolved_at >= $3 AND resolved_at < $4`
+	AND resolved_at >= $3 AND resolved_at < $4
+	AND NOT EXISTS (SELECT 1 FROM approval a
+	                 WHERE a.id = capture_pending_counterparty.proposal_id
+	                   AND a.decided_at IS NOT NULL)`
 
 // ParkedByExhaustion lists up to limit rows the window parked, oldest first.
 func (s *PendingStore) ParkedByExhaustion(ctx context.Context, w ReopenWindow, limit int) ([]ids.UUID, error) {
@@ -103,15 +108,18 @@ func (s *PendingStore) CountParkedByExhaustion(ctx context.Context, w ReopenWind
 }
 
 // ClaimParkedForReopen locks one row for the rest of the caller's transaction
-// and reports the offer standing against it, or ok=false when the row stopped
+// and reports the offer still pending against it (an expired offer is nothing
+// to withdraw, so it is not reported), or ok=false when the row stopped
 // matching between the scan and now (a human decided it, or an earlier run
 // reopened it). The lock orders a concurrent decision against the reopen the
 // way ClaimReviewForAgeOut does for the age-out.
 func (s *PendingStore) ClaimParkedForReopen(ctx context.Context, tx pgx.Tx, w ReopenWindow, id ids.UUID) (proposalID *ids.UUID, ok bool, err error) {
 	err = tx.QueryRow(ctx, `
-		SELECT proposal_id FROM capture_pending_counterparty
+		SELECT (SELECT a.id FROM approval a
+		         WHERE a.id = capture_pending_counterparty.proposal_id AND a.status = 'pending')
+		  FROM capture_pending_counterparty
 		 WHERE id = $5 AND `+parkedByExhaustion+`
-		 FOR UPDATE`, ExhaustedReason, PendingMaxAttempts, w.From, w.To, id).Scan(&proposalID)
+		 FOR UPDATE OF capture_pending_counterparty`, ExhaustedReason, PendingMaxAttempts, w.From, w.To, id).Scan(&proposalID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, false, nil
 	}
@@ -128,6 +136,17 @@ func (s *PendingStore) ClaimParkedForReopen(ctx context.Context, tx pgx.Tx, w Re
 // Audit only: the ledger is internal scheduling state with no kernel entity
 // kind, so the closed event catalog has no verb to carry it.
 func (s *PendingStore) ReopenParkedTx(ctx context.Context, tx pgx.Tx, id ids.UUID, w ReopenWindow) error {
+	var attempts int
+	var reason string
+	err := tx.QueryRow(ctx, `
+		SELECT attempts, coalesce(disposition_reason, '') FROM capture_pending_counterparty
+		 WHERE id = $1 AND status = 'unsure'`, id).Scan(&attempts, &reason)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return fmt.Errorf("capture: disposition %s was not the unsure row this transaction locked", id)
+	}
+	if err != nil {
+		return fmt.Errorf("capture: reading disposition %s before reopening it: %w", id, err)
+	}
 	tag, err := tx.Exec(ctx, `
 		UPDATE capture_pending_counterparty
 		   SET status = 'pending', attempts = 0, next_attempt_at = now(),
@@ -141,7 +160,7 @@ func (s *PendingStore) ReopenParkedTx(ctx context.Context, tx pgx.Tx, id ids.UUI
 		return fmt.Errorf("capture: disposition %s was not the unsure row this transaction locked", id)
 	}
 	_, err = storekit.AuditWithEvidence(ctx, tx, "update", pendingObject, id,
-		map[string]any{columnStatus: PendingStatusUnsure, columnAttempts: PendingMaxAttempts, "disposition_reason": ExhaustedReason},
+		map[string]any{columnStatus: PendingStatusUnsure, columnAttempts: attempts, "disposition_reason": reason},
 		map[string]any{columnStatus: PendingStatusPending, columnAttempts: 0},
 		map[string]any{"reopened_window_from": w.From, "reopened_window_to": w.To})
 	if err != nil {
