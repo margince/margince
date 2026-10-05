@@ -261,7 +261,7 @@ func (s *Service) Run(ctx context.Context, scanID ids.UUID, companyID ids.Compan
 	findings, by, err := Read(ai.WithSubject(ctx, companyID.Ref(), in.Account.Name),
 		s.lane, companyID, in, lang)
 	if until, deferred := ai.DeferredUntil(err); deferred {
-		if deferErr := s.deferBudget(ctx, h, until); deferErr != nil {
+		if deferErr := s.deferRead(ctx, h, until, deferralReason(err)); deferErr != nil {
 			return errors.Join(err, deferErr)
 		}
 		return err
@@ -391,10 +391,19 @@ func (s *Service) claim(ctx context.Context, scanID ids.UUID) (row, bool, error)
 	return r, ok, err
 }
 
-func (s *Service) deferBudget(ctx context.Context, h held, next time.Time) error {
+func (s *Service) deferRead(ctx context.Context, h held, next time.Time, reason string) error {
 	return database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
-		return deferBudget(ctx, tx, h, next)
+		return deferRead(ctx, tx, h, next, reason)
 	})
+}
+
+// deferralReason is the degrade_reason a deferred read carries: budget recovery
+// selects on the first, so the second must stay out of its reach.
+func deferralReason(cause error) string {
+	if errors.Is(cause, ai.ErrProviderDown) {
+		return "provider_deferred"
+	}
+	return "budget_deferred"
 }
 
 // fail closes a claimed row. It writes under a context that outlives the
