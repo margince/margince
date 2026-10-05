@@ -69,3 +69,11 @@ func TestTheKindVocabularyIsCompleteAndDistinct(t *testing.T) {
 		}
 	}
 }
+
+// RecordTx refuses a kind nobody declared before it writes, for the reason
+// Record does: an unowned key would stop the reaper's pass for the workspace.
+func TestRecordTxRefusesAnUndeclaredKind(t *testing.T) {
+	if err := RecordTx(context.Background(), nil, Kind("nobody's"), "ws/x/1"); err == nil {
+		t.Fatal("an undeclared kind was accepted")
+	}
+}

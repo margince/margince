@@ -14,11 +14,13 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"log/slog"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/capture/partslim"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -243,13 +245,86 @@ func TestAFileWhoseObjectIsGoneIsStillWithheld(t *testing.T) {
 	if err := blob.Delete(ctx, key); err != nil {
 		t.Fatalf("losing the object: %v", err)
 	}
+	// A second due message, queued behind the first by id.
+	next, nextThread := "msg-gone-next-"+tag, "thread-next-"+tag
+	captureBeforeTheVerdict(ctx, t, db, blob, next, nextThread, address)
+	judgeThreadPersonal(ctx, t, db, next, nextThread, address, "8 days")
 
 	if _, err := privateThreadStripperFor(db.Pool(), blob).StripWorkspace(ctx, capture.DefaultPersonalPurgeWindows()); err != nil {
 		t.Fatalf("StripWorkspace: %v", err)
 	}
 	requireNamedWithoutBytes(t, filesFor(ctx, t, db, source))
+	requireNamedWithoutBytes(t, filesFor(ctx, t, db, next))
 	encoded := base64.StdEncoding.EncodeToString(onePDF().Body)
 	if raw := storedOriginal(ctx, t, db, source); bytes.Contains(raw, []byte(encoded)) {
 		t.Error("the stored original still carries the file's bytes")
 	}
+}
+
+// An original the part sweep already slimmed carries a stanza naming the
+// object instead of the bytes. It is put back from the object first, then
+// withheld, so no stanza is left naming an object the reaper will delete.
+func TestASlimmedOriginalIsRestoredThenWithheld(t *testing.T) {
+	ctx, db, tag := captureWorkspace(t)
+	blob := blobstore.NewMemory()
+	address := "thread-" + tag + "@example.com"
+	source, thread := "msg-slimmed-"+tag, "thread-"+tag
+	// Large enough that the sweep's stanza is cheaper than the bytes it
+	// replaces; a small part is left in place, and this test would not reach
+	// the restore.
+	big := onePDF()
+	big.Body = bytes.Repeat([]byte("%PDF-1.4 scanned page "), 400)
+	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blob))
+	rec := withAttachedOriginal(withFiles(fromAddress(mailRecord(source), address), big))
+	rec.ThreadKey = thread
+	if _, err := sink.Upsert(ctx, rec); err != nil {
+		t.Fatalf("capturing before the verdict: %v", err)
+	}
+	if _, err := capture.NewPartSlimStore(db, blob).SlimBatch(ctx, 1000); err != nil {
+		t.Fatalf("slimming: %v", err)
+	}
+	if !partslim.IsSlimmed(storedOriginal(ctx, t, db, source)) {
+		t.Fatal("the part sweep did not slim the fixture, so this test would not reach the restore")
+	}
+	judgeThreadPersonal(ctx, t, db, source, thread, address, "8 days")
+
+	if _, err := privateThreadStripperFor(db.Pool(), blob).StripWorkspace(ctx, capture.DefaultPersonalPurgeWindows()); err != nil {
+		t.Fatalf("StripWorkspace: %v", err)
+	}
+	if files := filesFor(ctx, t, db, source); len(files) != 1 || !files[0].withheld || files[0].storageKey != "" {
+		t.Fatalf("files = %+v, want one withheld row with no object", files)
+	}
+	raw := storedOriginal(ctx, t, db, source)
+	if partslim.IsSlimmed(raw) {
+		t.Error("the withheld original still names an object the reaper will delete")
+	}
+	if bytes.Contains(raw, []byte(base64.StdEncoding.EncodeToString(big.Body))[:200]) {
+		t.Error("the withheld original carries the file's bytes")
+	}
+}
+
+// The verdict job's stage runs the strip when an object store is wired and
+// skips it when none is.
+func TestTheVerdictJobStripsPrivateThreadFilesOnlyWithAnObjectStore(t *testing.T) {
+	ctx, db, tag := captureWorkspace(t)
+	blob := blobstore.NewMemory()
+	address := "thread-" + tag + "@example.com"
+	source, thread := "msg-stage-"+tag, "thread-"+tag
+	captureBeforeTheVerdict(ctx, t, db, blob, source, thread, address)
+	judgeThreadPersonal(ctx, t, db, source, thread, address, "8 days")
+	ws, _ := principal.WorkspaceID(ctx)
+
+	unwired := &counterpartyVerdictWorker{stripper: privateThreadStripperFor(db.Pool(), nil)}
+	if err := unwired.stripPrivateThreads(ctx, ctx, ws); err != nil {
+		t.Fatalf("the stage with no object store: %v", err)
+	}
+	if files := filesFor(ctx, t, db, source); len(files) != 1 || files[0].withheld {
+		t.Fatalf("files = %+v, want nothing withheld without an object store", files)
+	}
+
+	wired := &counterpartyVerdictWorker{stripper: privateThreadStripperFor(db.Pool(), blob), log: slog.Default()}
+	if err := wired.stripPrivateThreads(ctx, ctx, ws); err != nil {
+		t.Fatalf("the stage: %v", err)
+	}
+	requireNamedWithoutBytes(t, filesFor(ctx, t, db, source))
 }
