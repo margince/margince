@@ -12,10 +12,6 @@
 import { navigate } from "../app/router";
 import type { CitedRecord } from "./companyevidence";
 
-// openCitation routes a cited record to its own screen. The brief, the
-// prepared answers and the suggestions all cite the same records, so they
-// share one route — a second copy would drift and send one card's reader to
-// the wrong screen.
 // A citation goes to one of two places. A deal or a contact has a screen of its
 // own; a fact or a profile field has no screen, but it does have a receipt —
 // where the value came from and what could not be recorded about it — which is

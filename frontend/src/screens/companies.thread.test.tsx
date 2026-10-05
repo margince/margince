@@ -12,7 +12,9 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { RecordZoneProvider } from "../app/recordzone";
 import { RecordShell } from "../app/testing/recordshell.testkit";
+import { formatDateTime } from "../format/format";
 import { LocaleProvider } from "../i18n";
 import { CompanyScreen } from "./companies";
 import {
@@ -29,6 +31,9 @@ afterEach(() => {
   window.location.hash = "";
 });
 
+// Fourteen hours off UTC, so a drawer dated in the viewer's zone reads otherwise.
+const RECORD_ZONE = "Pacific/Kiritimati";
+
 function render(ui: ReactNode) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -36,7 +41,9 @@ function render(ui: ReactNode) {
   return rtlRender(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <RecordShell>{ui}</RecordShell>
+        <RecordZoneProvider zone={RECORD_ZONE}>
+          <RecordShell>{ui}</RecordShell>
+        </RecordZoneProvider>
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -133,7 +140,7 @@ function drawAccount() {
 }
 
 describe("the account overview's thread opens the messages it names", () => {
-  it("opens a conversation on the spine in the page's email drawer", async () => {
+  it("opens a conversation on the spine in the page's email drawer, dated in the record's zone", async () => {
     const user = userEvent.setup();
     const { container } = drawAccount();
     await screen.findByRole("heading", { name: company.display_name });
@@ -146,8 +153,11 @@ describe("the account overview's thread opens the messages it names", () => {
       await within(spine).findByRole("button", { name: /About scope/ }),
     );
 
+    const drawer = await screen.findByRole("dialog", { name: "About scope" });
     expect(
-      await screen.findByRole("dialog", { name: "About scope" }),
+      await within(drawer).findByText(
+        formatDateTime("2026-05-30T09:00:00Z", "en", RECORD_ZONE),
+      ),
     ).toBeTruthy();
   });
 

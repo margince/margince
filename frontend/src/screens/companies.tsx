@@ -39,7 +39,6 @@ import {
   formatMoney,
   formatNumber,
 } from "../format/format";
-import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { taskWriteKeys } from "./activitykeys";
@@ -1514,6 +1513,7 @@ function CompanyRecordBody({
   // moment of closing would empty it in front of the reader. Null only before
   // the first composer is ever opened, so nothing is mounted until then.
   const shownAnchor = useRef<ComposeAnchor | null>(null);
+  const recordZone = useRecordZone();
   if (composing !== null) {
     shownAnchor.current = composing;
   }
@@ -1690,7 +1690,7 @@ function CompanyRecordBody({
           the same reason: both are what a chip on this page opens into. */}
       <OpenEmailDrawer
         activityId={receipt.email}
-        zone={viewerZone()}
+        zone={recordZone}
         onClose={receipt.closeEmail}
       />
       <CompanyProfileTab

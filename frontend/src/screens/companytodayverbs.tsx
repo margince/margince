@@ -13,6 +13,7 @@ import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
 import { stable } from "../format/collate";
 import type { useT } from "../i18n";
+import { citationOpensRecord } from "./companycitations";
 import "./record360/record360.css";
 
 type Company360 = components["schemas"]["Company360"];
@@ -77,7 +78,8 @@ export function momentVerb({
     state !== "available" ||
     !onOpenRecord ||
     destination?.entity_type == null ||
-    destination.entity_id == null
+    destination.entity_id == null ||
+    !citationOpensRecord(destination.entity_type)
   ) {
     return fallback;
   }
