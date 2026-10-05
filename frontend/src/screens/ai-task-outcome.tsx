@@ -70,8 +70,8 @@ export function TaskOutcome({ flow }: Readonly<{ flow: Flow }>) {
     },
   ];
   return (
-    <div className="ai-outcome">
-      <p className="ai-outcome-headline">
+    <div className="form-stack">
+      <p>
         {lost
           ? t("aiOutcome.headline.lost", {
               share: share(total - lost, total, locale),

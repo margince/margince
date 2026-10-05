@@ -28,9 +28,3 @@
 .access-row-revoked .access-row-main {
   opacity: 0.6;
 }
-
-.access-issued {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}

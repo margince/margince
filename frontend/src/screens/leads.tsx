@@ -850,18 +850,16 @@ function DemoteAction({ id }: Readonly<{ id: string }>) {
         pending={demote.isPending}
         error={demote.isError ? problemMessageOf(demote.error, t) : undefined}
       >
-        <div className="lead-stack">
-          <p className="t-body">{t("lead.demoteExplain")}</p>
-          <Field label={t("lead.demoteReason")} required>
-            {(control) => (
-              <Textarea
-                {...control}
-                value={reason}
-                onChange={(event) => setReason(event.target.value)}
-              />
-            )}
-          </Field>
-        </div>
+        <p className="t-body">{t("lead.demoteExplain")}</p>
+        <Field label={t("lead.demoteReason")} required>
+          {(control) => (
+            <Textarea
+              {...control}
+              value={reason}
+              onChange={(event) => setReason(event.target.value)}
+            />
+          )}
+        </Field>
       </ConfirmModal>
     </>
   );

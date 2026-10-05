@@ -22,8 +22,11 @@
   gap: var(--space-2);
 }
 
-.dealsuggestion-money {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: var(--space-3);
+/* The amount carries the figure and the currency only a code, so the pair
+   splits 2:1 rather than the even split `.form-row` gives; it never wraps. */
+.dealsuggestion-money > .field {
+  flex-basis: 0;
+}
+.dealsuggestion-money > .field:first-child {
+  flex-grow: 2;
 }

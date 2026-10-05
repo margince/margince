@@ -69,21 +69,9 @@
   flex-wrap: wrap;
 }
 
-/* The typed-ERASE field, one gap-step below the modal's lead paragraph —
- * every other labelled field in the app opens with this much breathing room. */
-.dsr-erase-field {
-  margin-top: var(--space-3);
-}
-
-/* A legal hold is a documented, lawful refusal (Art. 17(3)(b)), not a mistake
- * the operator made — and neither is a request that another officer already
- * decided. Both are drawn by `Callout`, which owns the border, the ink and the
- * padding; the band is what this screen still owns — where the notices sit
- * relative to the confirm's own lead paragraph, and the interval between them
- * when both stand at once. */
+/* `Callout` draws each refusal; the band only spaces two that stand at once. */
 .dsr-refusal {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  margin-top: var(--space-3);
 }

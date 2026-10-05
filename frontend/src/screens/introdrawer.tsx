@@ -11,7 +11,14 @@
 
 import { useId, useState } from "react";
 import type { components } from "../api/schema";
-import { Badge, Button, Checkbox, Field, Modal } from "../design-system/atoms";
+import {
+  Badge,
+  Button,
+  Checkbox,
+  Field,
+  Modal,
+  Textarea,
+} from "../design-system/atoms";
 import { ChoiceList } from "../design-system/choicelist";
 import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
@@ -90,95 +97,89 @@ export function IntroDrawer({
         {t("contact.intro.askTitle", { name: contactName })}
       </Heading>
 
-      {route ? (
-        <p className="pn-route">
-          <RouteLine route={route} />
-        </p>
-      ) : (
-        <p className="pn-route">{t("contact.graph.noRoute")}</p>
-      )}
-
-      <Field
-        label={t("contact.intro.reasonLabel")}
-        hint={t("contact.intro.reasonHint")}
-      >
-        {(control) => (
-          <textarea
-            {...control}
-            rows={3}
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-          />
+      <div className="form-stack">
+        {route ? (
+          <p className="pn-route">
+            <RouteLine route={route} />
+          </p>
+        ) : (
+          <p className="pn-route">{t("contact.graph.noRoute")}</p>
         )}
-      </Field>
-
-      <Field
-        label={t("contact.intro.valueLabel")}
-        hint={t("contact.intro.valueHint")}
-      >
-        {(control) => (
-          <textarea
-            {...control}
-            rows={3}
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-          />
-        )}
-      </Field>
-
-      <Field
-        label={t("contact.intro.noteLabel")}
-        hint={t("contact.intro.noteHint")}
-      >
-        {(control) => (
-          <textarea
-            {...control}
-            rows={5}
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-          />
-        )}
-      </Field>
-
-      <Checkbox
-        checked={nameDrop}
-        label={t("contact.intro.nameDropAsk")}
-        onChange={(e) => setNameDrop(e.target.checked)}
-      />
-
-      <ChoiceList<FallbackPolicy>
-        legend={t("contact.intro.fallbackLegend")}
-        value={fallback}
-        onChange={setFallback}
-        choices={[
-          {
-            value: "none",
-            label: t("contact.intro.fallbackNone"),
-            description: t("contact.intro.fallbackNoneHelp"),
-          },
-          {
-            value: "name_drop",
-            label: t("contact.intro.fallbackNameDrop"),
-            description: t("contact.intro.fallbackNameDropHelp"),
-          },
-          {
-            value: "next_route",
-            label: t("contact.intro.fallbackNextRoute"),
-            description: t("contact.intro.fallbackNextRouteHelp"),
-          },
-        ]}
-      />
-
-      {/* Nothing here reaches the contact. The verb says so, because a button
-          reading "Send" beside a note addressed to Dana would tell the reader
-          the product just wrote to her. */}
-      <div className="form-actions">
-        <Button onClick={onClose} variant="ghost">
-          {t("contact.intro.cancel")}
-        </Button>
-        <Button onClick={submit} disabled={!ready || create.isPending}>
-          {t("contact.intro.askAction")}
-        </Button>
+        <Field
+          label={t("contact.intro.reasonLabel")}
+          hint={t("contact.intro.reasonHint")}
+        >
+          {(control) => (
+            <Textarea
+              {...control}
+              rows={3}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+            />
+          )}
+        </Field>
+        <Field
+          label={t("contact.intro.valueLabel")}
+          hint={t("contact.intro.valueHint")}
+        >
+          {(control) => (
+            <Textarea
+              {...control}
+              rows={3}
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+            />
+          )}
+        </Field>
+        <Field
+          label={t("contact.intro.noteLabel")}
+          hint={t("contact.intro.noteHint")}
+        >
+          {(control) => (
+            <Textarea
+              {...control}
+              rows={5}
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+            />
+          )}
+        </Field>
+        <Checkbox
+          checked={nameDrop}
+          label={t("contact.intro.nameDropAsk")}
+          onChange={(e) => setNameDrop(e.target.checked)}
+        />
+        <ChoiceList<FallbackPolicy>
+          legend={t("contact.intro.fallbackLegend")}
+          value={fallback}
+          onChange={setFallback}
+          choices={[
+            {
+              value: "none",
+              label: t("contact.intro.fallbackNone"),
+              description: t("contact.intro.fallbackNoneHelp"),
+            },
+            {
+              value: "name_drop",
+              label: t("contact.intro.fallbackNameDrop"),
+              description: t("contact.intro.fallbackNameDropHelp"),
+            },
+            {
+              value: "next_route",
+              label: t("contact.intro.fallbackNextRoute"),
+              description: t("contact.intro.fallbackNextRouteHelp"),
+            },
+          ]}
+        />
+        {/* Not "Send": nothing here reaches the contact. */}
+        <div className="form-actions">
+          <Button onClick={onClose} variant="ghost">
+            {t("contact.intro.cancel")}
+          </Button>
+          <Button onClick={submit} disabled={!ready || create.isPending}>
+            {t("contact.intro.askAction")}
+          </Button>
+        </div>
       </div>
       {create.isError ? (
         <p role="alert">

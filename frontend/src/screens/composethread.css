@@ -25,7 +25,6 @@
 .compose-split > .compose-fields {
   min-block-size: 0;
   overflow-y: auto;
-  margin-bottom: 0;
 }
 /* Only the editor gives way; every other field keeps its own height and the
    column scrolls. A child that clips its overflow (the AI card is a Panel) has

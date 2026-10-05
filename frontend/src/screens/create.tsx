@@ -651,90 +651,90 @@ export function RecordFormBody({
         if (!pending && !requiredMissing && refusals.size === 0)
           onSubmit(submittedValues(fields, values), rows);
       }}
-      className="form-stack"
     >
-      {shown.map((field) => {
-        if (field.divider) {
+      <div className="form-stack">
+        {shown.map((field) => {
+          if (field.divider) {
+            return (
+              <p className="form-divider t-label" key={field.key}>
+                {fieldLabel(field, t)}
+              </p>
+            );
+          }
+          if (field.type === "repeatable") {
+            return (
+              <RepeatableRowsField
+                key={field.key}
+                field={field}
+                formId={formId}
+                rows={rows[field.key] ?? []}
+                setRows={(next) => setRows({ ...rows, [field.key]: next })}
+              />
+            );
+          }
+          if (field.type === "multiselect") {
+            return (
+              <MultiselectField
+                key={field.key}
+                field={field}
+                value={values[field.key] ?? ""}
+                setValue={(next) =>
+                  setVisibleValues({ ...values, [field.key]: next })
+                }
+              />
+            );
+          }
           return (
-            <p className="form-divider t-label" key={field.key}>
-              {fieldLabel(field, t)}
-            </p>
-          );
-        }
-        if (field.type === "repeatable") {
-          return (
-            <RepeatableRowsField
+            <Field
               key={field.key}
-              field={field}
-              formId={formId}
-              rows={rows[field.key] ?? []}
-              setRows={(next) => setRows({ ...rows, [field.key]: next })}
-            />
-          );
-        }
-        if (field.type === "multiselect") {
-          return (
-            <MultiselectField
-              key={field.key}
-              field={field}
-              value={values[field.key] ?? ""}
-              setValue={(next) =>
-                setVisibleValues({ ...values, [field.key]: next })
+              label={fieldLabel(field, t)}
+              required={field.required}
+              hint={
+                field.offers
+                  ? offeredHint(field.offers, field.key, values, t)
+                  : field.hint
               }
-            />
-          );
-        }
-        return (
-          <Field
-            key={field.key}
-            label={fieldLabel(field, t)}
-            required={field.required}
-            hint={
-              field.offers
-                ? offeredHint(field.offers, field.key, values, t)
-                : field.hint
-            }
-            error={refusals.get(field.key)}
-          >
-            {(control) =>
-              field.offers ? (
-                <OfferedNameControl
-                  fieldKey={field.key}
-                  offers={field.offers}
-                  control={control}
-                  values={values}
-                  setValues={setVisibleValues}
-                />
-              ) : (
-                fieldControl(
-                  field,
-                  control,
-                  values[field.key] ?? "",
-                  (next) => setVisibleValues({ ...values, [field.key]: next }),
-                  t,
-                  values,
+              error={refusals.get(field.key)}
+            >
+              {(control) =>
+                field.offers ? (
+                  <OfferedNameControl
+                    fieldKey={field.key}
+                    offers={field.offers}
+                    control={control}
+                    values={values}
+                    setValues={setVisibleValues}
+                  />
+                ) : (
+                  fieldControl(
+                    field,
+                    control,
+                    values[field.key] ?? "",
+                    (next) =>
+                      setVisibleValues({ ...values, [field.key]: next }),
+                    t,
+                    values,
+                  )
                 )
-              )
+              }
+            </Field>
+          );
+        })}
+        {/* Announced: nothing moves when a submit is refused, and the server's
+            reason is the only thing saying why the dialog is still open. */}
+        {error && <ErrorLine>{error}</ErrorLine>}
+        {existing && resolveExisting && (
+          <Button
+            type="button"
+            className="create-view-existing"
+            onClick={() =>
+              navigate(resolveExisting(existing.code, existing.id))
             }
-          </Field>
-        );
-      })}
-      {error && (
-        // Announced, so a refused submit reaches a reader whose focus never
-        // left the form: nothing moves when this appears, and the server's
-        // reason is the only thing that says why the dialog is still open. The
-        // edit dialog renders this same body, so both carry it.
-        <ErrorLine>{error}</ErrorLine>
-      )}
-      {existing && resolveExisting && (
-        <Button
-          type="button"
-          className="create-view-existing"
-          onClick={() => navigate(resolveExisting(existing.code, existing.id))}
-        >
-          {t("dedupe.viewExisting")}
-        </Button>
-      )}
+          >
+            {t("dedupe.viewExisting")}
+          </Button>
+        )}
+      </div>
       <div className="actions">
         <Button type="button" onClick={onClose}>
           {t("create.cancel")}

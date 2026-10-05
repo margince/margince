@@ -192,72 +192,79 @@ function AddRecordRoleDialog({
       >
         {t("recordRoles.addTitle")}
       </Heading>
-      <Field label={t("recordRoles.addLabel")} hint={t("recordRoles.addHint")}>
-        {(control) => (
-          <TextInput
-            {...control}
-            value={label}
-            onChange={(e) => setLabel(e.target.value)}
-          />
-        )}
-      </Field>
-      <fieldset className="field-multiselect" disabled={pending}>
-        <legend className="t-name">{t("recordRoles.recordTypes")}</legend>
-        {(["company", "deal", "project"] as const).map((kind) => (
-          <Checkbox
-            key={kind}
-            label={t(`search.kind.${kind}`)}
-            checked={recordTypes.includes(kind)}
-            onChange={(e) =>
-              setRecordTypes((current) =>
-                e.target.checked
-                  ? [...current, kind]
-                  : current.filter((value) => value !== kind),
-              )
-            }
-          />
-        ))}
-      </fieldset>
-      <fieldset className="field-multiselect" disabled={pending}>
-        <legend className="t-name">{t("recordRoles.assigneeKinds")}</legend>
-        {(["user", "team"] as const).map((kind) => (
-          <Checkbox
-            key={kind}
-            label={t(
-              kind === "user" ? "assignments.kindUser" : "assignments.kindTeam",
-            )}
-            checked={assigneeKinds.includes(kind)}
-            onChange={(e) =>
-              setAssigneeKinds((current) =>
-                e.target.checked
-                  ? [...current, kind]
-                  : current.filter((value) => value !== kind),
-              )
-            }
-          />
-        ))}
-      </fieldset>
-      <div className="action-row">
-        <Button variant="ghost" onClick={onClose}>
-          {t("deals.cancel")}
-        </Button>
-        <Button
-          disabled={
-            !label.trim() ||
-            !recordTypes.length ||
-            !assigneeKinds.length ||
-            pending
-          }
-          onClick={() =>
-            onAdd({
-              label: label.trim(),
-              record_types: recordTypes,
-              assignee_kinds: assigneeKinds,
-            })
-          }
+      <div className="form-stack">
+        <Field
+          label={t("recordRoles.addLabel")}
+          hint={t("recordRoles.addHint")}
         >
-          {t("recordRoles.addConfirm")}
-        </Button>
+          {(control) => (
+            <TextInput
+              {...control}
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+            />
+          )}
+        </Field>
+        <fieldset className="field-multiselect" disabled={pending}>
+          <legend className="t-name">{t("recordRoles.recordTypes")}</legend>
+          {(["company", "deal", "project"] as const).map((kind) => (
+            <Checkbox
+              key={kind}
+              label={t(`search.kind.${kind}`)}
+              checked={recordTypes.includes(kind)}
+              onChange={(e) =>
+                setRecordTypes((current) =>
+                  e.target.checked
+                    ? [...current, kind]
+                    : current.filter((value) => value !== kind),
+                )
+              }
+            />
+          ))}
+        </fieldset>
+        <fieldset className="field-multiselect" disabled={pending}>
+          <legend className="t-name">{t("recordRoles.assigneeKinds")}</legend>
+          {(["user", "team"] as const).map((kind) => (
+            <Checkbox
+              key={kind}
+              label={t(
+                kind === "user"
+                  ? "assignments.kindUser"
+                  : "assignments.kindTeam",
+              )}
+              checked={assigneeKinds.includes(kind)}
+              onChange={(e) =>
+                setAssigneeKinds((current) =>
+                  e.target.checked
+                    ? [...current, kind]
+                    : current.filter((value) => value !== kind),
+                )
+              }
+            />
+          ))}
+        </fieldset>
+        <div className="action-row">
+          <Button variant="ghost" onClick={onClose}>
+            {t("deals.cancel")}
+          </Button>
+          <Button
+            disabled={
+              !label.trim() ||
+              !recordTypes.length ||
+              !assigneeKinds.length ||
+              pending
+            }
+            onClick={() =>
+              onAdd({
+                label: label.trim(),
+                record_types: recordTypes,
+                assignee_kinds: assigneeKinds,
+              })
+            }
+          >
+            {t("recordRoles.addConfirm")}
+          </Button>
+        </div>
       </div>
     </Modal>
   );

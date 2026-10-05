@@ -1,20 +1,13 @@
 import type { ReactNode } from "react";
-import { useId } from "react";
+import { Children, useId } from "react";
 import { useT } from "../i18n";
 import { Button, Modal } from "./atoms";
 import { ErrorLine } from "./errorline";
 import { Heading } from "./heading";
 import { AutonomyDot } from "./trust";
 
-// The shared confirm-dialog chrome: this used to live duplicated,
-// near-identically, inline in the deals.tsx terminal-stage
-// advance confirm and archive.tsx's ArchiveAction. Both wire a Modal, a
-// title (deals.tsx's carries an autonomy dot, archive.tsx's doesn't), an
-// inline mutation error, and a Cancel/Confirm pair that both refuse the press
-// while a mutation is in flight — Cancel by going unavailable, Confirm by
-// going busy, since only one of them started anything. The caller owns the body copy and any extra
-// fields (e.g. the lost-reason input) via children — this atom only owns
-// the modal chrome and the actions.
+// While `pending`, Cancel goes unavailable and Confirm goes busy: only Confirm
+// started anything. The body and its fields are the caller's.
 
 export function ConfirmModal({
   open,
@@ -93,6 +86,7 @@ export function ConfirmModal({
 }>) {
   const t = useT();
   const headingId = useId();
+  const body = Children.toArray(children).length > 0 || Boolean(error);
   return (
     <Modal
       open={open}
@@ -111,8 +105,12 @@ export function ConfirmModal({
         )}
         {title}
       </Heading>
-      {children}
-      {error && <ErrorLine>{error}</ErrorLine>}
+      {body && (
+        <div className="form-stack">
+          {children}
+          {error && <ErrorLine>{error}</ErrorLine>}
+        </div>
+      )}
       <div className="actions">
         {actionsLead && <span className="actions-lead">{actionsLead}</span>}
         {/* Cancel is `disabled`, not `pending`, and the difference is real: it

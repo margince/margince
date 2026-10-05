@@ -32,11 +32,15 @@ export const Default: Story = {
       </StoryProviders>
     );
   },
+  play: async () => {
+    await screen.findByRole("dialog");
+  },
 };
 
 export const Customize: Story = {
   ...Default,
   play: async () => {
+    await screen.findByRole("dialog");
     await userEvent.click(
       await screen.findByRole("button", { name: "Customize report" }),
     );

@@ -209,9 +209,7 @@ export function MeetingBriefView({
               may not open, a meeting filed elsewhere — and "could not load"
               throws that away. Outside the SurfaceState because it renders
               children only when the state is ready. */}
-          {state.kind === "failed" && (
-            <p className="mb-failed-detail">{state.message}</p>
-          )}
+          {state.kind === "failed" && <p>{state.message}</p>}
         </div>
       </div>
       <div className="drawer-foot">

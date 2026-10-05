@@ -120,20 +120,22 @@ function TeamCommitment({
   const [response, setResponse] = useState(commitment.manager_response ?? "");
   return (
     <PanelRow>
-      <div>
-        <p>{commitment.label}</p>
-        <p>{t(`plan.state.${commitment.state}`)}</p>
-        {commitment.due_on && (
-          <p>
-            {t("plan.due", {
-              day: formatDate(
-                middayInstant(commitment.due_on, zone),
-                locale,
-                zone,
-              ),
-            })}
-          </p>
-        )}
+      <div className="form-stack">
+        <div>
+          <p>{commitment.label}</p>
+          <p>{t(`plan.state.${commitment.state}`)}</p>
+          {commitment.due_on && (
+            <p>
+              {t("plan.due", {
+                day: formatDate(
+                  middayInstant(commitment.due_on, zone),
+                  locale,
+                  zone,
+                ),
+              })}
+            </p>
+          )}
+        </div>
         {commitment.linked_record && (
           <EntityRef
             kind={commitment.linked_record.type}
@@ -142,8 +144,11 @@ function TeamCommitment({
         )}
         {commitment.help_requested && (
           <>
-            <p>{commitment.help_requested}</p>
-            {editable ? (
+            <div>
+              <p>{commitment.help_requested}</p>
+              {!editable && <p>{commitment.manager_response}</p>}
+            </div>
+            {editable && (
               <>
                 <Field label={t("brief.team.response")}>
                   {(control) => (
@@ -155,24 +160,24 @@ function TeamCommitment({
                     />
                   )}
                 </Field>
-                <Button
-                  pending={answer.isPending}
-                  disabled={
-                    response.trim() === "" ||
-                    response === commitment.manager_response
-                  }
-                  onClick={() =>
-                    answer.mutate({
-                      id: commitment.id,
-                      managerResponse: response,
-                    })
-                  }
-                >
-                  {t("brief.team.saveResponse")}
-                </Button>
+                <div className="form-actions">
+                  <Button
+                    pending={answer.isPending}
+                    disabled={
+                      response.trim() === "" ||
+                      response === commitment.manager_response
+                    }
+                    onClick={() =>
+                      answer.mutate({
+                        id: commitment.id,
+                        managerResponse: response,
+                      })
+                    }
+                  >
+                    {t("brief.team.saveResponse")}
+                  </Button>
+                </div>
               </>
-            ) : (
-              <p>{commitment.manager_response}</p>
             )}
             <ErrorLine error={answer.error} />
           </>

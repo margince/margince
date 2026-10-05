@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { screen, userEvent, within } from "storybook/test";
 import { Button } from "../design-system/atoms";
 import { Heading } from "../design-system/heading";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
@@ -97,6 +98,20 @@ export const Ready: Story = {
       "POST /contacts/p-1/research": () => jsonResponse(readyRun),
     });
     return drawer();
+  },
+};
+
+/** A mapped claim opens its value, quote and source, prefilled from the run. */
+export const MappingAClaim: Story = {
+  render: Ready.render,
+  play: async () => {
+    const dialog = await screen.findByRole("dialog");
+    const user = userEvent.setup();
+    const [picker] = await within(dialog).findAllByRole("combobox", {
+      name: "Profile field",
+    });
+    await user.click(picker);
+    await user.click(await screen.findByRole("option", { name: "Role" }));
   },
 };
 

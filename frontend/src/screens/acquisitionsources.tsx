@@ -171,25 +171,27 @@ function AddAcquisitionSourceDialog({
       >
         {t("acqSources.addTitle")}
       </Heading>
-      <Field label={t("acqSources.addLabel")} hint={t("acqSources.addHint")}>
-        {(control) => (
-          <TextInput
-            {...control}
-            value={label}
-            onChange={(e) => setLabel(e.target.value)}
-          />
-        )}
-      </Field>
-      <div className="action-row">
-        <Button variant="ghost" onClick={onClose}>
-          {t("deals.cancel")}
-        </Button>
-        <Button
-          disabled={!label.trim() || pending}
-          onClick={() => onAdd(label.trim())}
-        >
-          {t("acqSources.addConfirm")}
-        </Button>
+      <div className="form-stack">
+        <Field label={t("acqSources.addLabel")} hint={t("acqSources.addHint")}>
+          {(control) => (
+            <TextInput
+              {...control}
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+            />
+          )}
+        </Field>
+        <div className="action-row">
+          <Button variant="ghost" onClick={onClose}>
+            {t("deals.cancel")}
+          </Button>
+          <Button
+            disabled={!label.trim() || pending}
+            onClick={() => onAdd(label.trim())}
+          >
+            {t("acqSources.addConfirm")}
+          </Button>
+        </div>
       </div>
     </Modal>
   );

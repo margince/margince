@@ -21,6 +21,11 @@
   gap: var(--space-5);
 }
 
+/* The background disclosure closes the stack, which spaces its panels itself. */
+.mb-stack > .disclosure {
+  margin-bottom: 0;
+}
+
 /* Who the brief is for, under the dialog's title. */
 .mb-prepared-for {
   margin: var(--space-1) 0 0;
@@ -56,10 +61,6 @@
   flex-direction: column;
   gap: var(--space-3);
   padding-top: var(--space-3);
-}
-
-.mb-failed-detail {
-  margin: var(--space-2) 0 0;
 }
 
 /* The outcome to earn, with its icon in a column of its own so a two-line

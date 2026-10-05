@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { LocaleProvider } from "../i18n";
 import { Card } from "./atoms";
 import { Eyebrow } from "./eyebrow";
+import { Panel, PanelBody } from "./panel";
 import { type SectionState, SurfaceState } from "./surfacestate";
 
 // The nine states a surface can be in. They are drawn together because that is
@@ -210,3 +211,55 @@ function NestedDemo() {
 }
 
 export const NestedUnderASection: Story = { render: () => <NestedDemo /> };
+
+// The stack's gap falls under the pair, never between its two lines.
+export const EmptyWithDetailInAStack: Story = {
+  render: () => (
+    <Card>
+      <div className="form-stack">
+        <SurfaceState
+          state="empty"
+          emptyLabel="No renewals on this account."
+          emptyDetail="A renewal appears once a deal is marked as one."
+          loadingLabel="Loading renewals"
+        >
+          {ROWS}
+        </SurfaceState>
+        <p className="t-body">Next review in March.</p>
+      </div>
+    </Card>
+  ),
+};
+
+// The caveat stays on its figures under flow spacing and under a gap stack.
+export const StaleInBothHosts: Story = {
+  render: () => (
+    <div style={{ display: "grid", gap: "var(--space-4)", maxWidth: 420 }}>
+      <Panel title="Panel body">
+        <PanelBody>
+          <SurfaceState
+            loadingLabel="Loading the section"
+            state="stale"
+            emptyLabel="No open deals for this company."
+            detail={{ staleAsOf: "9:15 this morning" }}
+          >
+            {ROWS}
+          </SurfaceState>
+        </PanelBody>
+      </Panel>
+      <Card title="Form stack">
+        <div className="form-stack">
+          <SurfaceState
+            loadingLabel="Loading the section"
+            state="stale"
+            emptyLabel="No open deals for this company."
+            detail={{ staleAsOf: "9:15 this morning" }}
+          >
+            {ROWS}
+          </SurfaceState>
+          <p className="t-body">Next review in March.</p>
+        </div>
+      </Card>
+    </div>
+  ),
+};

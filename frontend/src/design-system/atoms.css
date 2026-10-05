@@ -187,7 +187,8 @@
 .empty-body p + p {
   margin-top: var(--space-2);
 }
-.empty-action {
+/* A step past the card's gap: the verb stands apart from the sentence above. */
+.empty-instructional > .empty-action {
   margin-top: var(--space-1);
 }
 
@@ -396,6 +397,17 @@
  * two-column measure with one column in it. */
 .modal-drawer-split {
   width: clamp(360px, 62vw, 1040px);
+}
+/* A body stack between the split drawer and its two columns passes on the
+   height the columns claim. */
+.modal-drawer-split > .form-stack {
+  flex: 1 1 auto;
+  min-block-size: 0;
+}
+/* In a dialog the stack's gap is the only space between its rows; a row's own
+   margin would add to it. Above `.modal .actions`, which keeps its margin. */
+.modal .form-stack > * {
+  margin-block: 0;
 }
 
 /* The zero padding above belongs to the head/body/foot split: those three

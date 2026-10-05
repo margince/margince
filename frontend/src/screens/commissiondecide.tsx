@@ -13,7 +13,6 @@ import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { isVersionSkew, ProblemError, throwProblem } from "./common";
-import "./commissiondecide.css";
 import "./common.css";
 
 // Moving one commission entry through the ledger's lifecycle.
@@ -209,9 +208,9 @@ export function CommissionDecision({
         <Heading size="large" id={headingId} className="t-h2 modal-title">
           {t(copy.label)}
         </Heading>
-        <p className="commissiondecide-confirm">{t(copy.confirm)}</p>
-        {needsReason && (
-          <div className="commissiondecide-reason">
+        <div className="form-stack">
+          <p>{t(copy.confirm)}</p>
+          {needsReason && (
             <Field
               label={t("commission.decide.reasonLabel")}
               required
@@ -231,14 +230,14 @@ export function CommissionDecision({
                 />
               )}
             </Field>
-          </div>
-        )}
-        {mutation.error instanceof ProblemError &&
-        isVersionSkew(mutation.error.problem) ? (
-          <ErrorLine>{t("edit.versionSkew")}</ErrorLine>
-        ) : (
-          <ErrorLine error={mutation.error} />
-        )}
+          )}
+          {mutation.error instanceof ProblemError &&
+          isVersionSkew(mutation.error.problem) ? (
+            <ErrorLine>{t("edit.versionSkew")}</ErrorLine>
+          ) : (
+            <ErrorLine error={mutation.error} />
+          )}
+        </div>
         <div className="actions">
           <Button onClick={() => setOpen(false)} disabled={mutation.isPending}>
             {t("create.cancel")}

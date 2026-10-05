@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { CompanyRejectAction } from "./companyreject";
 import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
@@ -76,6 +77,16 @@ export const Offered: Story = {
  * take a 403 on the archive. Absent rather than disabled: STATE-4a sorts by
  * cause, and a control the reader has no authority for reports no fact about
  * this account. */
+/** The dialog the offer opens: the sentence naming both halves, then the reason. */
+export const Confirming: Story = {
+  render: () => inMenu(COMPANY, CAN_REJECT),
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(await body.findByTestId("reject-company"));
+    await body.findByRole("dialog");
+  },
+};
+
 export const WithoutBothGrants: Story = {
   render: () => inMenu(COMPANY, meRoute({ company: ["read", "delete"] })),
 };
