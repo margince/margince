@@ -194,9 +194,9 @@ func TestALocalRouterSendsTheBrokerDefaultsProductionWould(t *testing.T) {
 				t.Fatalf("building the router: %v", err)
 			}
 			for tier, client := range router.binding().clients {
-				compat, ok := client.(*openAICompatClient)
+				compat, ok := untracked(client).(*openAICompatClient)
 				if !ok {
-					t.Fatalf("tier %s is served by %T, want the OpenAI-wire adapter", tier, client)
+					t.Fatalf("tier %s is served by %T, want the OpenAI-wire adapter", tier, untracked(client))
 				}
 				wire := compat.chatWire(model.Request{ResponseSchema: []byte(`{"type":"object"}`)}, false)
 				if wire.Provider == nil || wire.Provider.RequireParameters == nil || !*wire.Provider.RequireParameters {

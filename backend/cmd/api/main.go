@@ -40,7 +40,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/licensecheck"
 	"github.com/margince/margince/backend/internal/platform/mailer"
-	"github.com/margince/margince/backend/internal/platform/ratelimit"
 )
 
 func main() {
@@ -123,7 +122,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	// built, not because construction order matters — the registry reaches
 	// limiters made either side of this line — but because the line belongs
 	// where the client it shares is opened.
-	ratelimit.ShareProcess(rdb)
+	shareThroughRedis(ctx, rdb)
 
 	surfaceOpts, resetLane, err := declaredSurfaceOptions(ctx, cfg, deployCfg, pool, schemaPool, vault, rdb, logger, stdout)
 	if err != nil {

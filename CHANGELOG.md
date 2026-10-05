@@ -16,6 +16,24 @@ when it has content.
 
 ### Added
 
+- AI provider health: a provider that is out of credit, rejecting its key,
+  unreachable or degraded is marked as such on Settings → AI models and in the new
+  **AI provider status** card under System health. A blocked provider is skipped
+  with no call and no charge, mail and enrichment wait instead of spending their
+  attempts, and an interactive request fails fast with a message to contact the
+  system administrator. `worker reopen-parked --from … --to … [--dry-run]` reopens
+  the sender questions and company enrichments an earlier outage parked.
+  A rejected key or an empty balance is read from the vendor's reply text, not only
+  its status code, and the call that first meets one is refunded and fails with the
+  specific reason. A successful key test clears the provider's state at once, and the
+  status is shared between the API and the worker through Redis (the worst status
+  wins; without Redis a process shows only its own), so Settings shows an outage only
+  the worker saw. A call that finds the host unreachable and every failed probe while
+  blocked are refunded, one probe runs at a time, and a vendor's "does not have
+  permission" refusal no longer marks the key rejected. Settings → AI's "Recorded
+  work waiting on the allowance" counts only what an allowance raise would resume;
+  website reads, account scans and voice builds waiting for a provider are shown
+  as their own "Waiting for the AI provider" number and resume by themselves.
 - Model prices sync themselves: once a day (and on **Refresh model prices**) every
   provider with a usable key is re-priced from models.dev or OpenRouter, newly
   listed chat and embedding models the catalogue prices are added, and a price you set

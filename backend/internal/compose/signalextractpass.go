@@ -40,7 +40,8 @@ type ExtractPass struct {
 	// more backlog behind it. The first passes over an installation's history
 	// are expected to sit here for a few hours.
 	AtCap bool
-	// Deferred says the workspace's model budget stopped the pass early.
+	// Deferred says the pass stopped early because the workspace's model budget
+	// ran out or the provider is not answering.
 	Deferred bool
 	// OutOfTime says the pass ran up against its own deadline and stopped
 	// while conversations were still owed a reading.
@@ -162,10 +163,10 @@ func (x *SignalExtractor) RunWorkspace(ctx context.Context, wsID ids.WorkspaceID
 			pass.OutOfTime = true
 			return pass, passFailure(failed)
 		}
-		if errors.Is(err, ai.ErrBudgetDeferred) {
-			// The budget is the WORKSPACE's, so this one does stop the pass:
-			// every thread behind it would buy the same refusal.
-			x.log.InfoContext(ctx, "signal extract: budget exhausted, stopping the pass", "raised", raised)
+		if ai.IsDeferral(err) {
+			// The budget and the provider are the WORKSPACE's, so this one does
+			// stop the pass: every thread behind it would buy the same refusal.
+			x.log.InfoContext(ctx, "signal extract: work deferred, stopping the pass", "raised", raised)
 			pass.Raised = raised
 			pass.Deferred = true
 			return pass, passFailure(failed)
@@ -179,7 +180,7 @@ func (x *SignalExtractor) RunWorkspace(ctx context.Context, wsID ids.WorkspaceID
 	// old ones, and inside the same deadline and budget.
 	converted, err := x.convertLegacyCommitments(ctx)
 	pass.Converted = converted
-	if errors.Is(err, ai.ErrBudgetDeferred) {
+	if ai.IsDeferral(err) {
 		pass.Deferred = true
 		return pass, passFailure(failed)
 	}

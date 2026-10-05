@@ -41,14 +41,20 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/providerwait"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 type budgetDeferringBrain struct {
 	next time.Time
+	// err replaces the budget deferral when set, for a deferral of another cause.
+	err error
 }
 
 func (b budgetDeferringBrain) Complete(context.Context, model.Request) (model.Response, error) {
+	if b.err != nil {
+		return model.Response{}, b.err
+	}
 	return model.Response{}, &ai.BudgetDeferralError{Task: ai.TaskSiteExtract, NextAttemptAt: b.next}
 }
 
@@ -380,6 +386,33 @@ func TestDeepReadBudgetDeferralSnoozesTheDurableJob(t *testing.T) {
 	if deferred.Status != "deferred" || deferred.StatusCode == nil || *deferred.StatusCode != "budget_deferred" ||
 		deferred.NextAttemptAt == nil || !deferred.NextAttemptAt.Equal(next) || deferred.FinishedAt != nil {
 		t.Fatalf("dossier after budget deferral = %+v", deferred)
+	}
+}
+
+func TestDeepReadProviderOutageSnoozesUntilTheProbe(t *testing.T) {
+	e := integration.Setup(t)
+	company := insertCompany(t, e, e.Rep1, "acme.example", "")
+	now := time.Date(2026, time.July, 19, 10, 0, 0, 0, time.UTC)
+	probe := now.Add(5 * time.Minute)
+	down := &ai.ProviderDownError{Provider: "acme", Health: model.HealthDown, RetryAfter: probe}
+	worker, _ := newDeepReadTestWorker(e, acmeDeepSite(), budgetDeferringBrain{err: down})
+	worker.now = func() time.Time { return now }
+	read, args := startDeepRead(t, e, company)
+
+	err := worker.Work(context.Background(), &river.Job[SiteDeepReadArgs]{Args: args})
+	var snooze *river.JobSnoozeError
+	if !errors.As(err, &snooze) || snooze.Duration != probe.Sub(now) {
+		t.Fatalf("Work error = %v, want snooze for %s, not a failed attempt", err, probe.Sub(now))
+	}
+	deferred, getErr := e.Contacts.GetSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), companyIDOf(company), read.ID)
+	if getErr != nil {
+		t.Fatal(getErr)
+	}
+	if deferred.Status != "deferred" || deferred.NextAttemptAt == nil || !deferred.NextAttemptAt.Equal(probe) {
+		t.Fatalf("dossier after an outage = %+v, want deferred until the probe", deferred)
+	}
+	if deferred.StatusDetail == nil || *deferred.StatusDetail != providerwait.Detail {
+		t.Fatalf("status_detail = %v, want the provider wait, not a budget wait", deferred.StatusDetail)
 	}
 }
 

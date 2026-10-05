@@ -351,6 +351,13 @@ function DeferredWork({ rows }: Readonly<{ rows: Deferred[] }>) {
             {row.available && row.count !== undefined
               ? formatNumber(row.count, locale)
               : t("aiAdmin.unavailable")}
+            {row.available && row.waiting_on_provider ? (
+              <div>
+                {t("aiAdmin.providerWaiting", {
+                  waiting: formatNumber(row.waiting_on_provider, locale),
+                })}
+              </div>
+            ) : null}
           </li>
         ))}
       </ul>
