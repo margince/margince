@@ -565,35 +565,36 @@ export function SentenceList({
       onOpenEmail={onOpenEmail}
     />
   );
+  const list = (
+    <ul className="co-brief-lines">
+      {(lead ? rest : sentences).map((sentence, index) => (
+        // Indexed because two sentences may legitimately read the same;
+        // keying on the text collapses them into one row.
+        // biome-ignore lint/suspicious/noArrayIndexKey: the list is replaced wholesale on every read, never reordered in place
+        <li key={index}>
+          <NatureBadge sentence={sentence} />
+          {sentence.text}
+          {citations === "per-sentence" && citationsFor(sentence.evidence)}
+        </li>
+      ))}
+      {citations === "collected" && (
+        <li className="co-brief-sources">
+          {citationsFor(sentences.flatMap((sentence) => sentence.evidence))}
+        </li>
+      )}
+    </ul>
+  );
+  if (!lead) return list;
   return (
-    <>
-      {lead ? (
-        <p className="co-brief-lead">
-          {/* No nature word on the lead: being set apart IS its mark. The
-              lines under it keep theirs, where a suggestion sits beside a
-              fact and the word is what tells them apart. */}
-          {lead.text}
-          {citations === "per-sentence" && citationsFor(lead.evidence)}
-        </p>
-      ) : null}
-      <ul className="co-brief-lines">
-        {(lead ? rest : sentences).map((sentence, index) => (
-          // Indexed because two sentences may legitimately read the same;
-          // keying on the text collapses them into one row.
-          // biome-ignore lint/suspicious/noArrayIndexKey: the list is replaced wholesale on every read, never reordered in place
-          <li key={index}>
-            <NatureBadge sentence={sentence} />
-            {sentence.text}
-            {citations === "per-sentence" && citationsFor(sentence.evidence)}
-          </li>
-        ))}
-        {citations === "collected" && (
-          <li className="co-brief-sources">
-            {citationsFor(sentences.flatMap((sentence) => sentence.evidence))}
-          </li>
-        )}
-      </ul>
-    </>
+    <div className="co-brief-read">
+      <p className="co-brief-lead">
+        {/* No nature word: being set apart is the lead's mark; the lines
+            under it need theirs to tell a suggestion from a fact. */}
+        {lead.text}
+        {citations === "per-sentence" && citationsFor(lead.evidence)}
+      </p>
+      {list}
+    </div>
   );
 }
 

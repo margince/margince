@@ -354,7 +354,10 @@ function ProviderConnection({
 
   return (
     <div>
-      <div data-testid={`ai-provider-key-${status.provider}`}>
+      <div
+        className="form-stack"
+        data-testid={`ai-provider-key-${status.provider}`}
+      >
         <div className="ai-provider">
           <span className="ai-provider-who">
             {/* The variable is the only thing that says HOW a key reached the

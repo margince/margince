@@ -54,7 +54,10 @@ export const WithError: Story = {
 };
 
 // Every row one stack step apart, the refusal included.
-function ConfirmFormDemo({ error }: Readonly<{ error?: string }>) {
+function ConfirmFormDemo({
+  error,
+  placement,
+}: Readonly<{ error?: string; placement?: "right" }>) {
   const [open, setOpen] = useState(true);
   const [reason, setReason] = useState("price");
   return (
@@ -66,6 +69,7 @@ function ConfirmFormDemo({ error }: Readonly<{ error?: string }>) {
       confirmVariant="danger"
       onConfirm={() => setOpen(false)}
       error={error}
+      placement={placement}
     >
       <p>The deal leaves the pipeline and its open tasks close.</p>
       <ChoiceList
@@ -103,5 +107,10 @@ export const WithFieldsAndError: Story = {
   render: () => (
     <ConfirmFormDemo error="The deal changed while you were here." />
   ),
+  play: opensWithFields,
+};
+
+export const WithFieldsInDrawer: Story = {
+  render: () => <ConfirmFormDemo placement="right" />,
   play: opensWithFields,
 };

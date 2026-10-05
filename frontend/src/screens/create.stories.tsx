@@ -138,6 +138,7 @@ export const FormBodyFilled: Story = {
           onSubmit={() => undefined}
           onClose={() => undefined}
           intent="create"
+          inline
         />
       );
     }
@@ -185,6 +186,7 @@ export const OfferedCompanyPicked: Story = {
           onSubmit={() => undefined}
           onClose={() => undefined}
           intent="create"
+          inline
         />
       );
     }
