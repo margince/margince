@@ -32,7 +32,7 @@ import (
 )
 
 // UndoDeclarationSetting is the transaction-local setting the two retention
-// triggers read to admit an undo; migration 1791118500 spells the same name.
+// triggers read to admit an undo; migration 1791178500 spells the same name.
 // It carries the activity id, so one declaration cannot be spent on another row.
 const UndoDeclarationSetting = "margince.project_filing_undo"
 
