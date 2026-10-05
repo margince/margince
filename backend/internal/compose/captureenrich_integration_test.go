@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"log/slog"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -259,6 +260,18 @@ func TestSignatureEnrichAbsorbsModelFailures(t *testing.T) {
 		}
 		if brain.calls != 1 {
 			t.Fatalf("model calls = %d, want 1 — the stop must end the pass, not walk the fleet", brain.calls)
+		}
+	})
+
+	t.Run("a provider outage ends the pass cleanly", func(t *testing.T) {
+		down := &ai.ProviderDownError{Provider: "acme", Health: model.HealthDown, RetryAfter: time.Now().Add(time.Hour)}
+		brain := &faultyEnrichBrain{err: down}
+		enricher := NewCaptureEnricher(e.Pool, brain, slog.New(slog.DiscardHandler))
+		if _, err := enricher.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
+			t.Fatalf("an outage must not be an error: %v", err)
+		}
+		if brain.calls != 1 {
+			t.Fatalf("model calls = %d, want 1 — the outage must end the pass", brain.calls)
 		}
 	})
 }

@@ -162,10 +162,10 @@ func (x *SignalExtractor) RunWorkspace(ctx context.Context, wsID ids.WorkspaceID
 			pass.OutOfTime = true
 			return pass, passFailure(failed)
 		}
-		if errors.Is(err, ai.ErrBudgetDeferred) {
-			// The budget is the WORKSPACE's, so this one does stop the pass:
-			// every thread behind it would buy the same refusal.
-			x.log.InfoContext(ctx, "signal extract: budget exhausted, stopping the pass", "raised", raised)
+		if ai.IsDeferral(err) {
+			// The budget and the provider are the WORKSPACE's, so this one does
+			// stop the pass: every thread behind it would buy the same refusal.
+			x.log.InfoContext(ctx, "signal extract: work deferred, stopping the pass", "raised", raised)
 			pass.Raised = raised
 			pass.Deferred = true
 			return pass, passFailure(failed)
@@ -179,7 +179,7 @@ func (x *SignalExtractor) RunWorkspace(ctx context.Context, wsID ids.WorkspaceID
 	// old ones, and inside the same deadline and budget.
 	converted, err := x.convertLegacyCommitments(ctx)
 	pass.Converted = converted
-	if errors.Is(err, ai.ErrBudgetDeferred) {
+	if ai.IsDeferral(err) {
 		pass.Deferred = true
 		return pass, passFailure(failed)
 	}

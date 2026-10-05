@@ -167,8 +167,7 @@ func Read(
 		}
 		return nil
 	})
-	var deferral *ai.BudgetDeferralError
-	if errors.As(err, &deferral) {
+	if ai.IsDeferral(err) {
 		return nil, crmcontracts.WrittenByDeterministic, err
 	}
 	if err != nil {

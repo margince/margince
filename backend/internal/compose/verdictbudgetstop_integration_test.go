@@ -44,12 +44,17 @@ type brokeBrain struct {
 	// onAsk runs before the refusal, so a case can change the world underneath
 	// the pass at the one moment it is guaranteed to be mid-batch.
 	onAsk func()
+	// err is what every ask answers; unset, it is the budget deferral.
+	err error
 }
 
 func (b *brokeBrain) Complete(context.Context, model.Request) (model.Response, error) {
 	b.calls++
 	if b.onAsk != nil {
 		b.onAsk()
+	}
+	if b.err != nil {
+		return model.Response{}, b.err
 	}
 	return model.Response{}, ai.ErrBudgetDeferred
 }

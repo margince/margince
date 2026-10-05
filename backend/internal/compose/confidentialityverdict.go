@@ -19,7 +19,6 @@ package compose
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -125,11 +124,11 @@ func (e *ConfidentialityVerdictEngine) RunWorkspace(ctx context.Context, maxVerd
 		}
 		n, err := e.judgeClaimed(wsCtx, batch)
 		resolved += n
-		if errors.Is(err, ai.ErrBudgetDeferred) {
+		if ai.IsDeferral(err) {
 			// The refund is judgeClaimed's, because it is what knows where it
 			// stopped. Releasing from here would hand back the whole batch,
 			// including the thread already deferred and refunded inside.
-			e.log.InfoContext(wsCtx, "confidentiality verdict: budget exhausted, stopping the pass", "resolved", resolved)
+			e.log.InfoContext(wsCtx, "confidentiality verdict: work deferred, stopping the pass", "resolved", resolved)
 			return nil
 		}
 		if err != nil {
@@ -156,10 +155,10 @@ func (e *ConfidentialityVerdictEngine) judgeClaimed(
 	// unwritable instead of merely unwritten: only the loop that knows where it
 	// stopped can reach this, so no caller can hand back a batch that includes
 	// the row already refunded below.
-	releaseUnreached := func(rest []capture.PendingThread) {
+	releaseUnreached := func(rest []capture.PendingThread, backoff time.Duration) {
 		for _, row := range rest {
-			if err := e.threads.Defer(ctx, row, confidentialityRetryBackoff,
-				"the workspace was out of model budget", true); err != nil {
+			if err := e.threads.Defer(ctx, row, backoff,
+				"the pass stopped before reaching this thread", true); err != nil {
 				e.log.WarnContext(ctx, "confidentiality verdict: releasing a claimed thread failed",
 					"thread", row.ID.String(), "err", err)
 			}
@@ -170,14 +169,15 @@ func (e *ConfidentialityVerdictEngine) judgeClaimed(
 		n, err := e.judgeOne(ctx, row)
 		applied += n
 		if err != nil {
-			outOfBudget := errors.Is(err, ai.ErrBudgetDeferred)
-			if deferErr := e.threads.Defer(ctx, row, confidentialityRetryBackoff,
-				"the confidentiality verdict could not be completed", outOfBudget); deferErr != nil {
-				releaseUnreached(claimed[i+1:])
+			deferred := ai.IsDeferral(err)
+			backoff := deferralBackoff(err, confidentialityRetryBackoff)
+			if deferErr := e.threads.Defer(ctx, row, backoff,
+				"the confidentiality verdict could not be completed", deferred); deferErr != nil {
+				releaseUnreached(claimed[i+1:], backoff)
 				return applied, deferErr
 			}
-			if outOfBudget {
-				releaseUnreached(claimed[i+1:])
+			if deferred {
+				releaseUnreached(claimed[i+1:], backoff)
 				return applied, err
 			}
 			// Any other fault is a property of THIS thread, whose text an

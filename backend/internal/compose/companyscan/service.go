@@ -260,9 +260,8 @@ func (s *Service) Run(ctx context.Context, scanID ids.UUID, companyID ids.Compan
 	// the request are that account's correspondence.
 	findings, by, err := Read(ai.WithSubject(ctx, companyID.Ref(), in.Account.Name),
 		s.lane, companyID, in, lang)
-	var deferral *ai.BudgetDeferralError
-	if errors.As(err, &deferral) {
-		if deferErr := s.deferBudget(ctx, h, deferral.NextAttemptAt); deferErr != nil {
+	if until, deferred := ai.DeferredUntil(err); deferred {
+		if deferErr := s.deferBudget(ctx, h, until); deferErr != nil {
 			return errors.Join(err, deferErr)
 		}
 		return err
