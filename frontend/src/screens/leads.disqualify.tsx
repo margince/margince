@@ -96,31 +96,29 @@ export function DisqualifyDialog({
         disqualify.isError ? problemMessageOf(disqualify.error, t) : undefined
       }
     >
-      <div className="lead-qualify">
-        <Field label={t("lead.disqualify.reason")} required>
-          {(control) => (
-            <Select
-              {...control}
-              value={reasonId}
-              placeholder={t("lead.disqualify.pickReason")}
-              onChange={setReasonId}
-              options={active.map((reason) => ({
-                value: reason.id,
-                label: reason.label,
-              }))}
-            />
-          )}
-        </Field>
-        <Field label={t("lead.disqualify.note")}>
-          {(control) => (
-            <Textarea
-              {...control}
-              value={note}
-              onChange={(event) => setNote(event.target.value)}
-            />
-          )}
-        </Field>
-      </div>
+      <Field label={t("lead.disqualify.reason")} required>
+        {(control) => (
+          <Select
+            {...control}
+            value={reasonId}
+            placeholder={t("lead.disqualify.pickReason")}
+            onChange={setReasonId}
+            options={active.map((reason) => ({
+              value: reason.id,
+              label: reason.label,
+            }))}
+          />
+        )}
+      </Field>
+      <Field label={t("lead.disqualify.note")}>
+        {(control) => (
+          <Textarea
+            {...control}
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+          />
+        )}
+      </Field>
     </ConfirmModal>
   );
 }

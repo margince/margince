@@ -52,14 +52,6 @@
   margin: 0 0 var(--space-3);
 }
 
-.cp-intro-mark {
-  margin: 0 0 var(--space-2);
-}
-
-.cp-intro-field {
-  margin: var(--space-3) 0 0;
-}
-
 .cp-intro-why {
   margin: var(--space-3) 0 var(--space-1);
 }

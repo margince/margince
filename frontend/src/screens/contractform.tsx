@@ -240,27 +240,25 @@ export function ContractForm({
         {t(contract ? "contracts.form.editTitle" : "contracts.form.title")}
       </Heading>
 
-      <ContractTermsFields
-        draft={draft}
-        setDraft={setDraft}
-        currency={contractCurrency}
-      />
-
-      <ContractCustomFields
-        fields={cf.formFields}
-        values={draft.customValues}
-        onChange={(customValues) => setDraft({ ...draft, customValues })}
-      />
-
-      <SignedFileField
-        companyId={companyId}
-        contractID={contract?.id}
-        file={file}
-        onPick={setFile}
-      />
-
-      <ErrorLine error={save.error} />
-
+      <div className="form-stack">
+        <ContractTermsFields
+          draft={draft}
+          setDraft={setDraft}
+          currency={contractCurrency}
+        />
+        <ContractCustomFields
+          fields={cf.formFields}
+          values={draft.customValues}
+          onChange={(customValues) => setDraft({ ...draft, customValues })}
+        />
+        <SignedFileField
+          companyId={companyId}
+          contractID={contract?.id}
+          file={file}
+          onPick={setFile}
+        />
+        <ErrorLine error={save.error} />
+      </div>
       <div className="actions">
         <Button onClick={onClose}>{t("create.cancel")}</Button>
         {/* The refusal travels WITH the control: a disabled button whose

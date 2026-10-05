@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { feature } from "./ai-admin.testkit";
@@ -232,6 +232,7 @@ function stub({
   installFetchStub({
     "GET /me": () => jsonResponse(meFixture({ allow })),
     "GET /ai/provider-keys": () => jsonResponse(KEYS),
+    "GET /ai/provider-health": () => jsonResponse({ providers: [] }),
     "GET /ai/routing": () => jsonResponse(ROUTING),
     "GET /ai-model-rates": () => jsonResponse({ data: [] }),
     "GET /ai/routing/schema": () => jsonResponse(SCHEMA),
@@ -467,9 +468,12 @@ export const TaskConflict: Story = {
   },
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
-    await userEvent.click(
-      await body.findByRole("combobox", { name: /Thinking level/ }),
-    );
+    const thinking = await body.findByRole("combobox", {
+      name: /Thinking level/,
+    });
+    // The control stays disabled until the stored overrides load.
+    await waitFor(() => expect(thinking).toBeEnabled());
+    await userEvent.click(thinking);
     await userEvent.click(await body.findByRole("option", { name: "low" }));
     await userEvent.click(body.getByRole("button", { name: "Save settings" }));
   },

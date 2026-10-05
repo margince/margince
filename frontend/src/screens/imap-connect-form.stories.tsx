@@ -42,6 +42,9 @@ export const Idle: Story = {
       </StoryProviders>
     );
   },
+  play: async () => {
+    await screen.findByRole("dialog");
+  },
 };
 
 export const LoginRejected: Story = {

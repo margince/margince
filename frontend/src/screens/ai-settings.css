@@ -533,16 +533,6 @@
 }
 
 /* A task's outcome: the headline, the bar, then one card per step. */
-.ai-outcome {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-.ai-outcome-headline {
-  margin: 0;
-}
-
 .ai-outcome-steps {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));

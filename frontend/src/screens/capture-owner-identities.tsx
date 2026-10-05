@@ -242,7 +242,6 @@ function DeclareDialog({ onClose }: Readonly<{ onClose: () => void }>) {
         {t("ownerIdentities.addLabel")}
       </Heading>
       <form
-        className="form-stack"
         onSubmit={(event) => {
           event.preventDefault();
           if (value === "") {
@@ -251,35 +250,37 @@ function DeclareDialog({ onClose }: Readonly<{ onClose: () => void }>) {
           add.mutate({ kind, value }, { onSuccess: onClose });
         }}
       >
-        <SegmentedControl
-          options={KINDS}
-          value={kind}
-          onChange={setKind}
-          labels={{
-            address: t("ownerIdentities.kind.address"),
-            domain: t("ownerIdentities.kind.domain"),
-          }}
-          label={t("ownerIdentities.kindLabel")}
-        />
-        <TextInput
-          value={draft}
-          aria-label={t("ownerIdentities.valueLabel")}
-          onChange={(event) => setDraft(event.target.value)}
-          placeholder={
-            kind === "address"
-              ? t("ownerIdentities.addressPlaceholder")
-              : t("ownerIdentities.domainPlaceholder")
-          }
-        />
-        {add.isError && (
-          <Callout
-            tone="danger"
-            kind="outcome"
-            title={t("ownerIdentities.addFailed")}
-          >
-            {problemMessageOf(add.error, t)}
-          </Callout>
-        )}
+        <div className="form-stack">
+          <SegmentedControl
+            options={KINDS}
+            value={kind}
+            onChange={setKind}
+            labels={{
+              address: t("ownerIdentities.kind.address"),
+              domain: t("ownerIdentities.kind.domain"),
+            }}
+            label={t("ownerIdentities.kindLabel")}
+          />
+          <TextInput
+            value={draft}
+            aria-label={t("ownerIdentities.valueLabel")}
+            onChange={(event) => setDraft(event.target.value)}
+            placeholder={
+              kind === "address"
+                ? t("ownerIdentities.addressPlaceholder")
+                : t("ownerIdentities.domainPlaceholder")
+            }
+          />
+          {add.isError && (
+            <Callout
+              tone="danger"
+              kind="outcome"
+              title={t("ownerIdentities.addFailed")}
+            >
+              {problemMessageOf(add.error, t)}
+            </Callout>
+          )}
+        </div>
         <div className="actions">
           <Button variant="ghost" onClick={onClose} type="button">
             {t("create.cancel")}

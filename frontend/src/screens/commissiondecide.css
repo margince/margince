@@ -1,5 +1,0 @@
-/* The confirm sentence and the reason field each stand off what follows. */
-.commissiondecide-confirm,
-.commissiondecide-reason {
-  margin-bottom: var(--space-4);
-}

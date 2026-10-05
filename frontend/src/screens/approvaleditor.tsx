@@ -26,6 +26,7 @@ import {
   humanizeKind,
 } from "./approvalkind";
 import type { Approval } from "./approvals.queries";
+import "./approvalrow.css";
 import { QueryGate, throwProblem } from "./common";
 import "./common.css";
 
@@ -187,10 +188,8 @@ function ApprovalDetailBody({
   // nothing else to show, so they are the content.
   const rawPayload = <RawPayload change={change} />;
   return (
-    <div className="approval-detail">
-      {approval.summary && (
-        <p className="approval-detail-lead t-body">{approval.summary}</p>
-      )}
+    <div className="form-stack">
+      {approval.summary && <p className="t-body">{approval.summary}</p>}
       {named.length > 0
         ? named.map((entry) => (
             <FieldLine
@@ -206,7 +205,7 @@ function ApprovalDetailBody({
       <EvidenceList evidence={approval.evidence} />
       {named.length > 0 && (
         <Disclosure summary={t("decision.detailTechnical")}>
-          <div className="approval-detail">{rawPayload}</div>
+          <div className="form-stack">{rawPayload}</div>
         </Disclosure>
       )}
     </div>
