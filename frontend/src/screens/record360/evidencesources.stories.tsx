@@ -55,6 +55,12 @@ export const EveryDoor: Story = {
   ),
 };
 
+// The same doors in dark, where the message row and the chips must keep contrast.
+export const EveryDoorDark: Story = {
+  ...EveryDoor,
+  globals: { theme: "dark" },
+};
+
 // A host with no receipt drawer: the fact is prose beside the deal's button.
 export const NoReceiptDrawer: Story = {
   render: () => (
