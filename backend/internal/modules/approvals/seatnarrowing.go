@@ -85,6 +85,8 @@ var decidedByTheSeatStagedFor = map[string]bool{
 	// A promise read out of a conversation, staged for the colleague who made
 	// it, or for the reader of the conversation when nobody could be named.
 	kindCommitmentTask: true,
+	// Retired; its decided cards stay with the seat they were staged for.
+	kindTranscriptProposal: true,
 }
 
 // withheldFromOtherSeats is the self-only narrowing of decidable, spelled once

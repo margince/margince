@@ -79,6 +79,10 @@ const kindHeldDraft = "held_draft"
 const (
 	kindDealFollowUp   = "deal_follow_up"
 	kindCommitmentTask = "commitment_task"
+	// kindTranscriptProposal is retired: nothing stages it and no effect
+	// applies it. It stays governed so the cards already decided under it stay
+	// readable to the people who decided them.
+	kindTranscriptProposal = "transcript_proposal"
 )
 
 // KindScheduledSendHeld is the card a stopped scheduled message raises for the
@@ -285,6 +289,8 @@ var decisionGrants = map[string][]grantRequirement{
 	// proposed, and points the claim on the customer's record at that task —
 	// so the decider must be able to do both by hand.
 	kindCommitmentTask: {{objectActivity, principal.ActionCreate}, {tableContact, principal.ActionUpdate}},
+	// Retired; read only, see kindTranscriptProposal.
+	kindTranscriptProposal: {{objectActivity, principal.ActionCreate}},
 	// A proposed stage move is decided by whoever may MOVE the deal. Approving
 	// it performs the advance, so read is not enough: somebody who can see a
 	// deal but not steer it must not be able to release a move they could not
