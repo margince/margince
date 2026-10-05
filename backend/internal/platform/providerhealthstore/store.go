@@ -89,7 +89,7 @@ func (s *Redis) Load(ctx context.Context) (map[string]model.ProviderHealthStatus
 	if err != nil {
 		return nil, fmt.Errorf("providerhealthstore: reading statuses: %w", err)
 	}
-	var expired []any
+	var expired []string
 	for i, value := range values {
 		raw, ok := value.(string)
 		if !ok {
@@ -107,7 +107,7 @@ func (s *Redis) Load(ctx context.Context) (map[string]model.ProviderHealthStatus
 		// index does not grow past what is recorded. A failure is not the
 		// reader's problem: the next Load tries again.
 		for _, provider := range expired {
-			if err := s.pruneIfStillAbsent(ctx, provider.(string)); err != nil {
+			if err := s.pruneIfStillAbsent(ctx, provider); err != nil {
 				slog.WarnContext(ctx, "providerhealthstore: pruning an expired provider from the index", "provider", provider, "error", err)
 			}
 		}
