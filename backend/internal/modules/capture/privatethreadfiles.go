@@ -66,16 +66,11 @@ func SelectPrivateThreadFilesDueTx(
 	if err != nil {
 		return nil, fmt.Errorf("capture: selecting private-thread mail whose files are due: %w", err)
 	}
-	defer rows.Close()
-	var out []PrivateThreadMessage
-	for rows.Next() {
+	out, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (PrivateThreadMessage, error) {
 		var m PrivateThreadMessage
-		if err := rows.Scan(&m.Activity, &m.RawCapture); err != nil {
-			return nil, fmt.Errorf("capture: reading private-thread mail whose files are due: %w", err)
-		}
-		out = append(out, m)
-	}
-	if err := rows.Err(); err != nil {
+		return m, row.Scan(&m.Activity, &m.RawCapture)
+	})
+	if err != nil {
 		return nil, fmt.Errorf("capture: reading private-thread mail whose files are due: %w", err)
 	}
 	return out, nil
@@ -92,6 +87,9 @@ func SelectPrivateThreadFilesDueTx(
 func PrivateThreadFilesStillDueTx(
 	ctx context.Context, tx pgx.Tx, windows PersonalPurgeWindows, floor StatutoryFloor, activity ids.UUID,
 ) (bool, error) {
+	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
+		return false, err
+	}
 	where, args := privateThreadFilesDue(windows, floor)
 	args = append(args, activity)
 	var due bool

@@ -34,6 +34,9 @@ func TestThePrivateThreadStripRefusesBeforeItReads(t *testing.T) {
 	if due, err := SelectPrivateThreadFilesDueTx(updater, nil, windows, StatutoryFloor{}, 0); err != nil || due != nil {
 		t.Errorf("scan with no room: %v, %v; want nothing and no error", due, err)
 	}
+	if _, err := PrivateThreadFilesStillDueTx(readOnly, nil, windows, StatutoryFloor{}, ids.NewV7()); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("recheck without update: %v, want ErrPermissionDenied", err)
+	}
 	if err := WithholdStoredOriginalTx(readOnly, nil, ids.NewV7(), []StoredBody{{Ordinal: 1, Body: []byte("x")}}); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("rewrite without update: %v, want ErrPermissionDenied", err)
 	}

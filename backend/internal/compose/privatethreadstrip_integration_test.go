@@ -19,6 +19,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/partslim"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
@@ -79,6 +80,14 @@ func TestAPersonalThreadsEarlierFilesAreWithheldOnceItsWindowCloses(t *testing.T
 
 	requireNamedWithoutBytes(t, filesFor(ctx, t, db, source))
 	requireQueuedForDeletion(ctx, t, db, key)
+	// A second pass finds nothing left to strip on this message.
+	if err := database.WithWorkspaceTx(ctx, db.Pool(), func(tx pgx.Tx) error {
+		return activities.NewStore(db).WithBlobstore(blob).WithholdStoredFilesTx(
+			principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: "system:private-thread-strip"}),
+			tx, []activities.StoredMessageFile{{ID: ids.NewV7(), Key: key}})
+	}); err != nil {
+		t.Fatalf("withholding a file already withheld: %v", err)
+	}
 	encoded := base64.StdEncoding.EncodeToString(onePDF().Body)
 	if raw := storedOriginal(ctx, t, db, source); bytes.Contains(raw, []byte(encoded)) {
 		t.Error("the stored original still carries the file's bytes")

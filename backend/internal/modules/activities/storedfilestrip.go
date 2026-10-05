@@ -50,21 +50,16 @@ func (s *Store) StoredFilesOfMessageTx(ctx context.Context, tx pgx.Tx, activityI
 	if err != nil {
 		return nil, fmt.Errorf("activities: listing a message's stored files: %w", err)
 	}
-	var files []StoredMessageFile
-	for rows.Next() {
+	files, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (StoredMessageFile, error) {
 		var f StoredMessageFile
 		var partID string
-		if err := rows.Scan(&f.ID, &f.Key, &partID); err != nil {
-			rows.Close()
-			return nil, fmt.Errorf("activities: reading a message's stored file: %w", err)
-		}
-		if ordinal, err := strconv.Atoi(strings.TrimPrefix(partID, "part:")); err == nil {
+		err := row.Scan(&f.ID, &f.Key, &partID)
+		if ordinal, convErr := strconv.Atoi(strings.TrimPrefix(partID, "part:")); convErr == nil {
 			f.Ordinal = ordinal
 		}
-		files = append(files, f)
-	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
+		return f, err
+	})
+	if err != nil {
 		return nil, fmt.Errorf("activities: reading a message's stored files: %w", err)
 	}
 	for i := range files {
