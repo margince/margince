@@ -129,19 +129,26 @@ func (s *Service) InviteUser(ctx context.Context, actor Identity, in InviteUserI
 		if err != nil {
 			return err
 		}
-		if err := storekit.EmitEvent(ctx, tx, auditID, newUserID.UUID,
-			userInvitedPayload(newUserID, in.Role, actor.UserID, in.TeamIDs)); err != nil {
-			return err
-		}
-		// A subscriber that follows greeting names hears the invited one too.
-		if in.GreetingName == nil {
-			return nil
-		}
-		return storekit.EmitEvent(ctx, tx, auditID, newUserID.UUID,
-			crmcontracts.PublicEventUserGreetingNameChanged{GreetingName: in.GreetingName})
+		return emitInvited(ctx, tx, auditID, newUserID, actor.UserID, in)
 	})
 	if err != nil {
 		return ids.UserID{}, "", err
 	}
 	return newUserID, raw, nil
+}
+
+// emitInvited publishes the invitation, and the greeting name when the invite
+// carried one, so a subscriber that follows greeting names hears it too.
+func emitInvited(
+	ctx context.Context, tx pgx.Tx, auditID ids.UUID, newUserID, inviter ids.UserID, in InviteUserInput,
+) error {
+	if err := storekit.EmitEvent(ctx, tx, auditID, newUserID.UUID,
+		userInvitedPayload(newUserID, in.Role, inviter, in.TeamIDs)); err != nil {
+		return err
+	}
+	if in.GreetingName == nil {
+		return nil
+	}
+	return storekit.EmitEvent(ctx, tx, auditID, newUserID.UUID,
+		crmcontracts.PublicEventUserGreetingNameChanged{GreetingName: in.GreetingName})
 }

@@ -186,3 +186,22 @@ func TestASecondProviderDoesNotRefillAClearedGreetingName(t *testing.T) {
 		t.Errorf("greeting_name = %q after a second provider's first sign-in, want the member's clear kept", textOf(got))
 	}
 }
+
+// An invite that names a greeting name stores it and announces it, so a
+// subscriber following greeting names hears the invited one too.
+func TestAnInvitedGreetingNameIsStoredAndAnnounced(t *testing.T) {
+	e := setupRevocationEnv(t, "invite-greeting")
+	greeting := "Lan"
+	userID, _, err := e.svc.InviteUser(e.wsCtx(e.admin), e.admin, InviteUserInput{
+		Email: "lan@" + e.slug + ".test", DisplayName: "Nguyễn Thị Lan", Role: "rep", GreetingName: &greeting,
+	})
+	if err != nil {
+		t.Fatalf("inviting: %v", err)
+	}
+	if got := storedGreetingName(t, e.svc, userID.UUID); textOf(got) != "Lan" {
+		t.Errorf("greeting_name = %q after the invite, want Lan", textOf(got))
+	}
+	if _, events := greetingNameLedger(t, e.svc, userID.UUID); events != 1 {
+		t.Errorf("the invite emitted %d greeting-name events, want 1", events)
+	}
+}
