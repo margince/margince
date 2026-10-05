@@ -35248,6 +35248,9 @@ type InviteUserRequest struct {
 	DisplayName string              `json:"display_name"`
 	Email       openapi_types.Email `json:"email"`
 
+	// GreetingName The name the member's greetings use, when the first word of `display_name` is not it. Optional; absent, empty or null leaves it unset.
+	GreetingName *string `json:"greeting_name,omitempty"`
+
 	// Role A live role's key: one of the seeded system roles or one made with `createRole`. Seeded keys are wire vocabulary and diverge from the product names on purpose — `manager` displays as "Team Lead", `rep` as "User"; `management` is the whole-company seat that holds no admin power. A caller who is not an admin may only produce an account whose whole access their own contains — every grant, row scope, team and readable field — because the set-password link goes to an address the caller chooses. `listAssignableRoles` names the roles this caller may hand out.
 	Role string `json:"role"`
 
@@ -41368,6 +41371,13 @@ type SaveMyDisplayNameRequest struct {
 	DisplayName string `json:"display_name"`
 }
 
+// SaveMyGreetingNameRequest defines model for SaveMyGreetingNameRequest.
+type SaveMyGreetingNameRequest struct {
+	// GreetingName The name a colleague's greeting uses. Surrounding whitespace is
+	// trimmed; empty or null clears it.
+	GreetingName *string `json:"greeting_name"`
+}
+
 // SaveMyLocaleRequest defines model for SaveMyLocaleRequest.
 type SaveMyLocaleRequest struct {
 	// Locale The language to render this contact's own interface in. One of the
@@ -44585,7 +44595,10 @@ type User struct {
 	CreatedAt      *time.Time            `json:"created_at,omitempty"`
 	DisplayName    string                `json:"display_name"`
 	Email          openapi_types.Email   `json:"email"`
-	Id             openapi_types.UUID    `json:"id"`
+
+	// GreetingName The name a colleague's greeting uses ("Hi Sofia,"), absent or null when nobody has said. Read through one rule on both sides: this when set, else the first word of `display_name`. Present on the caller's own seat; absent on the roster.
+	GreetingName *string            `json:"greeting_name,omitempty"`
+	Id           openapi_types.UUID `json:"id"`
 
 	// IsAgent First-party Agent Runner identity vs a human seat.
 	IsAgent bool `json:"is_agent"`
@@ -53655,6 +53668,9 @@ type SaveMyDisplayNameJSONRequestBody = SaveMyDisplayNameRequest
 
 // SaveMyEmailSignatureJSONRequestBody defines body for SaveMyEmailSignature for application/json ContentType.
 type SaveMyEmailSignatureJSONRequestBody = SaveEmailSignatureRequest
+
+// SaveMyGreetingNameJSONRequestBody defines body for SaveMyGreetingName for application/json ContentType.
+type SaveMyGreetingNameJSONRequestBody = SaveMyGreetingNameRequest
 
 // SaveMyLinkedInAccountJSONRequestBody defines body for SaveMyLinkedInAccount for application/json ContentType.
 type SaveMyLinkedInAccountJSONRequestBody = SaveLinkedInAccountRequest
@@ -65953,6 +65969,9 @@ type ServerInterface interface {
 	// Write or clear your own sign-off.
 	// (PUT /me/email-signature)
 	SaveMyEmailSignature(w http.ResponseWriter, r *http.Request)
+	// Change the name colleagues greet you by.
+	// (PUT /me/greeting-name)
+	SaveMyGreetingName(w http.ResponseWriter, r *http.Request)
 	// Your own LinkedIn account as this CRM records it.
 	// (GET /me/linkedin-account)
 	GetMyLinkedInAccount(w http.ResponseWriter, r *http.Request)
@@ -69826,6 +69845,12 @@ func (_ Unimplemented) GetMyEmailSignature(w http.ResponseWriter, r *http.Reques
 // Write or clear your own sign-off.
 // (PUT /me/email-signature)
 func (_ Unimplemented) SaveMyEmailSignature(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Change the name colleagues greet you by.
+// (PUT /me/greeting-name)
+func (_ Unimplemented) SaveMyGreetingName(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -93180,6 +93205,26 @@ func (siw *ServerInterfaceWrapper) SaveMyEmailSignature(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
+// SaveMyGreetingName operation middleware
+func (siw *ServerInterfaceWrapper) SaveMyGreetingName(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SaveMyGreetingName(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetMyLinkedInAccount operation middleware
 func (siw *ServerInterfaceWrapper) GetMyLinkedInAccount(w http.ResponseWriter, r *http.Request) {
 
@@ -106414,6 +106459,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/me/email-signature", wrapper.SaveMyEmailSignature)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/me/greeting-name", wrapper.SaveMyGreetingName)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/me/linkedin-account", wrapper.GetMyLinkedInAccount)

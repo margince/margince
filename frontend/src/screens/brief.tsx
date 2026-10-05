@@ -9,6 +9,7 @@ import { Button, Modal } from "../design-system/atoms";
 import { Heading } from "../design-system/heading";
 import { PageZones } from "../design-system/pagezones";
 import { formatDateTime } from "../format/format";
+import { greetingNameOf } from "../format/greetingname";
 import { useNow } from "../format/now";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
@@ -78,7 +79,7 @@ export function BriefScreen() {
   );
   const queuedDay = briefDay(queued.data?.pages);
   const review = useWeeklyReview(address.week);
-  const firstName = me.data?.user?.display_name?.trim().split(/\s+/)[0] ?? null;
+  const firstName = greetingNameOf(me.data?.user);
   return (
     <div className="wrap brief-wrap">
       {/* THE HEAD ON THE PAGE GROUND, the way a record's head stands: the

@@ -961,6 +961,7 @@ public.app_user.app_user_delivery_hour_check CHECK (((delivery_hour_local IS NUL
 public.app_user.app_user_failed_login_count_check CHECK ((failed_login_count >= 0))
 public.app_user.app_user_forced_rotation_needs_a_password CHECK ((NOT (must_change_password AND (password_hash IS NULL))))
 public.app_user.app_user_forget_weekly_plan_responses CREATE TRIGGER app_user_forget_weekly_plan_responses BEFORE DELETE ON public.app_user FOR EACH ROW EXECUTE FUNCTION weekly_plan_commitment_forget_manager()
+public.app_user.app_user_greeting_name_length CHECK (((greeting_name IS NULL) OR ((char_length(greeting_name) >= 1) AND (char_length(greeting_name) <= 100))))
 public.app_user.app_user_locale_shipped CHECK ((locale = ANY (ARRAY['en'::text, 'de'::text, 'vi'::text])))
 public.app_user.app_user_morning_brief_delivery_check CHECK (((morning_brief_delivery IS NULL) OR (morning_brief_delivery = ANY (ARRAY['none'::text, 'email'::text]))))
 public.app_user.app_user_pkey PRIMARY KEY (id)
@@ -977,6 +978,8 @@ public.app_user.delivery_hour_local integer gen=- def=-
 public.app_user.display_name text NOT NULL gen=- def=-
 public.app_user.email text NOT NULL gen=- def=-
 public.app_user.failed_login_count integer NOT NULL gen=- def=0
+public.app_user.greeting_name text gen=- def=-
+public.app_user.greeting_name_chosen_at timestamp with time zone gen=- def=-
 public.app_user.id uuid NOT NULL gen=- def=uuidv7()
 public.app_user.is_agent boolean NOT NULL gen=- def=false
 public.app_user.locale text gen=- def=-

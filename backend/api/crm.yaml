@@ -25460,6 +25460,40 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /me/greeting-name:
+    put:
+      tags: [Identity]
+      operationId: saveMyGreetingName
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
+      x-agent-access: human-only
+      summary: Change the name colleagues greet you by.
+      description: |
+        Always the CALLER's own, never anybody else's: there is no id to pass.
+
+        A greeting opens with one name, and the first word of the display name
+        is often the wrong one ("Dr. Sofia Meier", "Nguyễn Thị Lan"). This is the
+        word a colleague's greeting uses instead. Empty or null clears it, and
+        the greeting falls back to the first word of the display name.
+
+        The first sign-in through a login provider fills it from the provider's
+        given name, but only while it is empty, so a value saved here is never
+        overwritten.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SaveMyGreetingNameRequest' }
+      responses:
+        '200':
+          description: The caller's seat, with the new greeting name.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /me/ai-activity:
     get:
       tags: [AI]
@@ -37036,6 +37070,17 @@ components:
             that is only whitespace is refused — the same bounds the invite form
             applies, because this writes the same column.
       additionalProperties: false
+    SaveMyGreetingNameRequest:
+      type: object
+      required: [greeting_name]
+      properties:
+        greeting_name:
+          type: [string, 'null']
+          maxLength: 100
+          description: |
+            The name a colleague's greeting uses. Surrounding whitespace is
+            trimmed; empty or null clears it.
+      additionalProperties: false
     WorkingHours:
       type: object
       additionalProperties: false
@@ -44461,6 +44506,13 @@ components:
         id: { type: string, format: uuid }
         email: { type: string, format: email }
         display_name: { type: string }
+        greeting_name:
+          type: [string, 'null']
+          maxLength: 100
+          description: >
+            The name a colleague's greeting uses ("Hi Sofia,"), absent or null when nobody has said.
+            Read through one rule on both sides: this when set, else the first word of
+            `display_name`. Present on the caller's own seat; absent on the roster.
         timezone: { type: string, default: UTC, description: IANA name. }
         locale:
           type: string
@@ -44565,6 +44617,12 @@ components:
       properties:
         email: { type: string, format: email }
         display_name: { type: string, minLength: 1, maxLength: 255 }
+        greeting_name:
+          type: [string, 'null']
+          maxLength: 100
+          description: >-
+            The name the member's greetings use, when the first word of `display_name`
+            is not it. Optional; absent, empty or null leaves it unset.
         role:
           type: string
           maxLength: 64

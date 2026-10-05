@@ -5002,6 +5002,10 @@ export const vi = {
   "settings.displayNameHelp":
     "C\u00e1ch \u0111\u1ed3ng nghi\u1ec7p th\u1ea5y b\u1ea1n \u2014 tr\u00ean b\u1ea3n ghi, trong danh s\u00e1ch ch\u1ecdn v\u00e0 trong nh\u1eadt k\u00fd.",
   "settings.displayNameSave": "L\u01b0u",
+  "settings.greetingName": "Tên gọi",
+  "settings.greetingNameHelp":
+    "Tên dùng để chào bạn trong bản nháp và lời chào. Để trống thì dùng chữ đầu tiên trong tên của bạn.",
+  "settings.greetingNameSave": "Lưu",
   "settings.languageHelp": "Chỉ giữ trong phiên làm việc.",
   "settings.deviceCard": "Thiết bị này",
   "settings.installApp": "Ứng dụng Margince",
@@ -8562,6 +8566,9 @@ export const vi = {
   "users.nameLabel": "Họ tên người dùng mới",
   "users.emailPlaceholder": "name@company.com",
   "users.namePlaceholder": "Họ và tên",
+  "users.greetingLabel": "Tên gọi",
+  "users.greetingHint":
+    "Không bắt buộc. Tên dùng khi chào, nếu đó không phải chữ đầu tiên của họ tên.",
   "users.deactivateConfirmTitle": "Vô hiệu hoá {name}?",
   "users.deactivateConfirmBody":
     "Người đó sẽ bị đăng xuất ở mọi nơi và mọi passport Agent của họ bị thu hồi ngay. Bạn có thể kích hoạt lại sau, nhưng họ sẽ phải đăng nhập lại.",

@@ -125,6 +125,7 @@ components:
         - email_signature.changed
         - user_locale.changed
         - user_display_name.changed
+        - user_greeting_name.changed
         - linkedin_account.changed
         - linkedin_network.imported
         - linkedin_match.decided
@@ -2898,6 +2899,28 @@ components:
             The name now in force, trimmed. Never empty: a name of only
             whitespace is refused, and a save that moved nothing writes nothing
             and publishes nothing.
+      additionalProperties: false
+
+    PublicEventUserGreetingNameChanged:
+      type: object
+      x-event-type: user_greeting_name.changed
+      x-entity-type: user
+      x-version: 1
+      description: >-
+        Payload for user_greeting_name.changed — the name a member's colleagues
+        greet them by changed (identity/greetingname.go). The member saved it
+        themselves, or their first sign-in through a login provider filled an
+        empty one from the provider's given name. A subscriber that drafts a
+        greeting to this member reads it, because the first word of the display
+        name is not always the name somebody is greeted by.
+      required:
+        - greeting_name
+      properties:
+        greeting_name:
+          type: [string, 'null']
+          description: >-
+            The greeting name now in force, trimmed. Null when it was cleared,
+            and greetings fall back to the first word of the display name.
       additionalProperties: false
 
     PublicEventLinkedinAccountChanged:

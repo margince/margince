@@ -559,6 +559,7 @@ const (
 	UserDeactivated                       SubscribableEventType = "user.deactivated"
 	UserDeliveryChanged                   SubscribableEventType = "user_delivery.changed"
 	UserDisplayNameChanged                SubscribableEventType = "user_display_name.changed"
+	UserGreetingNameChanged               SubscribableEventType = "user_greeting_name.changed"
 	UserInvited                           SubscribableEventType = "user.invited"
 	UserLocaleChanged                     SubscribableEventType = "user_locale.changed"
 	UserPasswordLinkIssued                SubscribableEventType = "user.password_link_issued"
@@ -802,6 +803,8 @@ func (e SubscribableEventType) Valid() bool {
 	case UserDeliveryChanged:
 		return true
 	case UserDisplayNameChanged:
+		return true
+	case UserGreetingNameChanged:
 		return true
 	case UserInvited:
 		return true
@@ -2239,6 +2242,12 @@ type PublicEventUserDisplayNameChanged struct {
 	DisplayName string `json:"display_name"`
 }
 
+// PublicEventUserGreetingNameChanged Payload for user_greeting_name.changed — the name a member's colleagues greet them by changed (identity/greetingname.go). The member saved it themselves, or their first sign-in through a login provider filled an empty one from the provider's given name. A subscriber that drafts a greeting to this member reads it, because the first word of the display name is not always the name somebody is greeted by.
+type PublicEventUserGreetingNameChanged struct {
+	// GreetingName The greeting name now in force, trimmed. Null when it was cleared, and greetings fall back to the first word of the display name.
+	GreetingName *string `json:"greeting_name"`
+}
+
 // PublicEventUserInvited Payload for user.invited — an admin provisioned a new active member with a single-use set-password token (identity/users.go's InviteUser).
 type PublicEventUserInvited struct {
 	// By The admin who issued the invite.
@@ -2916,6 +2925,10 @@ func (PublicEventUserDisplayNameChanged) EventType() string { return "user_displ
 
 func (PublicEventUserDisplayNameChanged) EntityType() string { return "user" }
 
+func (PublicEventUserGreetingNameChanged) EventType() string { return "user_greeting_name.changed" }
+
+func (PublicEventUserGreetingNameChanged) EntityType() string { return "user" }
+
 func (PublicEventUserInvited) EventType() string { return "user.invited" }
 
 func (PublicEventUserInvited) EntityType() string { return "user" }
@@ -3090,6 +3103,7 @@ var PublicEventVersions = map[string]int{
 	"user.reactivated":                          1,
 	"user_delivery.changed":                     1,
 	"user_display_name.changed":                 1,
+	"user_greeting_name.changed":                1,
 	"user_locale.changed":                       1,
 	"voice.build_changed":                       1,
 	"voice.corpus_changed":                      1,

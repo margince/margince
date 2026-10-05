@@ -51,6 +51,33 @@ func TestTheFloorGreetsAColleagueByTheirFirstName(t *testing.T) {
 	}
 }
 
+// A colleague who chose a greeting name is greeted by it, on the template and
+// in what the model is told and checked against. "Dr. Sofia Meier" would
+// otherwise be greeted "Hi Dr.,".
+func TestTheAskGreetsAColleagueByTheirChosenGreetingName(t *testing.T) {
+	t.Parallel()
+	titled := warmIntro()
+	titled.Colleague = "Dr. Sofia Meier"
+	titled.ColleagueGreeting = "Sofia"
+	if _, body := IntroFloorFor(titled); !strings.HasPrefix(body, "Hi Sofia,") {
+		t.Fatalf("the template did not greet the chosen name:\n%s", body)
+	}
+	payload := IntroRequestFor(titled).Messages[0].Content
+	if !strings.Contains(payload, `"colleague_greeting":"Sofia"`) {
+		t.Fatalf("the model is not told the greeting name:\n%s", payload)
+	}
+	if _, _, err := CheckIntroDraft(
+		`{"subject":"Intro to Philipp?","body":"Hi Sofia,\n\ncould you introduce me to Philipp Königs?"}`,
+		titled); err != nil {
+		t.Fatalf("a draft greeting the chosen name was refused: %v", err)
+	}
+	if _, _, err := CheckIntroDraft(
+		`{"subject":"Intro to Philipp?","body":"Hi Dr.,\n\ncould you introduce me to Philipp Königs?"}`,
+		titled); err == nil {
+		t.Fatal("a draft greeting the display name's first word passed although a greeting name is set")
+	}
+}
+
 // WITH NOTHING ON FILE, THE DRAFT SAYS NOTHING ABOUT A HISTORY. Naming a date
 // that is not recorded — or dressing "not recorded" up as recency — puts a
 // claim in a colleague's inbox that they can falsify from memory.
@@ -254,7 +281,7 @@ func TestARecordValueCannotOpenAParagraphInTheTemplate(t *testing.T) {
 func TestTheIntroPromptAsksForTheNamesTheCheckerRequires(t *testing.T) {
 	t.Parallel()
 	for _, required := range []string{
-		"Open with a greeting line naming the colleague by first name",
+		"Open with a greeting line naming the colleague exactly as \"colleague_greeting\" spells it",
 		"name the contact you want to meet in full",
 		`Write a short subject line in the "subject" field, naming the contact you want to meet`,
 	} {
