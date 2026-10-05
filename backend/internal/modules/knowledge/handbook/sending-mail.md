@@ -200,14 +200,16 @@ To set your email signature in Margince, open the account menu, choose **Setting
 1. Open the account menu at the top right and choose **Settings**.
 2. Open **Account**.
 3. Under **Email signature**, press **Edit signature**, type plain text and save.
-Leave it empty to send unsigned. The AI never writes a sign-off; this signature is the one that goes out.
+Leave it empty and a send closes with a short greeting and your name, such as "Best regards", in the message's language (the installation's language, then English, when the message is too short to tell). The composer shows the sign-off under the body before you send. The AI never writes a sign-off; this is the one that goes out. A message an agent sends carries no sign-off.
 Also called: sign-off, email footer, sender signature.
 
 ## Your signature
 
 The email signature is set at **Settings → Account**. Plain text, appended below
-every message you send and above the unsubscribe footer. Leave it empty to send
-unsigned.
+every message you send and above the unsubscribe footer. Leave it empty and a
+send closes with a short greeting and your name instead. The greeting follows the
+message's language; a message too short to tell uses the installation's language,
+then English.
 
 > **The AI never writes a sign-off — this is the one that goes out.**
 

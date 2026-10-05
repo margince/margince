@@ -134,6 +134,11 @@ type Copy struct {
 	UnsubscribeLabel       string
 	ManagePreferencesLabel string
 
+	// The closing a send appends for a sender who has written no signature of
+	// their own, above their name. Plain, because the sender chose no words
+	// for it.
+	SignOffClosing string
+
 	// The password reset a colleague asked for.
 	ResetSubject string
 	ResetIntro   string

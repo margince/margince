@@ -4452,6 +4452,12 @@ export const de = {
   "compose.whyThisDraft": "Warum dieser Entwurf?",
   "compose.body": "Nachrichtentext",
   "compose.bodyHint": "Klicke auf den Text, um ihn zu bearbeiten.",
+  "compose.signOff": "Wird beim Senden angefügt",
+  "compose.signOffClosing":
+    "Du hast keine Signatur, deshalb wird diese Grußformel angefügt.",
+  "compose.signOffSet": "Signatur festlegen",
+  "compose.signOffFailed":
+    "Die Grußformel, die beim Senden angefügt wird, konnte nicht geladen werden.",
   "compose.transport": "Senden über",
   "compose.transportEmail": "E-Mail",
   "compose.recipientHint": "Name oder Adresse",
@@ -5061,7 +5067,7 @@ export const de = {
   "settings.signatureLabel": "Grußformel",
   "settings.signaturePlaceholder": "Marek Janetzke\nGradion · +49 40 123456",
   "settings.signatureHint":
-    "Nur Text. Leer lassen, um ohne Signatur zu senden. KI-Entwürfe fügen nie eine Grußformel hinzu.",
+    "Nur Text. Ohne Signatur enden Mails mit Gruß und deinem Namen. KI fügt keine an.",
   "settings.signatureSaving": "Wird gespeichert…",
   "settings.signatureEdit": "Signatur bearbeiten",
   "settings.signatureNone": "Keine Grußformel festgelegt",

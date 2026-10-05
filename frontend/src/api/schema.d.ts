@@ -4985,6 +4985,35 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/emails:sign-off": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * The sign-off a send of this message would append beneath it.
+         * @description What the composer shows under the body, read-only. It runs the code the send
+         *     runs, so the block shown is the block sent.
+         *
+         *     The caller's own signature when they have written one. Otherwise a plain
+         *     closing in the message's language — detected from `body`, then `subject`, then
+         *     the installation's language, then English — above the caller's display name
+         *     when one is on file.
+         *
+         *     Writes nothing. The send asks again, so a signature changed in between goes out
+         *     as changed.
+         */
+        post: operations["previewEmailSignOff"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/activities/{id}/send-email": {
         parameters: {
             query?: never;
@@ -17105,14 +17134,14 @@ export interface paths {
          *     edits another member's through this API.
          *
          *     A member who has never written one has no row, and that is not an error:
-         *     `body` is empty and mail goes out unsigned, which is what happens today
-         *     for everyone.
+         *     `body` is empty, and their mail closes with a plain greeting and their
+         *     display name, when one is on file, instead (`POST /emails:sign-off` shows it).
          */
         get: operations["getMyEmailSignature"];
         /**
          * Write or clear your own sign-off.
          * @description An empty `body` CLEARS the signature — a member emptying the field means
-         *     "send my mail unsigned", not "leave what was there".
+         *     "sign off with the plain closing", not "leave what was there".
          *
          *     Plain text only. The transport sends `text/plain` and the drafting
          *     prompts forbid the model from writing a sign-off of its own, so what is
@@ -26255,12 +26284,32 @@ export interface components {
         EmailSignature: {
             /**
              * @description The sign-off appended below every message this member sends, plain text.
-             *     Empty means unsigned, which is the state of every member who has not
-             *     written one.
+             *     Empty means none written; a send then closes with a plain greeting and
+             *     the member's display name when one is on file.
              */
             body: string;
             /** Format: date-time */
             updated_at?: string | null;
+        };
+        EmailSignOffRequest: {
+            /** @description The message as written so far, plain text. Read only for its language. */
+            body: string;
+            /** @description The subject, read for its language when the body is too short to tell. */
+            subject?: string;
+        };
+        EmailSignOff: {
+            /**
+             * @description The block appended below the message, plain text, exactly as sent. Empty when
+             *     `kind` is `none`.
+             */
+            text: string;
+            /**
+             * @description `signature`: the caller's own, from Settings. `closing`: the caller has written
+             *     none, so the send closes with a plain greeting and their name when available. `none`: this
+             *     send appends nothing.
+             * @enum {string}
+             */
+            kind: "signature" | "closing" | "none";
         };
         SaveEmailSignatureRequest: {
             /**
@@ -50179,6 +50228,32 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    previewEmailSignOff: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmailSignOffRequest"];
+            };
+        };
+        responses: {
+            /** @description The block a send would append. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailSignOff"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
             422: components["responses"]["ValidationError"];
         };
     };

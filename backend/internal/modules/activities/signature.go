@@ -18,6 +18,8 @@ import (
 	"html"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/platform/mailcopy"
+	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -43,70 +45,103 @@ func (h Handlers) WithSignature(reader SignatureReader) Handlers {
 	return h
 }
 
-// signedBody returns the message with the sender's sign-off beneath it.
+// SignOffKind says where a send's sign-off came from.
+type SignOffKind string
+
+const (
+	// SignOffNone means the send appends nothing — an agent caller, or a role
+	// wired without the signature seam.
+	SignOffNone SignOffKind = "none"
+	// SignOffSignature means the sender's own words from their settings.
+	SignOffSignature SignOffKind = "signature"
+	// SignOffClosing means the sender wrote no signature, so the send closes with
+	// a plain greeting in the message's language above their name.
+	SignOffClosing SignOffKind = "closing"
+)
+
+// SignOff is the block a send appends beneath the message, and where it came
+// from. The composer shows this same value, so what a rep reads under their
+// draft is what the recipient gets.
+type SignOff struct {
+	Text string
+	Kind SignOffKind
+}
+
+// under returns the message with the sign-off beneath it.
 //
 // The separator is a blank line rather than the "-- " sig-dash: this product's
 // own reply parser treats that dash as a signature boundary and cuts everything
 // below it (textlang.NewTextOnly), so writing one here would make our own
 // captured copy of the thread end at the signature we just added.
-//
-// An agent caller has no signature of its own and signs nothing. It acts under
-// a human's authority but it is not that human, and a tool-written message
-// arriving under somebody's personal sign-off claims a hand that never touched
-// it.
-func (s *Store) signedBody(ctx context.Context, body string) (string, error) {
-	sign, err := s.senderSignature(ctx)
-	if err != nil {
-		return "", err
+func (o SignOff) under(body string) string {
+	if o.Text == "" {
+		return body
 	}
-	if sign == "" {
-		return body, nil
-	}
-	return strings.TrimRight(body, "\n") + "\n\n" + sign, nil
+	return strings.TrimRight(body, "\n") + "\n\n" + o.Text
 }
 
-// senderSignature is the caller's own sign-off, trimmed, or empty when there is
-// none to add — no reader wired, no human actor, or nothing written.
+// signOff is what a send of this message appends: the caller's own signature,
+// or, when they wrote none, a closing in the message's language with their
+// name. Body and subject are asked only for that language.
+//
+// An agent caller signs nothing. It acts under a human's authority but it is
+// not that human, and a tool-written message arriving under somebody's
+// personal sign-off — or under their name below a closing — claims a hand that
+// never touched it. The From header refuses the same claim (senderDisplayName).
 //
 // One lookup for both renderings. Two would be two chances for the plain part
 // and the markup part of one message to disagree about who signed it.
-func (s *Store) senderSignature(ctx context.Context) (string, error) {
+func (s *Store) signOff(ctx context.Context, body, subject string) (SignOff, error) {
+	name, err := s.senderDisplayName(ctx)
+	if err != nil {
+		return SignOff{}, err
+	}
+	return s.signOffAs(ctx, body, subject, name)
+}
+
+// signOffAs is signOff with the sender's display name already read, so a send
+// writes one name in its From header and its closing.
+func (s *Store) signOffAs(ctx context.Context, body, subject, name string) (SignOff, error) {
 	if s.signature == nil {
-		return "", nil
+		return SignOff{Kind: SignOffNone}, nil
 	}
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID == ids.Nil {
-		return "", nil
+		return SignOff{Kind: SignOffNone}, nil
 	}
 	sign, err := s.signature.SignatureFor(ctx, actor.UserID)
 	if err != nil {
-		return "", err
+		return SignOff{}, err
 	}
-	return strings.TrimSpace(sign), nil
+	if sign = strings.TrimSpace(sign); sign != "" {
+		return SignOff{Text: sign, Kind: SignOffSignature}, nil
+	}
+	closing := mailcopy.For(string(s.footerLanguage(ctx, body, subject))).SignOffClosing
+	// One line, or a line break typed into the name would split the closing.
+	if name = draftfloor.NameLine(name); name != "" {
+		closing += "\n" + name
+	}
+	return SignOff{Text: closing, Kind: SignOffClosing}, nil
 }
 
-// signedHTML is signedBody's markup twin: the same sign-off and the same
+// signedHTML is SignOff.under's markup twin: the same sign-off and the same
 // unsubscribe footer, rendered as HTML.
 //
-// The signature is stored as PLAIN TEXT, so it is escaped before it reaches a
-// markup document. A member whose sign-off contains "Weiß & Konrad <Recht>"
-// must not have it silently become a broken tag, and one who typed a script tag
-// must not have it run in the recipient's client.
+// The sign-off is PLAIN TEXT, so it is escaped before it reaches a markup
+// document. A member whose sign-off contains "Weiß & Konrad <Recht>" must not
+// have it silently become a broken tag, and one who typed a script tag must
+// not have it run in the recipient's client.
 //
 // An empty markup body stays empty: a message with no HTML alternative is sent
 // as a single text/plain part, and manufacturing markup here would make every
 // plain send multipart for no reader's benefit.
-func (s *Store) signedHTML(ctx context.Context, htmlBody string, derived sendDeliverability) (string, error) {
+func signedHTML(htmlBody string, sign SignOff, derived sendDeliverability) string {
 	if strings.TrimSpace(htmlBody) == "" {
-		return "", nil
-	}
-	sign, err := s.senderSignature(ctx)
-	if err != nil {
-		return "", err
+		return ""
 	}
 	out := htmlBody
-	if sign != "" {
-		out += "\n<p>" + htmlLines(sign) + "</p>"
+	if sign.Text != "" {
+		out += "\n<p>" + htmlLines(sign.Text) + "</p>"
 	}
 	// The DISCLOSURES before the unsubscribe footer, matching the plain-text
 	// order: what the law requires the message to say, then the capability it
@@ -119,7 +154,7 @@ func (s *Store) signedHTML(ctx context.Context, htmlBody string, derived sendDel
 	if footer := derived.htmlFooter(); footer != "" {
 		out += "\n" + footer
 	}
-	return out, nil
+	return out
 }
 
 // htmlLines escapes plain text for a markup document and keeps its line breaks,
