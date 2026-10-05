@@ -10,11 +10,13 @@ package integration
 
 import (
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -84,5 +86,27 @@ func TestAWithheldFileStaysOutOfTheDealsFiles(t *testing.T) {
 		if ids.UUID(doc.Attachment.Id) == file {
 			t.Fatal("the deal's Files area lists a file nobody can open")
 		}
+	}
+}
+
+// A withheld file that reached a staged send parks it with the reason at the
+// carriage gate, rather than failing at transmit and retrying on nothing.
+func TestEnsureTransmittableParksAWithheldFile(t *testing.T) {
+	e := Setup(t)
+	store, blob := attachmentStore(e)
+	_, file := withheldFileOnDealMail(t, e, store)
+	roleKey := "sendall-" + e.Rep1.String()[:8]
+	e.WsExec(t, `INSERT INTO role (key, name, permissions) VALUES ($1, 'Send All', $2::jsonb)`,
+		roleKey, `{"objects":{"activity":{"read":true},"deal":{"read":true}},"row_scope":"all"}`)
+	e.WsExec(t, `INSERT INTO role_assignment (role_id, user_id) SELECT r.id, $1 FROM role r WHERE r.key = $2`,
+		e.Rep1, roleKey)
+
+	ok, reason, err := compose.NewSendAttachmentAuthority(e.Pool, blob).EnsureTransmittable(
+		sendWorkerCtx(e.WS), ids.From[ids.UserKind](e.Rep1), []ids.UUID{file})
+	if err != nil {
+		t.Fatalf("EnsureTransmittable: %v", err)
+	}
+	if ok || !strings.Contains(reason, "private mail") {
+		t.Fatalf("EnsureTransmittable = %v, %q; want a park naming the withheld file", ok, reason)
 	}
 }

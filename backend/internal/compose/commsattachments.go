@@ -88,11 +88,16 @@ func (a commsAttachments) EnsureTransmittable(
 		return false, reason, err
 	}
 	for _, id := range attachmentIDs {
-		if _, err := a.files.GetAttachmentMeta(senderCtx, id); err != nil {
+		meta, err := a.files.GetAttachmentMeta(senderCtx, id)
+		if err != nil {
 			if errors.Is(err, apperrors.ErrNotFound) {
 				return false, "a file attached to this message is no longer available to the sender; it was archived, or their access to the record holding it was withdrawn", nil
 			}
 			return false, "", fmt.Errorf("comms: reading an attached file: %w", err)
+		}
+		// The send refuses one at creation; this is the park if one got past it.
+		if meta.BytesWithheld != nil && *meta.BytesWithheld {
+			return false, "a file attached to this message came with private mail and was not kept, so there is nothing to send", nil
 		}
 	}
 	return true, "", nil
