@@ -32587,7 +32587,7 @@ export interface components {
             /** Format: email */
             email: string;
             display_name: string;
-            /** @description The name a colleague's greeting uses ("Hi Sofia,"), null when nobody has said. Read through one rule on both sides: this when set, else the first word of `display_name`. Present on the caller's own seat; absent on the roster. */
+            /** @description The name a colleague's greeting uses ("Hi Sofia,"), absent or null when nobody has said. Read through one rule on both sides: this when set, else the first word of `display_name`. Present on the caller's own seat; absent on the roster. */
             greeting_name?: string | null;
             /**
              * @description IANA name.

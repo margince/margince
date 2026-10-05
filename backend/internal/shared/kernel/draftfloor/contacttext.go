@@ -86,10 +86,16 @@ func FirstName(full string) string {
 // which is wrong for "Dr. Sofia Meier" and for a family name written first.
 // The screen applies the same rule in frontend/src/format/greetingname.ts.
 func GreetingName(greeting, display string) string {
-	if chosen := OneLine(greeting); chosen != "" {
+	if chosen := NameLine(greeting); chosen != "" {
 		return chosen
 	}
 	return FirstName(display)
+}
+
+// NameLine is a typed name as one line: every run of whitespace, line breaks
+// included, becomes one space, so "Sofia\nP.S." stays two words.
+func NameLine(name string) string {
+	return OneLine(strings.Join(strings.Fields(name), " "))
 }
 
 // NamesContact reports whether the text names somebody, as a WORD.

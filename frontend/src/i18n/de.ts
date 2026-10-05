@@ -5073,7 +5073,7 @@ export const de = {
   "settings.displayNameSave": "Speichern",
   "settings.greetingName": "Rufname",
   "settings.greetingNameHelp":
-    "Mit diesem Namen begrüßt dich dein Team in entworfenen Nachrichten. Leer gilt das erste Wort deines Anzeigenamens.",
+    "Mit diesem Namen begrüßt dich dein Team in entworfenen Nachrichten. Lässt du das Feld leer, gilt das erste Wort deines Anzeigenamens.",
   "settings.greetingNameSave": "Speichern",
   "settings.languageHelp": "Gilt für diese Sitzung.",
   "settings.deviceCard": "Dieses Gerät",
@@ -8648,7 +8648,7 @@ export const de = {
   "users.namePlaceholder": "Vollständiger Name",
   "users.greetingLabel": "Rufname",
   "users.greetingHint":
-    "Optional. Der Name für Begrüßungen, wenn es nicht das erste Wort des vollständigen Namens ist.",
+    "Optional. Nur angeben, wenn der Rufname nicht das erste Wort des vollständigen Namens ist.",
   "users.deactivateConfirmTitle": "{name} deaktivieren?",
   "users.deactivateConfirmBody":
     "Die Person wird überall abgemeldet, und ihre Agenten-Passports werden sofort widerrufen. Eine spätere Reaktivierung ist möglich; danach muss sich die Person erneut anmelden.",

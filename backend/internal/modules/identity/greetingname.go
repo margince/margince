@@ -46,7 +46,7 @@ func greetingNameOf(raw *string) (string, error) {
 	if raw == nil {
 		return "", nil
 	}
-	name := draftfloor.OneLine(*raw)
+	name := draftfloor.NameLine(*raw)
 	if !fitsGreetingBound(name) {
 		return "", &InvalidGreetingNameError{MaxRunes: greetingNameMaxRunes}
 	}
@@ -123,7 +123,7 @@ func (s *Service) SaveMyGreetingName(ctx context.Context, raw *string) (Seat, er
 func fillGreetingNameFromProvider(
 	ctx context.Context, tx pgx.Tx, userID ids.UserID, provider, givenName string, newLink bool,
 ) error {
-	name := draftfloor.OneLine(givenName)
+	name := draftfloor.NameLine(givenName)
 	if !newLink || name == "" || !fitsGreetingBound(name) {
 		return nil
 	}

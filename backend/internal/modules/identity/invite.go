@@ -14,6 +14,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -128,8 +130,16 @@ func (s *Service) InviteUser(ctx context.Context, actor Identity, in InviteUserI
 		if err != nil {
 			return err
 		}
+		if err := storekit.EmitEvent(ctx, tx, auditID, newUserID.UUID,
+			userInvitedPayload(newUserID, in.Role, actor.UserID, in.TeamIDs)); err != nil {
+			return err
+		}
+		// A subscriber that follows greeting names hears the invited one too.
+		if in.GreetingName == nil {
+			return nil
+		}
 		return storekit.EmitEvent(ctx, tx, auditID, newUserID.UUID,
-			userInvitedPayload(newUserID, in.Role, actor.UserID, in.TeamIDs))
+			crmcontracts.PublicEventUserGreetingNameChanged{GreetingName: in.GreetingName})
 	})
 	if err != nil {
 		return ids.UserID{}, "", err

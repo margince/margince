@@ -8802,7 +8802,7 @@ export const en = {
   "users.namePlaceholder": "Full name",
   "users.greetingLabel": "Greeting name",
   "users.greetingHint":
-    "Optional. The name greetings use, when it is not the first word of the full name.",
+    "Optional. Leave empty to let greetings use the first word of the full name.",
   "users.deactivateConfirmTitle": "Deactivate {name}?",
   "users.deactivateConfirmBody":
     "They are signed out everywhere and their agent passports are revoked immediately. They can be reactivated later and must then sign in again.",

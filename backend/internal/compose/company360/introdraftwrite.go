@@ -74,7 +74,7 @@ const introSystem = `You write one short message asking a COLLEAGUE at your own 
 This is a favour asked of a teammate, not a message to a customer. Write the way somebody writes to a colleague they see every week: brief, direct, no pitch and no pleasantries stacked on the front.
 
 Rules you must not break:
-- Open with a greeting line naming the colleague by first name, exactly as "colleague_greeting" spells it, then a blank line, then the ask.
+- Open with a greeting line naming the colleague exactly as "colleague_greeting" spells it, then a blank line, then the ask.
 - In one sentence, name the contact you want to meet in full, with their title and company when given, so the colleague knows who you mean. Give a reason only when "deal" names one, in one sentence; with no deal, the ask is complete without a reason.
 - Say that the colleague and the contact have been in touch, with "relationship" and "last_spoke" as given, and nothing warmer: the colleague can check any claim about their own relationship from memory.
 - Do not write the introduction itself, and do not write to the contact. The message is TO the colleague.

@@ -131,10 +131,10 @@ func linkFederatedIdentity(ctx context.Context, tx pgx.Tx, userID ids.UserID, pr
 	return wasRelink, nil
 }
 
-// LoginViaFederatedIdentity resolves a verified (provider, subject, email)
-// tuple, read off claims, to a session, mirroring Service.Login's shape: mint the token first,
-// then one transaction that links/resolves, mints the session row, and
-// audits — the same unexported session helpers Login already uses, no
+// LoginViaFederatedIdentity resolves the verified (provider, subject, email)
+// tuple read off the claims to a session, mirroring Service.Login's shape: mint
+// the token first, then one transaction that links/resolves, mints the session
+// row, and audits — the same unexported session helpers Login already uses, no
 // parallel implementation. Sessions carry no workspace column (ADR-0091 §8),
 // so unlike Login this needs no bound installation context.
 //

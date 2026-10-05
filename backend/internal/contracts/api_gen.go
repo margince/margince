@@ -44511,7 +44511,7 @@ type User struct {
 	DisplayName    string                `json:"display_name"`
 	Email          openapi_types.Email   `json:"email"`
 
-	// GreetingName The name a colleague's greeting uses ("Hi Sofia,"), null when nobody has said. Read through one rule on both sides: this when set, else the first word of `display_name`. Present on the caller's own seat; absent on the roster.
+	// GreetingName The name a colleague's greeting uses ("Hi Sofia,"), absent or null when nobody has said. Read through one rule on both sides: this when set, else the first word of `display_name`. Present on the caller's own seat; absent on the roster.
 	GreetingName *string            `json:"greeting_name,omitempty"`
 	Id           openapi_types.UUID `json:"id"`
 

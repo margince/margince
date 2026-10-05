@@ -27,7 +27,7 @@ func TestAGreetingUsesTheChosenNameElseTheFirstWord(t *testing.T) {
 		{"family name first", "Lan", "Nguyễn Thị Lan", "Lan"},
 		{"nothing chosen", "", "Dr. Sofia Meier", "Dr."},
 		{"blank is nothing chosen", "  \t ", "Lena Brandt", "Lena"},
-		{"a chosen name stays one line", "Sofia\nP.S.", "Sofia Meier", "SofiaP.S."},
+		{"a chosen name stays one line", "Sofia\nP.S.", "Sofia Meier", "Sofia P.S."},
 		{"no name at all", "", "", ""},
 	} {
 		if got := GreetingName(tc.greeting, tc.display); got != tc.want {

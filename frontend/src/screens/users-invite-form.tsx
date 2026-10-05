@@ -94,13 +94,13 @@ export function InviteUserForm({
   const greetingName = askName ? greeting.trim() : "";
   const invite = useMutation({
     mutationFn: async (
-      choice: Readonly<{ role: Role; teams: string[] }>,
+      choice: Readonly<{ role: Role; teams: string[]; greeting: string }>,
     ): Promise<string> => {
       const { data, error: err } = await api.POST("/users", {
         body: {
           email: email.trim(),
           display_name: displayName,
-          ...(greetingName === "" ? {} : { greeting_name: greetingName }),
+          ...(choice.greeting === "" ? {} : { greeting_name: choice.greeting }),
           role: choice.role,
           team_ids: choice.teams,
         },
@@ -137,7 +137,11 @@ export function InviteUserForm({
       onSubmit={(e) => {
         e.preventDefault();
         if (canInvite) {
-          invite.mutate({ role, teams: placesOnTeams ? teamIds : [] });
+          invite.mutate({
+            role,
+            teams: placesOnTeams ? teamIds : [],
+            greeting: greetingName,
+          });
         }
       }}
     >
