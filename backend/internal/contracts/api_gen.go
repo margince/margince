@@ -23535,6 +23535,9 @@ type AssuranceRunAcceptedStatus string
 type Attachment struct {
 	ByteSize *int64 `json:"byte_size,omitempty"`
 
+	// BytesWithheld True for a file a private message carried that was recorded by name, size and type only: no bytes were kept, so there is nothing to download (404) or read.
+	BytesWithheld *bool `json:"bytes_withheld,omitempty"`
+
 	// CapturedBy Server-stamped from the authenticated principal; never client-supplied.
 	CapturedBy *string `json:"captured_by,omitempty"`
 
@@ -33029,10 +33032,13 @@ type EmailAccessStatus string
 
 // EmailAttachmentSummary One file that came with the message. Metadata only; bytes are fetched separately.
 type EmailAttachmentSummary struct {
-	ByteSize    *int               `json:"byte_size,omitempty"`
-	ContentType *string            `json:"content_type,omitempty"`
-	Filename    string             `json:"filename"`
-	Id          openapi_types.UUID `json:"id"`
+	ByteSize *int `json:"byte_size,omitempty"`
+
+	// BytesWithheld True when the message is private to its owner and the file was recorded by name, size and type only. There are no bytes to fetch.
+	BytesWithheld *bool              `json:"bytes_withheld,omitempty"`
+	ContentType   *string            `json:"content_type,omitempty"`
+	Filename      string             `json:"filename"`
+	Id            openapi_types.UUID `json:"id"`
 }
 
 // EmailDelivery Whether an outbound message actually left, and why not when it did not.

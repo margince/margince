@@ -598,13 +598,14 @@ The 24 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## attachment
 
-26 columns · primary key `(id)` · referenced by 6 foreign keys
+27 columns · primary key `(id)` · referenced by 6 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid` | yes | Primary key. |
 | `activity_id` | `uuid` |  | Optional `uuid`. |
 | `byte_size` | `bigint` |  | Optional `bigint`. |
+| `bytes_withheld` | `boolean` | yes | True for a file a private message carried that was recorded by name, size and type only: no bytes were kept, so there is nothing to download (404) or read. |
 | `category` | `text` | yes | What kind of document this is (DOC-DDL-1). |
 | `checksum` | `text` |  | sha256 of the bytes, for integrity/dedupe. |
 | `company_id` | `uuid` |  | The account this file rolls up to — a READ PATH, not a second parent. |

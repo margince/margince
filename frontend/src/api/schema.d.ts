@@ -20522,6 +20522,8 @@ export interface components {
             filename: string;
             byte_size?: number | null;
             content_type?: string | null;
+            /** @description True when the message is private to its owner and the file was recorded by name, size and type only. There are no bytes to fetch. */
+            readonly bytes_withheld?: boolean;
         };
         /**
          * @description Who reads this message, and what this caller may do about that. `can_change` and
@@ -29515,6 +29517,8 @@ export interface components {
              * @description The agreement this document is about (CONTRACT-DDL-5) — the same kind of roll-up as company_id above, and just as deliberately not a second parent. Set at upload by the contact filing the paper; never inferred from a filename or a date, which is the guess the document state exists to refuse.
              */
             readonly contract_id?: string | null;
+            /** @description True for a file a private message carried that was recorded by name, size and type only: no bytes were kept, so there is nothing to download (404) or read. */
+            readonly bytes_withheld?: boolean;
             source: string;
             /** @description Server-stamped from the authenticated principal; never client-supplied. */
             readonly captured_by: string;
