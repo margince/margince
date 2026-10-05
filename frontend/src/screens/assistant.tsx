@@ -3,6 +3,7 @@ import { Panel, PanelBody } from "../design-system/panel";
 import type { PickableProject } from "../design-system/projectpicker";
 import { useT } from "../i18n";
 import { AskSection } from "./company360";
+import type { OpenReceipt } from "./record360";
 
 /**
  * AssistantPanel is what you can ASK about this account.
@@ -22,11 +23,13 @@ import { AskSection } from "./company360";
 export function AssistantPanel({
   companyId,
   onOpenRecord,
+  onOpenReceipt,
   onOpenEmail,
   projects,
 }: Readonly<{
   companyId: string;
   onOpenRecord?: (entityType: string, entityId: string) => void;
+  onOpenReceipt?: OpenReceipt;
   // Opens a cited message in the page's email drawer; see `Citations`.
   onOpenEmail?: (activityId: string) => void;
   // The account's projects, for the question to be asked about one of them.
@@ -49,6 +52,7 @@ export function AssistantPanel({
         <AskSection
           companyId={companyId}
           onOpenRecord={onOpenRecord}
+          onOpenReceipt={onOpenReceipt}
           onOpenEmail={onOpenEmail}
           projects={projects}
         />

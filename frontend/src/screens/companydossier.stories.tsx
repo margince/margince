@@ -55,7 +55,7 @@ function Dossier({ body }: Readonly<{ body: unknown }>) {
   return (
     <StoryProviders>
       <div style={{ maxWidth: 480 }}>
-        <DossierPanel companyId="o-1" />
+        <DossierPanel companyId="o-1" onOpenReceipt={() => undefined} />
       </div>
     </StoryProviders>
   );

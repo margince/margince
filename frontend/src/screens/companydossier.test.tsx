@@ -68,7 +68,7 @@ function show() {
       }
     >
       <LocaleProvider initial="en">
-        <DossierPanel companyId="o-1" />
+        <DossierPanel companyId="o-1" onOpenReceipt={() => {}} />
       </LocaleProvider>
     </QueryClientProvider>,
   );
