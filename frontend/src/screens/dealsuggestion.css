@@ -29,6 +29,7 @@
 }
 .form-row.dealsuggestion-money > .field {
   flex-basis: 0;
+  flex-grow: 1;
 }
 .form-row.dealsuggestion-money > .field:first-child {
   flex-grow: 2;

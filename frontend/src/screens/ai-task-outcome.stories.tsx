@@ -67,3 +67,8 @@ export const InTheSheet: Story = {
     await screen.findByRole("dialog");
   },
 };
+
+export const InTheSheetDark: Story = {
+  ...InTheSheet,
+  globals: { theme: "dark" },
+};

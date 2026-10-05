@@ -243,28 +243,28 @@ function AddRecordRoleDialog({
             />
           ))}
         </fieldset>
-        <div className="action-row">
-          <Button variant="ghost" onClick={onClose}>
-            {t("deals.cancel")}
-          </Button>
-          <Button
-            disabled={
-              !label.trim() ||
-              !recordTypes.length ||
-              !assigneeKinds.length ||
-              pending
-            }
-            onClick={() =>
-              onAdd({
-                label: label.trim(),
-                record_types: recordTypes,
-                assignee_kinds: assigneeKinds,
-              })
-            }
-          >
-            {t("recordRoles.addConfirm")}
-          </Button>
-        </div>
+      </div>
+      <div className="actions">
+        <Button variant="ghost" onClick={onClose}>
+          {t("deals.cancel")}
+        </Button>
+        <Button
+          disabled={
+            !label.trim() ||
+            !recordTypes.length ||
+            !assigneeKinds.length ||
+            pending
+          }
+          onClick={() =>
+            onAdd({
+              label: label.trim(),
+              record_types: recordTypes,
+              assignee_kinds: assigneeKinds,
+            })
+          }
+        >
+          {t("recordRoles.addConfirm")}
+        </Button>
       </div>
     </Modal>
   );

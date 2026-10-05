@@ -60,3 +60,8 @@ export const Filled: Story = {
     await screen.findByRole("dialog");
   },
 };
+
+export const FilledDark: Story = {
+  ...Filled,
+  globals: { theme: "dark" },
+};

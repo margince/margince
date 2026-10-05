@@ -77,6 +77,10 @@ export const Offered: Story = {
  * take a 403 on the archive. Absent rather than disabled: STATE-4a sorts by
  * cause, and a control the reader has no authority for reports no fact about
  * this account. */
+export const WithoutBothGrants: Story = {
+  render: () => inMenu(COMPANY, meRoute({ company: ["read", "delete"] })),
+};
+
 /** The dialog the offer opens: the sentence naming both halves, then the reason. */
 export const Confirming: Story = {
   render: () => inMenu(COMPANY, CAN_REJECT),
@@ -85,10 +89,6 @@ export const Confirming: Story = {
     await userEvent.click(await body.findByTestId("reject-company"));
     await body.findByRole("dialog");
   },
-};
-
-export const WithoutBothGrants: Story = {
-  render: () => inMenu(COMPANY, meRoute({ company: ["read", "delete"] })),
 };
 
 /** A company somebody typed in by hand. It was never derived from mail, so

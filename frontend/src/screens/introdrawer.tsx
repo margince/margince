@@ -174,15 +174,15 @@ export function IntroDrawer({
         {create.isError ? (
           <ErrorLine>{t("contact.intro.askFailed")}</ErrorLine>
         ) : null}
-        {/* Not "Send": nothing here reaches the contact. */}
-        <div className="form-actions">
-          <Button onClick={onClose} variant="ghost">
-            {t("contact.intro.cancel")}
-          </Button>
-          <Button onClick={submit} disabled={!ready || create.isPending}>
-            {t("contact.intro.askAction")}
-          </Button>
-        </div>
+      </div>
+      {/* Not "Send": nothing here reaches the contact. */}
+      <div className="actions">
+        <Button onClick={onClose} variant="ghost">
+          {t("contact.intro.cancel")}
+        </Button>
+        <Button onClick={submit} disabled={!ready || create.isPending}>
+          {t("contact.intro.askAction")}
+        </Button>
       </div>
     </Modal>
   );

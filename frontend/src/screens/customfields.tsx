@@ -248,7 +248,7 @@ export function FieldBuilder({
           reader's hand expects the safe one. Reset went with the disclosure
           this form used to live in: closing the dialog discards the draft, so
           a control that empties the inputs in place has nothing left to do. */}
-      <div className="cf-actions">
+      <div className="actions">
         <Button variant="ghost" onClick={onCancel}>
           {t("deals.cancel")}
         </Button>
@@ -856,7 +856,7 @@ export function CustomFieldsAdmin() {
             />
           )}
         </Field>
-        <div className="cf-actions">
+        <div className="actions">
           <Button variant="ghost" onClick={() => setRenaming(null)}>
             {t("deals.cancel")}
           </Button>

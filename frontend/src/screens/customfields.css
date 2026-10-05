@@ -86,12 +86,6 @@
   padding: var(--space-1) var(--space-2);
 }
 
-.cf-actions {
-  display: flex;
-  gap: var(--gapActions);
-  margin-top: var(--space-4);
-}
-
 /* Field cell: a type-glyph tile, then the human label with the immutable API
    key on its own muted line beneath it — never run together. */
 .cf-fieldcell {

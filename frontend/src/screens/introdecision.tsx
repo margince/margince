@@ -132,14 +132,14 @@ export function IntroDecisionDrawer({
         {decide.isError ? (
           <ErrorLine>{t("contact.intro.decideFailed")}</ErrorLine>
         ) : null}
-        <div className="form-actions">
-          <Button onClick={onClose} variant="ghost">
-            {t("contact.intro.cancel")}
-          </Button>
-          <Button onClick={submit} disabled={decide.isPending}>
-            {t("contact.intro.decideAction")}
-          </Button>
-        </div>
+      </div>
+      <div className="actions">
+        <Button onClick={onClose} variant="ghost">
+          {t("contact.intro.cancel")}
+        </Button>
+        <Button onClick={submit} disabled={decide.isPending}>
+          {t("contact.intro.decideAction")}
+        </Button>
       </div>
     </Modal>
   );

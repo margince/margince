@@ -93,15 +93,24 @@ function edges(body: string) {
   }
   return out;
 }
+const GAP = /(?:^|[;\s])(row-gap|column-gap|gap)\s*:\s*([^;]+)/g;
+// In source order, so a later shorthand overrides an earlier longhand.
+function gaps(body: string) {
+  const out: { rowGap?: string; columnGap?: string } = {};
+  for (const [, prop, value] of body.matchAll(GAP)) {
+    const box = splitTopLevel(value, " \t\n");
+    if (prop !== "column-gap") out.rowGap = box[0];
+    if (prop !== "row-gap") out.columnGap = box.at(-1);
+  }
+  return out;
+}
 function layoutOf(body: string): Placed["props"] {
-  const gap = splitTopLevel(decl(body, "gap") ?? "", " \t\n");
   const flow = decl(body, "flex-direction") ?? decl(body, "flex-flow");
   const props: Placed["props"] = {
     ...edges(body),
+    ...gaps(body),
     display: decl(body, "display"),
     direction: flow && (/^\s*column/.test(flow) ? "column" : "row"),
-    rowGap: decl(body, "row-gap") ?? gap[0],
-    columnGap: decl(body, "column-gap") ?? gap.at(-1),
   };
   const set = Object.entries(props).filter(([, v]) => v !== undefined);
   return Object.fromEntries(set);
@@ -120,7 +129,8 @@ function placedOf(selector: string, body: string, order: number): Placed[] {
       );
       if (subject.includes(":") || /[+~]/.test(alternative)) return [];
       const context = links.slice(0, -1).map(classesOf);
-      const weight = links.reduce((n, l) => n + classesOf(l).size, 0);
+      const classed = links.reduce((n, l) => n + classesOf(l).size, 0);
+      const weight = classed + (place ? 1 : 0);
       const child = />\s*[^\s>]+$/.test(alternative);
       const rule = { subject: classesOf(subject), context, child, weight };
       const at = { order, props, place, selector: alternative };
@@ -145,7 +155,7 @@ function ownersIn(sheets: readonly string[]): Owners {
       }
     }
     const box = (p: string) => splitTopLevel(decl(body, p) ?? "", " \t\n");
-    const rowGap = decl(body, "row-gap") ?? box("gap")[0] ?? "0";
+    const rowGap = gaps(body).rowGap ?? "0";
     const direction = decl(body, "flex-direction") ?? decl(body, "flex-flow");
     const column = /^\s*column/.test(direction ?? "");
     const flex = display(body, "flex");
@@ -439,13 +449,19 @@ function rowsIn(
     prop: Prop,
     skip: (r: Placed) => boolean = (r) => r.place !== undefined,
   ) => {
-    const applies = (r: Placed) =>
-      [...r.subject].every((c) => cls.includes(c)) &&
-      r.context.every((need, i) =>
-        r.child && i === r.context.length - 1
-          ? subset(need, chain[0] ?? [])
-          : chain.some((a) => subset(need, a)),
+    // Ancestors match innermost first, each further out than the last.
+    const applies = (r: Placed) => {
+      let from = 0;
+      return (
+        [...r.subject].every((c) => cls.includes(c)) &&
+        [...r.context].reverse().every((need, i) => {
+          const end = r.child && i === 0 ? 1 : chain.length;
+          const at = chain.slice(from, end).findIndex((a) => subset(need, a));
+          from += at + 1;
+          return at >= 0;
+        })
       );
+    };
     return [...cls, "*"]
       .flatMap((c) => own.placed.get(c) ?? [])
       .filter((r) => r.props[prop] !== undefined && !skip(r) && applies(r))
@@ -782,6 +798,9 @@ describe("a dialog's field rows have an owner for the space between them", () =>
     ${"reads that stack under its host"}                    | ${'<Modal><div className="f"><div className="pb"><p /><Field /></div></div></Modal>'}                       | ${"spaced"}               | ${SCOPED}
     ${"lets the dialog stack zero every row's margin"}      | ${'<Modal><div className="s"><Field /><Field className="m" /></div></Modal>'}                               | ${"spaced spaced"}        | ${`${STACK} ${M} .modal .s > * { margin-block: 0 }`}
     ${"lets a later two-class rule beat that zero"}         | ${'<Modal><div className="s"><Field /><Field className="m" /></div></Modal>'}                               | ${"spaced doubled"}       | ${`${STACK} .modal .s > * { margin-block: 0 } .modal .m { margin-top: var(--space-2) }`}
+    ${"reads a gap shorthand after its longhand"}           | ${'<Modal><div className="s"><Field /><Field /></div></Modal>'}                                             | ${"spaced spaced"}        | ${".s { display: flex; flex-direction: column; row-gap: 0; gap: var(--space-3) }"}
+    ${"reads a context's ancestors in order"}               | ${'<Modal><div className="o"><div className="b"><p /><Field /></div></div></Modal>'}                        | ${"flush"}                | ${".o .modal .b { display: flex; flex-direction: column; gap: var(--space-3) }"}
+    ${"weighs :last-child above a later bare class"}        | ${'<Modal><div className="s"><Field /><Field className="m" /></div></Modal>'}                               | ${"spaced doubled"}       | ${`${STACK} .m:last-child { margin-top: var(--space-2) } .m { margin-top: 0 }`}
   `("$spec", ({ jsx, verdict, sheet }: RowCase) => {
     expect(plantedRows(jsx, sheet ? ownersIn([sheet]) : owners)).toBe(verdict);
   });
