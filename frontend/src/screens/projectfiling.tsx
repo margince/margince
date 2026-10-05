@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type RefObject, useRef, useState } from "react";
+import { type RefObject, useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
@@ -25,6 +25,8 @@ const REFUSAL_COPY: Record<RefusalCode, MessageKey> = {
   not_filed: "projectFiling.refusal.not_filed",
   other_basis_remains: "projectFiling.refusal.other_basis_remains",
   restricted: "projectFiling.refusal.restricted",
+  archived: "projectFiling.refusal.archived",
+  erasure_pending: "projectFiling.refusal.erasure_pending",
   legal_hold: "projectFiling.refusal.legal_hold",
   hidden_project: "projectFiling.refusal.hidden_project",
   qualifying_deal: "projectFiling.refusal.qualifying_deal",
@@ -100,10 +102,7 @@ export function ProjectFilingModal({
       const { data, error } = await api.POST(
         "/activities/{id}/project-filing/undo",
         {
-          params: {
-            header: { "Idempotency-Key": crypto.randomUUID() },
-            path: { id: request.activityId },
-          },
+          params: { path: { id: request.activityId } },
           body: { reason: request.reason.trim() },
         },
       );
@@ -118,8 +117,11 @@ export function ProjectFilingModal({
   // is mounted in, so refreshing first would take the audit entry off screen
   // before anybody read it.
   const refreshReads = () => {
+    // The timeline keys are prefixes of the filtered and paged reads under them,
+    // so they refetch all of those; the activity's own key is exact so the filing
+    // query beside it is not refetched as the dialog closes.
     for (const key of entityTimelineKeys("project", projectId)) {
-      queryClient.invalidateQueries({ queryKey: key, exact: true });
+      queryClient.invalidateQueries({ queryKey: key });
     }
     queryClient.invalidateQueries({
       queryKey: ["activity", activityId],
@@ -136,8 +138,16 @@ export function ProjectFilingModal({
     onClose();
   };
 
-  const state = undone ?? filing.data;
+  // A cached verdict is not shown while a fresh one is being read: it may say
+  // the filing is undoable after it has been undone, and a second undo would
+  // be sent from it.
+  const state = undone ?? (filing.isFetching ? undefined : filing.data);
   const canUndo = !undone && Boolean(state?.filed && state.undoable);
+  // The reason field exists only once the verdict has arrived, after the dialog
+  // has already taken focus, so focus follows it in.
+  useEffect(() => {
+    if (open && canUndo) reasonBox.current?.focus();
+  }, [open, canUndo]);
   return (
     <ConfirmModal
       open={open}
@@ -158,7 +168,7 @@ export function ProjectFilingModal({
       pending={undo.isPending}
       error={undo.isError ? problemMessageOf(undo.error, t) : undefined}
     >
-      {filing.isError && !state ? (
+      {filing.isError && !state && !filing.isFetching ? (
         <Callout
           tone="danger"
           kind="outcome"

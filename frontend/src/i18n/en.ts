@@ -12337,7 +12337,7 @@ export const en = {
   "aiServing.previewFailed":
     "The server could not check this value: {reason} Save stays off until it can.",
   "projectFiling.action": "Undo filing",
-  "projectFiling.title": "Undo project filing",
+  "projectFiling.title": "Undo project filing?",
   "projectFiling.loading": "Checking what keeps this activity…",
   "projectFiling.explain":
     "Filing this activity under {projects} marked it as commercial correspondence, which erasure and retention sweeps must keep. Undoing removes it from the project and withdraws that mark.",
@@ -12362,6 +12362,10 @@ export const en = {
   "projectFiling.actionFor": "Undo filing: {subject}",
   "projectFiling.hiddenProject": "a project you cannot see",
   "projectFiling.decisionRedacted": "A decision was recorded on {when}",
+  "projectFiling.refusal.archived":
+    "This activity is archived, so its filing can no longer be undone.",
+  "projectFiling.refusal.erasure_pending":
+    "An open erasure request covers a contact on this activity, so its retention mark stays until the request is decided.",
   "projectFiling.refusal.legal_hold":
     "A legal hold sits on a record this activity is linked to, so its retention mark stays until the hold is lifted.",
   "projectFiling.refusal.hidden_project":

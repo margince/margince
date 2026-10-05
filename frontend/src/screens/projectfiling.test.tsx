@@ -74,7 +74,9 @@ function stubRoutes(routes: Record<string, () => Response>) {
         body,
         headers: request ? request.headers : new Headers(),
       });
-      return (routes[key] ?? (() => jsonResponse({})))();
+      const route = routes[key];
+      if (!route) throw new Error(`an unstubbed request: ${key}`);
+      return route();
     }),
   );
   return sent;
@@ -136,7 +138,6 @@ describe("ProjectFilingAction", () => {
       (r) => r.key === "POST /activities/act-1/project-filing/undo",
     );
     expect(undo?.body).toEqual({ reason: "wrong thread" });
-    expect(undo?.headers.get("Idempotency-Key")).toBeTruthy();
     // The audit entry is shown where the activity is: who, and in their words.
     expect(within(dialog).getByText(/Ada Admin/)).toBeTruthy();
     expect(within(dialog).getByText("wrong thread")).toBeTruthy();
@@ -214,6 +215,40 @@ describe("ProjectFilingAction", () => {
     const alert = await within(dialog).findByRole("alert");
     expect(alert.textContent).toContain("Not yours.");
     expect(within(dialog).queryByRole("textbox")).toBeNull();
+  });
+
+  it("does not show the last verdict while a fresh one is being read", async () => {
+    let reads = 0;
+    stubRoutes({
+      "GET /activities/act-1/project-filing": () => {
+        reads += 1;
+        return reads === 1
+          ? jsonResponse(FILED)
+          : (new Promise<Response>(() => {}) as never);
+      },
+    });
+    render(<ProjectFilingAction activityId="act-1" projectId="p-1" />);
+    const { user, dialog } = await openDialog();
+    await within(dialog).findByRole("textbox");
+    await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+
+    await user.click(screen.getByRole("button", { name: "Undo filing" }));
+    const reopened = await screen.findByRole("dialog");
+    expect((await within(reopened).findByRole("status")).textContent).toMatch(
+      /Checking what keeps/,
+    );
+    expect(within(reopened).queryByRole("textbox")).toBeNull();
+  });
+
+  it("moves focus to the reason field when the verdict arrives", async () => {
+    stubRoutes({
+      "GET /activities/act-1/project-filing": () => jsonResponse(FILED),
+    });
+    render(<ProjectFilingAction activityId="act-1" projectId="p-1" />);
+    const { dialog } = await openDialog();
+    const box = await within(dialog).findByRole("textbox");
+    await waitFor(() => expect(document.activeElement).toBe(box));
   });
 
   it("announces the wait while the verdict is read", async () => {
@@ -300,9 +335,12 @@ describe("ProjectFilingAction", () => {
     const closers = within(dialog).getAllByRole("button", { name: "Close" });
     await user.click(closers[closers.length - 1]);
     await waitFor(() => expect(invalidate).toHaveBeenCalled());
-    for (const [filters] of invalidate.mock.calls) {
-      expect(filters?.exact).toBe(true);
-    }
+    // The timeline refetches by prefix; the activity's own read is exact.
+    const exact = invalidate.mock.calls.map(
+      ([filters]) => filters?.exact === true,
+    );
+    expect(exact).toContain(false);
+    expect(exact).toContain(true);
   });
 
   it("names a hidden project as unnamed and shows a redacted decision as its moment alone", async () => {

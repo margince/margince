@@ -12198,16 +12198,16 @@ export const de = {
   "aiServing.notObject": "muss ein Objekt sein: der Text zwischen { und }.",
   "aiServing.previewFailed":
     "Der Server konnte diesen Wert nicht prüfen: {reason} Speichern bleibt aus, bis er es kann.",
-  "projectFiling.action": "Ablage rückgängig",
-  "projectFiling.title": "Projektablage rückgängig machen",
+  "projectFiling.action": "Ablage rückgängig machen",
+  "projectFiling.title": "Projektablage rückgängig machen?",
   "projectFiling.loading": "Prüfe, was diese Aktivität aufbewahrt …",
   "projectFiling.explain":
-    "Die Ablage dieser Aktivität unter {projects} hat sie als Geschäftskorrespondenz markiert, die Löschung und Aufbewahrungsläufe aufbewahren müssen. Rückgängig machen entfernt sie aus dem Projekt und hebt diese Markierung auf.",
+    "Die Ablage dieser Aktivität unter {projects} hat sie als Geschäftskorrespondenz markiert, die Lösch- und Aufbewahrungsläufe aufbewahren müssen. Rückgängig machen entfernt sie aus dem Projekt und hebt diese Markierung auf.",
   "projectFiling.reason": "Warum ist die Ablage falsch?",
   "projectFiling.reasonHint": "Wird mit deinem Namen im Audit-Log gespeichert.",
   "projectFiling.reasonRequired":
     "Begründe, warum die Ablage falsch ist. Die Begründung wird im Audit-Log gespeichert.",
-  "projectFiling.confirm": "Ablage rückgängig",
+  "projectFiling.confirm": "Ablage rückgängig machen",
   "projectFiling.doneTitle": "Ablage rückgängig gemacht",
   "projectFiling.done":
     "Die Aktivität ist nicht mehr unter dem Projekt abgelegt, und ihre Aufbewahrungsmarkierung ist aufgehoben.",
@@ -12221,11 +12221,15 @@ export const de = {
     "Für diese Aktivität hat bereits eine gesetzliche Sperre begonnen. Eine begonnene Sperre wird nie verkürzt.",
   "projectFiling.refusal.qualifying_deal":
     "Diese Aktivität ist unter einem Deal abgelegt, der sie als Geschäftskorrespondenz qualifiziert, daher behält sie ihre Aufbewahrungsmarkierung.",
-  "projectFiling.actionFor": "Ablage rückgängig: {subject}",
+  "projectFiling.actionFor": "Ablage rückgängig machen: {subject}",
   "projectFiling.hiddenProject": "ein Projekt, das du nicht sehen kannst",
   "projectFiling.decisionRedacted": "Entscheidung am {when} dokumentiert",
+  "projectFiling.refusal.archived":
+    "Diese Aktivität ist archiviert, daher kann ihre Ablage nicht mehr rückgängig gemacht werden.",
+  "projectFiling.refusal.erasure_pending":
+    "Eine offene Löschanfrage betrifft einen Kontakt dieser Aktivität, daher bleibt ihre Aufbewahrungsmarkierung bis zur Entscheidung.",
   "projectFiling.refusal.legal_hold":
-    "Auf einen Datensatz, mit dem diese Aktivität verknüpft ist, wirkt eine Rechtssperre, daher bleibt die Aufbewahrungsmarkierung bis zur Aufhebung.",
+    "Auf einen Datensatz, mit dem diese Aktivität verknüpft ist, gilt ein Legal Hold, daher bleibt die Aufbewahrungsmarkierung bis zur Aufhebung.",
   "projectFiling.refusal.hidden_project":
     "Ein Projekt, das du nicht sehen kannst, hält diese Aktivität weiterhin. Frage jemanden, der es sehen kann, ob er die Ablage rückgängig macht.",
 } as const satisfies Record<MessageKey, string>;

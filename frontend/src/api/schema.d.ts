@@ -36253,7 +36253,7 @@ export interface components {
         };
         ProjectFilingRefusal: {
             /** @enum {string} */
-            code: "not_filed" | "other_basis_remains" | "restricted" | "legal_hold" | "hidden_project" | "qualifying_deal";
+            code: "not_filed" | "archived" | "restricted" | "legal_hold" | "erasure_pending" | "hidden_project" | "other_basis_remains" | "qualifying_deal";
             message: string;
         };
         ProjectFilingUndoDecision: {
@@ -49705,25 +49705,7 @@ export interface operations {
     undoActivityProjectFiling: {
         parameters: {
             query?: never;
-            header?: {
-                /**
-                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
-                 *     create (API-CC-6). **Scope:** the key is unique within
-                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
-                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
-                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
-                 *     attempt already bumped the version.
-                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
-                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
-                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
-                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
-                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
-                 *     to retry blind.
-                 */
-                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
-            };
+            header?: never;
             path: {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
                 id: components["parameters"]["Id"];
@@ -49748,12 +49730,14 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description The filing cannot be undone; the problem's `code` is one of `not_filed`, `other_basis_remains`, `restricted`, `legal_hold`, `hidden_project` or `qualifying_deal`. */
+            /** @description The filing cannot be undone; the problem's `code` is one of `not_filed`, `archived`, `restricted`, `legal_hold`, `erasure_pending`, `hidden_project`, `other_basis_remains` or `qualifying_deal`, or `decider_unnamed` when the deciding account has no display name. */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
             };
             422: components["responses"]["ValidationError"];
         };
