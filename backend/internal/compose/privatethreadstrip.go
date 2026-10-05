@@ -57,7 +57,7 @@ func (s *privateThreadStripper) StripWorkspace(ctx context.Context, windows capt
 	var due []ids.UUID
 	if err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
 		var err error
-		due, err = capture.SelectPrivateThreadFilesDueTx(ctx, tx, windows, privateThreadStripBatch)
+		due, err = capture.SelectPrivateThreadFilesDueTx(ctx, tx, windows, statutoryFloor(), privateThreadStripBatch)
 		return err
 	}); err != nil {
 		return 0, fmt.Errorf("verdict: finding personal-thread mail whose files are due: %w", err)

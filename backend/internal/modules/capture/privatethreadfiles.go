@@ -21,7 +21,9 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/capture/partslim"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // SelectPrivateThreadFilesDueTx lists messages on a thread held as personal
@@ -32,15 +34,23 @@ import (
 // (senderWasSeen, at capture). The window is the purge's: a week
 // when the owner held the thread, a month when the classifier did, measured
 // from the later of the message's capture and the verdict. A message a
-// colleague also imported is theirs too and is left alone, and so is one under
-// a statutory hold.
+// colleague also imported is theirs too and is left alone. So, as the purge
+// leaves them, is mail under a hold, inside the statutory floor, or named by an
+// open data-subject request: withholding bytes cannot be undone either.
 func SelectPrivateThreadFilesDueTx(
-	ctx context.Context, tx pgx.Tx, windows PersonalPurgeWindows, limit int,
+	ctx context.Context, tx pgx.Tx, windows PersonalPurgeWindows, floor StatutoryFloor, limit int,
 ) ([]ids.UUID, error) {
+	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
+		return nil, err
+	}
 	if limit <= 0 {
 		return nil, nil
 	}
-	args := []any{windows.ByOwner, windows.ByClassifier, limit}
+	// Windows first, then the floor's own arguments, then the limit — each
+	// placeholder derived from where its argument actually landed.
+	args := []any{windows.ByOwner, windows.ByClassifier}
+	shielded, args := floor.column(len(args), args)
+	args = append(args, limit)
 	limitAt := "$" + strconv.Itoa(len(args))
 	rows, err := tx.Query(ctx, `
 		SELECT a.id
@@ -52,6 +62,8 @@ func SelectPrivateThreadFilesDueTx(
 		   AND a.counterparty_email = ANY (v.seen_addresses)
 		   AND a.kind = 'email' AND a.captured_by LIKE 'connector:%'
 		   AND a.archived_at IS NULL AND a.restricted_at IS NULL
+		   AND NOT (`+shielded+`)
+		   AND NOT `+underAnOpenRequest+`
 		   AND greatest(a.created_at, v.resolved_at)
 		       + (CASE WHEN v.status = 'held_by_owner' THEN $1 ELSE $2 END)::interval <= now()
 		   AND NOT EXISTS (
@@ -97,6 +109,9 @@ type StoredBody struct {
 // any other. The row is stamped slimmed either way, so the slim sweep does not
 // read it again.
 func WithholdStoredOriginalTx(ctx context.Context, tx pgx.Tx, activityID ids.UUID, files []StoredBody) error {
+	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
+		return err
+	}
 	if len(files) == 0 {
 		return nil
 	}
