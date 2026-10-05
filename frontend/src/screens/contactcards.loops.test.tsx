@@ -324,6 +324,9 @@ describe("a commitment read from a conversation", () => {
         <ContactCommitmentsCard view={view} firstName="Dana" />
       </StoryProviders>,
     );
+    expect(
+      screen.getByRole("checkbox", { name: /Send the pilot quote/ }),
+    ).toHaveProperty("checked", true);
     expect(screen.queryByText(/overdue/)).toBeNull();
   });
 

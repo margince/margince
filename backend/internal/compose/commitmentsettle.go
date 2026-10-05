@@ -43,15 +43,12 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -69,7 +66,6 @@ const claimStatusDone = "done"
 
 // CommitmentSettleTrigger keeps a commitment and its task settled together.
 type CommitmentSettleTrigger struct {
-	pool     *pgxpool.Pool
 	claims   *contacts.Store
 	tasks    *activities.Store
 	identity *identity.Service
@@ -80,7 +76,7 @@ type CommitmentSettleTrigger struct {
 func NewCommitmentSettleTrigger(pool *pgxpool.Pool, log *slog.Logger) *CommitmentSettleTrigger {
 	db := InstallationDB(pool)
 	return &CommitmentSettleTrigger{
-		pool: pool, claims: contacts.NewStore(db), tasks: activities.NewStore(db),
+		claims: contacts.NewStore(db), tasks: activities.NewStore(db),
 		identity: identity.NewService(pool), log: log,
 	}
 }
@@ -105,7 +101,7 @@ func (t *CommitmentSettleTrigger) HandleEvent(ctx context.Context, env events.En
 		if !readSettlePayload(ctx, t.log, env, &payload) || payload.Status != claimStatusDone {
 			return nil
 		}
-		return t.completeTaskOf(ctx, env.Actor, ids.UUID(payload.ClaimId))
+		return t.completeTaskOf(ctx, env.Actor, ids.UUID(payload.ClaimId), env.Trace.AuditLogID)
 	}
 	return nil
 }
@@ -122,15 +118,6 @@ func (t *CommitmentSettleTrigger) settleClaimsOf(ctx context.Context, by events.
 		return err
 	}
 	for _, claim := range claims {
-		// Settling checks the claim's own conversation as them; the contact's
-		// write authority is asked here, because settling does not.
-		writable, err := t.mayWriteContact(asThem, claim.Contact)
-		if err != nil {
-			return err
-		}
-		if !writable {
-			continue
-		}
 		if err := t.claims.SettleConversationClaim(asThem, claim.ID, claimStatusDone); err != nil {
 			if refused(err) {
 				continue
@@ -143,8 +130,8 @@ func (t *CommitmentSettleTrigger) settleClaimsOf(ctx context.Context, by events.
 
 // completeTaskOf completes the task a claim settled as done became, as
 // whoever settled the claim; a task they may not change stays as it is.
-func (t *CommitmentSettleTrigger) completeTaskOf(ctx context.Context, by events.Actor, claimID ids.UUID) error {
-	task, status, settledAt, err := t.claims.ClaimTask(ctx, claimID)
+func (t *CommitmentSettleTrigger) completeTaskOf(ctx context.Context, by events.Actor, claimID, settlement ids.UUID) error {
+	task, status, settledAt, err := t.claims.ClaimTask(ctx, claimID, settlement)
 	if err != nil || task == nil || status != claimStatusDone {
 		return err
 	}
@@ -183,23 +170,6 @@ func (t *CommitmentSettleTrigger) actingAs(ctx context.Context, by events.Actor)
 		Type: principal.PrincipalHuman, ID: principal.HumanIDPrefix + seat.String(), UserID: seat,
 		SeatType: seatType, TeamIDs: rbac.TeamIDs, Permissions: rbac.Permissions,
 	}), true, nil
-}
-
-// mayWriteContact asks whether the acting human could update this contact.
-func (t *CommitmentSettleTrigger) mayWriteContact(asThem context.Context, contact ids.UUID) (bool, error) {
-	if err := auth.Require(asThem, string(recordTypeContact), principal.ActionUpdate); err != nil {
-		if refused(err) {
-			return false, nil
-		}
-		return false, err
-	}
-	err := database.WithWorkspaceTx(asThem, t.pool, func(tx pgx.Tx) error {
-		return auth.EnsureWritableLive(asThem, tx, string(recordTypeContact), contact)
-	})
-	if refused(err) {
-		return false, nil
-	}
-	return err == nil, err
 }
 
 // refused reports an answer that means "not theirs to do": the write is

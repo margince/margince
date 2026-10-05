@@ -63,16 +63,18 @@ func (s *Store) OpenClaimsOnTask(ctx context.Context, taskID ids.UUID) ([]ClaimO
 	return out, err
 }
 
-// ClaimTask is the task a claim became, the claim's status, and when the claim
-// last changed by the database's clock — or no task when the claim never
-// became one or is gone.
-func (s *Store) ClaimTask(ctx context.Context, claimID ids.UUID) (*ids.UUID, string, time.Time, error) {
+// ClaimTask is the task a claim became, the claim's status, and when the
+// settlement recorded by the audit row settlement was made, by the database's
+// clock. The claim's own updated_at is no stand-in: a merge or a correction
+// moves it after the settlement. No task when the claim never became one, is
+// gone, or settlement is not an audit row about this claim.
+func (s *Store) ClaimTask(ctx context.Context, claimID, settlement ids.UUID) (*ids.UUID, string, time.Time, error) {
 	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
 		return nil, "", time.Time{}, err
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	claimPos := arg(claimID)
+	claimPos, auditPos := arg(claimID), arg(settlement)
 	scope, err := auth.ScopeClauseFor(ctx, "contact", "pr", arg)
 	if err != nil {
 		return nil, "", time.Time{}, err
@@ -85,9 +87,10 @@ func (s *Store) ClaimTask(ctx context.Context, claimID ids.UUID) (*ids.UUID, str
 	var changed time.Time
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		err := tx.QueryRow(ctx, fmt.Sprintf(`
-			SELECT c.task_activity_id, c.status, c.updated_at FROM conversation_claim c
+			SELECT c.task_activity_id, c.status, a.occurred_at FROM conversation_claim c
 			  JOIN contact pr ON pr.id = c.contact_id AND pr.archived_at IS NULL
-			 WHERE c.id = $%d AND c.archived_at IS NULL AND (%s)`, claimPos, scope), args...).Scan(&task, &status, &changed)
+			  JOIN audit_log a ON a.id = $%d AND a.after->>'%s' = c.id::text
+			 WHERE c.id = $%d AND c.archived_at IS NULL AND (%s)`, auditPos, claimIDKey, claimPos, scope), args...).Scan(&task, &status, &changed)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil
 		}
