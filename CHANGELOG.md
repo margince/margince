@@ -16,6 +16,13 @@ when it has content.
 
 ### Added
 
+- AI provider health: a provider that is out of credit, rejecting its key,
+  unreachable or degraded is marked as such on Settings → AI models and in the new
+  **AI provider status** card under System health. A blocked provider is skipped
+  with no call and no charge, mail and enrichment wait instead of spending their
+  attempts, and an interactive request fails fast with a message to contact the
+  system administrator. `worker reopen-parked --from … --to … [--dry-run]` reopens
+  the sender questions and company enrichments an earlier outage parked.
 - Model prices sync themselves: once a day (and on **Refresh model prices**) every
   provider with a usable key is re-priced from models.dev or OpenRouter, newly
   listed chat and embedding models the catalogue prices are added, and a price you set

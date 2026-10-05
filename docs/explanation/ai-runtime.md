@@ -5,8 +5,7 @@ How every AI call in Margince is *named*, *routed*, *metered*, *traced*, and
 deep-read extraction, capture classification, the agent loop, briefs — they all
 speak the same task vocabulary and pass through the same Router. For what an
 *agent* does with a call, see [agent-surface.md](agent-surface.md); for how the
-governance gate admits it, see [authorization.md](authorization.md). This page is
-the model runtime itself.
+governance gate admits it, see [authorization.md](authorization.md).
 
 ## The shape at a glance
 
@@ -376,7 +375,8 @@ Every call converges on the Router (`internal/modules/ai`). In one pass it:
 - **strips secrets** from the prompt before the request leaves the process, and
   again from anything it records;
 - **walks the ladder** — one attempt per rung, escalating on provider error or a
-  structured-output schema failure;
+  structured-output schema failure, and skipping a rung whose provider is
+  blocked ([provider health](ai-provider-health.md));
 - **traces** every attempt (below).
 
 **Company context** is the installation's own profile (offer, ICP, voice —
