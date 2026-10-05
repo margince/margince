@@ -516,15 +516,15 @@ export function useViewerId(enabled = true): string | undefined {
   return useMe(enabled).data?.user.id;
 }
 
-const PROBLEM_CODE_COPY: Partial<Record<string, MessageKey>> = {
-  gateway_unavailable: "common.gatewayUnavailable",
-  assistant_unavailable: "common.assistantUnavailable",
-  provider_out_of_credit: "common.providerOutOfCredit",
-  provider_unauthorized: "common.providerUnauthorized",
-  provider_unavailable: "common.providerUnavailable",
-  permission_denied: "common.permissionDenied",
-  seat_tier_insufficient: "common.seatReadOnly",
-};
+const PROBLEM_CODE_COPY = new Map<string, MessageKey>([
+  ["gateway_unavailable", "common.gatewayUnavailable"],
+  ["assistant_unavailable", "common.assistantUnavailable"],
+  ["provider_out_of_credit", "common.providerOutOfCredit"],
+  ["provider_unauthorized", "common.providerUnauthorized"],
+  ["provider_unavailable", "common.providerUnavailable"],
+  ["permission_denied", "common.permissionDenied"],
+  ["seat_tier_insufficient", "common.seatReadOnly"],
+]);
 
 // RFC 7807 bodies carry the honest detail; surface it instead of a generic
 // failure so the error state names its cause. `null` says the body carried no
@@ -569,7 +569,7 @@ function problemDetail(
   t?: (key: MessageKey) => string,
 ): string | null {
   const code = problemCode(problem);
-  const copyKey = code === null ? undefined : PROBLEM_CODE_COPY[code];
+  const copyKey = code === null ? undefined : PROBLEM_CODE_COPY.get(code);
   if (t && copyKey) {
     return t(copyKey);
   }
