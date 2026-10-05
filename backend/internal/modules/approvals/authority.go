@@ -71,18 +71,23 @@ const kindLinkedInMatch = "linkedin_match"
 const kindHeldDraft = "held_draft"
 
 // kindDealFollowUp is the nightly reconciliation's "this conversation left no
-// next step" card, and kindTranscriptProposal the next step a transcript
-// recorded somebody committing to. Named rather than spelled: this module makes
+// next step" card, and kindCommitmentTask a promise one of our users made in a
+// captured conversation. Named rather than spelled: this module makes
 // three separate statements about each — the grants deciding it needs, that the
 // rep it was staged for decides it alone, and what filing it means — and a typo
 // across them would leave the kind half-governed with nothing saying so.
 const (
-	kindDealFollowUp       = "deal_follow_up"
-	kindTranscriptProposal = "transcript_proposal"
-	// kindCommitmentTask is a promise one of our users made in a captured
-	// conversation, read too unsurely to become their task without asking.
+	kindDealFollowUp   = "deal_follow_up"
 	kindCommitmentTask = "commitment_task"
+	// kindTranscriptProposal is retired: nothing stages it and no effect
+	// applies it. It stays governed so the cards already decided under it stay
+	// readable to whoever decided them.
+	kindTranscriptProposal = "transcript_proposal"
 )
+
+// retiredKinds are governed for reading and refused for approving: see
+// kindTranscriptProposal.
+var retiredKinds = map[string]bool{kindTranscriptProposal: true}
 
 // KindScheduledSendHeld is the card a stopped scheduled message raises for the
 // rep who scheduled it (ADR-0104 §5). Exported because compose stages it and
@@ -284,17 +289,12 @@ var decisionGrants = map[string][]grantRequirement{
 	// may see and decide it (targetVisible), the create grant gates the
 	// write the confirm performs.
 	kindDealFollowUp: {{objectActivity, principal.ActionCreate}},
-	// Confirming a next step read out of a meeting transcript (S-E04.3)
-	// creates the task activity it proposed. The transcript activity it is
-	// filed against gates who may see and decide it (targetVisible); the
-	// create grant gates the write the confirm performs. Read is not enough:
-	// somebody who may read the transcript but not add to the timeline could
-	// otherwise release a task they could not have logged themselves.
-	kindTranscriptProposal: {{objectActivity, principal.ActionCreate}},
 	// Confirming a promise read out of a conversation creates the task it
 	// proposed, and points the claim on the customer's record at that task —
 	// so the decider must be able to do both by hand.
 	kindCommitmentTask: {{objectActivity, principal.ActionCreate}, {tableContact, principal.ActionUpdate}},
+	// Retired; read only, see kindTranscriptProposal.
+	kindTranscriptProposal: {{objectActivity, principal.ActionCreate}},
 	// A proposed stage move is decided by whoever may MOVE the deal. Approving
 	// it performs the advance, so read is not enough: somebody who can see a
 	// deal but not steer it must not be able to release a move they could not

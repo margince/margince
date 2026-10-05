@@ -11920,8 +11920,6 @@ export const de = {
     "Die Umwandlung eines Leads wartet auf dein Wort",
   "magic.action.approval_overnight":
     "Ein Vorschlag aus der Nacht wartet auf dein Wort",
-  "magic.action.approval_transcript_proposal":
-    "Ein Vorschlag aus einer Aufzeichnung wartet auf dein Wort",
   "magic.action.approval_commitment_task":
     "Eine Zusage aus einem Gespräch wartet auf dein Wort",
   "magic.action.approval_capture_counterparty":

@@ -93,7 +93,7 @@ func blocksCustomerWork(item crmcontracts.AttentionItem) bool {
 	// fresh the page is.
 	case "send_email", "send_company_email", "send_message",
 		"book_meeting",
-		"deal_follow_up", "transcript_proposal", "commitment_task":
+		"deal_follow_up", "commitment_task":
 		return true
 	case kindScheduledSend:
 		// A message the rep already MEANT to send, stopped at send time. The

@@ -11809,8 +11809,6 @@ export const vi = {
     "Việc chuyển một lead thành deal đang chờ bạn duyệt",
   "magic.action.approval_overnight":
     "Một đề xuất từ đêm qua đang chờ bạn duyệt",
-  "magic.action.approval_transcript_proposal":
-    "Một đề xuất từ bản ghi âm đang chờ bạn duyệt",
   "magic.action.approval_commitment_task":
     "Một lời hứa từ cuộc trò chuyện đang chờ bạn duyệt",
   "magic.action.approval_capture_counterparty":

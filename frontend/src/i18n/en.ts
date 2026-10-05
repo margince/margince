@@ -12076,8 +12076,6 @@ export const en = {
     "Promoting a lead is waiting for your word",
   "magic.action.approval_overnight":
     "An overnight proposal is waiting for your word",
-  "magic.action.approval_transcript_proposal":
-    "A proposal from a recording is waiting for your word",
   "magic.action.approval_commitment_task":
     "A commitment from a conversation is waiting for your word",
   "magic.action.approval_capture_counterparty":

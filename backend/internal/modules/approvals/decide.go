@@ -245,6 +245,12 @@ func (s *Service) decideInTx(ctx context.Context, tx pgx.Tx, p principal.Princip
 		// refused.
 		return a, &AlreadyDecidedError{Status: st}
 	}
+	// A retired kind is governed only so its decided cards stay readable;
+	// nothing applies it, so a yes would be recorded and do nothing.
+	if approve && retiredKinds[a.Kind] {
+		return row{}, fmt.Errorf("crmapprovals: %s is retired and can no longer be applied: %w",
+			a.Kind, apperrors.ErrConflict)
+	}
 
 	status, action, verdict := approvalStatusRejected, "reject", approvalStatusRejected
 	if approve {

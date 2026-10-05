@@ -18,6 +18,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// transcriptProposalActor is who a commitment read out of a transcript is
+// captured by: the reader's, not the confirming human's own note. The human is
+// on the decision's audit row, which is where "who approved this" belongs.
+const transcriptProposalActor = "agent:transcript-proposer"
+
 // commitmentFrom names who made one promise a transcript states.
 //
 // The owner arrives as PROSE — "Lena Fischer", "Frédéric", "the team" —
