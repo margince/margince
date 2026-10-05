@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -181,5 +182,50 @@ func TestTickingATaskLeavesACommitmentOnAContactTheyMayNotUpdate(t *testing.T) {
 	k.deliver(t, k.newest(t, eventActivityUpdated, `envelope->'entity'->>'id' = $2`, k.task.String()))
 	if got := k.claimStatus(t); got != "open" {
 		t.Errorf("ticking a task settled a commitment on a contact the rep may not update (status %q)", got)
+	}
+}
+
+// The settlement a tick causes is made on the ticker's behalf, so the event it
+// emits names them, and a settlement that event causes in turn is held to the
+// same human's rights rather than the product's.
+func TestASettlementCarriesTheHumanWhoCausedIt(t *testing.T) {
+	k := seedKeptCommitment(t)
+	k.setDone(t, true)
+	k.deliver(t, k.newest(t, eventActivityUpdated, `envelope->'entity'->>'id' = $2`, k.task.String()))
+	follow := k.newest(t, eventClaimChanged, `envelope->'payload'->>'claim_id' = $2`, k.claim.String())
+	if follow.Actor.OnBehalfOf == nil || *follow.Actor.OnBehalfOf != k.Rep2 {
+		t.Fatalf("the settlement's event acts for %v, want the colleague who ticked the task", follow.Actor.OnBehalfOf)
+	}
+	k.WsExec(t, `DELETE FROM role_assignment WHERE user_id = $1`, k.Rep2)
+	allowed, err := k.settle.originMayWrite(context.Background(), follow.Actor, "activity", k.task, nil)
+	if err != nil || allowed {
+		t.Errorf("an event the product made for a human with no rights was allowed=%v err=%v", allowed, err)
+	}
+}
+
+// Ticking a task does not settle a commitment quoted from a conversation that
+// can no longer be read, as settling it directly would not.
+func TestTickingATaskLeavesACommitmentFromAConversationTheyMayNotRead(t *testing.T) {
+	k := seedKeptCommitment(t)
+	k.WsExec(t, `UPDATE activity SET archived_at = now() WHERE id = $1`, k.activity.UUID)
+	k.setDone(t, true)
+	k.deliver(t, k.newest(t, eventActivityUpdated, `envelope->'entity'->>'id' = $2`, k.task.String()))
+	if got := k.claimStatus(t); got != "open" {
+		t.Errorf("ticking a task settled a commitment from a conversation the rep may not read (status %q)", got)
+	}
+}
+
+// A settlement delivered after its task changed again does not overrule that
+// change: the task stays as the later edit left it.
+func TestAnOldSettlementDoesNotOverruleALaterChangeToTheTask(t *testing.T) {
+	k := seedKeptCommitment(t)
+	if err := k.Contacts.SettleConversationClaim(k.Admin(), k.claim, claimStatusDone); err != nil {
+		t.Fatalf("settling the commitment: %v", err)
+	}
+	settled := k.newest(t, eventClaimChanged, `envelope->'payload'->>'claim_id' = $2`, k.claim.String())
+	k.WsExec(t, `UPDATE activity SET updated_at = $2 WHERE id = $1`, k.task, settled.OccurredAt.Add(time.Minute))
+	k.deliver(t, settled)
+	if got := k.taskDone(t); got != "false" {
+		t.Errorf("a settlement older than the task's last change completed it")
 	}
 }

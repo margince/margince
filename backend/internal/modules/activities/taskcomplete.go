@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -15,11 +16,13 @@ import (
 )
 
 // CompleteTask completes one task because the thing it tracked was settled
-// somewhere else, and answers whether this call is what completed it. A task
-// already done, or gone, is not an error: the settlement it follows has
-// nothing left to do. It completes through UpdateActivity, so the task's own
-// gates, audit and event apply as they do to a human ticking it.
-func (s *Store) CompleteTask(ctx context.Context, id ids.ActivityID) (bool, error) {
+// somewhere else at settledAt, and answers whether this call is what completed
+// it. A task already done, or gone, is not an error: the settlement it follows
+// has nothing left to do. Nor is a task changed after settledAt — reopened,
+// most likely — which a settlement older than that change does not overrule.
+// It completes through UpdateActivity, so the task's own gates, audit and
+// event apply as they do to a human ticking it.
+func (s *Store) CompleteTask(ctx context.Context, id ids.ActivityID, settledAt time.Time) (bool, error) {
 	current, err := s.GetActivity(ctx, id, storekit.LiveOnly)
 	if errors.Is(err, apperrors.ErrNotFound) {
 		return false, nil
@@ -31,7 +34,7 @@ func (s *Store) CompleteTask(ctx context.Context, id ids.ActivityID) (bool, erro
 		return false, fmt.Errorf("activities: %s is a %s, not a task to complete: %w",
 			id, current.Kind, apperrors.ErrConflict)
 	}
-	if (current.IsDone != nil && *current.IsDone) || current.Version == nil {
+	if (current.IsDone != nil && *current.IsDone) || current.Version == nil || current.UpdatedAt.After(settledAt) {
 		return false, nil
 	}
 	return s.completeSystemTask(ctx, id, int64(*current.Version))

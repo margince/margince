@@ -19,9 +19,18 @@ package compose
 // a task you hold must not settle a claim on a contact you may not update, and
 // settling a claim must not complete a colleague's task you may not change.
 // A human answers for themselves, an agent or connector for the human it acts
-// for; an agent acting for nobody settles nothing. A change the product made
-// itself is followed, because the product's own passes are what the rules
-// above already govern.
+// for; an agent acting for nobody settles nothing. The write is made on that
+// human's behalf, so the event it emits names them again and a settlement it
+// causes in turn is held to the same human's rights. A change the product made
+// on nobody's behalf is followed, because the product's own passes are what
+// the rules above already govern.
+//
+// Settling a claim also asks what settling it directly asks: that the
+// conversation it was quoted from is still the human's to read.
+//
+// A HISTORY REPLAYED IS NOT RE-ENACTED. A new group starts at the stream's
+// beginning, so a claim settled long ago arrives as news. A task changed after
+// that settlement — reopened, most likely — is not completed again.
 //
 // Each reaction is a no-op when the other side is already done, so the pair
 // cannot loop: completing the task emits activity.updated, which finds the
@@ -37,6 +46,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -100,9 +110,22 @@ func (t *CommitmentSettleTrigger) HandleEvent(ctx context.Context, env events.En
 		if !t.readPayload(ctx, env, &payload) || payload.Status != claimStatusDone {
 			return nil
 		}
-		return t.completeTaskOf(ctx, env.Actor, ids.UUID(payload.ClaimId))
+		return t.completeTaskOf(ctx, env.Actor, ids.UUID(payload.ClaimId), env.OccurredAt)
 	}
 	return nil
+}
+
+// onBehalfOfOrigin is the context the write runs under: the product, acting
+// for the human behind the event when there is one, so the event the write
+// emits carries them forward.
+func onBehalfOfOrigin(ctx context.Context, by events.Actor) context.Context {
+	seat, ok := originSeat(by)
+	if !ok {
+		return ctx
+	}
+	return principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalSystem, ID: commitmentSettleActor, OnBehalfOf: seat,
+	})
 }
 
 // settleClaimsOf settles every open claim a completed task stands for, on
@@ -113,14 +136,14 @@ func (t *CommitmentSettleTrigger) settleClaimsOf(ctx context.Context, by events.
 		return err
 	}
 	for _, claim := range claims {
-		allowed, err := t.originMayWrite(ctx, by, string(recordTypeContact), claim.Contact)
+		allowed, err := t.originMayWrite(ctx, by, string(recordTypeContact), claim.Contact, &claim.Source)
 		if err != nil {
 			return err
 		}
 		if !allowed {
 			continue
 		}
-		if err := t.claims.SettleConversationClaim(ctx, claim.ID, claimStatusDone); err != nil {
+		if err := t.claims.SettleConversationClaim(onBehalfOfOrigin(ctx, by), claim.ID, claimStatusDone); err != nil {
 			return err
 		}
 	}
@@ -129,31 +152,33 @@ func (t *CommitmentSettleTrigger) settleClaimsOf(ctx context.Context, by events.
 
 // completeTaskOf completes the task a claim settled as done became, if
 // whoever settled the claim could complete that task themselves.
-func (t *CommitmentSettleTrigger) completeTaskOf(ctx context.Context, by events.Actor, claimID ids.UUID) error {
+func (t *CommitmentSettleTrigger) completeTaskOf(
+	ctx context.Context, by events.Actor, claimID ids.UUID, settledAt time.Time,
+) error {
 	task, status, err := t.claims.ClaimTask(ctx, claimID)
 	if err != nil || task == nil || status != claimStatusDone {
 		return err
 	}
-	allowed, err := t.originMayWrite(ctx, by, string(recordTypeActivity), *task)
+	allowed, err := t.originMayWrite(ctx, by, string(recordTypeActivity), *task, nil)
 	if err != nil || !allowed {
 		return err
 	}
-	_, err = t.tasks.CompleteTask(ctx, ids.From[ids.ActivityKind](*task))
+	_, err = t.tasks.CompleteTask(onBehalfOfOrigin(ctx, by), ids.From[ids.ActivityKind](*task), settledAt)
 	return err
 }
 
 // originMayWrite asks whether whoever caused the event could change this row
 // themselves: the object grant to update it and write authority over the row,
-// asked as them.
+// asked as them. evidence, when set, is the conversation a claim was quoted
+// from, which they must still be able to read.
 func (t *CommitmentSettleTrigger) originMayWrite(
-	ctx context.Context, by events.Actor, table string, id ids.UUID,
+	ctx context.Context, by events.Actor, table string, id ids.UUID, evidence *ids.UUID,
 ) (bool, error) {
-	if by.Type == string(principal.PrincipalSystem) {
-		return true, nil
-	}
 	seat, ok := originSeat(by)
 	if !ok {
-		return false, nil
+		// The product acting for nobody is followed; an agent acting for
+		// nobody is not.
+		return by.Type == string(principal.PrincipalSystem), nil
 	}
 	ws, err := t.identity.InstallationWorkspace(ctx)
 	if err != nil {
@@ -178,6 +203,11 @@ func (t *CommitmentSettleTrigger) originMayWrite(
 		return false, err
 	}
 	err = database.WithWorkspaceTx(asThem, t.pool, func(tx pgx.Tx) error {
+		if evidence != nil {
+			if err := auth.EnsureActivityContentVisibleLive(asThem, tx, *evidence); err != nil {
+				return err
+			}
+		}
 		// An activity's write rule is its own: its audience, not an owner.
 		if table == string(recordTypeActivity) {
 			return auth.EnsureActivityWritableIn(asThem, tx, id, true)
@@ -191,7 +221,7 @@ func (t *CommitmentSettleTrigger) originMayWrite(
 }
 
 // originSeat is the human behind an event's actor: the human themselves, or
-// the one an agent or connector acted for.
+// the one an agent, a connector or this consumer acted for.
 func originSeat(by events.Actor) (ids.UUID, bool) {
 	if by.Type == string(principal.PrincipalHuman) {
 		seat, err := ids.Parse(strings.TrimPrefix(by.ID, principal.HumanIDPrefix))

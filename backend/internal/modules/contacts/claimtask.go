@@ -20,6 +20,8 @@ import (
 type ClaimOnTask struct {
 	ID      ids.UUID
 	Contact ids.UUID
+	// Source is the conversation the claim was quoted from.
+	Source ids.UUID
 }
 
 // OpenClaimsOnTask lists the open claims a task stands for. A claim and the
@@ -42,7 +44,7 @@ func (s *Store) OpenClaimsOnTask(ctx context.Context, taskID ids.UUID) ([]ClaimO
 	var out []ClaimOnTask
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, fmt.Sprintf(`
-			SELECT c.id, c.contact_id FROM conversation_claim c
+			SELECT c.id, c.contact_id, c.source_activity_id FROM conversation_claim c
 			  JOIN contact pr ON pr.id = c.contact_id AND pr.archived_at IS NULL
 			 WHERE c.task_activity_id = $%d AND c.status = 'open' AND c.archived_at IS NULL
 			   AND (%s)
@@ -52,7 +54,7 @@ func (s *Store) OpenClaimsOnTask(ctx context.Context, taskID ids.UUID) ([]ClaimO
 		}
 		out, err = pgx.CollectRows(rows, func(row pgx.CollectableRow) (ClaimOnTask, error) {
 			var c ClaimOnTask
-			err := row.Scan(&c.ID, &c.Contact)
+			err := row.Scan(&c.ID, &c.Contact, &c.Source)
 			return c, err
 		})
 		return err
