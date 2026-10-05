@@ -21,9 +21,9 @@ export default meta;
 type Story = StoryObj;
 
 const DRAFT: ContractDraft = {
-  title: "valantic GmbH — Rahmenvertrag",
-  contractNumber: "V-5253-VALA",
-  valueMinor: 17_740_000,
+  title: "Northwind Handel GmbH — Rahmenvertrag",
+  contractNumber: "NW-2026-014",
+  valueMinor: 15_000_000,
   arrMinor: 12_000_000,
   currency: "EUR",
   valueBasis: "annualized_12m",

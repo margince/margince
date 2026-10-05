@@ -6,8 +6,7 @@ import { ErrorLine } from "./errorline";
 import { Heading } from "./heading";
 import { AutonomyDot } from "./trust";
 
-// While `pending`, Cancel goes unavailable and Confirm goes busy: only Confirm
-// started anything. The body and its fields are the caller's.
+// The body and its fields are the caller's; the dialog owns their spacing.
 
 export function ConfirmModal({
   open,

@@ -11,6 +11,7 @@
 import { useId, useState } from "react";
 import { Badge, Button, Field, Modal, Textarea } from "../design-system/atoms";
 import { ChoiceList } from "../design-system/choicelist";
+import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import {
@@ -94,7 +95,8 @@ export function IntroDecisionDrawer({
         {request.forwardable_note ? (
           <section>
             <Heading size="medium">{t("contact.intro.noteLabel")}</Heading>
-            {/* Not a tooltip: the colleague forwards these under their own name. */}
+            {/* Who wrote the note sits beside its words, not in a tooltip: the
+                colleague forwards them under their own name. */}
             {request.note_ai_generated ? (
               <Badge tone="ai">{t("contact.intro.noteByModel")}</Badge>
             ) : null}
@@ -127,6 +129,9 @@ export function IntroDecisionDrawer({
             />
           )}
         </Field>
+        {decide.isError ? (
+          <ErrorLine>{t("contact.intro.decideFailed")}</ErrorLine>
+        ) : null}
         <div className="form-actions">
           <Button onClick={onClose} variant="ghost">
             {t("contact.intro.cancel")}
@@ -136,11 +141,6 @@ export function IntroDecisionDrawer({
           </Button>
         </div>
       </div>
-      {decide.isError ? (
-        <p role="alert">
-          <Badge tone="danger">{t("contact.intro.decideFailed")}</Badge>
-        </p>
-      ) : null}
     </Modal>
   );
 }

@@ -721,7 +721,7 @@ export function RecordFormBody({
           );
         })}
         {/* Announced: nothing moves when a submit is refused, and the server's
-            reason is the only thing saying why the dialog is still open. */}
+            reason is the only thing saying why the form is still open. */}
         {error && <ErrorLine>{error}</ErrorLine>}
         {existing && resolveExisting && (
           <Button

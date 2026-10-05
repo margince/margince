@@ -405,7 +405,7 @@
   min-block-size: 0;
 }
 /* In a dialog the stack's gap is the only space between its rows; a row's own
-   margin would add to it. Above `.modal .actions`, which keeps its margin. */
+   margin would add to it. Declared before `.modal .actions`, so its margin wins. */
 .modal .form-stack > * {
   margin-block: 0;
 }
@@ -586,6 +586,11 @@
   to {
     transform: translateX(calc(100% + var(--space-4)));
   }
+}
+
+/* Outside a dialog nothing else spaces an action row from the stack above it. */
+.form-stack + .actions {
+  margin-top: var(--space-3);
 }
 
 /* The row wraps rather than running off a narrow dialog, and only between the

@@ -360,7 +360,8 @@ export function AddDocumentDialog({
             {problemMessageOf(upload.error, t, t("docs.add.failed"))}
           </Callout>
         )}
-        {/* Not a dropdown: a menu hides the alternative this choice is about. */}
+        {/* Not a dropdown: a menu hides the alternative this choice is about.
+            Only an account asks: a contact's library has no second answer. */}
         {anchor.record === "company" && (
           <>
             <ChoiceList

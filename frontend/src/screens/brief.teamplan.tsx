@@ -135,13 +135,13 @@ function TeamCommitment({
               })}
             </p>
           )}
+          {commitment.linked_record && (
+            <EntityRef
+              kind={commitment.linked_record.type}
+              id={commitment.linked_record.id}
+            />
+          )}
         </div>
-        {commitment.linked_record && (
-          <EntityRef
-            kind={commitment.linked_record.type}
-            id={commitment.linked_record.id}
-          />
-        )}
         {commitment.help_requested && (
           <>
             <div>

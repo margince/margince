@@ -6,6 +6,7 @@ import { LocaleProvider } from "../i18n";
 import { Card } from "./atoms";
 import { Eyebrow } from "./eyebrow";
 import { Panel, PanelBody } from "./panel";
+import { Stack } from "./stack";
 import { type SectionState, SurfaceState } from "./surfacestate";
 
 // The nine states a surface can be in. They are drawn together because that is
@@ -234,7 +235,7 @@ export const EmptyWithDetailInAStack: Story = {
 // The caveat stays on its figures under flow spacing and under a gap stack.
 export const StaleInBothHosts: Story = {
   render: () => (
-    <div style={{ display: "grid", gap: "var(--space-4)", maxWidth: 420 }}>
+    <Stack gap="4">
       <Panel title="Panel body">
         <PanelBody>
           <SurfaceState
@@ -260,6 +261,6 @@ export const StaleInBothHosts: Story = {
           <p className="t-body">Next review in March.</p>
         </div>
       </Card>
-    </div>
+    </Stack>
   ),
 };

@@ -12,7 +12,6 @@
 import { useId, useState } from "react";
 import type { components } from "../api/schema";
 import {
-  Badge,
   Button,
   Checkbox,
   Field,
@@ -20,6 +19,7 @@ import {
   Textarea,
 } from "../design-system/atoms";
 import { ChoiceList } from "../design-system/choicelist";
+import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import { RouteLine } from "./contactroutes";
@@ -171,6 +171,9 @@ export function IntroDrawer({
             },
           ]}
         />
+        {create.isError ? (
+          <ErrorLine>{t("contact.intro.askFailed")}</ErrorLine>
+        ) : null}
         {/* Not "Send": nothing here reaches the contact. */}
         <div className="form-actions">
           <Button onClick={onClose} variant="ghost">
@@ -181,11 +184,6 @@ export function IntroDrawer({
           </Button>
         </div>
       </div>
-      {create.isError ? (
-        <p role="alert">
-          <Badge tone="danger">{t("contact.intro.askFailed")}</Badge>
-        </p>
-      ) : null}
     </Modal>
   );
 }

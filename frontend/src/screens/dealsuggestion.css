@@ -23,10 +23,13 @@
 }
 
 /* The amount carries the figure and the currency only a code, so the pair
-   splits 2:1 rather than the even split `.form-row` gives; it never wraps. */
-.dealsuggestion-money > .field {
+   splits 2:1 on one line rather than `.form-row`'s even, wrapping split. */
+.form-row.dealsuggestion-money {
+  flex-wrap: nowrap;
+}
+.form-row.dealsuggestion-money > .field {
   flex-basis: 0;
 }
-.dealsuggestion-money > .field:first-child {
+.form-row.dealsuggestion-money > .field:first-child {
   flex-grow: 2;
 }

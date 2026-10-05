@@ -46,7 +46,7 @@
 1534 frontend/src/design-system/atoms.tsx
 1780 frontend/src/screens/company360.tsx
 1581 frontend/src/design-system/composed.tsx
-1582 frontend/src/screens/leads.tsx
+1558 frontend/src/screens/leads.tsx
 2215 frontend/src/screens/company360.test.tsx
 2235 frontend/src/screens/companies.test.tsx
 2336 frontend/src/screens/companies.tsx
@@ -69,7 +69,7 @@
 534 frontend/src/screens/worklist.queries.ts
 571 frontend/src/screens/capture-activity.tsx
 562 frontend/src/screens/project360.tsx
-538 frontend/src/screens/adddocument.tsx
+522 frontend/src/screens/adddocument.tsx
 568 frontend/src/app/account.tsx
 536 frontend/src/screens/logactivity.tsx
 591 frontend/src/screens/dealroomaccess.tsx
@@ -100,7 +100,7 @@
 883 frontend/src/screens/leadvocab.tsx
 894 frontend/src/screens/onboarding-conversation/voice-scenes.tsx
 852 frontend/src/screens/settingscatalog.ts
-893 frontend/src/screens/customfields.tsx
+878 frontend/src/screens/customfields.tsx
 926 frontend/src/screens/contactprovider.tsx
 939 frontend/src/screens/share.tsx
 793 frontend/src/screens/automations.tsx
