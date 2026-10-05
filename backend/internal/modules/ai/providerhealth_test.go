@@ -75,7 +75,7 @@ func TestAnHTTPStatusIsTaggedOnlyWhenTheProviderItselfIsFailing(t *testing.T) {
 	for status, want := range map[int]error{
 		http.StatusPaymentRequired:       ErrProviderQuota,
 		http.StatusUnauthorized:          ErrProviderUnauthorized,
-		http.StatusForbidden:             ErrProviderUnauthorized,
+		http.StatusForbidden:             nil,
 		http.StatusBadGateway:            ErrProviderUnavailable,
 		http.StatusInternalServerError:   ErrProviderUnavailable,
 		http.StatusBadRequest:            nil,
@@ -92,6 +92,30 @@ func TestAnHTTPStatusIsTaggedOnlyWhenTheProviderItselfIsFailing(t *testing.T) {
 		}
 		if !errors.Is(got, want) || !errors.Is(got, base) {
 			t.Errorf("status %d: %v, want %v wrapping the cause", status, got, want)
+		}
+	}
+}
+
+func TestAnEmptyBalanceOrRejectedKeyIsRecognisedByItsTextUnderStatusesThatAlsoMeanOtherThings(t *testing.T) {
+	t.Parallel()
+	for name, tc := range map[string]struct {
+		status int
+		text   string
+		want   error
+	}{
+		"anthropic empty balance":       {http.StatusBadRequest, "anthropic: invalid_request_error: Your credit balance is too low to access the API (http 400)", ErrProviderQuota},
+		"gemini key not valid":          {http.StatusBadRequest, "gemini: INVALID_ARGUMENT: API key not valid. Please pass a valid API key.", ErrProviderUnauthorized},
+		"a revoked key under 403":       {http.StatusForbidden, "vendor: PERMISSION_DENIED: your API key was reported as leaked", ErrProviderUnauthorized},
+		"a moderation flag under 403":   {http.StatusForbidden, "openrouter: this input requires moderation and was flagged", nil},
+		"a model not enabled under 403": {http.StatusForbidden, "vertex: PERMISSION_DENIED: the model is not enabled for this project", nil},
+		"an ordinary bad request":       {http.StatusBadRequest, "openai: invalid_request_error: max_tokens is too large", nil},
+	} {
+		got := providerFaultOf(tc.status, errors.New(tc.text))
+		if tc.want == nil && errors.Unwrap(got) != nil {
+			t.Errorf("%s: %v was tagged, want it returned as it came", name, got)
+		}
+		if tc.want != nil && !errors.Is(got, tc.want) {
+			t.Errorf("%s: %v, want %v", name, got, tc.want)
 		}
 	}
 }
@@ -173,6 +197,59 @@ func TestAMessageTheProviderRefusedProvesItIsAnswering(t *testing.T) {
 	tr.observe(errors.New("ai: provider refused this request"))
 	if h := tr.current().Health; h != model.HealthOK {
 		t.Errorf("health %s after the provider answered a probe, want ok", h)
+	}
+}
+
+func TestAProbeInFlightRefusesOthersWithAMomentStillAheadOfThem(t *testing.T) {
+	t.Parallel()
+	clock := newClock()
+	tr := newProviderTracker(clock.now)
+	tr.observe(ErrProviderUnauthorized)
+	clock.advance(accountReprobe)
+	if _, ok := tr.admit(); !ok {
+		t.Fatal("the probe was refused")
+	}
+	st, ok := tr.admit()
+	if ok || !st.RetryAfter.After(clock.now()) {
+		t.Errorf("a second caller got admitted=%v with retry %v, want a refusal with a moment after now", ok, st.RetryAfter)
+	}
+	if !tr.current().Blocked(clock.now()) {
+		t.Error("the router would still let a call through while the probe is in flight")
+	}
+	clock.advance(probeLease)
+	if _, ok := tr.admit(); !ok {
+		t.Error("a probe that never reported held the slot past its lease")
+	}
+}
+
+func TestAProbeTheCallerCancelsFreesItsSlotWithoutCounting(t *testing.T) {
+	t.Parallel()
+	clock := newClock()
+	tr := newProviderTracker(clock.now)
+	tr.observe(ErrProviderQuota)
+	clock.advance(accountReprobe)
+	if _, ok := tr.admit(); !ok {
+		t.Fatal("the probe was refused")
+	}
+	tr.observe(context.Canceled)
+	if h := tr.current().Health; h != model.HealthOutOfCredit {
+		t.Errorf("health %s after a cancelled probe, want it unchanged", h)
+	}
+	if _, ok := tr.admit(); !ok {
+		t.Error("a cancelled probe kept the slot")
+	}
+}
+
+func TestAnAccountFaultKeepsItsLabelWhenAProbeFailsAnotherWay(t *testing.T) {
+	t.Parallel()
+	clock := newClock()
+	tr := newProviderTracker(clock.now)
+	tr.observe(ErrProviderQuota)
+	clock.advance(accountReprobe)
+	tr.admit()
+	tr.observe(ErrProviderUnavailable)
+	if st := tr.current(); st.Health != model.HealthOutOfCredit || !st.RetryAfter.Equal(clock.now().Add(accountReprobe)) {
+		t.Errorf("status %+v, want out_of_credit re-armed for the account reprobe", st)
 	}
 }
 
@@ -364,5 +441,73 @@ func TestARebindClearsWhatTheOperatorJustFixed(t *testing.T) {
 	}
 	if got := sharedProviderHealth.tracker(ProviderFake).current().Health; got != model.HealthOK {
 		t.Errorf("health %s after a rebind, want ok", got)
+	}
+}
+
+// ladderOf binds two tiers to two providers, each reporting into its own book,
+// so a test can stand one provider's outage beside the other's answer.
+func ladderOf(cheap, premium model.Client) *Router {
+	return testRouter(map[Tier]model.Client{TierCheapCloud: cheap, TierPremium: premium},
+		&memMeter{}, DefaultMonthlyTokens, ProfileEUHosted)
+}
+
+func TestTheCallThatTripsAnEmptyAccountIsRefundedLikeTheNext(t *testing.T) {
+	t.Parallel()
+	book := newProviderBook(newClock().now)
+	empty := trackClient(&faultClient{err: ErrProviderQuota}, "openai", book)
+	r := ladderOf(empty, empty)
+	_, _, err := r.Complete(wsContext(t), TaskSummarize, model.Request{Messages: []model.Message{{Role: "user", Content: "x"}}})
+	var down *ProviderDownError
+	if !errors.As(err, &down) || down.Health != model.HealthOutOfCredit {
+		t.Fatalf("error %v, want a deferral for an out-of-credit provider", err)
+	}
+	if !errors.Is(err, ErrProviderQuota) || !IsDeferral(err) {
+		t.Errorf("error %v lost the refusal that tripped the provider, or is not a deferral", err)
+	}
+}
+
+func TestTheCallThatTripsARejectedKeyIsRefundedWhenTheWalkEndsOnIt(t *testing.T) {
+	t.Parallel()
+	book := newProviderBook(newClock().now)
+	rejected := trackClient(&faultClient{err: ErrProviderUnauthorized}, "openai", book)
+	r := ladderOf(rejected, rejected)
+	_, _, err := r.Complete(wsContext(t), TaskSummarize, model.Request{Messages: []model.Message{{Role: "user", Content: "x"}}})
+	if !IsDeferral(err) || !errors.Is(err, ErrProviderUnauthorized) {
+		t.Errorf("error %v, want a deferral that keeps the rejected-key cause", err)
+	}
+}
+
+func TestABlockedRungNeverReplacesWhatACalledRungAnswered(t *testing.T) {
+	t.Parallel()
+	book := newProviderBook(newClock().now)
+	blocked := trackClient(&faultClient{}, "openai", book)
+	blocked.(*trackedClient).tracker.observe(ErrProviderQuota)
+	poison := errors.New("provider refused this message")
+	r := ladderOf(&faultClient{err: poison}, blocked)
+	_, _, err := r.Complete(wsContext(t), TaskSummarize, model.Request{Messages: []model.Message{{Role: "user", Content: "x"}}})
+	if IsDeferral(err) || !errors.Is(err, poison) {
+		t.Errorf("error %v, want the called rung's own failure, charged to the message", err)
+	}
+}
+
+func TestAnEmbeddingForABlockedProviderIsRefusedUntracedAndNotWrappedAsAFailedLane(t *testing.T) {
+	t.Parallel()
+	book := newProviderBook(newClock().now)
+	blocked := trackClient(&faultClient{}, "openai", book)
+	blocked.(*trackedClient).tracker.observe(ErrProviderUnauthorized)
+	r := assembleRouter(map[Tier]model.Client{TierCheapCloud: NewFakeClient()}, blocked, ProfileEUHosted,
+		&memoryMeter{}, StaticBudget(1<<40), nil, nil, false, nil)
+	_, err := r.Embed(wsContext(t), model.EmbedRequest{Inputs: []string{"x"}})
+	if !errors.Is(err, ErrProviderDown) || errors.Is(err, ErrEmbedLaneFailed) {
+		t.Errorf("error %v, want ErrProviderDown and not an embed-lane failure", err)
+	}
+}
+
+func TestABindingNamesTheProvidersItsTiersUse(t *testing.T) {
+	t.Parallel()
+	b := binding{routeMeta: map[Tier]routeMeta{TierCheapCloud: {provider: "openai"}, TierPremium: {provider: "openai"}, TierEmbedLane: {provider: "gemini"}}}
+	got := b.providers()
+	if len(got) != 2 || got[0] != "gemini" || got[1] != "openai" {
+		t.Errorf("providers %v, want gemini and openai once each", got)
 	}
 }

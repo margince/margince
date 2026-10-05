@@ -193,14 +193,36 @@ const premiumShareAlarmThreshold = 0.20
 
 // providerFaultOf tags the statuses that mean the provider is failing for
 // every caller, so the health tracker reads a sentinel rather than a message.
+//
+// A 400 or 403 is only the provider's own fault when its text says so: an empty
+// balance and a rejected key arrive under those statuses at some vendors, while
+// the same statuses also answer one message's moderation flag or one model the
+// project may not use, and blocking the whole provider for those would turn one
+// poisoned message into an outage every retry cycle.
 func providerFaultOf(status int, err error) error {
+	text := strings.ToLower(err.Error())
 	switch {
-	case status == http.StatusPaymentRequired:
+	case status == http.StatusPaymentRequired, status >= 400 && status < 500 && mentionsAny(text, emptyBalancePhrases):
 		return fmt.Errorf("%w: %w", ErrProviderQuota, err)
-	case status == http.StatusUnauthorized, status == http.StatusForbidden:
+	case status == http.StatusUnauthorized,
+		(status == http.StatusBadRequest || status == http.StatusForbidden) && mentionsAny(text, rejectedKeyPhrases):
 		return fmt.Errorf("%w: %w", ErrProviderUnauthorized, err)
 	case status >= http.StatusInternalServerError:
 		return fmt.Errorf("%w: %w", ErrProviderUnavailable, err)
 	}
 	return err
+}
+
+var (
+	emptyBalancePhrases = []string{"credit balance is too low", "insufficient credit", "insufficient_quota", "billing hard limit"}
+	rejectedKeyPhrases  = []string{"api key", "api_key", "x-api-key", "credential", "authentication"}
+)
+
+func mentionsAny(text string, phrases []string) bool {
+	for _, phrase := range phrases {
+		if strings.Contains(text, phrase) {
+			return true
+		}
+	}
+	return false
 }

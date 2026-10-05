@@ -187,7 +187,7 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 			boundRungs = append(boundRungs, t)
 		}
 	}
-	var lastErr error
+	var lastErr, skipped error
 	var lastTier Tier
 	for i, t := range boundRungs {
 		// The rail's lease covers one model call, and this is the next one.
@@ -198,12 +198,14 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 		out, callErr := b.clients[t].Complete(callCtx, req)
 		cancel()
 		if callErr != nil {
-			lastErr, lastTier = callErr, t
 			// A rung whose provider is blocked made no call: it is skipped, not
-			// traced or metered as a failure of this request.
+			// traced or metered as a failure of this request, and it never
+			// replaces what a rung that WAS called answered.
 			if errors.Is(callErr, ErrProviderDown) {
+				skipped = callErr
 				continue
 			}
+			lastErr, lastTier = callErr, t
 			// A refused account is the operator's to fix, and only the rung
 			// that hit it knows so. The walk keeps just `lastErr`, so an
 			// escalation overwrites that refusal with whatever the rung above
@@ -225,7 +227,7 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 				// Not an exhausted ladder — the rungs above were never tried.
 				// Reported as the refusal alone so a caller cannot read "every
 				// tier failed" off a walk that stopped at the first one.
-				return model.Response{}, t, false, callErr
+				return model.Response{}, t, false, blockedBy(b, t, callErr)
 			}
 			// A withheld answer walks on: a different model may answer what this
 			// one declined, and the content is the caller's own to send it. The
@@ -260,8 +262,8 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 		}
 		return out, t, true, nil
 	}
-	if errors.Is(lastErr, ErrProviderDown) {
-		return model.Response{}, lastTier, false, lastErr
+	if lastErr == nil && skipped != nil {
+		return model.Response{}, "", false, skipped
 	}
 	if lastErr != nil {
 		// lastTier names the rung whose failure the caller sees, so the
@@ -276,6 +278,13 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 		// would send a caller to re-drive it as an outage.
 		if errors.Is(lastErr, model.ErrOutputWithheld) || errors.Is(lastErr, model.ErrRequestRejected) {
 			return model.Response{}, lastTier, false, lastErr
+		}
+		// A rejected key walks on, as above, but when the walk ends on it the
+		// provider is blocked, and this call is refunded like the next one.
+		if errors.Is(lastErr, ErrProviderUnauthorized) {
+			if down, blocked := blockedBy(b, lastTier, lastErr).(*ProviderDownError); blocked {
+				return model.Response{}, lastTier, false, down
+			}
 		}
 		return model.Response{}, lastTier, false, fmt.Errorf("%w for %s: %w", ErrAllTiersFailed, task, lastErr)
 	}

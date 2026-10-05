@@ -34,13 +34,16 @@ type ProviderDownError struct {
 	Provider   string
 	Health     model.ProviderHealth
 	RetryAfter time.Time
+	// Cause is the failure that blocked the provider, set on the call that
+	// tripped it and nil for a call refused because it was already blocked.
+	Cause error
 }
 
 func (e *ProviderDownError) Error() string {
 	return fmt.Sprintf("ai: provider %s is %s until %s", e.Provider, e.Health, e.RetryAfter.Format(time.RFC3339))
 }
 
-func (e *ProviderDownError) Unwrap() error { return ErrProviderDown }
+func (e *ProviderDownError) Unwrap() []error { return []error{ErrProviderDown, e.Cause} }
 
 // IsDeferral reports whether err means "not now, and not this item's fault":
 // the installation's budget stop or a blocked provider. The attempt is refunded
@@ -71,6 +74,8 @@ const (
 	accountReprobe = 15 * time.Minute
 	downProbeFloor = 30 * time.Second
 	downProbeCap   = 5 * time.Minute
+	// probeLease is how long the one admitted probe holds the slot.
+	probeLease = time.Minute
 )
 
 type failureKind int
@@ -118,7 +123,6 @@ type providerTracker struct {
 	now         func() time.Time
 	status      model.ProviderHealthStatus
 	consecutive int
-	probing     bool
 	backoff     time.Duration
 }
 
@@ -133,17 +137,21 @@ func (t *providerTracker) current() model.ProviderHealthStatus {
 }
 
 // admit lets a call through, or refuses it with the blocking status. Once the
-// retry moment passes, exactly one caller is let through as the probe.
+// retry moment passes, exactly one caller is let through as the probe: it takes
+// a lease by moving RetryAfter forward, so everyone else is refused with a
+// moment still ahead of them, and a probe that never reports frees the slot
+// itself when the lease runs out.
 func (t *providerTracker) admit() (model.ProviderHealthStatus, bool) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	if !t.status.Health.Blocking() {
 		return t.status, true
 	}
-	if t.now().Before(t.status.RetryAfter) || t.probing {
+	now := t.now()
+	if now.Before(t.status.RetryAfter) {
 		return t.status, false
 	}
-	t.probing = true
+	t.status.RetryAfter = now.Add(probeLease)
 	return t.status, true
 }
 
@@ -152,21 +160,23 @@ func (t *providerTracker) observe(err error) {
 	kind := classifyFailure(err)
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	t.probing = false
-	if kind == failNone {
-		if errors.Is(err, context.Canceled) {
-			return
+	switch {
+	case kind != failNone:
+		t.fail(kind)
+	case errors.Is(err, context.Canceled):
+		// The caller walked away before the provider answered: a probe that
+		// was cut short frees its slot without counting for or against it.
+		if t.status.Health.Blocking() {
+			t.status.RetryAfter = t.now()
 		}
+	default:
 		t.recover()
-		return
 	}
-	t.fail(kind)
 }
 
 func (t *providerTracker) reset() {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	t.probing = false
 	t.recover()
 }
 
@@ -187,6 +197,8 @@ func (t *providerTracker) fail(kind failureKind) {
 	case failServer, failTimeout:
 		t.consecutive++
 		switch {
+		case t.status.Health == model.HealthOutOfCredit || t.status.Health == model.HealthUnauthorized:
+			t.trip(t.status.Health, now, accountReprobe)
 		case t.status.Health.Blocking():
 			t.trip(model.HealthDown, now, t.nextBackoff())
 		case t.consecutive < consecutiveToTrip:
@@ -345,4 +357,15 @@ func blockedProvider(b *binding, ladder []Tier, now time.Time) *ProviderDownErro
 		}
 	}
 	return first
+}
+
+// blockedBy dresses the failure that has just blocked a rung's provider as a
+// deferral, so the call that tripped the status is refunded like every later
+// one. A failure that did not block the provider is returned as it came.
+func blockedBy(b *binding, tier Tier, cause error) error {
+	st := b.clients[tier].Health()
+	if !st.Health.Blocking() {
+		return cause
+	}
+	return &ProviderDownError{Provider: b.routeMeta[tier].provider, Health: st.Health, RetryAfter: st.RetryAfter, Cause: cause}
 }
