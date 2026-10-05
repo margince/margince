@@ -63,6 +63,10 @@ func (s *privateThreadStripper) StripWorkspace(ctx context.Context, windows capt
 	}
 	for i, message := range due {
 		if err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+			due, err := capture.PrivateThreadFilesStillDueTx(ctx, tx, windows, statutoryFloor(), message.Activity)
+			if err != nil || !due {
+				return err
+			}
 			return s.stripMessage(ctx, tx, message)
 		}); err != nil {
 			return i, fmt.Errorf("verdict: withholding a personal-thread message's files: %w", err)

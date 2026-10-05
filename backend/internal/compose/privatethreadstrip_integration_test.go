@@ -21,6 +21,8 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // captureBeforeTheVerdict lands a message with a file on a thread nobody has
@@ -74,12 +76,7 @@ func TestAPersonalThreadsEarlierFilesAreWithheldOnceItsWindowCloses(t *testing.T
 	}
 
 	requireNamedWithoutBytes(t, filesFor(ctx, t, db, source))
-	if rc, _, err := blob.Get(ctx, key); err == nil {
-		if cerr := rc.Close(); cerr != nil {
-			t.Errorf("closing: %v", cerr)
-		}
-		t.Error("the file's object is still in the store")
-	}
+	requireQueuedForDeletion(ctx, t, db, key)
 	encoded := base64.StdEncoding.EncodeToString(onePDF().Body)
 	if raw := storedOriginal(ctx, t, db, source); bytes.Contains(raw, []byte(encoded)) {
 		t.Error("the stored original still carries the file's bytes")
@@ -143,5 +140,92 @@ func TestAnOverruledPersonalThreadKeepsItsFiles(t *testing.T) {
 	}
 	if files := filesFor(ctx, t, db, source); len(files) != 1 || files[0].withheld {
 		t.Fatalf("files = %+v, want the file kept on a thread its owner shared", files)
+	}
+}
+
+// requireQueuedForDeletion holds that the object is left to the stored-object
+// reaper: declared provisional, and named by no row, which is the pair the
+// reaper deletes on. Deleting it inside the strip's transaction would leave a
+// row naming a missing object whenever the transaction then failed.
+func requireQueuedForDeletion(ctx context.Context, t *testing.T, db *database.DB, key string) {
+	t.Helper()
+	var queued, named int
+	if err := db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := tx.QueryRow(ctx,
+			`SELECT count(*) FROM stored_object_intent WHERE storage_key = $1`, key).Scan(&queued); err != nil {
+			return err
+		}
+		return tx.QueryRow(ctx,
+			`SELECT count(*) FROM attachment WHERE storage_key = $1`, key).Scan(&named)
+	}); err != nil {
+		t.Fatalf("reading the deletion queue: %v", err)
+	}
+	if queued != 1 || named != 0 {
+		t.Errorf("object %s: queued=%d, named by %d row(s); want queued for the reaper and named by none", key, queued, named)
+	}
+}
+
+// Archiving hides an attachment and keeps its object, so an archived file on a
+// personal thread is withheld like any other, and stays archived.
+func TestAnArchivedFileOnAPersonalThreadIsWithheldToo(t *testing.T) {
+	ctx, db, tag := captureWorkspace(t)
+	blob := blobstore.NewMemory()
+	address := "thread-" + tag + "@example.com"
+	source, thread := "msg-archived-"+tag, "thread-"+tag
+	key := captureBeforeTheVerdict(ctx, t, db, blob, source, thread, address)
+	judgeThreadPersonal(ctx, t, db, source, thread, address, "8 days")
+	if err := db.Tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `UPDATE attachment SET archived_at = now() WHERE storage_key = $1`, key)
+		return err
+	}); err != nil {
+		t.Fatalf("archiving the file: %v", err)
+	}
+
+	if _, err := privateThreadStripperFor(db.Pool(), blob).StripWorkspace(ctx, capture.DefaultPersonalPurgeWindows()); err != nil {
+		t.Fatalf("StripWorkspace: %v", err)
+	}
+	requireNamedWithoutBytes(t, filesFor(ctx, t, db, source))
+	requireQueuedForDeletion(ctx, t, db, key)
+}
+
+// The scan's answer goes stale the moment its transaction ends. Asked again
+// inside the strip's own transaction, a thread shared back in between is no
+// longer due.
+func TestTheRecheckSeesAThreadSharedAfterTheScan(t *testing.T) {
+	ctx, db, tag := captureWorkspace(t)
+	blob := blobstore.NewMemory()
+	address := "thread-" + tag + "@example.com"
+	source, thread := "msg-recheck-"+tag, "thread-"+tag
+	captureBeforeTheVerdict(ctx, t, db, blob, source, thread, address)
+	judgeThreadPersonal(ctx, t, db, source, thread, address, "8 days")
+	strip := principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: "system:private-thread-strip"})
+
+	ask := func() bool {
+		t.Helper()
+		var due bool
+		if err := db.Tx(strip, func(tx pgx.Tx) error {
+			var id ids.UUID
+			if err := tx.QueryRow(strip, `SELECT id FROM activity WHERE source_id = $1`, source).Scan(&id); err != nil {
+				return err
+			}
+			var err error
+			due, err = capture.PrivateThreadFilesStillDueTx(strip, tx, capture.DefaultPersonalPurgeWindows(), statutoryFloor(), id)
+			return err
+		}); err != nil {
+			t.Fatalf("rechecking: %v", err)
+		}
+		return due
+	}
+	if !ask() {
+		t.Fatal("a message past its window was not due — the recheck refuses everything")
+	}
+	if err := db.Tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `UPDATE capture_thread_verdict SET status = 'shared_by_owner' WHERE thread_key = $1`, thread)
+		return err
+	}); err != nil {
+		t.Fatalf("sharing the thread: %v", err)
+	}
+	if ask() {
+		t.Fatal("a thread shared back after the scan was still due")
 	}
 }

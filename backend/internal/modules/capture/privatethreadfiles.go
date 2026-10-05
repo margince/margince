@@ -53,34 +53,16 @@ func SelectPrivateThreadFilesDueTx(
 	if limit <= 0 {
 		return nil, nil
 	}
-	// Windows first, then the floor's own arguments, then the limit — each
-	// placeholder derived from where its argument actually landed.
-	args := []any{windows.ByOwner, windows.ByClassifier}
-	shielded, args := floor.column(len(args), args)
+	where, args := privateThreadFilesDue(windows, floor)
 	args = append(args, limit)
-	limitAt := "$" + strconv.Itoa(len(args))
 	rows, err := tx.Query(ctx, `
 		SELECT a.id, a.raw_capture_id
 		  FROM activity a
 		  JOIN capture_thread_verdict v
 		    ON v.thread_key = a.thread_key AND v.user_id::text = split_part(a.captured_by, ':', 3)
-		 WHERE v.kind = 'personal' AND v.status IN ('held', 'held_by_owner')
-		   AND v.resolved_at IS NOT NULL
-		   AND a.counterparty_email = ANY (v.seen_addresses)
-		   AND a.kind = 'email' AND a.captured_by LIKE 'connector:%'
-		   AND a.archived_at IS NULL AND a.restricted_at IS NULL
-		   AND NOT (`+shielded+`)
-		   AND NOT `+underAnOpenRequest+`
-		   AND greatest(a.created_at, v.resolved_at)
-		       + (CASE WHEN v.status = 'held_by_owner' THEN $1 ELSE $2 END)::interval <= now()
-		   AND NOT EXISTS (
-		       SELECT 1 FROM capture_import o WHERE o.activity_id = a.id AND o.user_id <> v.user_id)
-		   AND EXISTS (
-		       SELECT 1 FROM attachment at
-		        WHERE at.activity_id = a.id AND at.archived_at IS NULL
-		          AND at.storage_key <> '' AND NOT at.bytes_withheld)
+		 WHERE `+where+`
 		 ORDER BY a.id
-		 LIMIT `+limitAt, args...)
+		 LIMIT $`+strconv.Itoa(len(args)), args...)
 	if err != nil {
 		return nil, fmt.Errorf("capture: selecting private-thread mail whose files are due: %w", err)
 	}
@@ -97,6 +79,58 @@ func SelectPrivateThreadFilesDueTx(
 		return nil, fmt.Errorf("capture: reading private-thread mail whose files are due: %w", err)
 	}
 	return out, nil
+}
+
+// PrivateThreadFilesStillDueTx asks the selection's question again for one
+// message, inside the transaction that will withhold its files, and locks the
+// message and its verdict while it does.
+//
+// The selection ran in a transaction of its own, and a thread shared back, a
+// hold, an archive or a colleague's import between that read and this one would
+// otherwise be stripped on a stale answer. The locks keep the owner's share and
+// a restriction from landing between this answer and the commit.
+func PrivateThreadFilesStillDueTx(
+	ctx context.Context, tx pgx.Tx, windows PersonalPurgeWindows, floor StatutoryFloor, activity ids.UUID,
+) (bool, error) {
+	where, args := privateThreadFilesDue(windows, floor)
+	args = append(args, activity)
+	var due bool
+	err := tx.QueryRow(ctx, `
+		SELECT true
+		  FROM activity a
+		  JOIN capture_thread_verdict v
+		    ON v.thread_key = a.thread_key AND v.user_id::text = split_part(a.captured_by, ':', 3)
+		 WHERE `+where+` AND a.id = $`+strconv.Itoa(len(args))+`
+		   FOR UPDATE OF a, v`, args...).Scan(&due)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("capture: rechecking a private-thread message before withholding its files: %w", err)
+	}
+	return due, nil
+}
+
+// privateThreadFilesDue is the one spelling of which messages' files are due,
+// over `activity a` joined to its verdict `v`, with its arguments. The scan and
+// the recheck both read it, so they cannot come to disagree.
+func privateThreadFilesDue(windows PersonalPurgeWindows, floor StatutoryFloor) (string, []any) {
+	args := []any{windows.ByOwner, windows.ByClassifier}
+	shielded, args := floor.column(len(args), args)
+	return `v.kind = 'personal' AND v.status IN ('held', 'held_by_owner')
+		   AND v.resolved_at IS NOT NULL
+		   AND a.counterparty_email = ANY (v.seen_addresses)
+		   AND a.kind = 'email' AND a.captured_by LIKE 'connector:%'
+		   AND a.archived_at IS NULL AND a.restricted_at IS NULL
+		   AND NOT (` + shielded + `)
+		   AND NOT ` + underAnOpenRequest + `
+		   AND greatest(a.created_at, v.resolved_at)
+		       + (CASE WHEN v.status = 'held_by_owner' THEN $1 ELSE $2 END)::interval <= now()
+		   AND NOT EXISTS (
+		       SELECT 1 FROM capture_import o WHERE o.activity_id = a.id AND o.user_id <> v.user_id)
+		   AND EXISTS (
+		       SELECT 1 FROM attachment at
+		        WHERE at.activity_id = a.id AND at.storage_key <> '' AND NOT at.bytes_withheld)`, args
 }
 
 // StoredBody is one stored file of a message, with its bytes: the ordinal the

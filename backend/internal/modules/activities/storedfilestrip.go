@@ -14,6 +14,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/storedobjects"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -31,7 +32,7 @@ type StoredMessageFile struct {
 // bytes, which a caller withholding them needs to find them in the original.
 //
 // Only files with an object behind them: a row already withheld has nothing to
-// read. A file whose part ordinal is not one capture wrote is still returned,
+// read. An archived file is included: archiving hides a row and keeps its bytes. A file whose part ordinal is not one capture wrote is still returned,
 // with ordinal 0, so its bytes are withheld even if no marker can name it.
 func (s *Store) StoredFilesOfMessageTx(ctx context.Context, tx pgx.Tx, activityID ids.UUID) ([]StoredMessageFile, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
@@ -42,8 +43,7 @@ func (s *Store) StoredFilesOfMessageTx(ctx context.Context, tx pgx.Tx, activityI
 	}
 	rows, err := tx.Query(ctx, `
 		SELECT id, storage_key, coalesce(external_part_id, '') FROM attachment
-		 WHERE activity_id = $1 AND archived_at IS NULL
-		   AND storage_key <> '' AND NOT bytes_withheld
+		 WHERE activity_id = $1 AND storage_key <> '' AND NOT bytes_withheld
 		 ORDER BY id`, activityID)
 	if err != nil {
 		return nil, fmt.Errorf("activities: listing a message's stored files: %w", err)
@@ -92,22 +92,21 @@ func (s *Store) readObject(ctx context.Context, key string) ([]byte, error) {
 
 // WithholdStoredFilesTx turns stored files into withheld ones: each row keeps
 // its name, size and type, loses its key and checksum and is marked
-// bytes_withheld, with an audit row; then the objects are deleted.
+// bytes_withheld, with an audit row. An archived row is withheld too and stays
+// archived.
 //
-// Objects last and inside the caller's transaction, as erasure does: a failed
-// delete rolls the rows back with their keys intact, so no row is left naming
-// an object that is gone, and a retry finds the same files again.
+// No object is deleted here. Each key is declared provisional on this same
+// transaction, and the stored-object reaper deletes it once no row names it —
+// so the rows and the deletion commit together, and a rolled-back strip leaves
+// every object where its row still points.
 func (s *Store) WithholdStoredFilesTx(ctx context.Context, tx pgx.Tx, files []StoredMessageFile) error {
 	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
 		return err
 	}
-	if s.blob == nil {
-		return ErrBlobstoreUnconfigured
-	}
 	for _, f := range files {
 		tag, err := tx.Exec(ctx, `
 			UPDATE attachment SET storage_key = '', checksum = NULL, bytes_withheld = true
-			 WHERE id = $1 AND storage_key = $2 AND NOT bytes_withheld AND archived_at IS NULL`, f.ID, f.Key)
+			 WHERE id = $1 AND storage_key = $2 AND NOT bytes_withheld`, f.ID, f.Key)
 		if err != nil {
 			return fmt.Errorf("activities: withholding a stored file: %w", err)
 		}
@@ -118,8 +117,8 @@ func (s *Store) WithholdStoredFilesTx(ctx context.Context, tx pgx.Tx, files []St
 			map[string]any{fieldBytesWithheld: false}, map[string]any{fieldBytesWithheld: true}); err != nil {
 			return fmt.Errorf("activities: auditing a withheld file: %w", err)
 		}
-		if err := s.blob.Delete(ctx, f.Key); err != nil {
-			return fmt.Errorf("activities: deleting a withheld file's object: %w", err)
+		if err := storedobjects.RecordTx(ctx, tx, storedobjects.KindAttachment, f.Key); err != nil {
+			return err
 		}
 	}
 	return nil
