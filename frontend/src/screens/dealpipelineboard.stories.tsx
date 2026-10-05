@@ -126,7 +126,9 @@ const openSummary: Story["play"] = async ({ canvasElement }) => {
   await userEvent.click(first);
   const page = within(canvasElement.ownerDocument.body);
   await expect(
-    await page.findByRole("dialog", { name: "Deal summary" }),
+    await page.findByRole("dialog", {
+      name: "deal-de-nordwind-x-gradion-admin-fleetops",
+    }),
   ).toBeInTheDocument();
 };
 

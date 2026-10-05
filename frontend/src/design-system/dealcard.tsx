@@ -277,10 +277,9 @@ function DealCardFoot({
 /**
  * The card's verbs, as named glyphs at the trailing end of its last line.
  *
- * They keep their room at rest and show under the pointer or on focus (see
- * composed.css): twenty cards of glyphs that never go away is a column of
- * noise, and a line that only made room for them on hover would push every
- * card under it down a step.
+ * On every card and at rest, not revealed by a hover: a verb that kept its
+ * room while hidden left a blank band under the hairline of every card with
+ * nothing else to say, and a screen with no pointer could never reveal it.
  */
 function DealCardVerbs({ actions }: Readonly<{ actions: DealCardActions }>) {
   const t = useT();

@@ -483,26 +483,27 @@
 .deal-card .deal-foot button.deal-mail:hover .chip svg {
   color: var(--accentText);
 }
-/* The verbs hold their room at rest and appear under the pointer or with focus
-   inside the card — the keyboard reader tabs onto them and sees them arrive.
-   A screen with no hover has no way to reveal them, so there they stay. */
 .deal-card .deal-actions {
   position: relative;
   z-index: 1;
   display: inline-flex;
   gap: var(--gapActions);
   margin-inline-start: auto;
-  opacity: 0;
-  transition: opacity var(--dur-state) var(--ease-out);
 }
-.deal-card:hover .deal-actions,
-.deal-card:focus-within .deal-actions {
-  opacity: 1;
+/* Bare glyphs in the supporting ink, with the ground coming back under the
+   pointer: a ground and an edge on every verb is sixty buttons on a column of
+   twenty cards, where the glyphs alone read as one quiet line a rep reaches
+   into. Stated above `.btn-ghost:hover`'s specificity, so the hover is not
+   settled by which sheet the bundler emits last. */
+.deal-card .deal-actions .btn {
+  border-color: transparent;
+  background: none;
+  box-shadow: none;
+  color: var(--textSecondary);
 }
-@media (hover: none) {
-  .deal-card .deal-actions {
-    opacity: 1;
-  }
+.deal-card .deal-actions .btn:hover:not(:disabled) {
+  background: var(--bgHover);
+  color: var(--textPrimary);
 }
 
 /* `margin-bottom` owns the interval below the identity, one full step, on

@@ -34,7 +34,7 @@ function boardDeal(extra?: Partial<BoardDeal>): BoardDeal {
 
 // The card in each reading it has, at the board's own column width: the slots
 // stay level from card to card, and only a card that needs the reader carries
-// colour. The verbs are present on every card here and show under the pointer.
+// colour. Every card here is handed all three verbs.
 const verbs = {
   onSummary: () => undefined,
   onEmail: () => undefined,

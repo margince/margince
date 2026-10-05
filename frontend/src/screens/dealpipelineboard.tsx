@@ -82,6 +82,8 @@ type SummaryState = Readonly<{ deal: BoardDeal; open: boolean }>;
 /**
  * A deal's summary beside the board: the status card the deal page leads with,
  * in a drawer so the column a rep was triaging stays on screen behind it.
+ * Headed by the deal's name, as the deal page is, because the card's own panel
+ * is already titled as the summary.
  */
 function DealSummaryDrawer({
   summary,
@@ -97,17 +99,15 @@ function DealSummaryDrawer({
       placement="right"
     >
       <Heading size="large" id={titleId} className="modal-title">
-        {t("deal360.brief")}
+        {summary?.deal.name}
       </Heading>
       {summary && (
-        <>
-          <div className="record-stack">
-            <DealStatusCardPanel
-              key={summary.deal.id}
-              dealId={summary.deal.id}
-              dealName={summary.deal.name}
-            />
-          </div>
+        <div className="record-stack">
+          <DealStatusCardPanel
+            key={summary.deal.id}
+            dealId={summary.deal.id}
+            dealName={summary.deal.name}
+          />
           <p>
             <a
               className="entity-link"
@@ -117,7 +117,7 @@ function DealSummaryDrawer({
               {t("deal.openDeal")}
             </a>
           </p>
-        </>
+        </div>
       )}
     </Modal>
   );

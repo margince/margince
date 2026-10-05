@@ -104,7 +104,9 @@ describe("DealPipelineBoard", () => {
     const user = userEvent.setup();
     renderBoard([openDeal], null);
     await user.click(screen.getByRole("button", { name: "Deal summary" }));
-    const drawer = await screen.findByRole("dialog", { name: "Deal summary" });
+    const drawer = await screen.findByRole("dialog", {
+      name: "Fleet retrofit",
+    });
     expect(
       within(drawer)
         .getByRole("link", { name: "Open deal" })
