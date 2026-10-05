@@ -8764,6 +8764,27 @@ func (e EmailPresentationLifecycle) Valid() bool {
 	}
 }
 
+// Defines values for EmailSignOffKind.
+const (
+	EmailSignOffKindClosing   EmailSignOffKind = "closing"
+	EmailSignOffKindNone      EmailSignOffKind = "none"
+	EmailSignOffKindSignature EmailSignOffKind = "signature"
+)
+
+// Valid indicates whether the value is a known member of the EmailSignOffKind enum.
+func (e EmailSignOffKind) Valid() bool {
+	switch e {
+	case EmailSignOffKindClosing:
+		return true
+	case EmailSignOffKindNone:
+		return true
+	case EmailSignOffKindSignature:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for EmailSummaryDirection.
 const (
 	EmailSummaryDirectionInbound  EmailSummaryDirection = "inbound"
@@ -33189,11 +33210,37 @@ type EmailPresentation struct {
 // frame when the reads that serve them land, and they are not listed until then.
 type EmailPresentationLifecycle string
 
+// EmailSignOff defines model for EmailSignOff.
+type EmailSignOff struct {
+	// Kind `signature`: the caller's own, from Settings. `closing`: the caller has written
+	// none, so the send closes with a plain greeting and their name. `none`: this
+	// send appends nothing.
+	Kind EmailSignOffKind `json:"kind"`
+
+	// Text The block appended below the message, plain text, exactly as sent. Empty when
+	// `kind` is `none`.
+	Text string `json:"text"`
+}
+
+// EmailSignOffKind `signature`: the caller's own, from Settings. `closing`: the caller has written
+// none, so the send closes with a plain greeting and their name. `none`: this
+// send appends nothing.
+type EmailSignOffKind string
+
+// EmailSignOffRequest defines model for EmailSignOffRequest.
+type EmailSignOffRequest struct {
+	// Body The message as written so far, plain text. Read only for its language.
+	Body string `json:"body"`
+
+	// Subject The subject, read for its language when the body is too short to tell.
+	Subject *string `json:"subject,omitempty"`
+}
+
 // EmailSignature defines model for EmailSignature.
 type EmailSignature struct {
 	// Body The sign-off appended below every message this member sends, plain text.
-	// Empty means unsigned, which is the state of every member who has not
-	// written one.
+	// Empty means none written; a send then closes with a plain greeting and
+	// the member's display name.
 	Body      string     `json:"body"`
 	UpdatedAt *time.Time `json:"updated_at,omitempty"`
 }
@@ -53644,6 +53691,9 @@ type SendCompanyEmailJSONRequestBody = SendCompanyEmailRequest
 // PreviewAccountSendAuthorizationJSONRequestBody defines body for PreviewAccountSendAuthorization for application/json ContentType.
 type PreviewAccountSendAuthorizationJSONRequestBody = PreviewAccountSendRequest
 
+// PreviewEmailSignOffJSONRequestBody defines body for PreviewEmailSignOff for application/json ContentType.
+type PreviewEmailSignOffJSONRequestBody = EmailSignOffRequest
+
 // EmbedReindexStartJSONRequestBody defines body for EmbedReindexStart for application/json ContentType.
 type EmbedReindexStartJSONRequestBody = EmbedReindexStartRequest
 
@@ -65749,6 +65799,9 @@ type ServerInterface interface {
 	// Would this account-started message be allowed, and on what ground.
 	// (POST /emails:preview)
 	PreviewAccountSendAuthorization(w http.ResponseWriter, r *http.Request)
+	// The sign-off a send of this message would append beneath it.
+	// (POST /emails:sign-off)
+	PreviewEmailSignOff(w http.ResponseWriter, r *http.Request)
 	// Confirm and start a fleet-wide reindex.
 	// (POST /embeddings/reindex)
 	EmbedReindexStart(w http.ResponseWriter, r *http.Request)
@@ -69304,6 +69357,12 @@ func (_ Unimplemented) SendCompanyEmail(w http.ResponseWriter, r *http.Request, 
 // Would this account-started message be allowed, and on what ground.
 // (POST /emails:preview)
 func (_ Unimplemented) PreviewAccountSendAuthorization(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The sign-off a send of this message would append beneath it.
+// (POST /emails:sign-off)
+func (_ Unimplemented) PreviewEmailSignOff(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -89379,6 +89438,26 @@ func (siw *ServerInterfaceWrapper) PreviewAccountSendAuthorization(w http.Respon
 	handler.ServeHTTP(w, r)
 }
 
+// PreviewEmailSignOff operation middleware
+func (siw *ServerInterfaceWrapper) PreviewEmailSignOff(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewEmailSignOff(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // EmbedReindexStart operation middleware
 func (siw *ServerInterfaceWrapper) EmbedReindexStart(w http.ResponseWriter, r *http.Request) {
 
@@ -106268,6 +106347,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/emails:preview", wrapper.PreviewAccountSendAuthorization)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/emails:sign-off", wrapper.PreviewEmailSignOff)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/embeddings/reindex", wrapper.EmbedReindexStart)

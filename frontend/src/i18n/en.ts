@@ -4558,6 +4558,9 @@ export const en = {
   "compose.whyThisDraft": "Why this draft?",
   "compose.body": "Body",
   "compose.bodyHint": "Click the text to edit it.",
+  "compose.signOff": "Added when you send",
+  "compose.signOffClosing": "You have no signature, so this closing is added.",
+  "compose.signOffSet": "Set your signature",
   "compose.transport": "Send via",
   "compose.transportEmail": "Email",
   "compose.recipientHint": "Name or address",
@@ -5163,7 +5166,7 @@ export const en = {
   "settings.signatureLabel": "Sign-off",
   "settings.signaturePlaceholder": "Marek Janetzke\nGradion · +49 40 123456",
   "settings.signatureHint":
-    "Plain text. Leave empty to send without a signature. AI drafts never add a sign-off.",
+    "Plain text. Leave empty to sign off with a short closing and your name. AI drafts never add a sign-off.",
   "settings.signatureSaving": "Saving…",
   "settings.signatureEdit": "Edit signature",
   "settings.signatureNone": "No sign-off set",

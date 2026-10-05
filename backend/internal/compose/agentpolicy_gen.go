@@ -622,6 +622,7 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/dedupe/candidates/{id}/undo":                                  {Op: "undoDedupeDisposition", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/emails":                                                       {Op: "sendCompanyEmail", Access: "tool", Tool: "send_company_email", RecordType: "activity", Tier: "auto_execute", Scope: "send"},
 	"POST /v1/emails:preview":                                               {Op: "previewAccountSendAuthorization", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"POST /v1/emails:sign-off":                                              {Op: "previewEmailSignOff", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/embeddings/reindex":                                           {Op: "EmbedReindexStart", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/employment-import/backfill":                                   {Op: "backfillEmploymentImport", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/exports":                                                      {Op: "createFilteredExport", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

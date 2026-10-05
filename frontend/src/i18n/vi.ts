@@ -4395,6 +4395,10 @@ export const vi = {
   "compose.whyThisDraft": "Vì sao có bản nháp này?",
   "compose.body": "Nội dung",
   "compose.bodyHint": "Nhấp vào văn bản để chỉnh sửa.",
+  "compose.signOff": "Được thêm khi gửi",
+  "compose.signOffClosing":
+    "Bạn chưa có chữ ký, nên lời kết này sẽ được thêm vào.",
+  "compose.signOffSet": "Đặt chữ ký",
   "compose.transport": "Cách gửi",
   "compose.transportEmail": "Email",
   "compose.recipientHint": "Tên hoặc địa chỉ",
@@ -4992,7 +4996,7 @@ export const vi = {
   "settings.signatureLabel": "Lời kết của bạn",
   "settings.signaturePlaceholder": "Nguyễn Minh Anh\nGradion · +84 28 123456",
   "settings.signatureHint":
-    "Chỉ văn bản thuần. Để trống nghĩa là gửi không chữ ký. AI không bao giờ tự viết lời kết — chữ ký này mới là thứ được gửi đi.",
+    "Chỉ văn bản thuần. Để trống thì thư sẽ kết bằng một lời chào ngắn kèm tên bạn. AI không bao giờ tự viết lời kết — chữ ký này mới là thứ được gửi đi.",
   "settings.signatureSaving": "Đang lưu…",
   "settings.signatureEdit": "Sửa chữ ký",
   "settings.signatureNone": "Chưa đặt lời kết",

@@ -31,16 +31,27 @@ func humanCtx(userID ids.UUID) context.Context {
 	})
 }
 
+// signedBody is the plain part the send path builds: the sign-off for this
+// message, beneath it.
+func signedBody(ctx context.Context, t *testing.T, store *Store, body string) string {
+	t.Helper()
+	sign, err := store.signOff(ctx, body, "")
+	if err != nil {
+		t.Fatalf("resolving the sign-off failed: %v", err)
+	}
+	return sign.under(body)
+}
+
 // The sign-off goes under the message the rep wrote, separated by a blank line
 // — which is what makes it read as theirs rather than as another paragraph.
+// A sender who wrote a signature gets that signature and nothing else: no
+// closing, and no name the signature did not write itself.
 func TestASignatureIsAppendedBeneathTheMessage(t *testing.T) {
-	user := ids.NewV7()
-	store := (&Store{}).WithSignature(&stubSignature{body: "Marek Janetzke\nGradion"})
+	store := (&Store{}).
+		WithSignature(&stubSignature{body: "Marek Janetzke\nGradion"}).
+		WithSenderName(&stubSenderName{name: "Marek J."})
 
-	got, err := store.signedBody(humanCtx(user), "Shall we say Tuesday at 10?")
-	if err != nil {
-		t.Fatalf("signing the body failed: %v", err)
-	}
+	got := signedBody(humanCtx(ids.NewV7()), t, store, "Shall we say Tuesday at 10?")
 	if got != "Shall we say Tuesday at 10?\n\nMarek Janetzke\nGradion" {
 		t.Fatalf("unexpected signed body:\n%q", got)
 	}
@@ -53,62 +64,92 @@ func TestASignatureIsAppendedBeneathTheMessage(t *testing.T) {
 func TestTheSeparatorIsNotASigDash(t *testing.T) {
 	store := (&Store{}).WithSignature(&stubSignature{body: "Marek"})
 
-	got, err := store.signedBody(humanCtx(ids.NewV7()), "Body")
-	if err != nil {
-		t.Fatalf("signing the body failed: %v", err)
-	}
+	got := signedBody(humanCtx(ids.NewV7()), t, store, "Body")
 	if strings.Contains(got, "\n-- \n") || strings.Contains(got, "\n--\n") {
 		t.Fatalf("the signature was introduced by a sig-dash:\n%q", got)
 	}
 }
 
-// Unsigned is the honest state for a member who never wrote one, and it is what
-// every message did before this existed. It must not become a blank block.
-func TestAnEmptySignatureLeavesTheBodyExactlyAsWritten(t *testing.T) {
-	for name, sign := range map[string]string{
-		"never written": "",
-		"only spaces":   "   \n  ",
-	} {
+// A sender who wrote no signature still signs off: a plain closing in the
+// message's own language, above their name. Short notes the detector cannot
+// place fall to the installation's language, then to English.
+func TestASenderWithNoSignatureClosesWithTheirName(t *testing.T) {
+	cases := map[string]struct {
+		signature, body, base, want string
+	}{
+		"english message": {
+			body: "Hi Anna, as discussed I am sending you the offer and the documents for the project. I look forward to your reply.",
+			want: "Best regards,\nLars Jankowfsky",
+		},
+		"german message": {
+			body: "Hallo Anna, wie besprochen schicke ich dir das Angebot und die Unterlagen für das Projekt. Ich freue mich auf deine Rückmeldung.",
+			want: "Viele Grüße,\nLars Jankowfsky",
+		},
+		"vietnamese message": {
+			body: "Chào anh, em gửi anh bản báo giá và tài liệu dự án như đã trao đổi. Mong nhận được phản hồi của anh.",
+			want: "Trân trọng,\nLars Jankowfsky",
+		},
+		"too short to tell, german installation":      {body: "Danke!", base: "de", want: "Viele Grüße,\nLars Jankowfsky"},
+		"too short to tell, no installation language": {body: "Thx", want: "Best regards,\nLars Jankowfsky"},
+		"a signature of only spaces":                  {signature: "  \n ", body: "Thx", want: "Best regards,\nLars Jankowfsky"},
+	}
+	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			store := (&Store{}).WithSignature(&stubSignature{body: sign})
-			got, err := store.signedBody(humanCtx(ids.NewV7()), "Body")
+			store := (&Store{}).
+				WithSignature(&stubSignature{body: tc.signature}).
+				WithSenderName(&stubSenderName{name: "Lars Jankowfsky"}).
+				WithBaseLanguage(BaseLanguageFunc(func(context.Context) string { return tc.base }))
+
+			sign, err := store.signOff(humanCtx(ids.NewV7()), tc.body, "")
 			if err != nil {
-				t.Fatalf("signing the body failed: %v", err)
+				t.Fatalf("resolving the sign-off failed: %v", err)
 			}
-			if got != "Body" {
-				t.Fatalf("the body gained something: %q", got)
+			if sign.Kind != SignOffClosing || sign.Text != tc.want {
+				t.Fatalf("sign-off = %+v, want closing %q", sign, tc.want)
+			}
+			if got := sign.under(tc.body); got != tc.body+"\n\n"+tc.want {
+				t.Fatalf("the closing is not beneath the message: %q", got)
 			}
 		})
 	}
 }
 
+// A member with no display name on file still gets the closing, without a
+// blank line where the name would be.
+func TestAClosingWithNoNameOnFileIsTheClosingAlone(t *testing.T) {
+	store := (&Store{}).WithSignature(&stubSignature{}).WithSenderName(&stubSenderName{})
+
+	if got := signedBody(humanCtx(ids.NewV7()), t, store, "Thx"); got != "Thx\n\nBest regards," {
+		t.Fatalf("unexpected signed body: %q", got)
+	}
+}
+
 // A role wired without the seam sends unsigned rather than refusing to send.
 func TestNoSignatureReaderSendsUnsigned(t *testing.T) {
-	got, err := (&Store{}).signedBody(humanCtx(ids.NewV7()), "Body")
-	if err != nil {
-		t.Fatalf("signing the body failed: %v", err)
-	}
-	if got != "Body" {
+	store := (&Store{}).WithSenderName(&stubSenderName{name: "Lars Jankowfsky"})
+
+	if got := signedBody(humanCtx(ids.NewV7()), t, store, "Body"); got != "Body" {
 		t.Fatalf("the body changed with no reader wired: %q", got)
 	}
 }
 
 // An agent acts under a human's authority but is not that human. A tool-written
-// message arriving under somebody's personal sign-off claims a hand that never
-// touched it, so the agent path asks for no signature at all.
+// message arriving under somebody's personal sign-off — or under their name
+// beneath a closing — claims a hand that never touched it, so the agent path
+// asks for no signature and writes no closing.
 func TestAnAgentSendSignsNothing(t *testing.T) {
-	reader := &stubSignature{body: "Marek Janetzke"}
-	store := (&Store{}).WithSignature(reader)
+	reader := &stubSignature{}
+	store := (&Store{}).WithSignature(reader).WithSenderName(&stubSenderName{name: "Lars Jankowfsky"})
 	ctx := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:assistant", UserID: ids.NewV7(),
 	})
 
-	got, err := store.signedBody(ctx, "Body")
+	sign, err := store.signOff(ctx, "Body", "")
 	if err != nil {
-		t.Fatalf("signing the body failed: %v", err)
+		t.Fatalf("resolving the sign-off failed: %v", err)
 	}
-	if got != "Body" {
-		t.Fatalf("an agent send was signed: %q", got)
+	if sign.Kind != SignOffNone || sign.under("Body") != "Body" {
+		t.Fatalf("an agent send was signed: %+v", sign)
 	}
 	if reader.askedID != ids.Nil {
 		t.Fatal("an agent send asked for a signature it may not use")
@@ -122,9 +163,7 @@ func TestTheSignatureIsReadForTheAuthenticatedSender(t *testing.T) {
 	reader := &stubSignature{body: "Marek"}
 	store := (&Store{}).WithSignature(reader)
 
-	if _, err := store.signedBody(humanCtx(user), "Body"); err != nil {
-		t.Fatalf("signing the body failed: %v", err)
-	}
+	signedBody(humanCtx(user), t, store, "Body")
 	if reader.askedID != user {
 		t.Fatalf("asked for %s, expected the sender %s", reader.askedID, user)
 	}
@@ -132,12 +171,18 @@ func TestTheSignatureIsReadForTheAuthenticatedSender(t *testing.T) {
 
 // A read that fails is not silently swallowed: sending a message the sender
 // believes is signed, unsigned, is a change to what they put their name to.
-func TestAFailedSignatureReadRefusesTheSend(t *testing.T) {
+// The same holds for the name beneath a closing.
+func TestAFailedSignOffReadRefusesTheSend(t *testing.T) {
 	boom := errors.New("database is down")
-	store := (&Store{}).WithSignature(&stubSignature{err: boom})
-
-	if _, err := store.signedBody(humanCtx(ids.NewV7()), "Body"); !errors.Is(err, boom) {
-		t.Fatalf("expected the read error to surface, got %v", err)
+	for name, store := range map[string]*Store{
+		"signature": (&Store{}).WithSignature(&stubSignature{err: boom}),
+		"name":      (&Store{}).WithSignature(&stubSignature{}).WithSenderName(&stubSenderName{err: boom}),
+	} {
+		t.Run(name, func(t *testing.T) {
+			if _, err := store.signOff(humanCtx(ids.NewV7()), "Body", ""); !errors.Is(err, boom) {
+				t.Fatalf("expected the read error to surface, got %v", err)
+			}
+		})
 	}
 }
 
@@ -145,12 +190,9 @@ func TestAFailedSignatureReadRefusesTheSend(t *testing.T) {
 // of a message that disagreed would be two messages, and which one a recipient
 // reads is their client's decision rather than ours.
 func TestTheMarkupAlternativeCarriesTheSameSignOff(t *testing.T) {
-	store := (&Store{}).WithSignature(&stubSignature{body: "Marek Janetzke\nGradion"})
+	sign := SignOff{Text: "Marek Janetzke\nGradion", Kind: SignOffSignature}
 
-	got, err := store.signedHTML(humanCtx(ids.NewV7()), "<p>Shall we say Tuesday?</p>", sendDeliverability{})
-	if err != nil {
-		t.Fatalf("signing the markup failed: %v", err)
-	}
+	got := signedHTML("<p>Shall we say Tuesday?</p>", sign, sendDeliverability{})
 	if !strings.Contains(got, "Marek Janetzke<br>Gradion") {
 		t.Fatalf("the markup lost the sign-off or its line break: %q", got)
 	}
@@ -161,14 +203,9 @@ func TestTheMarkupAlternativeCarriesTheSameSignOff(t *testing.T) {
 // have it become a broken tag, and one who typed a script tag must not have it
 // run in the recipient's client.
 func TestASignatureCannotInjectMarkup(t *testing.T) {
-	store := (&Store{}).WithSignature(&stubSignature{
-		body: `Weiß & Konrad <Recht><script>alert(1)</script>`,
-	})
+	sign := SignOff{Text: `Weiß & Konrad <Recht><script>alert(1)</script>`, Kind: SignOffSignature}
 
-	got, err := store.signedHTML(humanCtx(ids.NewV7()), "<p>Body</p>", sendDeliverability{})
-	if err != nil {
-		t.Fatalf("signing the markup failed: %v", err)
-	}
+	got := signedHTML("<p>Body</p>", sign, sendDeliverability{})
 	if strings.Contains(got, "<script>") {
 		t.Fatalf("a signature injected live markup: %q", got)
 	}
@@ -180,13 +217,7 @@ func TestASignatureCannotInjectMarkup(t *testing.T) {
 // A message with no markup stays single-part. Manufacturing an HTML alternative
 // would make every plain send multipart for no reader's benefit.
 func TestNoMarkupBodyProducesNoMarkupAlternative(t *testing.T) {
-	store := (&Store{}).WithSignature(&stubSignature{body: "Marek"})
-
-	got, err := store.signedHTML(humanCtx(ids.NewV7()), "", sendDeliverability{})
-	if err != nil {
-		t.Fatalf("signing the markup failed: %v", err)
-	}
-	if got != "" {
+	if got := signedHTML("", SignOff{Text: "Marek", Kind: SignOffSignature}, sendDeliverability{}); got != "" {
 		t.Fatalf("a plain-text send gained a markup part: %q", got)
 	}
 }
@@ -202,12 +233,8 @@ func TestBothPartsCarryTheUnsubscribeSurface(t *testing.T) {
 		},
 		words: mailcopy.For("en"),
 	}
-	store := (&Store{}).WithSignature(&stubSignature{})
 
-	got, err := store.signedHTML(humanCtx(ids.NewV7()), "<p>Body</p>", derived)
-	if err != nil {
-		t.Fatalf("signing the markup failed: %v", err)
-	}
+	got := signedHTML("<p>Body</p>", SignOff{Kind: SignOffNone}, derived)
 	if !strings.Contains(got, derived.links.unsubscribe) || !strings.Contains(got, derived.links.manage) {
 		t.Fatalf("the markup part carries no unsubscribe surface: %q", got)
 	}
@@ -297,10 +324,7 @@ func TestTheEnvelopeAndTheSignOffAgreeAboutAuthorship(t *testing.T) {
 			if err != nil {
 				t.Fatalf("resolving the sender name failed: %v", err)
 			}
-			signed, err := store.signedBody(ctx, "Body")
-			if err != nil {
-				t.Fatalf("signing the body failed: %v", err)
-			}
+			signed := signedBody(ctx, t, store, "Body")
 			named := envelope != ""
 			if signedOff := signed != "Body"; named != signedOff {
 				t.Fatalf("envelope named=%v but signed=%v — the two disagree", named, signedOff)

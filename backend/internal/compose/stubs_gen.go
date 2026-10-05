@@ -1639,6 +1639,10 @@ func (stubs) PreviewAccountSendAuthorization(w nethttp.ResponseWriter, r *nethtt
 	httperr.NotImplemented(w, r, "PreviewAccountSendAuthorization")
 }
 
+func (stubs) PreviewEmailSignOff(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "PreviewEmailSignOff")
+}
+
 func (stubs) EmbedReindexStart(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "EmbedReindexStart")
 }

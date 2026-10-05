@@ -164,6 +164,7 @@ import {
   useVisibleSettingsPages,
 } from "./settingsnav";
 import { settingsHref, settingsRouteTarget } from "./settingsrouting";
+import { useSaveSignature } from "./settingssignature";
 
 // Re-exported so this module's own consumers — the tests, the stories, the
 // testkit — keep asking one module for both halves. Splitting their imports
@@ -707,7 +708,6 @@ function AccountCard() {
 // line, which is the part a reader recognises their own signature by.
 function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
   const t = useT();
-  const queryClient = useQueryClient();
   const titleId = useId();
   const [open, setOpen] = useState(false);
   const [body, setBody] = useState<string | null>(null);
@@ -721,29 +721,17 @@ function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
       return data ?? { body: "" };
     },
   });
-  const save = useMutation({
-    mutationFn: async (next: string) => {
-      const { data, error } = await api.PUT("/me/email-signature", {
-        body: { body: next },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-    onSuccess: (saved) => {
-      // Hand the edit back to the server's answer. It trims what it stores, so
-      // a member who typed trailing spaces would otherwise keep seeing them
-      // over a row that no longer has them — with Save still lit, offering to
-      // save a difference that exists only in the browser.
-      setBody(saved?.body ?? "");
-      queryClient.invalidateQueries({ queryKey: ["me-email-signature"] });
-      // Committing the edit is what the dialog was opened for, so a save closes
-      // it — and the toast is what says the write landed, on the page the
-      // reader is handed back to.
-      setOpen(false);
-      toast.show(t("settings.saved"));
-    },
+  const save = useSaveSignature((saved) => {
+    // Hand the edit back to the server's answer. It trims what it stores, so
+    // a member who typed trailing spaces would otherwise keep seeing them
+    // over a row that no longer has them — with Save still lit, offering to
+    // save a difference that exists only in the browser.
+    setBody(saved?.body ?? "");
+    // Committing the edit is what the dialog was opened for, so a save closes
+    // it — and the toast is what says the write landed, on the page the
+    // reader is handed back to.
+    setOpen(false);
+    toast.show(t("settings.saved"));
   });
 
   // The saved value until the member types; theirs from then on. Reading state
