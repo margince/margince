@@ -5499,6 +5499,36 @@ export const de = {
     "Gründe, Klassen und Abhilfen stammen aus der Job-Schicht, nie aus der Rohursache des Workers. Einen Fehler, den sie nicht formulieren kann, zeigt sie mit einem festen Ersatztext und ohne Klasse.",
   "jobs.generatedAt": "Stand: {time}",
 
+  "settings.providerHealth": "Status der KI-Anbieter",
+  "settings.providerHealthSub":
+    "Ob jeder KI-Anbieter antwortet, so wie dieser Server es erlebt hat.",
+  "providerHealth.adminOnly":
+    "Der Status der KI-Anbieter betrifft die ganze Installation und erfordert eine Berechtigung, die deine Rolle nicht hat.",
+  "providerHealth.healthy": "Alle KI-Anbieter antworten.",
+  "aiProviderHealth.label.degraded": "Eingeschränkt",
+  "aiProviderHealth.label.down": "Nicht erreichbar",
+  "aiProviderHealth.label.outOfCredit": "Kein Guthaben",
+  "aiProviderHealth.label.unauthorized": "Schlüssel abgelehnt",
+  "aiProviderHealth.reason.degraded":
+    "Einige Anfragen an diesen Anbieter schlagen fehl. Aufrufe laufen weiterhin.",
+  "aiProviderHealth.reason.down":
+    "Dieser Anbieter ist nicht erreichbar. Aufrufe warten bis zur nächsten Prüfung.",
+  "aiProviderHealth.reason.outOfCredit":
+    "Das Konto hat kein Guthaben mehr. Aufrufe warten bis zur nächsten Prüfung.",
+  "aiProviderHealth.reason.unauthorized":
+    "Der Anbieter hat den API-Schlüssel abgelehnt. Aufrufe warten bis zur nächsten Prüfung.",
+  "aiProviderHealth.fix.degraded":
+    "Prüfe die Statusseite des Anbieters oder wende dich an deinen Systemadministrator.",
+  "aiProviderHealth.fix.down":
+    "Prüfe die Statusseite des Anbieters und seinen Host unter Anbieter oder wende dich an deinen Systemadministrator.",
+  "aiProviderHealth.fix.outOfCredit":
+    "Lade das Konto beim Anbieter auf oder wende dich an deinen Systemadministrator.",
+  "aiProviderHealth.fix.unauthorized":
+    "Ersetze den Schlüssel oder wende dich an deinen Systemadministrator.",
+  "aiProviderHealth.since": "Begann {when}",
+  "aiProviderHealth.nextCheck": "Nächste Prüfung {when}",
+  "aiProviderHealth.nextCheckDue": "Die nächste Prüfung steht an",
+
   "settings.extIngest": "Abgewiesene Connector-Datensätze",
   "settings.extIngestSub":
     "Datensätze eines installierten Connectors, die dieses CRM nicht speichern konnte.",

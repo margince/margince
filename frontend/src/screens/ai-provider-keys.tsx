@@ -9,6 +9,11 @@ import { serviceAccountProblem } from "../design-system/serviceaccountkeyfield";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { ProviderCallsLine, ProviderRecentCalls } from "./ai-call-figures";
+import { useProviderHealth } from "./ai-provider-health";
+import {
+  type ProviderHealthEntry,
+  ProviderHealthNotice,
+} from "./ai-provider-health-notice";
 import {
   credentialKindOf,
   KeyEntry,
@@ -71,6 +76,9 @@ export function AiProviderKeysCard() {
   const canManage = useCanWrite("ai_routing", "update");
   const query = useProviderKeys(canSee);
   const routing = useRouting(canSee);
+  // A separate grant from the list's: health is a diagnostic, so a reader who
+  // may see the keys but not diagnostics gets the rows without the notice.
+  const health = useProviderHealth(useCan("ai_diagnostics", "read")).data;
   const usage = routing.data ? providerUsage(routing.data.routing) : null;
   // The provider whose sheet is open, by name so it follows the list as a key
   // is saved rather than holding a copy that goes stale.
@@ -115,6 +123,9 @@ export function AiProviderKeysCard() {
                   key={p.provider}
                   status={p}
                   usage={usage?.get(p.provider)}
+                  health={health?.providers.find(
+                    (h) => h.provider === p.provider,
+                  )}
                   onOpen={() => {
                     setDraftHost(null);
                     setOpened(p.provider);
@@ -180,10 +191,12 @@ export function AiProviderKeysCard() {
 function ProviderRow({
   status,
   usage,
+  health,
   onOpen,
 }: {
   status: ProviderStatus;
   usage: ProviderUsage | undefined;
+  health: ProviderHealthEntry | undefined;
   onOpen: () => void;
 }) {
   const t = useT();
@@ -212,6 +225,7 @@ function ProviderRow({
           <span className="sr-only"> {providerName(status.provider, t)}</span>
         </Button>
       </div>
+      {health && <ProviderHealthNotice entry={health} />}
     </PanelRow>
   );
 }

@@ -5431,6 +5431,36 @@ export const vi = {
     "Lý do, lớp lỗi và cách xử lý đều là câu chữ của chính tầng tác vụ, không bao giờ là nguyên nhân thô từ worker. Một lỗi mà tầng đó không diễn đạt được sẽ báo bằng câu thay thế cố định và không mang lớp lỗi nào. Một lớp lỗi được đặt ra cho văn bản chưa kiểm chứng sẽ khiến cảnh báo của bạn dựa trên phỏng đoán.",
   "jobs.generatedAt": "Đọc lúc {time}",
 
+  "settings.providerHealth": "Trạng thái nhà cung cấp AI",
+  "settings.providerHealthSub":
+    "Từng nhà cung cấp AI có đang phản hồi hay không, theo máy chủ này ghi nhận.",
+  "providerHealth.adminOnly":
+    "Trạng thái nhà cung cấp AI áp dụng cho toàn bộ hệ thống và cần một quyền mà vai trò của bạn không có.",
+  "providerHealth.healthy": "Tất cả nhà cung cấp AI đang phản hồi.",
+  "aiProviderHealth.label.degraded": "Suy giảm",
+  "aiProviderHealth.label.down": "Không kết nối được",
+  "aiProviderHealth.label.outOfCredit": "Hết tín dụng",
+  "aiProviderHealth.label.unauthorized": "Khóa bị từ chối",
+  "aiProviderHealth.reason.degraded":
+    "Một số yêu cầu tới nhà cung cấp này đang thất bại. Các lệnh gọi vẫn được gửi đi.",
+  "aiProviderHealth.reason.down":
+    "Không kết nối được tới nhà cung cấp này. Các lệnh gọi chờ đến lần kiểm tra tiếp theo.",
+  "aiProviderHealth.reason.outOfCredit":
+    "Tài khoản đã hết tín dụng. Các lệnh gọi chờ đến lần kiểm tra tiếp theo.",
+  "aiProviderHealth.reason.unauthorized":
+    "Nhà cung cấp đã từ chối khóa API. Các lệnh gọi chờ đến lần kiểm tra tiếp theo.",
+  "aiProviderHealth.fix.degraded":
+    "Hãy xem trang trạng thái của nhà cung cấp, hoặc liên hệ quản trị viên hệ thống của bạn.",
+  "aiProviderHealth.fix.down":
+    "Hãy xem trang trạng thái của nhà cung cấp và máy chủ của nó trong mục Nhà cung cấp, hoặc liên hệ quản trị viên hệ thống của bạn.",
+  "aiProviderHealth.fix.outOfCredit":
+    "Hãy nạp thêm tín dụng cho tài khoản nhà cung cấp, hoặc liên hệ quản trị viên hệ thống của bạn.",
+  "aiProviderHealth.fix.unauthorized":
+    "Hãy thay khóa, hoặc liên hệ quản trị viên hệ thống của bạn.",
+  "aiProviderHealth.since": "Bắt đầu {when}",
+  "aiProviderHealth.nextCheck": "Lần kiểm tra tiếp theo {when}",
+  "aiProviderHealth.nextCheckDue": "Đã đến lúc kiểm tra tiếp",
+
   "settings.extIngest": "Bản ghi bị từ chối từ trình kết nối",
   "settings.extIngestSub":
     "Những bản ghi mà một trình kết nối đã cài gửi đến nhưng CRM này không thể biểu diễn.",

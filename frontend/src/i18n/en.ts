@@ -5665,6 +5665,36 @@ export const en = {
     "Reasons, classes and remedies come from the job layer, never the worker’s raw cause. A failure it cannot phrase shows a fixed substitute and no class.",
   "jobs.generatedAt": "As of {time}",
 
+  "settings.providerHealth": "AI provider status",
+  "settings.providerHealthSub":
+    "Whether each AI provider is answering, as this server has seen it.",
+  "providerHealth.adminOnly":
+    "AI provider status covers the whole installation and requires a permission your role does not have.",
+  "providerHealth.healthy": "All AI providers are answering.",
+  "aiProviderHealth.label.degraded": "Degraded",
+  "aiProviderHealth.label.down": "Unreachable",
+  "aiProviderHealth.label.outOfCredit": "Out of credit",
+  "aiProviderHealth.label.unauthorized": "Key rejected",
+  "aiProviderHealth.reason.degraded":
+    "Some requests to this provider are failing. Calls still go through.",
+  "aiProviderHealth.reason.down":
+    "This provider is not reachable. Calls wait until the next check.",
+  "aiProviderHealth.reason.outOfCredit":
+    "The account has no credit left. Calls wait until the next check.",
+  "aiProviderHealth.reason.unauthorized":
+    "The provider rejected the API key. Calls wait until the next check.",
+  "aiProviderHealth.fix.degraded":
+    "Check the provider’s status page, or contact your system administrator.",
+  "aiProviderHealth.fix.down":
+    "Check the provider’s status page and its host under Providers, or contact your system administrator.",
+  "aiProviderHealth.fix.outOfCredit":
+    "Top up the provider account, or contact your system administrator.",
+  "aiProviderHealth.fix.unauthorized":
+    "Replace the key, or contact your system administrator.",
+  "aiProviderHealth.since": "Started {when}",
+  "aiProviderHealth.nextCheck": "Next check {when}",
+  "aiProviderHealth.nextCheckDue": "Next check is due",
+
   "settings.extIngest": "Refused connector records",
   "settings.extIngestSub":
     "Records from an installed connector that this CRM could not store.",

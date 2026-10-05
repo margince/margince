@@ -11,6 +11,7 @@ import {
   formatMoneyCompact,
   formatMoneyOrAbsent,
   formatNumber,
+  formatRelativeTime,
   formatSignedMoney,
   formatTimeOfDay,
   formatUsdPerMTok,
@@ -375,6 +376,28 @@ describe("when a booked meeting happens", () => {
     expect(() => formatDayFull(start, "en", "+01:00")).toThrow(/IANA/);
     expect(() => formatTimeRange(start, end, "en", "Etc/GMT-1")).toThrow(
       /IANA/,
+    );
+  });
+});
+
+describe("formatRelativeTime", () => {
+  const now = new Date("2026-10-05T12:00:00Z");
+
+  it("reads the past and the future in the largest whole unit", () => {
+    expect(formatRelativeTime("2026-10-02T12:00:00Z", "en", now)).toBe(
+      "3 days ago",
+    );
+    expect(formatRelativeTime("2026-10-05T09:00:00Z", "en", now)).toBe(
+      "3 hours ago",
+    );
+    expect(formatRelativeTime("2026-10-05T12:15:00Z", "en", now)).toBe(
+      "in 15 minutes",
+    );
+  });
+
+  it("follows the reader's language", () => {
+    expect(formatRelativeTime("2026-10-05T09:00:00Z", "de", now)).toBe(
+      "vor 3 Stunden",
     );
   });
 });
