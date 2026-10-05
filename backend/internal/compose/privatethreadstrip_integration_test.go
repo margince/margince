@@ -19,7 +19,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/partslim"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
@@ -80,13 +79,23 @@ func TestAPersonalThreadsEarlierFilesAreWithheldOnceItsWindowCloses(t *testing.T
 
 	requireNamedWithoutBytes(t, filesFor(ctx, t, db, source))
 	requireQueuedForDeletion(ctx, t, db, key)
-	// A second pass finds nothing left to strip on this message.
-	if err := database.WithWorkspaceTx(ctx, db.Pool(), func(tx pgx.Tx) error {
-		return activities.NewStore(db).WithBlobstore(blob).WithholdStoredFilesTx(
-			principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: "system:private-thread-strip"}),
-			tx, []activities.StoredMessageFile{{ID: ids.NewV7(), Key: key}})
+	// A second pass finds nothing left to strip on this message, and leaves the
+	// withheld row exactly as the first pass did.
+	if _, err := privateThreadStripperFor(db.Pool(), blob).StripWorkspace(ctx, capture.DefaultPersonalPurgeWindows()); err != nil {
+		t.Fatalf("a second StripWorkspace: %v", err)
+	}
+	requireNamedWithoutBytes(t, filesFor(ctx, t, db, source))
+	var audits int
+	if err := db.Tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `
+			SELECT count(*) FROM audit_log l JOIN attachment at ON at.id = l.entity_id
+			 WHERE l.entity_type = 'attachment' AND l.action = 'update' AND at.activity_id =
+			       (SELECT id FROM activity WHERE source_id = $1)`, source).Scan(&audits)
 	}); err != nil {
-		t.Fatalf("withholding a file already withheld: %v", err)
+		t.Fatalf("counting the withhold audits: %v", err)
+	}
+	if audits != 1 {
+		t.Errorf("the file was withheld %d times, want once — a second pass must not write again", audits)
 	}
 	encoded := base64.StdEncoding.EncodeToString(onePDF().Body)
 	if raw := storedOriginal(ctx, t, db, source); bytes.Contains(raw, []byte(encoded)) {
