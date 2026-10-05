@@ -236,7 +236,7 @@ func insertCapturedAttachment(
 	// the bytes and never anything a sender wrote beyond the name we already
 	// sanitized — matching how a captured activity is audited (ADR-0072/A118).
 	if _, err := storekit.Audit(ctx, tx, "create", "attachment", row.id, nil, map[string]any{
-		"entity_type":    "activity",
+		"entity_type":    linkEntityActivity,
 		"entity_id":      activityID.String(),
 		"category":       from.Category,
 		"byte_size":      row.byteSize,
