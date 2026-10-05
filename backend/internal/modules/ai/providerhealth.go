@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -374,7 +375,40 @@ func (c *trackedClient) Stream(ctx context.Context, req model.Request) (model.To
 		return nil, err
 	}
 	stream, err := c.Client.Stream(ctx, req)
-	return stream, c.observed(a, err)
+	if err != nil {
+		return nil, c.observed(a, err)
+	}
+	// A stream that opened has not answered yet: the provider is heard from
+	// when it ends, because an outage can arrive mid-response.
+	return &observedStream{TokenStream: stream, client: c, admitted: a}, nil
+}
+
+// observedStream reports a stream's outcome to its provider once, when it ends
+// or is closed unfinished.
+type observedStream struct {
+	model.TokenStream
+	client   *trackedClient
+	admitted admission
+	once     sync.Once
+}
+
+func (s *observedStream) Next(ctx context.Context) (string, bool, error) {
+	chunk, ok, err := s.TokenStream.Next(ctx)
+	if err != nil || !ok {
+		err = s.finish(err)
+	}
+	return chunk, ok, err
+}
+
+func (s *observedStream) Close() error {
+	s.finish(context.Canceled)
+	return s.TokenStream.Close()
+}
+
+func (s *observedStream) finish(err error) error {
+	reported := err
+	s.once.Do(func() { reported = s.client.observed(s.admitted, err) })
+	return reported
 }
 
 func (c *trackedClient) Embed(ctx context.Context, req model.EmbedRequest) (model.Embeddings, error) {
@@ -416,4 +450,34 @@ func blockedProvider(b *binding, ladder []Tier, now time.Time) *ProviderDownErro
 func refusedUncalled(err error) bool {
 	var down *ProviderDownError
 	return errors.As(err, &down) && down.Cause == nil
+}
+
+// blockedUnlessCached refuses a call every servable rung of which sits on a
+// blocked provider, unless a cached answer will serve it: that reaches no
+// provider and spends no attempt, so an outage must not withhold it.
+func (r *Router) blockedUnlessCached(b *binding, task Task, ladder []Tier, key string, wsID ids.WorkspaceID, keyErr error) *ProviderDownError {
+	servable := servableLadder(b, task, ladder)
+	if keyErr == nil && !r.cacheOff {
+		if _, tier, hit := r.cache.get(key, wsID, b.generation); hit && tierOnLadder(servable, tier) {
+			return nil
+		}
+	}
+	return blockedProvider(b, servable, r.now())
+}
+
+// blockedForCredit reports whether err refused a call because the provider's
+// account is out of credit.
+func blockedForCredit(err error) bool {
+	var down *ProviderDownError
+	return errors.As(err, &down) && down.Health == model.HealthOutOfCredit
+}
+
+// earlier keeps whichever of two refusals names the sooner retry moment, so a
+// walk that skipped every rung defers only until the first provider may answer.
+func earlier(kept, next error) error {
+	var a, b *ProviderDownError
+	if !errors.As(kept, &a) || !errors.As(next, &b) || b.RetryAfter.Before(a.RetryAfter) {
+		return next
+	}
+	return kept
 }

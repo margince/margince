@@ -58,6 +58,9 @@ func (f *fakeHealthStore) Publish(_ context.Context, provider string, st model.P
 }
 
 func (f *fakeHealthStore) Clear(_ context.Context, provider string) error {
+	if f.gate != nil {
+		<-f.gate
+	}
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	delete(f.rows, provider)
@@ -251,5 +254,55 @@ func TestABookWithNoStoreStaysLocal(t *testing.T) {
 	book.forget("anthropic")
 	if got := book.report(t.Context()); len(got) != 1 || got[0].Provider != "openai" {
 		t.Fatalf("report = %+v", got)
+	}
+}
+
+func TestAProviderClearedByAnotherProcessIsClearedHereToo(t *testing.T) {
+	t.Parallel()
+	store := newFakeHealthStore()
+	book, clock := sharedBook(store)
+	tr := book.tracker("openai")
+	tr.observe(admission{}, ErrProviderQuota)
+	store.wait(t)
+	store.Clear(context.Background(), "openai")
+	store.wait(t)
+
+	book.reconcile(context.Background())
+	if tr.current().Health != model.HealthOutOfCredit {
+		t.Fatal("a status published a moment ago was read as cleared: it may simply not have reached the store")
+	}
+	clock.advance(shareSettle)
+	book.reconcile(context.Background())
+	if h := tr.current().Health; h != model.HealthOK {
+		t.Errorf("health %s after another process cleared the record, want ok", h)
+	}
+}
+
+func TestAnUnreachableStoreIsNotReadAsACleared(t *testing.T) {
+	t.Parallel()
+	store := newFakeHealthStore()
+	book, clock := sharedBook(store)
+	tr := book.tracker("openai")
+	tr.observe(admission{}, ErrProviderQuota)
+	store.wait(t)
+	clock.advance(shareSettle)
+	store.loadErr = errors.New("redis down")
+	book.reconcile(context.Background())
+	if tr.current().Health != model.HealthOutOfCredit {
+		t.Error("an unreachable store cleared a blocked provider")
+	}
+}
+
+func TestAnIdleUnhealthyProviderIsRepublishedBeforeTheStoreExpiresIt(t *testing.T) {
+	t.Parallel()
+	store := newFakeHealthStore()
+	book, clock := sharedBook(store)
+	tr := book.tracker("openai")
+	tr.observe(admission{}, ErrProviderQuota)
+	store.wait(t)
+	clock.advance(shareRefresh)
+	book.reconcile(context.Background())
+	if got := store.wait(t); got != "publish openai" {
+		t.Errorf("the refresh wrote %q, want a publish", got)
 	}
 }

@@ -22,8 +22,13 @@ func TestAStatusPublishedByOneProcessIsLoadedByAnotherAndExpires(t *testing.T) {
 	if err := writer.Publish(t.Context(), "openai", down); err != nil {
 		t.Fatalf("publish: %v", err)
 	}
+	// A provider that is indexed but whose value is garbled, and one whose
+	// key has expired: Load must skip both and prune the expired one.
 	if err := rdb.Set(t.Context(), keyPrefix+"garbled", "{not json", keyTTL).Err(); err != nil {
 		t.Fatalf("seeding a garbled value: %v", err)
+	}
+	if err := rdb.SAdd(t.Context(), indexKey, "garbled", "expired").Err(); err != nil {
+		t.Fatalf("indexing the seeded providers: %v", err)
 	}
 	got, err := reader.Load(t.Context())
 	if err != nil {
@@ -32,6 +37,9 @@ func TestAStatusPublishedByOneProcessIsLoadedByAnotherAndExpires(t *testing.T) {
 	if len(got) != 1 || !got["openai"].Since.Equal(since) || got["openai"].Health != model.HealthDown ||
 		!got["openai"].RetryAfter.Equal(down.RetryAfter) {
 		t.Fatalf("loaded %+v, want only openai %+v", got, down)
+	}
+	if members := rdb.SMembers(t.Context(), indexKey).Val(); len(members) != 2 {
+		t.Errorf("index %v after a load, want the expired provider pruned and openai and garbled left", members)
 	}
 	if ttl := rdb.TTL(t.Context(), keyPrefix+"openai").Val(); ttl <= 0 || ttl > keyTTL {
 		t.Errorf("ttl = %v, want within (0, %v]", ttl, keyTTL)

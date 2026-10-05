@@ -456,6 +456,14 @@ func ladderOf(cheap, premium model.Client) *Router {
 		&memMeter{}, DefaultMonthlyTokens, ProfileEUHosted)
 }
 
+// ladderOn is ladderOf with the router reading the same hand-driven clock as
+// the trackers beneath it, so a retry moment means the same thing to both.
+func ladderOn(clock *healthClock, cheap, premium model.Client) *Router {
+	r := ladderOf(cheap, premium)
+	r.now = clock.now
+	return r
+}
+
 func TestTheCallThatTripsAnEmptyAccountIsRefundedLikeTheNext(t *testing.T) {
 	t.Parallel()
 	book := newProviderBook(newClock().now)
@@ -522,7 +530,7 @@ func TestAFailedProbeOrAnUnreachableHostRefundsTheItemTheWalkEndedOn(t *testing.
 	clock := newClock()
 	dial := &net.OpError{Op: "dial", Err: syscall.ECONNREFUSED}
 	client := trackClient(&faultClient{err: dial}, "openai", newProviderBook(clock.now))
-	r := ladderOf(client, client)
+	r := ladderOn(clock, client, client)
 	ask := func() error {
 		_, _, err := r.Complete(wsContext(t), TaskSummarize, model.Request{Messages: []model.Message{{Role: "user", Content: "x"}}})
 		return err
@@ -596,6 +604,124 @@ func TestAnAuthenticationPolicyRefusalIsTheMessagesOwn(t *testing.T) {
 		got := providerFaultOf(status, errors.New("vendor: this request's authentication method is not allowed by policy"))
 		if errors.Is(got, ErrProviderUnauthorized) {
 			t.Errorf("status %d: an authentication-policy refusal blocked the provider", status)
+		}
+	}
+}
+
+type streamClient struct {
+	model.NoHealth
+	stream model.TokenStream
+}
+
+func (c *streamClient) Complete(context.Context, model.Request) (model.Response, error) {
+	return model.Response{}, nil
+}
+func (c *streamClient) Stream(context.Context, model.Request) (model.TokenStream, error) {
+	return c.stream, nil
+}
+func (c *streamClient) Embed(context.Context, model.EmbedRequest) (model.Embeddings, error) {
+	return model.Embeddings{}, nil
+}
+func (c *streamClient) Caps() model.Capabilities { return model.Capabilities{} }
+
+type scriptedStream struct {
+	err    error
+	closed bool
+}
+
+func (s *scriptedStream) Next(context.Context) (string, bool, error) { return "", false, s.err }
+func (s *scriptedStream) Close() error                               { s.closed = true; return nil }
+
+func TestAStreamThatFailsMidResponseBlocksItsProvider(t *testing.T) {
+	t.Parallel()
+	clock := newClock()
+	book := newProviderBook(clock.now)
+	stream := &scriptedStream{err: ErrProviderQuota}
+	client := trackClient(&streamClient{stream: stream}, "openai", book)
+	opened, err := client.Stream(context.Background(), model.Request{})
+	if err != nil {
+		t.Fatalf("opening the stream: %v", err)
+	}
+	if h := client.Health().Health; h != model.HealthOK {
+		t.Fatalf("health %s before the stream ended, want ok: an opened stream has not answered yet", h)
+	}
+	_, _, err = opened.Next(context.Background())
+	if !IsDeferral(err) || !errors.Is(err, ErrProviderQuota) {
+		t.Errorf("the terminal error %v, want a deferral that keeps the refusal", err)
+	}
+	if h := client.Health().Health; h != model.HealthOutOfCredit {
+		t.Errorf("health %s after the stream failed, want out_of_credit", h)
+	}
+}
+
+func TestAStreamClosedUnfinishedFreesTheProbeSlotWithoutCounting(t *testing.T) {
+	t.Parallel()
+	clock := newClock()
+	book := newProviderBook(clock.now)
+	tracker := book.tracker("openai")
+	tracker.observe(admission{}, ErrProviderQuota)
+	clock.advance(accountReprobe)
+	client := trackClient(&streamClient{stream: &scriptedStream{}}, "openai", book)
+	opened, err := client.Stream(context.Background(), model.Request{})
+	if err != nil {
+		t.Fatalf("the probe stream was refused: %v", err)
+	}
+	if err := opened.Close(); err != nil {
+		t.Fatalf("closing: %v", err)
+	}
+	if h := client.Health().Health; h != model.HealthOutOfCredit {
+		t.Errorf("health %s after an abandoned probe, want it unchanged", h)
+	}
+	if _, _, ok := tracker.admit(); !ok {
+		t.Error("an abandoned probe stream kept the slot")
+	}
+}
+
+func TestACachedAnswerIsServedWhileTheProviderIsBlocked(t *testing.T) {
+	t.Parallel()
+	clock := newClock()
+	book := newProviderBook(clock.now)
+	inner := &faultClient{}
+	client := trackClient(inner, "openai", book)
+	r := ladderOn(clock, client, client)
+	ctx := wsContext(t)
+	ask := func() error {
+		_, _, err := r.Complete(ctx, TaskSummarize, model.Request{Messages: []model.Message{{Role: "user", Content: "same question"}}})
+		return err
+	}
+	if err := ask(); err != nil {
+		t.Fatalf("the first call: %v", err)
+	}
+	client.(*trackedClient).tracker.observe(admission{}, ErrProviderQuota)
+	if err := ask(); err != nil {
+		t.Errorf("a cached answer was withheld by an outage: %v", err)
+	}
+	if inner.calls != 1 {
+		t.Errorf("provider called %d times, want the one that filled the cache", inner.calls)
+	}
+}
+
+func TestAnEmptyAccountEndsTheWalkInsteadOfBillingARungAbove(t *testing.T) {
+	t.Parallel()
+	clock := newClock()
+	book := newProviderBook(clock.now)
+	empty := trackClient(&faultClient{}, "openai", book)
+	empty.(*trackedClient).tracker.observe(admission{}, ErrProviderQuota)
+	premium := &faultClient{}
+	r := ladderOn(clock, empty, trackClient(premium, "gemini", newProviderBook(clock.now)))
+	_, _, err := r.Complete(wsContext(t), TaskSummarize, model.Request{Messages: []model.Message{{Role: "user", Content: "x"}}})
+	if !IsDeferral(err) || premium.calls != 0 {
+		t.Errorf("error %v with the premium rung called %d times, want a deferral and no silent fallback", err, premium.calls)
+	}
+}
+
+func TestASkippedWalkDefersOnlyUntilTheFirstProviderMayAnswer(t *testing.T) {
+	t.Parallel()
+	soon := &ProviderDownError{Health: model.HealthDown, RetryAfter: time.Date(2026, 10, 5, 9, 1, 0, 0, time.UTC)}
+	later := &ProviderDownError{Health: model.HealthDown, RetryAfter: time.Date(2026, 10, 5, 9, 15, 0, 0, time.UTC)}
+	for name, got := range map[string]error{"later first": earlier(later, soon), "sooner first": earlier(soon, later)} {
+		if until, _ := DeferredUntil(got); !until.Equal(soon.RetryAfter) {
+			t.Errorf("%s: deferred until %v, want the sooner %v", name, until, soon.RetryAfter)
 		}
 	}
 }

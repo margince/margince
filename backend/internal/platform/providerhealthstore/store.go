@@ -11,6 +11,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -46,7 +47,7 @@ func (s *Redis) Publish(ctx context.Context, provider string, st model.ProviderH
 	if err != nil {
 		return fmt.Errorf("providerhealthstore: encoding %s: %w", provider, err)
 	}
-	pipe := s.rdb.Pipeline()
+	pipe := s.rdb.TxPipeline()
 	pipe.Set(ctx, keyPrefix+provider, raw, keyTTL)
 	pipe.SAdd(ctx, indexKey, provider)
 	if _, err := pipe.Exec(ctx); err != nil {
@@ -57,7 +58,7 @@ func (s *Redis) Publish(ctx context.Context, provider string, st model.ProviderH
 
 // Clear drops provider's status; clearing a provider with none is not an error.
 func (s *Redis) Clear(ctx context.Context, provider string) error {
-	pipe := s.rdb.Pipeline()
+	pipe := s.rdb.TxPipeline()
 	pipe.Del(ctx, keyPrefix+provider)
 	pipe.SRem(ctx, indexKey, provider)
 	if _, err := pipe.Exec(ctx); err != nil {
@@ -88,9 +89,11 @@ func (s *Redis) Load(ctx context.Context) (map[string]model.ProviderHealthStatus
 	if err != nil {
 		return nil, fmt.Errorf("providerhealthstore: reading statuses: %w", err)
 	}
+	var expired []any
 	for i, value := range values {
 		raw, ok := value.(string)
 		if !ok {
+			expired = append(expired, providers[i])
 			continue
 		}
 		var rec record
@@ -98,6 +101,14 @@ func (s *Redis) Load(ctx context.Context) (map[string]model.ProviderHealthStatus
 			continue
 		}
 		out[providers[i]] = model.ProviderHealthStatus{Health: rec.Health, Since: rec.Since, RetryAfter: rec.RetryAfter}
+	}
+	if len(expired) > 0 {
+		// A key that expired leaves its provider in the index; drop it so the
+		// index does not grow past what is recorded. A failure is not the
+		// reader's problem: the next Load tries again.
+		if err := s.rdb.SRem(ctx, indexKey, expired...).Err(); err != nil {
+			slog.WarnContext(ctx, "providerhealthstore: pruning expired providers from the index", "error", err)
+		}
 	}
 	return out, nil
 }

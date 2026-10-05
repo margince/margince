@@ -202,7 +202,13 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 			// traced or metered as a failure of this request, and it never
 			// replaces what a rung that WAS called answered.
 			if refusedUncalled(callErr) {
-				skipped = callErr
+				// An account refused for lack of credit ends the walk, as the
+				// refusal itself does: skipping on would bill a premium rung
+				// for every call while the configured one is empty.
+				if lastErr == nil && blockedForCredit(callErr) {
+					return model.Response{}, t, false, callErr
+				}
+				skipped = earlier(skipped, callErr)
 				continue
 			}
 			lastErr, lastTier = callErr, t

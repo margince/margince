@@ -206,10 +206,6 @@ func (r *Router) serveAttempt(ctx context.Context, lc *logicalCall, task Task, l
 		// return below.
 		return model.Response{}, RouteInfo{}, budgetErr
 	}
-	if downErr := blockedProvider(b, ladder, r.now()); downErr != nil {
-		// Like a budget deferral: no call was made, so nothing is traced.
-		return model.Response{}, RouteInfo{}, downErr
-	}
 	if req.SecretStripper == nil {
 		req.SecretStripper = r.stripper
 	}
@@ -224,6 +220,10 @@ func (r *Router) serveAttempt(ctx context.Context, lc *logicalCall, task Task, l
 	if keyErr == nil {
 		// The site's own defect, found with the key's: before any provider.
 		req, keyErr = withSiteThinking(req, task)
+	}
+	if downErr := r.blockedUnlessCached(b, task, ladder, key, wsID, keyErr); downErr != nil {
+		// Like a budget deferral: no call was made, so nothing is traced.
+		return model.Response{}, RouteInfo{}, downErr
 	}
 
 	// Every terminal from here on is traced — the budget-read and cache-key

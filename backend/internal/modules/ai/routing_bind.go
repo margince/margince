@@ -196,5 +196,8 @@ func (cfg RoutingConfig) providers() []string {
 	for _, binding := range cfg.Tiers {
 		seen[binding.Provider] = true
 	}
+	if cfg.Decisions != nil {
+		seen[cfg.Decisions.Provider] = true
+	}
 	return slices.Sorted(maps.Keys(seen))
 }

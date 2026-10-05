@@ -20,6 +20,12 @@ const (
 	// changed, well inside the store's expiry, so a long degraded spell is not
 	// forgotten while it is still true.
 	shareRefresh = 10 * time.Minute
+	// shareTick is how often a process with an unhealthy provider refreshes its
+	// shared record and notices that another process cleared it.
+	shareTick = 30 * time.Second
+	// shareSettle is how old a published status must be before its absence from
+	// the store is read as "cleared by someone" rather than "not written yet".
+	shareSettle = time.Minute
 )
 
 // ProviderHealthStore is where processes leave each provider's unhealthy
@@ -37,7 +43,48 @@ type ProviderHealthStore interface {
 // ShareProviderHealth makes this process publish its provider statuses to store
 // and read the others' through it. A role without a shared store never calls it
 // and keeps answering for itself alone.
-func ShareProviderHealth(store ProviderHealthStore) { sharedProviderHealth.sharer.use(store) }
+func ShareProviderHealth(store ProviderHealthStore) {
+	sharedProviderHealth.sharer.use(store)
+	go sharedProviderHealth.maintain(shareTick)
+}
+
+// maintain keeps this process's records honest for as long as it runs: an
+// unhealthy status nobody touches is republished before the store expires it,
+// and a status another process cleared (a confirmed key test, a rebind) is
+// cleared here too, so the fix reaches the process that owns the retry window.
+// It costs nothing while every provider is healthy.
+func (b *providerBook) maintain(every time.Duration) {
+	for range time.Tick(every) {
+		b.reconcile(context.Background())
+	}
+}
+
+func (b *providerBook) reconcile(ctx context.Context) {
+	b.mu.Lock()
+	trackers := make(map[string]*providerTracker, len(b.trackers))
+	for name, t := range b.trackers {
+		trackers[name] = t
+	}
+	b.mu.Unlock()
+	unhealthy := false
+	for _, t := range trackers {
+		if t.refreshIfDue() {
+			unhealthy = true
+		}
+	}
+	if !unhealthy {
+		return
+	}
+	shared, ok := b.sharer.loadChecked(ctx)
+	if !ok {
+		return
+	}
+	for name, t := range trackers {
+		if _, held := shared[name]; !held {
+			t.resetIfClearedElsewhere()
+		}
+	}
+}
 
 // healthSharer pushes status changes to the store off the call path: a change
 // is queued, one goroutine at a time drains the queue, and a provider changing
@@ -115,6 +162,21 @@ func (s *healthSharer) write(store ProviderHealthStore, provider string, st mode
 	case recovered:
 		slog.InfoContext(ctx, "the shared AI provider status is writable again")
 	}
+}
+
+// loadChecked is load that also says whether the store answered, because an
+// empty answer and an unreachable store mean opposite things to reconcile.
+func (s *healthSharer) loadChecked(ctx context.Context) (map[string]model.ProviderHealthStatus, bool) {
+	s.mu.Lock()
+	store := s.store
+	s.mu.Unlock()
+	if store == nil {
+		return nil, false
+	}
+	ctx, cancel := context.WithTimeout(ctx, shareTimeout)
+	defer cancel()
+	shared, err := store.Load(ctx)
+	return shared, err == nil
 }
 
 // load reads what every process published; nil when nothing is shared or Redis
@@ -200,4 +262,33 @@ func (t *providerTracker) share(before model.ProviderHealthStatus) {
 	}
 	t.sharedAt = now
 	t.notify(t.status)
+}
+
+// refreshIfDue republishes an unhealthy status that has sat unchanged for most
+// of the store's expiry, and reports whether the tracker is unhealthy at all.
+func (t *providerTracker) refreshIfDue() bool {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if t.status.Health == model.HealthOK {
+		return false
+	}
+	if t.notify != nil && t.now().Sub(t.sharedAt) >= shareRefresh {
+		t.sharedAt = t.now()
+		t.notify(t.status)
+	}
+	return true
+}
+
+// resetIfClearedElsewhere recovers a blocked tracker whose shared record has
+// gone: another process cleared it, which only an operator's fix does, and the
+// record was old enough to have been written (else it is merely unpublished).
+func (t *providerTracker) resetIfClearedElsewhere() {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if !t.status.Health.Blocking() || t.sharedAt.IsZero() || t.now().Sub(t.sharedAt) < shareSettle {
+		return
+	}
+	before := t.status
+	t.recover()
+	t.share(before)
 }
