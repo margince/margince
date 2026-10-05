@@ -5,6 +5,7 @@ package activities
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -73,6 +74,9 @@ func refuseWithheldBytes(ctx context.Context, tx pgx.Tx, attachmentID ids.UUID) 
 	var withheld bool
 	if err := tx.QueryRow(ctx,
 		`SELECT bytes_withheld FROM attachment WHERE id = $1`, attachmentID).Scan(&withheld); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return apperrors.ErrNotFound
+		}
 		return fmt.Errorf("activities: reading whether a file's bytes were kept: %w", err)
 	}
 	if withheld {

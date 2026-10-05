@@ -20523,7 +20523,7 @@ export interface components {
             byte_size?: number | null;
             content_type?: string | null;
             /** @description True when the message is private to its owner and the file was recorded by name, size and type only. There are no bytes to fetch. */
-            bytes_withheld?: boolean;
+            readonly bytes_withheld?: boolean;
         };
         /**
          * @description Who reads this message, and what this caller may do about that. `can_change` and

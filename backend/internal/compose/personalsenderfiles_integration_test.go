@@ -220,8 +220,10 @@ func requireNamedWithoutBytes(t *testing.T, files []capturedFile) {
 	if !f.withheld || f.storageKey != "" {
 		t.Errorf("the row has withheld=%v, storage_key=%q; want a withheld row with no object", f.withheld, f.storageKey)
 	}
-	if f.filename != onePDF().Filename || f.byteSize != int64(len(onePDF().Body)) {
-		t.Errorf("the row names %q, %d bytes; want %q, %d bytes", f.filename, f.byteSize, onePDF().Filename, len(onePDF().Body))
+	if f.filename != onePDF().Filename || f.byteSize != int64(len(onePDF().Body)) ||
+		f.contentType == nil || *f.contentType != onePDF().ContentType {
+		t.Errorf("the row names %q (%v), %d bytes; want %q (%s), %d bytes",
+			f.filename, f.contentType, f.byteSize, onePDF().Filename, onePDF().ContentType, len(onePDF().Body))
 	}
 	if f.company != nil {
 		t.Errorf("a withheld file rolled up to account %s; a file nobody can open has no place in a library", *f.company)

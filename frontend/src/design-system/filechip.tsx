@@ -36,20 +36,22 @@ export function FileChip(
           // Same-origin path to the bytes. This control is for OUR files;
           // anything pointing off the origin is a link, not a file.
           href: string;
+          withheld?: never;
         }
       | {
           // The sentence saying why there is nothing to open: a file recorded
           // by name only, whose bytes were never kept. The card is drawn the
           // same, so the list still says what arrived, but it is not a link.
+          href?: never;
           withheld: string;
         }
     )
   >,
 ) {
-  if ("withheld" in props) {
-    return <WithheldFileChip {...props} />;
+  if (props.withheld !== undefined) {
+    return <WithheldFileChip {...props} withheld={props.withheld} />;
   }
-  return <StoredFileChip {...props} />;
+  return <StoredFileChip {...props} href={props.href} />;
 }
 
 function StoredFileChip({

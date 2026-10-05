@@ -184,13 +184,14 @@ func (s *Store) resolveAttachments(ctx context.Context, attachmentIDs []ids.UUID
 			// without this layer inventing a second vocabulary for it.
 			return nil, fmt.Errorf("resolving an attached file: %w", err)
 		}
-		if meta.ByteSize == nil || *meta.ByteSize <= 0 {
-			return nil, &EmptyAttachmentError{Filename: meta.Filename}
-		}
 		// Refused here, where the sender can act on it: a file named on a private
-		// message has a size and no bytes, and would fail only at delivery.
+		// message has a size and no bytes, and would fail only at delivery. Asked
+		// first, so an empty withheld file is not told to be attached again.
 		if meta.BytesWithheld != nil && *meta.BytesWithheld {
 			return nil, &WithheldAttachmentError{Filename: meta.Filename}
+		}
+		if meta.ByteSize == nil || *meta.ByteSize <= 0 {
+			return nil, &EmptyAttachmentError{Filename: meta.Filename}
 		}
 		out = append(out, OutboundFile{
 			AttachmentID: id,

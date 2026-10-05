@@ -545,12 +545,11 @@ func TestTheAuditImageOfACapturedFileNamesTheCategoryTheRowHolds(t *testing.T) {
 	}
 }
 
-// A thread the classifier has already judged private stores no files at all.
-//
-// The read boundary kept a colleague out of them; it did not keep them from
-// being written. A payslip forwarded from a private address is the case, and
-// not storing it is strictly better than storing it and being able to delete
-// it later.
+// A thread the classifier has already judged private keeps none of its files'
+// bytes. Each file is still named, on a row with no stored object, so its
+// owner sees what arrived — a payslip forwarded from a private address is the
+// case, and not storing it is strictly better than storing it and deleting it
+// later.
 func TestAPrivateThreadsFilesAreNeverStored(t *testing.T) {
 	ctx, db, tag := captureWorkspace(t)
 	blob := blobstore.NewMemory()

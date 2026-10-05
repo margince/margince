@@ -167,7 +167,9 @@ describe("the email drawer's attachments", () => {
 
     await waitFor(() => expect(screen.getByText("payslip.pdf")).toBeTruthy());
     expect(screen.getByText("payslip.pdf").closest("a")).toBeNull();
-    expect(screen.getByText("Not kept: private mail")).toBeTruthy();
+    expect(
+      screen.getByText("Not kept, because the message is private."),
+    ).toBeTruthy();
     expect(screen.getByText("120 kB")).toBeTruthy();
   });
 

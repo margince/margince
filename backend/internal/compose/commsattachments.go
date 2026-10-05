@@ -97,7 +97,7 @@ func (a commsAttachments) EnsureTransmittable(
 		}
 		// The send refuses one at creation; this is the park if one got past it.
 		if meta.BytesWithheld != nil && *meta.BytesWithheld {
-			return false, "a file attached to this message came with private mail and was not kept, so there is nothing to send", nil
+			return false, fmt.Sprintf("%q came with private mail and was not kept, so there is nothing to send", meta.Filename), nil
 		}
 	}
 	return true, "", nil

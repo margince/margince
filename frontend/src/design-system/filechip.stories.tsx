@@ -38,7 +38,7 @@ export const OtherKind: Story = {
 // the same card, quieter, and not a link.
 export const Withheld: Story = {
   args: {
-    withheld: "Not kept: private mail",
+    withheld: "Not kept, because the message is private.",
     filename: "payslip-september.pdf",
     size: "120 kB",
   },

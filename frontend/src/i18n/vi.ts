@@ -2429,7 +2429,7 @@ export const vi = {
   "email.detail.none": "Thư này",
   "email.detail.attachments_one": "{count} tệp đính kèm",
   "email.detail.attachments_other": "{count} tệp đính kèm",
-  "email.detail.attachmentWithheld": "Không lưu: thư riêng tư",
+  "email.detail.attachmentWithheld": "Không lưu vì thư là riêng tư.",
   "email.detail.showQuoted": "Hiện phần trích dẫn",
   "email.detail.withheldReason": "Thư này không được chia sẻ với bạn",
   "email.detail.from": "Từ",

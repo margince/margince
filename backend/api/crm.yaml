@@ -30040,6 +30040,7 @@ components:
         content_type: { type: [string, 'null'] }
         bytes_withheld:
           type: boolean
+          readOnly: true
           description: >-
             True when the message is private to its owner and the file was recorded by
             name, size and type only. There are no bytes to fetch.

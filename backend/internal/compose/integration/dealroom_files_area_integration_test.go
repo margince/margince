@@ -211,6 +211,13 @@ func TestAWithheldMailFileCannotBePutInADealRoom(t *testing.T) {
 		t.Fatalf("read the withheld file: %v", err)
 	}
 
+	var area AnyMap
+	if status := e.Call(t, "GET", "/v1/deals/"+dealID+"/documents", nil, nil, &area); status != http.StatusOK {
+		t.Fatalf("deal files = %d %v", status, area)
+	}
+	if list, _ := area["data"].([]any); len(list) != 0 {
+		t.Fatalf("the deal's Files area lists the withheld file: %v", list)
+	}
 	if status := e.Call(t, "POST", "/v1/deal-rooms/"+room.roomID+"/documents", AnyMap{
 		"attachment_id": attachmentID, "group_key": "legal", "source": "manual",
 	}, nil, nil); status != http.StatusNotFound {

@@ -179,9 +179,6 @@ func resolveAttachmentParent(ctx context.Context, tx pgx.Tx, id ids.UUID, action
 // and opens its object for reading; the caller closes the reader. Archived
 // or invisible attachments read as ErrNotFound.
 func (s *Store) OpenAttachment(ctx context.Context, id ids.UUID) (crmcontracts.Attachment, io.ReadCloser, error) {
-	if s.blob == nil {
-		return crmcontracts.Attachment{}, nil, ErrBlobstoreUnconfigured
-	}
 	var (
 		meta crmcontracts.Attachment
 		key  string
@@ -217,6 +214,9 @@ func (s *Store) OpenAttachment(ctx context.Context, id ids.UUID) (crmcontracts.A
 	})
 	if err != nil {
 		return crmcontracts.Attachment{}, nil, err
+	}
+	if s.blob == nil {
+		return crmcontracts.Attachment{}, nil, ErrBlobstoreUnconfigured
 	}
 	rc, _, err := s.blob.Get(ctx, key)
 	if err != nil {

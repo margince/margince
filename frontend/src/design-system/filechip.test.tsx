@@ -65,13 +65,17 @@ describe("FileChip", () => {
   it("names a withheld file without offering bytes that were never kept", () => {
     render(
       <FileChip
-        withheld="Not kept: private mail"
+        withheld="Not kept, because the message is private."
         filename="payslip.pdf"
         size="120 KB"
       />,
     );
     expect(screen.queryByRole("link")).toBeNull();
     expect(screen.getByText("payslip.pdf")).toBeTruthy();
-    expect(screen.getByText("Not kept: private mail")).toBeTruthy();
+    expect(
+      screen.getByText("Not kept, because the message is private."),
+    ).toBeTruthy();
+    expect(screen.getByText("120 KB")).toBeTruthy();
+    expect(screen.getByText("PDF")).toBeTruthy();
   });
 });
