@@ -112,5 +112,8 @@ func runDatabaseSubcommand(ctx context.Context, pool *pgxpool.Pool, args []strin
 	if args[0] == "authz-disagreement" {
 		return true, runAuthzDisagreement(ctx, pool, args[1:], stdout)
 	}
+	if args[0] == "reopen-parked" {
+		return true, runReopenParked(ctx, pool, args[1:], stdout)
+	}
 	return false, nil
 }
