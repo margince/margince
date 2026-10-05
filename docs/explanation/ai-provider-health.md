@@ -32,8 +32,7 @@ the message's own, and is still charged. The classification is `providerFaultOf`
 `budget.go`.
 
 **A refusal is read by its text.** A 400 or 403 marks the key rejected only when its
-text says so (`api key not valid`, `invalid api key`, `reported as leaked`,
-`authentication`), never for a vendor's "does not have permission" refusal for one
+text says so (`api key not valid`, `invalid api key`, `reported as leaked`), never for a vendor's "does not have permission" refusal for one
 model. An empty balance is recognised from a 402 or from text such as `credit balance
 is too low`.
 
@@ -86,6 +85,7 @@ The budget's own deferral is above, under *The monthly budget* in [ai-runtime.md
 - A stream that opens cleanly but fails in-band is not seen as a provider failure.
 - An in-flight call on a superseded key can re-trip the provider after a fix.
 - A probe cut short by the caller's own deadline counts as a failed probe.
+- While a provider is blocked only its probe is heard: a call admitted before the block that finishes later neither restores the provider nor re-arms the backoff.
 - Other processes do not brake on the shared status; it is for display.
 - Voice builds and website reads deferred by an outage are still labelled as a
   budget deferral (tracked in a follow-up).
