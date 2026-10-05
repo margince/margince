@@ -16,6 +16,12 @@ describe("formatRelativeTime", () => {
     );
   });
 
+  it("reads under a minute as this minute", () => {
+    expect(formatRelativeTime("2026-10-05T11:59:40Z", "en", now)).toBe(
+      "this minute",
+    );
+  });
+
   it("follows the reader's language", () => {
     expect(formatRelativeTime("2026-10-05T09:00:00Z", "de", now)).toBe(
       "vor 3 Stunden",

@@ -5688,7 +5688,7 @@ export const en = {
   "aiProviderHealth.fix.degraded":
     "Check the provider’s status page, or contact your system administrator.",
   "aiProviderHealth.fix.down":
-    "Check the provider’s status page and its host under Providers, or contact your system administrator.",
+    "Check the provider’s status page and host, or contact your system administrator.",
   "aiProviderHealth.fix.outOfCredit":
     "Top up the provider account, or contact your system administrator.",
   "aiProviderHealth.fix.unauthorized":

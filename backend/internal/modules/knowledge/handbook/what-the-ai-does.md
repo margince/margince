@@ -128,7 +128,8 @@ Each shows as queued, running, done, degraded, failed — or **stalled**.
 There is a seventh state those six do not name: work can be **deferred** because
 the company's monthly AI allowance is spent, or the AI provider is not
 answering. That is not a failure and not a stall — the request is kept whole, with its original authority and attempt
-limits, and a sweep picks it up when the allowance is raised or the month rolls, or the provider answers again.
+limits, and a sweep picks it up later. Work held for the allowance wakes when the allowance is raised or the month rolls;
+work held for the provider wakes by itself at the provider's next check, and raising the allowance does not hasten it.
 See [Settings](settings.md).
 
 "Stalled" means the work has been running unusually long and may have stopped.

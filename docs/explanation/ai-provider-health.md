@@ -56,8 +56,10 @@ pass stops, so an outage no longer parks senders as unsure or spends the attempt
 enrichment and River jobs. The call that trips an out-of-credit or rejected-key status
 is refunded too, as is a call that finds the host unreachable (down trips at once)
 and every failed probe while blocked: each returns a deferral that keeps the cause, so
-an interactive user gets the reason-specific 503 on the first call. Only the first two
-5xx or timeouts of a run of three are charged, being ordinary failures. A failure that is the message's own still
+an interactive user gets the reason-specific 503 on the first call. The first two 5xx of a run of
+three are charged, being ordinary failures, and the third trips down and is refunded.
+Timeouts are never refunded: three in a row make the provider degraded, which blocks
+and defers nothing, so every timed-out call is charged. A failure that is the message's own still
 charges the item, because it would fail on a healthy provider too.
 
 An embedding for a blocked provider is refused untraced with `ai.ErrProviderDown`,

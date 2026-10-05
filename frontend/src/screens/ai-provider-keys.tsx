@@ -78,7 +78,11 @@ export function AiProviderKeysCard() {
   const routing = useRouting(canSee);
   // A separate grant from the list's: health is a diagnostic, so a reader who
   // may see the keys but not diagnostics gets the rows without the notice.
-  const health = useProviderHealth(useCan("ai_diagnostics", "read")).data;
+  const canDiagnose = useCan("ai_diagnostics", "read");
+  // Gated again at the read: a revoked grant disables the query but leaves its
+  // cached answer, which would keep drawing a diagnostic the reader may no
+  // longer see.
+  const health = useProviderHealth(canDiagnose).data;
   const usage = routing.data ? providerUsage(routing.data.routing) : null;
   // The provider whose sheet is open, by name so it follows the list as a key
   // is saved rather than holding a copy that goes stale.
@@ -123,9 +127,11 @@ export function AiProviderKeysCard() {
                   key={p.provider}
                   status={p}
                   usage={usage?.get(p.provider)}
-                  health={health?.providers.find(
-                    (h) => h.provider === p.provider,
-                  )}
+                  health={
+                    canDiagnose
+                      ? health?.providers.find((h) => h.provider === p.provider)
+                      : undefined
+                  }
                   onOpen={() => {
                     setDraftHost(null);
                     setOpened(p.provider);

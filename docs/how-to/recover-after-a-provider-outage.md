@@ -51,7 +51,9 @@ reopened and changes nothing. A real run reopens at most `--batch` rows of each 
 per workspace and prints how many remain in the window; run it again until none do.
 The window is half-open and cannot tell an outage from a message the validator
 rejected, because both retire a row with the same reason; name it from the **Started**
-time on the **AI provider status** card, not wider.
+line of the **AI provider status** card in System health, not wider. The card shows it
+as a relative time ("Started 12 minutes ago"), so subtract that from now to get the
+start of the window; the end is when the provider answered again.
 
 It reopens two kinds of work, each back to zero attempts and due at once: sender
 questions retired to unsure for want of a verdict inside the window, which also

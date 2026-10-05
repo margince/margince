@@ -13,6 +13,18 @@ import { useSetProviderSettings } from "./ai-provider-settings";
 
 const HEALTH_KEY = ["ai-provider-health"];
 
+// The document a settings save answers with (AiRouting).
+const ROUTING = {
+  profile: "cloud_frontier",
+  tiers: {},
+  embeddings: {
+    provider: "ollama",
+    model: "nomic-embed-text",
+    base_url: "http://localhost:11434",
+    dimensions: 768,
+  },
+};
+
 function setup() {
   const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
     const url = input instanceof Request ? input.url : String(input);
@@ -22,7 +34,10 @@ function setup() {
         { status: 200, headers: { "Content-Type": "application/json" } },
       );
     }
-    return new Response(null, { status: 204 });
+    return new Response(JSON.stringify(ROUTING), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
   });
   vi.stubGlobal("fetch", fetchMock);
   const client = new QueryClient({

@@ -64,6 +64,13 @@ export const EveryFailure: Story = {
   ]),
 };
 
+// Dark. Each failure is told apart by a badge tone and a caption colour, which
+// must both stay legible against the dark panel.
+export const EveryFailureDark: Story = {
+  ...EveryFailure,
+  globals: { theme: "dark" },
+};
+
 export const Withheld: Story = {
   render: story([], { ai_diagnostics: [] }),
 };

@@ -671,20 +671,6 @@ export const auditEntries = [
 // leave half the card's markup unvisited by the very sweeps that exist to see
 // it. `env_var`, `optional` and `credential_kind` are required by
 // AiProviderKeyStatus.
-// One blocked provider, so the sweeps visit the health badge and the System
-// health card in their failing state rather than only the empty one.
-// `retry_after` is omitted for a degraded provider only.
-export const aiProviderHealth = {
-  providers: [
-    {
-      provider: "gemini",
-      health: "out_of_credit",
-      since: "2026-10-05T08:00:00Z",
-      retry_after: "2026-10-05T08:15:00Z",
-    },
-  ],
-};
-
 export const aiProviderKeys = {
   providers: [
     {
@@ -700,6 +686,20 @@ export const aiProviderKeys = {
       env_var: "ANTHROPIC_API_KEY",
       optional: false,
       credential_kind: "api_key",
+    },
+  ],
+};
+
+// One blocked provider, so the sweeps visit the health badge and the System
+// health card in their failing state rather than only the empty one.
+// `retry_after` is omitted for a degraded provider only.
+export const aiProviderHealth = {
+  providers: [
+    {
+      provider: "gemini",
+      health: "out_of_credit",
+      since: "2026-10-05T08:00:00Z",
+      retry_after: "2026-10-05T08:15:00Z",
     },
   ],
 };

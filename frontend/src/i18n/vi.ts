@@ -5454,9 +5454,9 @@ export const vi = {
   "aiProviderHealth.fix.degraded":
     "Hãy xem trang trạng thái của nhà cung cấp, hoặc liên hệ quản trị viên hệ thống của bạn.",
   "aiProviderHealth.fix.down":
-    "Hãy xem trang trạng thái của nhà cung cấp và máy chủ của nó trong mục Nhà cung cấp, hoặc liên hệ quản trị viên hệ thống của bạn.",
+    "Hãy xem trang trạng thái và máy chủ của nhà cung cấp, hoặc liên hệ quản trị viên hệ thống.",
   "aiProviderHealth.fix.outOfCredit":
-    "Hãy nạp thêm tín dụng cho tài khoản nhà cung cấp, hoặc liên hệ quản trị viên hệ thống của bạn.",
+    "Hãy nạp tín dụng cho tài khoản nhà cung cấp, hoặc liên hệ quản trị viên hệ thống.",
   "aiProviderHealth.fix.unauthorized":
     "Hãy thay khóa, hoặc liên hệ quản trị viên hệ thống của bạn.",
   "aiProviderHealth.since": "Bắt đầu {when}",

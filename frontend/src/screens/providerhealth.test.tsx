@@ -4,7 +4,7 @@
 
 import "@testing-library/jest-dom/vitest";
 
-import { cleanup, screen, within } from "@testing-library/react";
+import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { AiProviderKeysCard } from "./ai-provider-keys";
@@ -57,6 +57,17 @@ function stubBackend(providers: Entry[], allow: GrantSpec = DIAGNOSER) {
               optional: false,
             },
           ],
+        });
+      if (path === "/ai/routing")
+        return jsonResponse({
+          profile: "cloud_frontier",
+          tiers: {},
+          embeddings: {
+            provider: "ollama",
+            model: "nomic-embed-text",
+            base_url: "http://localhost:11434",
+            dimensions: 768,
+          },
         });
       return jsonResponse({}, 404);
     }),
@@ -174,6 +185,27 @@ describe("Providers list", () => {
       ),
     ).toBeNull();
     expect(screen.getAllByTestId(/^ai-provider-health-/)).toHaveLength(1);
+  });
+
+  it("stops drawing a cached health badge once the diagnostics grant is lost", async () => {
+    const allow: GrantSpec = { ...DIAGNOSER };
+    stubBackend(
+      [
+        {
+          provider: "openai",
+          health: "unauthorized",
+          since: "2026-10-05T10:00:00Z",
+        },
+      ],
+      allow,
+    );
+    const { client } = render(<AiProviderKeysCard />);
+    expect(await screen.findByText("Key rejected")).toBeInTheDocument();
+
+    allow.ai_diagnostics = [];
+    await act(() => client.invalidateQueries({ queryKey: ["me"] }));
+
+    await waitFor(() => expect(screen.queryByText("Key rejected")).toBeNull());
   });
 
   it("draws no health without the diagnostics grant, and does not ask", async () => {

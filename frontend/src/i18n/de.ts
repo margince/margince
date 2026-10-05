@@ -1394,11 +1394,11 @@ export const de = {
   "common.assistantUnavailable":
     "Der Assistent hat nicht geantwortet, daher wurde kein Entwurf erstellt. Gib die Angaben von Hand ein oder lass einen Admin das Modell in den Einstellungen unter KI prüfen.",
   "common.providerOutOfCredit":
-    "Beim KI-Anbieter ist kein Guthaben mehr vorhanden. Wende dich an deinen Systemadministrator.",
+    "Beim KI-Anbieter ist kein Guthaben mehr vorhanden. Wende dich an deine Admins.",
   "common.providerUnauthorized":
-    "Der KI-Anbieter hat den hinterlegten Zugangsschlüssel abgelehnt. Wende dich an deinen Systemadministrator.",
+    "Der KI-Anbieter hat den hinterlegten API-Schlüssel abgelehnt. Wende dich an deine Admins.",
   "common.providerUnavailable":
-    "Der KI-Anbieter antwortet gerade nicht. Versuche es später erneut oder wende dich an deinen Systemadministrator.",
+    "Der KI-Anbieter antwortet gerade nicht. Versuche es später erneut oder wende dich an deine Admins.",
   "common.gatewayUnavailable":
     "Der Server hat die Anfrage nicht rechtzeitig abgeschlossen und verarbeitet sie möglicherweise noch. Warte, bevor du es erneut versuchst, sonst kann die Arbeit zweimal laufen.",
   "common.permissionDenied":
@@ -5520,13 +5520,13 @@ export const de = {
   "aiProviderHealth.reason.unauthorized":
     "Der Anbieter hat den API-Schlüssel abgelehnt. Aufrufe warten bis zur nächsten Prüfung.",
   "aiProviderHealth.fix.degraded":
-    "Prüfe die Statusseite des Anbieters oder wende dich an deinen Systemadministrator.",
+    "Prüfe die Statusseite des Anbieters oder wende dich an deine Admins.",
   "aiProviderHealth.fix.down":
-    "Prüfe die Statusseite des Anbieters und seinen Host unter Anbieter oder wende dich an deinen Systemadministrator.",
+    "Prüfe Statusseite und Host des Anbieters oder wende dich an deine Admins.",
   "aiProviderHealth.fix.outOfCredit":
-    "Lade das Konto beim Anbieter auf oder wende dich an deinen Systemadministrator.",
+    "Lade das Konto beim Anbieter auf oder wende dich an deine Admins.",
   "aiProviderHealth.fix.unauthorized":
-    "Ersetze den Schlüssel oder wende dich an deinen Systemadministrator.",
+    "Ersetze den Schlüssel oder wende dich an deine Admins.",
   "aiProviderHealth.since": "Begann {when}",
   "aiProviderHealth.nextCheck": "Nächste Prüfung {when}",
   "aiProviderHealth.nextCheckDue": "Die nächste Prüfung steht an",

@@ -16185,8 +16185,8 @@ paths:
 
         The API and the worker each publish their status changes to Redis and this reads the merged
         view, where the worst or blocking status wins, so an outage only the worker saw still shows.
-        Without Redis a process shows only its own view. Shared entries expire after about an
-        hour unless refreshed every 10 while the provider is unhealthy. It is learned from real
+        Without Redis a process shows only its own view. Shared entries expire after 30
+        minutes unless refreshed every 10 while the provider is unhealthy. It is learned from real
         calls, not a probe. The list never contains a key, a host or the
         provider's own message text. It is admitted through the same grant as `/ai/health`.
       responses:
