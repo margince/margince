@@ -490,6 +490,7 @@
   position: relative;
   z-index: 1;
   display: inline-flex;
+  gap: var(--gapActions);
   margin-inline-start: auto;
   opacity: 0;
   transition: opacity var(--dur-state) var(--ease-out);
