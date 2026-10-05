@@ -731,7 +731,7 @@ function LinkedinPanel({
   const trimmed = profile.trim();
 
   return (
-    <div className="form-stack ob-connect-linkedin-panel">
+    <div className="ob-connect-linkedin-panel">
       <Field label={t("ob.conv.linkedin.profileLabel")}>
         {(control) => (
           <input

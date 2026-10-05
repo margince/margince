@@ -369,7 +369,7 @@ export function StagedEditor({
 }>) {
   const t = useT();
   return (
-    <div className="form-stack approval-editor">
+    <div className="approval-editor">
       {fields.map((entry) => (
         <Field
           key={entry.field}
@@ -421,6 +421,7 @@ export function StagedEditor({
         </Field>
       ))}
       <ActionRow
+        className="approval-gate"
         primary={
           /* The edited approve is the same write as the plain one and was the
              one path with no gate at all, so a second press sent a second

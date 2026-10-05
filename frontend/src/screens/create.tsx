@@ -541,8 +541,10 @@ export function fieldControl(
   );
 }
 
-// A MultiSelect whose toggled set re-joins into the one string `setValue`
-// writes, the channel every scalar field uses.
+// A multiselect field: a MultiSelect dropdown whose toggled set re-joins back
+// into `values` via `setValue` — the same single-string channel every scalar
+// field writes through (see `splitMultiselectValue`/`joinMultiselectValue`
+// above).
 function MultiselectField({
   field,
   value,
@@ -582,8 +584,10 @@ export const SUBMIT_COPY = {
 } as const satisfies Record<string, { label: MessageKey; busy: MessageKey }>;
 export type SubmitIntent = keyof typeof SUBMIT_COPY;
 
-// The record form body of the create and edit dialogs and the record page's
-// inline edit; where the values come from stays with each owner.
+// The shared modal form body: fields → controls, the error paragraph, and
+// the Cancel/Save row. Both create and edit render this identically — only
+// the values' origin (empty defaults vs. a prefilled record) and the submit
+// intent differ, and those stay with each modal's owner.
 export function RecordFormBody({
   fields,
   values,
@@ -597,7 +601,6 @@ export function RecordFormBody({
   onSubmit,
   onClose,
   intent,
-  inline,
 }: Readonly<{
   fields: CreateField[];
   values: Record<string, string>;
@@ -614,8 +617,6 @@ export function RecordFormBody({
   onSubmit: (values: Record<string, string>, rows?: FormRows) => void;
   onClose: () => void;
   intent: SubmitIntent;
-  // On a page no dialog footer spaces the action row, so the stack does.
-  inline?: boolean;
 }>) {
   const t = useT();
   const formId = useId();
@@ -650,7 +651,6 @@ export function RecordFormBody({
         if (!pending && !requiredMissing && refusals.size === 0)
           onSubmit(submittedValues(fields, values), rows);
       }}
-      className={inline ? "form-stack" : undefined}
     >
       <div className="form-stack">
         {shown.map((field) => {

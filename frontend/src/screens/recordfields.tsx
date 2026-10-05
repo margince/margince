@@ -476,7 +476,6 @@ function RecordFieldForm({
         }}
         onClose={onClose}
         intent="save"
-        inline
       />
     </div>
   );
