@@ -233,16 +233,6 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 			return nil
 		}
 
-		// Stamped back onto the record, so the activity below can name the
-		// original it was read from and a purge can follow the link instead of
-		// joining on two writers' keys and hoping they agree. rec is a value
-		// copy; this settles it for every reader downstream of here.
-		storedOriginal, err := storeRawCapture(ctx, tx, rec)
-		if err != nil {
-			return err
-		}
-		rec.StoredOriginal = storedOriginal
-
 		switch fields := rec.Fields.(type) {
 		case ActivityFields:
 			// FIRST of everything that touches an activity row in this
@@ -257,10 +247,17 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 			if rec, fields, err = s.readAgainstTheSeatsAddressesTx(ctx, tx, actor.UserID, rec, fields); err != nil {
 				return err
 			}
+			// Stored only now, so the original's privacy question sees the record
+			// staging sees, after it was read against the seat's own addresses.
+			if rec, err = storeOriginalTx(ctx, tx, rec); err != nil {
+				return err
+			}
 			ref, activityCreated, decision, err = s.captureActivity(ctx, tx, rec, fields)
 			return err
 		case LeadFields:
-			var err error
+			if rec, err = storeOriginalTx(ctx, tx, rec); err != nil {
+				return err
+			}
 			ref, dedupeHit, dedupeFields, err = s.captureLead(ctx, tx, rec, fields)
 			return err
 		default:

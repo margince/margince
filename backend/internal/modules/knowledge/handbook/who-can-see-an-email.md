@@ -16,6 +16,15 @@ record in the company still does not read a message they were not an audience
 for. An admin is no exception, and neither the audit log nor an export names a
 held message's subject or attachments.
 
+Private mail keeps no attachment files. That covers a message on a thread held
+as personal, from a sender that thread's verdict saw. It also covers a message
+from a sender your verdict judged a personal correspondent in the last 14 days.
+Margince keeps such a message's files out of the file store, and the stored
+original carries none of their bytes. The message itself is kept. A sender
+verdict does not apply to a sender you marked as business on the Senders page,
+one you have replied to, or a contact you correspond with. This covers new mail
+only: mail that arrived before the verdict keeps its files.
+
 ### Who can see an email I captured or sent?
 To see who can read an email in Margince, open the message from a timeline: the line under its subject shows **Team**, **Shared**, **Participants**, **Selected** or **Withheld**, with a sentence saying what that means.
 - **Shared**: "Everyone in the company can read this."
