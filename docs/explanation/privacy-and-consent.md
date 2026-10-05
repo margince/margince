@@ -317,12 +317,35 @@ itself the moment they happen rather than re-derived later:
   what reaches mail from a negotiation that was lost and from delivery work years after the deal that
   started it — both of which the deal rule alone misses.
 
-**The mark is permanent, and moving the record does not remove it.** Relinking an activity away from
-the project, archiving the project, or closing it all leave the classification standing. The evidence
-behind it is frozen too: the project's name is copied at the moment it qualifies, so a later rename
-does not rewrite what the record says. Removing a mark takes a named contact giving a written reason,
-through the controller's release path. The asymmetry is deliberate — over-retention is an argument to
-have with a supervisory authority, and destruction is irreversible.
+**Moving the record does not remove the mark; undoing the filing does.** Relinking an activity away
+from the project, archiving the project, or closing it all leave the classification standing. The
+evidence behind it is frozen too: the project's name is copied at the moment it qualifies, so a later
+rename does not rewrite what the record says. The one way out is **Undo filing**
+(`POST /activities/{id}/project-filing/undo`), a human-only decision by a named member holding
+`activity.update`, with a written reason:
+
+- It removes the activity from its project and withdraws the class together with the project filing's
+  evidence, in one transaction with the audit entry (the reason and the decider's name) and an
+  `activity.updated` event carrying `project_filing_undone`.
+- It is allowed only when the project filing is the **sole** basis. A won deal, a sent offer, a
+  controller's pin or a deal link that still qualifies keeps the class (`409 other_basis_remains` /
+  `qualifying_deal`), an activity a statutory hold has already restricted never loses it
+  (`409 restricted`), and a legal hold on any record it is linked to, the project included, outranks
+  the undo (`409 legal_hold`). A project the member cannot see still holds the activity
+  (`409 hidden_project`); the read shows such a project unnamed and a decision about it as a bare
+  moment. `GET /activities/{id}/project-filing` answers the same judgement, plus the
+  decisions already taken, so the screen and the write cannot disagree.
+- The database enforces the same rule underneath. The class may clear only inside a transaction that
+  declares the undo for that one activity, from an unrestricted row with no evidence and no project link
+  left, and the declaration may delete project-filing evidence and nothing else. Every other change to
+  the class or its timestamp is still refused.
+- An agent never decides it, even holding an administrator's passport. It can stage and, on an attended
+  call, release the relink that files an activity under a project, but only while the undo could still
+  take the filing back: an activity that is restricted, held through a link or covered by an open erasure
+  request is released by a member in the CRM, because that filing would be permanent.
+
+Over-retention is an argument to have with a supervisory authority, and destruction is irreversible,
+which is why the undo is narrow and the refusals are in the data layer as well as the writer.
 
 ## Where the code lives
 

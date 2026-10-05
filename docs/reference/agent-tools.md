@@ -84,8 +84,22 @@ Columns:
   stage's semantic (`open` → 🟢, won/lost → 🟡), and the three relink verbs
   (`relink_activity`, `relink_thread`, `relink_activities` — the table below
   lists the first) read the destination record type (filing under a project is
-  🟡 — it classifies every named activity as commercial correspondence, which is
-  write-once and cannot be undone by relinking away).
+  🟡 — it classifies every named activity as commercial correspondence). A thread
+  or a named set cannot pin a version, so a named set always stages. The thread
+  form never stages and never runs for an assistant: `relink_thread` refuses at
+  every destination, however it is called, because a thread key is re-read at
+  the retry, and sends the caller to `relink_activities`, whose approval binds
+  the exact ids. A credential may release its own staged relink with
+  `decide_approval` on an attended call, but only when the same checks the
+  decision applies pass for it (the decision grants and the target's own
+  visibility) and the change can be put back. A filing under a project is taken
+  back by a member with *Undo filing*, a human-only decision with a written
+  reason that is never the credential's, so a project relink is releasable only
+  while that undo could still apply: not when the activity is restricted,
+  archived, linked to a record under a legal hold, covered by an open erasure
+  request, or kept by another basis such as a won deal, a sent offer or a
+  controller's pin. Such a relink is released by a member in the CRM. A credential's
+  release is recorded as the member's own decision, given through the agent.
   **🟢 / 🟡** means the tier depends on the record type the call names: 🟢 for
   the seven the tool enumerates, 🟡 for `custom_field` and
   `webhook_subscription`, which the contract still declares confirm-first.

@@ -6895,7 +6895,7 @@ paths:
         A `meeting` or a `call` cannot be relinked to an `company` — it is with a contact, and
         the company is reached through that contact's employer. The estate refuses it
         (migration 1788000100).
-      x-mcp-tool: { verb: relink_activity, record_type: activity, tier: dynamic, tier_resolver: destination_record_type, confirmation_required_when: 'entity_type is project — filing under a project classifies the activity as commercial correspondence, which is write-once and cannot be undone by relinking away', scope: write }
+      x-mcp-tool: { verb: relink_activity, record_type: activity, tier: dynamic, tier_resolver: destination_record_type, confirmation_required_when: 'entity_type is project — filing under a project classifies the activity as commercial correspondence — a member can take that back with a written reason, but a human or a member confirms it first', scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
         # Conditions the move on the version the caller read the ACTIVITY at.
@@ -6928,6 +6928,78 @@ paths:
         '409': { $ref: '#/components/responses/VersionConflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /activities/{id}/project-filing:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Activities]
+      operationId: getActivityProjectFiling
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: What filing this activity under a project did to its retention, and whether it can be undone.
+      description: |
+        Answers from the same judgement the undo applies, so the screen offering the undo and the
+        write refusing it cannot disagree: `undoable` is true only when the project filing is the
+        SOLE reason the correspondence is kept, no statutory hold has started, and no qualifying deal
+        is linked. When it is not, `refusal` says which rule stands in the way. `undone` lists the
+        decisions already taken on this activity — who, when and the written reason — newest first,
+        which is how the audit entry is shown where the activity is.
+      responses:
+        '200':
+          description: The filing's state.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProjectFiling' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /activities/{id}/project-filing/undo:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Activities]
+      operationId: undoActivityProjectFiling
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      # The one door out of the commercial-correspondence class a project filing
+      # stamped. It removes the project link and the filing's evidence, then
+      # clears the class, in one transaction. Never an agent's: an agent that
+      # could undo the shield it was allowed to write has no floor under it.
+      summary: Undo filing this activity under a project. Requires a stated reason; audited.
+      description: |
+        Removes the activity from its project and withdraws the retention class that filing gave it,
+        so the correspondence is treated as ordinary again. Allowed only when the project filing is
+        the sole basis for the class: another qualifying basis (a won deal, a sent offer, a
+        controller's pin, a second project) keeps it and the call answers `409
+        other_basis_remains`. An activity already restricted by a statutory hold answers `409
+        restricted` — a hold that has started never shortens. The decision is recorded with the
+        deciding member's name and the written reason, in one transaction with the audit entry and
+        the `activity.updated` event.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RetentionOverrideRequest' }
+      responses:
+        '200':
+          description: The filing's state after the undo.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProjectFiling' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: >-
+            The filing cannot be undone; the problem's `code` is one of `not_filed`, `archived`,
+            `restricted`, `legal_hold`, `erasure_pending`, `hidden_project`, `other_basis_remains`
+            or `qualifying_deal`, or `decider_unnamed` when the deciding account has no display name.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /activities/relink-thread:
     post:
       tags: [Activities]
@@ -6947,7 +7019,7 @@ paths:
         A `meeting` or a `call` cannot be relinked to an `company` — it is with a contact, and
         the company is reached through that contact's employer. The estate refuses it
         (migration 1788000100).
-      x-mcp-tool: { verb: relink_thread, record_type: activity, tier: dynamic, tier_resolver: destination_record_type, confirmation_required_when: 'entity_type is project — filing under a project classifies every activity in the thread as commercial correspondence, which is write-once and cannot be undone by relinking away', scope: write }
+      x-mcp-tool: { verb: relink_thread, record_type: activity, tier: dynamic, tier_resolver: destination_record_type, confirmation_required_when: 'entity_type is project — filing under a project classifies every activity in the thread as commercial correspondence — a member can take that back with a written reason, but a human or a member confirms it first', scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -6984,7 +7056,7 @@ paths:
         the company is reached through that contact's employer. The estate refuses it
         (migration 1788000100).
 
-      x-mcp-tool: { verb: relink_activities, record_type: activity, tier: dynamic, tier_resolver: destination_record_type, confirmation_required_when: 'entity_type is project — filing under a project classifies every named activity as commercial correspondence, which is write-once and cannot be undone by relinking away', scope: write }
+      x-mcp-tool: { verb: relink_activities, record_type: activity, tier: dynamic, tier_resolver: destination_record_type, confirmation_required_when: 'entity_type is project — filing under a project classifies every named activity as commercial correspondence — a member can take that back with a written reason, but a human or a member confirms it first', scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -49402,6 +49474,58 @@ components:
         lawful_basis: { type: [string, 'null'] }
         enabled: { type: boolean }
 
+    ProjectFiling:
+      type: object
+      description: >-
+        What filing one activity under a project did to its retention, and whether the filing
+        can be undone. Names projects by the name frozen when the filing qualified the
+        correspondence, so a renamed or deleted project still reads as what it was.
+      required: [filed, projects, undoable, undone]
+      properties:
+        filed:
+          type: boolean
+          description: Whether the activity carries evidence that filing it under a project qualified it.
+        projects:
+          type: array
+          description: The project filings on record, oldest first.
+          items: { $ref: '#/components/schemas/ProjectFilingEntry' }
+        undoable: { type: boolean }
+        refusal:
+          description: Why a filed activity cannot be undone. Absent when it can, or when it is not filed.
+          allOf: [ { $ref: '#/components/schemas/ProjectFilingRefusal' } ]
+        undone:
+          type: array
+          description: Undo decisions already taken on this activity, newest first.
+          items: { $ref: '#/components/schemas/ProjectFilingUndoDecision' }
+    ProjectFilingEntry:
+      type: object
+      required: [name, qualified_at]
+      properties:
+        name: { type: string, description: "The project's name when the filing qualified the activity. Empty when the project is hidden from the caller." }
+        hidden:
+          type: boolean
+          description: True when the project exists and the caller cannot see it; its name is withheld.
+        qualified_at: { type: string, format: date-time }
+    ProjectFilingRefusal:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string, enum: [not_filed, archived, restricted, legal_hold, erasure_pending, hidden_project, other_basis_remains, qualifying_deal] }
+        message: { type: string }
+    ProjectFilingUndoDecision:
+      type: object
+      required: [id, at, by_name, reason, projects]
+      properties:
+        id: { type: string, format: uuid, description: The audit entry that recorded the decision. }
+        at: { type: string, format: date-time }
+        redacted:
+          type: boolean
+          description: True when the decision touched a project the caller cannot see; only its moment is shown.
+        by_name: { type: string }
+        reason: { type: string }
+        projects:
+          type: array
+          items: { type: string }
     RetentionOverrideRequest:
       type: object
       # The reason is what makes the override a decision rather than a toggle:

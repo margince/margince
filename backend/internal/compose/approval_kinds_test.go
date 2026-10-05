@@ -45,6 +45,8 @@ func (stubApprovals) StageVolumeRelease(_ context.Context, _ agents.VolumeReleas
 	return ids.ApprovalID{}, false, nil
 }
 
+func (stubApprovals) ReleasableByCaller(context.Context, agents.StageRequest) bool { return false }
+
 func (stubApprovals) StageCall(_ context.Context, _ agents.StageRequest) (ids.ApprovalID, bool, error) {
 	return ids.ApprovalID{}, false, nil
 }

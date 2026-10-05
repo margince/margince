@@ -472,6 +472,7 @@ The 25 tables owned by `activities`, as the migrations build them. [Back to the 
 
 **Rules**
 
+- `activity_class_needs_evidence` — `TRIGGER DEFERRABLE INITIALLY DEFERRED`
 - `activity_retention_evidence_basis_check` — `CHECK ((basis = ANY (ARRAY['deal_won', 'offer_beyond_draft', 'project_linked', 'controller_pin'])))`
 - `are_deal_name_with_id` — `CHECK (((deal_id IS NULL) OR (deal_name IS NOT NULL)))`
 - `are_derived_names_its_record` — `CHECK (((basis = 'controller_pin') OR ((decided_by IS NULL) AND (decided_by_name IS NULL) AND (reason IS NULL) AND CASE basis WHEN 'project_linked' THEN ((project_name IS NOT NULL) AND (deal_name IS NULL)) ELSE ((deal_name IS NOT NULL) AND (project_name IS NULL)) END)))`
@@ -489,6 +490,7 @@ The 25 tables owned by `activities`, as the migrations build them. [Back to the 
 
 **Triggers**
 
+- `activity_class_needs_evidence` — `AFTER DELETE DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION activity_class_needs_evidence()`
 - `activity_retention_evidence_is_frozen` — `BEFORE DELETE OR UPDATE FOR EACH ROW EXECUTE FUNCTION activity_retention_evidence_is_frozen()`
 - `activity_retention_evidence_names_its_record` — `BEFORE INSERT FOR EACH ROW EXECUTE FUNCTION activity_retention_evidence_names_its_record()`
 

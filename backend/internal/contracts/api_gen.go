@@ -12511,6 +12511,42 @@ func (e Project360Section) Valid() bool {
 	}
 }
 
+// Defines values for ProjectFilingRefusalCode.
+const (
+	ProjectFilingRefusalCodeArchived          ProjectFilingRefusalCode = "archived"
+	ProjectFilingRefusalCodeErasurePending    ProjectFilingRefusalCode = "erasure_pending"
+	ProjectFilingRefusalCodeHiddenProject     ProjectFilingRefusalCode = "hidden_project"
+	ProjectFilingRefusalCodeLegalHold         ProjectFilingRefusalCode = "legal_hold"
+	ProjectFilingRefusalCodeNotFiled          ProjectFilingRefusalCode = "not_filed"
+	ProjectFilingRefusalCodeOtherBasisRemains ProjectFilingRefusalCode = "other_basis_remains"
+	ProjectFilingRefusalCodeQualifyingDeal    ProjectFilingRefusalCode = "qualifying_deal"
+	ProjectFilingRefusalCodeRestricted        ProjectFilingRefusalCode = "restricted"
+)
+
+// Valid indicates whether the value is a known member of the ProjectFilingRefusalCode enum.
+func (e ProjectFilingRefusalCode) Valid() bool {
+	switch e {
+	case ProjectFilingRefusalCodeArchived:
+		return true
+	case ProjectFilingRefusalCodeErasurePending:
+		return true
+	case ProjectFilingRefusalCodeHiddenProject:
+		return true
+	case ProjectFilingRefusalCodeLegalHold:
+		return true
+	case ProjectFilingRefusalCodeNotFiled:
+		return true
+	case ProjectFilingRefusalCodeOtherBasisRemains:
+		return true
+	case ProjectFilingRefusalCodeQualifyingDeal:
+		return true
+	case ProjectFilingRefusalCodeRestricted:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ProjectHealthState.
 const (
 	ProjectHealthStateAtRisk   ProjectHealthState = "at_risk"
@@ -38920,6 +38956,55 @@ type ProjectCompanyListResponse struct {
 	Data []ProjectCompany `json:"data"`
 }
 
+// ProjectFiling What filing one activity under a project did to its retention, and whether the filing can be undone. Names projects by the name frozen when the filing qualified the correspondence, so a renamed or deleted project still reads as what it was.
+type ProjectFiling struct {
+	// Filed Whether the activity carries evidence that filing it under a project qualified it.
+	Filed bool `json:"filed"`
+
+	// Projects The project filings on record, oldest first.
+	Projects []ProjectFilingEntry `json:"projects"`
+
+	// Refusal Why a filed activity cannot be undone. Absent when it can, or when it is not filed.
+	Refusal  *ProjectFilingRefusal `json:"refusal,omitempty"`
+	Undoable bool                  `json:"undoable"`
+
+	// Undone Undo decisions already taken on this activity, newest first.
+	Undone []ProjectFilingUndoDecision `json:"undone"`
+}
+
+// ProjectFilingEntry defines model for ProjectFilingEntry.
+type ProjectFilingEntry struct {
+	// Hidden True when the project exists and the caller cannot see it; its name is withheld.
+	Hidden *bool `json:"hidden,omitempty"`
+
+	// Name The project's name when the filing qualified the activity. Empty when the project is hidden from the caller.
+	Name        string    `json:"name"`
+	QualifiedAt time.Time `json:"qualified_at"`
+}
+
+// ProjectFilingRefusal defines model for ProjectFilingRefusal.
+type ProjectFilingRefusal struct {
+	Code    ProjectFilingRefusalCode `json:"code"`
+	Message string                   `json:"message"`
+}
+
+// ProjectFilingRefusalCode defines model for ProjectFilingRefusal.Code.
+type ProjectFilingRefusalCode string
+
+// ProjectFilingUndoDecision defines model for ProjectFilingUndoDecision.
+type ProjectFilingUndoDecision struct {
+	At     time.Time `json:"at"`
+	ByName string    `json:"by_name"`
+
+	// Id The audit entry that recorded the decision.
+	Id       openapi_types.UUID `json:"id"`
+	Projects []string           `json:"projects"`
+	Reason   string             `json:"reason"`
+
+	// Redacted True when the decision touched a project the caller cannot see; only its moment is shown.
+	Redacted *bool `json:"redacted,omitempty"`
+}
+
 // ProjectHealthAssessment One judgement of how a project is going, on the day it applies to. Assessments are never edited: a mistake is corrected by superseding the row, so what was said and when it was said both survive the correction.
 type ProjectHealthAssessment struct {
 	// AssessedAt When the judgement APPLIES, which is not when it was written: a lead catching up on Monday records Friday's reading, and the timeline shows it on Friday.
@@ -53007,6 +53092,9 @@ type SetActivityDispositionJSONRequestBody = SetActivityDispositionRequest
 // DraftEmailJSONRequestBody defines body for DraftEmail for application/json ContentType.
 type DraftEmailJSONRequestBody DraftEmailJSONBody
 
+// UndoActivityProjectFilingJSONRequestBody defines body for UndoActivityProjectFiling for application/json ContentType.
+type UndoActivityProjectFilingJSONRequestBody = RetentionOverrideRequest
+
 // RelinkActivityJSONRequestBody defines body for RelinkActivity for application/json ContentType.
 type RelinkActivityJSONRequestBody RelinkActivityJSONBody
 
@@ -64383,6 +64471,12 @@ type ServerInterface interface {
 	// Every ingress stage this message passed through, and why each did or did not run.
 	// (GET /activities/{id}/pipeline)
 	ReadActivityPipelineTrace(w http.ResponseWriter, r *http.Request, id Id)
+	// What filing this activity under a project did to its retention, and whether it can be undone.
+	// (GET /activities/{id}/project-filing)
+	GetActivityProjectFiling(w http.ResponseWriter, r *http.Request, id Id)
+	// Undo filing this activity under a project. Requires a stated reason; audited.
+	// (POST /activities/{id}/project-filing/undo)
+	UndoActivityProjectFiling(w http.ResponseWriter, r *http.Request, id Id)
 	// Re-associate a captured activity to a chosen deal/entity (idempotent, source-preserving).
 	// (POST /activities/{id}/relink)
 	RelinkActivity(w http.ResponseWriter, r *http.Request, id Id, params RelinkActivityParams)
@@ -66768,6 +66862,18 @@ func (_ Unimplemented) GetMeetingBrief(w http.ResponseWriter, r *http.Request, i
 // Every ingress stage this message passed through, and why each did or did not run.
 // (GET /activities/{id}/pipeline)
 func (_ Unimplemented) ReadActivityPipelineTrace(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What filing this activity under a project did to its retention, and whether it can be undone.
+// (GET /activities/{id}/project-filing)
+func (_ Unimplemented) GetActivityProjectFiling(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Undo filing this activity under a project. Requires a stated reason; audited.
+// (POST /activities/{id}/project-filing/undo)
+func (_ Unimplemented) UndoActivityProjectFiling(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -72317,6 +72423,70 @@ func (siw *ServerInterfaceWrapper) ReadActivityPipelineTrace(w http.ResponseWrit
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ReadActivityPipelineTrace(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetActivityProjectFiling operation middleware
+func (siw *ServerInterfaceWrapper) GetActivityProjectFiling(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetActivityProjectFiling(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UndoActivityProjectFiling operation middleware
+func (siw *ServerInterfaceWrapper) UndoActivityProjectFiling(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UndoActivityProjectFiling(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -104762,6 +104932,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/activities/{id}/pipeline", wrapper.ReadActivityPipelineTrace)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/activities/{id}/project-filing", wrapper.GetActivityProjectFiling)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/activities/{id}/project-filing/undo", wrapper.UndoActivityProjectFiling)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/activities/{id}/relink", wrapper.RelinkActivity)

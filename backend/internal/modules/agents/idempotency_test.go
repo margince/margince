@@ -583,6 +583,8 @@ func (a *consumingApprovals) StageVolumeRelease(context.Context, VolumeReleaseRe
 	return ids.ApprovalID{}, false, nil
 }
 
+func (a *consumingApprovals) ReleasableByCaller(context.Context, StageRequest) bool { return false }
+
 func (a *consumingApprovals) Redeem(_ context.Context, id ids.ApprovalID, _, _ string) (int64, bool, error) {
 	a.redeems++
 	if a.redeemErr != nil {
