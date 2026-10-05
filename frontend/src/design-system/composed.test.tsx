@@ -49,9 +49,80 @@ describe("DealCard + PipelineBoard", () => {
   // reader who cannot see colour gets is the badge.
   it("renders value/age and the stalled aging flag (AC-pipeline-5)", () => {
     render(<DealCard deal={deal} href="#/deals/d1" zone="Europe/Berlin" />);
-    expect(screen.getByText("€48,000.00")).toBeTruthy();
+    // Compact on the card: the column head carries the exact sum.
+    expect(screen.getByText("€48K")).toBeTruthy();
     expect(screen.getByText("Stalled")).toBeTruthy();
     expect(screen.getByRole("link").className).not.toContain("stalled");
+  });
+
+  // The slots hold their order on every card, so a column reads straight down:
+  // the name leads the figure, and what is wrong with the deal comes after both
+  // rather than in a line that pushes them down only on the cards that have it.
+  it("reads name, then figure, then the stall, on every card", () => {
+    render(<DealCard deal={deal} href="#/deals/d1" zone="Europe/Berlin" />);
+    const name = screen.getByRole("link", { name: "Fleet retrofit" });
+    const figure = screen.getByText("€48K");
+    const stall = screen.getByText("Stalled");
+    const follows = (a: Node, b: Node) =>
+      (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+    expect(follows(name, figure)).toBe(true);
+    expect(follows(figure, stall)).toBe(true);
+  });
+
+  // Each verb the caller hands in is a named control that runs its handler; one
+  // it leaves out is simply absent, because whether a reader may mail or file
+  // work is the screen's to decide.
+  it("draws the verbs it is given, by name, and only those", async () => {
+    const user = userEvent.setup();
+    const pressed: string[] = [];
+    const { rerender } = render(
+      <DealCard
+        deal={deal}
+        href="#/deals/d1"
+        zone="Europe/Berlin"
+        actions={{
+          onSummary: () => pressed.push("summary"),
+          onEmail: () => pressed.push("email"),
+          onAddTask: () => pressed.push("task"),
+        }}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Deal summary" }));
+    await user.click(screen.getByRole("button", { name: "Email" }));
+    await user.click(screen.getByRole("button", { name: "Add task" }));
+    expect(pressed).toEqual(["summary", "email", "task"]);
+
+    rerender(
+      <LocaleProvider initial="en">
+        <DealCard
+          deal={deal}
+          href="#/deals/d1"
+          zone="Europe/Berlin"
+          actions={{ onSummary: () => pressed.push("summary") }}
+        />
+      </LocaleProvider>,
+    );
+    expect(screen.getByRole("button", { name: "Deal summary" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Email" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Add task" })).toBeNull();
+  });
+
+  // A press on a verb is not a press on the card: the deal's own door does not
+  // fire under it, or summarising a deal would also navigate away from the board.
+  it("keeps a verb's press off the deal's link", async () => {
+    const user = userEvent.setup();
+    const opened: string[] = [];
+    render(
+      <DealCard
+        deal={deal}
+        href="#/deals/d1"
+        zone="Europe/Berlin"
+        onOpen={(d) => opened.push(d.id)}
+        actions={{ onSummary: () => undefined }}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Deal summary" }));
+    expect(opened).toEqual([]);
   });
 
   // Two destinations on one card, and the reader picks. The whole card used to

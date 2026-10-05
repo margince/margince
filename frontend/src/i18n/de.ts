@@ -1137,6 +1137,7 @@ export const de = {
   "deal.undated": "kein Abschlussdatum",
   "deal.lastMail": "Letzte E-Mail",
   "deal.mail.title": "Bisherige E-Mails",
+  "deal.openDeal": "Deal öffnen",
   "deal.mail.sent": "Gesendet {ago}",
   "deal.mail.received": "Erhalten {ago}",
   "deal.mail.none": "Noch keine E-Mail zu diesem Deal",

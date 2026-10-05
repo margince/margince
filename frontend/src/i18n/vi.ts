@@ -1122,6 +1122,7 @@ export const vi = {
   "deal.undated": "chưa có ngày chốt",
   "deal.lastMail": "Email gần nhất",
   "deal.mail.title": "Các email trước",
+  "deal.openDeal": "Mở deal",
   "deal.mail.sent": "Đã gửi {ago}",
   "deal.mail.received": "Đã nhận {ago}",
   "deal.mail.none": "Chưa có email nào về deal này",
