@@ -190,8 +190,7 @@ func (s *Store) OpenAttachment(ctx context.Context, id ids.UUID) (crmcontracts.A
 		var entityType, storageKey string
 		var entityID ids.UUID
 		var withheld bool
-		row := tx.QueryRow(ctx,
-			`SELECT entity_type, entity_id, storage_key, bytes_withheld
+		row := tx.QueryRow(ctx, `SELECT entity_type, entity_id, storage_key, bytes_withheld
 			   FROM attachment WHERE id = $1 AND archived_at IS NULL`, id)
 		switch err := row.Scan(&entityType, &entityID, &storageKey, &withheld); {
 		case errors.Is(err, pgx.ErrNoRows):
@@ -205,8 +204,7 @@ func (s *Store) OpenAttachment(ctx context.Context, id ids.UUID) (crmcontracts.A
 		if err := ensureAttachmentParentVisible(ctx, tx, entityType, entityID); err != nil {
 			return err
 		}
-		// Asked after the gates, so a caller who may not see the file learns
-		// nothing from the difference: a withheld file has no bytes to serve.
+		// After the gates, so the refusal tells an outsider nothing.
 		if withheld {
 			return ErrBytesWithheld
 		}
