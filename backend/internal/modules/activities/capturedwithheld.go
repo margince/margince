@@ -10,9 +10,15 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
+
+// ErrBytesWithheld is a file recorded by name only: capture kept no bytes for
+// it (RecordWithheldFiles), so there is nothing to serve or read. It answers as
+// not-found, the contract's only refusal for a file that cannot be had.
+var ErrBytesWithheld = fmt.Errorf("activities: the file's bytes were not kept: %w", apperrors.ErrNotFound)
 
 // WithheldFile is one file a private message carried whose bytes capture did
 // not keep: what arrived, without the arrival itself.

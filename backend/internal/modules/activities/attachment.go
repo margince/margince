@@ -34,11 +34,6 @@ func (h Handlers) WithBlobstore(blob blobstore.Store) Handlers {
 // maps it to 501). A role opts in with Store.WithBlobstore.
 var ErrBlobstoreUnconfigured = errors.New("activities: no object store configured")
 
-// ErrBytesWithheld is a file recorded by name only: capture kept no bytes for
-// it (RecordWithheldFiles), so there is nothing to serve or read. It answers as
-// not-found, the contract's only refusal for a file that cannot be had.
-var ErrBytesWithheld = fmt.Errorf("activities: the file's bytes were not kept: %w", apperrors.ErrNotFound)
-
 const attachmentColumns = `at.id, at.entity_type, at.entity_id, at.filename,
 	at.content_type, at.byte_size, at.checksum, at.source, at.captured_by, at.created_at,
 	at.category, at.title, at.doc_state, at.pinned, at.supersedes_id, at.company_id,
