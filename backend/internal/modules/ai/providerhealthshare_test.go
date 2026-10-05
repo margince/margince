@@ -88,24 +88,26 @@ func sharedBook(store ProviderHealthStore) (*providerBook, *healthClock) {
 func TestATripAndARecoveryAreSharedAndADegradedSpellIsToo(t *testing.T) {
 	t.Parallel()
 	store := newFakeHealthStore()
-	book, _ := sharedBook(store)
+	book, clock := sharedBook(store)
 	tr := book.tracker("openai")
 
-	tr.observe(ErrProviderQuota)
+	tr.observe(admission{}, ErrProviderQuota)
 	if got := store.wait(t); got != "publish openai" {
 		t.Fatalf("a trip wrote %q", got)
 	}
 	if st := store.rows["openai"]; st.Health != model.HealthOutOfCredit || st.RetryAfter.IsZero() {
 		t.Fatalf("shared status = %+v, want out_of_credit with a retry moment", st)
 	}
-	tr.observe(nil)
+	clock.advance(accountReprobe)
+	_, probe, _ := tr.admit()
+	tr.observe(probe, nil)
 	if got := store.wait(t); got != "clear openai" {
 		t.Fatalf("a recovery wrote %q", got)
 	}
 
 	slow := book.tracker("gemini")
 	for range consecutiveToTrip {
-		slow.observe(context.DeadlineExceeded)
+		slow.observe(admission{}, context.DeadlineExceeded)
 	}
 	store.wait(t)
 	if st := store.rows["gemini"]; st.Health != model.HealthDegraded {
@@ -117,9 +119,9 @@ func TestAnUnchangedHealthyProviderWritesNothing(t *testing.T) {
 	t.Parallel()
 	store := newFakeHealthStore()
 	book, _ := sharedBook(store)
-	book.tracker("openai").observe(nil)
-	book.tracker("openai").observe(errors.New("a message the provider refused"))
-	book.tracker("anthropic").observe(ErrProviderUnauthorized)
+	book.tracker("openai").observe(admission{}, nil)
+	book.tracker("openai").observe(admission{}, errors.New("a message the provider refused"))
+	book.tracker("anthropic").observe(admission{}, ErrProviderUnauthorized)
 	if got := store.wait(t); got != "publish anthropic" {
 		t.Fatalf("first write = %q: a provider that never failed must not be written", got)
 	}
@@ -149,7 +151,7 @@ func TestSharingNeverMakesTheCallPathWait(t *testing.T) {
 
 	done := make(chan struct{})
 	go func() {
-		book.tracker("openai").observe(ErrProviderQuota)
+		book.tracker("openai").observe(admission{}, ErrProviderQuota)
 		book.forget("openai")
 		close(done)
 	}()
@@ -200,7 +202,7 @@ func TestAWorkerOnlyOutageShowsInAnotherProcessesReport(t *testing.T) {
 	worker, _ := sharedBook(store)
 	api, _ := sharedBook(store)
 
-	worker.tracker("openai").observe(ErrProviderQuota)
+	worker.tracker("openai").observe(admission{}, ErrProviderQuota)
 	store.wait(t)
 
 	got := api.report(t.Context())
@@ -224,8 +226,8 @@ func TestARedisFaultIsLoggedOnceAndTheLocalViewStillAnswers(t *testing.T) {
 	store.loadErr = errors.New("connection refused")
 	store.putErr = errors.New("connection refused")
 	book, _ := sharedBook(store)
-	book.tracker("openai").observe(ErrProviderQuota)
-	book.tracker("anthropic").observe(ErrProviderUnauthorized)
+	book.tracker("openai").observe(admission{}, ErrProviderQuota)
+	book.tracker("anthropic").observe(admission{}, ErrProviderUnauthorized)
 	store.wait(t)
 	store.wait(t)
 
@@ -245,7 +247,7 @@ func TestARedisFaultIsLoggedOnceAndTheLocalViewStillAnswers(t *testing.T) {
 func TestABookWithNoStoreStaysLocal(t *testing.T) {
 	t.Parallel()
 	book := newProviderBook(newClock().now)
-	book.tracker("openai").observe(ErrProviderQuota)
+	book.tracker("openai").observe(admission{}, ErrProviderQuota)
 	book.forget("anthropic")
 	if got := book.report(t.Context()); len(got) != 1 || got[0].Provider != "openai" {
 		t.Fatalf("report = %+v", got)

@@ -141,38 +141,56 @@ func (t *providerTracker) current() model.ProviderHealthStatus {
 	return t.status
 }
 
+// admission says what an admitted call is: the one probe of a blocked
+// provider, or an ordinary call. observe needs it to tell a call that owns the
+// probe slot from one admitted before the provider was blocked.
+type admission struct{ probe bool }
+
 // admit lets a call through, or refuses it with the blocking status. Once the
 // retry moment passes, exactly one caller is let through as the probe and holds
 // the slot until it reports or the longest call could have ended. Everyone
 // else is refused with a moment still ahead of them, soon, because the probe
 // usually answers in seconds.
-func (t *providerTracker) admit() (model.ProviderHealthStatus, bool) {
+func (t *providerTracker) admit() (model.ProviderHealthStatus, admission, bool) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	if !t.status.Health.Blocking() {
-		return t.status, true
+		return t.status, admission{}, true
 	}
 	now := t.now()
 	if now.Before(t.status.RetryAfter) {
-		return t.status, false
+		return t.status, admission{}, false
 	}
 	if now.Before(t.probeUntil) {
 		refused := t.status
 		refused.RetryAfter = now.Add(downProbeFloor)
-		return refused, false
+		return refused, admission{}, false
 	}
 	t.probeUntil = now.Add(CallCeiling)
-	return t.status, true
+	return t.status, admission{probe: true}, true
 }
 
-// observe records one call's outcome.
-func (t *providerTracker) observe(err error) {
+// observe records one call's outcome and reports whether that call's own
+// provider-wide failure left the provider blocked: the answer is taken here,
+// under the lock, so a concurrent call cannot change it before the caller
+// reads it.
+//
+// While the provider is blocked only its probe is heard. Any other call
+// finishing then was admitted before the block, and its outcome is older
+// news: a late success must not restore the provider while the probe is still
+// out, and a late failure must not re-arm the backoff the probe owns.
+func (t *providerTracker) observe(a admission, err error) (model.ProviderHealthStatus, bool) {
 	kind := classifyFailure(err)
 	t.mu.Lock()
 	defer t.mu.Unlock()
+	if t.status.Health.Blocking() && !a.probe {
+		return t.status, false
+	}
 	before := t.status
 	defer func() { t.share(before) }()
-	t.probeUntil = time.Time{}
+	if a.probe {
+		t.probeUntil = time.Time{}
+	}
 	switch {
 	case kind != failNone:
 		t.fail(kind)
@@ -182,6 +200,7 @@ func (t *providerTracker) observe(err error) {
 	default:
 		t.recover()
 	}
+	return t.status, kind != failNone && t.status.Health.Blocking()
 }
 
 func (t *providerTracker) reset() {
@@ -319,39 +338,52 @@ func trackClient(c model.Client, provider string, book *providerBook) model.Clie
 	return &trackedClient{Client: c, provider: provider, tracker: book.tracker(provider)}
 }
 
-func (c *trackedClient) admit() error {
-	if st, ok := c.tracker.admit(); !ok {
-		return &ProviderDownError{Provider: c.provider, Health: st.Health, RetryAfter: st.RetryAfter}
+func (c *trackedClient) admit() (admission, error) {
+	st, a, ok := c.tracker.admit()
+	if !ok {
+		return a, &ProviderDownError{Provider: c.provider, Health: st.Health, RetryAfter: st.RetryAfter}
 	}
-	return nil
+	return a, nil
+}
+
+// observed records err and, when this very failure left the provider blocked,
+// returns it as the deferral it now is, keeping the failure as its cause. The
+// decision is the tracker's own at the moment of the call, never a later read
+// of shared health that another call may have moved.
+func (c *trackedClient) observed(a admission, err error) error {
+	st, blocked := c.tracker.observe(a, err)
+	if !blocked {
+		return err
+	}
+	return &ProviderDownError{Provider: c.provider, Health: st.Health, RetryAfter: st.RetryAfter, Cause: err}
 }
 
 func (c *trackedClient) Complete(ctx context.Context, req model.Request) (model.Response, error) {
-	if err := c.admit(); err != nil {
+	a, err := c.admit()
+	if err != nil {
 		return model.Response{}, err
 	}
 	resp, err := c.Client.Complete(ctx, req)
-	c.tracker.observe(err)
-	return resp, err
+	return resp, c.observed(a, err)
 }
 
 //nolint:ireturn // Stream passes the adapter's TokenStream through unchanged
 func (c *trackedClient) Stream(ctx context.Context, req model.Request) (model.TokenStream, error) {
-	if err := c.admit(); err != nil {
+	a, err := c.admit()
+	if err != nil {
 		return nil, err
 	}
 	stream, err := c.Client.Stream(ctx, req)
-	c.tracker.observe(err)
-	return stream, err
+	return stream, c.observed(a, err)
 }
 
 func (c *trackedClient) Embed(ctx context.Context, req model.EmbedRequest) (model.Embeddings, error) {
-	if err := c.admit(); err != nil {
+	a, err := c.admit()
+	if err != nil {
 		return model.Embeddings{}, err
 	}
 	out, err := c.Client.Embed(ctx, req)
-	c.tracker.observe(err)
-	return out, err
+	return out, c.observed(a, err)
 }
 
 func (c *trackedClient) Health() model.ProviderHealthStatus { return c.tracker.current() }
@@ -375,17 +407,6 @@ func blockedProvider(b *binding, ladder []Tier, now time.Time) *ProviderDownErro
 		}
 	}
 	return first
-}
-
-// blockedBy dresses the failure that has just blocked a rung's provider as a
-// deferral, so the call that tripped the status is refunded like every later
-// one. A failure that did not block the provider is returned as it came.
-func blockedBy(b *binding, tier Tier, cause error) error {
-	st := b.clients[tier].Health()
-	if !st.Health.Blocking() {
-		return cause
-	}
-	return &ProviderDownError{Provider: b.routeMeta[tier].provider, Health: st.Health, RetryAfter: st.RetryAfter, Cause: cause}
 }
 
 // refusedUncalled reports whether err is a refusal that made no provider call:

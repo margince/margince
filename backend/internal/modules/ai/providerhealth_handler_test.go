@@ -25,9 +25,9 @@ func providerHealthRequest(grants map[string]principal.ObjectGrant) *http.Reques
 func TestProviderHealthListsOnlyBlockedProvidersInNameOrderWithoutProviderText(t *testing.T) {
 	t.Parallel()
 	book := newProviderBook(newClock().now)
-	book.tracker("openai").observe(ErrProviderQuota)
-	book.tracker("anthropic").observe(ErrProviderUnauthorized)
-	book.tracker("gemini").observe(nil)
+	book.tracker("openai").observe(admission{}, ErrProviderQuota)
+	book.tracker("anthropic").observe(admission{}, ErrProviderUnauthorized)
+	book.tracker("gemini").observe(admission{}, nil)
 	h := Handlers{providers: book}
 
 	w := httptest.NewRecorder()

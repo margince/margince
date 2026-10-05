@@ -129,12 +129,12 @@ func TestOneEmptyAccountOrRejectedKeyBlocksTheProviderAndAReprobeIsFifteenMinute
 	} {
 		clock := newClock()
 		tr := newProviderTracker(clock.now)
-		tr.observe(err)
+		tr.observe(admission{}, err)
 		st := tr.current()
 		if st.Health != want || !st.Since.Equal(clock.now()) || !st.RetryAfter.Equal(clock.now().Add(accountReprobe)) {
 			t.Errorf("%v: status %+v, want %s with a 15 minute reprobe", err, st, want)
 		}
-		if _, ok := tr.admit(); ok {
+		if _, _, ok := tr.admit(); ok {
 			t.Errorf("%v: a call was admitted while the provider is blocked", err)
 		}
 	}
@@ -144,15 +144,15 @@ func TestServerFaultsTripOnlyAfterARunAndASuccessEndsTheRun(t *testing.T) {
 	t.Parallel()
 	tr := newProviderTracker(newClock().now)
 	fault := fmt.Errorf("%w", ErrProviderUnavailable)
-	tr.observe(fault)
-	tr.observe(fault)
-	tr.observe(nil)
-	tr.observe(fault)
-	tr.observe(fault)
+	tr.observe(admission{}, fault)
+	tr.observe(admission{}, fault)
+	tr.observe(admission{}, nil)
+	tr.observe(admission{}, fault)
+	tr.observe(admission{}, fault)
 	if h := tr.current().Health; h != model.HealthOK {
 		t.Fatalf("health %s after two faults, a success and two more, want ok", h)
 	}
-	tr.observe(fault)
+	tr.observe(admission{}, fault)
 	if h := tr.current().Health; h != model.HealthDown {
 		t.Errorf("health %s after three faults in a row, want down", h)
 	}
@@ -162,16 +162,16 @@ func TestTimeoutsDegradeTheProviderWithoutBlockingIt(t *testing.T) {
 	t.Parallel()
 	tr := newProviderTracker(newClock().now)
 	for range consecutiveToTrip {
-		tr.observe(context.DeadlineExceeded)
+		tr.observe(admission{}, context.DeadlineExceeded)
 	}
 	st := tr.current()
 	if st.Health != model.HealthDegraded || st.Health.Blocking() {
 		t.Errorf("status %+v, want degraded and not blocking", st)
 	}
-	if _, ok := tr.admit(); !ok {
+	if _, _, ok := tr.admit(); !ok {
 		t.Error("a degraded provider refused a call")
 	}
-	tr.observe(nil)
+	tr.observe(admission{}, nil)
 	if h := tr.current().Health; h != model.HealthOK {
 		t.Errorf("health %s after a success, want ok", h)
 	}
@@ -180,7 +180,7 @@ func TestTimeoutsDegradeTheProviderWithoutBlockingIt(t *testing.T) {
 func TestAnUnreachableProviderIsDownAtOnce(t *testing.T) {
 	t.Parallel()
 	tr := newProviderTracker(newClock().now)
-	tr.observe(&net.OpError{Op: "dial", Err: syscall.ECONNREFUSED})
+	tr.observe(admission{}, &net.OpError{Op: "dial", Err: syscall.ECONNREFUSED})
 	if h := tr.current().Health; h != model.HealthDown {
 		t.Errorf("health %s after one refused connection, want down", h)
 	}
@@ -190,12 +190,13 @@ func TestAMessageTheProviderRefusedProvesItIsAnswering(t *testing.T) {
 	t.Parallel()
 	clock := newClock()
 	tr := newProviderTracker(clock.now)
-	tr.observe(ErrProviderQuota)
+	tr.observe(admission{}, ErrProviderQuota)
 	clock.advance(accountReprobe)
-	if _, ok := tr.admit(); !ok {
+	_, probe, ok := tr.admit()
+	if !ok {
 		t.Fatal("the probe was refused")
 	}
-	tr.observe(errors.New("ai: provider refused this request"))
+	tr.observe(probe, errors.New("ai: provider refused this request"))
 	if h := tr.current().Health; h != model.HealthOK {
 		t.Errorf("health %s after the provider answered a probe, want ok", h)
 	}
@@ -205,21 +206,21 @@ func TestAProbeInFlightRefusesOthersWithAMomentStillAheadOfThem(t *testing.T) {
 	t.Parallel()
 	clock := newClock()
 	tr := newProviderTracker(clock.now)
-	tr.observe(ErrProviderUnauthorized)
+	tr.observe(admission{}, ErrProviderUnauthorized)
 	clock.advance(accountReprobe)
-	if _, ok := tr.admit(); !ok {
+	if _, _, ok := tr.admit(); !ok {
 		t.Fatal("the probe was refused")
 	}
-	st, ok := tr.admit()
+	st, _, ok := tr.admit()
 	if ok || !st.RetryAfter.After(clock.now()) {
 		t.Errorf("a second caller got admitted=%v with retry %v, want a refusal with a moment after now", ok, st.RetryAfter)
 	}
 	clock.advance(CallCeiling - time.Second)
-	if _, ok := tr.admit(); ok {
+	if _, _, ok := tr.admit(); ok {
 		t.Error("a second probe started while the first could still be running")
 	}
 	clock.advance(time.Second)
-	if _, ok := tr.admit(); !ok {
+	if _, _, ok := tr.admit(); !ok {
 		t.Error("a probe that never reported held the slot past the longest call")
 	}
 }
@@ -228,16 +229,17 @@ func TestAProbeTheCallerCancelsFreesItsSlotWithoutCounting(t *testing.T) {
 	t.Parallel()
 	clock := newClock()
 	tr := newProviderTracker(clock.now)
-	tr.observe(ErrProviderQuota)
+	tr.observe(admission{}, ErrProviderQuota)
 	clock.advance(accountReprobe)
-	if _, ok := tr.admit(); !ok {
+	_, probe, ok := tr.admit()
+	if !ok {
 		t.Fatal("the probe was refused")
 	}
-	tr.observe(context.Canceled)
+	tr.observe(probe, context.Canceled)
 	if h := tr.current().Health; h != model.HealthOutOfCredit {
 		t.Errorf("health %s after a cancelled probe, want it unchanged", h)
 	}
-	if _, ok := tr.admit(); !ok {
+	if _, _, ok := tr.admit(); !ok {
 		t.Error("a cancelled probe kept the slot")
 	}
 }
@@ -246,10 +248,10 @@ func TestAnAccountFaultKeepsItsLabelWhenAProbeFailsAnotherWay(t *testing.T) {
 	t.Parallel()
 	clock := newClock()
 	tr := newProviderTracker(clock.now)
-	tr.observe(ErrProviderQuota)
+	tr.observe(admission{}, ErrProviderQuota)
 	clock.advance(accountReprobe)
-	tr.admit()
-	tr.observe(ErrProviderUnavailable)
+	_, probe, _ := tr.admit()
+	tr.observe(probe, ErrProviderUnavailable)
 	if st := tr.current(); st.Health != model.HealthOutOfCredit || !st.RetryAfter.Equal(clock.now().Add(accountReprobe)) {
 		t.Errorf("status %+v, want out_of_credit re-armed for the account reprobe", st)
 	}
@@ -259,15 +261,15 @@ func TestExactlyOneProbeIsAdmittedOnceTheRetryMomentPasses(t *testing.T) {
 	t.Parallel()
 	clock := newClock()
 	tr := newProviderTracker(clock.now)
-	tr.observe(ErrProviderUnauthorized)
+	tr.observe(admission{}, ErrProviderUnauthorized)
 	clock.advance(accountReprobe - time.Second)
-	if _, ok := tr.admit(); ok {
+	if _, _, ok := tr.admit(); ok {
 		t.Fatal("a call was admitted before the retry moment")
 	}
 	clock.advance(time.Second)
 	admitted := 0
 	for range 5 {
-		if _, ok := tr.admit(); ok {
+		if _, _, ok := tr.admit(); ok {
 			admitted++
 		}
 	}
@@ -281,16 +283,17 @@ func TestAFailedProbeKeepsSinceAndBacksOffADownProvider(t *testing.T) {
 	clock := newClock()
 	tr := newProviderTracker(clock.now)
 	start := clock.now()
-	tr.observe(&net.OpError{Op: "dial", Err: syscall.ECONNREFUSED})
+	tr.observe(admission{}, &net.OpError{Op: "dial", Err: syscall.ECONNREFUSED})
 	var waits []time.Duration
 	for range 5 {
 		st := tr.current()
 		waits = append(waits, st.RetryAfter.Sub(clock.now()))
 		clock.advance(st.RetryAfter.Sub(clock.now()))
-		if _, ok := tr.admit(); !ok {
+		_, probe, ok := tr.admit()
+		if !ok {
 			t.Fatal("the probe was refused")
 		}
-		tr.observe(&net.OpError{Op: "dial", Err: syscall.ECONNREFUSED})
+		tr.observe(probe, &net.OpError{Op: "dial", Err: syscall.ECONNREFUSED})
 	}
 	if got := tr.current().Since; !got.Equal(start) {
 		t.Errorf("since moved to %v, want it kept at %v", got, start)
@@ -306,7 +309,7 @@ func TestAFailedProbeKeepsSinceAndBacksOffADownProvider(t *testing.T) {
 func TestForgettingAProviderClearsItsFailuresSoTheNextCallProbes(t *testing.T) {
 	t.Parallel()
 	book := newProviderBook(newClock().now)
-	book.tracker("openai").observe(ErrProviderQuota)
+	book.tracker("openai").observe(admission{}, ErrProviderQuota)
 	if len(book.snapshot()) != 1 {
 		t.Fatal("the blocked provider is missing from the snapshot")
 	}
@@ -314,7 +317,7 @@ func TestForgettingAProviderClearsItsFailuresSoTheNextCallProbes(t *testing.T) {
 	if got := book.snapshot(); len(got) != 0 {
 		t.Errorf("snapshot %v after forgetting, want none", got)
 	}
-	if _, ok := book.tracker("openai").admit(); !ok {
+	if _, _, ok := book.tracker("openai").admit(); !ok {
 		t.Error("a forgotten provider refused its next call")
 	}
 }
@@ -322,9 +325,9 @@ func TestForgettingAProviderClearsItsFailuresSoTheNextCallProbes(t *testing.T) {
 func TestTheSnapshotListsOnlyProvidersThatAreNotOKInNameOrder(t *testing.T) {
 	t.Parallel()
 	book := newProviderBook(newClock().now)
-	book.tracker("openai").observe(ErrProviderQuota)
-	book.tracker("anthropic").observe(ErrProviderUnauthorized)
-	book.tracker("gemini").observe(nil)
+	book.tracker("openai").observe(admission{}, ErrProviderQuota)
+	book.tracker("anthropic").observe(admission{}, ErrProviderUnauthorized)
+	book.tracker("gemini").observe(admission{}, nil)
 	got := book.snapshot()
 	if len(got) != 2 || got[0].Provider != "anthropic" || got[1].Provider != "openai" {
 		t.Errorf("snapshot %+v, want anthropic then openai", got)
@@ -413,7 +416,7 @@ func TestTheRouterRefusesACallWhoseEveryRungIsBlockedWithoutCallingOrTracing(t *
 	book := newProviderBook(clock.now)
 	inner := &faultClient{err: ErrProviderUnauthorized}
 	blocked := trackClient(inner, "openai", book)
-	blocked.(*trackedClient).tracker.observe(ErrProviderUnauthorized)
+	blocked.(*trackedClient).tracker.observe(admission{}, ErrProviderUnauthorized)
 	router := assembleRouter(map[Tier]model.Client{TierCheapCloud: blocked}, blocked, ProfileCloudFrontier,
 		&memoryMeter{}, StaticBudget(1<<40), nil, nil, false, nil)
 	router.now = clock.now
@@ -437,7 +440,7 @@ func TestARebindClearsWhatTheOperatorJustFixed(t *testing.T) {
 	if err != nil {
 		t.Fatalf("building the router: %v", err)
 	}
-	sharedProviderHealth.tracker(ProviderFake).observe(ErrProviderUnauthorized)
+	sharedProviderHealth.tracker(ProviderFake).observe(admission{}, ErrProviderUnauthorized)
 	if err := router.Rebind(cfg); err != nil {
 		t.Fatalf("rebinding: %v", err)
 	}
@@ -483,7 +486,7 @@ func TestABlockedRungNeverReplacesWhatACalledRungAnswered(t *testing.T) {
 	t.Parallel()
 	book := newProviderBook(newClock().now)
 	blocked := trackClient(&faultClient{}, "openai", book)
-	blocked.(*trackedClient).tracker.observe(ErrProviderQuota)
+	blocked.(*trackedClient).tracker.observe(admission{}, ErrProviderQuota)
 	poison := errors.New("provider refused this message")
 	r := ladderOf(&faultClient{err: poison}, blocked)
 	_, _, err := r.Complete(wsContext(t), TaskSummarize, model.Request{Messages: []model.Message{{Role: "user", Content: "x"}}})
@@ -496,7 +499,7 @@ func TestAnEmbeddingForABlockedProviderIsRefusedUntracedAndNotWrappedAsAFailedLa
 	t.Parallel()
 	book := newProviderBook(newClock().now)
 	blocked := trackClient(&faultClient{}, "openai", book)
-	blocked.(*trackedClient).tracker.observe(ErrProviderUnauthorized)
+	blocked.(*trackedClient).tracker.observe(admission{}, ErrProviderUnauthorized)
 	r := assembleRouter(map[Tier]model.Client{TierCheapCloud: NewFakeClient()}, blocked, ProfileEUHosted,
 		&memoryMeter{}, StaticBudget(1<<40), nil, nil, false, nil)
 	_, err := r.Embed(wsContext(t), model.EmbedRequest{Inputs: []string{"x"}})
@@ -543,5 +546,56 @@ func TestACallRefusedBecauseTheProviderIsBlockedHasNothingToTrace(t *testing.T) 
 	}
 	if refusedUncalled(errors.New("x")) {
 		t.Error("an ordinary error was read as an untraced refusal")
+	}
+}
+
+func TestACallAdmittedBeforeTheBlockNeitherReleasesTheProbeNorRestoresTheProvider(t *testing.T) {
+	t.Parallel()
+	clock := newClock()
+	tr := newProviderTracker(clock.now)
+	_, early, _ := tr.admit()
+	tr.observe(admission{}, ErrProviderQuota)
+	clock.advance(accountReprobe)
+	_, probe, ok := tr.admit()
+	if !ok || !probe.probe {
+		t.Fatal("the probe was not admitted")
+	}
+	if _, blocked := tr.observe(early, nil); blocked || tr.current().Health != model.HealthOutOfCredit {
+		t.Fatalf("a call from before the block restored the provider: %+v", tr.current())
+	}
+	if _, _, again := tr.admit(); again {
+		t.Error("a call from before the block released the probe's slot")
+	}
+	tr.observe(probe, nil)
+	if tr.current().Health != model.HealthOK {
+		t.Errorf("health %s after the probe answered, want ok", tr.current().Health)
+	}
+}
+
+func TestOnlyTheCallThatBlockedTheProviderIsRefundedForIt(t *testing.T) {
+	t.Parallel()
+	clock := newClock()
+	tr := newProviderTracker(clock.now)
+	_, a, _ := tr.admit()
+	if _, blocked := tr.observe(a, errors.New("provider refused this message")); blocked {
+		t.Error("a message the provider refused was reported as blocking it")
+	}
+	tr.observe(admission{}, ErrProviderQuota)
+	if _, blocked := tr.observe(a, errors.New("provider refused this message")); blocked {
+		t.Error("a message refused earlier was dressed as the outage a concurrent call caused")
+	}
+	reader := newProviderTracker(clock.now)
+	if st, blocked := reader.observe(admission{}, ErrProviderQuota); !blocked || st.Health != model.HealthOutOfCredit {
+		t.Errorf("the call that blocked the provider got %+v blocked=%v, want to be told so", st, blocked)
+	}
+}
+
+func TestAnAuthenticationPolicyRefusalIsTheMessagesOwn(t *testing.T) {
+	t.Parallel()
+	for _, status := range []int{http.StatusBadRequest, http.StatusForbidden} {
+		got := providerFaultOf(status, errors.New("vendor: this request's authentication method is not allowed by policy"))
+		if errors.Is(got, ErrProviderUnauthorized) {
+			t.Errorf("status %d: an authentication-policy refusal blocked the provider", status)
+		}
 	}
 }

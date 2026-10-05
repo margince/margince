@@ -63,7 +63,7 @@ func (r *Router) Embed(ctx context.Context, req model.EmbedRequest) (model.Embed
 
 	start := r.now()
 	res, err := b.embedder.Embed(embedCtx, req)
-	if errors.Is(err, ErrProviderDown) {
+	if refusedUncalled(err) {
 		// No call was made to a provider already known to be down, so there is
 		// nothing to trace, and a caller tells a deferral from a failed lane.
 		return model.Embeddings{}, err

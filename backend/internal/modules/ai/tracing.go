@@ -201,7 +201,7 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 			// A rung whose provider is blocked made no call: it is skipped, not
 			// traced or metered as a failure of this request, and it never
 			// replaces what a rung that WAS called answered.
-			if errors.Is(callErr, ErrProviderDown) {
+			if refusedUncalled(callErr) {
 				skipped = callErr
 				continue
 			}
@@ -227,7 +227,7 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 				// Not an exhausted ladder — the rungs above were never tried.
 				// Reported as the refusal alone so a caller cannot read "every
 				// tier failed" off a walk that stopped at the first one.
-				return model.Response{}, t, false, blockedBy(b, t, callErr)
+				return model.Response{}, t, false, callErr
 			}
 			// A withheld answer walks on: a different model may answer what this
 			// one declined, and the content is the caller's own to send it. The
@@ -279,13 +279,12 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 		if errors.Is(lastErr, model.ErrOutputWithheld) || errors.Is(lastErr, model.ErrRequestRejected) {
 			return model.Response{}, lastTier, false, lastErr
 		}
-		// A walk that ends on a failure of the provider itself has left that
-		// provider blocked (or kept it so, when this call was its probe), and
-		// the call is refunded like the next one: the item did nothing wrong.
-		if classifyFailure(lastErr) != failNone {
-			if down, blocked := blockedBy(b, lastTier, lastErr).(*ProviderDownError); blocked {
-				return model.Response{}, lastTier, false, down
-			}
+		// A walk that ends on the failure that blocked its provider (or kept
+		// it blocked, when the call was the probe) is a deferral already: the
+		// tracked client dressed it as one, and the item did nothing wrong.
+		var down *ProviderDownError
+		if errors.As(lastErr, &down) {
+			return model.Response{}, lastTier, false, lastErr
 		}
 		return model.Response{}, lastTier, false, fmt.Errorf("%w for %s: %w", ErrAllTiersFailed, task, lastErr)
 	}
