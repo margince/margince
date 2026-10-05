@@ -14,8 +14,8 @@ package compose
 // The two halves live in two modules that may not import each other, which
 // is why the edge sits in compose.
 //
-// WHOSE RIGHT IT IS. The write runs as the product, but only after asking the
-// person who caused the event whether they could make it themselves: ticking
+// WHOSE RIGHT IT IS. The write runs as the product, but only after asking
+// whoever caused the event whether they could make it themselves: ticking
 // a task you hold must not settle a claim on a contact you may not update, and
 // settling a claim must not complete a colleague's task you may not change.
 // A human answers for themselves, an agent or connector for the human it acts
@@ -106,7 +106,7 @@ func (t *CommitmentSettleTrigger) HandleEvent(ctx context.Context, env events.En
 }
 
 // settleClaimsOf settles every open claim a completed task stands for, on
-// each contact the person who completed it could update.
+// each contact whoever completed it could update.
 func (t *CommitmentSettleTrigger) settleClaimsOf(ctx context.Context, by events.Actor, taskID ids.UUID) error {
 	claims, err := t.claims.OpenClaimsOnTask(ctx, taskID)
 	if err != nil {
@@ -127,8 +127,8 @@ func (t *CommitmentSettleTrigger) settleClaimsOf(ctx context.Context, by events.
 	return nil
 }
 
-// completeTaskOf completes the task a claim settled as done became, if the
-// person who settled the claim could complete that task themselves.
+// completeTaskOf completes the task a claim settled as done became, if
+// whoever settled the claim could complete that task themselves.
 func (t *CommitmentSettleTrigger) completeTaskOf(ctx context.Context, by events.Actor, claimID ids.UUID) error {
 	task, status, err := t.claims.ClaimTask(ctx, claimID)
 	if err != nil || task == nil || status != claimStatusDone {
@@ -172,7 +172,10 @@ func (t *CommitmentSettleTrigger) originMayWrite(
 		SeatType: seatType, TeamIDs: rbac.TeamIDs, Permissions: rbac.Permissions,
 	})
 	if err := auth.Require(asThem, table, principal.ActionUpdate); err != nil {
-		return false, nil
+		if errors.Is(err, apperrors.ErrPermissionDenied) {
+			return false, nil
+		}
+		return false, err
 	}
 	err = database.WithWorkspaceTx(asThem, t.pool, func(tx pgx.Tx) error {
 		// An activity's write rule is its own: its audience, not an owner.

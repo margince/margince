@@ -148,7 +148,7 @@ func TestDismissingOrReopeningSettlesNothingElse(t *testing.T) {
 	}
 }
 
-// Settling a commitment does not complete a task the person settling it could
+// Settling a commitment does not complete a task whoever settles it could
 // not change themselves: someone who may update contacts but no activity keeps
 // their hands off the colleague's task.
 func TestSettlingACommitmentLeavesATaskTheSettlerMayNotChange(t *testing.T) {
@@ -172,7 +172,7 @@ func TestSettlingACommitmentLeavesATaskTheSettlerMayNotChange(t *testing.T) {
 	}
 }
 
-// Ticking a task does not settle a commitment on a contact the person ticking
+// Ticking a task does not settle a commitment on a contact whoever ticks
 // it may not update.
 func TestTickingATaskLeavesACommitmentOnAContactTheyMayNotUpdate(t *testing.T) {
 	k := seedKeptCommitment(t)

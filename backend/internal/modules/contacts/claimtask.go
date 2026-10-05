@@ -29,12 +29,24 @@ func (s *Store) OpenClaimsOnTask(ctx context.Context, taskID ids.UUID) ([]ClaimO
 	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
 		return nil, err
 	}
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	taskPos := arg(taskID)
+	scope, err := auth.ScopeClauseFor(ctx, "contact", "pr", arg)
+	if err != nil {
+		return nil, err
+	}
+	if scope == "" {
+		scope = sqlAlwaysVisible
+	}
 	var out []ClaimOnTask
-	err := s.tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, `
-			SELECT id, contact_id FROM conversation_claim
-			 WHERE task_activity_id = $1 AND status = 'open' AND archived_at IS NULL
-			 ORDER BY id`, taskID)
+	err = s.tx(ctx, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, fmt.Sprintf(`
+			SELECT c.id, c.contact_id FROM conversation_claim c
+			  JOIN contact pr ON pr.id = c.contact_id AND pr.archived_at IS NULL
+			 WHERE c.task_activity_id = $%d AND c.status = 'open' AND c.archived_at IS NULL
+			   AND (%s)
+			 ORDER BY c.id`, taskPos, scope), args...)
 		if err != nil {
 			return fmt.Errorf("read the claims on a task: %w", err)
 		}
@@ -54,12 +66,23 @@ func (s *Store) ClaimTask(ctx context.Context, claimID ids.UUID) (*ids.UUID, str
 	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
 		return nil, "", err
 	}
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	claimPos := arg(claimID)
+	scope, err := auth.ScopeClauseFor(ctx, "contact", "pr", arg)
+	if err != nil {
+		return nil, "", err
+	}
+	if scope == "" {
+		scope = sqlAlwaysVisible
+	}
 	var task *ids.UUID
 	var status string
-	err := s.tx(ctx, func(tx pgx.Tx) error {
-		err := tx.QueryRow(ctx, `
-			SELECT task_activity_id, status FROM conversation_claim
-			 WHERE id = $1 AND archived_at IS NULL`, claimID).Scan(&task, &status)
+	err = s.tx(ctx, func(tx pgx.Tx) error {
+		err := tx.QueryRow(ctx, fmt.Sprintf(`
+			SELECT c.task_activity_id, c.status FROM conversation_claim c
+			  JOIN contact pr ON pr.id = c.contact_id AND pr.archived_at IS NULL
+			 WHERE c.id = $%d AND c.archived_at IS NULL AND (%s)`, claimPos, scope), args...).Scan(&task, &status)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil
 		}
