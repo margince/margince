@@ -111,7 +111,11 @@ func commitmentGap(t *testing.T, rec aicert.Record, bands map[string]string) (fi
 				firmMin = row.AnswerConfidenceMin
 			}
 		case aicert.CommitmentBandHedged:
-			if row.AnswerConfidenceMax != nil && (hedgedMax == nil || *row.AnswerConfidenceMax > *hedgedMax) {
+			if row.AnswerConfidenceMax == nil {
+				t.Errorf("%s: no kept run of the hedged scenario %q reported a confidence", who, name)
+				continue
+			}
+			if hedgedMax == nil || *row.AnswerConfidenceMax > *hedgedMax {
 				hedgedMax = row.AnswerConfidenceMax
 			}
 		}

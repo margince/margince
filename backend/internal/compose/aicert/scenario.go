@@ -341,9 +341,9 @@ func validateCommitmentBand(sc Scenario, path string) error {
 		return fmt.Errorf("aicert: %s: commitment_band is %q, want %s or %s",
 			path, sc.CommitmentBand, CommitmentBandFirm, CommitmentBandHedged)
 	}
-	if sc.Expect.Outcome != aitasks.OutcomeAccepted {
-		return fmt.Errorf("aicert: %s: commitment_band needs expect.outcome %s, since only an accepted reply carries a confidence to bound",
-			path, aitasks.OutcomeAccepted)
+	if sc.Expect.Outcome != aitasks.OutcomeAccepted || strings.TrimSpace(string(sc.Expect.Answer)) == "[]" {
+		return fmt.Errorf("aicert: %s: commitment_band needs an accepted reply that states a commitment, since an abstention carries no confidence to bound",
+			path)
 	}
 	return nil
 }

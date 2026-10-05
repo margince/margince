@@ -172,7 +172,7 @@ func runOnce(ctx context.Context, candidate *ai.Router, candidateRec *traceRecor
 		output: validated.output, outcome: entry.outcome, passed: entry.passed,
 		scope: aitasks.ScopeOf(factory), pooled: pooled,
 	})
-	outcome.AnswerConfidence = validated.confidence
+	outcome.AnswerConfidence = keptConfidence(prepared, caseTrace, entry.passed)
 	outcome.ContextApplied = len(caseTrace.Requests) > 0 && caseTrace.Requests[0].ContextFingerprint != ""
 	if !entry.graded {
 		log.WarnContext(ctx, "aicert: this run has no whole answer, so it fails and is not sent to the judge",
@@ -216,9 +216,6 @@ type validation struct {
 	output, outcome string
 	// asExpected is the outcome the scenario named, inside its caps.
 	asExpected bool
-	// confidence is what the reply put on its readings; set only for a kept run
-	// of a site that reports one.
-	confidence *ConfidenceRange
 }
 
 // validateRun runs the site's own validator over the site's own trace: Evaluate
@@ -249,16 +246,14 @@ func validateRun(ctx context.Context, prepared aitasks.PreparedCase, caseTrace a
 	// The judge reads what production's parsers read: the unfenced text (every
 	// serving path strips markdown fences before json.Unmarshal, so a fence is
 	// presentation, not a defect).
-	kept := outcomeAsExpected && capsOK
 	return validation{
-		output: ai.Unfence(caseTrace.Output), outcome: evaluated.Result, asExpected: kept,
-		confidence: keptConfidence(prepared, caseTrace, kept),
+		output: ai.Unfence(caseTrace.Output), outcome: evaluated.Result, asExpected: outcomeAsExpected && capsOK,
 	}, nil
 }
 
-// keptConfidence reads the confidence off a run that did what its scenario
-// asked. A run that did not has no reading worth bounding a threshold with: the
-// replies it gave are the ones the site refused or the scenario did not want.
+// keptConfidence reads the confidence off a run the tally counts as passed. A
+// run that did not pass — refused, wrong, or cut off mid-answer — has no reading
+// worth bounding a threshold with.
 func keptConfidence(prepared aitasks.PreparedCase, trace aitasks.Trace, kept bool) *ConfidenceRange {
 	reporter, ok := prepared.(aitasks.ConfidenceCase)
 	if !ok || !kept {
