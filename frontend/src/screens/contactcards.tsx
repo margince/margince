@@ -263,14 +263,20 @@ function openLoops(
   // A commitment that became a task is the task's while it is open: the page
   // lists the task, on this card or beside it, and the claim would say the
   // same thing twice. Once kept, the task leaves the open list and settled
-  // its claim with it, so the claim stays as the record that it was kept.
+  // its claim with it, so the claim stays as the record that it was kept —
+  // unless the task was reopened, when the open task speaks for it again.
+  const openTasks = new Set(
+    (view.next_steps?.data ?? []).map((task) => task.id),
+  );
   const fromClaims = LOOPS.flatMap((loop) =>
     claims
       .filter(
         (claim) =>
           claim.kind === loop.kind &&
           claim.status !== "dismissed" &&
-          (!claim.task_activity_id || claim.status === "done"),
+          (!claim.task_activity_id ||
+            (claim.status === "done" &&
+              !openTasks.has(claim.task_activity_id))),
       )
       .map(
         (claim): OpenLoop => ({
@@ -384,6 +390,11 @@ function LoopStatus({ loop }: Readonly<{ loop: OpenLoop }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
+  // A kept commitment owes nothing, so it names no deadline: a ticked row
+  // reading "overdue" would contradict its own checkbox.
+  if (loop.done) {
+    return null;
+  }
   // An unreadable due instant names no deadline, so the row reads as one with
   // no date rather than as a promise due at some NaN o'clock.
   const dueMs = loop.dueAt ? Date.parse(loop.dueAt) : Number.NaN;

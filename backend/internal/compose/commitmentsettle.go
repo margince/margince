@@ -14,19 +14,15 @@ package compose
 // The two halves live in two modules that may not import each other, which
 // is why the edge sits in compose.
 //
-// WHOSE RIGHT IT IS. The write runs as the product, but only after asking
-// whoever caused the event whether they could make it themselves: ticking
-// a task you hold must not settle a claim on a contact you may not update, and
-// settling a claim must not complete a colleague's task you may not change.
-// A human answers for themselves, an agent or connector for the human it acts
-// for; an agent acting for nobody settles nothing. The write is made on that
-// human's behalf, so the event it emits names them again and a settlement it
-// causes in turn is held to the same human's rights. A change the product made
-// on nobody's behalf is followed, because the product's own passes are what
-// the rules above already govern.
-//
-// Settling a claim also asks what settling it directly asks: that the
-// conversation it was quoted from is still the human's to read.
+// WHOSE RIGHT IT IS. The write runs as whoever caused the event: a human as
+// themselves, an agent or connector as the human it acts for. So the stores'
+// own gates ask about that human inside the write's transaction — ticking a
+// task you hold must not settle a claim on a contact you may not update, nor
+// one quoted from a conversation you may no longer read, and settling a claim
+// must not complete a task you may not change. The event the write emits names
+// the same human, so a settlement it causes in turn is held to their rights
+// too. An agent acting for nobody settles nothing; the product acting for
+// nobody is followed, because its own passes are what the rules above govern.
 //
 // A HISTORY REPLAYED IS NOT RE-ENACTED. A new group starts at the stream's
 // beginning, so a claim settled long ago arrives as news. A task changed after
@@ -46,7 +42,6 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -110,118 +105,111 @@ func (t *CommitmentSettleTrigger) HandleEvent(ctx context.Context, env events.En
 		if !t.readPayload(ctx, env, &payload) || payload.Status != claimStatusDone {
 			return nil
 		}
-		return t.completeTaskOf(ctx, env.Actor, ids.UUID(payload.ClaimId), env.OccurredAt)
+		return t.completeTaskOf(ctx, env.Actor, ids.UUID(payload.ClaimId))
 	}
 	return nil
-}
-
-// onBehalfOfOrigin is the context the write runs under: the product, acting
-// for the human behind the event when there is one, so the event the write
-// emits carries them forward.
-func onBehalfOfOrigin(ctx context.Context, by events.Actor) context.Context {
-	seat, ok := originSeat(by)
-	if !ok {
-		return ctx
-	}
-	return principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem, ID: commitmentSettleActor, OnBehalfOf: seat,
-	})
 }
 
 // settleClaimsOf settles every open claim a completed task stands for, on
 // each contact whoever completed it could update.
 func (t *CommitmentSettleTrigger) settleClaimsOf(ctx context.Context, by events.Actor, taskID ids.UUID) error {
+	asThem, ok, err := t.actingAs(ctx, by)
+	if err != nil || !ok {
+		return err
+	}
 	claims, err := t.claims.OpenClaimsOnTask(ctx, taskID)
 	if err != nil {
 		return err
 	}
 	for _, claim := range claims {
-		allowed, err := t.originMayWrite(ctx, by, string(recordTypeContact), claim.Contact, &claim.Source)
+		// Settling checks the claim's own conversation as them; the contact's
+		// write authority is asked here, because settling does not.
+		writable, err := t.mayWriteContact(asThem, claim.Contact)
 		if err != nil {
 			return err
 		}
-		if !allowed {
+		if !writable {
 			continue
 		}
-		if err := t.claims.SettleConversationClaim(onBehalfOfOrigin(ctx, by), claim.ID, claimStatusDone); err != nil {
+		if err := t.claims.SettleConversationClaim(asThem, claim.ID, claimStatusDone); err != nil {
+			if refused(err) {
+				continue
+			}
 			return err
 		}
 	}
 	return nil
 }
 
-// completeTaskOf completes the task a claim settled as done became, if
-// whoever settled the claim could complete that task themselves.
-func (t *CommitmentSettleTrigger) completeTaskOf(
-	ctx context.Context, by events.Actor, claimID ids.UUID, settledAt time.Time,
-) error {
-	task, status, err := t.claims.ClaimTask(ctx, claimID)
+// completeTaskOf completes the task a claim settled as done became, as
+// whoever settled the claim; a task they may not change stays as it is.
+func (t *CommitmentSettleTrigger) completeTaskOf(ctx context.Context, by events.Actor, claimID ids.UUID) error {
+	task, status, settledAt, err := t.claims.ClaimTask(ctx, claimID)
 	if err != nil || task == nil || status != claimStatusDone {
 		return err
 	}
-	allowed, err := t.originMayWrite(ctx, by, string(recordTypeActivity), *task, nil)
-	if err != nil || !allowed {
+	asThem, ok, err := t.actingAs(ctx, by)
+	if err != nil || !ok {
 		return err
 	}
-	_, err = t.tasks.CompleteTask(onBehalfOfOrigin(ctx, by), ids.From[ids.ActivityKind](*task), settledAt)
+	_, err = t.tasks.CompleteTask(asThem, ids.From[ids.ActivityKind](*task), settledAt)
+	if refused(err) {
+		return nil
+	}
 	return err
 }
 
-// originMayWrite asks whether whoever caused the event could change this row
-// themselves: the object grant to update it and write authority over the row,
-// asked as them. evidence, when set, is the conversation a claim was quoted
-// from, which they must still be able to read.
-func (t *CommitmentSettleTrigger) originMayWrite(
-	ctx context.Context, by events.Actor, table string, id ids.UUID, evidence *ids.UUID,
-) (bool, error) {
+// actingAs is the context the write runs under: the human behind the event,
+// with the authority they hold now, or the product when nobody is behind it.
+// It answers false for an agent or connector acting for nobody.
+func (t *CommitmentSettleTrigger) actingAs(ctx context.Context, by events.Actor) (context.Context, bool, error) {
 	seat, ok := originSeat(by)
 	if !ok {
-		// The product acting for nobody is followed; an agent acting for
-		// nobody is not.
-		return by.Type == string(principal.PrincipalSystem), nil
+		return ctx, by.Type == string(principal.PrincipalSystem), nil
 	}
 	ws, err := t.identity.InstallationWorkspace(ctx)
 	if err != nil {
-		return false, err
+		return nil, false, err
 	}
 	ctx = principal.WithWorkspaceID(ctx, ws.UUID)
 	rbac, seatType, err := t.identity.EffectiveAuthority(ctx, ws.UUID, seat)
 	if errors.Is(err, apperrors.ErrNotFound) {
-		return false, nil
+		return nil, false, nil
 	}
 	if err != nil {
-		return false, fmt.Errorf("commitment settle: resolving who caused the change: %w", err)
+		return nil, false, fmt.Errorf("commitment settle: resolving who caused the change: %w", err)
 	}
-	asThem := principal.WithActor(ctx, principal.Principal{
+	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: principal.HumanIDPrefix + seat.String(), UserID: seat,
 		SeatType: seatType, TeamIDs: rbac.TeamIDs, Permissions: rbac.Permissions,
-	})
-	if err := auth.Require(asThem, table, principal.ActionUpdate); err != nil {
-		if errors.Is(err, apperrors.ErrPermissionDenied) {
+	}), true, nil
+}
+
+// mayWriteContact asks whether the acting human could update this contact.
+func (t *CommitmentSettleTrigger) mayWriteContact(asThem context.Context, contact ids.UUID) (bool, error) {
+	if err := auth.Require(asThem, string(recordTypeContact), principal.ActionUpdate); err != nil {
+		if refused(err) {
 			return false, nil
 		}
 		return false, err
 	}
-	err = database.WithWorkspaceTx(asThem, t.pool, func(tx pgx.Tx) error {
-		if evidence != nil {
-			if err := auth.EnsureActivityContentVisibleLive(asThem, tx, *evidence); err != nil {
-				return err
-			}
-		}
-		// An activity's write rule is its own: its audience, not an owner.
-		if table == string(recordTypeActivity) {
-			return auth.EnsureActivityWritableIn(asThem, tx, id, true)
-		}
-		return auth.EnsureWritableLive(asThem, tx, table, id)
+	err := database.WithWorkspaceTx(asThem, t.pool, func(tx pgx.Tx) error {
+		return auth.EnsureWritableLive(asThem, tx, string(recordTypeContact), contact)
 	})
-	if errors.Is(err, apperrors.ErrPermissionDenied) || errors.Is(err, apperrors.ErrNotFound) {
+	if refused(err) {
 		return false, nil
 	}
 	return err == nil, err
 }
 
+// refused reports an answer that means "not theirs to do": the write is
+// skipped, not retried, because asking again gets the same answer.
+func refused(err error) bool {
+	return errors.Is(err, apperrors.ErrPermissionDenied) || errors.Is(err, apperrors.ErrNotFound)
+}
+
 // originSeat is the human behind an event's actor: the human themselves, or
-// the one an agent, a connector or this consumer acted for.
+// the one an agent or connector acted for.
 func originSeat(by events.Actor) (ids.UUID, bool) {
 	if by.Type == string(principal.PrincipalHuman) {
 		seat, err := ids.Parse(strings.TrimPrefix(by.ID, principal.HumanIDPrefix))

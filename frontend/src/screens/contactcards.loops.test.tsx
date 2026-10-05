@@ -314,6 +314,47 @@ describe("a commitment read from a conversation", () => {
     expect(box).toHaveProperty("checked", true);
   });
 
+  it("names no deadline once kept", () => {
+    vi.setSystemTime(new Date(Date.parse(NOW)));
+    const view = viewWithDue(at(-25 * HOUR));
+    // biome-ignore lint/style/noNonNullAssertion: the fixture above builds it.
+    view.claims![0].status = "done";
+    render(
+      <StoryProviders>
+        <ContactCommitmentsCard view={view} firstName="Dana" />
+      </StoryProviders>,
+    );
+    expect(screen.queryByText(/overdue/)).toBeNull();
+  });
+
+  it("is drawn once, as the open task, when its task was reopened", () => {
+    const view = viewWithDue(null);
+    // biome-ignore lint/style/noNonNullAssertion: the fixture above builds it.
+    const kept = view.claims![0];
+    kept.task_activity_id = "t-1";
+    kept.status = "done";
+    view.next_steps = {
+      data: [
+        {
+          id: "t-1",
+          kind: "task",
+          subject: "Send the pilot quote",
+          occurred_at: NOW,
+          is_done: false,
+          ...CAPTURED,
+        },
+      ],
+      page: { has_more: false },
+    };
+    render(
+      <StoryProviders>
+        <ContactCommitmentsCard view={view} firstName="Dana" />
+      </StoryProviders>,
+    );
+    // One row: its visible text and its checkbox's hidden label.
+    expect(screen.getAllByText(/Send the pilot quote/)).toHaveLength(2);
+  });
+
   it("is drawn once, as its task, when it became one", () => {
     const view = viewWithDue(null);
     // biome-ignore lint/style/noNonNullAssertion: the fixture above builds it.

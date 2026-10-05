@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -62,36 +63,38 @@ func (s *Store) OpenClaimsOnTask(ctx context.Context, taskID ids.UUID) ([]ClaimO
 	return out, err
 }
 
-// ClaimTask is the task a claim became, and the claim's status, or no task
-// when the claim never became one or is gone.
-func (s *Store) ClaimTask(ctx context.Context, claimID ids.UUID) (*ids.UUID, string, error) {
+// ClaimTask is the task a claim became, the claim's status, and when the claim
+// last changed by the database's clock — or no task when the claim never
+// became one or is gone.
+func (s *Store) ClaimTask(ctx context.Context, claimID ids.UUID) (*ids.UUID, string, time.Time, error) {
 	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
-		return nil, "", err
+		return nil, "", time.Time{}, err
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	claimPos := arg(claimID)
 	scope, err := auth.ScopeClauseFor(ctx, "contact", "pr", arg)
 	if err != nil {
-		return nil, "", err
+		return nil, "", time.Time{}, err
 	}
 	if scope == "" {
 		scope = sqlAlwaysVisible
 	}
 	var task *ids.UUID
 	var status string
+	var changed time.Time
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		err := tx.QueryRow(ctx, fmt.Sprintf(`
-			SELECT c.task_activity_id, c.status FROM conversation_claim c
+			SELECT c.task_activity_id, c.status, c.updated_at FROM conversation_claim c
 			  JOIN contact pr ON pr.id = c.contact_id AND pr.archived_at IS NULL
-			 WHERE c.id = $%d AND c.archived_at IS NULL AND (%s)`, claimPos, scope), args...).Scan(&task, &status)
+			 WHERE c.id = $%d AND c.archived_at IS NULL AND (%s)`, claimPos, scope), args...).Scan(&task, &status, &changed)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil
 		}
 		return err
 	})
 	if err != nil {
-		return nil, "", fmt.Errorf("read the task a claim became: %w", err)
+		return nil, "", time.Time{}, fmt.Errorf("read the task a claim became: %w", err)
 	}
-	return task, status, nil
+	return task, status, changed, nil
 }
