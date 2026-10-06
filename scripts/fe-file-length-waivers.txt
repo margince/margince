@@ -99,7 +99,7 @@
 846 frontend/src/screens/common.tsx
 883 frontend/src/screens/leadvocab.tsx
 894 frontend/src/screens/onboarding-conversation/voice-scenes.tsx
-852 frontend/src/screens/settingscatalog.ts
+850 frontend/src/screens/settingscatalog.ts
 878 frontend/src/screens/customfields.tsx
 926 frontend/src/screens/contactprovider.tsx
 939 frontend/src/screens/share.tsx

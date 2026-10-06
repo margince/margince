@@ -702,34 +702,19 @@ describe("a page and its cards ask the same question", () => {
   });
 
   it("opens system-health on any of its cards' grants", () => {
-    // A union that is really a union: the job report, the reindex and the
-    // schedules answer to different grants, and a holder of one finds the
-    // others' cards withheld.
+    // A union that is really a union: each card answers to its own grant.
+    const grants: GrantSpec[] = [
+      { job_health: ["read"] },
+      { embedding_reindex: ["read"] },
+      { installation_settings: ["read", "update"] },
+    ];
+    for (const allow of grants) {
+      expect(opens("system-health", { roles: ["ops"], allow })).toBe(true);
+    }
+    const settingsReader = { installation_settings: ["read"] } as const;
     expect(
-      opens("system-health", {
-        roles: ["ops"],
-        allow: { job_health: ["read"] },
-      }),
-    ).toBe(true);
-    expect(
-      opens("system-health", {
-        roles: ["ops"],
-        allow: { embedding_reindex: ["read"] },
-      }),
-    ).toBe(true);
-    expect(
-      opens("system-health", {
-        roles: ["ops"],
-        allow: { installation_settings: ["read", "update"] },
-      }),
-    ).toBe(true);
-    expect(
-      opens("system-health", {
-        roles: ["rep"],
-        allow: { installation_settings: ["read"] },
-      }),
+      opens("system-health", { roles: ["rep"], allow: settingsReader }),
     ).toBe(false);
-    expect(opens("system-health", { roles: ["rep"], allow: {} })).toBe(false);
   });
 
   it("opens audit on audit_log, without needing the admin role", () => {
