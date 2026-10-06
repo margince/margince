@@ -4,7 +4,7 @@
 import type { Block, Inline, Run } from "./markdown-parse";
 
 /**
- * A bare web address in prose a person typed. The timeline's mail bodies and
+ * A bare web address in typed prose. The timeline's mail bodies and
  * its markdown notes both find links with this one pattern, so a URL that is a
  * link in one row is a link in the row beside it.
  *
