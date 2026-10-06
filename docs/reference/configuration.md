@@ -387,8 +387,8 @@ Before you build an alert on these:
   resolves a uniqueness conflict by updating the existing row, so a child still
   active from the previous fan-out is deduplicated and writes no new row. A
   batch-keyed reading would report a dispatcher retried mid-fleet as covering a
-  fraction of the workspaces it covers. Each workspace's most recent child of
-  that kind is what counts.
+  fraction of the workspaces it covers. Any child of that kind counts the
+  workspace as covered, and its most recent child that ended is its outcome.
 - **Retention can shrink a sweep series.** It can shrink or vanish because of River's retention, since
   the cleaner deletes finalized rows on its own schedule. An absent series is
   correct; a fabricated zero would look like "the fleet is empty".
@@ -404,8 +404,8 @@ Before you build an alert on these:
   Telegram poll fan out per **connection**; the voice-build retry fans out per
   **build**. A workspace holding two connections produces two children per pass.
   If the broken one failed before the healthy one succeeded, the workspace's
-  most recent child is the successful one, and the workspace pair reports zero
-  failures while a connection is dead. The unit pair counts each connection on
+  most recent child that ended is the successful one, and the workspace pair
+  reports zero failures while a connection is dead. The unit pair counts each connection on
   its own and reports the failure. Read the workspace pair for fleet coverage
   and the unit pair for whether every unit of a pass ran; these kinds appear in
   both (see the note above on never summing them).

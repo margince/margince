@@ -6,6 +6,7 @@ import { PageAsideToggle } from "../app/pageaside";
 import { navigate } from "../app/router";
 import { useUrlParams } from "../app/urlstate";
 import { Button, Modal } from "../design-system/atoms";
+import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
 import { PageZones } from "../design-system/pagezones";
 import { formatDateTime } from "../format/format";
@@ -297,17 +298,15 @@ function PersonalMorning({
           labelledBy={titleId}
           placement="right"
         >
-          <div className="drawer-head brief-queue-head">
+          <DrawerHead className="brief-queue-head">
             <Heading size="large" id={titleId} className="t-h2">
               {t("brief.focus.context")}
             </Heading>
             <Button variant="ghost" onClick={() => setSelected("")}>
               {t("brief.focus.back")}
             </Button>
-          </div>
-          <div className="drawer-body">
-            {context && <WorklistPane item={context} />}
-          </div>
+          </DrawerHead>
+          <DrawerBody>{context && <WorklistPane item={context} />}</DrawerBody>
         </Modal>
       )}
     </>

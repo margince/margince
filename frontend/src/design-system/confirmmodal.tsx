@@ -4,9 +4,19 @@ import { useT } from "../i18n";
 import { Button, Modal } from "./atoms";
 import { ErrorLine } from "./errorline";
 import { Heading } from "./heading";
+import type { ModalIntent } from "./modal";
 import { AutonomyDot } from "./trust";
 
 // The body and its fields are the caller's; the dialog owns their spacing.
+
+// Modal's own pair, narrowed to the placements a confirm takes.
+type ConfirmBox =
+  | { intent?: Exclude<ModalIntent, "full">; size?: never; placement?: never }
+  | {
+      intent?: never;
+      size?: "default" | "wide" | "split";
+      placement?: "center" | "right";
+    };
 
 export function ConfirmModal({
   open,
@@ -22,6 +32,7 @@ export function ConfirmModal({
   onConfirm,
   pending,
   error,
+  intent = "confirm",
   size,
   placement,
   returnFocusTo,
@@ -33,16 +44,6 @@ export function ConfirmModal({
   title: string;
   tier?: "confirm";
   confirmLabel: string;
-  // Passed through to Modal. A confirm whose body is a form the user has to
-  // READ before an irreversible act — an email about to leave — needs more
-  // than the compact width every yes/no confirm uses. "split" is the two-column
-  // drawer: the reply beside the conversation it answers.
-  size?: "default" | "wide" | "split";
-  // Passed through to Modal. "right" is the drawer form: the record the
-  // confirm is about stays visible beside it as context, which a centred box
-  // covers. The composer uses it so a rep can read the account while writing
-  // to it.
-  placement?: "center" | "right";
   // The confirm button's tone. Defaults to "primary" (backward-compatible);
   // a destructive confirm (e.g. reject-with-reason) passes "danger" so it
   // doesn't read green like an approve.
@@ -82,7 +83,8 @@ export function ConfirmModal({
   /** The writing field can take focus before supporting context controls. */
   initialFocusTo?: () => HTMLElement | null;
   children: ReactNode;
-}>) {
+}> &
+  ConfirmBox) {
   const t = useT();
   const headingId = useId();
   const body = Children.toArray(children).length > 0 || Boolean(error);
@@ -91,8 +93,7 @@ export function ConfirmModal({
       open={open}
       onClose={onClose}
       labelledBy={headingId}
-      size={size}
-      placement={placement}
+      {...(size || placement ? { size, placement } : { intent })}
       returnFocusTo={returnFocusTo}
       initialFocusTo={initialFocusTo}
     >

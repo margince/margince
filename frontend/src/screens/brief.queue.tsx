@@ -5,6 +5,7 @@ import { useEffect, useId, useRef } from "react";
 import { navigateReplacing } from "../app/router";
 import { useUrlParams } from "../app/urlstate";
 import { Modal } from "../design-system/atoms";
+import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import { WorklistScreen } from "./worklist";
@@ -49,13 +50,13 @@ export function BriefQueue() {
           have to stay put while the rows move under them. Everything about how
           the band is spaced is the shared drawer's (atoms.css) — this head adds
           nothing, because a queue title is not a different kind of title. */}
-      <div className="drawer-head">
+      <DrawerHead>
         <Heading size="large" id={titleId} className="t-h2">
           {t("brief.queue.title")}
         </Heading>
-      </div>
-      <div
-        className="drawer-body brief-queue-body"
+      </DrawerHead>
+      <DrawerBody
+        className="brief-queue-body"
         ref={(element) => {
           if (element) element.scrollTop = scroll.current;
         }}
@@ -64,7 +65,7 @@ export function BriefQueue() {
         }}
       >
         <WorklistScreen opensOn={params.get("owner")} embedded />
-      </div>
+      </DrawerBody>
     </Modal>
   );
 }

@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
+import { DrawerHead } from "../../design-system/drawerbands";
 import { StoryProviders } from "../story-utils";
 import { briefModel, briefReady, meetingFacts, preparedFor } from "./fixtures";
 import { BriefHeader } from "./header";
@@ -28,14 +29,14 @@ type Story = StoryObj<typeof BriefHeader>;
 function band(brief: components["schemas"]["MeetingBrief"]) {
   return () => (
     <StoryProviders>
-      <div className="drawer-head">
+      <DrawerHead>
         <BriefHeader
           brief={brief}
           meeting={meetingFacts}
           preparedFor={preparedFor}
           formatWhen={() => "24 June, 15:00"}
         />
-      </div>
+      </DrawerHead>
     </StoryProviders>
   );
 }
@@ -63,9 +64,9 @@ export const Dark: Story = {
 export const ActivityIdOnly: Story = {
   render: () => (
     <StoryProviders>
-      <div className="drawer-head">
+      <DrawerHead>
         <BriefHeader brief={briefReady} />
-      </div>
+      </DrawerHead>
     </StoryProviders>
   ),
 };

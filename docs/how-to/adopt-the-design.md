@@ -114,7 +114,7 @@ reader would call broken.
 | `Card` | Keep as is (`onecard.test.ts`); the pane is `Panel`, not `Card`. |
 | `StatCard` | The reading card: the eyebrow as its label, 26px figure in the display face, tabular (down to 20px where five share a narrow row), 12.5px basis, `--pane` ground, 18px radius, 138px min height. `numeric` for figures. |
 | `Skeleton`, `PendingBody`, `EmptyState` | Recolour to tokens; `EmptyState` left-aligned in its pane, one sentence and one verb. |
-| `SegmentedControl`, `TextInput`, `Select`, `ComboBox`, `Kbd`, `Modal`, `Callout`, `Switch` | Token and radius pass only. `Modal placement="right"` becomes the compose drawer's surface (560px, `--paneSolid`). |
+| `SegmentedControl`, `TextInput`, `Select`, `ComboBox`, `Kbd`, `Modal`, `Callout`, `Switch` | Token and radius pass only. The compose drawer becomes `Modal intent="drawer-reading"` (880px, `--bgElevated`). |
 | `.t-eyebrow` | The one uppercase micro-type: 10.5px, `.08em`. Lower the eyebrow baseline where the restyle removes restatements. |
 
 Stories: update every changed story; the catalog test needs no new rows
@@ -133,7 +133,7 @@ unless a primitive is added (`variant="agent"` is a prop, not a primitive).
 | `GroupedTimelineList` / `TimelineRow` (`composed.css .timeline`) | Already the rail. Restyle only: 76px date column in tabular figures, marks by kind (solid, hollow for `change`, indigo for an agent change, dashed indigo for staged, circled glyph for a thread group), kind eyebrow, direction words, title 13.5/600, text clamped to three lines, meta line; a thread group as a card on the body side. |
 | `record360/spine.css` | Keep the geometry (it is the product's); take the mock's sizes: gap day count 26px display amber, today bar 2×15px, dotted grey ahead. Nothing structural. |
 | `record360/verdict.tsx` + `brieftitle.tsx` + `citations.tsx` | The 360 pane: `BriefTitle` becomes the indigo tile + "{name} · 360" + "read this record {when}" + "Write it again"; `VerdictHead` puts the standing word at 34px display left of the because-sentence; `Citations` render inline in the sentence as source chips. |
-| `EvidenceMark` | Add hover/focus preview: the popover (`--paneSolid`, `--shadow-pop`, 300px) with the quote in a left-ruled indigo block and the origin line; click keeps opening the full receipt (`EvidenceModal`). |
+| `EvidenceMark` | Add hover/focus preview: the popover (`--bgElevated`, `--shadow-pop`, 300px) with the quote in a left-ruled indigo block and the origin line; click keeps opening the full receipt (`EvidenceModal`). |
 | `trust.tsx` (`StagingCard`, `FieldDiff`) | The agent's row: `--aiBg` ground, 14px radius, eyebrow in `--aiText`, headline 16px display, sentence, "Rests on" chips, verbs. Staged: dashed `--aiLine` edge, Accept in the agent fill. |
 | `DecisionCard`, `BriefItemCard`, `Callout` | Token pass; `Callout` is a row with a tone dot, never a filled box. |
 | `RelationshipMap` (`relationshipmap.css`) | Colours only: node boxes on `--pane`, gap node dashed amber, edges banded (strong 2.5px accent, developing dashed, cold dotted), selection lights in ink and fades the rest to 35%, panel as a pane. Geometry is untouched (`relationshipmap.layout.ts` is pure and tested). |
