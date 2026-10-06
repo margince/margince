@@ -923,6 +923,31 @@ describe("TimelineText on a mail row", () => {
   });
 });
 
+describe("TimelineText's links in a mail", () => {
+  it("takes a balanced parenthesis and leaves the prose's closing one", () => {
+    render(
+      <RecordView
+        identity="r-1"
+        name="Acme"
+        zone="UTC"
+        timeline={[
+          {
+            id: "a-mail",
+            kind: "email",
+            title: "Passwort",
+            atIso: "2026-07-01T00:00:00Z",
+            provenance: { kind: "human" as const, self: true },
+            body: "Neu setzen (über https://kunde.de/reset/(abc)) oder HTTPS://kunde.de/hilfe.",
+          },
+        ]}
+      />,
+    );
+    expect(
+      screen.getAllByRole("link").map((a) => a.getAttribute("href")),
+    ).toEqual(["https://kunde.de/reset/(abc)", "HTTPS://kunde.de/hilfe"]);
+  });
+});
+
 describe("TimelineText on a note", () => {
   const row = (kind: "note" | "email", body: string) => (
     <RecordView

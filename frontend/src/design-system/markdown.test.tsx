@@ -471,3 +471,29 @@ describe("autolink shows where every link goes", () => {
     ]);
   });
 });
+
+describe("which characters a bare address takes", () => {
+  const linked = (source: string) => {
+    render(<Markdown source={source} autolink />);
+    return screen.getAllByRole("link").map((a) => a.getAttribute("href"));
+  };
+
+  it("keeps a balanced parenthesis inside the address", () => {
+    expect(linked("Reset at https://example.test/reset/(token) today")).toEqual(
+      ["https://example.test/reset/(token)"],
+    );
+  });
+
+  it("leaves the parenthesis that closes the prose around it", () => {
+    expect(linked("(see https://x.test/a) and https://x.test/b.")).toEqual([
+      "https://x.test/a",
+      "https://x.test/b",
+    ]);
+  });
+
+  it("reads the scheme in any case", () => {
+    expect(linked("Open HTTPS://Example.test/Path now")).toEqual([
+      "HTTPS://Example.test/Path",
+    ]);
+  });
+});

@@ -7,8 +7,13 @@ import type { Block, Inline, Run } from "./markdown-parse";
  * A bare web address in prose a person typed. The timeline's mail bodies and
  * its markdown notes both find links with this one pattern, so a URL that is a
  * link in one row is a link in the row beside it.
+ *
+ * A parenthesis belongs to the address only as a balanced pair, as in
+ * `/reset/(token)`; a lone `)` closes the prose around it. Trailing sentence
+ * punctuation stays outside.
  */
-export const URL_PATTERN = /https?:\/\/[^\s<>"')\]]+[^\s<>"')\].,;:!?]/g;
+export const URL_PATTERN =
+  /https?:\/\/(?:[^\s<>"'()\]]|\([^\s<>"'()\]]*\))*(?:[^\s<>"'()\].,;:!?]|\([^\s<>"'()\]]*\))/gi;
 
 /**
  * The parsed document for prose nobody vetted: every bare address becomes a
