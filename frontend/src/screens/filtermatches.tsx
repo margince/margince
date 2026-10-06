@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// What a filter selects: the count and the first page of rows behind it, and
-// the one rule for when they are on screen at all.
+// What a filter selects: the count and the first page of rows behind it, the
+// one rule for when they are on screen at all, and the line that says what
+// would bring them while they are not.
 
 import { useState } from "react";
 import { Button } from "../design-system/atoms";
@@ -10,11 +11,22 @@ import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody } from "../design-system/panel";
 import { formatNumber } from "../format/format";
 import { type PluralBase, useLocale, usePlural, useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import { QueryStates } from "./common";
-import type { useFilterPreview, VocabularyField } from "./filterdata";
+import {
+  PREVIEW_PAGE,
+  useFilterPreview,
+  type VocabularyField,
+} from "./filterdata";
+import { type VocabularyRead, vocabularyState } from "./filtereditor";
 import { FilterResults } from "./filterresults";
-import { MATCH_LABEL, type ObjectTab, UNIT_LABEL } from "./filtersaddress";
-import { type Group, isComplete } from "./segmentpredicate";
+import {
+  MATCH_LABEL,
+  type ObjectTab,
+  RESOURCE_OF,
+  UNIT_LABEL,
+} from "./filtersaddress";
+import { fieldsNamed, type Group, isComplete } from "./segmentpredicate";
 import "./filters.css";
 
 type Preview = ReturnType<typeof useFilterPreview>;
@@ -91,7 +103,7 @@ export function MatchCount({
  * keeps its last answer even while it asks nothing, so whether this tree was
  * ever answered is remembered here instead, and forgotten when it empties.
  */
-export function useResultsShown(tree: Group, preview: Preview): boolean {
+function useResultsShown(tree: Group, preview: Preview): boolean {
   const [answered, setAnswered] = useState(false);
   const empty = tree.children.length === 0;
   const complete = isComplete(tree);
@@ -172,5 +184,79 @@ export function FilterMatches({
         </QueryStates>
       </PanelBody>
     </Panel>
+  );
+}
+
+/**
+ * Everything under a filter's editor: the line saying what would bring a
+ * count, and the results once there is one. The page's preview lives here, its
+ * page size set by the table's own dial.
+ */
+export function FilterOutcome({
+  tab,
+  tree,
+  vocabulary,
+}: Readonly<{
+  tab: ObjectTab;
+  tree: Group;
+  vocabulary: VocabularyRead;
+}>) {
+  const [limit, setLimit] = useState(PREVIEW_PAGE);
+  const preview = useFilterPreview(RESOURCE_OF[tab], tree, limit);
+  const shown = useResultsShown(tree, preview);
+  return (
+    <>
+      {/* Only beside an editor the reader can use: while the fields are
+          read, or could not be, there is no condition for it to ask for. */}
+      {vocabularyState(vocabulary) === "ready" && (
+        <WaitingLine
+          shown={shown}
+          empty={tree.children.length === 0}
+          complete={isComplete(tree)}
+          records={UNIT_LABEL[tab]}
+        />
+      )}
+      {shown && (
+        <FilterMatches
+          preview={preview}
+          tab={tab}
+          fields={vocabulary.data?.fields ?? []}
+          named={fieldsNamed(tree)}
+          limit={limit}
+          onLimit={setLimit}
+        />
+      )}
+    </>
+  );
+}
+
+/**
+ * The line under the editor while the results are not the whole story: what
+ * would bring a count, or that the count on screen waits for the condition
+ * the reader is still writing.
+ */
+function WaitingLine({
+  shown,
+  empty,
+  complete,
+  records,
+}: Readonly<{
+  shown: boolean;
+  empty: boolean;
+  complete: boolean;
+  records: MessageKey;
+}>) {
+  const t = useT();
+  if (shown && complete) {
+    return null;
+  }
+  return (
+    <p className="t-sub filters-hint">
+      {shown
+        ? t("filters.hint.update")
+        : t(empty ? "filters.hint.start" : "filters.hint.finish", {
+            records: t(records),
+          })}
+    </p>
   );
 }

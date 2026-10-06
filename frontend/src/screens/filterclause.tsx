@@ -100,6 +100,15 @@ type ClauseRowProps = Readonly<{
  * assembling `created_at contains "x"` and learning from a 422 that dates have no
  * substring.
  */
+/**
+ * A row takes focus on its field, its first combobox: the first choice the
+ * reader makes about a condition, and the one everything after it reads from.
+ * Given rows rather than one, the first row takes it.
+ */
+export function focusRow(row: ParentNode | null | undefined) {
+  row?.querySelector<HTMLElement>('[role="combobox"]')?.focus();
+}
+
 export function ClauseRow({
   leafID,
   field,
@@ -116,9 +125,7 @@ export function ClauseRow({
   const row = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     if (arrived) {
-      // The field is the row's first combobox: the first choice the reader
-      // makes about a condition, and the one everything after it reads from.
-      row.current?.querySelector<HTMLElement>('[role="combobox"]')?.focus();
+      focusRow(row.current);
     }
   }, [arrived]);
   const chosen = fields.find((f) => f.name === field);

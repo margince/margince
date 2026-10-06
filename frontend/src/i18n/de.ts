@@ -10501,6 +10501,22 @@ export const de = {
   "filters.purpose": "Zweck (optional)",
   "filters.viewSaved": "Ansicht gespeichert",
   "filters.listCreated": "Live-Liste „{name}“ erstellt",
+  "filters.view.facts": "Gespeicherte Ansicht · {records} · Privat",
+  "filters.listFacts": "Live-Liste · {records} · {who}",
+  "filters.view.saveAsList": "Als Live-Liste speichern",
+  "filters.editConditions": "Bedingungen bearbeiten",
+  "filters.done": "Fertig",
+  "filters.noChanges": "Noch keine Änderungen",
+  "filters.unsavedChanges": "Nicht gespeicherte Änderungen",
+  "filters.discardChanges": "Änderungen verwerfen",
+  "filters.saveChanges": "Änderungen speichern",
+  "filters.changesSaved": "Änderungen gespeichert",
+  "filters.view.conflict":
+    "Diese Ansicht hat sich geändert, seit du sie geöffnet hast. Lade sie neu, um die aktuelle Fassung zu sehen.",
+  "filters.view.reload": "Ansicht neu laden",
+  "filters.view.gone":
+    "Diese gespeicherte Ansicht wurde gelöscht oder ist nicht auffindbar.",
+  "filters.backToLibrary": "Zurück zu Filter und Ansichten",
   "filters.emptyGroup": "Eine leere Gruppe trifft auf nichts zu.",
   "filters.field": "Feld",
   "filters.field.amount": "Umgerechneter Betrag",
@@ -10774,9 +10790,12 @@ export const de = {
   "lists.history.liveNote":
     "Die Prüfung läuft alle 15 Minuten und nimmt sich zuerst die Listen vor, die am längsten nicht geprüft wurden. Bei sehr vielen Listen kann eine Liste daher länger warten; „Zuletzt geprüft“ zeigt, wann es war. Wer hinzukam oder wegfiel, wird zum Zeitpunkt der Prüfung festgehalten, die die Änderung bemerkt hat. Ein Datensatz, der zwischen zwei Prüfungen hinzukommt und wieder wegfällt, wird nicht festgehalten.",
   "lists.editFilter": "Filter bearbeiten",
+  "lists.filterCannotOpen":
+    "Der Filter dieser Liste lässt sich hier nicht öffnen.",
+  "lists.savedTo": "In „{name}“ gespeichert",
   "lists.editingTitle": "Du bearbeitest den Filter von {name}",
   "lists.editingBody":
-    "Speichere in die Liste, um zu ändern, welche Datensätze sie enthält. „Als Live-Liste speichern“ legt stattdessen eine neue Liste an.",
+    "Speichere in die Liste, um zu ändern, welche Datensätze sie enthält. Um stattdessen eine Kopie zu behalten, speichere den Filter als neue Ansicht.",
   "lists.saveFilterTo": "In {name} speichern",
   "lists.saveFilterTitle": "Filter von {name} ändern?",
   "lists.saveFilterBody":

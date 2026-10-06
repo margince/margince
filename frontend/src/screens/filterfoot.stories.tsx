@@ -6,15 +6,16 @@ import { userEvent, within } from "storybook/test";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useT } from "../i18n";
 import { useFilterExport } from "./filterexport";
-import { FilterFoot } from "./filterfoot";
+import { FilterFoot, type FootMode } from "./filterfoot";
 import { SaveToListAction } from "./filterlistedit";
 import { listsMe, liveList } from "./lists.fixtures";
 import { newGroup, newLeaf } from "./segmentpredicate";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
-// The filter Panel's footer band, drawn once a filter is complete: what state
-// it is in on the leading edge, and the one emerald Save on the trailing edge
-// with the exports folded into More beside it.
+// The filter Panel's footer band: what state the filter is in on the leading
+// edge, and the one emerald way to keep it on the trailing edge, with the rarer
+// verbs folded into More beside it. A new filter, an opened view and a Live
+// List's filter each keep it their own way.
 const meta: Meta = {
   title: "Patterns/Filters and views/Filter footer",
   parameters: { layout: "padded" },
@@ -32,27 +33,49 @@ type Story = StoryObj;
 
 const COMPLETE = newGroup("and", [newLeaf("industry", "eq", "Manufacturing")]);
 
+type Kind = FootMode["kind"];
+
 /** The band under the editor it belongs to, as the page draws it. */
-function Footed({ listFilter = false }: Readonly<{ listFilter?: boolean }>) {
+function Footed({
+  kind = "new",
+  changed = false,
+}: Readonly<{ kind?: Kind; changed?: boolean }>) {
   const t = useT();
   const run = useFilterExport();
+  const modes: Record<Kind, FootMode> = {
+    new: { kind: "new" },
+    view: {
+      kind: "view",
+      changed,
+      onDone: () => undefined,
+      onDiscard: () => undefined,
+      onSaveChanges: () => undefined,
+      saving: false,
+    },
+    list: {
+      kind: "list",
+      changed,
+      onDiscard: () => undefined,
+      saveTo: (
+        <SaveToListAction
+          list={liveList}
+          tree={COMPLETE}
+          disabled={!changed}
+          onSaved={() => undefined}
+        />
+      ),
+    },
+  };
   return (
     <Panel
-      title={t("filters.find", { records: t("unit.companies") })}
+      title={t("filters.builderTitle")}
       footer={
         <FilterFoot
           resource="company"
           tree={COMPLETE}
+          mode={modes[kind]}
           onSave={() => undefined}
           exportRun={run}
-          saveTo={
-            listFilter ? (
-              <SaveToListAction
-                edited={{ list: liveList, version: liveList.version }}
-                tree={COMPLETE}
-              />
-            ) : undefined
-          }
         />
       }
     >
@@ -144,9 +167,33 @@ export const Exporting: Story = {
 export const SavingToAList: Story = {
   render: () => {
     routes();
-    return <Footed listFilter />;
+    return <Footed kind="list" changed />;
   },
   play: async ({ canvasElement }) => {
     await openMore(canvasElement);
+  },
+};
+
+// The list's filter as it opened: nothing to save to it yet.
+export const ListUnchanged: Story = {
+  render: () => {
+    routes();
+    return <Footed kind="list" />;
+  },
+};
+
+// An opened view's rows, unchanged: Done folds them back to the sentence.
+export const ViewUnchanged: Story = {
+  render: () => {
+    routes();
+    return <Footed kind="view" />;
+  },
+};
+
+// An opened view, changed: discard, keep as a new view, or save it back.
+export const ViewChanged: Story = {
+  render: () => {
+    routes();
+    return <Footed kind="view" changed />;
   },
 };

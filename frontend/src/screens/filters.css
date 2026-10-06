@@ -46,7 +46,7 @@
 }
 
 @media (max-width: 700px) {
-  .filters-head {
+  .filters-head-picks {
     flex-direction: column;
     align-items: stretch;
   }
@@ -160,4 +160,31 @@
  * whole of it, or the trailing edge would be wherever the caption ends. */
 .filters-foot {
   flex: 1 1 auto;
+}
+
+/* An opened item: a saved view read before it is edited, or a list's filter.
+ * Its verbs sit behind one More at the end of the name's row, on a phone too:
+ * one square button never needs a line of its own, so the name gives way. */
+.filters-head-actions {
+  flex: none;
+}
+
+.filters-head:has(> .filters-head-actions) > .filters-head-name {
+  flex: 1 1 0;
+}
+
+/* How the last export from the head's More stands; nothing at all until one
+ * has been asked for, so the stack's gap does not open around an empty line. */
+.filters-head-status:empty {
+  display: none;
+}
+
+/* The filter read as one sentence, held to a line length an eye can follow. */
+.filters-reading {
+  margin: 0;
+  max-inline-size: 72ch;
+}
+
+.filters-back {
+  margin: 0;
 }

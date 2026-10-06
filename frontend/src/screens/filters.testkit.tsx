@@ -3,15 +3,19 @@
 
 // A fake server for the Filters and views suites: /me, the vocabulary, the
 // preview, a proposal, /views, /lists and /exports, answering as the contract
-// says and remembering its writes, so a rename is read back renamed and a
-// delete is read back gone. Every request is recorded with its method,
-// address, If-Match and body, so a suite asserts what was asked rather than
-// inferring it from what drew.
+// says and remembering its writes, so a rename is read back renamed, a delete
+// is read back gone, and a write held to a stale version is refused. Every
+// request is recorded with its method, address, If-Match and body, so a suite
+// asserts what was asked rather than inferring it from what drew. Beside it,
+// the shell's unsaved guard, for a suite that leaves the page.
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { vi } from "vitest";
 import { meFixture } from "../app/mefixture";
+import { useHash } from "../app/router";
+import { UnsavedGuard } from "../app/unsaved";
+import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import type { FilterResource, FilterVocabulary } from "./filterdata";
 import type { List } from "./lists.queries";
@@ -30,13 +34,9 @@ export type FiltersServer = Readonly<{
   meAnswered?: Promise<void>;
   views?: readonly Readonly<Record<string, unknown>>[];
   viewsAnswered?: Promise<void>;
-  /** Held open until it resolves: every `GET /views` after the first. */
-  viewsReread?: Promise<void>;
-  /** What `GET /views/{id}` answers; otherwise the row from `views`. */
-  view?: unknown;
+  /** Held open until it resolves: every `PATCH /views/{id}`. */
+  viewPatched?: Promise<void>;
   lists?: readonly List[];
-  /** What `GET /lists/{id}` answers; otherwise the row from `lists`. */
-  list?: List;
   /** Held open until it resolves: one list read by id. */
   listAnswered?: Promise<void>;
   /** What `POST /lists` answers. */
@@ -132,22 +132,51 @@ function isRow(value: unknown): value is Row {
   return typeof value === "object" && value !== null;
 }
 
-const notFound = () => json({ title: "Not found", status: 404 }, 404);
-
-const problem = (refusal: Readonly<{ status: number; detail: string }>) =>
+const problem = (
+  refusal: Readonly<{ status: number; detail: string; code?: string }>,
+) =>
   new Response(JSON.stringify({ title: "Refused", ...refusal }), {
     status: refusal.status,
     headers: { "Content-Type": "application/problem+json" },
   });
 
+const notFound = () =>
+  problem({ status: 404, code: "not_found", detail: "Not found." });
+
 const searchOf = (sent: Sent) =>
   new URL(sent.url, "https://x.local").searchParams;
 
-/** The saved views, as a server holding them: writes change what reads see. */
+/** A stored view changed as a colleague would: a later read sees it. */
+type ChangeView = (id: string, changes: Row) => void;
+
+/**
+ * The saved views, as a server holding them: writes change what reads see, a
+ * PATCH whose If-Match names a version the row has moved past is refused, and
+ * an archived row is read but no longer written, as the server does both.
+ */
 function viewsServer(server: FiltersServer) {
   let views: Row[] = [...(server.views ?? [])];
-  let reads = 0;
-  const write = (sent: Sent, id: string | undefined): Response => {
+  const patch = async (sent: Sent, id: string | undefined, body: Row) => {
+    await server.viewPatched;
+    const was = views.find((row) => row.id === id);
+    if (was === undefined || was.archived_at) {
+      return notFound();
+    }
+    if (sent.ifMatch !== null && sent.ifMatch !== String(was.version)) {
+      return problem({
+        status: 409,
+        code: "version_skew",
+        detail: "The view changed since it was read.",
+      });
+    }
+    const now = { ...was, ...body, version: Number(was.version ?? 0) + 1 };
+    views = views.map((row) => (row.id === id ? now : row));
+    return json(now);
+  };
+  const write = (
+    sent: Sent,
+    id: string | undefined,
+  ): Response | Promise<Response> => {
     const body = isRow(sent.body) ? sent.body : {};
     if (sent.method === "POST" && server.createRefused) {
       return problem(server.createRefused);
@@ -158,25 +187,21 @@ function viewsServer(server: FiltersServer) {
       return json(made, 201);
     }
     if (sent.method === "PATCH") {
-      const was = views.find((row) => row.id === id) ?? {};
-      const now = { ...was, ...body, version: Number(was.version ?? 0) + 1 };
-      views = views.map((row) => (row.id === id ? now : row));
-      return json(now);
+      return patch(sent, id, body);
     }
     views = views.filter((row) => row.id !== id);
     return new Response(null, { status: 204 });
   };
+  const change: ChangeView = (id, changes) => {
+    views = views.map((row) => (row.id === id ? { ...row, ...changes } : row));
+  };
   const read = async (sent: Sent, id: string | undefined) => {
     await server.viewsAnswered;
-    reads += 1;
-    if (reads > 1) {
-      await server.viewsReread;
-    }
     if (server.viewsFail) {
       return refused();
     }
     if (id !== undefined) {
-      const found = server.view ?? views.find((row) => row.id === id);
+      const found = views.find((row) => row.id === id);
       return found ? json(found) : notFound();
     }
     const resource = searchOf(sent).get("resource");
@@ -185,24 +210,29 @@ function viewsServer(server: FiltersServer) {
       : views;
     return page(rows, server.truncated === true);
   };
-  return async (sent: Sent, path: string) => {
+  const answer = async (sent: Sent, path: string) => {
     const id = /^\/views\/([^/]+)$/.exec(path)?.[1];
     if (sent.method === "POST") {
       await server.createAnswered;
     }
     return sent.method === "GET" ? read(sent, id) : write(sent, id);
   };
+  return { answer, change };
 }
 
 /** The lists catalog, honouring `q`, `include_archived` and the cap. */
-async function listsCatalog(server: FiltersServer, sent: Sent) {
+async function listsCatalog(
+  server: FiltersServer,
+  lists: readonly List[],
+  sent: Sent,
+) {
   const query = searchOf(sent);
   const archived = query.get("include_archived") === "true";
   if (archived) {
     await server.archivedAnswered;
   }
   const q = (query.get("q") ?? "").toLowerCase();
-  const rows = (server.lists ?? []).filter(
+  const rows = lists.filter(
     (row) =>
       (archived || !row.archived_at) &&
       `${row.name} ${row.purpose ?? ""}`.toLowerCase().includes(q),
@@ -214,10 +244,41 @@ async function listsCatalog(server: FiltersServer, sent: Sent) {
   );
 }
 
-/** The lists: the catalog, one list by id, and a create. */
+/** A stored list changed as a colleague would: a later read sees it. */
+type ChangeList = (id: string, changes: Partial<List>) => void;
+
+/**
+ * The lists: the catalog, one list by id, a create, and a filter written back,
+ * refused as the server refuses it when the version it carries is not the
+ * stored one.
+ */
 function listsServer(server: FiltersServer) {
-  const lists = server.lists ?? [];
-  return async (sent: Sent, path: string) => {
+  let lists: List[] = [...(server.lists ?? [])];
+  const change: ChangeList = (id, changes) => {
+    lists = lists.map((row) => (row.id === id ? { ...row, ...changes } : row));
+  };
+  const update = (id: string, sent: Sent) => {
+    const body = isRow(sent.body) ? sent.body : {};
+    const was = lists.find((row) => row.id === id);
+    if (was === undefined) {
+      return notFound();
+    }
+    if (body.version !== was.version) {
+      return problem({
+        status: 409,
+        code: "version_skew",
+        detail: "The list changed since it was read.",
+      });
+    }
+    const now: List = {
+      ...was,
+      version: was.version + 1,
+      definition: isRow(body.definition) ? body.definition : was.definition,
+    };
+    lists = lists.map((row) => (row.id === id ? now : row));
+    return json(now);
+  };
+  const answer = async (sent: Sent, path: string) => {
     const id = /^\/lists\/([^/]+)$/.exec(path)?.[1];
     if (sent.method === "POST") {
       await server.createAnswered;
@@ -229,16 +290,20 @@ function listsServer(server: FiltersServer) {
     if (server.listsFail) {
       return refused();
     }
+    if (id !== undefined && sent.method === "PATCH") {
+      return update(id, sent);
+    }
     if (id !== undefined) {
       return oneList(id);
     }
-    return listsCatalog(server, sent);
+    return listsCatalog(server, lists, sent);
   };
   async function oneList(id: string) {
     await server.listAnswered;
-    const found = server.list ?? lists.find((row) => row.id === id);
+    const found = lists.find((row) => row.id === id);
     return found ? json(found) : notFound();
   }
+  return { answer, change };
 }
 
 /** The model's answers, handed out in the order the reader asked. */
@@ -322,10 +387,10 @@ export function mountFilters(server: FiltersServer = {}) {
       "",
     );
     if (path.startsWith("/views")) {
-      return views(sent, path);
+      return views.answer(sent, path);
     }
     if (path.startsWith("/lists")) {
-      return lists(sent, path);
+      return lists.answer(sent, path);
     }
     return reads[path]?.(sent) ?? page([], false);
   };
@@ -350,7 +415,43 @@ export function mountFilters(server: FiltersServer = {}) {
       <LocaleProvider initial="en">{children}</LocaleProvider>
     </QueryClientProvider>
   );
-  return { seen, written, wrapper, client };
+  return {
+    seen,
+    written,
+    wrapper,
+    client,
+    changeView: views.change,
+    changeList: lists.change,
+  };
+}
+
+/**
+ * The shell's unsaved guard around a page, with the toasts a save shows.
+ * `page` draws the addresses a suite opens; every other address reads as where
+ * the reader went, so a way off the page that should not ask is seen not to.
+ */
+export function GuardedFilters({
+  page,
+}: Readonly<{ page: (address: string) => ReactNode }>) {
+  const hash = useHash();
+  return (
+    <ToastProvider>
+      <UnsavedGuard
+        address={hash}
+        onKeep={(kept) => {
+          window.location.hash = kept;
+        }}
+      >
+        {(shown) => page(shown) ?? <p>{`Arrived at ${shown}`}</p>}
+      </UnsavedGuard>
+      <ToastRegion />
+    </ToastProvider>
+  );
+}
+
+/** The first row's field, where a press that redrew the rows leaves focus. */
+export function firstRowField(): Element | null {
+  return document.querySelector('.filter-clause [role="combobox"]');
 }
 
 /** A stored saved view whose `query` holds the given filter tree. */

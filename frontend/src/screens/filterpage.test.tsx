@@ -2,19 +2,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { meFixture } from "../app/mefixture";
-import { useHash } from "../app/router";
-import { UnsavedGuard } from "../app/unsaved";
 import { pickOption } from "../design-system/select-testing";
 import { en } from "../i18n/en";
 import type { FilterVocabulary } from "./filterdata";
 import { FiltersScreen } from "./filters";
-import { mountFilters, type Sent } from "./filters.testkit";
-import { liveList } from "./lists.fixtures";
-import { savedViewsKey } from "./savedviews.queries";
+import { GuardedFilters, mountFilters, type Sent } from "./filters.testkit";
 
 // The focused new-filter page. What it owns is the WIRING and the order the
 // page grows in: which request went out for which record type, when the count
@@ -52,33 +48,15 @@ const FINISH_HINT = "Finish the condition to see how many contacts match.";
 
 /** Every request the screen made, so a test can assert what it asked rather than
  *  inferring it from what rendered. */
-function mount(
-  preview?: {
-    match_count: number;
-    columns?: readonly string[];
-    rows?: readonly Record<string, unknown>[];
-  },
-  views: readonly Record<string, unknown>[] = [],
-  viewsAnswered: Promise<void> = Promise.resolve(),
-) {
+function mount(preview?: {
+  match_count: number;
+  columns?: readonly string[];
+  rows?: readonly Record<string, unknown>[];
+}) {
   return mountFilters({
     preview,
-    views,
-    viewsAnswered,
     vocabularies: { contact: CONTACT_VOCAB, deal: DEAL_VOCAB },
   });
-}
-
-/** A stored view row, with whatever `query` blob the test is about. */
-function viewRow(name: string, query: unknown) {
-  return {
-    id: `v-${name}`,
-    owner_id: "u-1",
-    resource: "contacts",
-    name,
-    query,
-    version: 1,
-  };
 }
 
 const previews = (seen: readonly Sent[]) =>
@@ -529,31 +507,15 @@ describe("keeping and exporting", () => {
   });
 });
 
-/** The app's shape in miniature: the guard above the page the address picks. */
-function Guarded() {
-  const hash = useHash();
-  return (
-    <UnsavedGuard
-      address={hash}
-      onKeep={(kept) => {
-        window.location.hash = kept;
-      }}
-    >
-      {(shown) => {
-        const tab = GUARDED_PAGES[shown];
-        return tab ? (
-          <FiltersScreen key={shown} id={tab} />
-        ) : (
-          <p>{`Arrived at ${shown}`}</p>
-        );
-      }}
-    </UnsavedGuard>
-  );
-}
-
 const GUARDED_PAGES: Readonly<Record<string, "contacts" | "companies">> = {
   "#/filters/contacts": "contacts",
   "#/filters/companies": "companies",
+};
+
+/** A new filter's address draws the page; every other is somewhere else. */
+const newFilterAt = (address: string) => {
+  const tab = GUARDED_PAGES[address];
+  return tab ? <FiltersScreen key={address} id={tab} /> : null;
 };
 
 describe("leaving a filter", () => {
@@ -566,7 +528,7 @@ describe("leaving a filter", () => {
       preview: { match_count: 2 },
       vocabularies: { contact: CONTACT_VOCAB },
     });
-    render(<Guarded />, { wrapper });
+    render(<GuardedFilters page={newFilterAt} />, { wrapper });
   }
 
   async function complete(user: ReturnType<typeof userEvent.setup>) {
@@ -750,134 +712,6 @@ describe("a refused count", () => {
     );
     expect(alert.textContent).not.toContain("seat tier insufficient");
     expect(screen.getByText("Count unavailable")).toBeTruthy();
-  });
-});
-
-describe("an opened saved view", () => {
-  it("opens the view the address names, already loaded, under its name", async () => {
-    const { wrapper } = mount({ match_count: 4 }, [
-      viewRow("Other", {
-        filter: { and: [{ field: "full_name", op: "contains", value: "bob" }] },
-      }),
-      viewRow("Berliners", {
-        filter: { and: [{ field: "full_name", op: "contains", value: "ann" }] },
-      }),
-    ]);
-    render(<FiltersScreen id="contacts" view="v-Berliners" />, { wrapper });
-
-    expect(await screen.findByDisplayValue("ann")).toBeTruthy();
-    expect(screen.queryByDisplayValue("bob")).toBeNull();
-    expect(
-      screen.getByRole("heading", { level: 1, name: "Berliners" }),
-    ).toBeTruthy();
-    expect(await screen.findByText("4 contacts match")).toBeTruthy();
-  });
-
-  it("holds the editor until the addressed view is read, so no edit is overwritten", async () => {
-    let answer = () => {};
-    const answered = new Promise<void>((resolve) => {
-      answer = resolve;
-    });
-    const { wrapper, seen } = mount(
-      { match_count: 4 },
-      [
-        viewRow("Berliners", {
-          filter: {
-            and: [{ field: "full_name", op: "contains", value: "ann" }],
-          },
-        }),
-      ],
-      answered,
-    );
-    render(<FiltersScreen id="contacts" view="v-Berliners" />, { wrapper });
-
-    // The session has answered and the views are being read.
-    await waitFor(() =>
-      expect(seen.some((sent) => sent.url.includes("/views"))).toBe(true),
-    );
-    expect(
-      screen.getByRole("heading", { level: 1, name: "Saved view" }),
-    ).toBeTruthy();
-    expect(screen.queryByRole("button", { name: ADD })).toBeNull();
-    answer();
-    expect(await screen.findByDisplayValue("ann")).toBeTruthy();
-    expect(
-      screen.getByRole("heading", { level: 1, name: "Berliners" }),
-    ).toBeTruthy();
-  });
-
-  it("reads the views again when the cached ones predate the addressed view", async () => {
-    const berliners = viewRow("Berliners", {
-      filter: { and: [{ field: "full_name", op: "contains", value: "ann" }] },
-    });
-    const { wrapper, client } = mount({ match_count: 4 }, [berliners]);
-    client.setQueryData(savedViewsKey("contacts"), []);
-    render(<FiltersScreen id="contacts" view="v-Berliners" />, { wrapper });
-
-    expect(await screen.findByDisplayValue("ann")).toBeTruthy();
-  });
-
-  it("keeps what the reader built while the views are read again", async () => {
-    let reread = () => {};
-    const { wrapper, client, seen } = mountFilters({
-      views: [],
-      viewsReread: new Promise<void>((resolve) => {
-        reread = resolve;
-      }),
-      vocabularies: { contact: CONTACT_VOCAB },
-    });
-    const user = userEvent.setup();
-    render(<FiltersScreen id="contacts" view="v-Gone" />, { wrapper });
-
-    await user.click(await screen.findByRole("button", { name: ADD }));
-    await user.type(screen.getByLabelText("Value"), "ann");
-    // What a save on this page does to every views read, and what a refetch
-    // on focus does to this one: the page is open while the answer is out.
-    const again = client.invalidateQueries({
-      queryKey: savedViewsKey("contacts"),
-    });
-    await waitFor(() =>
-      expect(seen.filter((sent) => sent.url.includes("/views"))).toHaveLength(
-        2,
-      ),
-    );
-    reread();
-    await act(() => again);
-
-    expect(screen.getByDisplayValue("ann")).toBeTruthy();
-  });
-
-  it("opens an empty editor when the addressed view is gone", async () => {
-    const { wrapper } = mount({ match_count: 4 }, []);
-    render(<FiltersScreen id="contacts" view="v-Gone" />, { wrapper });
-
-    expect(await screen.findByRole("button", { name: ADD })).toBeTruthy();
-    expect(
-      screen.getByRole("heading", { level: 1, name: "Saved view" }),
-    ).toBeTruthy();
-    expect(screen.queryByDisplayValue("ann")).toBeNull();
-  });
-});
-
-describe("a Live List's filter", () => {
-  it("heads itself while the list is still being read", async () => {
-    let answer = () => {};
-    const { wrapper } = mountFilters({
-      listsOn: true,
-      lists: [liveList],
-      listAnswered: new Promise<void>((resolve) => {
-        answer = resolve;
-      }),
-    });
-    render(<FiltersScreen id="list" view={liveList.id} />, { wrapper });
-
-    expect(
-      await screen.findByRole("heading", { level: 1, name: "Edit filter" }),
-    ).toBeTruthy();
-    answer();
-    expect(
-      await screen.findByRole("heading", { level: 1, name: liveList.name }),
-    ).toBeTruthy();
   });
 });
 

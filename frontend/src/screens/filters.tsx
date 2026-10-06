@@ -11,9 +11,11 @@ import { PendingBody } from "../design-system/atoms";
 import { useT } from "../i18n";
 import { useMe } from "./common";
 import { FocusedPending } from "./filterhead";
+import { ListFilterPage } from "./filterlistedit";
 import { FilterPage } from "./filterpage";
 import { fallbackTitleOf, filtersAddressOf } from "./filtersaddress";
 import { FiltersLibrary } from "./filterslibrary";
+import { OpenedViewPage } from "./filterview";
 import { ListPending, ListScreen } from "./listpage";
 
 export function FiltersScreen({
@@ -60,8 +62,22 @@ export function FiltersScreen({
   if (list !== undefined) {
     return <ListScreen listID={list} />;
   }
-  if (address.kind === "library") {
-    return <FiltersLibrary anchor={address.anchor} />;
+  // Keyed by what each page opened: another record type, view or list is a
+  // page of its own rather than one inheriting the last one's draft.
+  switch (address.kind) {
+    case "library":
+      return <FiltersLibrary anchor={address.anchor} />;
+    case "new":
+      return <FilterPage key={address.tab} tab={address.tab} />;
+    case "view":
+      return (
+        <OpenedViewPage
+          key={`${address.tab}/${address.viewId}`}
+          tab={address.tab}
+          viewId={address.viewId}
+        />
+      );
+    case "listFilter":
+      return <ListFilterPage key={address.listId} listId={address.listId} />;
   }
-  return <FilterPage address={address} />;
 }

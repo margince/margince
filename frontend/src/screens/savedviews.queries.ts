@@ -48,6 +48,26 @@ export function useSavedViews(resource: ViewResource, fresh = false) {
 }
 
 /**
+ * One of the reader's saved views, read by id. Default freshness, so the
+ * top-bar trail and the page it names share one request.
+ */
+export function useSavedView(id: string, enabled = true) {
+  return useQuery({
+    queryKey: [SAVED_VIEWS_KEY, "one", id],
+    enabled,
+    queryFn: async (): Promise<SavedView> => {
+      const { data, error } = await api.GET("/views/{id}", {
+        params: { path: { id } },
+      });
+      if (error) {
+        throwProblem(error);
+      }
+      return data;
+    },
+  });
+}
+
+/**
  * Every saved view the reader owns, of every resource, in one read. The
  * library merges them with the lists; `truncated` is the server saying it
  * stopped at its cap, which drops the counts that would otherwise lie.
@@ -84,15 +104,23 @@ export function filterTreeOf(view: SavedView): Node | null {
   return decode(stored?.[FILTER_KEY]);
 }
 
-/** What a view saves, given the filter the reader has just built. */
-export function filterStateFrom(tree: Node): Record<string, unknown> {
-  return { [FILTER_KEY]: encode(tree) };
+/**
+ * What a view saves, given the filter the reader has just built. `kept` is
+ * what the view already stores beside its filter, which a save of the filter
+ * alone must not drop.
+ */
+export function filterStateFrom(
+  tree: Node,
+  kept: Readonly<Record<string, unknown>> = {},
+): Record<string, unknown> {
+  return { ...kept, [FILTER_KEY]: encode(tree) };
 }
 
 /**
- * Save a named view, rename one, and remove one that has served its purpose.
+ * Save a named view, rename one, change what one stores, and remove one that
+ * has served its purpose.
  *
- * All three invalidate the `views` prefix rather than one resource: every
+ * All four invalidate the `views` prefix rather than one resource: every
  * saved-view read sits under it (a list's rail, the library, an opened view),
  * and a write seen by one of them and not the others is a row that lies.
  */
@@ -146,6 +174,28 @@ export function useSaveView() {
     onSuccess: invalidate,
   });
 
+  // The stored query is replaced whole, so the caller hands over every key it
+  // keeps; held to the version it was read at, like a rename.
+  const saveQuery = useMutation({
+    mutationFn: async (
+      input: Readonly<{
+        id: string;
+        version: number;
+        query: Record<string, unknown>;
+      }>,
+    ) => {
+      const { data, error } = await api.PATCH("/views/{id}", {
+        params: { path: { id: input.id }, ...ifMatch(input.version) },
+        body: { query: input.query },
+      });
+      if (error) {
+        throwProblem(error);
+      }
+      return data;
+    },
+    onSuccess: invalidate,
+  });
+
   const remove = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await api.DELETE("/views/{id}", {
@@ -158,5 +208,5 @@ export function useSaveView() {
     onSuccess: invalidate,
   });
 
-  return { create, rename, remove };
+  return { create, rename, saveQuery, remove };
 }

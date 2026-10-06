@@ -4,7 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ReactNode } from "react";
 import { Button, OverflowMenu, SegmentedControl } from "../design-system/atoms";
-import { FocusedHead, FocusedPending } from "./filterhead";
+import { FocusedHead, FocusedPending, FocusedState } from "./filterhead";
 import { StoryProviders } from "./story-utils";
 
 // The head of a focused Filters and views page: its one h1, with the control
@@ -77,4 +77,15 @@ export const WithFactsAndMore: Story = {
 // Still reading what the page will name: the fallback name heads it.
 export const Pending: Story = {
   render: () => <FocusedPending title="Saved view" label="Loading…" />,
+};
+
+// Nothing the page can open: why, under the name it would have worn, and the
+// way back to the library.
+export const NothingToOpen: Story = {
+  render: () => (
+    <FocusedState
+      title="Saved view"
+      sentence="This saved view was deleted or cannot be found."
+    />
+  ),
 };

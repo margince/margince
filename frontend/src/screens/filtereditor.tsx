@@ -12,7 +12,7 @@ import { Heading } from "../design-system/heading";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { useT } from "../i18n";
 import { FilterBuilder } from "./filterbuilder";
-import { firstClause } from "./filterclause";
+import { firstClause, focusRow } from "./filterclause";
 import type { FilterVocabulary } from "./filterdata";
 import type { FilterDraft, FilterDraftAction } from "./filterdraft";
 import {
@@ -24,7 +24,8 @@ import {
 import { addToGroup, isGroup, type Node } from "./segmentpredicate";
 import "./filters.css";
 
-type VocabularyRead = Readonly<{
+/** The vocabulary read, which the editor and what is under it wait on. */
+export type VocabularyRead = Readonly<{
   data?: FilterVocabulary;
   isPending: boolean;
   isError: boolean;
@@ -145,12 +146,34 @@ function useArrivalFocus(draft: FilterDraft) {
       return;
     }
     const rows = editor.current;
-    const row =
+    focusRow(
       rows?.querySelector("[data-proposed]") ??
-      rows?.querySelector(".filter-clause");
-    row?.querySelector<HTMLElement>('[role="combobox"]')?.focus();
+        rows?.querySelector(".filter-clause"),
+    );
   }, [tree, by]);
   return { editor, arrived, restarted };
+}
+
+/**
+ * Focus for a press whose control leaves with it, such as Discard: once the
+ * rows it redrew are on screen, the first row takes it, rather than the
+ * reader's place falling to the top of the document.
+ */
+export function useRowsFocus() {
+  const rows = useRef<HTMLDivElement>(null);
+  const asked = useRef(false);
+  useLayoutEffect(() => {
+    if (asked.current) {
+      asked.current = false;
+      focusRow(rows.current);
+    }
+  });
+  return {
+    rows,
+    focusRows: () => {
+      asked.current = true;
+    },
+  };
 }
 
 /** Focus on nothing, or still in the box that asked for the answer. */

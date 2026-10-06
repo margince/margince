@@ -7,9 +7,11 @@
 // by the same engine that previewed it.
 
 import { useState } from "react";
+import type { Route } from "../app/router";
 import { Field, Textarea, TextInput } from "../design-system/atoms";
 import { ChoiceList } from "../design-system/choicelist";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import { problemMessageOf } from "./common";
 import {
@@ -28,6 +30,28 @@ import { filterStateFrom, useSaveView } from "./savedviews.queries";
 import { encode, type Node } from "./segmentpredicate";
 
 export type SavedKind = "view" | "list";
+
+/**
+ * Where a page goes once this dialog has made something: the new view, opened
+ * on its record type, or the new list's own page, with the toast saying which.
+ * `leave` is the page's guarded way out, so a save is never asked about.
+ */
+export function useLandOnSaved(
+  tab: ObjectTab,
+  leave: (route: Route) => void,
+): (kind: SavedKind, id: string, name: string) => void {
+  const t = useT();
+  const toast = useToast();
+  return (kind, id, name) => {
+    if (kind === "view") {
+      toast.show(t("filters.viewSaved"));
+      leave({ screen: "filters", id: tab, id2: id });
+      return;
+    }
+    toast.show(t("filters.listCreated", { name }));
+    leave({ screen: "lists", id });
+  };
+}
 
 export function SaveFilterModal({
   open,

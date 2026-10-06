@@ -3,13 +3,22 @@
 
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  render,
+  renderHook,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { type ReactNode, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import type { ListQuery } from "./listquery";
 import { SaveViewAction } from "./savedviews";
+import { useSaveView } from "./savedviews.queries";
 
 // A saved view the reader no longer wants, or whose name no longer says what
 // it shows, used to be permanent: a tab can be pressed and nothing else. The
@@ -88,16 +97,28 @@ function stubServer(
   return seen;
 }
 
-function draw(query: ListQuery = UNNARROWED) {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
-  render(
+function Providers({ children }: Readonly<{ children: ReactNode }>) {
+  const [client] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: { retry: false },
+          mutations: { retry: false },
+        },
+      }),
+  );
+  return (
     <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">
-        <SaveViewAction resource="companies" query={query} />
-      </LocaleProvider>
-    </QueryClientProvider>,
+      <LocaleProvider initial="en">{children}</LocaleProvider>
+    </QueryClientProvider>
+  );
+}
+
+function draw(query: ListQuery = UNNARROWED) {
+  render(
+    <Providers>
+      <SaveViewAction resource="companies" query={query} />
+    </Providers>,
   );
 }
 
@@ -239,5 +260,26 @@ describe("managing saved views", () => {
     expect((screen.getByLabelText("Name") as HTMLInputElement).value).toBe(
       "German customers 2",
     );
+  });
+
+  // An opened view saves its filter back over itself: the stored query whole,
+  // and nothing else, so a name changed in another tab is not written back.
+  it("saves a view's query alone, against the version it was read at", async () => {
+    const seen = stubServer([VIEW]);
+    const { result } = renderHook(() => useSaveView(), { wrapper: Providers });
+    const query = {
+      ...VIEW.query,
+      filter: { and: [{ field: "city", op: "eq", value: "Berlin" }] },
+    };
+
+    await act(() =>
+      result.current.saveQuery.mutateAsync({ id: "v-1", version: 3, query }),
+    );
+    expect(seen.find((call) => call.method === "PATCH")).toEqual({
+      method: "PATCH",
+      path: "/v1/views/v-1",
+      ifMatch: "3",
+      body: { query },
+    });
   });
 });

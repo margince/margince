@@ -18,6 +18,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { Button } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { throwProblem } from "./common";
@@ -118,6 +119,32 @@ export function ExportFilterItems({
           {t(LABEL[format])}
         </Button>
       ))}
+    </>
+  );
+}
+
+/**
+ * How the last export stands, beside the verbs that asked for it. The menu
+ * that asked has closed, so this says a file is coming, then the server's
+ * reason if it refused, and that only while the filter on screen is the one
+ * it refused: the run outlives an edit that hides the band and brings it back.
+ */
+export function ExportProgress({
+  run,
+  tree,
+}: Readonly<{ run: FilterExportRun; tree: Node }>) {
+  const t = useT();
+  return (
+    <>
+      {run.isPending && (
+        <span className="t-caption" role="status">
+          {t("filters.exporting")}
+        </span>
+      )}
+      <ErrorLine
+        inline
+        error={run.variables?.tree === tree ? run.error : null}
+      />
     </>
   );
 }

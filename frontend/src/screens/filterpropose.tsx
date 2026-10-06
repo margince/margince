@@ -97,9 +97,12 @@ export type PlainWords = Readonly<{
 export function usePlainWords({
   resource,
   dispatch,
+  onLanded,
 }: Readonly<{
   resource: FilterResource;
   dispatch: Dispatch<FilterDraftAction>;
+  /** Rows have landed: a page that folds its rows away shows them. */
+  onLanded?: () => void;
 }>): PlainWords {
   const { locale } = useLocale();
   const [text, setText] = useState("");
@@ -122,6 +125,7 @@ export function usePlainWords({
         unused: answer.unsupported,
         text: ask.text,
       });
+      onLanded?.();
     },
     // The folded box opens on its own refusal, or the reason would sit
     // inside a closed disclosure nobody is looking at.

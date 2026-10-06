@@ -6,7 +6,8 @@
 // folded description is open. One state, so a model's answer lands against
 // the tree as it stands when the answer ARRIVES, with no ref kept in step.
 
-import { useReducer } from "react";
+import type { FetchStatus } from "@tanstack/react-query";
+import { useReducer, useState } from "react";
 import type { components } from "../api/schema";
 import {
   acceptProposals,
@@ -15,7 +16,7 @@ import {
   proposedCount,
   replaceWithProposal,
 } from "./filterproposal";
-import { type Group, type Node, rootGroup } from "./segmentpredicate";
+import { encode, type Group, type Node, rootGroup } from "./segmentpredicate";
 
 type UnusedPhrase = components["schemas"]["FilterProposalUnsupported"];
 
@@ -134,4 +135,38 @@ export function useFilterDraft(initial: () => Group) {
       wordsOpen: false,
     }),
   );
+}
+
+/**
+ * A tree as the wire carries it, for asking whether a draft still says what it
+ * opened on. Ids and proposal marks never reach the wire, so neither reads as
+ * an edit, and a stored single clause reads as the group the editor wraps it
+ * in.
+ */
+export function wireSignature(tree: Node): string {
+  return JSON.stringify(encode(rootGroup(tree)));
+}
+
+/**
+ * The first answer this opening's read settled on, kept while later reads come
+ * and go: a refetch that answers differently, or fails, must not swap the page
+ * out from under the draft. A cached copy the mount is reading again does not
+ * count, since it may predate a write made elsewhere and its version is the
+ * one a save would be held to.
+ */
+export function useFirstAnswer<T>(
+  read: Readonly<{
+    data: T | undefined;
+    fetchStatus: FetchStatus;
+    isError: boolean;
+  }>,
+): T | undefined {
+  // A failed read keeps the copy it had, which is not what it answered.
+  const settled = read.fetchStatus === "idle" && !read.isError;
+  const answer = settled ? read.data : undefined;
+  const [first, setFirst] = useState(answer);
+  if (first === undefined && answer !== undefined) {
+    setFirst(answer);
+  }
+  return first ?? answer;
 }
