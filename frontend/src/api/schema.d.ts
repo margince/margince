@@ -40565,7 +40565,8 @@ export interface components {
             display_name: string;
             /**
              * @description True when the plan was read, whether or not anything in it was due. False when the
-             *     read failed, so this teammate's commitments are unknown rather than absent.
+             *     read failed, was refused, or was never made because the team read ran out of time,
+             *     so this teammate's commitments are unknown rather than absent.
              */
             read: boolean;
         };

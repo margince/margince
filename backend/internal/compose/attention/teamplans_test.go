@@ -176,6 +176,31 @@ func TestACappedRosterSaysThePlanCoverageIsTruncated(t *testing.T) {
 	t.Fatal("a team read that asked for plans left the promise lane out of reach")
 }
 
+func TestASlowTeamReadStopsAtOneLaneBudgetAndNamesWhoWasNotAsked(t *testing.T) {
+	t.Parallel()
+	var asked []ids.UUID
+	svc := teamPlanService(theTeam, plansByOwner{
+		due:   map[ids.UUID][]PlanWork{theReader: {promiseBy(theReader, "Send the proposal")}},
+		asked: &asked,
+	})
+	// Every plan read costs a whole lane budget, so the first spends the team's.
+	svc.now = func() time.Time { return rankInstant.Add(time.Duration(len(asked)) * laneBudget) }
+	scoped, missing := svc.readingPlan(meetingPrepReader(), scopeTeam, rankInstant)
+	if len(asked) != 1 || asked[0] != theReader {
+		t.Fatalf("a spent budget must stop the reads, asked=%v", asked)
+	}
+	if missing != nil || len(scoped.planRows) != 1 {
+		t.Fatalf("the plan read in time must still show: missing=%+v rows=%d", missing, len(scoped.planRows))
+	}
+	read := map[ids.UUID]bool{}
+	for _, member := range scoped.planCoverage.Members {
+		read[ids.UUID(member.UserId)] = member.Read
+	}
+	if !read[theReader] || read[theColleague] {
+		t.Fatalf("the teammate never asked must read as unread: %v", read)
+	}
+}
+
 func TestATeamWithMixedRefusalsNamesThePlansFailedWhateverTheRosterOrder(t *testing.T) {
 	t.Parallel()
 	denied, broken := apperrors.ErrPermissionDenied, errors.New("plan read failed")

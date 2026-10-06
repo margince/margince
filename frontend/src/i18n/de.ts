@@ -11148,8 +11148,7 @@ export const de = {
   "worklist.board.overdue": "Überfällig",
   "worklist.board.nobody": "Nicht zugewiesene Arbeit",
   "worklist.board.notMeasured": "Nicht gemessen",
-  "worklist.planCoverage.all_one":
-    "Wochenplan von einem Teammitglied gelesen.",
+  "worklist.planCoverage.all_one": "Wochenplan von einem Teammitglied gelesen.",
   "worklist.planCoverage.all_other":
     "Wochenpläne aller {count} Teammitglieder gelesen.",
   "worklist.planCoverage.some_one":

@@ -46940,7 +46940,8 @@ type WorklistPlanCoverageMember struct {
 	DisplayName string `json:"display_name"`
 
 	// Read True when the plan was read, whether or not anything in it was due. False when the
-	// read failed, so this teammate's commitments are unknown rather than absent.
+	// read failed, was refused, or was never made because the team read ran out of time,
+	// so this teammate's commitments are unknown rather than absent.
 	Read bool `json:"read"`
 
 	// UserId Whose plan this entry is about.

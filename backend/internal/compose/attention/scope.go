@@ -377,8 +377,8 @@ func (s *Service) narrowToScope(
 // "my team". resolveOwner refuses to open that same contact's queue by name,
 // so the page contradicted the door beside it.
 //
-// Membership is asked ONCE for the page rather than per row: the roster is a
-// fact about the reader, and asking per row would be a query per task.
+// Membership is asked per page, not per row (a query per task); the plan lane
+// asks it again inside the same snapshot, so the two answers cannot disagree.
 //
 // It fails CLOSED. Without the membership reader there is no team to answer
 // for, and a queue that handed back every row it had read would be widening a

@@ -74,13 +74,17 @@ func (s *Service) readingTeamPlans(ctx context.Context, now time.Time) (*Service
 		Members: make([]crmcontracts.WorklistPlanCoverageMember, 0, len(roster)), Truncated: cut,
 	}
 	var refused *crmcontracts.WorklistSourceUnavailable
+	// One lane budget for the whole team, checked between reads rather than
+	// carried on ctx: a degradable read rolls back on its own ctx, so an expired
+	// one would abort the snapshot every later lane shares.
+	spent := s.now().Add(laneBudget)
 	for _, member := range roster {
-		entries, refusal := s.duePlan(ctx, member.UserID, now)
-		// Withheld only when every refusal was one: a read that failed outright
-		// is the louder answer, whatever roster order put it.
-		if refused == nil || (refusal != nil && refusal.Reason == crmcontracts.WorklistSourceUnavailableReasonFailed) {
-			refused = refusal
+		var entries []PlanWork
+		refusal := planUnavailable(crmcontracts.WorklistSourceUnavailableReasonFailed)
+		if s.now().Before(spent) {
+			entries, refusal = s.duePlan(ctx, member.UserID, now)
 		}
+		refused = louder(refused, refusal)
 		coverage.Members = append(coverage.Members, crmcontracts.WorklistPlanCoverageMember{
 			UserId: openapi_types.UUID(member.UserID), DisplayName: member.DisplayName, Read: refusal == nil,
 		})
@@ -109,6 +113,15 @@ func (s *Service) duePlan(ctx context.Context, owner ids.UUID, now time.Time) ([
 		return nil, planUnavailable(crmcontracts.WorklistSourceUnavailableReasonFailed)
 	}
 	return entries, nil
+}
+
+// louder is the refusal a team reports: a failed read outranks a withheld one,
+// and withheld stands only when every refusal was one.
+func louder(held, next *crmcontracts.WorklistSourceUnavailable) *crmcontracts.WorklistSourceUnavailable {
+	if held == nil || (next != nil && next.Reason != crmcontracts.WorklistSourceUnavailableReasonWithheld) {
+		return next
+	}
+	return held
 }
 
 func anyPlanRead(members []crmcontracts.WorklistPlanCoverageMember) bool {
