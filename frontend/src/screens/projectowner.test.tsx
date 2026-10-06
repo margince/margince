@@ -5,6 +5,7 @@
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  act,
   cleanup,
   fireEvent,
   render as rtlRender,
@@ -158,6 +159,20 @@ describe("AssignProjectOwnerAction", () => {
     expect(calls).toHaveLength(0);
   });
 
+  it("finds a colleague by email as well as by name", async () => {
+    stubApi({ body: project }, []);
+    const user = userEvent.setup();
+    render(<AssignProjectOwnerAction project={project} />);
+
+    const panel = await openPicker(user);
+    await panel.findByRole("option", { name: "Jane Doe" });
+    await user.type(panel.getByRole("combobox"), "omar@");
+
+    expect(
+      panel.getAllByRole("option").map((option) => option.textContent),
+    ).toEqual(["Omar Haddad"]);
+  });
+
   it("sends one PATCH for a double press on a colleague", async () => {
     const calls: Recorded[] = [];
     stubApi({ body: { ...project, owner_id: "u-42", version: 6 } }, calls);
@@ -166,10 +181,12 @@ describe("AssignProjectOwnerAction", () => {
 
     const panel = await openPicker(user);
     const option = await panel.findByRole("option", { name: "Jane Doe" });
-    // Two presses in one task: the second lands before any render says the
-    // first is pending.
-    fireEvent.click(option);
-    fireEvent.click(option);
+    // One act holds both presses before any render, so `pending` is still
+    // false for the second and only the latch can refuse it.
+    act(() => {
+      fireEvent.click(option);
+      fireEvent.click(option);
+    });
 
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(calls).toHaveLength(1);

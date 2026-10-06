@@ -116,6 +116,20 @@ export const PhoneSheet: Story = {
   play: open,
 };
 
+// The sheet holds still and only the list scrolls, so the search stays put.
+export const PhoneSheetLongList: Story = {
+  args: {
+    options: Array.from({ length: 40 }, (_, index) => ({
+      id: `u-${index + 1}`,
+      name: `Colleague ${index + 1}`,
+    })),
+    selected: undefined,
+  },
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  play: open,
+};
+
 export const Dark: Story = {
   globals: { theme: "dark" },
   play: open,

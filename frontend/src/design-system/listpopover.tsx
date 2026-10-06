@@ -31,11 +31,13 @@ export type ListPopoverOption = Readonly<{
   /** Drawn in place of the name where the name has a mark of its own. */
   face?: ReactNode;
   hint?: string;
+  /** Matched by a typed term as the name is, never drawn: an email, say. */
+  keywords?: readonly string[];
   disabled?: boolean;
 }>;
 
 /** The rows come in hand, filtered here as the reader types (`undefined`
- *  while they load), or from the server, asked once per settled term. */
+ *  while they load), or from the server, asked once per settled non-empty term. */
 type ListSource =
   | Readonly<{
       options: readonly ListPopoverOption[] | undefined;
@@ -186,7 +188,7 @@ function ListSearch({
   const found = useCandidateSearch(list.search, term);
   const rows = list.search
     ? found.candidates
-    : matchingByName(list.options ?? [], term);
+    : matchingTerm(list.options ?? [], term);
   const optionId = (index: number) => `${listboxId}-option-${index}`;
   useActiveOptionVisible(true, active, listboxId);
 
@@ -211,7 +213,7 @@ function ListSearch({
     if (key !== null) {
       event.preventDefault();
       if (rows.length > 0) {
-        setActive((current) => walkedTo(current, key, rows.length));
+        setActive((current) => walkedTo(current, key, rows));
       }
       return;
     }
@@ -291,7 +293,7 @@ function ListSearch({
 
 // Not `matchingSuggestions`: it matches the value too, and a value here is an
 // id, so every uuid would match the letters a to f.
-function matchingByName(
+function matchingTerm(
   options: readonly ListPopoverOption[],
   term: string,
 ): readonly ListPopoverOption[] {
@@ -299,7 +301,11 @@ function matchingByName(
   if (needle === "") {
     return options;
   }
-  return options.filter((option) => option.name.toLowerCase().includes(needle));
+  return options.filter((option) =>
+    [option.name, ...(option.keywords ?? [])].some((text) =>
+      text.toLowerCase().includes(needle),
+    ),
+  );
 }
 
 function listKeyOf(key: string): ListKey | null {

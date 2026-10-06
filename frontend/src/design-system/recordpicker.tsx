@@ -46,97 +46,45 @@ export type CandidateSearch<T> = Readonly<{
 /**
  * The debounced search behind `RecordPicker` and `ListPopover`. A stale answer
  * is ignored, not aborted; an empty term or no `searchTargets` asks nothing.
+ * An answer offers its rows only while the typed term is still the one it
+ * answered, so no pick can land on a row the visible query never asked for.
  */
 export function useCandidateSearch<T>(
   searchTargets: ((q: string) => Promise<readonly T[]>) | undefined,
   term: string,
 ): CandidateSearch<T> {
-  const [candidates, setCandidates] = useState<readonly T[]>([]);
-  // Whether the CURRENT term has an answer behind it. An empty candidate list
-  // means two different things without it — nothing matched, or nothing has
-  // been asked yet — and only one of them is worth telling the reader.
-  const [answered, setAnswered] = useState(false);
-  // The FAILURE is held, not the sentence it becomes. A search runs inside a
-  // debounced effect, and `useT` hands back a fresh closure on every render, so
-  // a translator captured in that effect would either put it in the dependency
-  // array — re-firing the request on every render — or read a stale locale.
-  // Translating where it is rendered has neither problem, and a locale change
-  // re-words a refusal already on screen.
-  // WRAPPED, not stored bare. A promise may reject with anything, `null`
-  // included, and a bare `unknown` cannot tell "rejected with null" from "no
-  // failure" — the picker would then clear its candidates and say nothing at
-  // all, which is the one state this control exists to avoid.
-  const [searchFailure, setSearchFailure] = useState<{
-    readonly cause: unknown;
-  } | null>(null);
-  const [waiting, setWaiting] = useState(false);
+  // The failure is held, not its sentence, so it is translated where it renders
+  // and follows the locale. Wrapped, because a promise may reject with `null`.
+  const [answer, setAnswer] = useState<Readonly<{
+    query: string;
+    candidates: readonly T[];
+    failure: Readonly<{ cause: unknown }> | null;
+  }> | null>(null);
 
-  // A NEW search space empties the list, at once.
-  //
-  // The effect below cancels the update the previous searchTargets would have
-  // made, but cancelling a future answer does nothing about the answers
-  // already on screen: they stay rendered, and clickable, until the new search
-  // debounces and resolves. A caller that changes searchTargets has changed
-  // what it is asking about — notes' filing control does it when the record
-  // TYPE changes — so a candidate from the old space is not a wrong-looking
-  // answer, it is an answer to a question nobody asked any more, and picking
-  // one hands the caller a record of the wrong kind.
-  //
-  // Done in RENDER rather than in an effect, which is React's own shape for
-  // adjusting state when a prop changes: an effect would paint one frame with
-  // the stale rows still on screen, and one frame is a click.
-  //
-  // The TERM survives on purpose: the same words usually mean the same search
-  // in the new space, and the effect below re-runs on searchTargets anyway, so
-  // the list refills without the contact retyping.
-  // Both halves take the FUNCTIONAL form because the value is a function:
-  // useState(fn) reads fn as a lazy initializer and calls it, and
-  // setState(fn) reads it as an updater — so the plain spellings store the
-  // RESULT of searching for nothing, which is a promise that never equals the
-  // prop, which is an infinite render.
+  // A new search space drops the old answer in render, not an effect, so no
+  // frame paints a row of the wrong kind. The functional forms, because the
+  // value is itself a function and the plain spellings would call it.
   const [searchSpace, setSearchSpace] = useState(() => searchTargets);
   if (searchSpace !== searchTargets) {
     setSearchSpace(() => searchTargets);
-    setCandidates([]);
-    setSearchFailure(null);
-    setAnswered(false);
+    setAnswer(null);
   }
 
+  const query = term.trim();
   useEffect(() => {
-    const query = term.trim();
     if (!query || !searchTargets) {
-      setCandidates([]);
-      setSearchFailure(null);
-      setAnswered(false);
-      setWaiting(false);
       return;
     }
-    // The previous answer stops standing the moment the term moves: a list
-    // left on screen under a newly typed query describes the old one.
-    setAnswered(false);
-    setWaiting(true);
     let cancelled = false;
     const timer = setTimeout(async () => {
       try {
-        const results = await searchTargets(query);
+        const candidates = await searchTargets(query);
         if (!cancelled) {
-          setCandidates(results);
-          setSearchFailure(null);
-          // A search that ANSWERED, so an empty answer can be told from a
-          // search that never ran. Both drew the same nothing before, and the
-          // reader looking at a company whose contacts are all archived could
-          // not tell "nobody here" from a field that had not responded yet.
-          setAnswered(true);
-          setWaiting(false);
+          setAnswer({ query, candidates, failure: null });
         }
       } catch (error) {
         if (!cancelled) {
-          setCandidates([]);
-          setSearchFailure({ cause: error });
-          // A refusal is not an empty answer: the failure line below says what
-          // went wrong, and "nothing matched" underneath it would contradict it.
-          setAnswered(false);
-          setWaiting(false);
+          setAnswer({ query, candidates: [], failure: { cause: error } });
         }
       }
     }, SEARCH_DEBOUNCE_MS);
@@ -144,9 +92,16 @@ export function useCandidateSearch<T>(
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [term, searchTargets]);
+  }, [query, searchTargets]);
 
-  return { candidates, answered, failure: searchFailure, pending: waiting };
+  const asking = query !== "" && searchTargets !== undefined;
+  const current = asking && answer?.query === query ? answer : null;
+  return {
+    candidates: current?.candidates ?? [],
+    answered: current !== null && current.failure === null,
+    failure: current?.failure ?? null,
+    pending: asking && current === null,
+  };
 }
 
 export function RecordPicker({

@@ -66,7 +66,9 @@ export function AssignProjectOwnerAction({
   });
 
   const options = roster.data?.flatMap((entry): ListPopoverOption[] =>
-    "display_name" in entry ? [{ id: entry.id, name: entry.display_name }] : [],
+    "display_name" in entry
+      ? [{ id: entry.id, name: entry.display_name, keywords: [entry.email] }]
+      : [],
   );
   const skew = isVersionSkewOf(mutation.error);
   const errorMessage = mutation.isError

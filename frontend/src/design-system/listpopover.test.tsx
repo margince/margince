@@ -229,7 +229,6 @@ describe("ListPopover on a desktop", () => {
     const taken = screen.getByRole("option", { name: /Renewal/ });
 
     await user.click(taken);
-    await user.keyboard("{Home}{Enter}");
 
     expect(onPick).not.toHaveBeenCalled();
     expect(taken.getAttribute("aria-disabled")).toBe("true");
@@ -238,6 +237,60 @@ describe("ListPopover on a desktop", () => {
         .getByRole("option", { name: "Priority" })
         .getAttribute("aria-selected"),
     ).toBe("true");
+  });
+
+  it("walks past a disabled row with the arrows, Home and End", async () => {
+    const user = userEvent.setup();
+    render(
+      <ListPopover
+        label="Add tag"
+        title="Tags"
+        searchLabel="Search tags"
+        options={[
+          { id: "t-1", name: "Renewal", disabled: true },
+          { id: "t-2", name: "Priority" },
+          { id: "t-3", name: "Pilot", disabled: true },
+          { id: "t-4", name: "Churn risk" },
+          { id: "t-5", name: "Archive", disabled: true },
+        ]}
+        onPick={vi.fn()}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Add tag" }));
+
+    await user.keyboard("{ArrowDown}");
+    expect(activeName()).toBe("Priority");
+    await user.keyboard("{ArrowDown}");
+    expect(activeName()).toBe("Churn risk");
+    await user.keyboard("{ArrowDown}");
+    expect(activeName()).toBe("Churn risk");
+    await user.keyboard("{Home}");
+    expect(activeName()).toBe("Priority");
+    await user.keyboard("{End}");
+    expect(activeName()).toBe("Churn risk");
+  });
+
+  it("matches a typed term against an option's keywords as well as its name", async () => {
+    const user = userEvent.setup();
+    render(
+      <ListPopover
+        label="Assign owner"
+        title="Colleagues"
+        searchLabel="Search colleagues"
+        options={[
+          { id: "u-1", name: "Anna Weber", keywords: ["anna@nordwand.test"] },
+          { id: "u-2", name: "Otto Fischer", keywords: ["otto@example.test"] },
+        ]}
+        onPick={vi.fn()}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Assign owner" }));
+
+    await user.keyboard("nordwand");
+
+    expect(
+      screen.getAllByRole("option").map((option) => option.textContent),
+    ).toEqual(["Anna Weber"]);
   });
 
   it("closes on Escape and on a press outside, handing focus back on Escape", async () => {
@@ -382,6 +435,29 @@ describe("ListPopover over a server search", () => {
     });
     expect(screen.queryByText("No match")).toBeNull();
     expect(screen.getByRole("alert")).toBeTruthy();
+  });
+
+  it("offers no row of an earlier term once the term moves on", async () => {
+    const search = vi.fn((term: string) =>
+      Promise.resolve([{ id: `p-${term}`, name: `Answer to ${term}` }]),
+    );
+    const type = await openSearch(search);
+
+    type("a");
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(250);
+    });
+    expect(screen.getByRole("option", { name: "Answer to a" })).toBeTruthy();
+
+    type("at");
+    expect(screen.queryAllByRole("option")).toEqual([]);
+    expect(liveRegion()?.textContent).toBe("Searching…");
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(250);
+    });
+    expect(
+      screen.getAllByRole("option").map((option) => option.textContent),
+    ).toEqual(["Answer to at"]);
   });
 
   it("ignores an older answer that lands after a newer one", async () => {

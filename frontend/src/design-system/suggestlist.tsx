@@ -15,6 +15,7 @@ import {
   useAnchoredPopup,
   useDismissOnOutsidePress,
 } from "./anchoredpopup";
+import { stepEnabled, type Walkable } from "./selectlistbox";
 import "./suggestlist.css";
 
 /**
@@ -175,22 +176,26 @@ function navigateList(
 export type ListKey = "ArrowDown" | "ArrowUp" | "Home" | "End";
 
 /**
- * Where a walking key moves the active row (-1: none yet). The first ArrowUp
- * reaches the last row, as Select's does, and nothing wraps: a jump from the
- * last row to the first hides from the reader that they reached the end.
+ * Where a walking key moves the active row (-1: none yet), past disabled rows
+ * as Select's walk goes. The first ArrowUp reaches the last row, and nothing
+ * wraps: a jump from the last row to the first hides that the end was reached.
  */
-export function walkedTo(current: number, key: ListKey, count: number): number {
+export function walkedTo(
+  current: number,
+  key: ListKey,
+  rows: readonly Walkable[],
+): number {
+  const last = rows.length - 1;
   if (key === "Home") {
-    return 0;
+    return stepEnabled(rows, 0, 1);
   }
   if (key === "End") {
-    return count - 1;
+    return stepEnabled(rows, last, -1);
   }
   const step = key === "ArrowDown" ? 1 : -1;
-  if (current === -1) {
-    return step === 1 ? 0 : count - 1;
-  }
-  return Math.min(Math.max(current + step, 0), count - 1);
+  const from = current === -1 ? (step === 1 ? 0 : last) : current + step;
+  const next = stepEnabled(rows, from, step);
+  return next === -1 ? current : next;
 }
 
 export function useSuggestList({
@@ -243,7 +248,7 @@ export function useSuggestList({
   const walk = (step: 1 | -1) => {
     setOpen(true);
     setActive((current) =>
-      walkedTo(current, step === 1 ? "ArrowDown" : "ArrowUp", matches.length),
+      walkedTo(current, step === 1 ? "ArrowDown" : "ArrowUp", matches),
     );
   };
 
@@ -341,7 +346,7 @@ export function SuggestPopup({
 
 /**
  * One option row of a listbox a text box drives (`SuggestPopup`, `ListPopover`).
- * A `disabled` row stays listed and readable, as Select's does, and takes no press.
+ * A `disabled` row stays listed and readable, as Select's does, and takes no press or hover.
  */
 export function SuggestOption({
   id,
@@ -384,7 +389,7 @@ export function SuggestOption({
         event.preventDefault();
       }}
       onClick={disabled ? undefined : onPick}
-      onMouseEnter={onHover}
+      onMouseEnter={disabled ? undefined : onHover}
     >
       <span className="suggest-option-value">{children}</span>
       {hint && <span className="suggest-option-hint">{hint}</span>}

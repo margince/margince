@@ -37,3 +37,14 @@
   padding: var(--controlGap) var(--space-2);
   color: var(--textSecondary);
 }
+
+/* The phone sheet holds still and only the list scrolls, so the search stays
+   in reach however long the list runs. */
+.modal-drawer:has(> .listpopover) {
+  display: flex;
+  flex-direction: column;
+  overflow: clip;
+}
+.modal-drawer > .listpopover {
+  flex: 1;
+}
