@@ -8,6 +8,7 @@ import type { FilterVocabulary } from "./filterdata";
 import { useFilterDraft } from "./filterdraft";
 import { FilterEditor } from "./filtereditor";
 import { FocusedHead } from "./filterhead";
+import { usePlainWords } from "./filterpropose";
 import { FiltersScreen } from "./filters";
 import { listsMe } from "./lists.fixtures";
 import { newGroup, newLeaf } from "./segmentpredicate";
@@ -65,6 +66,13 @@ const READ_SEAT = {
   detail: "seat tier insufficient",
 };
 
+const PROPOSED = {
+  and: [
+    { field: "city", op: "eq", value: "Hamburg" },
+    { field: "last_activity_at", op: "lt", value: { days_ago: 45 } },
+  ],
+};
+
 function routes(
   options: Readonly<{
     matches?: number;
@@ -75,6 +83,8 @@ function routes(
   const matches = options.matches ?? 3;
   installFetchStub({
     "GET /me": listsMe(options.listsOn === true),
+    "POST /filters/propose": () =>
+      jsonResponse({ resource: "contact", filter: PROPOSED, unsupported: [] }),
     "GET /filters/vocabulary": () => jsonResponse(VOCABULARY),
     "POST /filters/preview": (body) => {
       if (options.refused) {
@@ -228,16 +238,18 @@ function ProposedRows() {
       },
     ]),
   );
+  const words = usePlainWords({ resource: "contact", dispatch });
   return (
     <div className="wrap filters-screen">
       <FocusedHead title="New contact filter" />
       <Panel title="Find contacts where…">
         <PanelBody>
           <FilterEditor
-            resource="contact"
             draft={draft}
             dispatch={dispatch}
             vocabulary={{ data: VOCABULARY, isPending: false, isError: false }}
+            words={words}
+            records="contacts"
           />
         </PanelBody>
       </Panel>
@@ -251,6 +263,29 @@ export const ProposedRowsHandMarked: Story = {
   render: () => {
     routes();
     return <ProposedRows />;
+  },
+};
+
+// A proposal landed beside the reader's own condition: the bar above the
+// dashed rows, and the footer saying a save keeps them. Save stays offered.
+export const ProposalBarWithFooterCount: Story = {
+  render: newContactFilter(),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await addCity(canvas, "Berlin");
+    await userEvent.click(
+      await canvas.findByText("Describe changes in plain words"),
+    );
+    await userEvent.type(
+      canvas.getByLabelText("Describe the contacts you want"),
+      "in Hamburg, quiet for 45 days",
+    );
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Propose conditions" }),
+    );
+    await canvas.findByText(
+      "2 proposed conditions in this filter. Saving keeps them.",
+    );
   },
 };
 

@@ -1,18 +1,17 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Describing a list in plain words, and getting it back as clauses.
+// Describing a filter in plain words, and getting it back as conditions.
 //
-// The model proposes and nothing more: what it answers lands in the builder as
-// ordinary clauses the reader edits, the preview counts them as it counts any
-// edit, and Save is still the reader's press. A proposal never lands over a
-// filter the reader already built without asking first, because replacing four
-// clauses somebody chose with one a model guessed is not an undoable glance.
+// The model proposes and nothing more: its answer lands in the builder as
+// ordinary rows marked as proposed, which the reader changes, removes or keeps,
+// and Save is still the reader's press.
 
 import { useMutation } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { type Dispatch, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { AiPending } from "../design-system/aipending";
 import {
   Button,
   Card,
@@ -22,16 +21,18 @@ import {
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ErrorLine } from "../design-system/errorline";
-import { type Locale, useLocale, useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemCodeOf, problemMessageOf, throwProblem } from "./common";
+import { problemCodeOf, throwProblem } from "./common";
 import {
   type FilterResource,
   fieldLabel,
   type VocabularyField,
 } from "./filterdata";
-import { addProposal } from "./filterproposal";
-import { decode, isGroup, type Node } from "./segmentpredicate";
+import type { FilterDraftAction } from "./filterdraft";
+import { type Proposal, proposedCount } from "./filterproposal";
+import { decode, type Group, rootGroup } from "./segmentpredicate";
 
 export type FilterProposal = components["schemas"]["FilterProposal"];
 export type UnusedPhrase = components["schemas"]["FilterProposalUnsupported"];
@@ -49,7 +50,16 @@ type ProposalAsk = Readonly<{
   locale: Locale;
 }>;
 
-export function useFilterProposal() {
+/**
+ * The ask, with its answer handled at the hook rather than per `mutate`: a
+ * per-call callback runs only while the component that asked is mounted.
+ */
+export function useFilterProposal(
+  handlers: Readonly<{
+    onSuccess: (answer: FilterProposal, ask: ProposalAsk) => void;
+    onError: () => void;
+  }>,
+) {
   return useMutation({
     mutationFn: async (ask: ProposalAsk) => {
       const { data, error } = await api.POST("/filters/propose", { body: ask });
@@ -58,100 +68,121 @@ export function useFilterProposal() {
       }
       return data;
     },
+    onSuccess: handlers.onSuccess,
+    onError: handlers.onError,
   });
 }
 
-function isEmptyTree(tree: Node): boolean {
-  return isGroup(tree) && tree.children.length === 0;
+/** The page's description box: what is typed in it and how its ask stands. */
+export type PlainWords = Readonly<{
+  /** False on a record type no proposal can be asked for. */
+  available: boolean;
+  text: string;
+  setText: (text: string) => void;
+  submit: () => void;
+  pending: boolean;
+  /** The installation has no model, so the box gives way to a line saying so. */
+  noModel: boolean;
+  /** Any other refusal of the last ask. */
+  failure: unknown;
+  /** The last answer arrived in a shape no condition can be read from. */
+  unreadable: boolean;
+}>;
+
+/**
+ * Called by the PAGE rather than the box it is typed in: the box folds and
+ * trades places with the calm start, and the answer must land through the
+ * page's reducer, against the tree as it stands when it arrives.
+ */
+export function usePlainWords({
+  resource,
+  dispatch,
+}: Readonly<{
+  resource: FilterResource;
+  dispatch: Dispatch<FilterDraftAction>;
+}>): PlainWords {
+  const { locale } = useLocale();
+  const [text, setText] = useState("");
+  const [unreadable, setUnreadable] = useState(false);
+  const propose = useFilterProposal({
+    onSuccess: (answer, ask) => {
+      if (answer.filter === null || answer.filter === undefined) {
+        dispatch({ type: "unused", unused: answer.unsupported });
+        return;
+      }
+      const proposed = decode(answer.filter);
+      if (proposed === null) {
+        setUnreadable(true);
+        dispatch({ type: "setWordsOpen", open: true });
+        return;
+      }
+      dispatch({
+        type: "answer",
+        proposed: rootGroup(proposed),
+        unused: answer.unsupported,
+        text: ask.text,
+      });
+    },
+    // The folded box opens on its own refusal, or the reason would sit
+    // inside a closed disclosure nobody is looking at.
+    onError: () => dispatch({ type: "setWordsOpen", open: true }),
+  });
+  const askable = proposalResource(resource);
+  const noModel =
+    propose.isError && problemCodeOf(propose.error) === "ai_not_configured";
+  const submit = () => {
+    const sentence = text.trim();
+    if (askable === null || sentence === "" || propose.isPending) {
+      return;
+    }
+    setUnreadable(false);
+    dispatch({ type: "asking" });
+    propose.mutate({ resource: askable, text: sentence, locale });
+  };
+  return {
+    available: askable !== null,
+    text,
+    setText,
+    submit,
+    pending: propose.isPending,
+    noModel,
+    failure: propose.isError && !noModel ? propose.error : null,
+    unreadable,
+  };
 }
 
-type Pending = Readonly<{ tree: Node; unused: readonly UnusedPhrase[] }>;
-
 export type PlainWordsFilterProps = Readonly<{
-  resource: FilterResource;
-  tree: Node;
-  /** Puts a tree in the builder and the phrases that did not make it beside it. */
-  onApply: (tree: Node | null, unused: readonly UnusedPhrase[]) => void;
+  words: PlainWords;
+  /** The record type in the reader's words: "contacts". */
+  records: string;
   /**
    * `start`: one of the two ways in, on a page with no conditions yet.
-   * `folded`: behind a disclosure above the reader's own rows. Either way it
-   * is the same component, so a description being read survives the switch.
+   * `folded`: behind a disclosure above the reader's rows.
    */
   layout: "start" | "folded";
+  /** Whether the folded box is open; the start card is always open. */
+  open: boolean;
+  onOpen: (open: boolean) => void;
 }>;
 
 export function PlainWordsFilter({
-  resource,
-  tree,
-  onApply,
+  words,
+  records,
   layout,
+  open,
+  onOpen,
 }: PlainWordsFilterProps) {
   const t = useT();
-  const { locale } = useLocale();
-  const [text, setText] = useState("");
-  const [pending, setPending] = useState<Pending | null>(null);
-  const [unreadable, setUnreadable] = useState(false);
-  // Whether the folded box is open: opened from here while it holds what the
-  // reader must see, folded when an answer lands. State rather than derived,
-  // so React re-opens a box the reader folded in the meantime.
-  const [open, setOpen] = useState(false);
-  // The tree as it stands when the answer ARRIVES. The reader may have added a
-  // clause or loaded a view while the model was reading, and replace-or-ask is
-  // decided against what is on screen then, not what was there at submit.
-  const current = useRef(tree);
-  useEffect(() => {
-    current.current = tree;
-  }, [tree]);
-  const propose = useFilterProposal();
-  const askable = proposalResource(resource);
-  if (askable === null) {
+  if (!words.available) {
     return null;
   }
-
-  const received = (proposal: FilterProposal) => {
-    setUnreadable(false);
-    if (proposal.filter === null || proposal.filter === undefined) {
-      onApply(null, proposal.unsupported);
-      return;
-    }
-    const proposed = decode(proposal.filter);
-    if (proposed === null) {
-      setUnreadable(true);
-      setOpen(true);
-      return;
-    }
-    if (isEmptyTree(current.current)) {
-      onApply(proposed, proposal.unsupported);
-      setOpen(false);
-      return;
-    }
-    setPending({ tree: proposed, unused: proposal.unsupported });
-    setOpen(true);
-  };
-
-  const submit = () => {
-    const sentence = text.trim();
-    if (sentence === "") {
-      return;
-    }
-    setPending(null);
-    setOpen(true);
-    propose.mutate(
-      { resource: askable, text: sentence, locale },
-      { onSuccess: received, onError: () => setOpen(true) },
-    );
-  };
-
-  const land = (tree: Node, unused: readonly UnusedPhrase[]) => {
-    onApply(tree, unused);
-    setPending(null);
-    setOpen(false);
-  };
-
+  if (words.noModel) {
+    return <ErrorLine>{t("filters.propose.noModel")}</ErrorLine>;
+  }
   const body = (
     <div className="filters-propose">
       <Field
-        label={t("filters.propose.label")}
+        label={t("filters.propose.label", { records })}
         hint={t("filters.propose.hint")}
       >
         {(control) => (
@@ -159,8 +190,20 @@ export function PlainWordsFilter({
             {...control}
             rows={2}
             maxLength={500}
-            value={text}
-            onChange={(event) => setText(event.target.value)}
+            value={words.text}
+            onChange={(event) => words.setText(event.target.value)}
+            onKeyDown={(event) => {
+              // Enter sends the description and Shift+Enter breaks the line;
+              // Enter that confirms an input method's word is not a send.
+              if (
+                event.key === "Enter" &&
+                !event.shiftKey &&
+                !event.nativeEvent.isComposing
+              ) {
+                event.preventDefault();
+                words.submit();
+              }
+            }}
             placeholder={t("filters.propose.placeholder")}
           />
         )}
@@ -168,44 +211,18 @@ export function PlainWordsFilter({
       <div className="form-actions">
         <Button
           variant="ai"
-          onClick={submit}
-          pending={propose.isPending}
+          onClick={words.submit}
+          pending={words.pending}
           busyLabel={t("filters.propose.busy")}
-          disabled={text.trim() === ""}
+          disabled={words.text.trim() === ""}
         >
           {t("filters.propose.submit")}
         </Button>
       </div>
-      {propose.isError && <ProposalFailure error={propose.error} />}
-      {unreadable && <ErrorLine>{t("filters.propose.unreadable")}</ErrorLine>}
-      {pending && (
-        <Callout
-          tone="ai"
-          live="status"
-          title={t("filters.propose.readyTitle")}
-          actions={
-            <>
-              <Button
-                variant="ai"
-                onClick={() => land(pending.tree, pending.unused)}
-              >
-                {t("filters.propose.replace")}
-              </Button>
-              <Button
-                onClick={() =>
-                  land(addProposal(tree, pending.tree), pending.unused)
-                }
-              >
-                {t("filters.propose.add")}
-              </Button>
-              <Button variant="link" onClick={() => setPending(null)}>
-                {t("filters.propose.discard")}
-              </Button>
-            </>
-          }
-        >
-          {t("filters.propose.readyBody")}
-        </Callout>
+      {words.pending && <AiPending label={t("filters.propose.busy")} />}
+      <ErrorLine error={words.failure} />
+      {words.unreadable && (
+        <ErrorLine>{t("filters.propose.unreadable")}</ErrorLine>
       )}
     </div>
   );
@@ -220,19 +237,73 @@ export function PlainWordsFilter({
     <Disclosure
       summary={t("filters.describeChanges")}
       open={open}
-      onToggle={setOpen}
+      onToggle={onOpen}
     >
       {body}
     </Disclosure>
   );
 }
 
-function ProposalFailure({ error }: Readonly<{ error: unknown }>) {
+/**
+ * Above the rows while a proposal still has a marked row: what was proposed
+ * from which words, and the three answers to it. Undo returns to the tree
+ * before the FIRST proposal on screen, which is what `before` holds.
+ */
+export function ProposalBar({
+  tree,
+  proposal,
+  dispatch,
+}: Readonly<{
+  tree: Group;
+  proposal: Proposal | null;
+  dispatch: Dispatch<FilterDraftAction>;
+}>) {
   const t = useT();
-  if (problemCodeOf(error) === "ai_not_configured") {
-    return <ErrorLine>{t("filters.propose.noModel")}</ErrorLine>;
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const keep = useRef<HTMLButtonElement>(null);
+  const count = proposedCount(tree);
+  if (proposal === null || count === 0) {
+    return null;
   }
-  return <ErrorLine>{problemMessageOf(error, t)}</ErrorLine>;
+  return (
+    <Callout
+      tone="ai"
+      live="status"
+      title={plural("filters.proposal.title", count, {
+        count: formatNumber(count, locale),
+        text: proposal.text,
+      })}
+      actions={
+        <>
+          <Button
+            ref={keep}
+            variant="ai"
+            onClick={() => dispatch({ type: "keepAll" })}
+          >
+            {t("filters.proposal.keepAll")}
+          </Button>
+          {proposal.hadOwn && (
+            <Button
+              onClick={() => {
+                // This button leaves with the press, and Keep all is the
+                // question still open about the rows left.
+                keep.current?.focus();
+                dispatch({ type: "replaceMine" });
+              }}
+            >
+              {t("filters.proposal.replaceMine")}
+            </Button>
+          )}
+          <Button variant="link" onClick={() => dispatch({ type: "undo" })}>
+            {t("common.undo")}
+          </Button>
+        </>
+      }
+    >
+      {t("filters.proposal.body")}
+    </Callout>
+  );
 }
 
 /** What a dropped clause's code says, in the reader's words. */

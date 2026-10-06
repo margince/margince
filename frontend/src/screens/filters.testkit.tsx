@@ -2,11 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // A fake server for the Filters and views suites: /me, the vocabulary, the
-// preview, /views, /lists and /exports, answering as the contract says and
-// remembering its writes, so a rename is read back renamed and a delete is
-// read back gone. Every request is recorded with its method, address,
-// If-Match and body, so a suite asserts what was asked rather than inferring
-// it from what drew.
+// preview, a proposal, /views, /lists and /exports, answering as the contract
+// says and remembering its writes, so a rename is read back renamed and a
+// delete is read back gone. Every request is recorded with its method,
+// address, If-Match and body, so a suite asserts what was asked rather than
+// inferring it from what drew.
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
@@ -62,6 +62,16 @@ export type FiltersServer = Readonly<{
     columns?: readonly string[];
     rows?: readonly Record<string, unknown>[];
   }>;
+  /**
+   * What `POST /filters/propose` answers, one per ask in order; the last one
+   * answers every ask after it. A status other than 200 is a problem, and an
+   * answer is held open until its `answered` resolves.
+   */
+  proposals?: readonly Readonly<{
+    status?: number;
+    body: unknown;
+    answered?: Promise<void>;
+  }>[];
   vocabularies?: Partial<Record<FilterResource, FilterVocabulary>>;
   vocabularyAnswered?: Promise<void>;
   /** The reader's teams, each answered by `GET /teams` under its name. */
@@ -231,11 +241,34 @@ function listsServer(server: FiltersServer) {
   }
 }
 
+/** The model's answers, handed out in the order the reader asked. */
+function proposeServer(server: FiltersServer) {
+  let asked = 0;
+  return async () => {
+    const answers = server.proposals ?? [];
+    const answer = answers[Math.min(asked, answers.length - 1)];
+    asked += 1;
+    if (answer === undefined) {
+      return notFound();
+    }
+    await answer.answered;
+    const status = answer.status ?? 200;
+    return status === 200
+      ? json(answer.body)
+      : problem({
+          status,
+          detail: "refused",
+          ...(isRow(answer.body) ? answer.body : {}),
+        });
+  };
+}
+
 /** Everything else the pages read, one answer per address. */
 function readsServer(
   server: FiltersServer,
 ): Readonly<Record<string, (sent: Sent) => Promise<Response> | Response>> {
   return {
+    "/filters/propose": proposeServer(server),
     "/me": async () => {
       await server.meAnswered;
       return json({

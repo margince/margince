@@ -32,6 +32,7 @@ import {
   useOpenListFromAddress,
 } from "./filterlistedit";
 import { FilterMatches, useResultsShown } from "./filtermatches";
+import { usePlainWords } from "./filterpropose";
 import {
   type FocusedFiltersAddress,
   fallbackTitleOf,
@@ -49,6 +50,7 @@ import { useList } from "./lists.queries";
 import { filterTreeOf, useSavedViews } from "./savedviews.queries";
 import {
   fieldsNamed,
+  type Group,
   isComplete,
   type Node,
   newGroup,
@@ -163,13 +165,16 @@ function FilterBuildPage({
   // The request's page size, which the table's own size dial sets.
   const [limit, setLimit] = useState(PREVIEW_PAGE);
   const [switchTo, setSwitchTo] = useState<ObjectTab | null>(null);
-  const [saving, setSaving] = useState(false);
+  // The tree as the reader saw it when they pressed Save: an answer landing
+  // behind the dialog must not become part of what they named and saved.
+  const [saving, setSaving] = useState<Group | null>(null);
   const { edited, opening } = useOpenListFromAddress(
     editing.kind === "list" ? editing.listId : undefined,
     tab,
     (tree) => dispatch({ type: "reset", tree }),
   );
   const resource = RESOURCE_OF[tab];
+  const words = usePlainWords({ resource, dispatch });
   const vocabulary = useFilterVocabulary(resource);
   const preview = useFilterPreview(resource, draft.tree, limit);
   const shown = useResultsShown(draft.tree, preview);
@@ -200,7 +205,7 @@ function FilterBuildPage({
     setSwitchTo(next);
   };
   const saved = (kind: SavedKind, id: string, name: string) => {
-    setSaving(false);
+    setSaving(null);
     if (kind === "view") {
       toast.show(t("filters.viewSaved"));
       leave({ screen: "filters", id: tab, id2: id });
@@ -245,7 +250,7 @@ function FilterBuildPage({
             <FilterFoot
               resource={resource}
               tree={draft.tree}
-              onSave={() => setSaving(true)}
+              onSave={() => setSaving(draft.tree)}
               exportRun={exportRun}
               saveTo={
                 edited ? (
@@ -258,10 +263,11 @@ function FilterBuildPage({
       >
         <PanelBody>
           <FilterEditor
-            resource={resource}
             draft={draft}
             dispatch={dispatch}
             vocabulary={vocabulary}
+            words={words}
+            records={records}
           />
         </PanelBody>
       </Panel>
@@ -286,10 +292,10 @@ function FilterBuildPage({
         />
       )}
       <SaveFilterModal
-        open={saving}
-        onClose={() => setSaving(false)}
+        open={saving !== null}
+        onClose={() => setSaving(null)}
         tab={tab}
-        tree={draft.tree}
+        tree={saving ?? draft.tree}
         onSaved={saved}
       />
       <ConfirmModal

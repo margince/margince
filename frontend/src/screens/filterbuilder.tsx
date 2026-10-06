@@ -22,6 +22,7 @@ import { useT } from "../i18n";
 import "./filterbuilder.css";
 import { ClauseRow, firstClause } from "./filterclause";
 import type { VocabularyField } from "./filterdata";
+import { ownGroup } from "./filterproposal";
 import {
   addToGroup,
   type Group,
@@ -29,6 +30,7 @@ import {
   type Node,
   newGroup,
   removeNode,
+  rootGroup,
   toggleJoin,
 } from "./segmentpredicate";
 
@@ -185,7 +187,11 @@ function Connector({
           all ? "filters.connector.matchAll" : "filters.connector.matchAny",
           { word },
         )}
-        onClick={() => onChange(toggleJoin(tree, group.id))}
+        // A group joined the other way is a group the reader rewrote, so
+        // its proposed rows are theirs now, as an edited row is.
+        onClick={() =>
+          onChange(ownGroup(rootGroup(toggleJoin(tree, group.id)), group.id))
+        }
       >
         {word}
       </Button>

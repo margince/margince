@@ -2,20 +2,24 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { useState } from "react";
-import type { VocabularyField } from "./filterdata";
+import { userEvent, within } from "storybook/test";
+import { Panel, PanelBody } from "../design-system/panel";
+import type { FilterVocabulary } from "./filterdata";
+import { useFilterDraft } from "./filterdraft";
+import { FilterEditor } from "./filtereditor";
 import {
   PlainWordsFilter,
   type UnusedPhrase,
-  UnusedPhrases,
+  usePlainWords,
 } from "./filterpropose";
-import { isGroup, type Node, newGroup, newLeaf } from "./segmentpredicate";
+import { type Group, newGroup, newLeaf } from "./segmentpredicate";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
-// Describing a list in plain words. The states worth seeing are the box at rest,
-// the question it asks before touching a filter somebody already built, the
-// phrases it names back, and the refusal of an installation with no model.
-// Press "Propose filter" in each: the answer is canned per story.
+// Describing a filter in plain words. The answer lands as rows marked as
+// proposed, with the bar above them that keeps, replaces or undoes them; the
+// states worth seeing are the wait, the landing on an empty filter and over
+// the reader's own row, a proposed row the reader made their own, an
+// installation with no model, and the phrases an answer could not use.
 const meta: Meta<typeof PlainWordsFilter> = {
   title: "Patterns/Plain-words filter",
   component: PlainWordsFilter,
@@ -23,14 +27,26 @@ const meta: Meta<typeof PlainWordsFilter> = {
 };
 export default meta;
 
-const FIELDS: VocabularyField[] = [
-  {
-    name: "last_activity_at",
-    type: "date",
-    operators: ["eq", "neq", "gt", "gte", "lt", "lte", "exists"],
-    custom: false,
-  },
-];
+type Story = StoryObj<typeof PlainWordsFilter>;
+type Canvas = ReturnType<typeof within>;
+
+const VOCABULARY: FilterVocabulary = {
+  resource: "company",
+  fields: [
+    {
+      name: "country",
+      type: "text",
+      operators: ["eq", "neq", "in", "contains", "exists"],
+      custom: false,
+    },
+    {
+      name: "last_activity_at",
+      type: "date",
+      operators: ["eq", "neq", "gt", "gte", "lt", "lte", "exists"],
+      custom: false,
+    },
+  ],
+};
 
 const UNUSED: UnusedPhrase[] = [
   {
@@ -46,63 +62,65 @@ const UNUSED: UnusedPhrase[] = [
   },
 ];
 
-function proposalAnswers(status = 200): void {
+const PROPOSED = {
+  and: [
+    { field: "country", op: "eq", value: "Germany" },
+    { field: "last_activity_at", op: "lt", value: { days_ago: 45 } },
+  ],
+};
+
+type Answer = "proposal" | "held" | "noModel" | "nothingUsable";
+
+function routes(answer: Answer): void {
   installFetchStub({
-    "POST /filters/propose": () =>
-      status === 200
-        ? jsonResponse({
+    "POST /filters/propose": () => {
+      switch (answer) {
+        case "held":
+          return new Promise<Response>(() => undefined);
+        case "noModel":
+          return jsonResponse(
+            { code: "ai_not_configured", status: 409, detail: "no model" },
+            409,
+          );
+        case "nothingUsable":
+          return jsonResponse({
             resource: "company",
-            filter: {
-              or: [
-                {
-                  field: "last_activity_at",
-                  op: "lt",
-                  value: { days_ago: 45 },
-                },
-                { field: "last_activity_at", op: "exists", value: false },
-              ],
-            },
+            filter: null,
             unsupported: UNUSED,
-          })
-        : jsonResponse(
-            { code: "ai_not_configured", status, detail: "no model" },
-            status,
-          ),
+          });
+        default:
+          return jsonResponse({
+            resource: "company",
+            filter: PROPOSED,
+            unsupported: [],
+          });
+      }
+    },
   });
 }
 
-function Surface({ start }: Readonly<{ start: Node }>) {
-  const [tree, setTree] = useState<Node>(start);
-  const [unused, setUnused] = useState<readonly UnusedPhrase[]>([]);
+/** The editing panel as the page draws it, with the ask held by its parent. */
+function Surface({ start }: Readonly<{ start: () => Group }>) {
+  const [draft, dispatch] = useFilterDraft(start);
+  const words = usePlainWords({ resource: "company", dispatch });
   return (
-    <>
-      <PlainWordsFilter
-        resource="company"
-        tree={tree}
-        // As the editor draws it: its own card on an empty filter, folded
-        // above the rows once there are some.
-        layout={
-          isGroup(tree) && tree.children.length === 0 ? "start" : "folded"
-        }
-        onApply={(next, phrases) => {
-          if (next !== null) {
-            setTree(next);
-          }
-          setUnused(phrases);
-        }}
-      />
-      <UnusedPhrases
-        unused={unused}
-        fields={FIELDS}
-        onDismiss={() => setUnused([])}
-      />
-    </>
+    <Panel title="Find companies where…">
+      <PanelBody>
+        <FilterEditor
+          draft={draft}
+          dispatch={dispatch}
+          vocabulary={{ data: VOCABULARY, isPending: false, isError: false }}
+          words={words}
+          records="companies"
+        />
+      </PanelBody>
+    </Panel>
   );
 }
 
-function story(start: Node, status = 200) {
+function story(answer: Answer, start: () => Group = () => newGroup("and")) {
   return () => {
-    proposalAnswers(status);
+    routes(answer);
     return (
       <StoryProviders>
         <Surface start={start} />
@@ -111,29 +129,81 @@ function story(start: Node, status = 200) {
   };
 }
 
-type Story = StoryObj<typeof PlainWordsFilter>;
+/** Types a description and sends it, opening the folded box first if shut. */
+async function askInWords(canvas: Canvas) {
+  const folded = canvas.queryByText("Describe changes in plain words");
+  if (folded) {
+    await userEvent.click(folded);
+  }
+  await userEvent.type(
+    await canvas.findByLabelText("Describe the companies you want"),
+    "German companies, quiet for 45 days",
+  );
+  await userEvent.click(
+    canvas.getByRole("button", { name: "Propose conditions" }),
+  );
+}
 
-export const OnAnEmptyFilter: Story = {
-  // The proposal lands straight in the builder, and the phrases it could not use
-  // are listed under it.
-  render: story(newGroup("and")),
+const ownCondition = () =>
+  newGroup("and", [newLeaf("country", "eq", "Austria")]);
+
+// The model is reading: the button says so and the indigo wait stands under
+// the description.
+export const CalmStartAsking: Story = {
+  render: story("held"),
+  play: async ({ canvasElement }) => {
+    await askInWords(within(canvasElement));
+  },
 };
 
-export const OverAFilterAlreadyBuilt: Story = {
-  // The reader's own clauses stay until they choose Replace or Add.
-  render: story(
-    newGroup("and", [newLeaf("last_activity_at", "gte", "2026-01-01")]),
-  ),
+// Proposed on the calm start: two dashed rows, and a bar offering Keep all
+// and Undo, which returns to the calm start.
+export const LandedOnEmpty: Story = {
+  render: story("proposal"),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await askInWords(canvas);
+    await canvas.findByText("Keep all");
+  },
 };
 
-export const WithNoModel: Story = {
-  render: story(newGroup("and"), 409),
+// Over the reader's own condition the proposal is appended, and the bar also
+// offers to replace what the reader had.
+export const LandedOverOwnConditions: Story = {
+  render: story("proposal", ownCondition),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await askInWords(canvas);
+    await canvas.findByText("Replace my conditions");
+  },
 };
 
-export const PhrasesItCouldNotUse: Story = {
-  render: () => (
-    <StoryProviders>
-      <UnusedPhrases unused={UNUSED} fields={FIELDS} onDismiss={() => {}} />
-    </StoryProviders>
-  ),
+// The reader changed one proposed row: its dashes are gone and the bar counts
+// the one proposal left.
+export const OneRowEdited: Story = {
+  render: story("proposal"),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await askInWords(canvas);
+    await canvas.findByText("Keep all");
+    await userEvent.type(canvas.getAllByLabelText("Value")[0], " and Austria");
+  },
+};
+
+// No model is configured: the description gives way to the line saying so,
+// and building by hand still works.
+export const NoModel: Story = {
+  render: story("noModel"),
+  play: async ({ canvasElement }) => {
+    await askInWords(within(canvasElement));
+  },
+};
+
+// An answer that expressed nothing leaves the calm start and names every
+// phrase it could not use, and why.
+export const CouldNotUse: Story = {
+  render: story("nothingUsable"),
+  play: async ({ canvasElement }) => {
+    await askInWords(within(canvasElement));
+  },
 };

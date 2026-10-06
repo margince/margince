@@ -9,13 +9,15 @@ import type { ReactNode } from "react";
 import { ActionRow } from "../design-system/actionrow";
 import { Button, OverflowMenu } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
-import { useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { useLocale, usePlural, useT } from "../i18n";
 import type { FilterResource } from "./filterdata";
 import {
   canExportFilter,
   ExportFilterItems,
   type FilterExportRun,
 } from "./filterexport";
+import { proposedCount } from "./filterproposal";
 import type { Node } from "./segmentpredicate";
 import "./filters.css";
 
@@ -38,7 +40,10 @@ export function FilterFoot({
   saveTo?: ReactNode;
 }>) {
   const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
   const exportable = canExportFilter(tree);
+  const proposed = proposedCount(tree);
   const more = saveTo !== undefined || exportable;
   return (
     <ActionRow
@@ -67,7 +72,15 @@ export function FilterFoot({
         </>
       }
     >
-      <span className="t-caption">{t("filters.unsavedFilter")}</span>
+      {/* Proposed rows never hold Save back: a save stores them as plain
+          conditions, and the band says so before the press. */}
+      <span className="t-caption">
+        {proposed > 0
+          ? plural("filters.foot.proposed", proposed, {
+              count: formatNumber(proposed, locale),
+            })
+          : t("filters.unsavedFilter")}
+      </span>
       {/* The menu that asked has closed, so the band says a file is coming. */}
       {exportRun.isPending && (
         <span className="t-caption" role="status">

@@ -10729,23 +10729,17 @@ export const en = {
   "filters.date.mode": "How the date is given",
   "filters.date.daysAgoCount": "{field}: days before today",
   "filters.saveListConfirm": "Save list",
-  "filters.propose.label": "Describe the list in plain words",
+  "filters.propose.label": "Describe the {records} you want",
   "filters.propose.hint":
-    "Margince proposes conditions for the filter below. Nothing is saved until you press Save.",
+    "Proposed conditions are shown for review. Nothing is saved until you save.",
   "filters.propose.placeholder":
-    "Companies in Germany with no activity in the last 45 days",
-  "filters.propose.submit": "Propose filter",
+    "In Germany, with no activity in the last 45 days",
+  "filters.propose.submit": "Propose conditions",
   "filters.propose.busy": "Reading your description",
   "filters.propose.noModel":
     "Plain-words filters need an AI model configured. You can still build the filter by hand.",
   "filters.propose.unreadable":
-    "The proposal could not be read. Try describing the list another way.",
-  "filters.propose.readyTitle": "A filter is ready",
-  "filters.propose.readyBody":
-    "Your filter already has conditions. Replace them with the proposal, or add the proposal to them.",
-  "filters.propose.replace": "Replace current filter",
-  "filters.propose.add": "Add to current filter",
-  "filters.propose.discard": "Discard proposal",
+    "The proposal could not be read. Try describing it another way.",
   "filters.propose.unusedTitle": "Could not use",
   "filters.propose.unusedDismiss": "Dismiss",
   "filters.propose.unusedItem": "“{phrase}”: {reason}",
@@ -10757,6 +10751,18 @@ export const en = {
     "{field} lists options you cannot see, so the value could not be checked.",
   "filters.propose.reason.tooMany":
     "The filter already holds as many conditions as it can.",
+  "filters.proposal.title_one":
+    "Margince proposed {count} condition from “{text}”.",
+  "filters.proposal.title_other":
+    "Margince proposed {count} conditions from “{text}”.",
+  "filters.proposal.body":
+    "Dashed rows are proposals: change anything, and a row you change becomes yours.",
+  "filters.proposal.keepAll": "Keep all",
+  "filters.proposal.replaceMine": "Replace my conditions",
+  "filters.foot.proposed_one":
+    "{count} proposed condition in this filter. Saving keeps it.",
+  "filters.foot.proposed_other":
+    "{count} proposed conditions in this filter. Saving keeps them.",
   "lists.page": "List",
   "lists.loading": "Loading list",
   "lists.kind.live": "Live List",

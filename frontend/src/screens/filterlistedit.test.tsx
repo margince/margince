@@ -12,7 +12,12 @@ import { en } from "../i18n/en";
 import { FiltersScreen } from "./filters";
 import { ListScreen } from "./listpage";
 import { LIVE_ID, listsMe, liveList } from "./lists.fixtures";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
+import {
+  installFetchStub,
+  jsonResponse,
+  type RouteMap,
+  StoryProviders,
+} from "./story-utils";
 
 const COMPANY_VOCAB = {
   resource: "company",
@@ -47,6 +52,7 @@ function builder(
   list = liveList,
   patch = (_body: unknown) => jsonResponse(list),
   create = (_body: unknown) => jsonResponse(list, 201),
+  more: RouteMap = {},
 ) {
   installFetchStub({
     "GET /me": listsMe(true),
@@ -55,6 +61,7 @@ function builder(
     "POST /filters/preview": () => jsonResponse(PREVIEW),
     [`PATCH /lists/${LIVE_ID}`]: patch,
     "POST /lists": create,
+    ...more,
   });
   return render(
     <StoryProviders>
@@ -113,6 +120,58 @@ describe("editing a Live List's filter", () => {
         en["lists.rules.watches"].replace("{name}", "Tell me about new buyers"),
       ),
     ).toBeInTheDocument();
+  });
+
+  it("writes the filter the reader confirmed, not an answer that lands behind the dialog", async () => {
+    const written: unknown[] = [];
+    let answer = () => {};
+    const answered = new Promise<void>((resolve) => {
+      answer = resolve;
+    });
+    builder(
+      liveList,
+      (body) => {
+        written.push(body);
+        return jsonResponse(liveList);
+      },
+      undefined,
+      {
+        "POST /filters/propose": async () => {
+          await answered;
+          return jsonResponse({
+            resource: "company",
+            filter: { field: "industry", op: "eq", value: "Retail" },
+            unsupported: [],
+          });
+        },
+      },
+    );
+    const user = userEvent.setup();
+    await user.click(await screen.findByText(en["filters.describeChanges"]));
+    await user.type(
+      screen.getByLabelText("Describe the companies you want"),
+      "retailers",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Propose conditions" }),
+    );
+    await user.click(screen.getByRole("button", { name: saveTo }));
+    const dialog = await screen.findByRole("dialog");
+    answer();
+    expect(
+      await screen.findByText(/^Margince proposed 1 condition/),
+    ).toBeInTheDocument();
+
+    await user.click(
+      within(dialog).getByRole("button", {
+        name: en["lists.saveFilterConfirm"],
+      }),
+    );
+    await vi.waitFor(() => expect(written).toHaveLength(1));
+    expect(written[0]).toEqual({
+      version: liveList.version,
+      definition: liveList.definition,
+    });
   });
 
   it("says plainly when somebody changed the list since it was opened", async () => {

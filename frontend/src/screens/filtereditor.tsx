@@ -2,12 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // The body of a filter page's editing panel: two ways in while there is no
-// condition, then the rows, with the plain-words box folded above them.
-//
-// The plain-words box keeps ONE position in both states. A description being
-// read when the reader starts building by hand is a request still in flight,
-// and its answer arrives through the component that asked; moving the box to
-// another place in the tree would remount it and drop that answer.
+// condition, then the rows, with the plain-words box folded above them and a
+// proposal's bar above the rows it marked.
 
 import { Plus } from "lucide-react";
 import { type Dispatch, useLayoutEffect, useRef, useState } from "react";
@@ -17,9 +13,14 @@ import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { useT } from "../i18n";
 import { FilterBuilder } from "./filterbuilder";
 import { firstClause } from "./filterclause";
-import type { FilterResource, FilterVocabulary } from "./filterdata";
+import type { FilterVocabulary } from "./filterdata";
 import type { FilterDraft, FilterDraftAction } from "./filterdraft";
-import { PlainWordsFilter, UnusedPhrases } from "./filterpropose";
+import {
+  type PlainWords,
+  PlainWordsFilter,
+  ProposalBar,
+  UnusedPhrases,
+} from "./filterpropose";
 import { addToGroup, isGroup, type Node } from "./segmentpredicate";
 import "./filters.css";
 
@@ -30,32 +31,23 @@ type VocabularyRead = Readonly<{
 }>;
 
 export function FilterEditor({
-  resource,
   draft,
   dispatch,
   vocabulary,
+  words,
+  records,
 }: Readonly<{
-  resource: FilterResource;
   draft: FilterDraft;
   dispatch: Dispatch<FilterDraftAction>;
   vocabulary: VocabularyRead;
+  words: PlainWords;
+  /** The record type in the reader's words: "contacts". */
+  records: string;
 }>) {
   const t = useT();
   const fields = vocabulary.data?.fields ?? [];
   const empty = draft.tree.children.length === 0;
-  // Where focus goes once an edit has removed the control that made it: the
-  // calm start's button, a proposal's card and the last row's remove all
-  // unmount with the press, and focus left there falls to <body>.
-  const [arrived, setArrived] = useState<string | null>(null);
-  const [restarted, setRestarted] = useState(false);
-  const follow = (next: Node) => {
-    setArrived(firstNewLeaf(draft.tree, next));
-    setRestarted(!empty && isGroup(next) && next.children.length === 0);
-  };
-  const edit = (tree: Node) => {
-    dispatch({ type: "edit", tree });
-    follow(tree);
-  };
+  const focus = useArrivalFocus(draft);
   return (
     <SurfaceState
       state={vocabularyState(vocabulary)}
@@ -65,36 +57,44 @@ export function FilterEditor({
       loadingLines={4}
     >
       <div
+        ref={focus.editor}
         className={empty ? "filters-editor filters-start" : "filters-editor"}
       >
-        {/* Keyed by object so a sentence typed for contacts is not offered
-            to deals, whose vocabulary it was never read against. */}
         <PlainWordsFilter
-          key={resource}
-          resource={resource}
-          tree={draft.tree}
+          words={words}
+          records={records}
           layout={empty ? "start" : "folded"}
-          onApply={(tree, unused) => {
-            dispatch({ type: "apply", tree, unused });
-            if (tree !== null) {
-              follow(tree);
-            }
-          }}
+          open={draft.wordsOpen}
+          onOpen={(open) => dispatch({ type: "setWordsOpen", open })}
         />
         {empty ? (
           <BuildByHand
-            refocus={restarted}
+            refocus={focus.restarted}
             onAdd={() =>
-              edit(addToGroup(draft.tree, draft.tree.id, firstClause(fields)))
+              dispatch({
+                type: "edit",
+                tree: addToGroup(
+                  draft.tree,
+                  draft.tree.id,
+                  firstClause(fields),
+                ),
+              })
             }
           />
         ) : (
-          <FilterBuilder
-            tree={draft.tree}
-            onChange={edit}
-            fields={fields}
-            arrived={arrived}
-          />
+          <>
+            <ProposalBar
+              tree={draft.tree}
+              proposal={draft.proposal}
+              dispatch={dispatch}
+            />
+            <FilterBuilder
+              tree={draft.tree}
+              onChange={(tree) => dispatch({ type: "edit", tree })}
+              fields={fields}
+              arrived={focus.arrived}
+            />
+          </>
         )}
         {/* Outside both states: an answer that expressed nothing leaves the
             page on its calm start, and what it could not use is still said. */}
@@ -111,9 +111,62 @@ export function FilterEditor({
 }
 
 /**
- * The first row a change brought onto the page, in reading order: the one the
- * reader just added, or the first a proposal wrote. Every edit keeps the ids
- * of the rows it leaves alone, so a row that is new here is new on screen.
+ * Where focus goes after the tree changes. The reader's own new row takes it,
+ * and the calm start takes it back when the last row goes.
+ *
+ * A tree the reader did not write in the rows (an answer, or a press on the
+ * proposal's bar) moves focus only when it has nowhere else to be: on <body>
+ * because the control pressed went with the press, or in the box that asked,
+ * which folds or leaves as the answer lands. A reader typing in a row or
+ * naming a save keeps their place, and a tree from outside moves nothing.
+ */
+function useArrivalFocus(draft: FilterDraft) {
+  const editor = useRef<HTMLDivElement>(null);
+  const [seen, setSeen] = useState(draft.tree);
+  const [arrived, setArrived] = useState<string | null>(null);
+  const [restarted, setRestarted] = useState(false);
+  const { tree, by } = draft;
+  if (tree !== seen) {
+    setSeen(tree);
+    setArrived(by === "edit" ? firstNewLeaf(seen, tree) : null);
+    setRestarted(
+      by !== "reset" && seen.children.length > 0 && tree.children.length === 0,
+    );
+  }
+  // An empty tree is the calm start's, which takes focus itself. The rows an
+  // answer marks are all new, because it replaces the last one's untouched rows.
+  useLayoutEffect(() => {
+    if (
+      by === "edit" ||
+      by === "reset" ||
+      tree.children.length === 0 ||
+      !focusIsFree()
+    ) {
+      return;
+    }
+    const rows = editor.current;
+    const row =
+      rows?.querySelector("[data-proposed]") ??
+      rows?.querySelector(".filter-clause");
+    row?.querySelector<HTMLElement>('[role="combobox"]')?.focus();
+  }, [tree, by]);
+  return { editor, arrived, restarted };
+}
+
+/** Focus on nothing, or still in the box that asked for the answer. */
+function focusIsFree(): boolean {
+  const active = document.activeElement;
+  return (
+    active === null ||
+    active === document.body ||
+    active.closest(".filters-propose") !== null
+  );
+}
+
+/**
+ * The first row the reader's edit brought onto the page, in reading order.
+ * Every edit keeps the ids of the rows it leaves alone, so a row that is new
+ * here is new on screen.
  */
 function firstNewLeaf(before: Node, after: Node): string | null {
   const known = new Set(leafIDs(before));
@@ -126,7 +179,7 @@ function leafIDs(node: Node): string[] {
 
 /**
  * The second way in: the first condition, by hand. `refocus` is the calm
- * start coming back because the reader removed the last row.
+ * start coming back because the last row went, removed or undone.
  */
 function BuildByHand({
   onAdd,

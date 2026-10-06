@@ -10586,23 +10586,17 @@ export const de = {
   "filters.date.mode": "Wie das Datum angegeben wird",
   "filters.date.daysAgoCount": "{field}: Tage vor heute",
   "filters.saveListConfirm": "Liste speichern",
-  "filters.propose.label": "Beschreibe die Liste in eigenen Worten",
+  "filters.propose.label": "Beschreibe die {records}, die du suchst",
   "filters.propose.hint":
-    "Margince schlägt Bedingungen für den Filter darunter vor. Gespeichert wird erst, wenn du auf Speichern drückst.",
+    "Vorgeschlagene Bedingungen werden zur Prüfung angezeigt. Gespeichert wird erst, wenn du speicherst.",
   "filters.propose.placeholder":
-    "Unternehmen in Deutschland ohne Aktivität in den letzten 45 Tagen",
-  "filters.propose.submit": "Filter vorschlagen",
+    "In Deutschland, ohne Aktivität in den letzten 45 Tagen",
+  "filters.propose.submit": "Bedingungen vorschlagen",
   "filters.propose.busy": "Deine Beschreibung wird gelesen",
   "filters.propose.noModel":
     "Filter aus eigenen Worten brauchen ein konfiguriertes KI-Modell. Du kannst den Filter weiterhin von Hand bauen.",
   "filters.propose.unreadable":
-    "Der Vorschlag ließ sich nicht lesen. Beschreibe die Liste anders.",
-  "filters.propose.readyTitle": "Ein Filter ist bereit",
-  "filters.propose.readyBody":
-    "Dein Filter hat schon Bedingungen. Ersetze sie durch den Vorschlag oder füge den Vorschlag hinzu.",
-  "filters.propose.replace": "Aktuellen Filter ersetzen",
-  "filters.propose.add": "Zum aktuellen Filter hinzufügen",
-  "filters.propose.discard": "Vorschlag verwerfen",
+    "Der Vorschlag ließ sich nicht lesen. Versuche es mit einer anderen Beschreibung.",
   "filters.propose.unusedTitle": "Nicht verwendet",
   "filters.propose.unusedDismiss": "Ausblenden",
   "filters.propose.unusedItem": "„{phrase}“: {reason}",
@@ -10614,6 +10608,18 @@ export const de = {
     "{field} hat Optionen, die du nicht sehen kannst, deshalb ließ sich der Wert nicht prüfen.",
   "filters.propose.reason.tooMany":
     "Der Filter enthält schon so viele Bedingungen, wie er fassen kann.",
+  "filters.proposal.title_one":
+    "Margince hat {count} Bedingung aus „{text}“ vorgeschlagen.",
+  "filters.proposal.title_other":
+    "Margince hat {count} Bedingungen aus „{text}“ vorgeschlagen.",
+  "filters.proposal.body":
+    "Gestrichelte Zeilen sind Vorschläge: Ändere, was du willst, und eine Zeile, die du änderst, gehört dir.",
+  "filters.proposal.keepAll": "Alle behalten",
+  "filters.proposal.replaceMine": "Meine Bedingungen ersetzen",
+  "filters.foot.proposed_one":
+    "{count} vorgeschlagene Bedingung in diesem Filter. Beim Speichern bleibt sie erhalten.",
+  "filters.foot.proposed_other":
+    "{count} vorgeschlagene Bedingungen in diesem Filter. Beim Speichern bleiben sie erhalten.",
   "lists.page": "Liste",
   "lists.loading": "Liste wird geladen",
   "lists.kind.live": "Live-Liste",

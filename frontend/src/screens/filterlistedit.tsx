@@ -103,7 +103,9 @@ export function SaveToListAction({
 }: Readonly<{ edited: EditedList; tree: Node }>) {
   const t = useT();
   const update = useUpdateList();
-  const [open, setOpen] = useState(false);
+  // The tree the reader confirmed is the one on screen when they asked: an
+  // answer landing behind the dialog is not theirs to write to a shared list.
+  const [pinned, setPinned] = useState<Node | null>(null);
   if (!isComplete(tree)) {
     return null;
   }
@@ -115,13 +117,13 @@ export function SaveToListAction({
       : problemMessageOf(update.error, t);
   return (
     <>
-      <Button onClick={() => setOpen(true)}>
+      <Button onClick={() => setPinned(tree)}>
         {t("lists.saveFilterTo", { name })}
       </Button>
       <ConfirmModal
-        open={open}
+        open={pinned !== null}
         onClose={() => {
-          setOpen(false);
+          setPinned(null);
           update.reset();
         }}
         title={t("lists.saveFilterTitle", { name })}
@@ -133,7 +135,7 @@ export function SaveToListAction({
             {
               id: edited.list.id,
               version: edited.version,
-              definition: encode(tree) as Record<string, unknown>,
+              definition: encode(pinned ?? tree) as Record<string, unknown>,
             },
             {
               onSuccess: () =>

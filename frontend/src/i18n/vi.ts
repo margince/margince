@@ -10465,27 +10465,17 @@ export const vi = {
   "filters.date.daysAgoCount":
     "{field}: s\u1ed1 ng\u00e0y tr\u01b0\u1edbc h\u00f4m nay",
   "filters.saveListConfirm": "L\u01b0u danh s\u00e1ch",
-  "filters.propose.label":
-    "M\u00f4 t\u1ea3 danh s\u00e1ch b\u1eb1ng l\u1eddi th\u01b0\u1eddng",
+  "filters.propose.label": "Mô tả {records} bạn muốn tìm",
   "filters.propose.hint":
-    "Margince \u0111\u1ec1 xu\u1ea5t \u0111i\u1ec1u ki\u1ec7n cho b\u1ed9 l\u1ecdc b\u00ean d\u01b0\u1edbi. Kh\u00f4ng c\u00f3 g\u00ec \u0111\u01b0\u1ee3c l\u01b0u cho \u0111\u1ebfn khi b\u1ea1n b\u1ea5m L\u01b0u.",
-  "filters.propose.placeholder":
-    "C\u00f4ng ty \u1edf \u0110\u1ee9c kh\u00f4ng c\u00f3 ho\u1ea1t \u0111\u1ed9ng trong 45 ng\u00e0y qua",
-  "filters.propose.submit": "\u0110\u1ec1 xu\u1ea5t b\u1ed9 l\u1ecdc",
+    "Các điều kiện đề xuất được hiển thị để bạn xem lại. Không có gì được lưu cho đến khi bạn lưu.",
+  "filters.propose.placeholder": "Ở Đức, không có hoạt động trong 45 ngày qua",
+  "filters.propose.submit": "Đề xuất điều kiện",
   "filters.propose.busy":
     "\u0110ang \u0111\u1ecdc m\u00f4 t\u1ea3 c\u1ee7a b\u1ea1n",
   "filters.propose.noModel":
     "B\u1ed9 l\u1ecdc b\u1eb1ng l\u1eddi th\u01b0\u1eddng c\u1ea7n m\u1ed9t m\u00f4 h\u00ecnh AI \u0111\u00e3 \u0111\u01b0\u1ee3c c\u1ea5u h\u00ecnh. B\u1ea1n v\u1eabn c\u00f3 th\u1ec3 t\u1ef1 x\u00e2y d\u1ef1ng b\u1ed9 l\u1ecdc.",
   "filters.propose.unreadable":
-    "Kh\u00f4ng \u0111\u1ecdc \u0111\u01b0\u1ee3c \u0111\u1ec1 xu\u1ea5t. H\u00e3y th\u1eed m\u00f4 t\u1ea3 danh s\u00e1ch theo c\u00e1ch kh\u00e1c.",
-  "filters.propose.readyTitle":
-    "B\u1ed9 l\u1ecdc \u0111\u00e3 s\u1eb5n s\u00e0ng",
-  "filters.propose.readyBody":
-    "B\u1ed9 l\u1ecdc c\u1ee7a b\u1ea1n \u0111\u00e3 c\u00f3 \u0111i\u1ec1u ki\u1ec7n. Thay ch\u00fang b\u1eb1ng \u0111\u1ec1 xu\u1ea5t, ho\u1eb7c th\u00eam \u0111\u1ec1 xu\u1ea5t v\u00e0o.",
-  "filters.propose.replace": "Thay b\u1ed9 l\u1ecdc hi\u1ec7n t\u1ea1i",
-  "filters.propose.add":
-    "Th\u00eam v\u00e0o b\u1ed9 l\u1ecdc hi\u1ec7n t\u1ea1i",
-  "filters.propose.discard": "B\u1ecf \u0111\u1ec1 xu\u1ea5t",
+    "Không đọc được đề xuất. Hãy thử mô tả theo cách khác.",
   "filters.propose.unusedTitle": "Kh\u00f4ng d\u00f9ng \u0111\u01b0\u1ee3c",
   "filters.propose.unusedDismiss": "\u1ea8n",
   "filters.propose.unusedItem":
@@ -10500,6 +10490,18 @@ export const vi = {
     "{field} c\u00f3 c\u00e1c l\u1ef1a ch\u1ecdn b\u1ea1n kh\u00f4ng \u0111\u01b0\u1ee3c xem, n\u00ean kh\u00f4ng th\u1ec3 ki\u1ec3m tra gi\u00e1 tr\u1ecb.",
   "filters.propose.reason.tooMany":
     "B\u1ed9 l\u1ecdc \u0111\u00e3 ch\u1ee9a nhi\u1ec1u \u0111i\u1ec1u ki\u1ec7n nh\u1ea5t c\u00f3 th\u1ec3.",
+  "filters.proposal.title_one":
+    "Margince đã đề xuất {count} điều kiện từ “{text}”.",
+  "filters.proposal.title_other":
+    "Margince đã đề xuất {count} điều kiện từ “{text}”.",
+  "filters.proposal.body":
+    "Các dòng nét đứt là đề xuất: hãy thay đổi bất cứ điều gì, và dòng nào bạn thay đổi sẽ thuộc về bạn.",
+  "filters.proposal.keepAll": "Giữ tất cả",
+  "filters.proposal.replaceMine": "Thay điều kiện của tôi",
+  "filters.foot.proposed_one":
+    "{count} điều kiện đề xuất trong bộ lọc này. Khi lưu, chúng vẫn được giữ.",
+  "filters.foot.proposed_other":
+    "{count} điều kiện đề xuất trong bộ lọc này. Khi lưu, chúng vẫn được giữ.",
   "lists.page": "Danh s\u00e1ch",
   "lists.loading": "Đang tải danh sách",
   "lists.kind.live": "Danh s\u00e1ch \u0111\u1ed9ng",

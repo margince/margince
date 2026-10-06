@@ -99,7 +99,9 @@ describe("the calm start", () => {
       screen.getByRole("heading", { level: 1, name: "New contact filter" }),
     ).toBeTruthy();
     expect(screen.getByRole("group", { name: "Record type" })).toBeTruthy();
-    expect(screen.getByLabelText(en["filters.propose.label"])).toBeTruthy();
+    expect(
+      screen.getByLabelText("Describe the contacts you want"),
+    ).toBeTruthy();
     expect(
       screen.getByRole("button", { name: en["filters.propose.submit"] }),
     ).toBeTruthy();
