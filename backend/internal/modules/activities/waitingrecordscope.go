@@ -96,6 +96,10 @@ func waitingReplyExistsClause(ctx context.Context, arg func(any) int, asOf time.
 	// for the Worklist: a thread the Worklist would not name as waiting must
 	// not be named by a record page either, and a per-record set-aside must
 	// still be this reader's own.
+	bookedDiscover, err := bookedDiscoverClause(ctx, arg)
+	if err != nil {
+		return "", err
+	}
 	reader := arg(readerOrNobody(ctx))
 	return "a.id IN (SELECT id FROM (" +
 		fmt.Sprintf(waitingRepliesSQL, instant, content, linkVisible, WaitingScanCap,
@@ -110,7 +114,7 @@ func waitingReplyExistsClause(ctx context.Context, arg func(any) int, asOf time.
 			messageSnoozeLiftedSQL(fmt.Sprintf("$%d", instant), backContent),
 			fmt.Sprintf("$%d", arg(readerAddresses)),
 			neverRelaxed,
-			noKeyset) +
+			noKeyset, bookedDiscover) +
 		") waiting_thread)", nil
 }
 

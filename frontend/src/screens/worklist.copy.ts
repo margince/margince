@@ -175,8 +175,8 @@ const VALUED_REASONS = {
   // MOMENTS rather than figures: valueText renders a date in the reader's zone.
   response_due_soon: true,
   first_asked: true,
+  meeting_booked: true,
 } as const;
-
 type ValuedReason = keyof typeof VALUED_REASONS;
 
 function valued(kind: WorklistReason["kind"]): kind is ValuedReason {

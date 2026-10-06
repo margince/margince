@@ -40,6 +40,7 @@ export const KNOWN_REASONS = {
   no_next_step: true,
   opened_overdue: true,
   meeting_soon: true,
+  meeting_booked: true,
   meeting_unprepared: true,
   response_overdue: true,
   response_due_soon: true,

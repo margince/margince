@@ -133,7 +133,8 @@ func (s *Store) HiddenWaitingRows(
 			if err := rows.Scan(&row.ActivityID, &row.Kind, &row.Subject, &row.Sender, &row.OccurredAt,
 				&row.ContactID, &row.CompanyID, &row.DealID,
 				&row.HasOpenDeal, &row.OwedVerdict, &row.CaptureLabel, &row.AddressedElsewhere,
-				&row.Engaged, &row.OwnerID, &row.Threaded, &row.ThreadKey, &row.ChannelProvider); err != nil {
+				&row.Engaged, &row.OwnerID, &row.Threaded, &row.ThreadKey, &row.ChannelProvider,
+				&row.MeetingBookedAt); err != nil {
 				return err
 			}
 			out = append(out, row)

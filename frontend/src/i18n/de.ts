@@ -11294,6 +11294,8 @@ export const de = {
   "worklist.because.opened_overdue":
     "erst nach Fristablauf erfasst, aus importiertem Bestand",
   "worklist.because.meeting_soon": "beginnt bald",
+  "worklist.because.meeting_booked": "Termin vereinbart",
+  "worklist.because.meeting_booked.value": "Termin vereinbart für {value}",
   "worklist.because.meeting_unprepared": "nichts vorbereitet",
   "worklist.because.outcome_unrecorded": "kein Ergebnis erfasst",
   "worklist.because.response_overdue": "Antwort überfällig",

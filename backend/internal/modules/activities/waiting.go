@@ -87,6 +87,14 @@ type WaitingReply struct {
 	// arrived. Zero when nothing was folded.
 	EarlierRequests int
 	FirstAskedAt    time.Time
+	// MeetingBookedAt is when the soonest booked meeting with this message's
+	// sender starts; nil when none is booked OR when none is discoverable to
+	// THIS reader — the column is fenced by the reader's own discover gate, so
+	// it is what this reader may be shown, never a global booking fact. A
+	// booked meeting does not settle the wait — only a held one does — but the
+	// caller stops counting waiting days against work that is already
+	// scheduled. bookedMeetingSQL holds the rule.
+	MeetingBookedAt *time.Time
 	// Engaged reports that this workspace wrote on this thread BEFORE the
 	// message arrived — the evidence that a conversation is one we are already
 	// in, rather than one that merely reached a mailbox.
@@ -303,6 +311,10 @@ func (s *Store) WaitingRepliesBefore(ctx context.Context, asOf time.Time, before
 		if err != nil {
 			return err
 		}
+		bookedDiscover, err := bookedDiscoverClause(ctx, arg)
+		if err != nil {
+			return err
+		}
 		rows, err := tx.Query(ctx,
 			fmt.Sprintf(waitingRepliesSQL, instant, content, linkVisible, WaitingScanCap,
 				horizon,
@@ -316,7 +328,7 @@ func (s *Store) WaitingRepliesBefore(ctx context.Context, asOf time.Time, before
 				messageSnoozeLiftedSQL(fmt.Sprintf("$%d", instant), backContent),
 				fmt.Sprintf("$%d", arg(readerAddresses)),
 				neverRelaxed,
-				olderThan(before, arg)), args...)
+				olderThan(before, arg), bookedDiscover), args...)
 		if err != nil {
 			return err
 		}
@@ -327,7 +339,8 @@ func (s *Store) WaitingRepliesBefore(ctx context.Context, asOf time.Time, before
 			if err := rows.Scan(&row.ActivityID, &row.Kind, &row.Subject, &row.Sender, &row.OccurredAt,
 				&row.ContactID, &row.CompanyID, &row.DealID,
 				&row.HasOpenDeal, &row.OwedVerdict, &row.CaptureLabel, &row.AddressedElsewhere,
-				&row.Engaged, &row.OwnerID, &row.Threaded, &row.ThreadKey, &row.ChannelProvider); err != nil {
+				&row.Engaged, &row.OwnerID, &row.Threaded, &row.ThreadKey, &row.ChannelProvider,
+				&row.MeetingBookedAt); err != nil {
 				return err
 			}
 			waiting = append(waiting, row)

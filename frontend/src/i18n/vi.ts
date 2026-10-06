@@ -11213,6 +11213,8 @@ export const vi = {
   "worklist.because.opened_overdue":
     "được ghi nhận sau thời hạn, từ dữ liệu đã nhập",
   "worklist.because.meeting_soon": "sắp bắt đầu",
+  "worklist.because.meeting_booked": "đã hẹn họp",
+  "worklist.because.meeting_booked.value": "đã hẹn họp vào {value}",
   "worklist.because.meeting_unprepared": "chưa chuẩn bị gì",
   "worklist.because.outcome_unrecorded": "chưa ghi nhận kết quả",
   "worklist.because.response_overdue": "quá hạn trả lời",
