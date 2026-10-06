@@ -82,7 +82,6 @@ import {
 import { GrowthFitPanel } from "./companygrowthfit";
 import {
   CompanyActionBadges,
-  CompanyLifecycleControl,
   displayHost,
   useCompanyVerbRefusal,
 } from "./companyheader";
@@ -90,7 +89,8 @@ import {
   type ActivityDrawer,
   CompanyHeaderActions,
 } from "./companyheaderactions";
-import { CompanyIdentityFacts, CompanySubtitle } from "./companyheaderfacts";
+import { CompanyIdentityFacts } from "./companyheaderfacts";
+import { CompanyNameLine } from "./companylifecycle";
 import {
   LIFECYCLE_LABELS,
   LIFECYCLE_OPTIONS,
@@ -1269,17 +1269,9 @@ function CompanyPage({
         // on the page, but beside a work column that opens on the reader's ask
         // it no longer needs to be the size of a masthead.
         scale="compact"
-        // Where the account stands, as the one real control beside its name,
-        // then what it is and the one way in every reader already knows, on
-        // the name's own line, the contact record's own shape.
-        nameBadge={
-          <>
-            {/* Keyed by the record: a refused pick belongs to this account and
-                must not carry over when the page moves to the next one. */}
-            <CompanyLifecycleControl key={company.id} company={company} />
-            <CompanySubtitle company={company} />
-          </>
-        }
+        // Where the account stands, what it is, and the one way in, on the
+        // name's own line, the contact record's own shape.
+        nameBadge={<CompanyNameLine company={company} />}
         // What the account is to us and who may read it, as the pills row
         // under the name.
         pulse={<CompanyMarks company={company} />}

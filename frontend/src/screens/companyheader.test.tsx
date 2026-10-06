@@ -11,10 +11,10 @@ import { en } from "../i18n/en";
 import { CompanyDetails } from "./companydetails";
 import {
   CompanyActionBadges,
-  CompanyLifecycleControl,
   CompanyRelationshipBadges,
 } from "./companyheader";
 import { CompanyIdentityFacts } from "./companyheaderfacts";
+import { CompanyLifecycleControl } from "./companylifecycle";
 
 // Who wrote the record and the record's own verbs are pinned in
 // companyheaderfacts.test.tsx and companyheaderactions.test.tsx: the two

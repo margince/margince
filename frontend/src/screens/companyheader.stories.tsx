@@ -5,9 +5,10 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent } from "storybook/test";
 import type { components } from "../api/schema";
 import { company360 } from "./company.fixtures";
-import { CompanyActionBadges, CompanyLifecycleControl } from "./companyheader";
+import { CompanyActionBadges } from "./companyheader";
 import { CompanyHeaderActions } from "./companyheaderactions";
-import { CompanyIdentityFacts, CompanySubtitle } from "./companyheaderfacts";
+import { CompanyIdentityFacts } from "./companyheaderfacts";
+import { CompanyNameLine } from "./companylifecycle";
 import { CompanyMarks } from "./companymarks";
 import {
   installFetchStub,
@@ -134,8 +135,8 @@ function Header({
   return (
     <StoryProviders>
       <div style={{ maxWidth: 640 }}>
-        {/* The nameBadge slot's own order: the stage, then what the account
-            is. The name itself is RecordView's and is left out here. */}
+        {/* The nameBadge slot; the name itself is RecordView's and is left
+            out here. */}
         <div
           style={{
             display: "flex",
@@ -143,8 +144,7 @@ function Header({
             gap: "var(--space-3)",
           }}
         >
-          <CompanyLifecycleControl company={record} />
-          <CompanySubtitle company={record} />
+          <CompanyNameLine company={record} />
         </div>
         <div style={{ marginTop: "var(--space-2)" }}>
           <CompanyMarks company={record} />
