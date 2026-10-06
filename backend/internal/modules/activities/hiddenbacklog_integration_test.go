@@ -324,6 +324,9 @@ func TestASetAsideFigureIsNotShortenedByARequestAColleagueHolds(t *testing.T) {
 		[]ActivityLinkInput{contactLink(first), contactLink(second)},
 		mailParticipants{Cc: []string{firstAddress, secondAddress}})
 	remindedOn(t, colleague, held, false)
+	// The request pass dates its work by the package's fixed instant; the queue
+	// reads against the wall clock, so the mail is moved inside its horizon.
+	colleague.exec(t, `UPDATE activity SET occurred_at = now() - interval '2 days' WHERE id = $1`, held)
 
 	e := setupLoad(t)
 	contact := ids.NewV7()
