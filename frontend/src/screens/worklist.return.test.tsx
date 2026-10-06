@@ -2,10 +2,12 @@
 import { cleanup, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
+import { translate } from "../i18n";
 import { en } from "../i18n/en";
 import { readingsDay, taskRow } from "./brief.fixtures";
 import { BriefQueue } from "./brief.queue";
 import { jsonResponse, render, stubApi } from "./brief.testkit";
+import { runContactMomentAction } from "./contactpage";
 import {
   keptWorklistReturn,
   WorklistReturnLink,
@@ -99,5 +101,36 @@ describe("Back to Worklist on the record", () => {
 
     window.location.hash = "#/contacts/c-1?prep=1";
     expect(keptWorklistReturn()).toBeUndefined();
+  });
+});
+
+describe("a related record opened from a record that came from the Worklist", () => {
+  const openDeal: components["schemas"]["ContactMomentAction"] = {
+    kind: "open_record",
+    label: "Open the deal",
+    state: "available",
+    destination: { surface: "record", entity_type: "deal", entity_id: "d-1" },
+  };
+  const handlers = {
+    contactId: "c-1",
+    openComposer: vi.fn(),
+    setDrawer: vi.fn(),
+    openBrief: vi.fn(),
+    nextMeetingId: null,
+  };
+  const t = (key: Parameters<typeof translate>[1]) => translate("en", key);
+
+  it("carries the way back onto the deal a contact moment opens", () => {
+    window.location.hash = "#/contacts/c-1?filter=tasks&from=worklist";
+    runContactMomentAction(openDeal, t, handlers);
+
+    expect(window.location.hash).toBe("#/deals/d-1?filter=tasks&from=worklist");
+  });
+
+  it("opens the deal bare when the contact came from anywhere else", () => {
+    window.location.hash = "#/contacts/c-1";
+    runContactMomentAction(openDeal, t, handlers);
+
+    expect(window.location.hash).toBe("#/deals/d-1");
   });
 });

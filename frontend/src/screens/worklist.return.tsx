@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { ArrowLeft } from "lucide-react";
 import { createContext, type ReactNode, useContext } from "react";
 import {
   navigate,
@@ -17,6 +16,7 @@ import {
   type UrlParams,
   useUrlParams,
 } from "../app/urlstate";
+import { RecordBack } from "../design-system/recordview";
 import { useT } from "../i18n";
 import { type ContactTab, contactTabRoute } from "./contacttab";
 import { WORKLIST_FILTER_PARAM } from "./worklist.header";
@@ -63,16 +63,16 @@ export function keptWorklistReturn(): UrlParams | undefined {
 }
 
 /**
- * Move to another tab of the record on screen. Every in-record tab move goes
- * through here so none of them drops the way back.
+ * A move from a record to another tab of it, or to a record it opens, that
+ * keeps the way back: every such move goes through here so none drops it.
  */
-export function navigateWithinRecord(route: Route): void {
+export function navigateKeepingReturn(route: Route): void {
   navigate(route, keptWorklistReturn());
 }
 
 /** One tab of the contact on screen, through the same move. */
 export function openContactTab(id: string, tab: ContactTab): void {
-  navigateWithinRecord(contactTabRoute(id, tab));
+  navigateKeepingReturn(contactTabRoute(id, tab));
 }
 
 /** `href` with the drawer's dials added, when it addresses a returning record. */
@@ -128,9 +128,9 @@ export function WorklistReturnLink() {
     return null;
   }
   return (
-    <a className="link-button" href={worklistReturnHref(carried)}>
-      <ArrowLeft aria-hidden="true" />
-      {t("brief.queue.back")}
-    </a>
+    <RecordBack
+      href={worklistReturnHref(carried)}
+      label={t("brief.queue.back")}
+    />
   );
 }

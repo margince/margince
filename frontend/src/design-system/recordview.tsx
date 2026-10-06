@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { ArrowLeft } from "lucide-react";
 import type { ReactNode } from "react";
 import { useT } from "../i18n";
 import { Avatar } from "./atoms";
@@ -146,6 +147,21 @@ function RecordHead({
   );
 }
 
+/** The way back to where the reader opened a record from, drawn over its head. */
+export function RecordBack({
+  href,
+  label,
+}: Readonly<{ href: string; label: string }>) {
+  return (
+    <div className="record-back">
+      <a className="link-button" href={href}>
+        <ArrowLeft aria-hidden="true" />
+        {label}
+      </a>
+    </div>
+  );
+}
+
 export function RecordView({
   back,
   name,
@@ -177,8 +193,8 @@ export function RecordView({
   zone,
   children,
 }: Readonly<{
-  // The way back to where the reader opened this record from, over the head.
-  // Absent when they arrived any other way.
+  // A `RecordBack` over the head, or a component that may draw one. Absent
+  // or null when the reader arrived any way that has no place to return to.
   back?: ReactNode;
   name: string;
   // The record's own image for the header chip — a company's resolved logo.
@@ -344,7 +360,7 @@ export function RecordView({
        itself an arriving block (design-system/enter.css), which is what keeps
        the two fades from multiplying. */
     <div className="arrive-stack">
-      {back && <div className="record-back">{back}</div>}
+      {back}
       {head}
       {actionsAt === "below" && <div className="record-actions">{actions}</div>}
       {strip}

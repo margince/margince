@@ -49,7 +49,7 @@ import {
 import { ContactRail, contactStanding, standingSentences } from "./contactrail";
 import { ContactResearchTab } from "./contactresearch";
 import { ContactSubtitle } from "./contactsubtitle";
-import { CONTACT_TABS, type ContactTab } from "./contacttab";
+import { CONTACT_TABS, type ContactTab, contactTabRoute } from "./contacttab";
 import { ContactTimelineTab } from "./contacttabs";
 import { transportForActivity, useTransports } from "./contacttransports";
 import { rosterOwnerName, useRoster, useRosterPartial } from "./entityref";
@@ -65,7 +65,7 @@ import {
 } from "./writeto";
 import "./contact360.css";
 import { buyingRoleLabel } from "./companycontacts/summary";
-import { openContactTab, WorklistReturnLink } from "./worklist.return";
+import { navigateKeepingReturn, WorklistReturnLink } from "./worklist.return";
 
 type Contact360 = components["schemas"]["Contact360"];
 type ContactMomentAction = components["schemas"]["ContactMomentAction"];
@@ -224,7 +224,7 @@ function ContactTabPanel({
 // the typed descriptor exists so a button whose path does not exist is never
 // rendered, and silently doing something else would be worse than the 404 it
 // was meant to prevent.
-function runContactMomentAction(
+export function runContactMomentAction(
   action: ContactMomentAction,
   t: ReturnType<typeof useT>,
   handlers: Readonly<{
@@ -263,7 +263,7 @@ function runContactMomentAction(
       return;
     case "record":
       if (destination.entity_id) {
-        navigate({ screen: "deals", id: destination.entity_id });
+        navigateKeepingReturn({ screen: "deals", id: destination.entity_id });
       }
       return;
     case "activity_log":
@@ -492,7 +492,7 @@ export function ContactPageV2({
                 options={CONTACT_TABS}
                 value={tab}
                 onChange={(next) => {
-                  openContactTab(id, next);
+                  navigateKeepingReturn(contactTabRoute(id, next));
                   scrollPageToTop();
                 }}
                 // The switch for the details pane, at the end of the tab row: it
@@ -781,7 +781,7 @@ function ContactMarks({
   // first, and the reveal waits for the anchor to be drawn.
   const showBrief = () => {
     if (tab !== "overview") {
-      openContactTab(view.contact.id, "overview");
+      navigateKeepingReturn(contactTabRoute(view.contact.id, "overview"));
     }
     revealOnceMounted(BRIEF_ANCHOR);
   };

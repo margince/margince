@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useRoute } from "../app/router";
-import { navigateWithinRecord } from "./worklist.return";
+import { navigateKeepingReturn } from "./worklist.return";
 
 /**
  * A record's tab, read off the address rather than held beside it, so it
@@ -22,6 +22,6 @@ export function useAddressedTab<Tab extends string>(
     route.screen === screen && route.id === recordId ? route.id2 : undefined;
   return [
     tabs.find((tab) => tab === addressed) ?? tabs[0],
-    (next: Tab) => navigateWithinRecord({ screen, id: recordId, id2: next }),
+    (next: Tab) => navigateKeepingReturn({ screen, id: recordId, id2: next }),
   ];
 }
