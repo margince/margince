@@ -32,6 +32,7 @@ export function ReportingScheduleDialog({
   const t = useT();
   const { locale } = useLocale();
   const id = useId();
+  const formId = useId();
   const client = useQueryClient();
   const [definition, setDefinition] = useState<Input>(
     schedule?.definition ?? {
@@ -100,11 +101,13 @@ export function ReportingScheduleDialog({
     }),
   );
   return (
-    <Modal open onClose={onClose} labelledBy={id}>
+    <Modal open onClose={onClose} labelledBy={id} intent="form">
       <Heading size="large" id={id} className="t-h2 modal-title">
         {t("reporting.schedule")} · {report.name}
       </Heading>
       <form
+        id={formId}
+        className="form-stack"
         onSubmit={(event) => {
           event.preventDefault();
           write.mutate({
@@ -114,111 +117,113 @@ export function ReportingScheduleDialog({
           });
         }}
       >
-        <div className="form-stack">
-          <p>
-            {report.selection.scope.label} · {t(`reporting.${report.audience}`)}{" "}
-            · {timezone}
-          </p>
-          <p className="t-caption">{t("reporting.scheduleResult")}</p>
-          {readiness.isSuccess && !ready && (
-            <p role="status">{t("reporting.scheduleSetup")}</p>
-          )}
-          {readiness.isSuccess && !ready && canRetention && (
+        <p>
+          {report.selection.scope.label} · {t(`reporting.${report.audience}`)} ·{" "}
+          {timezone}
+        </p>
+        <p className="t-caption">{t("reporting.scheduleResult")}</p>
+        {readiness.isSuccess && !ready && (
+          <p role="status">{t("reporting.scheduleSetup")}</p>
+        )}
+        {readiness.isSuccess && !ready && canRetention && (
+          <Button
+            variant="link"
+            onClick={() => navigate({ screen: "settings", id: "retention" })}
+          >
+            {t("reporting.retentionSettings")}
+          </Button>
+        )}
+        <ErrorLine error={readiness.error} />
+        {definition.report_revision !== report.revision && (
+          <div>
+            <p>{t("reporting.pinnedSettings")}</p>
             <Button
               variant="link"
-              onClick={() => navigate({ screen: "settings", id: "retention" })}
+              onClick={() =>
+                setDefinition({
+                  ...definition,
+                  report_revision: report.revision,
+                })
+              }
             >
-              {t("reporting.retentionSettings")}
+              {t("reporting.useCurrentSettings")}
             </Button>
+          </div>
+        )}
+        <Field label={t("reporting.frequency")}>
+          {(field) => (
+            <Select
+              {...field}
+              value={definition.frequency}
+              options={[
+                { value: "weekly", label: t("reporting.weekly") },
+                { value: "monthly", label: t("reporting.monthly") },
+              ]}
+              onChange={(value) => {
+                if (value === "weekly" || value === "monthly")
+                  setDefinition({ ...definition, frequency: value, day: 1 });
+              }}
+            />
           )}
-          <ErrorLine error={readiness.error} />
-          {definition.report_revision !== report.revision && (
-            <div>
-              <p>{t("reporting.pinnedSettings")}</p>
-              <Button
-                variant="link"
-                onClick={() =>
-                  setDefinition({
-                    ...definition,
-                    report_revision: report.revision,
-                  })
-                }
-              >
-                {t("reporting.useCurrentSettings")}
-              </Button>
-            </div>
+        </Field>
+        <Field label={t("reporting.day")}>
+          {(field) => (
+            <Select
+              {...field}
+              value={dayValue}
+              options={days}
+              onChange={(value) =>
+                setDefinition({ ...definition, day: Number(value) })
+              }
+            />
           )}
-          <Field label={t("reporting.frequency")}>
-            {(field) => (
-              <Select
-                {...field}
-                value={definition.frequency}
-                options={[
-                  { value: "weekly", label: t("reporting.weekly") },
-                  { value: "monthly", label: t("reporting.monthly") },
-                ]}
-                onChange={(value) => {
-                  if (value === "weekly" || value === "monthly")
-                    setDefinition({ ...definition, frequency: value, day: 1 });
-                }}
-              />
-            )}
-          </Field>
-          <Field label={t("reporting.day")}>
-            {(field) => (
-              <Select
-                {...field}
-                value={dayValue}
-                options={days}
-                onChange={(value) =>
-                  setDefinition({ ...definition, day: Number(value) })
-                }
-              />
-            )}
-          </Field>
-          <Field label={t("reporting.time")} required>
-            {(field) => (
-              <TextInput
-                {...field}
-                type="time"
-                value={definition.local_time}
-                onChange={(event) =>
-                  setDefinition({
-                    ...definition,
-                    local_time: event.target.value,
-                  })
-                }
-              />
-            )}
-          </Field>
-          <ErrorLine error={write.error} />
-        </div>
-        <div className="actions">
-          <Button variant="ghost" onClick={onClose}>
-            {t("reporting.cancel")}
-          </Button>
-          <Button
-            variant="ghost"
-            disabled={write.isPending}
-            onClick={() =>
-              write.mutate({
-                reportId: report.id,
-                previous: schedule,
-                input: { ...definition, enabled: false },
-              })
-            }
-          >
-            {t("reporting.savePaused")}
-          </Button>
-          <Button type="submit" disabled={write.isPending || !ready}>
-            {t(
-              schedule?.definition.enabled
-                ? "reporting.updateSchedule"
-                : "reporting.activateSchedule",
-            )}
-          </Button>
-        </div>
+        </Field>
+        <Field label={t("reporting.time")} required>
+          {(field) => (
+            <TextInput
+              {...field}
+              type="time"
+              value={definition.local_time}
+              onChange={(event) =>
+                setDefinition({
+                  ...definition,
+                  local_time: event.target.value,
+                })
+              }
+            />
+          )}
+        </Field>
+        <ErrorLine error={write.error} />
       </form>
+      <div className="actions">
+        <Button variant="ghost" onClick={onClose}>
+          {t("reporting.cancel")}
+        </Button>
+        <Button
+          variant="ghost"
+          disabled={write.isPending}
+          onClick={() =>
+            write.mutate({
+              reportId: report.id,
+              previous: schedule,
+              input: { ...definition, enabled: false },
+            })
+          }
+        >
+          {t("reporting.savePaused")}
+        </Button>
+        <Button
+          type="submit"
+          form={formId}
+          disabled={write.isPending || !ready}
+        >
+          {t(
+            schedule?.definition.enabled
+              ? "reporting.updateSchedule"
+              : "reporting.activateSchedule",
+          )}
+        </Button>
+      </div>
     </Modal>
   );
 }

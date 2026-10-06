@@ -56,8 +56,7 @@ export function BriefQueue() {
       open={params.get("queue") === "1"}
       onClose={close}
       labelledBy={titleId}
-      placement="right"
-      size="split"
+      intent="drawer-reading"
     >
       {/* The BANDED head, not the composer's one scrolling column: the queue is
           a list a reader pages through, so its title and the dialog's own close

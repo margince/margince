@@ -2,6 +2,7 @@ import { useId } from "react";
 import { routeHash } from "../app/router";
 import { hashWithParams, useUrlParams } from "../app/urlstate";
 import { Modal } from "../design-system/atoms";
+import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import { ApprovalRow } from "./approvalrow";
@@ -52,32 +53,35 @@ export function ApprovalDecisionDrawer({
       open={open}
       onClose={onClose}
       labelledBy={titleId}
-      placement="right"
-      size="wide"
+      intent="drawer-reading"
       returnFocusTo={returnFocusTo}
     >
-      <Heading size="large" id={titleId} className="modal-title">
-        {t("worklist.decision.title")}
-      </Heading>
-      {usable?.bundle_id && pending ? (
-        <ApprovalBundleReview approval={usable} />
-      ) : usable ? (
-        <ApprovalRow
-          approval={usable}
-          decided={!pending}
-          extraInvalidateKeys={[worklistKey]}
-          onAlreadyDecided={onClose}
-        />
-      ) : (
-        // Said rather than left blank: a drawer that opens onto nothing reads
-        // as a broken link, and a decision that is gone or not the reader's
-        // reads the same as one still loading.
-        <p>
-          {approval.isPending
-            ? t("worklist.decision.loading")
-            : t("worklist.decision.unavailable")}
-        </p>
-      )}
+      <DrawerHead>
+        <Heading size="large" id={titleId} className="t-h2">
+          {t("worklist.decision.title")}
+        </Heading>
+      </DrawerHead>
+      <DrawerBody>
+        {usable?.bundle_id && pending ? (
+          <ApprovalBundleReview approval={usable} />
+        ) : usable ? (
+          <ApprovalRow
+            approval={usable}
+            decided={!pending}
+            extraInvalidateKeys={[worklistKey]}
+            onAlreadyDecided={onClose}
+          />
+        ) : (
+          // Said rather than left blank: a drawer that opens onto nothing reads
+          // as a broken link, and a decision that is gone or not the reader's
+          // reads the same as one still loading.
+          <p>
+            {approval.isPending
+              ? t("worklist.decision.loading")
+              : t("worklist.decision.unavailable")}
+          </p>
+        )}
+      </DrawerBody>
     </Modal>
   );
 }
