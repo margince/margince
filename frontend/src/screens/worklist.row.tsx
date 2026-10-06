@@ -675,21 +675,8 @@ function NudgeDismiss({ contactId }: Readonly<{ contactId: string }>) {
   );
 }
 
-/**
- * The rank, and the way INTO the pane where there is one.
- *
- * A button on the rank rather than the whole row being pressable: the row
- * already holds links and verbs, and a control wrapping controls is a press
- * whose target the reader has to guess.
- *
- * Without `onSelect` it is a plain number. The Brief draws these rows on a page
- * with no second column, so a button there would open nothing — and a control
- * that answers nothing is worse than no control, because a reader presses it
- * once and learns the page lies about what is pressable.
- */
-// The row's first column: the rank, with the selection checkbox before it
-// where the list offers one. Without a checkbox the rank is the cell itself,
-// so a row nobody selects lays out exactly as before.
+// The rank, with the row's selection checkbox before it where the list offers
+// one; without a checkbox a row lays out exactly as before.
 function RowLead({
   pick,
   children,
@@ -705,6 +692,18 @@ function RowLead({
   );
 }
 
+/**
+ * The rank, and the way INTO the pane where there is one.
+ *
+ * A button on the rank rather than the whole row being pressable: the row
+ * already holds links and verbs, and a control wrapping controls is a press
+ * whose target the reader has to guess.
+ *
+ * Without `onSelect` it is a plain number. The Brief draws these rows on a page
+ * with no second column, so a button there would open nothing — and a control
+ * that answers nothing is worse than no control, because a reader presses it
+ * once and learns the page lies about what is pressable.
+ */
 function Rank({
   position,
   title,
