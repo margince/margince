@@ -139,3 +139,19 @@ export const OverflowOnAClosedDeal: Story = {
     ).toBeVisible();
   },
 };
+
+/** Reopen on a lost deal: the open stage it goes back to is picked first. */
+export const ReopeningAClosedDeal: Story = {
+  render: () => actions({ status: "lost" }),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", {
+        name: "More actions",
+      }),
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Reopen" }),
+    );
+    await screen.findByRole("dialog");
+  },
+};

@@ -3,6 +3,11 @@ import { useEffect, useId, useState } from "react";
 import type { components } from "../api/schema";
 import { useInstallationSettings } from "../app/uploadlimit";
 import { Button, Field, Modal } from "../design-system/atoms";
+import {
+  DrawerBody,
+  DrawerFoot,
+  DrawerHead,
+} from "../design-system/drawerbands";
 import { ErrorLine } from "../design-system/errorline";
 import { FileDropzoneControl } from "../design-system/filedropzone";
 import { Heading } from "../design-system/heading";
@@ -212,9 +217,8 @@ export function ContractForm({
         queryKey: ["companyContracts", companyId],
       });
       queryClient.invalidateQueries({ queryKey: ["company360", companyId] });
-      // The project 360 draws this agreement too. Without this a value saved
-      // here reaches the account and not the delivery it belongs to, and the
-      // project keeps serving the pre-save row from cache.
+      // The project 360 draws this agreement too, and would keep serving the
+      // pre-save row from cache.
       if (contract?.project_id) {
         queryClient.invalidateQueries({
           queryKey: ["project", contract.project_id],
@@ -223,10 +227,8 @@ export function ContractForm({
       queryClient.invalidateQueries({
         queryKey: ["companyDocuments", companyId],
       });
-      // The paper list this form and the contract row BOTH read. Without it an
-      // upload lands on the server and neither surface shows it: the row keeps
-      // the pre-upload list, and reopening the form serves the same stale cache
-      // while it refetches behind.
+      // The paper list this form and the contract row both read; without it
+      // an upload lands on the server and neither surface shows it.
       queryClient.invalidateQueries({ queryKey: ["contractPaper", companyId] });
       onClose();
     },
@@ -235,12 +237,13 @@ export function ContractForm({
   const invalid = draftProblem(draft);
 
   return (
-    <Modal open={open} onClose={onClose} labelledBy={titleId}>
-      <Heading size="large" id={titleId} className="modal-title">
-        {t(contract ? "contracts.form.editTitle" : "contracts.form.title")}
-      </Heading>
-
-      <div className="form-stack">
+    <Modal open={open} onClose={onClose} labelledBy={titleId} intent="drawer">
+      <DrawerHead>
+        <Heading size="large" id={titleId}>
+          {t(contract ? "contracts.form.editTitle" : "contracts.form.title")}
+        </Heading>
+      </DrawerHead>
+      <DrawerBody className="form-stack">
         <ContractTermsFields
           draft={draft}
           setDraft={setDraft}
@@ -258,12 +261,10 @@ export function ContractForm({
           onPick={setFile}
         />
         <ErrorLine error={save.error} />
-      </div>
-      <div className="actions">
+      </DrawerBody>
+      <DrawerFoot className="actions">
         <Button onClick={onClose}>{t("create.cancel")}</Button>
-        {/* The refusal travels WITH the control: a disabled button whose
-            reason lives in a paragraph somewhere above it is announced to
-            nobody using a screen reader, and cannot be focused to find out. */}
+        {/* A reason in a paragraph above the button reaches no screen reader. */}
         <Button
           variant="primary"
           reason={invalid ? t(invalid) : undefined}
@@ -274,7 +275,7 @@ export function ContractForm({
         >
           {t(contract ? "contracts.form.saveEdit" : "contracts.form.save")}
         </Button>
-      </div>
+      </DrawerFoot>
     </Modal>
   );
 }

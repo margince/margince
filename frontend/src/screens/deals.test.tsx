@@ -2176,9 +2176,8 @@ describe("DealScreen — a live deal that is not the viewer's to change", () => 
     }
   });
 
-  // Absent is not "unknown", it is "no": a response from a server too old to
-  // send the field must fail closed, or the fix is only as good as the oldest
-  // server a client talks to.
+  // Absent is not "unknown", it is "no": a server too old to send the field
+  // must fail closed, or the guard is only as good as the oldest server.
   it("treats a deal with no writable field as one it may not change", async () => {
     const withoutWritable = deal({ id: "x", owner_id: "u-someone-else" });
     delete (withoutWritable as { writable?: boolean }).writable;
@@ -2206,8 +2205,9 @@ describe("DealScreen reopen", () => {
     render(<DealScreen id="x" />);
     await openHeaderMenu();
     await userEvent.click(screen.getByTestId("reopen-open"));
-    await userEvent.click(screen.getByTestId("reopen-stage-s1"));
-    await userEvent.click(screen.getByTestId("reopen-confirm"));
+    const dialog = within(await screen.findByRole("dialog"));
+    await userEvent.click(dialog.getByTestId("reopen-stage-s1"));
+    await userEvent.click(dialog.getByRole("button", { name: "Reopen" }));
     await waitFor(() => expect(moves.length).toBe(1));
     expect(moves[0]).toEqual([{ to_stage_id: "s1", status: "open" }, "4"]);
   });

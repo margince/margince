@@ -1,9 +1,9 @@
 import { useState } from "react";
 import type { components } from "../../api/schema";
 import { useAgentTierMap, verbTier } from "../../app/autonomy";
-import { Button, Field, Modal, TextInput } from "../../design-system/atoms";
+import { Field, TextInput } from "../../design-system/atoms";
+import { ConfirmModal } from "../../design-system/confirmmodal";
 import { Select } from "../../design-system/select";
-import { AutonomyDot } from "../../design-system/trust";
 import { useT } from "../../i18n";
 import { problemFieldErrorsOf } from "../common";
 import { WON_REASON_LABELS, WON_REASONS, type WonReason } from "../winreason";
@@ -136,100 +136,94 @@ export function ConfirmAdvanceModal({
   const detailMissing =
     wonReason === WON_REASON_NEEDING_DETAIL && !saysSomething(wonDetail);
 
+  const confirm = async (asked: PendingAdvance) => {
+    setSubmitting(true);
+    // Captured BEFORE the await: `dismiss()` clears what was typed, and the
+    // review starts from the words this reader actually wrote for THIS close.
+    const why = closeReason({
+      wonAsked: needsWonReason,
+      lost: lostReason,
+      won: wonReason,
+      detail: wonDetail,
+      t,
+    });
+    const result = await onConfirm({
+      dealId: asked.dealId,
+      version: asked.version,
+      toStage: asked.toStage,
+      lostReason: lostReason.trim() || undefined,
+      ...wonAnswer(needsWonReason, wonReason, wonDetail),
+    });
+    setSubmitting(false);
+    // Only the missing-evidence refusal stays open: the reader can answer it
+    // here, and any other error renders on the screen behind this dialog.
+    if (!isSavedDeal(result)) {
+      if (winEvidenceRefused(result)) {
+        setRefusedDealId(asked.dealId);
+        return;
+      }
+    } else {
+      onClosed?.(result, why);
+    }
+    dismiss();
+  };
+
   return (
-    <Modal open={pending !== null} onClose={dismiss} labelledBy="advance-title">
+    <ConfirmModal
+      open={pending !== null}
+      onClose={dismiss}
+      title={
+        pending
+          ? t("deals.confirmAdvance", { stage: pending.toStage.name })
+          : ""
+      }
+      tier={verbTier("progress_deal", tierMap)}
+      confirmLabel={t("deals.confirm")}
+      confirmDisabled={
+        (needsLostReason && lostReason.trim() === "") ||
+        (needsWonReason && (wonReason === "" || detailMissing))
+      }
+      pending={submitting}
+      onConfirm={() => {
+        if (pending) {
+          void confirm(pending);
+        }
+      }}
+    >
       {pending && (
         <>
-          <div className="form-stack">
-            <p className="t-sub" id="advance-title">
-              <AutonomyDot tier={verbTier("progress_deal", tierMap)} />{" "}
-              {t("deals.confirmAdvance", { stage: pending.toStage.name })}
-            </p>
-            <p className="t-caption">
-              {t("deals.confirmTerminal", { status: pending.toStage.semantic })}
-            </p>
-            {needsLostReason && (
-              <Field label={t("deals.lostReason")}>
-                {(control) => (
-                  <TextInput
-                    {...control}
-                    value={lostReason}
-                    onChange={(event) => setLostReason(event.target.value)}
-                  />
-                )}
-              </Field>
-            )}
-            {needsWonReason && (
-              <WonReasonFields
-                reason={wonReason}
-                detail={wonDetail}
-                onReason={(next) => {
-                  setWonReason(next);
-                  // A detail kept behind a hidden field is one the reader
-                  // cannot correct.
-                  if (next !== WON_REASON_NEEDING_DETAIL) {
-                    setWonDetail("");
-                  }
-                }}
-                onDetail={setWonDetail}
-              />
-            )}
-          </div>
-          <div className="actions">
-            <Button onClick={dismiss}>{t("deals.cancel")}</Button>
-            <Button
-              variant="primary"
-              disabled={
-                submitting ||
-                (needsLostReason && lostReason.trim() === "") ||
-                (needsWonReason && (wonReason === "" || detailMissing))
-              }
-              onClick={async () => {
-                setSubmitting(true);
-                // Captured BEFORE the await: `dismiss()` clears what was
-                // typed, and the review starts from the words this reader
-                // actually wrote for THIS close.
-                const why = closeReason({
-                  wonAsked: needsWonReason,
-                  lost: lostReason,
-                  won: wonReason,
-                  detail: wonDetail,
-                  t,
-                });
-                const result = await onConfirm({
-                  dealId: pending.dealId,
-                  version: pending.version,
-                  toStage: pending.toStage,
-                  lostReason: lostReason.trim() || undefined,
-                  ...wonAnswer(needsWonReason, wonReason, wonDetail),
-                });
-                setSubmitting(false);
-                // ONE refusal keeps this dialog open: the server saying this
-                // win names no evidence, because the answer to that is a field
-                // the reader can fill in right here. Every other outcome closes
-                // it — a success has nothing left to ask, and a 403 or a 409
-                // has no answer this dialog can offer, so holding it open would
-                // trap the reader behind a modal whose error text renders on
-                // the screen underneath it.
-                if (!isSavedDeal(result)) {
-                  if (winEvidenceRefused(result)) {
-                    setRefusedDealId(pending.dealId);
-                    return;
-                  }
-                } else {
-                  // The close LANDED: offer the review, with this reason
-                  // already filled in.
-                  onClosed?.(result, why);
+          <p className="t-caption">
+            {t("deals.confirmTerminal", { status: pending.toStage.semantic })}
+          </p>
+          {needsLostReason && (
+            <Field label={t("deals.lostReason")}>
+              {(control) => (
+                <TextInput
+                  {...control}
+                  value={lostReason}
+                  onChange={(event) => setLostReason(event.target.value)}
+                />
+              )}
+            </Field>
+          )}
+          {needsWonReason && (
+            <WonReasonFields
+              reason={wonReason}
+              detail={wonDetail}
+              onReason={(next) => {
+                setWonReason(next);
+                // A detail kept behind a hidden field is one the reader
+                // cannot correct.
+                if (next !== WON_REASON_NEEDING_DETAIL) {
+                  setWonDetail("");
                 }
-                dismiss();
               }}
-            >
-              {t("deals.confirm")}
-            </Button>
-          </div>
+              onDetail={setWonDetail}
+            />
+          )}
         </>
       )}
-    </Modal>
+    </ConfirmModal>
   );
 }
 
