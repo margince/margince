@@ -41,6 +41,7 @@ function render(ui: ReactNode) {
 
 describe("ArchiveAction", () => {
   it("announces a refused archive with the server's own reason", async () => {
+    const user = userEvent.setup();
     render(
       <ArchiveAction
         label="Archive contact"
@@ -56,8 +57,8 @@ describe("ArchiveAction", () => {
         }}
       />,
     );
-    await userEvent.click(screen.getByTestId("archive-record"));
-    await userEvent.click(
+    await user.click(screen.getByTestId("archive-record"));
+    await user.click(
       within(screen.getByRole("dialog")).getByRole("button", {
         name: /^Archive/,
       }),
@@ -75,6 +76,7 @@ describe("ArchiveAction", () => {
   });
 
   it("says what went, once it has gone", async () => {
+    const user = userEvent.setup();
     // An archive is destructive and the contract has no restore endpoint, so
     // the closing dialog was the whole of what a reader got — and a dialog
     // closing is dismissal, not confirmation. It names the record because
@@ -90,8 +92,8 @@ describe("ArchiveAction", () => {
         onArchived={() => {}}
       />,
     );
-    await userEvent.click(screen.getByTestId("archive-record"));
-    await userEvent.click(
+    await user.click(screen.getByTestId("archive-record"));
+    await user.click(
       within(screen.getByRole("dialog")).getByRole("button", {
         name: /^Archive/,
       }),

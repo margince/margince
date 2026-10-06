@@ -35,16 +35,14 @@ export function catalogOfRecord(recordKey: string): CfObject | undefined {
   return CF_OBJECTS.find((object) => object === recordKey);
 }
 
-// Not while `catalog`'s first read is in flight: the form would open half-built
-// and change shape under typing. A failed or slow read opens the core fields.
+// Not while `catalog`'s first read, retries included, is in flight: the form
+// would open half-built. A read that fails for good or is slow opens the core.
 export function useSettledOpen(open: boolean, catalog?: CfObject): boolean {
   const reading = useIsFetching({
     queryKey: ["custom-fields", catalog],
     exact: true,
     predicate: (query) =>
-      catalog !== undefined &&
-      query.state.data === undefined &&
-      query.state.fetchFailureCount === 0,
+      catalog !== undefined && query.state.data === undefined,
   });
   const [waited, setWaited] = useState(false);
   useEffect(() => {

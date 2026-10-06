@@ -49,9 +49,9 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
-function render(ui: ReactNode) {
+function render(ui: ReactNode, retries = 0) {
   const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
+    defaultOptions: { queries: { retry: retries, retryDelay: 50 } },
   });
   return rtlRender(
     <QueryClientProvider client={client}>
@@ -768,9 +768,10 @@ describe("the record dialog's shape", () => {
   });
 
   it("keeps its shape and the reader's focus when fields arrive while open", async () => {
+    const user = userEvent.setup();
     render(<Harness start={six} />);
     const first = screen.getByLabelText("a");
-    await userEvent.type(first, "Acme");
+    await user.type(first, "Acme");
     act(() => controls.setFields?.([...six, text("g"), text("h")]));
     expect(screen.getByLabelText("g")).toBeTruthy();
     expect(screen.getByRole("dialog").className).toContain("modal-form");
@@ -802,6 +803,7 @@ describe("the record dialog's shape", () => {
   });
 
   it("waits for the custom fields and counts them", async () => {
+    const user = userEvent.setup();
     let answer: (response: Response) => void = () => undefined;
     stubApi({
       "GET /custom-fields": () =>
@@ -810,8 +812,10 @@ describe("the record dialog's shape", () => {
         }),
     });
     render(<CompaniesScreen />);
-    await userEvent.click(await screen.findByText(en["create.company"]));
+    const trigger = await screen.findByText(en["create.company"]);
+    await user.click(trigger);
     expect(screen.queryByRole("dialog")).toBeNull();
+    expect(trigger.closest("button")?.getAttribute("aria-busy")).toBe("true");
     answer(
       jsonResponse({ data: [customField("tier"), customField("region")] }),
     );
@@ -821,13 +825,36 @@ describe("the record dialog's shape", () => {
   });
 
   it("opens with the core fields when the custom-field read fails", async () => {
+    const user = userEvent.setup();
     stubApi({
       "GET /custom-fields": () => jsonResponse({ title: "Unavailable" }, 503),
     });
     render(<CompaniesScreen />);
-    await userEvent.click(await screen.findByText(en["create.company"]));
+    await user.click(await screen.findByText(en["create.company"]));
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByLabelText("Company name *")).toBeTruthy();
+  });
+
+  it("waits out a retried read and counts what the retry brings", async () => {
+    const user = userEvent.setup();
+    let fail: () => void = () => undefined;
+    let reads = 0;
+    stubApi({
+      "GET /custom-fields": () =>
+        reads++ === 0
+          ? new Promise<Response>((resolve) => {
+              fail = () => resolve(jsonResponse({ title: "Busy" }, 503));
+            })
+          : jsonResponse({
+              data: [customField("tier"), customField("region")],
+            }),
+    });
+    render(<CompaniesScreen />, 1);
+    await user.click(await screen.findByText(en["create.company"]));
+    act(() => fail());
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog.className).toContain("modal-drawer");
+    expect(within(dialog).getByLabelText("tier")).toBeTruthy();
   });
 
   it("opens with the core fields once a read that never answers has had its time", async () => {
@@ -841,6 +868,7 @@ describe("the record dialog's shape", () => {
   });
 
   it("is not held by another object's catalog", async () => {
+    const user = userEvent.setup();
     stubApi({ "GET /custom-fields": () => new Promise<Response>(() => {}) });
     function DealCatalog() {
       useObjectCustomFields("deal");
@@ -858,7 +886,7 @@ describe("the record dialog's shape", () => {
         />
       </>,
     );
-    await userEvent.click(screen.getByText("New company"));
+    await user.click(screen.getByText("New company"));
     expect(screen.getByRole("dialog")).toBeTruthy();
   });
 });

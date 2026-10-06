@@ -9,7 +9,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import userEvent, { type UserEvent } from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { meFixture } from "../app/mefixture";
@@ -64,18 +64,16 @@ function render(ui: ReactNode) {
   );
 }
 
-// The record's rare verbs — edit, merge, archive, share, full history — live
-// behind the header's overflow menu, so a test that operates one opens the
-// menu first. Returns once the item is on screen.
-//
-// getByTestId would find the items whether the menu were open or shut: they
-// stay mounted so their dialogs survive the click that closes the menu. The
-// closed state is asserted separately, on the `hidden` panel.
-async function openRecordMenu(testId: string): Promise<HTMLElement> {
+// The rare verbs live behind the header's overflow menu. Its items stay mounted
+// so their dialogs survive the closing click; the shut state is asserted apart.
+async function openRecordMenu(
+  testId: string,
+  user: UserEvent | typeof userEvent = userEvent,
+): Promise<HTMLElement> {
   await waitFor(() =>
     expect(screen.getByRole("button", { name: "More actions" })).toBeTruthy(),
   );
-  await userEvent.click(screen.getByRole("button", { name: "More actions" }));
+  await user.click(screen.getByRole("button", { name: "More actions" }));
   await waitFor(() => expect(screen.getByTestId(testId)).toBeTruthy());
   return screen.getByTestId(testId);
 }
@@ -743,10 +741,11 @@ describe("CompanyScreen — archive (P-3)", () => {
       }
       return jsonResponse(company);
     });
+    const user = userEvent.setup();
     render(<CompanyScreen id="o-1" />);
 
-    await userEvent.click(await openRecordMenu("archive-record"));
-    await userEvent.click(
+    await user.click(await openRecordMenu("archive-record", user));
+    await user.click(
       within(screen.getByRole("dialog")).getByRole("button", {
         name: /^Archive/,
       }),

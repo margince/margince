@@ -75,3 +75,7 @@ export const Drawer: Story = {
     await expect(dialog.className).toContain("modal-drawer");
   },
 };
+
+export const FormDark: Story = { ...Form, globals: { theme: "dark" } };
+
+export const DrawerDark: Story = { ...Drawer, globals: { theme: "dark" } };

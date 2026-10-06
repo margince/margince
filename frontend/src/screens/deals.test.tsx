@@ -1810,11 +1810,8 @@ describe("DealScreen — edit, archive (A3)", () => {
     expect("partner_attribution" in body).toBe(false);
   });
 
-  // The facts used to run together without a separator on the identity line:
-  // three adjacent spans in a plain text row rendered "€48,000.00Acme Corpvia
-  // Northgate", which is why the partner looked missing on screen while every
-  // assertion about it passed. Each is its own cell in the facts strip now, so
-  // two facts cannot share a text node no matter what either one contains.
+  // Each fact is its own cell: adjacent spans in one text row run together
+  // ("€48,000.00Acme Corpvia Northgate") while every text assertion passes.
   it("keeps each fact in its own cell rather than running them together", async () => {
     const d = deal({
       id: "x",
@@ -1883,10 +1880,11 @@ describe("DealScreen — edit, archive (A3)", () => {
         },
       }),
     );
+    const user = userEvent.setup();
     render(<DealScreen id="x" />);
-    await openHeaderMenu();
-    await userEvent.click(screen.getByTestId("archive-record"));
-    await userEvent.click(
+    await openHeaderMenu(user);
+    await user.click(screen.getByTestId("archive-record"));
+    await user.click(
       within(screen.getByRole("dialog")).getByRole("button", {
         name: /^Archive/,
       }),

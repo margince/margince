@@ -347,6 +347,7 @@ export function EditAction<Updated extends { id: string }>({
         <Button
           reasonId={disabledReasonId}
           onClick={() => setEditing(true)}
+          pending={editing && !shown}
           data-testid="edit-record"
         >
           {label}
@@ -357,6 +358,7 @@ export function EditAction<Updated extends { id: string }>({
           icon={<PenLine aria-hidden="true" />}
           reasonId={disabledReasonId}
           onClick={() => setEditing(true)}
+          pending={editing && !shown}
           testId="edit-record"
         />
       )}

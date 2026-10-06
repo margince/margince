@@ -170,13 +170,12 @@ export function AskMarginceModal({
   const claims = useMemo(() => answer?.claims ?? [], [answer]);
   const cited = openCite === null ? undefined : claims[openCite];
   const citedDoc = useRef<HTMLElement | null>(null);
-  const citedChunk = cited?.chunk_id;
   // Stacked on a narrow drawer, the document opens below the answer.
   useEffect(() => {
-    if (citedChunk !== undefined) {
+    if (open && cited !== undefined) {
       citedDoc.current?.scrollIntoView?.({ block: "nearest" });
     }
-  }, [citedChunk]);
+  }, [open, cited]);
 
   return (
     <Modal

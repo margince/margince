@@ -10,17 +10,19 @@ export default meta;
 
 type Story = StoryObj;
 
+const asking = () => (
+  <StoryProviders>
+    <ExcuseModal
+      open
+      onClose={() => undefined}
+      onConfirm={() => undefined}
+      pending={false}
+      error={null}
+    />
+  </StoryProviders>
+);
+
 /** Which ground, and the officer's own words for it; Confirm waits for both. */
-export const Asking: Story = {
-  render: () => (
-    <StoryProviders>
-      <ExcuseModal
-        open
-        onClose={() => undefined}
-        onConfirm={() => undefined}
-        pending={false}
-        error={null}
-      />
-    </StoryProviders>
-  ),
-};
+export const Asking: Story = { render: asking };
+
+export const AskingDark: Story = { globals: { theme: "dark" }, render: asking };

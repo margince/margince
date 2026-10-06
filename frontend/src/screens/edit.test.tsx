@@ -16,6 +16,7 @@ import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { throwProblem } from "./common";
 import type { CreateField } from "./create";
+import { useObjectCustomFields } from "./customfields.form";
 import { EditAction, EditRecordModal } from "./edit";
 
 // The shared edit-record form (the mirror of create): a record prefills the
@@ -67,6 +68,36 @@ describe("edit record flow", () => {
     expect(
       (screen.getByLabelText("Full name *") as HTMLInputElement).value,
     ).toBe("Alice");
+  });
+
+  it("shows its press as pending while the custom fields are read", async () => {
+    vi.stubGlobal("fetch", () => new Promise<Response>(() => {}));
+    function ContactCatalog() {
+      useObjectCustomFields("contact");
+      return null;
+    }
+    const user = userEvent.setup();
+    render(
+      <>
+        <ContactCatalog />
+        <EditAction
+          label="Edit"
+          fields={fields}
+          record={record}
+          update={vi.fn(async () => record)}
+          invalidate="contacts"
+          recordKey="contact"
+          savedMessage="Saved."
+        />
+      </>,
+    );
+    await user.click(screen.getByTestId("edit-record"));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.getByTestId("edit-record")).toHaveAttribute(
+      "aria-busy",
+      "true",
+    );
+    vi.unstubAllGlobals();
   });
 
   it("submits only the typed values", async () => {

@@ -352,6 +352,7 @@ export function CreateAction<Created extends { id: string }>({
         label={label}
         onClick={() => setCreating(true)}
         testId={testId}
+        pending={creating && !shown}
       />
       <CreateRecordModal
         open={shown}
@@ -376,15 +377,17 @@ export function NewRecordButton({
   label,
   onClick,
   testId = "new-record",
+  pending,
 }: Readonly<{
   label: string;
   onClick: () => void;
   // Two create buttons can share a list header (full form, quick capture); a
   // shared id would make both unaddressable.
   testId?: string;
+  pending?: boolean;
 }>) {
   return (
-    <Button onClick={onClick} data-testid={testId}>
+    <Button onClick={onClick} data-testid={testId} pending={pending}>
       <Plus aria-hidden /> {label}
     </Button>
   );
