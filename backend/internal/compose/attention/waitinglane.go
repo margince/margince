@@ -221,7 +221,7 @@ func (s *Service) waitingCustomers(
 	}
 	var rows []WaitingCustomer
 	var cut bool
-	err := s.degradable(ctx, func(ctx context.Context) error {
+	err := s.degradable(ctx, laneBudget, func(ctx context.Context) error {
 		var err error
 		rows, cut, err = s.waiting.Unanswered(ctx, asOf)
 		return err

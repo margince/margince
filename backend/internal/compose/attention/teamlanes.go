@@ -64,7 +64,7 @@ type PromiseLoad interface {
 // team scope reports a refused roster as unavailable, so the read must not
 // abort the snapshot on its way to saying so.
 func (s *Service) degradableRoster(ctx context.Context) (roster []TeamMember, cut bool, err error) {
-	err = s.degradable(ctx, func(ctx context.Context) error {
+	err = s.degradable(ctx, laneBudget, func(ctx context.Context) error {
 		var err error
 		roster, cut, err = s.teammates.LiveTeammatesOfCaller(ctx)
 		return err

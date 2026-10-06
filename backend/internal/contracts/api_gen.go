@@ -46926,7 +46926,9 @@ type WorklistPinRequest struct {
 // could not be read contributes no rows, and without this a lead would read their
 // silence as a week with nothing owed.
 type WorklistPlanCoverage struct {
-	// Members One entry per roster member whose plan this read asked for, in roster order.
+	// Members One entry per member of the roster as read (up to its cap), in roster order —
+	// including a teammate whose plan was never asked for because the team read ran
+	// out of time, who reads as `read: false`.
 	Members []WorklistPlanCoverageMember `json:"members"`
 
 	// Truncated True when the roster came back at its cap, so teammates past it were never asked

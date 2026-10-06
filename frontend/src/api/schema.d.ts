@@ -40546,7 +40546,11 @@ export interface components {
          *     silence as a week with nothing owed.
          */
         WorklistPlanCoverage: {
-            /** @description One entry per roster member whose plan this read asked for, in roster order. */
+            /**
+             * @description One entry per member of the roster as read (up to its cap), in roster order —
+             *     including a teammate whose plan was never asked for because the team read ran
+             *     out of time, who reads as `read: false`.
+             */
             members: components["schemas"]["WorklistPlanCoverageMember"][];
             /**
              * @description True when the roster came back at its cap, so teammates past it were never asked

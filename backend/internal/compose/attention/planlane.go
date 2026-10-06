@@ -53,7 +53,7 @@ func (s *Service) readingPlan(ctx context.Context, scope string, now time.Time) 
 		// it covers: every member of every team the reader oversees, or none.
 		return &scoped, planUnavailable(crmcontracts.WorklistSourceUnavailableReasonWithheld)
 	}
-	entries, refusal := s.duePlan(ctx, s.taskOwner, now)
+	entries, refusal := s.duePlan(ctx, laneBudget, s.taskOwner, now)
 	scoped.planRows = planRowsOf(entries, now)
 	return &scoped, refusal
 }
@@ -81,8 +81,9 @@ func (s *Service) readingTeamPlans(ctx context.Context, now time.Time) (*Service
 	for _, member := range roster {
 		var entries []PlanWork
 		refusal := planUnavailable(crmcontracts.WorklistSourceUnavailableReasonFailed)
-		if s.now().Before(spent) {
-			entries, refusal = s.duePlan(ctx, member.UserID, now)
+		// Each read gets what is left, so one started late cannot take a fresh budget.
+		if left := spent.Sub(s.now()); left > 0 {
+			entries, refusal = s.duePlan(ctx, left, member.UserID, now)
 		}
 		refused = louder(refused, refusal)
 		coverage.Members = append(coverage.Members, crmcontracts.WorklistPlanCoverageMember{
@@ -99,9 +100,9 @@ func (s *Service) readingTeamPlans(ctx context.Context, now time.Time) (*Service
 
 // duePlan is one owner's due commitments, read so a failure is named by the page
 // rather than aborting the snapshot every other source shares.
-func (s *Service) duePlan(ctx context.Context, owner ids.UUID, now time.Time) ([]PlanWork, *crmcontracts.WorklistSourceUnavailable) {
+func (s *Service) duePlan(ctx context.Context, budget time.Duration, owner ids.UUID, now time.Time) ([]PlanWork, *crmcontracts.WorklistSourceUnavailable) {
 	var entries []PlanWork
-	err := s.degradable(ctx, func(ctx context.Context) error {
+	err := s.degradable(ctx, budget, func(ctx context.Context) error {
 		var err error
 		entries, err = s.weeklyPlans.DuePlan(ctx, owner, now)
 		return err

@@ -9,6 +9,7 @@ package attention
 import (
 	"context"
 	"errors"
+	"slices"
 	"testing"
 	"time"
 
@@ -198,6 +199,36 @@ func TestASlowTeamReadStopsAtOneLaneBudgetAndNamesWhoWasNotAsked(t *testing.T) {
 	}
 	if !read[theReader] || read[theColleague] {
 		t.Fatalf("the teammate never asked must read as unread: %v", read)
+	}
+}
+
+// budgetsSeen is a snapshot that records the statement budget each degradable
+// read was given.
+type budgetsSeen struct{ budgets *[]time.Duration }
+
+func (b budgetsSeen) InSnapshot(ctx context.Context, fn func(context.Context) error) error {
+	return fn(ctx)
+}
+
+func (b budgetsSeen) Detached(ctx context.Context) context.Context { return ctx }
+
+func (b budgetsSeen) Degradable(ctx context.Context, budget time.Duration, fn func(context.Context) error) error {
+	*b.budgets = append(*b.budgets, budget)
+	return fn(ctx)
+}
+
+func TestATeammateReadLateGetsOnlyWhatIsLeftOfTheTeamsBudget(t *testing.T) {
+	t.Parallel()
+	var asked []ids.UUID
+	var budgets []time.Duration
+	svc := teamPlanService(theTeam, plansByOwner{asked: &asked}).WithSnapshots(budgetsSeen{budgets: &budgets})
+	step := laneBudget * 3 / 4
+	svc.now = func() time.Time { return rankInstant.Add(time.Duration(len(asked)) * step) }
+	svc.readingPlan(meetingPrepReader(), scopeTeam, rankInstant)
+	// The roster read comes first, on its own lane budget; then one read per teammate.
+	want := []time.Duration{laneBudget, laneBudget, laneBudget - step}
+	if !slices.Equal(budgets, want) {
+		t.Fatalf("each plan read must be bounded by the team's remaining budget: got %v, want %v", budgets, want)
 	}
 }
 

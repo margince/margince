@@ -54131,7 +54131,10 @@ components:
         members:
           type: array
           items: { $ref: '#/components/schemas/WorklistPlanCoverageMember' }
-          description: 'One entry per roster member whose plan this read asked for, in roster order.'
+          description: |
+            One entry per member of the roster as read (up to its cap), in roster order —
+            including a teammate whose plan was never asked for because the team read ran
+            out of time, who reads as `read: false`.
         truncated:
           type: boolean
           description: |
