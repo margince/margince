@@ -417,6 +417,20 @@ var piiTables = map[string]piiHandling{
 	// reason: a contact asking what is held about them is owed the record that
 	// they said stop, and when.
 	"communication_suppression": {erasureWrite: true, sarRead: true},
+	// A rep's standing vouch that a machine-level refusal may be overruled.
+	// Not consent, not a lawful basis, but a human decision on the record
+	// about this subject — erased with them like the suppression above, and
+	// disclosed for the same reason: a subject is owed the record that a
+	// human decided to write to them anyway, and why.
+	//
+	// The retention sweep deletes it outright, by contact in retentionactions.go
+	// and by lead in retention_leadrecord.go, so each arm is declared and a
+	// sweep that stops deleting either one fails here.
+	"communication_override": {
+		erasureWrite:   true,
+		sarRead:        true,
+		retentionPurge: []string{"contact_id = $1", "lead_id = $1"},
+	},
 
 	"preference_token": {erasureWrite: true, sarForbidden: true},
 

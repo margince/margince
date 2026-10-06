@@ -87,11 +87,11 @@ func apiFlagSet() (*flag.FlagSet, *cliflags.Env, *apiConfig, error) {
 		"path to the deployment configuration file (A107/ADR-0061: bootstrap + auth); a missing file boots an existing installation but cannot bootstrap an empty database")
 	env.String(fs, &cfg.schemaDSN, "schema-dsn", "MARGINCE_SCHEMA_DSN", "",
 		"Postgres DSN (owner role) for the customfields runtime-DDL pool; unset = the two schema-change operations answer 501")
-	fs.StringVar(&cfg.addr, "addr", ":8080", "listen address")
+	env.String(fs, &cfg.addr, "addr", "MARGINCE_ADDR", ":8080", "listen address")
 	env.String(fs, &cfg.redisAddr, "redis", "MARGINCE_REDIS", "localhost:16379", "Redis address (event bus)")
 	env.String(fs, &cfg.redisPassword, "redis-password", "MARGINCE_REDIS_PASSWORD", "",
 		"Event-bus credential, where the instance requires one")
-	fs.BoolVar(&cfg.inlineRelay, "inline-relay", true, "run the outbox relay in this process (false when cmd/worker runs it)")
+	env.Bool(fs, &cfg.inlineRelay, "inline-relay", "MARGINCE_INLINE_RELAY", true, "run the outbox relay in this process (false when cmd/worker runs it)")
 	env.String(fs, &cfg.routingPath, "ai-routing", "MARGINCE_AI_ROUTING", "", "IGNORED (kept so an existing command line still parses): the model binding is a stored setting, declared for a fresh install under `seeds.ai_routing` in margince.yaml and changed on a running one through Settings -> AI or PUT /v1/ai/routing. Passing it logs a warning naming which of those applies and does nothing else. Nothing reads a routing file any more: the debug lanes take --model or --ai-fake, and the certification runner is told its model outright")
 	fs.BoolVar(&cfg.fakeBrain, "ai-fake", false, "drive the AI surfaces with the offline fake model (dev/test only)")
 	env.String(fs, &cfg.logLevel, "log-level", "MARGINCE_LOG_LEVEL", "info", "log level: debug|info|warn|error")
@@ -144,7 +144,7 @@ func parseAPIFlags(args []string) (apiConfig, error) {
 	// rather than in each flag's default because `flag` echoes a non-empty default
 	// in its usage output, and these values are DSNs, signing keys, OAuth client
 	// secrets and bearer tokens — see internal/platform/cliflags.
-	env.Apply(fs, config.FromOS)
+	envErr := env.Apply(fs, config.FromOS)
 	// After Apply, so the report describes the environment the role actually
 	// consulted.
 	cfg.unknownVars = registry.Undeclared(config.Environ())
@@ -158,6 +158,11 @@ func parseAPIFlags(args []string) (apiConfig, error) {
 	// was true all along. Two boots to learn two requirements, and an operator
 	// who fixes both at once never sees the second message at all.
 	var faults []string
+	// A value the environment holds but its flag cannot read joins the faults
+	// found below, so one boot names every one of them.
+	if envErr != nil {
+		faults = append(faults, strings.Split(envErr.Error(), "\n")...)
+	}
 	if cfg.dsn == "" {
 		faults = append(faults, "--dsn or MARGINCE_DSN required")
 	}

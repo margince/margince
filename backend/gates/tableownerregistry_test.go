@@ -256,6 +256,7 @@ var tableOwners = map[string]string{
 	"communication_basis":          "internal/modules/consent",
 	"communication_review":         "internal/modules/consent",
 	"communication_instruction":    "internal/modules/consent",
+	"communication_override":       "internal/modules/consent",
 	"communication_suppression":    "internal/modules/consent",
 	"consent_qualifying_event":     "internal/modules/consent",
 	"data_subject_request":         "internal/modules/consent",
