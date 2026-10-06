@@ -518,6 +518,47 @@ describe("the deletion receipt", () => {
     expect(await screen.findByText(/is pinned/)).toBeTruthy();
     expect(screen.queryByText(/commercial correspondence/)).toBeNull();
   });
+
+  // Escape mid-purge would unmount the dialog and lose the receipt the server
+  // is about to send back.
+  it("stays open on Escape while the purge is running", async () => {
+    const user = userEvent.setup();
+    const { wrapped } = backendWithPurge({
+      destroyed: 3,
+      released: 0,
+      skipped: 0,
+      anonymised: 0,
+      preview: true,
+      kept: { held: 0, under_statute: 0, under_request: 0 },
+    });
+    let answer: () => void = () => {};
+    const answered = new Promise<void>((resolve) => {
+      answer = resolve;
+    });
+    vi.stubGlobal(
+      "fetch",
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = input instanceof Request ? input.url : String(input);
+        if (url.includes("/purge")) await answered;
+        return wrapped(input, init);
+      },
+    );
+    render(
+      <Providers>
+        <CaptureExclusionsCard />
+      </Providers>,
+    );
+
+    await openPurge(user);
+    await user.click(screen.getByRole("button", { name: "Check first" }));
+    await user.keyboard("{Escape}");
+    expect(screen.getByRole("dialog")).toBeTruthy();
+
+    answer();
+    expect(
+      await screen.findByText(/3 messages would be destroyed/),
+    ).toBeTruthy();
+  });
 });
 
 // The third reason, which renders on its own branch: a request still being

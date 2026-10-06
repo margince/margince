@@ -171,6 +171,7 @@ export function RelinkModal({
       open={open}
       onClose={onClose}
       title={t("compose.relinkTitle")}
+      intent="form"
       confirmLabel={t("compose.relinkConfirm")}
       confirmDisabled={!target}
       onConfirm={() =>

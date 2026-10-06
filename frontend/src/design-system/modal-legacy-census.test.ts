@@ -20,7 +20,6 @@ import { parseSource, sourceFileAt } from "../../scripts/lib/source-tree";
 /** Per file: legacy props handed to a dialog, and `Modal`s naming no box. */
 const BASELINE: Record<string, { legacy: number; bare: number }> = {
   "design-system/confirmmodal.tsx": { legacy: 2, bare: 0 },
-  "design-system/emaildetail.tsx": { legacy: 2, bare: 0 },
   "design-system/filepreview.tsx": { legacy: 1, bare: 0 },
   "design-system/resolvesheet.tsx": { legacy: 1, bare: 0 },
   "screens/acquisitionsources.tsx": { legacy: 0, bare: 1 },
@@ -30,20 +29,10 @@ const BASELINE: Record<string, { legacy: number; bare: number }> = {
   "screens/ai-task-outcome.stories.tsx": { legacy: 1, bare: 0 },
   "screens/ai-task-sheet.tsx": { legacy: 2, bare: 0 },
   "screens/automations.tsx": { legacy: 0, bare: 2 },
-  "screens/blocked-domains-decision.tsx": { legacy: 0, bare: 1 },
-  "screens/capture-activity-drawer.tsx": { legacy: 1, bare: 0 },
-  "screens/capture-exclusions.tsx": { legacy: 0, bare: 1 },
-  "screens/capture-owner-identities.tsx": { legacy: 0, bare: 1 },
-  "screens/capture-purge-dialog.tsx": { legacy: 0, bare: 1 },
-  "screens/compose.tsx": { legacy: 2, bare: 0 },
-  "screens/composeschedule.tsx": { legacy: 1, bare: 0 },
   "screens/connectors.tsx": { legacy: 0, bare: 1 },
-  "screens/consumer-mail-domains.tsx": { legacy: 0, bare: 1 },
-  "screens/directsendmodal.tsx": { legacy: 1, bare: 0 },
   "screens/imap-connect-form.tsx": { legacy: 0, bare: 1 },
   "screens/import.tsx": { legacy: 1, bare: 0 },
   "screens/onboarding-conversation/connect-dialog.tsx": { legacy: 0, bare: 1 },
-  "screens/own-domains.tsx": { legacy: 0, bare: 1 },
   "screens/telegram-connect-form.tsx": { legacy: 0, bare: 1 },
   "screens/webhooks.tsx": { legacy: 0, bare: 1 },
 };
