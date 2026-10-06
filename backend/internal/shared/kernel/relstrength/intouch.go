@@ -9,6 +9,7 @@ package relstrength
 // account, so the meeting rule lives here once.
 
 import (
+	"slices"
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
@@ -18,11 +19,28 @@ import (
 // with an account no longer counts as current.
 const InTouchDays = 30
 
+// countingMeetingStatuses are the statuses of a meeting that took place or is
+// booked. An untracked meeting (no status) counts too; canceled and no_show
+// never do. Both the SQL and the Go predicate below render from this list.
+var countingMeetingStatuses = []string{"booked", "held"}
+
 // MeetingCountsSQL is the predicate a meeting row passes to count toward
 // contact strength: not canceled and not a no-show, whenever it is. alias, and
 // now in the two below, are compile-time literals or bind placeholders.
 func MeetingCountsSQL(alias string) string {
-	return "(" + alias + ".meeting_status IS NULL OR " + alias + ".meeting_status IN ('booked', 'held'))"
+	return "(" + alias + ".meeting_status IS NULL OR " + alias + ".meeting_status IN (" +
+		sqlList(countingMeetingStatuses) + "))"
+}
+
+// MeetingStatusCounts is MeetingCountsSQL for a reader holding the row in Go;
+// status is "" when the meeting has none.
+func MeetingStatusCounts(status string) bool {
+	return status == "" || slices.Contains(countingMeetingStatuses, status)
+}
+
+// InteractionCounts is InteractionCountsSQL for a reader holding the row in Go.
+func InteractionCounts(kind, meetingStatus string) bool {
+	return IsInteractionKind(kind) && (kind != kindMeeting || MeetingStatusCounts(meetingStatus))
 }
 
 // MeetingTookPlaceSQL is a meeting that counts as contact we had: not called
@@ -44,7 +62,7 @@ func MeetingAheadSQL(alias, now string) string {
 // nobody called off.
 func InteractionCountsSQL(alias string) string {
 	return alias + ".kind IN " + InteractionKindSQLGroup() +
-		" AND (" + alias + ".kind <> 'meeting' OR " + MeetingCountsSQL(alias) + ")"
+		" AND (" + alias + ".kind <> '" + kindMeeting + "' OR " + MeetingCountsSQL(alias) + ")"
 }
 
 // How an account's contact stands, by what made it so.
