@@ -147,6 +147,9 @@ describe("NumberSetting", () => {
     await user.clear(box);
     await user.type(box, "0{Enter}");
     expect(onCommit).toHaveBeenCalledWith(0);
+    await user.clear(box);
+    await user.type(box, "300{Enter}");
+    expect(onCommit).toHaveBeenCalledWith(300);
   });
 
   // The blur after an Enter lands while the first save is still in flight, so

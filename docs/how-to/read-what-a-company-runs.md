@@ -105,9 +105,10 @@ a domain the record never carried.
 
 ## Configure it
 
-Two settings, both read by the **worker** at boot. The api does not read them, because the enricher
-is built in `cmd/worker/jobrunner.go`. Put them in `.env.local`, which `scripts/dev.sh` sources and
-exports.
+Two settings. The certificate log's address is an environment variable the **worker** reads at boot:
+the api does not read it, because the enricher is built in `cmd/worker/jobrunner.go`. Put it in
+`.env.local`, which `scripts/dev.sh` sources and exports. How often the sweep runs is an admin
+setting on Settings → System health, which a running worker picks up without a restart.
 
 ### `MARGINCE_CERTLOG_BASE_URL`: required, or the whole lane is off
 
