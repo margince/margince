@@ -12,6 +12,7 @@ package company360
 // date that hid which side it belonged to.
 
 import (
+	"fmt"
 	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -51,6 +52,9 @@ func (a *assembly) readLastTouch() error {
 		where += " AND " + scope
 	}
 	where += a.opts.projectScope(arg)
+	// A message dated after the read has not been sent yet, so it is neither
+	// side's last word: a scheduled send must not hide the real last one.
+	where += fmt.Sprintf(" AND a.occurred_at <= $%d", arg(a.now))
 	// Two ordered LIMIT-1 arms in ONE round trip, rather than two FILTERed
 	// max() aggregates. An aggregate has to see every qualifying row before it
 	// can answer; each arm here stops at the first, so the cost is bounded by

@@ -75,7 +75,7 @@ func captureMeetingWith(t *testing.T, e *integration.Env, contact ids.UUID, even
 	}
 }
 
-func relationshipOf(t *testing.T, e *integration.Env, acct quietAccount) *crmcontracts.HealthDimension {
+func pageOf(t *testing.T, e *integration.Env, acct quietAccount) crmcontracts.Company360 {
 	t.Helper()
 	page, err := company360.NewService(e.Pool, e.Contacts, e.Deals, e.Projects,
 		approvals.NewService(InstallationDB(e.Pool)), func() time.Time { return acct.now }).
@@ -83,6 +83,12 @@ func relationshipOf(t *testing.T, e *integration.Env, acct quietAccount) *crmcon
 	if err != nil {
 		t.Fatalf("assembling the account page: %v", err)
 	}
+	return page
+}
+
+func relationshipOf(t *testing.T, e *integration.Env, acct quietAccount) *crmcontracts.HealthDimension {
+	t.Helper()
+	page := pageOf(t, e, acct)
 	if page.Health == nil || page.Health.Relationship == nil {
 		t.Fatalf("the account page carries no relationship rating: %+v", page.Health)
 	}
@@ -221,5 +227,40 @@ func TestHealthWithoutTheActivityGrantNamesNoMeeting(t *testing.T) {
 		*code == crmcontracts.HealthDimensionReasonCodeMeetingBooked) {
 		t.Errorf("reason = %q (%q), which tells a reader without the activity grant that a meeting exists",
 			*code, page.Health.Relationship.Reason)
+	}
+}
+
+// A message dated ahead of the read, scheduled or mis-stamped, is not their
+// last word: the rating and the strip both read their newest real message.
+func TestAFutureDatedMessageHidesNotTheirLastRealOne(t *testing.T) {
+	e := integration.Setup(t)
+	acct := seedQuietAccount(t, e)
+	inbound := "inbound"
+	logInbound := func(subject string, at time.Time) {
+		if _, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+			Kind: "email", Subject: &subject, Direction: &inbound, OccurredAt: &at, Source: "manual",
+			Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: acct.contact}},
+		}); err != nil {
+			t.Fatalf("logging %q: %v", subject, err)
+		}
+	}
+	lastReal := acct.now.AddDate(0, 0, -10)
+	logInbound("Re: next steps", lastReal)
+	logInbound("Scheduled: quarterly note", acct.now.AddDate(0, 0, 3))
+
+	page := pageOf(t, e, acct)
+	if page.LastInboundAt == nil || page.LastInboundAt.Sub(lastReal).Abs() > time.Second {
+		t.Fatalf("last inbound = %v, want the real message at %v", page.LastInboundAt, lastReal)
+	}
+	if strip := page.StateStrip; strip == nil || strip.Engagement == nil || strip.Engagement.LastInboundAt == nil ||
+		strip.Engagement.LastInboundAt.Sub(lastReal).Abs() > time.Second {
+		t.Fatalf("the strip's last inbound = %+v, want the real message at %v", page.StateStrip, lastReal)
+	}
+	if page.Health == nil || page.Health.DaysSinceLastInbound == nil || *page.Health.DaysSinceLastInbound != 10 {
+		t.Fatalf("days since last inbound = %+v, want 10", page.Health)
+	}
+	got := page.Health.Relationship
+	if got == nil || got.Rating == crmcontracts.HealthDimensionRatingAtRisk {
+		t.Fatalf("relationship = %+v, want in touch through the message 10 days ago", got)
 	}
 }
