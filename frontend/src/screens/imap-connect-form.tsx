@@ -5,7 +5,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useId, useState } from "react";
 import { api } from "../api/client";
 import { Button, Field, Modal, TextInput } from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
@@ -38,6 +37,15 @@ type ImapConnectRequest = {
 const DEFAULT_PORT = "993";
 const DEFAULT_MAILBOX = "INBOX";
 const DEFAULT_MAX_MESSAGES = "50";
+
+type Range = { min: number; max: number };
+const PORT_RANGE: Range = { min: 1, max: 65535 };
+// The server clamps a larger count rather than refusing it; the form asks first.
+const MAX_MESSAGES_RANGE: Range = { min: 1, max: 200 };
+
+function inRange(value: number, { min, max }: Range): boolean {
+  return Number.isInteger(value) && value >= min && value <= max;
+}
 
 // The two IMAP-specific server conditions get their own honest sentence;
 // every other failure reads the way failures read everywhere else. Neither
@@ -147,16 +155,29 @@ export function ImapMailboxForm({
   ]
     .filter((need): need is [true, string] => need[0] === true)
     .map(([, label]) => label);
-  const ready =
-    missing.length === 0 &&
-    Number.isInteger(parsedPort) &&
-    parsedPort >= 1 &&
-    parsedPort <= 65535 &&
-    Number.isInteger(parsedMax) &&
-    parsedMax >= 1 &&
-    parsedMax <= 200;
+  const portInRange = inRange(parsedPort, PORT_RANGE);
+  const maxInRange = inRange(parsedMax, MAX_MESSAGES_RANGE);
+  // Filled in but unusable: named like the missing fields, never a silent no-op.
+  const outOfRange = [
+    [!portInRange, t("connectors.imapPort")],
+    [!maxInRange, t("connectors.imapMaxMessages")],
+  ]
+    .filter((bad): bad is [true, string] => bad[0] === true)
+    .map(([, label]) => label);
+  const ready = missing.length === 0 && outOfRange.length === 0;
   const needed = (absent: boolean) =>
     attempted && absent ? t("connectors.imapNeeded") : undefined;
+  const ranged = (fits: boolean, range: Range) =>
+    attempted && !fits
+      ? t("connectors.imapRange", {
+          min: String(range.min),
+          max: String(range.max),
+        })
+      : undefined;
+  const refusal =
+    missing.length > 0
+      ? t("connectors.imapStillNeeded", { fields: missing.join(", ") })
+      : t("connectors.imapOutOfRange", { fields: outOfRange.join(", ") });
 
   const errorMessage = connect.isError
     ? imapErrorMessage(connect.error, t)
@@ -189,11 +210,7 @@ export function ImapMailboxForm({
 
   const actions = (
     <>
-      {attempted && missing.length > 0 && (
-        <ErrorLine inline>
-          {t("connectors.imapStillNeeded", { fields: missing.join(", ") })}
-        </ErrorLine>
-      )}
+      {attempted && !ready && <ErrorLine inline>{refusal}</ErrorLine>}
       <Button type="button" onClick={onDismiss} disabled={connect.isPending}>
         {dismissLabel}
       </Button>
@@ -239,13 +256,16 @@ export function ImapMailboxForm({
               />
             )}
           </Field>
-          <Field label={t("connectors.imapPort")}>
+          <Field
+            label={t("connectors.imapPort")}
+            error={ranged(portInRange, PORT_RANGE)}
+          >
             {(control) => (
               <TextInput
                 {...control}
                 type="number"
-                min={1}
-                max={65535}
+                min={PORT_RANGE.min}
+                max={PORT_RANGE.max}
                 value={port}
                 onChange={(event) => setPort(event.target.value)}
               />
@@ -290,13 +310,16 @@ export function ImapMailboxForm({
               />
             )}
           </Field>
-          <Field label={t("connectors.imapMaxMessages")}>
+          <Field
+            label={t("connectors.imapMaxMessages")}
+            error={ranged(maxInRange, MAX_MESSAGES_RANGE)}
+          >
             {(control) => (
               <TextInput
                 {...control}
                 type="number"
-                min={1}
-                max={200}
+                min={MAX_MESSAGES_RANGE.min}
+                max={MAX_MESSAGES_RANGE.max}
                 value={maxMessages}
                 onChange={(event) => setMaxMessages(event.target.value)}
               />
@@ -307,13 +330,7 @@ export function ImapMailboxForm({
           </p>
           {errorMessage && (
             <div className="imap-mailbox-span">
-              <Callout
-                tone="danger"
-                kind="outcome"
-                title={t("connectors.imapConnectFailed")}
-              >
-                {errorMessage}
-              </Callout>
+              <ErrorLine>{errorMessage}</ErrorLine>
             </div>
           )}
         </div>

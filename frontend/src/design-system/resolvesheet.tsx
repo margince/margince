@@ -107,7 +107,7 @@ export function ResolveSheet({
           )}
 
           {/* Past the server's ceiling the date is refused, not shortened, so the
-            hint states the limit. */}
+              hint states the limit. */}
           {needsReason && (
             <Field label={labels.expiresAt} hint={labels.expiresHelp}>
               {(control) => (

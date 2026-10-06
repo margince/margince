@@ -63,8 +63,6 @@ function impactLabel(
   return t("embedreindex.impact.normal");
 }
 
-// dialogTitle/dialogConfirmLabel factor the mode-dependent copy out of the
-// render body below.
 function dialogTitle(
   mode: "reindex" | "rebuild",
   t: ReturnType<typeof useT>,

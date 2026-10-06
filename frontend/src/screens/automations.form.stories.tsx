@@ -136,7 +136,7 @@ export const Saving: Story = {
   render: () => form({ pending: true, submitLabel: "Save" }),
 };
 
-// Past six fields the definition is worked through in a drawer.
+// Past the form dialog's field limit the definition is worked through in a drawer.
 const sequence: CatalogEntry = {
   ...renewal,
   key: "follow_up_sequence",

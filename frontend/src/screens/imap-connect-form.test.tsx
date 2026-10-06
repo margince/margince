@@ -144,6 +144,25 @@ describe("ImapConnectForm", () => {
     expect(calls).toHaveLength(0);
   });
 
+  it("names an out-of-range port instead of ignoring the press", async () => {
+    const calls: unknown[] = [];
+    installFetchStub({
+      "POST /connectors/imap/connect": (body) => {
+        calls.push(body);
+        return jsonResponse({}, 500);
+      },
+    });
+    render(<ImapConnectForm open onClose={() => {}} />);
+    await fillValidForm();
+    const port = screen.getByLabelText("Port");
+    await userEvent.clear(port);
+    await userEvent.type(port, "70000");
+    await userEvent.click(screen.getByRole("button", { name: "Connect" }));
+    expect(screen.getByText("Out of range: Port")).toBeInTheDocument();
+    expect(screen.getByText("From 1 to 65535")).toBeInTheDocument();
+    expect(calls).toHaveLength(0);
+  });
+
   it("never retains the secret after a failed submit", async () => {
     installFetchStub({
       "POST /connectors/imap/connect": () =>
