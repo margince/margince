@@ -9973,6 +9973,45 @@ func (e HealthDimensionRating) Valid() bool {
 	}
 }
 
+// Defines values for HealthDimensionReasonCode.
+const (
+	HealthDimensionReasonCodeDealsAllStalled  HealthDimensionReasonCode = "deals_all_stalled"
+	HealthDimensionReasonCodeDealsNoneStalled HealthDimensionReasonCode = "deals_none_stalled"
+	HealthDimensionReasonCodeDealsSomeStalled HealthDimensionReasonCode = "deals_some_stalled"
+	HealthDimensionReasonCodeLastMet          HealthDimensionReasonCode = "last_met"
+	HealthDimensionReasonCodeMeetingBooked    HealthDimensionReasonCode = "meeting_booked"
+	HealthDimensionReasonCodeNeverWritten     HealthDimensionReasonCode = "never_written"
+	HealthDimensionReasonCodeQuiet            HealthDimensionReasonCode = "quiet"
+	HealthDimensionReasonCodeSeveralContacts  HealthDimensionReasonCode = "several_contacts"
+	HealthDimensionReasonCodeSingleThreaded   HealthDimensionReasonCode = "single_threaded"
+)
+
+// Valid indicates whether the value is a known member of the HealthDimensionReasonCode enum.
+func (e HealthDimensionReasonCode) Valid() bool {
+	switch e {
+	case HealthDimensionReasonCodeDealsAllStalled:
+		return true
+	case HealthDimensionReasonCodeDealsNoneStalled:
+		return true
+	case HealthDimensionReasonCodeDealsSomeStalled:
+		return true
+	case HealthDimensionReasonCodeLastMet:
+		return true
+	case HealthDimensionReasonCodeMeetingBooked:
+		return true
+	case HealthDimensionReasonCodeNeverWritten:
+		return true
+	case HealthDimensionReasonCodeQuiet:
+		return true
+	case HealthDimensionReasonCodeSeveralContacts:
+		return true
+	case HealthDimensionReasonCodeSingleThreaded:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for HeldEntityType.
 const (
 	HeldEntityTypeCompany HeldEntityType = "company"
@@ -34373,12 +34412,51 @@ type HealthDimension struct {
 	// Rating Three values, not a scale. A dimension that cannot be computed is ABSENT rather than rated `unknown`: absence is a fact about the reading, where a rating is a claim about the account.
 	Rating HealthDimensionRating `json:"rating"`
 
-	// Reason One sentence naming what this rating was read from.
+	// Reason One sentence naming what this rating was read from, in English. A client that knows `reason_code` renders that instead, in the reader's language.
 	Reason string `json:"reason"`
+
+	// ReasonCode Which sentence `reason` is, so a client can say it in the reader's language. Absent on a
+	// dimension the client rates itself.
+	//
+	// - `never_written`: no message from them and no meeting with them, ever.
+	// - `quiet`: no message from them and no meeting with them for `days` days.
+	// - `meeting_booked`: quiet, but a meeting is booked for `on`.
+	// - `last_met`: in touch through a meeting `days` days ago.
+	// - `single_threaded`: in touch, but one contact carries the whole account.
+	// - `several_contacts`: `count` contacts here are in touch with us.
+	// - `deals_all_stalled`: all `count` open deals have stalled.
+	// - `deals_some_stalled`: `count` of `total` open deals have stalled.
+	// - `deals_none_stalled`: `count` open deals, none stalled.
+	ReasonCode *HealthDimensionReasonCode `json:"reason_code,omitempty"`
+
+	// ReasonParams The values the reason names. Each code lists which it reads.
+	ReasonParams *HealthDimensionReasonParams `json:"reason_params,omitempty"`
 }
 
 // HealthDimensionRating Three values, not a scale. A dimension that cannot be computed is ABSENT rather than rated `unknown`: absence is a fact about the reading, where a rating is a claim about the account.
 type HealthDimensionRating string
+
+// HealthDimensionReasonCode Which sentence `reason` is, so a client can say it in the reader's language. Absent on a
+// dimension the client rates itself.
+//
+// - `never_written`: no message from them and no meeting with them, ever.
+// - `quiet`: no message from them and no meeting with them for `days` days.
+// - `meeting_booked`: quiet, but a meeting is booked for `on`.
+// - `last_met`: in touch through a meeting `days` days ago.
+// - `single_threaded`: in touch, but one contact carries the whole account.
+// - `several_contacts`: `count` contacts here are in touch with us.
+// - `deals_all_stalled`: all `count` open deals have stalled.
+// - `deals_some_stalled`: `count` of `total` open deals have stalled.
+// - `deals_none_stalled`: `count` open deals, none stalled.
+type HealthDimensionReasonCode string
+
+// HealthDimensionReasonParams The values the reason names. Each code lists which it reads.
+type HealthDimensionReasonParams struct {
+	Count *int                `json:"count,omitempty"`
+	Days  *int                `json:"days,omitempty"`
+	On    *openapi_types.Date `json:"on,omitempty"`
+	Total *int                `json:"total,omitempty"`
+}
 
 // HeldEntityType defines model for HeldEntityType.
 type HeldEntityType string

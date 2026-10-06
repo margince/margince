@@ -1800,7 +1800,7 @@ export const en = {
   // "Commercial · Good" was read from, and a rating a reader cannot interpret
   // is one they have to take on trust.
   "co.health.means.relationship":
-    "Whether contacts at this company are still in touch: who wrote, how recently and which side started.",
+    "Whether contacts at this company are still in touch: who wrote, when you last met or have a meeting booked, and which side started.",
   "co.health.means.commercial":
     "Whether open deals are moving: their stages and how long each has been idle.",
   "co.health.means.payment":
@@ -1811,6 +1811,30 @@ export const en = {
   "co.health.payment.overdue": "Payment is overdue.",
   "co.health.payment.late": "Typically pays {days} days after due.",
   "co.health.payment.onTime": "Pays on time.",
+  // The server's reason codes for the relationship and commercial ratings.
+  "co.health.reason.neverWritten":
+    "They have never written to you, and you have never met them.",
+  "co.health.reason.quiet_one": "No reply and no meeting for {days} day.",
+  "co.health.reason.quiet_other": "No reply and no meeting for {days} days.",
+  "co.health.reason.meetingBooked": "A meeting is booked for {on}.",
+  "co.health.reason.lastMet_one": "Last met them {days} day ago.",
+  "co.health.reason.lastMet_other": "Last met them {days} days ago.",
+  "co.health.reason.singleThreaded":
+    "In contact, but one contact carries the whole account.",
+  "co.health.reason.severalContacts_one":
+    "{count} contact here is in touch with you.",
+  "co.health.reason.severalContacts_other":
+    "{count} contacts here are in touch with you.",
+  "co.health.reason.dealsAllStalled_one": "The one open deal has stalled.",
+  "co.health.reason.dealsAllStalled_other":
+    "All {count} open deals have stalled.",
+  "co.health.reason.dealsSomeStalled_one":
+    "{count} of {total} open deals has stalled.",
+  "co.health.reason.dealsSomeStalled_other":
+    "{count} of {total} open deals have stalled.",
+  "co.health.reason.dealsNoneStalled_one": "{count} open deal, not stalled.",
+  "co.health.reason.dealsNoneStalled_other":
+    "{count} open deals, none stalled.",
   "company.partnerSetUp": "Set up partner program",
   "signal.kind.stalled_deal": "Deal stalled",
   "signal.kind.champion_left": "Champion left",

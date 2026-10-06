@@ -47,6 +47,7 @@ import {
   HEALTH_DIMENSION_LABEL,
   HEALTH_RATING_LABEL,
   LIFECYCLE_LABELS,
+  useHealthReason,
 } from "./companylookups";
 import { EntityRef } from "./entityref";
 import {
@@ -1140,6 +1141,7 @@ function PipelineCard({
   onOpen?: () => void;
   t: ReturnType<typeof useT>;
 }>) {
+  const healthReason = useHealthReason();
   const basis = dimension ? (
     <FactList
       facts={[
@@ -1147,7 +1149,7 @@ function PipelineCard({
           key: "commercial",
           term: t(HEALTH_DIMENSION_LABEL.commercial),
           value: t(HEALTH_RATING_LABEL[dimension.rating]),
-          note: dimension.reason,
+          note: healthReason(dimension),
         },
       ]}
     />
@@ -1308,6 +1310,7 @@ function HealthStat({
   onOpen?: () => void;
   t: ReturnType<typeof useT>;
 }>) {
+  const healthReason = useHealthReason();
   const dimension = health?.relationship;
   const slot = {
     label: t("co.strip.health"),
@@ -1319,7 +1322,7 @@ function HealthStat({
             key: "relationship",
             term: t(HEALTH_DIMENSION_LABEL.relationship),
             value: t(HEALTH_RATING_LABEL[dimension.rating]),
-            note: dimension.reason,
+            note: healthReason(dimension),
           },
         ]}
       />

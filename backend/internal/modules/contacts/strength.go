@@ -84,9 +84,14 @@ type RelationshipStrength struct {
 	LastInboundActivity *ids.ActivityID
 }
 
-// strengthKinds are the activity kinds that count as contact, from the one
-// shared definition — see relstrength.InteractionKindSQLGroup.
-var strengthKinds = relstrength.InteractionKindSQLGroup()
+// strengthCounts is the test an activity passes to count as contact, from the
+// one shared definition the company rating also reads — see
+// relstrength.InteractionCountsSQL. strengthCitedCounts is the same test on
+// the `i` alias the cited-message sub-selects use.
+var (
+	strengthCounts      = relstrength.InteractionCountsSQL("a")
+	strengthCitedCounts = relstrength.InteractionCountsSQL("i")
+)
 
 // strengthInteractionUnit is what ONE interaction is when these folds count
 // them, from the same shared definition — see relstrength.InteractionUnitSQL.
@@ -366,14 +371,14 @@ func contactStrengths(
 		       max(a.occurred_at) FILTER (WHERE a.direction = 'outbound'),
 		       (SELECT i.id FROM activity i
 		          JOIN activity_link il ON il.activity_id = i.id AND il.contact_id = l.contact_id
-		         WHERE i.direction = 'inbound' AND i.kind IN `+strengthKinds+`
+		         WHERE i.direction = 'inbound' AND `+strengthCitedCounts+`
 		           AND i.archived_at IS NULL AND i.occurred_at >= $2`+auth.AudienceWorkspaceOnly("i")+`
 		           AND ($3::timestamptz IS NULL OR i.occurred_at <= $3)`+citedWithin+`
 		         ORDER BY i.occurred_at DESC, i.id DESC
 		         LIMIT 1)
 		FROM activity a
 		JOIN activity_link l ON l.activity_id = a.id
-		WHERE l.contact_id = ANY($1) AND a.kind IN `+strengthKinds+` AND a.archived_at IS NULL`+auth.AudienceWorkspaceOnly("a")+`
+		WHERE l.contact_id = ANY($1) AND `+strengthCounts+` AND a.archived_at IS NULL`+auth.AudienceWorkspaceOnly("a")+`
 		  -- NULL means no upper bound, so the live score is unchanged; an
 		  -- as-of read passes the instant it is asking about.
 		  AND ($3::timestamptz IS NULL OR a.occurred_at <= $3)`+scoreWithin+`
@@ -439,13 +444,13 @@ func strengthInputs(
 		       max(a.occurred_at) FILTER (WHERE a.direction = 'outbound'),
 		       (SELECT i.id FROM activity i
 		          JOIN activity_link il ON il.activity_id = i.id AND il.contact_id = $1
-		         WHERE i.direction = 'inbound' AND i.kind IN `+strengthKinds+`
+		         WHERE i.direction = 'inbound' AND `+strengthCitedCounts+`
 		           AND i.archived_at IS NULL AND i.occurred_at >= $2`+auth.AudienceWorkspaceOnly("i")+citedWithin+`
 		         ORDER BY i.occurred_at DESC, i.id DESC
 		         LIMIT 1)
 		FROM activity a
 		JOIN activity_link l ON l.activity_id = a.id AND l.contact_id = $1
-		WHERE a.kind IN `+strengthKinds+` AND a.archived_at IS NULL`+auth.AudienceWorkspaceOnly("a")+scoreWithin,
+		WHERE `+strengthCounts+` AND a.archived_at IS NULL`+auth.AudienceWorkspaceOnly("a")+scoreWithin,
 		foldArgs...).Scan(&out.LastInteraction, &out.InteractionCount90d,
 		&out.Inbound90d, &out.Outbound90d, &out.LastInbound, &out.LastOutbound,
 		&out.LastInboundActivity); err != nil {
@@ -461,7 +466,7 @@ func strengthInputs(
 	rows, err := tx.Query(ctx, `
 		SELECT a.id FROM activity a
 		JOIN activity_link l ON l.activity_id = a.id AND l.contact_id = $1
-		WHERE a.kind IN `+strengthKinds+` AND a.archived_at IS NULL AND a.occurred_at >= $2`+auth.AudienceWorkspaceOnly("a")+contributingWithin+`
+		WHERE `+strengthCounts+` AND a.archived_at IS NULL AND a.occurred_at >= $2`+auth.AudienceWorkspaceOnly("a")+contributingWithin+`
 		ORDER BY a.occurred_at DESC
 		LIMIT $3`, citeArgs...)
 	if err != nil {

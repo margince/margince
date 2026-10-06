@@ -1744,7 +1744,7 @@ export const de = {
   "co.health.dim.commercial": "Geschäftlich",
   "co.health.dim.payment": "Zahlung",
   "co.health.means.relationship":
-    "Ob Kontakte bei diesem Unternehmen noch in Verbindung stehen: wer geschrieben hat, wie lange das her ist und welche Seite den Anfang gemacht hat.",
+    "Ob Kontakte bei diesem Unternehmen noch in Verbindung stehen: wer geschrieben hat, wann das letzte Treffen war oder ob eines ansteht, und welche Seite den Anfang gemacht hat.",
   "co.health.means.commercial":
     "Ob offene Deals vorankommen: ihre Phasen und wie lange jeder schon ruht.",
   "co.health.means.payment":
@@ -1755,6 +1755,32 @@ export const de = {
   "co.health.payment.overdue": "Die Zahlung ist überfällig.",
   "co.health.payment.late": "Zahlt in der Regel {days} Tage nach Fälligkeit.",
   "co.health.payment.onTime": "Zahlt pünktlich.",
+  "co.health.reason.neverWritten":
+    "Noch nie eine Nachricht von ihnen und noch kein Treffen.",
+  "co.health.reason.quiet_one":
+    "Seit {days} Tag keine Antwort und kein Treffen.",
+  "co.health.reason.quiet_other":
+    "Seit {days} Tagen keine Antwort und kein Treffen.",
+  "co.health.reason.meetingBooked": "Ein Termin ist für den {on} angesetzt.",
+  "co.health.reason.lastMet_one": "Zuletzt vor {days} Tag getroffen.",
+  "co.health.reason.lastMet_other": "Zuletzt vor {days} Tagen getroffen.",
+  "co.health.reason.singleThreaded":
+    "In Kontakt, aber ein einziger Kontakt trägt das ganze Unternehmen.",
+  "co.health.reason.severalContacts_one":
+    "{count} Kontakt hier steht mit dir in Verbindung.",
+  "co.health.reason.severalContacts_other":
+    "{count} Kontakte hier stehen mit dir in Verbindung.",
+  "co.health.reason.dealsAllStalled_one": "Der eine offene Deal stockt.",
+  "co.health.reason.dealsAllStalled_other":
+    "Alle {count} offenen Deals stocken.",
+  "co.health.reason.dealsSomeStalled_one":
+    "{count} von {total} offenen Deals stockt.",
+  "co.health.reason.dealsSomeStalled_other":
+    "{count} von {total} offenen Deals stocken.",
+  "co.health.reason.dealsNoneStalled_one":
+    "{count} offener Deal, er stockt nicht.",
+  "co.health.reason.dealsNoneStalled_other":
+    "{count} offene Deals, keiner stockt.",
   "company.partnerSetUp": "Partnerprogramm einrichten",
   "signal.kind.stalled_deal": "Deal stockt",
   "signal.kind.champion_left": "Champion ausgeschieden",

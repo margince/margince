@@ -24194,8 +24194,34 @@ export interface components {
              * @enum {string}
              */
             rating: "strong" | "good" | "at_risk";
-            /** @description One sentence naming what this rating was read from. */
+            /** @description One sentence naming what this rating was read from, in English. A client that knows `reason_code` renders that instead, in the reader's language. */
             reason: string;
+            reason_code?: components["schemas"]["HealthDimensionReasonCode"];
+            reason_params?: components["schemas"]["HealthDimensionReasonParams"];
+        };
+        /**
+         * @description Which sentence `reason` is, so a client can say it in the reader's language. Absent on a
+         *     dimension the client rates itself.
+         *
+         *     - `never_written`: no message from them and no meeting with them, ever.
+         *     - `quiet`: no message from them and no meeting with them for `days` days.
+         *     - `meeting_booked`: quiet, but a meeting is booked for `on`.
+         *     - `last_met`: in touch through a meeting `days` days ago.
+         *     - `single_threaded`: in touch, but one contact carries the whole account.
+         *     - `several_contacts`: `count` contacts here are in touch with us.
+         *     - `deals_all_stalled`: all `count` open deals have stalled.
+         *     - `deals_some_stalled`: `count` of `total` open deals have stalled.
+         *     - `deals_none_stalled`: `count` open deals, none stalled.
+         * @enum {string}
+         */
+        HealthDimensionReasonCode: "never_written" | "quiet" | "meeting_booked" | "last_met" | "single_threaded" | "several_contacts" | "deals_all_stalled" | "deals_some_stalled" | "deals_none_stalled";
+        /** @description The values the reason names. Each code lists which it reads. */
+        HealthDimensionReasonParams: {
+            days?: number;
+            count?: number;
+            total?: number;
+            /** Format: date */
+            on?: string;
         };
         /**
          * @description How the relationship stands, in the parts a reader can act on (AC-company-3).

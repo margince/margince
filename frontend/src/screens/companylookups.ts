@@ -1,6 +1,7 @@
 import type { components } from "../api/schema";
-import { formatNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { useRecordZone } from "../app/recordzone";
+import { formatDateAbbrev, formatNumber } from "../format/format";
+import { type PluralBase, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useFinanceSummary } from "./common";
 import type { Grounding } from "./record360";
@@ -161,6 +162,70 @@ export const HEALTH_DIMENSION_MEANS: Record<
   payment: "co.health.means.payment",
 };
 
+type HealthDimension = components["schemas"]["HealthDimension"];
+type HealthReasonCode = components["schemas"]["HealthDimensionReasonCode"];
+
+// The sentence each reason code stands for, and the value a sentence that
+// changes with a number is counted by. The server also sends the English
+// sentence, which a dimension without a code (payment, rated here) and a code
+// this build does not know fall back to.
+type ReasonMessage =
+  | { key: MessageKey }
+  | { plural: PluralBase; by: "days" | "count" };
+
+const HEALTH_REASON: Record<HealthReasonCode, ReasonMessage> = {
+  never_written: { key: "co.health.reason.neverWritten" },
+  quiet: { plural: "co.health.reason.quiet", by: "days" },
+  meeting_booked: { key: "co.health.reason.meetingBooked" },
+  last_met: { plural: "co.health.reason.lastMet", by: "days" },
+  single_threaded: { key: "co.health.reason.singleThreaded" },
+  several_contacts: { plural: "co.health.reason.severalContacts", by: "count" },
+  deals_all_stalled: {
+    plural: "co.health.reason.dealsAllStalled",
+    by: "count",
+  },
+  deals_some_stalled: {
+    plural: "co.health.reason.dealsSomeStalled",
+    by: "count",
+  },
+  deals_none_stalled: {
+    plural: "co.health.reason.dealsNoneStalled",
+    by: "count",
+  },
+};
+
+/** Says a health dimension's reason in the reader's language. */
+export function useHealthReason(): (
+  dimension: Pick<HealthDimension, "reason" | "reason_code" | "reason_params">,
+) => string {
+  const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const zone = useRecordZone();
+  return (dimension) => {
+    const message =
+      dimension.reason_code && HEALTH_REASON[dimension.reason_code];
+    if (!message) {
+      return dimension.reason;
+    }
+    const values = dimension.reason_params ?? {};
+    const params: Record<string, string> = {};
+    for (const name of ["days", "count", "total"] as const) {
+      const value = values[name];
+      if (value != null) {
+        params[name] = formatNumber(value, locale);
+      }
+    }
+    if (values.on) {
+      params.on = formatDateAbbrev(values.on, locale, zone);
+    }
+    if ("key" in message) {
+      return t(message.key, params);
+    }
+    return plural(message.plural, values[message.by] ?? 0, params);
+  };
+}
+
 // How many days past due a median has to run before it reads as a habit worth
 // naming. Named rather than inlined so the threshold is one number a reader
 // can find and argue with.
@@ -257,8 +322,8 @@ export function worstOf(
 export function useAccountStanding(
   companyId: string,
   health?: {
-    relationship?: { rating: HealthRating; reason: string };
-    commercial?: { rating: HealthRating; reason: string };
+    relationship?: HealthDimension;
+    commercial?: HealthDimension;
   },
 ): {
   overall?: HealthRating;
@@ -267,6 +332,7 @@ export function useAccountStanding(
   restsOn: Grounding[];
 } {
   const t = useT();
+  const healthReason = useHealthReason();
   const payment = usePaymentHealth(companyId);
   const dimensions = [
     { key: "relationship" as const, health: health?.relationship },
@@ -284,7 +350,7 @@ export function useAccountStanding(
       ? [
           {
             key: dimension.key,
-            quote: dimension.health.reason,
+            quote: healthReason(dimension.health),
             from: t(HEALTH_DIMENSION_LABEL[dimension.key]),
           },
         ]
