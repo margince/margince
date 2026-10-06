@@ -8,6 +8,11 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { useClipboardCopy } from "../design-system/clipboardcopy";
+import {
+  DrawerBody,
+  DrawerFoot,
+  DrawerHead,
+} from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import { downloadBytes } from "./download";
@@ -119,46 +124,50 @@ export function ExportScenarioDialog({
   }
 
   return (
-    <Modal open onClose={onClose} labelledBy={headingId} size="wide">
-      <Heading size="large" id={headingId} className="t-h2 modal-title">
-        {t("aiexport.title")}
-      </Heading>
-      <div className="form-stack">
-        <Field label={t("aiexport.nameLabel")}>
-          {(control) => (
-            <TextInput
-              {...control}
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-            />
-          )}
-        </Field>
-        {/* The PII gate before copy or download. It stands as the CONTROL it
-            is: a Callout around it was the primitive doing a fieldset's job —
-            a notice says something about the surface, and a tick the reader
-            must set is not that. The tick is the design system's own, so the
-            words are half the click target rather than a label threaded to a
-            hand-written id, and they carry the consequence themselves. */}
-        <Checkbox
-          label={t("aiexport.checklist")}
-          checked={acknowledged}
-          onChange={(event) => setAcknowledged(event.target.checked)}
-        />
-        <div className="field">
-          <span className="code-label t-eyebrow">
-            {t("aiexport.previewLabel")}
-          </span>
-          <pre className="code-block">{yaml}</pre>
+    <Modal
+      open
+      onClose={onClose}
+      labelledBy={headingId}
+      intent="drawer-reading"
+    >
+      <DrawerHead>
+        <Heading size="large" id={headingId} className="t-h2 modal-title">
+          {t("aiexport.title")}
+        </Heading>
+      </DrawerHead>
+      <DrawerBody>
+        <div className="form-stack">
+          <Field label={t("aiexport.nameLabel")}>
+            {(control) => (
+              <TextInput
+                {...control}
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+              />
+            )}
+          </Field>
+          {/* The PII gate before copy or download: a control to set, not a notice. */}
+          <Checkbox
+            label={t("aiexport.checklist")}
+            checked={acknowledged}
+            onChange={(event) => setAcknowledged(event.target.checked)}
+          />
+          <div className="field">
+            <span className="code-label t-eyebrow">
+              {t("aiexport.previewLabel")}
+            </span>
+            <pre className="code-block">{yaml}</pre>
+          </div>
+          <div className="field">
+            <span className="code-label t-eyebrow">
+              {t("aiexport.responseLabel")}
+            </span>
+            <pre className="code-block">{responseText}</pre>
+          </div>
+          {copy.notice}
         </div>
-        <div className="field">
-          <span className="code-label t-eyebrow">
-            {t("aiexport.responseLabel")}
-          </span>
-          <pre className="code-block">{responseText}</pre>
-        </div>
-        {copy.notice}
-      </div>
-      <div className="actions">
+      </DrawerBody>
+      <DrawerFoot className="actions">
         <Button onClick={onClose}>{t("aiexport.close")}</Button>
         <Button disabled={!acknowledged} onClick={copy.copy}>
           {copy.label}
@@ -170,7 +179,7 @@ export function ExportScenarioDialog({
         >
           {t("aiexport.download")}
         </Button>
-      </div>
+      </DrawerFoot>
     </Modal>
   );
 }
