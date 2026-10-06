@@ -5,7 +5,7 @@
 
 package gates
 
-// A fixture that needs THIS SESSION'S seat does not pick one out of app_user.
+// A fixture that needs this session's seat does not pick one out of app_user.
 //
 // `SELECT id FROM app_user WHERE is_agent = false ORDER BY created_at LIMIT 1`
 // names the seat a scenario signed in as only while the installation holds

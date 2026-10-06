@@ -5,8 +5,8 @@
 
 package gates
 
-// The outbound category vocabulary is spelled TWICE — once in Go, once as a
-// CHECK constraint on communication_decision — and the two must agree.
+// The outbound category vocabulary is spelled twice (once in Go, once as a
+// CHECK constraint on communication_decision), and the two must agree.
 //
 // The failure this exists to stop is silent and one-directional. A category
 // added to the Go vocabulary and forgotten in the constraint passes every

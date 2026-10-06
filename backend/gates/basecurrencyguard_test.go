@@ -5,7 +5,8 @@
 
 package gates
 
-// The base-currency lock as a fitness function.
+// Every table with an fx_rate_to_base column is on the base-currency lock's
+// list.
 //
 // `fx_rate_to_base` is a record's worth expressed against the base in force
 // when it froze, so the base may only change while no such record exists.

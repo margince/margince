@@ -7,7 +7,7 @@
 .sourceemail {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--space-3);
   padding: var(--space-3);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
@@ -28,7 +28,9 @@
   overflow-wrap: anywhere;
 }
 
-/* The air between the envelope facts and the words themselves. */
-.sourceemail__body {
-  margin-top: var(--space-2);
+/* The envelope facts sit tight together, a stack step above the words. */
+.sourceemail__envelope {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
 }

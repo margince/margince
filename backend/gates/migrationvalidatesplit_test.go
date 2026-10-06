@@ -5,7 +5,7 @@
 
 package gates
 
-// A constraint is validated in a migration of its OWN, or the two-step buys
+// A constraint is validated in a migration of its own, or the two-step buys
 // nothing.
 //
 // `ADD CONSTRAINT … NOT VALID` then `VALIDATE CONSTRAINT` is written down in

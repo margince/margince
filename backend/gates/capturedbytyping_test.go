@@ -5,7 +5,7 @@
 
 package gates
 
-// `captured_by` records the PRINCIPAL, and a principal is not a user row.
+// `captured_by` records the principal, and a principal is not a user row.
 //
 // The value every store stamps is prefixed by kind — "human:<id>" for a
 // session, "agent:<id>" for a passport — because an agent acting under

@@ -5,7 +5,7 @@
 
 package gates
 
-// The reset's cache flush has two entry points on purpose, and the split is a
+// The reset's cache flush has two entry points by design, and the split is a
 // security boundary rather than a style choice.
 //
 // Server.FlushResetCaches is what the reset control channel reaches. That

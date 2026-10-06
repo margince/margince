@@ -5,9 +5,8 @@
 
 package gates
 
-// The enum-vocabulary sync as a fitness function: where domain logic
-// branches on a typed Go enum, its constant set must equal the schema's
-// CHECK (col IN (...)) set for the column it mirrors. The valid set
+// Where domain logic branches on a typed Go enum, its constant set equals the
+// schema's CHECK (col IN (...)) set for the column it mirrors. The valid set
 // living only in the DB is how a typo'd Go literal compiles and
 // misbehaves silently; a Go set drifting from the CHECK is how a valid
 // value 500s at insert. This gate pins the two spellings together —

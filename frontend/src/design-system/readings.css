@@ -2,6 +2,7 @@
 .meterbar {
   height: 8px;
   background: var(--bgChip);
+  color: var(--textPrimary);
   border-radius: var(--r-full);
   corner-shape: round;
   overflow: hidden;
@@ -191,6 +192,7 @@
   display: flex;
   height: 12px;
   background: var(--bgChip);
+  color: var(--textPrimary);
   border-radius: 0 var(--r-xs) var(--r-xs) 0;
 }
 /* Parts meet on a 2px rule of the ground rather than a stroke: the gap is what

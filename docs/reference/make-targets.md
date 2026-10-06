@@ -1,7 +1,6 @@
 # Make targets
 
-The real Makefile is `backend/Makefile`; the root one delegates its targets and adds the frontend lane. `make help` in `backend/` lists them, and `make-target-parity` holds that every one it
-advertises also runs from the root.
+The real Makefile is `backend/Makefile`; the root one delegates its targets and adds the frontend lane. `make help` in `backend/` lists them, and `make-target-parity` holds that every one it advertises also runs from the root.
 
 ## Everyday
 
@@ -9,28 +8,39 @@ advertises also runs from the root.
 |---|---|
 | `help` | List targets (the default goal) |
 | `install` | One-shot fresh-worktree setup (frontend deps + Go gate binaries + git hooks). The factory's `worktree-init` runs this by name |
-| `dev` | Full local stack: db-up + migrate + `cmd/api` + `cmd/worker` (always on: the outbox relay + Surface-B runner) + the app on `http://localhost:8080` (the api behind it on `:18080`, proxied through). Starts **this worktree's** stack only and touches no other (`make dev-sweep` is the machine-wide clear). A linked worktree claims its own database, Redis logical database, port pair and object bucket automatically; the primary worktree keeps the shared `margince` on `:8080`. Boots **cold** — the company + admin bootstrapped from `config/margince.yaml` and nothing else, so onboarding and empty states are the default; `make seed-dev` adds the demo records on top. Returns when ready; the servers run in the background. On a slug whose stack is ALREADY running it restarts: the processes it finds under that slug are stopped first — named on the way past — and it then boots fresh, so re-running `make dev` after a backend change stays the reflex it reads as. Without that the new run booted beside the old one and the survivors became nameless: `make dev-stop` stopped the new stack while the old worker went on draining the queue against a database the next run was about to migrate. `DEV_SLUG=<slug>` overrides the derived slug when you want a second stack inside one worktree. Activates a real model for the cold-start read-back only when every cloud provider bound by `seeds.ai_routing` (in `config/margince.dev.yaml`, or your own `config/margince.yaml`) has its BYOK key in the environment / `.env.local` — otherwise the offline fake. The binding itself is a stored setting, planted at bootstrap; the api and worker read no routing file |
-| `dev-fresh` | `make dev-fresh [DEV_SLUG=<slug>]` — `dev` onto a **rebuilt** database: drops it, re-migrates, and boots the installation a first customer gets. Plain `dev` keeps whatever data is there, so a restart for a backend change never costs you a half-finished record. It is also the cure for a migration-ledger desync — a boot failing with `river migrate up: relation "river_migration" already exists` is the shared dev database's ledger disagreeing with its schema, not anything the branch did. Rebuild it; do not hand-repair the ledger, for the reason the integration lane gives |
-| `dev-stop` | `make dev-stop [DEV_SLUG=<slug>] [DROP=1]` — stops **this worktree's** stack and frees its ports. `DROP=1` also drops its per-slug `margince_dev_*` database — never the shared `margince` |
-| `dev-snapshot` | `make dev-snapshot [DEV_SLUG=<slug>]` — copies this stack's database to `<db>_tmpl`, so `dev-restore` can put the world back in about a second rather than paying a migrate and a reseed for it. The stack must be **stopped**: Postgres will not copy a database a session is connected to, and the api's pool redials the instant it is terminated, so a snapshot against a running stack fails on a race rather than on a rule. `dev-stop DROP=1` and `dev-sweep DROP=1` reap the snapshot with the database |
-| `dev-restore` | `make dev-restore [DEV_SLUG=<slug>]` — puts this stack's database back exactly as `dev-snapshot` left it, with the stack still **running**: the clone closes the api's connections and its pool redials on the next query. Cheaper than a reseed and also safer for a long-lived api, which is the opposite of what one expects — a fresh seed mints new ids for every record, so anything the process cached by id goes stale, while a clone is byte-identical to the world it was already looking at. This is what `make e2e-llm` uses between runs |
-| `dev-sweep` | `make dev-sweep [DROP=1]` — clears **every** margince dev stack on the machine: every api/worker/vite, recorded, orphaned, or from another worktree, and their claims. `DROP=1` also drops every per-slug `margince_dev_*` database. This is the old bare-`make dev` behaviour, now explicit |
-| `dev-logs` | `make dev-logs [DEV_SLUG=<slug>] [ROLE=api\|worker\|fe\|boot] [LEVEL=debug\|info\|warn\|error] [ALL=1] [FOLLOW=0 N=<n>]` — follow this worktree's `dev.log` (under `$XDG_STATE_HOME/margince/dev/<slug>/`, or `_base/` for the primary worktree) coloured by process and severity. api, worker and Vite all append to that one file, so `make dev` tags each line with the process that wrote it. At `MARGINCE_LOG_LEVEL=debug` the writer also colours the tag and severity **in the file**, so a plain `tail -f` is readable on its own; at info level the file stays plain text so `grep` and editors see clean lines. This view strips whatever colour is there and repaints, so its filters work either way. The job-queue (River) heartbeat is hidden by default because at `MARGINCE_LOG_LEVEL=debug` it repeats every few seconds and pushes real lines off the screen; `ALL=1` restores it. `LEVEL` is a floor, so `LEVEL=warn` shows warnings **and** errors. A dev view only: the servers' own output is unchanged plain text for a log collector |
+| `dev` | Starts this worktree's full stack: db-up + migrate + `cmd/api` + `cmd/worker` (always on: the outbox relay + Surface-B runner) + the app on `http://localhost:8080` (the api behind it on `:18080`, proxied through). Touches no other worktree's stack; see [One stack per worktree](#one-stack-per-worktree). Boots cold: the company + admin bootstrapped from `config/margince.yaml` and nothing else; `make seed-dev` adds the demo records. Returns when ready; the servers run in the background. Re-running it restarts the stack: it stops the processes it finds under the slug, naming them, then boots fresh. The api does not hot-reload, so re-run `make dev` after any backend change. `DEV_SLUG=<slug>` overrides the derived slug. See [Model activation](#model-activation-in-make-dev) |
+| `dev-fresh` | `make dev-fresh [DEV_SLUG=<slug>]`: `dev` onto a rebuilt database. Drops it, re-migrates, and boots the installation a first customer gets. Plain `dev` keeps whatever data is there. Also the cure for a migration-ledger desync: `river migrate up: relation "river_migration" already exists` means the shared dev database's ledger disagrees with its schema. Rebuild it; do not hand-repair the ledger |
+| `dev-stop` | `make dev-stop [DEV_SLUG=<slug>] [DROP=1]`: stops this worktree's stack and frees its ports. `DROP=1` also drops its per-slug `margince_dev_*` database, never the shared `margince` |
+| `dev-snapshot` | `make dev-snapshot [DEV_SLUG=<slug>]`: copies this stack's database to `<db>_tmpl`, so `dev-restore` can put it back in about a second instead of a migrate and reseed. The stack must be stopped: Postgres will not copy a database a session is connected to, and the api's pool redials as soon as it is terminated. `dev-stop DROP=1` and `dev-sweep DROP=1` remove the snapshot with the database |
+| `dev-restore` | `make dev-restore [DEV_SLUG=<slug>]`: puts this stack's database back as `dev-snapshot` left it, with the stack still running. The clone closes the api's connections and its pool redials on the next query. Cheaper and safer than a reseed for a long-lived api: a reseed mints new ids, so anything the process cached by id goes stale, while a clone is byte-identical. `make e2e-llm` uses it between runs |
+| `dev-sweep` | `make dev-sweep [DROP=1]`: clears every margince dev stack on the machine (every api/worker/vite, recorded, orphaned, or from another worktree) and their claims. `DROP=1` also drops every per-slug `margince_dev_*` database |
+| `dev-logs` | `make dev-logs [DEV_SLUG=<slug>] [ROLE=api\|worker\|fe\|boot] [LEVEL=debug\|info\|warn\|error] [ALL=1] [FOLLOW=0 N=<n>]`: follows this worktree's `dev.log` (under `$XDG_STATE_HOME/margince/dev/<slug>/`, or `_base/` for the primary worktree), coloured by process and severity. See [Reading dev.log](#reading-devlog) |
 | `db-up` / `infra-up` | Start the dev Postgres 16 (pgvector, port 15432) and Redis 7 (port 16379) containers, create the app role (`infra-up` is an alias) |
 | `db-init` | (Re)apply `scripts/db-init.sql` to the running Postgres |
 | `migrate` | Apply core + custom migrations with the owner DSN |
 | `infra-down` | Stop the dev containers but keep the data volumes |
-| `clean` | Remove the dev containers **and** the data volumes |
+| `clean` | Remove the dev containers and the data volumes |
+
+### Model activation in `make dev`
+
+`make dev` activates a real model for the cold-start read-back only when every cloud provider bound by `seeds.ai_routing` (in `config/margince.dev.yaml`, or your own `config/margince.yaml`) has its BYOK key in the environment or `.env.local`. Otherwise it uses the offline fake. The binding itself is a stored setting, planted at bootstrap; the api and worker read no routing file.
+
+### Reading `dev.log`
+
+- api, worker and Vite all append to one file, so `make dev` tags each line with the process that wrote it.
+- At `MARGINCE_LOG_LEVEL=debug` the writer also colours the tag and severity in the file, so a plain `tail -f` is readable. At info level the file stays plain text for `grep` and editors.
+- `make dev-logs` strips any colour and repaints, so its filters work either way.
+- The job-queue (River) heartbeat is hidden by default, because at `MARGINCE_LOG_LEVEL=debug` it repeats every few seconds. `ALL=1` restores it.
+- `LEVEL` is a floor: `LEVEL=warn` shows warnings and errors.
+- It is a dev view only. The servers' own output stays plain text for a log collector.
 
 ## Factory-compatibility golden commands
 
-These are the target names the dark-factory tooling, its UAT runner, and its UAT guides call by name
-(`docs/target-minimum-setup.md §3`). `check-q`, `check-go`, and `fe-typecheck` are the quiet/scope-aware
-gate variants; `test-integration` ends with the literal `OK: integration passed with 0 skips`.
+These target names are a stable interface: external tooling and its UAT guides call them by name, so do not rename them. `check-q`, `check-go` and `fe-typecheck` are the quiet, scope-aware gate variants; `test-integration` ends with the literal `OK: integration passed with 0 skips`.
 
 | Target | What it does |
 |---|---|
-| `check-q` | Quiet `make check` — full log in `.tmp/check.log`, excerpt on failure |
+| `check-q` | Quiet `make check`: full log in `.tmp/check.log`, excerpt on failure |
 | `check-go` | The Go half of the gate (`make -C backend check`) |
 | `fe-install` / `fe-typecheck` | Frontend deps install / `tsc` typecheck (scope-aware FE gates) |
 
@@ -38,290 +48,280 @@ gate variants; `test-integration` ends with the literal `OK: integration passed 
 
 | Target | What it does |
 |---|---|
-| `check` | **The merge gate.** Backend `make check` = build + vet + lint + arch-lint + test + drift. Root `make check` runs that **plus** the craft-doc floor, image pins, contract breaking-change (`oasdiff`), test-lane hygiene, and the file-length ratchet |
-| `check-all` | **What a change touching backend Go has to pass**: `check` plus the integration lane. `check` reaches that lane **not at all** — its `test` target is `go test ./...`, and every integration file carries `//go:build integration`, so those packages compile into nothing and a green `check` says nothing about them. Needs `make db-up`, and takes minutes: `check` stays the target for docs and frontend work, which is most changes. Deliberately not in the pre-push hook — parallel sessions on one machine share the test template, so a hook running the lane on every push would have them rebuilding each other's schema mid-run |
-| `check-backend` / `check-fe` | The two halves of the root gate, runnable alone: `check-backend` = backend `check` + the root script gates below (what CI's deterministic-gates job runs; it needs no frontend toolchain — `contract-frontend-drift` skips loudly without pnpm); `check-fe` = the composed typecheck, `frontend-check`, and the unit screens' own suites (`fe-test-ext`), with a loud fail if `frontend/node_modules` is missing |
+| `check` | **The merge gate.** Backend `make check` = build + vet + lint + arch-lint + test + drift. Root `make check` runs that plus the craft-doc floor, image pins, contract breaking-change (`oasdiff`), test-lane hygiene, and the file-length ratchet |
+| `check-all` | **The gate for a change touching backend Go**: `check` plus the integration lane. `check` does not reach that lane: its `test` target is `go test ./...`, and every integration file carries `//go:build integration`. Needs `make db-up` and takes minutes, so `check` stays the target for docs and frontend work. Not in the pre-push hook, because parallel sessions on one machine share the test template and would rebuild each other's schema mid-run |
+| `check-backend` / `check-fe` | The two halves of the root gate, runnable alone. `check-backend` = backend `check` + the root script gates below (what CI's deterministic-gates job runs). It needs no frontend toolchain: `contract-frontend-drift` skips loudly without pnpm. `check-fe` = the composed typecheck, `frontend-check`, and the unit screens' own suites (`fe-test-ext`), failing loudly if `frontend/node_modules` is missing |
 | `build` | `go build ./...` |
 | `vet` | `go vet ./...` |
 | `test` | Unit tests; the fitness gates in `backend/gates/` (license header, write shape, architecture, enum sync, `audit_log` enum coherence, contract `$ref` resolution) run uncached |
-| `test-integration` | Real-Postgres lane (`-tags integration`): cross-tenant isolation gates, governed-agent loop, HTTP end-to-end. Runs on its own `margince_test` namespace, never the dev `margince` DB, so it can run concurrently with `make dev`. **Parallel** — each package runs on its own throwaway clone db (`CREATE DATABASE … TEMPLATE margince_test`) + private MinIO bucket + its own Redis logical db (1..15 by slot; db 0 stays reserved for `make dev`), so packages share nothing; within a package still `-p 1`. Fails loudly without a database — never skips. Tune concurrency with `INTEGRATION_JOBS=N`. CI additionally slices the lane per test across six runners: `INTEGRATION_SHARD=k/N` runs the k-th deterministic slice (debug a red CI shard locally with exactly that), `INTEGRATION_SHARD_OUT=dir` collects the manifests + coverage pods `scripts/test-integration-reconcile.sh` verifies and merges |
+| `test-integration` | Real-Postgres lane (`-tags integration`): cross-tenant isolation gates, governed-agent loop, HTTP end-to-end. See [The integration lane](#the-integration-lane) |
 | `test-db-up` | (Re)build the migrated `margince_test` template the parallel lane clones from |
-| `test-it` | Run ONE integration package on a throwaway clone (+ own MinIO bucket + Redis db 15): `make test-it DIR=backend/internal/modules/contacts [RUN=TestName]` |
-| `e2e-siteread` | (backend Makefile) Deep-read quality floor vs the real gradion.com (`-tags e2e_llm`): paid, network, opt-in. Judge a candidate model with `MARGINCE_E2E_MODEL=provider:model` (+ its BYOK key); every assertion is a floor — a different model must extract the same or better to pass |
-| `e2e-ai` | Certify AI tasks against the corpus (`-tags e2e_llm`, `TestE2ECertify`): paid, network, opt-in. Names what it certifies outright, one of two ways: `MODEL=<provider:model>` binds ONE candidate to every task, and `ROUTING=<config>` certifies a DEPLOYMENT — each task measured against every distinct model the config's `seeds.ai_routing` binds on its ladder — the rung that answers, then each fallback — so one run writes records across several models. The two are mutually exclusive and the run refuses both. `JUDGE=<provider:model>` defaults to an exported `MARGINCE_AICERT_JUDGE_MODEL`, else `claude_cli:claude-sonnet-4-6` graded through `claude -p` on `CLAUDE_CODE_OAUTH_TOKEN` — ONE grader for every task of the run, because a judge swap flips verdicts on its own — and is never resolved from the routing; `JUDGE=openai_compatible:anthropic/claude-sonnet-4.6` or `gemini:gemini-3.5-flash` picks another, and an `openai_compatible` judge rides the candidate's `BASE_URL=` (or `MARGINCE_AICERT_BASE_URL`), falling back to the OpenRouter host only when neither is set (`JUDGE_BASE_URL=` for another broker). A model never grades itself: a run in which any task it certifies has the judge as its candidate is refused before the first paid call, naming the tasks. `BASE_URL=` carries a broker host (`openai_compatible` fails closed without one) and `PROFILE=` the environment class a record is filed under (ignored under `ROUTING=`, which takes the profile from the config that named the models). Narrow with `TASK=<task>`, repeat with `RUNS=<n>`. Dumps every candidate+judge request/response (the `ai_call_payload` shape, post-stripper) to a gitignored `.tmp/aicert/*.jsonl` and prints the path — on by default (`TRACE=<dir>` to relocate, `TRACE=` to disable). Survives a dropped connection two ways: a run the router failed every bound tier on is re-driven (3 attempts, 2s then 8s, never for an exhausted account or a failed validator; a candidate that breaks off its answer on every attempt is scored an invalid run instead of stopping the task), and every scored run is journaled to `.tmp/aicert/resume/` so a restart replays it instead of paying again — same bindings, profile, corpus, scenario stamp and binary, within six hours, one run per directory; on by default (`RESUME=<dir>` to relocate, `RESUME=` to measure everything fresh). A model whose record is already current is skipped unless `STALE_ONLY=0`. Fails loudly — never skips — without a binding or a corpus match |
-| `e2e-ai-report` | Print the certification readiness report: one row per shipped invocation site (from the census, so a MISSING record is visible), its band, that site's own runs/passed and the accepted/wrong_answer/invalid/abstained counts behind them, the scope certified (`full_invocation`, `single_turn` or `single_call`), and the (provider, model, env) it was measured on; then, per preset, each task's first rung and fallback with the state of each rung's record. Four states, never collapsed and never rendered as a row of zeroes: a record every one of whose scenario stamps still matches what this build sends renders `current`; one that is still right about every case it measured while the corpus has grown cases it never saw renders `partial`, with `SCENARIOS` giving how many of the site's current scenarios it still describes over how many that site ships today; one whose measured scenario — or the prompt its own code builds from it — has changed since renders `stale`; one that was never produced renders `absent`. A record written before per-scenario stamps existed is judged by its task stamp alone and shows `-` for coverage. Reads `backend/internal/compose/aicert/{corpus,records}/`. `go run`-only dev tool (`internal/compose/aicert/reportcmd`), not a shipped binary and **not a merge gate**: it always exits 0, because the lane it reports on is paid and manual. The same judgement, rendered as a page with a link to every scenario — and as `ai-certification.json` beside it, for a reader analysing the numbers themselves — is [ai-certification.md](ai-certification.md) — regenerated by `cd backend && go test ./internal/compose/aicert/ -run TestAICertificationPage -update-ai-cert`, and unlike this target that one DOES fail when the committed copy has gone stale |
-| `e2e-llm` | Guide: [test-the-mcp-surface-end-to-end.md](../how-to/test-the-mcp-surface-end-to-end.md). Drive the six deck use cases with a REAL assistant and check what it said (`e2e/llm/scenarios/*.yaml`, judged by `e2e/llm/check.py`). The half the Go suite in `integration/e2e/usecases/` cannot answer: those pin the payloads, the refusals and the legibility fields, and would stay green while the surface became undrivable. **Paid and opt-in** — refuses without `MARGINCE_E2E_LLM=1`. **The candidate is chosen**: `E2E_LLM_CANDIDATE=claude|gpt|mistral` (default `claude`), each pinned to the model its consumer app defaults to in `e2e/llm/candidates.json` (`claude-sonnet-5-5`, `gpt-5.6-sol`, `mistral-medium-3-5`), and `E2E_LLM_VIA` picks how it is reached. `api` (default) and `openrouter` run `e2e/llm/drive.py`, a neutral MCP bridge offering every vendor the same tools under the server's own instructions — the comparable route, filed under the model's folder — and spend `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `MISTRAL_API_KEY` or `OPENAI_COMPATIBLE_API_KEY` (OpenRouter; Mistral is pinned to its EU endpoint as the EU preset is). `cli` runs `claude -p` (spending `CLAUDE_CODE_OAUTH_TOKEN`, `ANTHROPIC_API_KEY` or `ANTHROPIC_AUTH_TOKEN`, ranked in the reverse of that order) or `codex exec` on a `codex login` — each with its own system prompt, filed apart under `<model>@<cli>`. Codex cannot offer MCP tools alone, so it runs from an empty directory under a read-only sandbox with every switchable built-in off, and any call outside the lane's server stops the run. A different model (`E2E_LLM_MODEL`) or effort (`E2E_LLM_EFFORT='reasoning low|medium|high'`) is an experiment and needs `E2E_LLM_FOLDER`, so it never overwrites the default's verdict. The run prints the candidate, the credential it spends and the judge's route (`E2E_LLM_JUDGE_VIA=cli|api|openrouter`); a route with no credential, or one the table lacks, is refused before anything boots. A run the bridge could not make, or one whose required tool was never offered, stops the lane with exit 2 instead of scoring. **Search must be semantic**: before the seeded world is snapshotted, `e2e/llm/stackready.py` asks `search_context` and the lane stops if it ranks by word overlap alone — no embedding model bound or reachable — because every candidate would then be measured on a degraded tool. `E2E_LLM_STACK_PRESET=config/presets/<name>.yaml` binds the lane's stack to a committed preset first, through `PUT /v1/ai/routing` (its key goes in `.env.local`, which the stack reads); `E2E_LLM_ALLOW_LEXICAL=1` runs anyway, and each verdict records `search: semantic|lexical`. `E2E_LLM_VERDICTS=<dir>` writes the verdicts there instead of the committed records tree, so such a run publishes nothing — the scheduled job uses it on purpose. Not deterministic by construction: each scenario runs three times and passes at two, because one bad run is the weather and two is a defect. Boots, seeds and tears down its own `DEV_SLUG` stack, so it never touches :8080. `SCENARIO=<name>` runs one, `E2E_LLM_KEEP=1` leaves the stack up. **Half the judging is a model.** Each scenario's mechanical assertions stay regexes (`must_mention`/`must_not_mention` — a name, a date, a count); its `judge:` entries are criteria written as sentences and decided per run by a pinned judge, because the regexes that used to carry them scored 15% and 20% of correct answers as failures on two `e2e-llm-guards` sweeps. `E2E_LLM_JUDGE` defaults to `live` here and has no default anywhere else: a run whose judge cannot be reached exits 2 and STOPS the lane, never scoring the case. Transcripts land in the gitignored `e2e/llm/records/` and are the finding — a verdict line says which scenario failed, only the transcript says what the assistant did. Runs weekly on `main` in `scheduled.yml` |
-| `e2e-llm-guards` | Put the SCENARIOS' regex guards on trial instead of the product. A real model is asked for answers a good assistant would give to a scenario's prompt and answers carrying the specific defect it forbids, and every one is judged by `e2e/llm/probe.py` — which runs them through `check.check()` itself, so the probe agrees with the lane by construction. It reports FALSE REDS (a correct answer a guard caught) and FALSE GREENS (a defective answer every guard missed), naming the pattern and the text it matched. A scenario's judged criteria are audited the same way and named by the criterion that decided, at one model call each per candidate; `E2E_LLM_JUDGE=replay:<dir>` audits the patterns alone. That is the failure mode nothing else sees: four review rounds of case 6 each found one by hand, and each round's own fix introduced the next round's. **Paid and opt-in** — refuses without `MARGINCE_E2E_LLM_GUARDS=1`, resolves a credential the same way `e2e-llm` does and pins its model for the same reason; needs no stack. `SCENARIO=<name>` audits one, `E2E_LLM_GUARDS_COUNT=<n>` asks for more answers of each kind, `E2E_LLM_GUARDS_OUT=<dir>` keeps the candidates. **The findings are candidates, not truth** — a model asked for a correct answer can write an incorrect one, so a human reads every finding and nothing is ever rewritten automatically. To judge sentences you wrote yourself, no model and no opt-in are needed: `python3 e2e/llm/probe.py <scenario.yaml> --expect correct "<answer>"` |
-| `ai-probe` | Probe ONE production AI invocation site against input an operator supplies, through the same certification case `make e2e-ai` drives (`Prepare`/`Run`/`Evaluate`). Answers a different question from `e2e-ai`: that one asks whether a model is good enough for a prompt, this asks whether a site survives THIS input — which is how a site can be certified 1.00 and still fail in the field. Four verbs via `ARGS=`: `list` (every registered site with its kind, certified scope and tier ladder), `scaffold <task>/<variant>` (a starter scenario copied from the corpus), `fetch <url>` (what crosses the fetch boundary — HTML reduced by `StripTags`, markdown and JSON verbatim — reporting media type, bytes and **passage count**; a route may reduce further before building its request, as the model-cost refresh does for a JSON catalog), and `run` (`--scenario` or `--fixture`+`--expect`+`--site`). Free except `run` against a real binding, which makes one model call — no judge, no scoring, no records written. DB-less. Artifacts land in the gitignored `.tmp/aitask/` because a fetched page carries whatever the source carried. BYOK key auto-loaded from `.env.local`. See [debug an AI task](../how-to/debug-an-ai-task.md) |
-| `test-integration-serial` | Escape hatch: the old sequential lane on the shared `margince_test` DB (for debugging a parallel-isolation issue) |
-| `lint` | `golangci-lint run` (depguard, gosec, misspell, revive, gofmt), through the `scripts/run-golangci.sh` wrapper `lint-modules` also uses — see `test-golangci-guard` for what it stops the shared analysis cache doing |
-| `arch-lint` | go-arch-lint over `.go-arch-lint.yml` — a hard gate on the import DAG |
+| `test-it` | Run one integration package on a throwaway clone (+ own MinIO bucket + Redis db 15): `make test-it DIR=backend/internal/modules/contacts [RUN=TestName]` |
+| `e2e-siteread` | (backend Makefile) Deep-read quality floor vs the real gradion.com (`-tags e2e_llm`): paid, network, opt-in. Judge a candidate model with `MARGINCE_E2E_MODEL=provider:model` (+ its BYOK key). Every assertion is a floor: a different model must extract the same or better to pass |
+| `e2e-ai` | Certify AI tasks against the corpus (`-tags e2e_llm`, `TestE2ECertify`): paid, network, opt-in. Fails loudly, never skips, without a binding or a corpus match. Options: [e2e-ai options](#e2e-ai-options) |
+| `e2e-ai-report` | Print the certification readiness report, per shipped invocation site and per preset. `go run`-only dev tool (`internal/compose/aicert/reportcmd`), not a shipped binary and not a merge gate: it always exits 0. See [e2e-ai-report](#e2e-ai-report) |
+| `e2e-llm` | Drive the deck use cases with a real assistant and check what it said (`e2e/llm/scenarios/*.yaml`, judged by `e2e/llm/check.py`). Paid and opt-in: refuses without `MARGINCE_E2E_LLM=1`. Runs weekly on `main` in `scheduled.yml`. Guide: [test-the-mcp-surface-end-to-end.md](../how-to/test-the-mcp-surface-end-to-end.md). Options: [e2e-llm options](#e2e-llm-options) |
+| `e2e-llm-guards` | Test the scenarios' regex guards instead of the product. Paid and opt-in: refuses without `MARGINCE_E2E_LLM_GUARDS=1`; needs no stack. See [e2e-llm-guards](#e2e-llm-guards) |
+| `ai-probe` | Probe one production AI invocation site against input an operator supplies, through the same certification case `make e2e-ai` drives (`Prepare`/`Run`/`Evaluate`). `e2e-ai` asks whether a model is good enough for a prompt; this asks whether a site survives this input, which is how a site certified 1.00 can still fail in the field. Verbs via `ARGS=`: `list` (every registered site with its kind, certified scope and tier ladder), `scaffold <task>/<variant>` (a starter scenario copied from the corpus), `fetch <url>` (what crosses the fetch boundary, reporting media type, bytes and passage count), and `run` (`--scenario` or `--fixture`+`--expect`+`--site`). `fetch` reduces HTML by `StripTags` and passes markdown and JSON verbatim; a route may reduce further, as the model-cost refresh does for a JSON catalog. Free except `run` against a real binding, which makes one model call (no judge, no scoring, no records). DB-less. Artifacts land in the gitignored `.tmp/aitask/`, because a fetched page carries whatever the source carried. BYOK key auto-loaded from `.env.local`. See [debug an AI task](../how-to/debug-an-ai-task.md) |
+| `test-integration-serial` | Escape hatch: the sequential lane on the shared `margince_test` DB (for debugging a parallel-isolation issue) |
+| `lint` | `golangci-lint run` (depguard, gosec, misspell, revive, gofmt), through the `scripts/run-golangci.sh` wrapper `lint-modules` also uses. See `test-golangci-guard` for what the wrapper guards against |
+| `arch-lint` | go-arch-lint over `.go-arch-lint.yml`: a hard gate on the import DAG |
 | `gen` | Regenerate everything derived from `api/crm.yaml` (contract types, 501 stubs, agent-policy table) and the extension composition |
-| `drift` | `gen`, then fail if any generated file changed — the contract drift gate |
-| `composition` | Materialize `build/composition/` from the enabled set under `extensions/`. Every build/test lane depends on it and runs under `GOWORK=build/composition/go.work`, so an enabled extension is compiled in and a stale composition is never built. A default checkout composes `{de}` (the first-party pack ships enabled); removing every directory under `extensions/` composes the empty set, whose wiring is byte-identical to the committed `composition/` stub |
+| `drift` | `gen`, then fail if any generated file changed: the contract drift gate |
+| `composition` | Materialize `build/composition/` from the enabled set under `extensions/`. Every build/test lane depends on it and runs under `GOWORK=build/composition/go.work`, so an enabled extension is compiled in and a stale composition is never built. A default checkout composes `{de}` (the first-party pack ships enabled). Removing every directory under `extensions/` composes the empty set, whose wiring is byte-identical to the committed `composition/` stub |
 | `check-composition` | `composition`, then `gen-composition -verify`: a clean regeneration must reproduce `composition.json`'s recorded input digests and output hashes byte-for-byte (the drift gate for ignored composition output) |
-| `test-extensions` | Every enabled extension's own test lane (each unit under `extensions/` is its own Go module — `./...` never reaches them), run on the composed workspace; part of `make check` |
-| `gen-workflow` | `make gen-workflow NAME=<snake_case_handler_name>` — scaffold a new automation `workflow.Handler` + its test stub (write-once; refuses to overwrite an existing scaffold). See [how-to/create-a-workflow.md](../how-to/create-a-workflow.md) |
+| `test-extensions` | Every enabled extension's own test lane (each unit under `extensions/` is its own Go module, so `./...` never reaches them), run on the composed workspace; part of `make check` |
+| `gen-workflow` | `make gen-workflow NAME=<snake_case_handler_name>`: scaffold a new automation `workflow.Handler` + its test stub (write-once; refuses to overwrite an existing scaffold). See [how-to/create-a-workflow.md](../how-to/create-a-workflow.md) |
 
-The root `make check` runs the backend gate above **and** these deterministic root script gates (each is a small script; all merge-blocking, and `check-backend` fans them out):
+### The integration lane
+
+- Runs on its own `margince_test` namespace, never the dev `margince` DB, so it can run concurrently with `make dev`.
+- Parallel: each package runs on its own throwaway clone db (`CREATE DATABASE … TEMPLATE margince_test`), a private MinIO bucket and its own Redis logical db (1..63 by slot; db 0 stays reserved for `make dev`). Packages share nothing; within a package the lane still runs `-p 1`.
+- Fails loudly without a database and never skips.
+- `INTEGRATION_JOBS=N` tunes concurrency.
+- CI slices the lane per test across several runners. `INTEGRATION_SHARD=k/N` runs the k-th deterministic slice; use the same value to debug a red CI shard locally. `INTEGRATION_SHARD_OUT=dir` collects the manifests + coverage pods `scripts/test-integration-reconcile.sh` verifies and merges.
+
+### `e2e-ai` options
+
+- **What it certifies.** `MODEL=<provider:model>` binds one candidate to every task. `ROUTING=<config>` certifies a deployment: each task is measured against every distinct model the config's `seeds.ai_routing` binds on its ladder (the rung that answers, then each fallback), so one run writes records across several models. The two are mutually exclusive and the run refuses both.
+- **The judge.** `JUDGE=<provider:model>` defaults to an exported `MARGINCE_AICERT_JUDGE_MODEL`, else `claude_cli:claude-sonnet-4-6` graded through `claude -p` on `CLAUDE_CODE_OAUTH_TOKEN`. One grader serves every task of the run, because a judge swap flips verdicts on its own. The judge is never resolved from the routing.
+- `JUDGE=openai_compatible:anthropic/claude-sonnet-4.6` or `gemini:gemini-3.5-flash` picks another. An `openai_compatible` judge uses the candidate's `BASE_URL=` (or `MARGINCE_AICERT_BASE_URL`), falling back to the OpenRouter host only when neither is set (`JUDGE_BASE_URL=` for another broker).
+- A model never grades itself. A run in which any certified task has the judge as its candidate is refused before the first paid call, naming the tasks.
+- `BASE_URL=` carries a broker host (`openai_compatible` fails closed without one). `PROFILE=` is the environment class a record is filed under; it is ignored under `ROUTING=`, which takes the profile from the config.
+- Narrow with `TASK=<task>`, repeat with `RUNS=<n>`.
+- **Trace.** Every candidate+judge request/response (the `ai_call_payload` shape, post-stripper) is dumped to a gitignored `.tmp/aicert/*.jsonl`, and the path is printed. On by default (`TRACE=<dir>` to relocate, `TRACE=` to disable).
+- **Retries.** A run the router failed on every bound tier is re-driven (3 attempts, 2s then 8s), never for an exhausted account or a failed validator. A candidate that breaks off its answer on every attempt is scored an invalid run instead of stopping the task.
+- **Resume.** Every scored run is journaled to `.tmp/aicert/resume/`, so a restart replays it instead of paying again. A replay needs the same bindings, profile, corpus, scenario stamp and binary, within six hours, one run per directory. On by default (`RESUME=<dir>` to relocate, `RESUME=` to measure everything fresh).
+- A model whose record is already current is skipped unless `STALE_ONLY=0`.
+
+### `e2e-ai-report`
+
+One row per shipped invocation site, taken from the census so a missing record is visible. Each row gives the site's band, its own runs/passed, the accepted/wrong_answer/invalid/abstained counts behind them, the scope certified (`full_invocation`, `single_turn` or `single_call`), and the (provider, model, env) it was measured on. Then, per preset, each task's first rung and fallback with the state of each rung's record.
+
+A record is in one of four states, never collapsed and never rendered as a row of zeroes:
+
+| State | Meaning |
+|---|---|
+| `current` | Every scenario stamp still matches what this build sends. |
+| `partial` | Still right about every case it measured, while the corpus has grown cases it never saw. `SCENARIOS` gives how many of the site's current scenarios it describes over how many the site ships today. |
+| `stale` | A measured scenario, or the prompt its code builds from it, has changed since. |
+| `absent` | Never produced. |
+
+A record without per-scenario stamps is judged by its task stamp alone and shows `-` for coverage. The report reads `backend/internal/compose/aicert/{corpus,records}/`. It always exits 0, because the lane it reports on is paid and manual.
+
+The same judgement is rendered as a page, [ai-certification.md](ai-certification.md), with a link to every scenario and `ai-certification.json` beside it for analysis. Regenerate it with `cd backend && go test ./internal/compose/aicert/ -run TestAICertificationPage -update-ai-cert`. Unlike this target, that test fails when the committed copy is stale.
+
+### `e2e-llm` options
+
+The Go suite in `integration/e2e/usecases/` pins payloads, refusals and legibility fields, and would stay green while the surface became undrivable by a model. This lane covers that half.
+
+- **The candidate.** `E2E_LLM_CANDIDATE=claude|gpt|mistral` (default `claude`), each pinned in `e2e/llm/candidates.json` to the model its consumer app defaults to (`claude-sonnet-5-5`, `gpt-5.6-sol`, `mistral-medium-3-5`).
+- **The route.** `E2E_LLM_VIA` picks how the candidate is reached:
+  - `api` (default) and `openrouter` run `e2e/llm/drive.py`, a neutral MCP bridge offering every vendor the same tools under the server's own instructions. This is the comparable route, filed under the model's folder. It spends `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `MISTRAL_API_KEY` or `OPENAI_COMPATIBLE_API_KEY` (OpenRouter). Mistral is pinned to its EU endpoint, as the EU preset is.
+  - `cli` runs `claude -p` or `codex exec` on a `codex login`, each with its own system prompt, filed apart under `<model>@<cli>`. `claude -p` spends `CLAUDE_CODE_OAUTH_TOKEN`, `ANTHROPIC_API_KEY` or `ANTHROPIC_AUTH_TOKEN`, ranked in the reverse of that order.
+  - Codex cannot offer MCP tools alone, so it runs from an empty directory under a read-only sandbox with every switchable built-in off. Any call outside the lane's server stops the run.
+- **Experiments.** A different model (`E2E_LLM_MODEL`) or effort (`E2E_LLM_EFFORT='reasoning low|medium|high'`) needs `E2E_LLM_FOLDER`, so it never overwrites the default's verdict.
+- **Preflight.** The run prints the candidate, the credential it spends and the judge's route (`E2E_LLM_JUDGE_VIA=cli|api|openrouter`). A route with no credential, or one the table lacks, is refused before anything boots. A run the bridge could not make, or one whose required tool was never offered, stops the lane with exit 2 instead of scoring.
+- **Search must be semantic.** Before the seeded world is snapshotted, `e2e/llm/stackready.py` asks `search_context`. The lane stops if it ranks by word overlap alone (no embedding model bound or reachable), because every candidate would then be measured on a degraded tool. `E2E_LLM_STACK_PRESET=config/presets/<name>.yaml` binds the lane's stack to a committed preset first, through `PUT /v1/ai/routing` (its key goes in `.env.local`, which the stack reads). `E2E_LLM_ALLOW_LEXICAL=1` runs anyway, and each verdict records `search: semantic|lexical`.
+- `E2E_LLM_VERDICTS=<dir>` writes the verdicts there instead of the committed records tree, so the run publishes nothing. The scheduled job uses it.
+- **Repetition.** Each scenario runs three times and passes at two, because one bad run is noise and two is a defect.
+- **Stack.** Boots, seeds and tears down its own `DEV_SLUG` stack, so it never touches :8080. `SCENARIO=<name>` runs one, `E2E_LLM_KEEP=1` leaves the stack up.
+- **Judging.** Each scenario's mechanical assertions are regexes (`must_mention`/`must_not_mention`: a name, a date, a count). Its `judge:` entries are criteria written as sentences and decided per run by a pinned judge, because regexes for those criteria scored 15% and 20% of correct answers as failures on two `e2e-llm-guards` sweeps. `E2E_LLM_JUDGE` defaults to `live` here and has no default anywhere else. A run whose judge cannot be reached exits 2 and stops the lane without scoring the case.
+- **Transcripts.** They land in the gitignored `e2e/llm/records/` and are the finding: a verdict line says which scenario failed, and only the transcript says what the assistant did.
+
+### `e2e-llm-guards`
+
+A real model is asked for answers a good assistant would give to a scenario's prompt, and for answers carrying the specific defect it forbids. Each one is judged by `e2e/llm/probe.py`, which runs them through `check.check()` itself, so the probe agrees with the lane by construction.
+
+- It reports false reds (a correct answer a guard caught) and false greens (a defective answer every guard missed), naming the pattern and the text it matched.
+- A scenario's judged criteria are audited the same way and named by the criterion that decided, at one model call each per candidate. `E2E_LLM_JUDGE=replay:<dir>` audits the patterns alone.
+- It resolves a credential the same way `e2e-llm` does and pins its model for the same reason.
+- `SCENARIO=<name>` audits one, `E2E_LLM_GUARDS_COUNT=<n>` asks for more answers of each kind, `E2E_LLM_GUARDS_OUT=<dir>` keeps the candidates.
+- The findings are candidates for a human to read. A model asked for a correct answer can write an incorrect one, so nothing is rewritten automatically.
+- To judge sentences you wrote yourself, no model and no opt-in are needed: `python3 e2e/llm/probe.py <scenario.yaml> --expect correct "<answer>"`.
+
+### Root script gates
+
+The root `make check` runs the backend gate above and these deterministic root script gates (each is a small script; all merge-blocking, and `check-backend` fans them out):
 
 | Target | What it does |
 |---|---|
 | `check-image-pins` | Every workflow `uses:`, container `image:` and Dockerfile base `FROM` is pinned to an immutable ref |
 | `check-host-ports` | Every host port published by `docker-compose.dev.yml` is below the ephemeral floor (32768), so `db-up` cannot lose a bind to a transient client port |
-| `make-target-parity` | Every backend target `make help` advertises resolves from the repo root, as the help text promises. The root delegation list is hand-maintained, so a new backend target can be advertised and unreachable at once — and a CI step that calls it then fails at `No rule to make target` without ever running what it was gating |
+| `make-target-parity` | Every backend target `make help` advertises resolves from the repo root, as the help text promises. The root delegation list is hand-maintained, so a new backend target can be advertised and unreachable at once. A CI step that calls it then fails at `No rule to make target` without running what it was gating |
 | `contract-breaking-check` | oasdiff severity gate on `api/crm.yaml` vs `origin/main` (breaking change fails; additive passes) |
-| `contract-frontend-drift` | The **third** regeneration a `backend/api/crm.yaml` change owes: `pnpm gen:api` writes `frontend/src/api/schema.d.ts` + `public-events.ts`, and until #1639 only the frontend lane enforced it — so a backend-only author could go green through the whole backend gate and strand the frontend types (#1573). Skips **loudly** when `pnpm` is absent (CI's `deterministic-gates` job installs Go only, and takes that path). The pull-request path is covered instead by `fe-quality`'s `fe-drift`, whose routing `TestTheContractReachesTheFrontendLane` pins. `fe-drift` runs this same script, so both lanes have one spelling. A `check-backend` prerequisite |
-| `test-contract-frontend-drift` | `contract-frontend-drift`'s own test: the skip is loud, goes to stderr, is the gate's only early exit, and the artifact census precedes it. A gate that may skip is a gate that can skip silently, which is the defect it was written for. A `check-backend` prerequisite |
-| `migration-versions` | Every migration version this branch adds is unclaimed on `origin/main` and sorts above the highest one there — per namespace, derived from `backend/migrations/*/`. Two PRs numbering against the same `main` each pass the per-tree loader test and collide only in the merge, which is how core `0240` (and `0248` the next day) ended up claimed twice and left `main` unable to load its own sequence. A version *below* the base's highest fails too, and is the worse case: the runner skips only what its ledger already names, so the migration still applies — but before the base's highest on a fresh database and after it on one already past that point, which leaves two schemas wherever the order matters. Overrides: `MIGRATION_VERSIONS_REQUIRE_BASE=1` (CI; a missing base ref is a broken checkout, not a skip), and a base ref as `$1`. A baseline consolidation is the one legitimate exception and must DECLARE itself with `MIGRATION_VERSIONS_BASELINE_RESET=1`; the declaration is honored only where the namespace both collapses (fewer migrations than the base) and shares no `(version, name)` pair with it, so it goes inert on its own once the consolidation merges (self-tested by `test-migration-versions`). |
+| `contract-frontend-drift` | The third regeneration a `backend/api/crm.yaml` change owes: `pnpm gen:api` regenerates `frontend/src/api/schema.d.ts` and `public-events.ts`, and this fails when they differ. Skips loudly when `pnpm` is absent (CI's `deterministic-gates` job installs Go only, and takes that path). On a pull request, `fe-quality`'s `fe-drift` covers it, with routing pinned by `TestTheContractReachesTheFrontendLane`. `fe-drift` runs this same script, so both lanes have one spelling. A `check-backend` prerequisite |
+| `test-contract-frontend-drift` | `contract-frontend-drift`'s own test: the skip is loud, goes to stderr, is the gate's only early exit, and the artifact census precedes it. A gate that may skip can skip without a sound, so the skip itself is tested. A `check-backend` prerequisite |
+| `migration-versions` | Every migration version this branch adds is unclaimed on `origin/main` and sorts above the highest one there, per namespace, derived from `backend/migrations/*/`. See [migration-versions](#migration-versions) |
 | `test-lanes` | Hermetic-unit-lane check: no untagged test opens a real Postgres/Redis |
-| `env-reads` | OPS-CFG-2: nothing under `backend/internal` reads the environment — config is resolved once at the composition root and injected. Ratcheted via `scripts/env-read-waivers.txt` (pre-existing offenders may shrink, never grow; #1252 burns them down). `cmd/**`, `*_test.go`, `//go:build integration` harnesses and `platform/cliflags` are exempt |
-| `gofmt` | Every tracked hand-written Go file is gofmt-clean, in **every** module. Not redundant with `lint-modules`, which enforces the same rule through golangci: golangci needs a type-checkable package and the `fixtures/` units deliberately are not one, while gofmt only has to parse. So this is the one formatting check with no exceptions, and the cheap floor that holds when a module is temporarily unlintable. The file list comes from `git ls-files`, so a new module is covered the day it is committed; generated `*_gen.go`/`*.gen.go` are exempt (their generator owns their bytes) |
-| `lint-modules` | golangci-lint over the Go modules the backend lint lane cannot reach. `make -C backend lint` runs `./...` from `backend/`, which stops at the module boundary — `backend/tools`, `composition` and each unit under `extensions/` are separate modules and were linted by nothing. Same `backend/.golangci.yml` as the product module (one bar, no second copy to drift); the module list derives from tracked `go.mod` files, so a new module is covered the day it is committed. Runs **uncapped** (`--max-same-issues=0`): golangci's default of 3 hides repeats, and a truncating gate reads like a passing one. Two exclusions, both reasoned in the script — `backend` (already linted twice by its own lane) and `fixtures/` (imports the product module while declaring no require, so it type-checks only inside the harness that composes it; still covered by the craftsmanship gate, the license test and `gofmt`) |
-| `test-golangci-guard` | Prove `scripts/run-golangci.sh` still tells a finding in this checkout from one golangci's cache remembers from another. Its analysis cache is machine-wide, shared by every worktree, and keyed by file **content**, so an unchanged file has one entry across all of them — carrying the path of whichever worktree filled it. A run that gets that entry can read neither the `//nolint:` directives in the file nor the path-anchored exclusions in `.golangci.yml`, so waived findings come back against a foreign path, under module names that do exist here (issue #1378). The wrapper both lint lanes run through resolves every reported path and quarantines the run (exit 40) instead; this asserts both directions, since a guard that flagged every run — `extensions/openchannel` legitimately reports as `../extensions/openchannel/…` — reads exactly like a working one from the passing side |
-| `go-file-length` | Hard 500-LOC cap on hand-written **product** Go, ratcheted via `scripts/go-file-length-waivers.txt`. Test and generated files are exempt here — `*_test.go` is bounded at 1000 lines by the craft gate instead |
+| `env-reads` | Nothing under `backend/internal` reads the environment: config is resolved once at the composition root and injected. Ratcheted via `scripts/env-read-waivers.txt` (pre-existing offenders may shrink, never grow; [#1252](https://github.com/margince/margince/issues/1252) burns them down). `cmd/**`, `*_test.go`, `//go:build integration` harnesses and `platform/cliflags` are exempt |
+| `gofmt` | Every tracked hand-written Go file is gofmt-clean, in every module. `lint-modules` enforces the same rule through golangci, but golangci needs a type-checkable package and the `fixtures/` units are not one, while gofmt only has to parse. So this is the one formatting check with no exceptions. The file list comes from `git ls-files`, so a new module is covered the day it is committed; generated `*_gen.go`/`*.gen.go` are exempt (their generator owns their bytes) |
+| `lint-modules` | golangci-lint over the Go modules the backend lint lane cannot reach: `backend/tools`, `composition` and each unit under `extensions/` are separate modules, and `make -C backend lint` stops at the module boundary. Same `backend/.golangci.yml` as the product module; the module list derives from tracked `go.mod` files. Runs uncapped (`--max-same-issues=0`), because golangci's default of 3 hides repeats. Two exclusions, both reasoned in the script: `backend` (linted by its own lane) and `fixtures/` (imports the product module while declaring no require, so it type-checks only inside its harness; still covered by the craftsmanship gate, the license test and `gofmt`) |
+| `test-golangci-guard` | Prove `scripts/run-golangci.sh` still tells a finding in this checkout from one golangci's cache remembers from another worktree. See [The golangci cache guard](#the-golangci-cache-guard) |
+| `go-file-length` | Hard 500-LOC cap on hand-written product Go, ratcheted via `scripts/go-file-length-waivers.txt`. Test and generated files are exempt here; the craft gate bounds `*_test.go` at 1000 lines |
 | `comment-budget` | A change may not add more comment lines than the code they explain. Diff-scoped against `origin/main`, Go only; `doc.go` and generated files are exempt. The counterweight to the function ceiling, which does not count comment lines |
-| `test-comment-budget` | Prove the budget gate fails an over-budget change — a budget nothing can trip reads exactly like a change within budget |
+| `test-comment-budget` | Prove the budget gate fails an over-budget change, since a budget nothing can trip looks the same as a change within budget |
 | `comment-density` | Backend's comment-to-code ratio may fall and never rise, pinned in `scripts/comment-density-baseline.txt`. A change that brings it down re-pins it in the same commit |
-| `fe-file-length` | The same cap on `frontend/src` — 500 for product code, 1000 for a test, story, testkit or fixture — ratcheted via `scripts/fe-file-length-waivers.txt`. Generated types and the i18n catalogs are exempt: one is the generator's output, the others are data read by lookup rather than top to bottom |
-| — (script) | `scripts/seed-fe-file-length-waivers.sh` re-freezes that list at the tree's current sizes. For ESTABLISHING the baseline, never for absorbing a file that grew — running it on a failing gate would freeze the growth, which is the one thing the ratchet refuses |
-| `rls-store-path` | No `internal/modules` statement addresses the superuser pool directly (RLS bypass); `// rls-exempt: <reason>` is the escape for a genuinely cross-workspace query |
-| `no-jurisdiction` | No country-specific regulatory identifier (XRechnung/ZUGFeRD/DATEV/…) or ISO-3166 code in core **code**, only in the jurisdiction seam (`internal/modules/de`, `internal/shared/ports/jurisdiction`); statute citations in comments are allowed |
-| `test-e2e-llm-check` | Points the e2e-llm checker at hand-written stream-json transcripts and asserts it tells a failed use case apart from a run that never happened: a refused credential (`401`), a transcript with no assistant turn, and an error with no message are each named as a harness fault, while a run that answered badly is still scored as a finding. Also asserts the lane WIRES that check and stops on it, since running the real lane needs a key and a live stack. It holds the JUDGED half offline too, replaying verdicts a real judge gave the committed fixtures (`e2e/llm/testdata/judge/`): 23 correct answers must score clean and 22 defects must be caught and named, so a judge that agreed with everything fails 22 cases — and a judge that cannot be reached, or answers something other than a verdict, is a stop rather than a pass. It also runs the `e2e/llm/tests/` unittest suites, which drive the bridge, the codex reader and the judge's key routes against in-process fakes of the MCP server and each vendor's API — no key, no network |
-| `test-dev-postgres-container` | Points the dev-database resolver at a stubbed `docker ps` and asserts the verdict sentence on each shape: one publisher resolves, none refuses rather than falling back to the compose project, two refuse NAMING both (a developer has to know which stack to stop), and the query filters on the port AND the compose service label |
-| `changelog-sections` | **Keep a Changelog**: one `### ` section per change type per release in `CHANGELOG.md`. The change types are read FROM the file, so a release that grows a new one is held the day it appears |
-| `test-changelog-sections` | Points that gate at planted files and asserts the verdict sentence on each: a type split in two, a third copy counted as the third, the same type under two releases (not a duplicate), a heading above the first release (out of scope), and both ways of reading nothing (a refusal, since either looks exactly like a clean file) |
-| `test-migration-versions` | Points that gate at throwaway git repositories and asserts its verdict on ten planted cases: each of the four defects it names fires (collision, sorts-below, duplicate-in-tree, undeclared consolidation), and every branch of the baseline-reset declaration is exercised — admitted for a real consolidation, refused for a survivor at the base's version AND name, refused for a one-for-one rename that does not collapse, and refused for a real collision. Each case also asserts a string the gate's own output must contain, so a gate broken such that it exits non-zero for an unrelated reason cannot pass for a detection; setup and mutation failures fail the case rather than leaving a clean tree that passes; and the harness unsets the gate's own switch and git's environment, because CI sets the reset declaration on the same step this target runs on |
-| `pkg-freeze` | Published-surface freeze (EXT-P3): apidiff on every `backend/pkg` package vs the merge target (`origin/$GITHUB_BASE_REF` in CI; locally the extensions integration branch, else `origin/main`). **Advisory before the first v1+ release tag** — incompatible changes print, never block (the surface is design-fluid). **Enforcing from v1.0.0** — incompatible changes and removed packages fail; a ratified change is its exact apidiff finding line in `scripts/pkg-freeze-allowlist.txt`, bound to the merge-base sha it was ratified against (superseded entries license nothing and warn); removals are never allowlistable. Overrides: `PKG_FREEZE_MODE=advisory\|enforce`, `PKG_FREEZE_BASE=<ref>` |
+| `fe-file-length` | The same cap on `frontend/src` (500 for product code, 1000 for a test, story, testkit or fixture), ratcheted via `scripts/fe-file-length-waivers.txt`. Generated types and the i18n catalogs are exempt: one is generator output, the others are data read by lookup |
+| (script) | `scripts/seed-fe-file-length-waivers.sh` re-freezes that list at the tree's current sizes. Use it to establish the baseline, never to absorb a file that grew: on a failing gate it would freeze the growth |
+| `rls-store-path` | No `internal/modules` statement addresses the superuser pool directly (RLS bypass); `// rls-exempt: <reason>` is the escape for a real cross-workspace query |
+| `no-jurisdiction` | No country-specific regulatory identifier (XRechnung/ZUGFeRD/DATEV/…) or ISO-3166 code in core code, only in the jurisdiction seam (`internal/modules/de`, `internal/shared/ports/jurisdiction`); statute citations in comments are allowed |
+| `test-e2e-llm-check` | Points the e2e-llm checker at hand-written stream-json transcripts and asserts it tells a failed use case from a run that never happened. See [test-e2e-llm-check](#test-e2e-llm-check) |
+| `test-dev-postgres-container` | Points the dev-database resolver at a stubbed `docker ps` and asserts the verdict sentence on each shape. One publisher resolves; none refuses rather than falling back to the compose project; two refuse, naming both (a developer has to know which stack to stop). The query filters on the port and the compose service label |
+| `changelog-sections` | **Keep a Changelog**: one `### ` section per change type per release in `CHANGELOG.md`. The change types are read from the file, so a release that grows a new one is held the day it appears |
+| `test-changelog-sections` | Points that gate at planted files and asserts the verdict sentence on each: a type split in two, a third copy counted as the third, the same type under two releases (not a duplicate), a heading above the first release (out of scope), and both ways of reading nothing (a refusal, since either looks like a clean file) |
+| `test-migration-versions` | Points that gate at throwaway git repositories and asserts its verdict on ten planted cases. See [migration-versions](#migration-versions) |
+| `pkg-freeze` | Published-surface freeze: apidiff on every `backend/pkg` package vs the merge target (`origin/$GITHUB_BASE_REF` in CI; locally the extensions integration branch, else `origin/main`). Advisory before the first v1+ release tag: incompatible changes print and never block. Enforcing from v1.0.0: incompatible changes and removed packages fail. A ratified change is its apidiff finding line in `scripts/pkg-freeze-allowlist.txt`, bound to the merge-base sha it was ratified against (superseded entries license nothing and warn); removals are never allowlistable. Overrides: `PKG_FREEZE_MODE=advisory\|enforce`, `PKG_FREEZE_BASE=<ref>` |
+
+### `migration-versions`
+
+- Two PRs numbering against the same `main` each pass the per-tree loader test and collide only in the merge, leaving `main` unable to load its own sequence. This gate fails a version already claimed on the base.
+- A version below the base's highest fails too. The runner skips only what its ledger already names, so such a migration still applies: before the base's highest on a fresh database and after it on one already past that point. That leaves two schemas wherever the order matters.
+- `MIGRATION_VERSIONS_REQUIRE_BASE=1` (CI) treats a missing base ref as a broken checkout instead of a skip. A base ref can be passed as `$1`.
+- A baseline consolidation is the one legitimate exception and must declare itself with `MIGRATION_VERSIONS_BASELINE_RESET=1`. The declaration is honoured only where the namespace both collapses (fewer migrations than the base) and shares no `(version, name)` pair with it, so it goes inert once the consolidation merges.
+
+`test-migration-versions` checks each of the four defects the gate names (collision, sorts-below, duplicate-in-tree, undeclared consolidation). It also exercises every branch of the baseline-reset declaration:
+
+- admitted for a real consolidation;
+- refused for a survivor at the base's version and name;
+- refused for a one-for-one rename that does not collapse;
+- refused for a real collision.
+
+Each case asserts a string the gate's own output must contain, so a gate that exits non-zero for an unrelated reason cannot pass for a detection. Setup and mutation failures fail the case. The harness unsets the gate's own switch and git's environment, because CI sets the reset declaration on the same step.
+
+### The golangci cache guard
+
+golangci's analysis cache is machine-wide, shared by every worktree, and keyed by file content. An unchanged file has one entry across all worktrees, carrying the path of whichever worktree filled it. A run that gets that entry can read neither the `//nolint:` directives in the file nor the path-anchored exclusions in `.golangci.yml`. Waived findings then come back against a foreign path, under module names that do exist here ([#1378](https://github.com/margince/margince/issues/1378)). The wrapper both lint lanes run through resolves every reported path and quarantines the run (exit 40) instead. `test-golangci-guard` asserts both directions. A guard that flagged every run would look the same as a working one from the passing side, and `extensions/openchannel` legitimately reports as `../extensions/openchannel/…`.
+
+### `test-e2e-llm-check`
+
+- A refused credential (`401`), a transcript with no assistant turn, and an error with no message are each named as a harness fault. A run that answered badly is still scored as a finding.
+- It asserts the lane wires that check and stops on it, since running the real lane needs a key and a live stack.
+- It holds the judged half offline, replaying verdicts a real judge gave the committed fixtures (`e2e/llm/testdata/judge/`). The correct answers must score clean and every defect must be caught and named, so a judge that agreed with everything fails. A judge that cannot be reached, or answers something other than a verdict, stops the run.
+- It runs the `e2e/llm/tests/` unittest suites, which drive the bridge, the codex reader and the judge's key routes against in-process fakes of the MCP server and each vendor's API. No key, no network.
 
 ### Where the gate spends its time
 
-Every green `make check` ends with a table of its own phases, so the next contact to optimize it starts from
-a reading of their machine rather than from a number in a comment. Both halves report: the backend's four
-phases and the gate fan-out, and the frontend's composed typecheck, core suite and unit screens.
+Every green `make check` ends with a table of its phases, so whoever optimizes it next starts from a measurement on their own machine. Both halves report: the backend's four phases and the gate fan-out, and the frontend's composed typecheck, core suite and unit screens.
 
-The distribution is lopsided, and it is worth knowing which end to pull. On a
-quiet laptop the frontend's five core legs measure ds-gates 12s, drift 3s, lint
-2s, **unit 75s**, build 3s — so `fe-unit` alone is about 79% of those 95s and
-everything else together is 20s. An optimization that does not touch the
-vitest suite is arguing over the remainder.
+The distribution is lopsided. On a quiet laptop the frontend's five core legs measure ds-gates 12s, drift 3s, lint 2s, unit 75s, build 3s. `fe-unit` alone is about 79% of those 95s, and everything else together is 20s. An optimization that does not touch the vitest suite works on the remainder.
 
-### What has already been tried, and rejected
+### Speed-ups measured and rejected
 
-Each of these looks obviously right and is not. They are recorded because the
-measurement is the expensive part, and re-deriving a "no" costs the same as
-deriving it the first time.
-
-- **`pool: threads` for vitest.** Reads as a large win under load and is a loss
-  on an idle machine: forks 73s vs threads 99s measured quiet, the sign opposite
-  to the contended reading that suggested it. It also shares one jsdom across a
-  worker's files, which two suites here depend on not happening (#2866). vitest
-  4's `forks` default is correct for this tree.
-- **Fanning `frontend-check`'s five legs out under `-j`.** Four of them begin
-  with `pnpm install --frozen-lockfile` into one `frontend/node_modules`;
-  concurrently they race the `.bin` symlink farm and leave the tree broken
-  (`ENOENT ... chmod`, exit 2). That CI runs these five as parallel *jobs* is not
-  evidence for it: a CI job has its own checkout, so the isolation the local run
-  needs is the one thing CI's green never tested. A working fan-out was worth
-  about 20s.
-- **Running `check-backend` and `check-fe` concurrently.** The backend's last two
-  phases (`drift`, `check-composition`) REWRITE `build/composition/` and
-  `*_gen.go` in place, and both frontend legs read `build/composition/`. This is
-  the write-under-reader race the backend `check` recipe already keeps its own
-  phases serial to avoid — running the halves together reintroduces it across a
-  wider surface.
+- **`pool: threads` for vitest.** A loss on an idle machine: forks 73s vs threads 99s measured quiet. It also shares one jsdom across a worker's files, which two suites here cannot tolerate ([#2866](https://github.com/margince/margince/issues/2866)). vitest 4's `forks` default is correct for this tree.
+- **Fanning `frontend-check`'s five legs out under `-j`.** Four of them begin with `pnpm install --frozen-lockfile` into one `frontend/node_modules`. Run together, they race the `.bin` symlink farm and leave the tree broken (`ENOENT ... chmod`, exit 2). CI runs them as parallel jobs only because each CI job has its own checkout. A working fan-out would save about 20s.
+- **Running `check-backend` and `check-fe` concurrently.** The backend's last two phases (`drift`, `check-composition`) rewrite `build/composition/` and `*_gen.go` in place, and both frontend legs read `build/composition/`. The backend `check` recipe keeps its own phases serial to avoid that race.
 
 ## Occasional
 
 | Target | What it does |
 |---|---|
-| `vuln` | govulncheck over all packages. Not part of `check` — it answers against a database that changes daily, so it runs per-PR in `ci.yml` and again daily against `main` in `scheduled.yml`, which is the only lane that can find a vulnerability disclosed after a merge |
-| `hooks` (root) | Point git at `.githooks/` (`core.hooksPath`), arming the diff-scoped pre-push craft gate and the store-path/jurisdiction script gates. Run once after cloning; `make install` does it for you. The backend's own `make -C backend hooks` is a **different** target that installs `scripts/pre-commit` (gofmt + license header) — it does **not** set `core.hooksPath`, so it alone leaves the strict pre-push gate disarmed |
-| `check-gates` | The meta-gate lane: the waiver census, the obligations derived from the migrations and the contract, and the walk-scope proofs. A dev-loop convenience — deliberately **not** a `check-backend` prerequisite, since `make -C backend check` already runs these tests uncached |
+| `vuln` | govulncheck over all packages. Not part of `check`: it answers against a database that changes daily, so it runs per-PR in `ci.yml` and daily against `main` in `scheduled.yml`. Only the daily run can find a vulnerability disclosed after a merge |
+| `hooks` (root) | Point git at `.githooks/` (`core.hooksPath`), arming the diff-scoped pre-push craft gate and the store-path/jurisdiction script gates. Run once after cloning; `make install` does it for you. The backend's own `make -C backend hooks` is a different target that installs `scripts/pre-commit` (gofmt + license header). It does not set `core.hooksPath`, so alone it leaves the strict pre-push gate disarmed |
+| `check-gates` | The meta-gate lane: the waiver census, the obligations derived from the migrations and the contract, and the walk-scope proofs. A dev-loop convenience and not a `check-backend` prerequisite, since `make -C backend check` already runs these tests uncached |
 | `tools` / `tools-go` | Install every gate binary at its pinned version (fresh-machine bootstrap) |
 | `migrate-up` / `migrate-down` | Alias for `migrate` / roll back the last migration(s) (`STEPS=n`) |
-| `migrate-create` | `make migrate-create NAME=add_renewal_risk` — scaffold a core `.up.sql`/`.down.sql` pair named for the current unix second. The clock, not the next number in a sequence: two branches open at once pick the same number and `main` stops loading once both merge. The four-digit `0001`–`0292` sequence is closed; ten-digit stamps sort above it |
-| `run` | `go run ./cmd/api` on `:8080` — no db-up/migrate first |
-| `seed-reset` / `seed-dev-db` | Clear the demo records, keeping the installation / apply the API-less dev SQL seed. **`seed-reset` is also the weekly-review rebuild.** A weekly review is a frozen reading of one week, written once under `uq_weekly_review_user_week` with `ON CONFLICT DO NOTHING`, and the generator skips a seat that already has one — so a review the dispatcher made at boot against the empty installation survives `make seed-dev` and reads as a week in which nothing happened. `seed-dev` cannot correct it; clearing the records is what rebuilds it. `audit_log` is preserved either way |
+| `migrate-create` | `make migrate-create NAME=add_renewal_risk`: scaffold a core `.up.sql`/`.down.sql` pair named for the current unix second. A sequence number would let two open branches pick the same number, and `main` would stop loading once both merge. The four-digit `0001`–`0292` sequence is closed; ten-digit stamps sort above it |
+| `run` | `go run ./cmd/api` on `:8080`, with no db-up/migrate first |
+| `seed-reset` / `seed-dev-db` | Clear the demo records, keeping the installation / apply the API-less dev SQL seed. `seed-reset` also rebuilds weekly reviews: see [Weekly reviews and seed-reset](#weekly-reviews-and-seed-reset). `audit_log` is preserved either way |
 | `psql` / `redis-cli` | Open a shell on the dev database (owner role) / dev Redis |
 | `test-v` / `test-cover` | Verbose unit tests / unit tests with a coverage summary |
 | `db-wait` / `infra-logs` / `infra-reset` | Block until Postgres answers / tail the dev-stack logs / wipe volumes and restart the stack |
 | `bench-perf` | The PERF benchmark harness on the mid-market tier, writing a record (needs `db-up`; seeds 250k contacts) |
-| `bench-perf-check` | The same budgets on the **SMB** tier, writing nothing — what the weekly scheduled workflow runs (needs `db-up`) |
+| `bench-perf-check` | The same budgets on the SMB tier, writing nothing: what the weekly scheduled workflow runs (needs `db-up`) |
 | `bench-record` | PERF-1/PERF-4: record open and save p50/p95/p99, measured over HTTP against the booted app (needs `db-up`) |
 | `bench-capture` | CAP-PARAM-1: capture-to-timeline latency, 60 s p95, over the auto-create path (needs `db-up`) |
-| `bench-dispatch` | AC-W2: workflow trigger→dispatch p95 against the 200 ms budget (needs `db-up`). Writes no record, AC-W2 having no published budget row, so it is the one `bench-*` target that re-renders nothing |
+| `bench-dispatch` | AC-W2: workflow trigger→dispatch p95 against the 200 ms budget (needs `db-up`). Writes no record, because AC-W2 has no published budget row, so it is the one `bench-*` target that re-renders nothing |
 | `perfdoc` | Re-render `docs/reference/performance-budgets.md` from the committed benchmark records. Every `bench-*` target runs it as its last step, so the page updates on every measurement; run it alone after editing the published-budget table in `backend/tools/gen-perfdoc` |
 | `tidy` | `go mod tidy` |
 
-### The `bench` lane — measurements, run by hand
+### Weekly reviews and seed-reset
 
-`bench-perf`, `bench-perf-check`, `bench-record`, `bench-capture` and
-`bench-dispatch` carry `//go:build integration && bench`, so **no MERGE gate runs
-them**: not `make check`, not the integration lane. They report the numbers behind
-the budgets `acceptance-standards.md` publishes rather than gating on them, which
-is why each prints p50/p95/p99 beside its budget. `bench-mobile` below is the
-frontend half of the same posture.
+A weekly review is a frozen reading of one week, written once under `uq_weekly_review_user_week` with `ON CONFLICT DO NOTHING`. The generator skips a seat that already has one. A review the dispatcher made at boot against the empty installation therefore survives `make seed-dev` and reads as a week in which nothing happened. `seed-dev` cannot correct it; `seed-reset` clears the records and so rebuilds it.
 
-They are still **type-checked** on every `make check`: both golangci passes carry
-the tag, and `gates/lintbuildtagreach_test.go` fails if either stops. That is load-bearing rather than
-tidiness — nothing scheduled compiles these files, so without it a renamed helper
-would break them silently and nobody would find out until the next contact ran a
-benchmark by hand and had to debug the harness instead of reading a number.
+### The `bench` lane: measurements, run by hand
 
-Each target that publishes a budget re-renders `performance-budgets.md` from
-**every** committed record, not just the one it wrote — so a partial run still
-leaves a complete page, with the rows it did not measure keeping their own dates
-and their own machines. A budget no record covers renders as `not measured`
-rather than being dropped, which is the whole reason the page lists the
-published set instead of the measured one.
+`bench-perf`, `bench-perf-check`, `bench-record`, `bench-capture` and `bench-dispatch` carry `//go:build integration && bench`, so no merge gate runs them: not `make check`, not the integration lane. They report the numbers behind the budgets `acceptance-standards.md` publishes, which is why each prints p50/p95/p99 beside its budget. `bench-mobile` below is the frontend half of the same posture.
 
-`bench-perf` is the one thing here a schedule touches, and only through
-`bench-perf-check`. PERF-3/PERF-7 used to ride the standing integration lane at
-the SMB tier as a canary; it stopped, because it was 37.9 s of every merge gate
-— a quarter of its package — for a claim it could not make. A PERF-7 row
-measured below mid-market renders `inconclusive`, never `within budget`: the
-canary's number satisfies a bound it was not measured against. So the merge gate
-paid a mid-market price for an SMB answer.
+They are still type-checked on every `make check`: both golangci passes carry the tag, and `gates/lintbuildtagreach_test.go` fails if either stops. Nothing else compiles these files, so this check is what catches a renamed helper before someone runs a benchmark by hand.
 
-The weekly scheduled workflow now runs `bench-perf-check` on the SMB tier
-instead, which is where drift nobody looks for gets found. Not mid-market: that
-tier seeds 250k contacts and 500k activities and does not finish inside `go
-test`'s 30m budget (measured — SMB 46.6s, mid-market killed at 1800.7s on a fast
-laptop), and a scheduled job that cannot finish does not report "slow", it goes
-red and files an issue claiming a budget breach that was never measured. It
-writes nothing:
-`MARGINCE_BENCH_RECORD=1` is set by `bench-perf` alone, because publishing a
-number stays a human's act — a machine must never write its own numbers into the
-tree. The write-path regression the standing canary once caught by TIMING OUT
-rather than by measuring is held deterministically now, by the `seq_scan` count
-in `lastactivity_integration_test.go`.
+Each target that publishes a budget re-renders `performance-budgets.md` from every committed record, beyond the one it wrote. A partial run still leaves a complete page, with the rows it did not measure keeping their own dates and machines. A budget no record covers renders as `not measured` rather than being dropped, so the page lists the published set of budgets.
 
-`bench-dispatch` arrived on a `main-health` p95 of 201.63 ms against 200 ms.
+The weekly scheduled workflow runs `bench-perf-check` on the SMB tier, which is where unwatched drift gets found. Rules for that run:
+
+- The merge gate does not run PERF-3/PERF-7. A PERF-7 row measured below mid-market renders `inconclusive`, never `within budget`, so an SMB run in the merge gate cannot answer the mid-market budget.
+- The scheduled run uses SMB because the mid-market tier seeds 250k contacts and 500k activities. It does not finish inside `go test`'s 30m budget (SMB 46.6s, mid-market killed at 1800.7s on a fast laptop).
+- It writes nothing. `MARGINCE_BENCH_RECORD=1` is set by `bench-perf` alone, because publishing a number stays a human's act.
+- The write-path regression a timed canary would catch is held deterministically by the `seq_scan` count in `lastactivity_integration_test.go`.
 
 ## Root-only (frontend lane)
 
 | Target | What it does |
 |---|---|
-| `frontend-check` | The frontend gate, node-only: `fe-ds-gates`, `fe-drift`, `fe-lint`, `fe-unit`, `fe-build` in that order. It is spelled as those five legs rather than inline because CI runs them as three parallel jobs and both callers have to mean the same thing — `TestEveryLocalFrontendGateLegRunsInCI` fails if a leg added here reaches no CI job |
-| `fe-ds-gates` | The design-system purity/font-lock/icon-glyph/spacing/spacing-role/space-token script gates, as one target. The native-control, extension-import and action-row gates are NOT here: they read the TypeScript AST and run in `fe-unit` with the rest of the vitest suite |
+| `frontend-check` | The frontend gate, node-only: `fe-ds-gates`, `fe-drift`, `fe-lint`, `fe-unit`, `fe-build` in that order. Spelled as those five legs because CI runs them as three parallel jobs and both callers have to mean the same thing. `TestEveryLocalFrontendGateLegRunsInCI` fails if a leg added here reaches no CI job |
+| `fe-ds-gates` | The design-system purity/font-lock/icon-glyph/spacing/spacing-role/space-token script gates, as one target. The native-control, extension-import and action-row gates are not here: they read the TypeScript AST and run in `fe-unit` with the rest of the vitest suite |
 | `fe-drift` | The TS type-drift gate: `pnpm gen:api`, then fail if the committed `src/api/schema.d.ts` / `public-events.ts` moved |
-| `fe-unit` / `fe-unit-merge` | The vitest suite, and the target that adds a sharded one back up. `FE_COVERAGE=1` instruments the run so it also writes `frontend/coverage/lcov.info` for the `sonarcloud` job — what CI passes, and about a third slower, which is why it is not the default a developer pays. On those runs `frontend/scripts/check-lcov-paths.sh` reads the report back before anything ships it: the scanner drops a path it cannot resolve in silence, so an unchecked lcov and an untested frontend look identical downstream (#1541). `FE_SHARD=k/N` runs slice k of N and writes a blob report instead of an lcov; `fe-unit-merge` (CI only — nothing writes a blob unless `FE_SHARD` asked for one) merges the blobs with `vitest --merge-reports`, which runs no test, and then gates what it built twice: `frontend/scripts/check-shard-union.sh` compares the merged report against vitest's own file discovery, so a slice that never reported cannot pass for a suite that did, and `check-lcov-paths.sh` on the report about to be uploaded |
-| `fe-clock-drift` | The same vitest suite, run as if it were `FE_CLOCK_SKEW_DAYS` (200) from now, and required to reach the same verdict. Not part of `frontend-check` and not a PR gate: the change that breaks these tests is the calendar rather than a diff, so it runs daily on `main` from `scheduled.yml`. It exists because three tests began failing on a date nobody edited anything on (#1977) — a fixture carried an absolute expiry the component compares to `now`. A grep cannot replace it: "an absolute date in a file that never pins the clock" matches 129 files here, nearly all harmless, and nothing static separates a date a component FORMATS from one it COMPARES |
+| `fe-unit` / `fe-unit-merge` | The vitest suite, and the target that merges a sharded run. See [fe-unit coverage and shards](#fe-unit-coverage-and-shards) |
+| `fe-clock-drift` | The same vitest suite, run as if it were `FE_CLOCK_SKEW_DAYS` (200) from now, and required to reach the same verdict. Not part of `frontend-check` and not a PR gate: a calendar date breaks these tests with no diff, so it runs daily on `main` from `scheduled.yml`. A grep cannot replace it: "an absolute date in a file that never pins the clock" matches 129 files here, nearly all harmless. Nothing static separates a date a component formats from one it compares to `now` |
 | `fe-quality` | The CI aggregate: every leg of the gate except the unit suite and the bundle, plus the composed-SPA typecheck and the unit screens' suites. Needs a Go toolchain (it composes) |
 | `fe-bundle` | The CI aggregate: `fe-build` + `fe-storybook` |
 | `fe-install` / `fe-lint` / `fe-test` / `fe-build` / `fe-storybook` / `fe-format` / `fe-preview` | The individual frontend steps (`pnpm` wrappers) |
-| `ds-purity` / `font-lock` / `icon-lint` / `ds-spacing` / `ds-spacing-roles` | The design-system script gates, runnable alone. The last two are the two halves of one rule: `ds-spacing` holds the vocabulary (a token, never a raw px, diff-scoped against the raw-px backlog) and `ds-spacing-roles` the grammar (in a context the design language names, the role rather than the rung — `var(--gapActions)` between two buttons, `var(--padCard)`/`var(--padPanel)` inside a surface), plus the rule that a screen never re-spaces a design-system primitive. The roles gate is whole-tree: that backlog was cleared to zero before it was armed |
-| `native-controls` / `ext-imports` / `action-rows` | The source-wide gates that read the TypeScript AST rather than the text, so both run in `fe-unit` with the rest of the vitest suite; these targets exist to run one of them alone. `native-controls` refuses `<select>`, `<option>` or `<optgroup>` anywhere under `frontend/src` or an extension's frontend layer — there is no exemption, `design-system/select.tsx` included. `ext-imports` holds a unit's screen to `frontend/package.json`'s `exports` map and to what the unit's own `package.json` declares. `action-rows` holds that a container of two or more sibling buttons takes `gap: var(--gapActions)` — reading the markup for the row and the stylesheets for what its class gets, which is the only way to see a row that names a class no stylesheet defines. Their shared walk is `frontend/scripts/lib/source-tree.ts` |
+| `ds-purity` / `font-lock` / `icon-lint` / `ds-spacing` / `ds-spacing-roles` | The design-system script gates, runnable alone. `ds-spacing` holds the vocabulary: a token, never a raw px, diff-scoped against the raw-px backlog. `ds-spacing-roles` holds the grammar: in a context the design language names, use the role rather than the rung (`var(--gapActions)` between two buttons, `var(--padCard)`/`var(--padPanel)` inside a surface). It also holds that a screen never re-spaces a design-system primitive. The roles gate is whole-tree; its backlog was cleared to zero before it was armed |
+| `native-controls` / `ext-imports` / `action-rows` | Source-wide gates that read the TypeScript AST, so they run in `fe-unit` with the rest of the vitest suite; these targets run one alone. `native-controls` refuses `<select>`, `<option>` or `<optgroup>` anywhere under `frontend/src` or an extension's frontend layer, with no exemption (`design-system/select.tsx` included). `ext-imports` holds a unit's screen to `frontend/package.json`'s `exports` map and to what the unit's own `package.json` declares. `action-rows` holds that a container of two or more sibling buttons takes `gap: var(--gapActions)`. It reads the markup for the row and the stylesheets for its class, which also catches a row naming a class no stylesheet defines. Their shared walk is `frontend/scripts/lib/source-tree.ts` |
 | `gen-types` / `gen-types-check` | Aliases for backend `gen` / `drift` |
 | `seed-dev` | API-seed the demo workspace against a running stack (idempotent), then the API-less extras (`seed-dev-db`) |
-| `verify-boot` | Prove a running, seeded stack end to end: seeded-admin login, seeded contacts over `/v1`, frontend production build — pure client, fails loudly |
+| `verify-boot` | Prove a running, seeded stack end to end: seeded-admin login, seeded contacts over `/v1`, frontend production build. Pure client, fails loudly |
 | `frontend-e2e` | The screen-acceptance UAT harness: AC-named tests + 390px sweep + axe WCAG 2.2 AA, against the built app over the seed mock (`BASE_URL=…` targets a live backend). Wired into CI as the `uat` job |
-| `bench-mobile` | MOBILE-AC-2: record open p95 against the 300 ms **perceived** budget on a throttled Fast-3G profile at 390px (MOBILE-PARAM-2). The by-hand frontend measurement, which is what publishes the record: the `uat` lane keeps the structural claim without a number, because a single wall-clock sample there measures the runner. Switched on by `MARGINCE_BENCH_MOBILE=1`, which is what keeps the two runs from collecting each other's specs: `pnpm e2e` does not see `perf-mobile.spec.ts`, and this target sees nothing else |
-| `bench-mobile-check` | The same measurement writing NOTHING — what the weekly scheduled workflow runs (`perf-mobile` in `scheduled.yml`). It clears `MARGINCE_BENCH_RECORD` rather than leaving it unset, for the reason `bench-perf-check` states: writing nothing must be a property of the target and not of whatever the caller's shell exported. This is what gives PERF-1's perceived budget a heartbeat; `bench-mobile` remains the only thing that publishes a number |
-| `storybook` | The component workbench on `:6006` — the design-system catalog and the story surface `fe-uat` renders. Stories live beside their component as `<name>.stories.tsx` |
-| `fe-uat` | Change-scoped Storybook render+capture UAT for frontend-only diffs: renders THIS branch's changed component's stories in headless Chromium and screenshots them on parallel pages (no live stack, no DB; `FE_UAT_WORKERS` sets the count, default half the cores, max 4). Fails on an unclean render, an unregistered story, or a changed component with no story. Artifact: `.tmp/fe-uat/manifest.json`. Deliberately **not** in `make check` — the fe-only UAT lane a coordinator runs instead of the full stack. `ARGS="--allow-missing"` |
+| `bench-mobile` | MOBILE-AC-2: record open p95 against the 300 ms perceived budget on a throttled Fast-3G profile at 390px (MOBILE-PARAM-2). The by-hand frontend measurement, and what publishes the record. The `uat` lane keeps the structural claim without a number, because a single wall-clock sample there measures the runner. Switched on by `MARGINCE_BENCH_MOBILE=1`, which keeps the two runs apart: `pnpm e2e` does not see `perf-mobile.spec.ts`, and this target sees nothing else |
+| `bench-mobile-check` | The same measurement writing nothing: what the weekly scheduled workflow runs (`perf-mobile` in `scheduled.yml`). It clears `MARGINCE_BENCH_RECORD` rather than leaving it unset, so writing nothing is a property of the target and does not depend on the caller's shell. This gives PERF-1's perceived budget a heartbeat; `bench-mobile` remains the only thing that publishes a number |
+| `storybook` | The component workbench on `:6006`: the design-system catalog and the story surface `fe-uat` renders. Stories live beside their component as `<name>.stories.tsx` |
+| `fe-uat` | Change-scoped Storybook render+capture UAT for frontend-only diffs: renders this branch's changed component's stories in headless Chromium and screenshots them on parallel pages (no live stack, no DB; `FE_UAT_WORKERS` sets the count, default half the cores, max 4). Fails on an unclean render, an unregistered story, or a changed component with no story. Artifact: `.tmp/fe-uat/manifest.json`. Not in `make check`: it is the fe-only UAT lane a coordinator runs instead of the full stack. `ARGS="--allow-missing"` |
+
+### `fe-unit` coverage and shards
+
+- `FE_COVERAGE=1` instruments the run so it also writes `frontend/coverage/lcov.info` for the `sonarcloud` job. CI passes it; it is about a third slower, so it is not the default.
+- On those runs `frontend/scripts/check-lcov-paths.sh` reads the report back before anything ships it. The scanner drops a path it cannot resolve without a warning, so an unchecked lcov and an untested frontend look the same downstream ([#1541](https://github.com/margince/margince/issues/1541)).
+- `FE_SHARD=k/N` runs slice k of N and writes a blob report instead of an lcov.
+- `fe-unit-merge` (CI only; nothing writes a blob unless `FE_SHARD` asked for one) merges the blobs with `vitest --merge-reports`, which runs no test. It then checks the result twice. `frontend/scripts/check-shard-union.sh` compares the merged report against vitest's own file discovery, so a slice that never reported cannot pass. `check-lcov-paths.sh` checks the report about to be uploaded.
 
 ## One stack per worktree
 
-`make dev` runs a full stack that will not collide with another worktree's: the
-ONE shared infra (Postgres/Redis/MinIO on `15432`/`16379`/`29000`), but a private
-database, a private **Redis logical database**, a private object bucket, and its
-own api/FE port pair.
+`make dev` runs a full stack that will not collide with another worktree's. All stacks share the one infra (Postgres/Redis/MinIO on `15432`/`16379`/`29000`), but each gets a private database, a private **Redis logical database**, a private object bucket, and its own api/FE port pair.
 
-Nothing has to be passed for that. A **linked worktree** derives its slug from
-its own directory name, so `.claude/worktrees/cfg-retire` gets
-`margince_dev_cfg-retire`. The **primary worktree** keeps the shared `margince`
-database, Redis db 0 and the app on the base `:8080`, because `make migrate`,
-`make seed-dev` and `make verify-boot` all target that database by name.
-`DEV_SLUG=<slug>` overrides the derived name when you want a second stack inside
-one worktree.
+Nothing has to be passed for that. A **linked worktree** derives its slug from its own directory name, so `.claude/worktrees/cfg-retire` gets `margince_dev_cfg-retire`. The **primary worktree** keeps the shared `margince` database, Redis db 0 and the app on the base `:8080`, because `make migrate`, `make seed-dev` and `make verify-boot` all target that database by name. `DEV_SLUG=<slug>` overrides the derived name when you want a second stack inside one worktree.
 
-Logs, pids and claims live under `$XDG_STATE_HOME/margince/dev/<slug>/`
-(`~/.local/state/...` by default), and the primary worktree's stack — which has
-no slug — uses `_base/` there. **One directory per machine, not per worktree**:
-that is load-bearing rather than tidy, because the registry below is only a
-registry if every worktree reads the same one. `DEV_SLUG=_base` is refused for
-the same reason, since it would land a second stack on the primary's own state.
+Logs, pids and claims live under `$XDG_STATE_HOME/margince/dev/<slug>/` (`~/.local/state/...` by default); the primary worktree's stack, which has no slug, uses `_base/` there. There is one directory per machine, shared by every worktree, because the registry below only works if every worktree reads the same one. `DEV_SLUG=_base` is refused for the same reason: it would land a second stack on the primary's own state.
 
-Every script that needs those paths gets them from `scripts/lib-devstate.sh`
-rather than composing them — `make dev-logs` spent one revision of this change
-looking for a file `make dev` no longer wrote, and reporting it as "is the stack
-up?".
+Every script that needs these paths gets them from `scripts/lib-devstate.sh`. Do not compose them by hand.
 
-**The Redis index is isolation, not tidiness.** The stream names and consumer
-groups are constants (`gw:events:crm:*`, `cg:*`), so two stacks on one index
-share one consumer group: whichever worker reads an entry first consumes it,
-resolves it against its OWN Postgres, finds nothing, and acks. The other
-stack's event is gone, and a projection or accrual that never runs looks
-exactly like a broken feature — it cost a day and a wrongly-filed critical bug
-once.
+The Redis index isolates the stacks' events. The stream names and consumer groups are constants (`gw:events:crm:*`, `cg:*`), so two stacks on one index share one consumer group. Whichever worker reads an entry first consumes it, resolves it against its own Postgres, finds nothing, and acks. The other stack's event is lost, and the lost event looks like a broken feature.
 
-The instance serves 80 databases in three blocks: **0** is the primary
-worktree's stack, **1–63** the parallel integration lane (one per package, which
-`FLUSHDB`s), and **64–79** per-worktree stacks. A stack takes the lowest free
-index in its block, claimed under a lock and recorded in the machine-global
-registry, so restarting reclaims its own index and two stacks never share one. A
-17th concurrent stack is refused rather than doubled up.
+The instance serves 80 databases in three blocks: **0** is the primary worktree's stack, **1–63** the parallel integration lane (one per package, which `FLUSHDB`s), and **64–79** per-worktree stacks. A stack takes the lowest free index in its block, claimed under a lock and recorded in the machine-global registry. Restarting reclaims its own index, and two stacks never share one. A 17th concurrent stack is refused rather than doubled up.
 
-**Ports are claimed the same way, from 8081–8179 (api at +10000).** They used to
-be derived from `8080 + cksum(slug) % 1000`, and two hashes differing by a
-multiple of the block size took different ports and the SAME Redis database — a
-collision the port check could not see. A claim also skips a port some unrelated
-process is listening on, which a hash cannot.
+Ports are claimed the same way, from 8081–8179 (api at +10000). A claim also skips a port some unrelated process is listening on.
 
-`make dev-stop [DEV_SLUG=<slug>] [DROP=1]` stops **this worktree's** stack;
-`DROP=1` also drops its per-slug database, never the shared `margince`.
+`make dev-stop [DEV_SLUG=<slug>] [DROP=1]` stops this worktree's stack; `DROP=1` also drops its per-slug database, never the shared `margince`.
 
-`make dev-sweep [DROP=1]` clears **every** stack on the machine — every
-api/worker/vite, recorded, orphaned, or belonging to another worktree — and is
-the only thing that does. It used to be what a bare `make dev` did on the way up,
-which made the routine command the destructive one: it killed every parallel
-session's stack and dropped databases another agent was mid-test against.
-
-## The API is a compiled binary, and Vite is not
-
-`make dev` runs two very different things. Vite hot-reloads the frontend, so a
-change under `frontend/src/` is in your browser by the time you have switched
-windows. **The API does not hot-reload.** It is a compiled Go binary, so every
-backend change — a new endpoint, a migration, a handler fix — needs `make dev`
-again before it reaches the browser at all.
-
-This is worth its own heading because of how it fails. The stale binary keeps
-answering perfectly happily, so the SPA calls endpoints it has never heard of and
-the app breaks in ways that look exactly like a bug in the code you just wrote. An
-old server is indistinguishable from a broken feature.
-
-The same shape catches you across branches, and this tree is often worked in
-several worktrees at once. So before you trust **any** manual test, confirm both:
-
-- `git branch --show-current` is the branch you think it is, and
-- the **API** process was started *after* your last backend change. That is the
-  one behind the app port — `:18080` for the primary worktree, a claimed port for
-  a linked one, both printed by the startup banner. The app port itself is Vite,
-  which hot-reloads, so its start time tells you nothing about the binary that
-  does not.
-
-Neither costs anything to check, and skipping them costs a debugging session.
+`make dev-sweep [DROP=1]` clears every stack on the machine (every api/worker/vite, recorded, orphaned, or belonging to another worktree) and is the only thing that does. Other sessions' stacks and databases go with it, so run it only when you mean to clear the machine.
 
 ## Root-only (craftsmanship gate)
 
 | Target | What it does |
 |---|---|
-| `test-craft-pin` | Prove the pinned craftsmanship gate is actually pinned: all four platform digests are real sha256s, the resolver yields the gate from its own cache path rather than something found on `PATH`, and the cached binary still matches its digest. A prerequisite of `craft-static`, so it runs wherever the gate runs and nowhere it does not — enrolling it in `ROOT_SCRIPT_GATES` would put a network fetch inside `make check-backend`, whose CI job otherwise never reaches the network and should not start failing on a download flake. It exists because the failure it catches is silent: a resolver that quietly fell back to some other `craft` would turn every craft lane green against an unknown rubric, and nothing downstream could tell |
-| `craft-static` | Full deterministic craftsmanship sweep of `backend/`, `extensions/` and `fixtures/` (each a separate Go module, so `./...` never reaches the latter two), **strict**: BLOCKER and MAJOR findings both fail it, MINOR is advisory. Green — the backlog was cleared to arm this bar. The pre-push hook runs the same bar diff-scoped, and CI's `craftsmanship` job runs this target as a required check. Size ceilings: 80 code lines / 500 file lines for product code, 160 / 1000 for `*_test.go`; a comment-only line is not length, so this check agrees with golangci's `funlen` (`ignore-comments`). Every threshold has a flag: `--max-func-lines`, `--max-file-lines`, `--max-test-func-lines`, `--max-test-file-lines` |
-| `craft-review` | **Opt-in, and the only craft target that is not enforced anywhere.** The model-driven arm: sends this branch's diff (`BASE`, default `origin/main`) to an external model API and reports what a syntax tree cannot see — the judgement calls in the rubric, not the countable properties. No hook runs it, no CI job runs it, and it blocks no push; `craft-static` is the arm that does all three. It calls a paid API and needs `ANTHROPIC_API_KEY`, which nothing sets for you. It **refuses** rather than reporting a pass it did not earn: with no key, and again when the reviewer comes back having skipped — that answer is `verdict: PASS` with an empty findings list, which is indistinguishable from a clean diff, so relaying it would report a clean review to everyone who has not activated it. Result JSON is kept at `.tmp/craft/review-result.json`. **Revisit 2026-12-01**: if nobody has run it by then, delete the arm and correct the two statements in AGENTS.md that describe it — the gate prompt fed from `## Craftsmanship`, and the rubric named as the standard |
-| `test-release-version-stamped` | Prove the release bake refuses to publish a set that carries no release version. An empty or `dev` `VERSION` builds and pushes perfectly well, and ships a fleet whose mixed-release guard is **inert** — every role reads both as "this build does not know", and unknown disables every comparison. Nothing downstream can tell that from a working guard: the images look finished, the roles all start, and the protection an operator believes they have refuses nothing. So the one path that must always stamp proves it (`scripts/release-version-stamped.sh`, called before the bake), and this proves the proof still refuses. Pure shell — no Docker, no registry |
-| `test-craft-review` | Prove `craft-review` refuses a reading that did not happen: no key, a result the reviewer skipped, and a blocking verdict it must not swallow — against a real reading it must not refuse, so the refusals are the two cases they name rather than a wrapper that never passes. The reviewer is stubbed: it is an external HTTP boundary, and a test that called it would spend a paid request to assert on a refusal that never gets that far. Pure shell — no network, no key. A `check-backend` gate |
-| `test-desktop-launcher` | The desktop launcher's own suite. `desktop/launcher` is its own module and deliberately outside `go.work` — it supervises the shipped binaries as child processes rather than importing them — so neither the workspace nor `./...` inside `backend` can reach it, and its tests ran nowhere before this lane existed. Runs with `GOWORK=off`, as that module's `go.mod` requires. A `check-backend` prerequisite |
-| `craft-residue` | Fail if any unresolved `CRAFT-FIX`/`CRAFT-DISPUTE` review-loop marker is left in the backend tree. CI's `craft-residue` job runs it on **every** non-draft change, docs included |
-| `secret-scan` | No hardcoded credential reaches `main`: gitleaks over a clean `git archive HEAD` export, policy in `.gitleaks.toml`. Scans the committed tree, not the working tree — gitleaks ignores `.gitignore`, so an in-place scan would read a sibling worktree or your real `.env.local` and differ per machine. Installs nothing on your machine and needs no account: `scripts/gitleaks-pin.sh` fetches the version- and checksum-pinned scanner into `.tmp/` on first use, so the binary — and therefore the verdict — is the one CI's `secret-scan` job runs on every non-draft change |
-| `test-api-entrypoint` | Prove `scripts/deploy/api-entrypoint.sh` writes the bootstrap admin credential **only** onto an unprovisioned installation, retires one a previous boot left, and refuses to start when its probe cannot answer. Stubs `margince-migrate`/`margince-api` on `PATH`, so it needs no container and no database. Every failure on that path is silent — a credential written to a live installation looks exactly like one that was not — and the entrypoint runs where nobody is watching. CI runs it beside the secret gate |
-| `test-dev-dsn` | Prove `scripts/dev.sh` resolves its DSNs through the same names the binaries read (`MARGINCE_OWNER_DSN` / `MARGINCE_DSN`) after an explicit `OWNER_DSN`/`APP_DSN` argument, still names the database itself so a `DEV_SLUG` stack cannot land on the base one, carries a query string like `?sslmode=require` across the swap, and never echoes a DSN. Pure shell — no Docker, no database |
-| `test-dev-isolation` | Prove two worktrees get two stacks: the slug is derived from the worktree, the Redis logical database and the port pair are CLAIMED from one machine-global registry rather than hashed, a port with a foreign listener is skipped, an exhausted block is refused rather than doubled up, and the integration lane's template is per worktree. Pure shell — no Docker, no database |
-| `test-secret-scan` | Prove `secret-scan` still catches: plant a credential-shaped token in each file `.gitleaks.toml` exempts, and require the scan to fail anyway. An over-broad allowlist reports "no leaks found" exactly like a clean tree — this is the only thing that tells them apart. CI runs it right after the scan |
-| `test-sbom-sign` | Prove `sbom-sign` signs what is unsigned and skips what already carries a bundle at least as new as itself. A Rekor entry is permanent and cannot be retracted, so a re-run that signs again leaves the first entry corroborating nothing — and a run that re-signs everything looks exactly like a clean one. cosign is stubbed; what is under test is which files reach it |
-| `check-craft-doc` | Assert AGENTS.md still carries its `## Craftsmanship` section — a cheap doc floor so the gate's rules cannot be silently unpinned from the rulebook. A `check-backend` prerequisite |
+| `test-craft-pin` | Prove the pinned craftsmanship gate is pinned: all four platform digests are real sha256s, the resolver yields the gate from its own cache path rather than from `PATH`, and the cached binary still matches its digest. A prerequisite of `craft-static`, so it runs wherever the gate runs and nowhere else. It stays out of `ROOT_SCRIPT_GATES` because that would put a network fetch inside `make check-backend`, whose CI job never reaches the network. A resolver that fell back to some other `craft` would turn every craft lane green against an unknown rubric, and nothing downstream could tell |
+| `craft-static` | Full deterministic craftsmanship sweep of `backend/`, `extensions/` and `fixtures/` (each a separate Go module, so `./...` never reaches the latter two). Strict: BLOCKER and MAJOR findings both fail it, MINOR is advisory. The tree is green. The pre-push hook runs the same bar diff-scoped, and CI's `craftsmanship` job runs this target as a required check. Size ceilings: 80 code lines / 500 file lines for product code, 160 / 1000 for `*_test.go`. A comment-only line is not length, so this check agrees with golangci's `funlen` (`ignore-comments`). Every threshold has a flag: `--max-func-lines`, `--max-file-lines`, `--max-test-func-lines`, `--max-test-file-lines` |
+| `craft-review` | **Opt-in, and enforced nowhere.** The model-driven arm: sends this branch's diff (`BASE`, default `origin/main`) to an external model API and reports the judgement calls in the rubric that a syntax tree cannot see. No hook or CI job runs it, and it blocks no push; `craft-static` is the enforced arm. It calls a paid API and needs `ANTHROPIC_API_KEY`, which nothing sets for you. It refuses rather than reporting an unearned pass: with no key, and when the reviewer comes back having skipped. A skip returns `verdict: PASS` with an empty findings list, which looks the same as a clean diff. Result JSON is kept at `.tmp/craft/review-result.json` Whether to keep the arm is [#1819](https://github.com/margince/margince/issues/1819). |
+| `test-release-version-stamped` | Prove the release bake refuses to publish a set that carries no release version. An empty or `dev` `VERSION` builds and pushes, and ships a fleet whose mixed-release guard is inert: every role reads it as "this build does not know", and unknown disables every comparison. The images look finished and the roles all start, so nothing downstream can tell. The release path proves it stamps (`scripts/release-version-stamped.sh`, called before the bake), and this target proves that proof still refuses. Pure shell, no Docker, no registry |
+| `test-craft-review` | Prove `craft-review` refuses a reading that did not happen (no key, a result the reviewer skipped, a blocking verdict it must not swallow) and accepts a real reading. The reviewer is stubbed: it is an external HTTP boundary, and calling it would spend a paid request on a refusal that never gets that far. Pure shell, no network, no key. A `check-backend` gate |
+| `test-desktop-launcher` | The desktop launcher's own suite. `desktop/launcher` is its own module and sits outside `go.work`, because it supervises the shipped binaries as child processes rather than importing them. Neither the workspace nor `./...` inside `backend` reaches it. Runs with `GOWORK=off`, as that module's `go.mod` requires. A `check-backend` prerequisite |
+| `craft-residue` | Fail if any unresolved `CRAFT-FIX`/`CRAFT-DISPUTE` review-loop marker is left in the backend tree. CI's `craft-residue` job runs it on every non-draft change, docs included |
+| `secret-scan` | No hardcoded credential reaches `main`: gitleaks over a clean `git archive HEAD` export, policy in `.gitleaks.toml`. It scans the committed tree, because gitleaks ignores `.gitignore` and an in-place scan would read a sibling worktree or your real `.env.local`. Installs nothing and needs no account: `scripts/gitleaks-pin.sh` fetches the version- and checksum-pinned scanner into `.tmp/` on first use, the same binary CI's `secret-scan` job runs on every non-draft change |
+| `test-api-entrypoint` | Prove `scripts/deploy/api-entrypoint.sh` writes the bootstrap admin credential only onto an unprovisioned installation, retires one a previous boot left, and refuses to start when its probe cannot answer. Stubs `margince-migrate`/`margince-api` on `PATH`, so it needs no container and no database. Failures on that path give no sign, and the entrypoint runs unattended. CI runs it beside the secret gate |
+| `test-dev-dsn` | Prove `scripts/dev.sh` resolves its DSNs through the same names the binaries read (`MARGINCE_OWNER_DSN` / `MARGINCE_DSN`) after an explicit `OWNER_DSN`/`APP_DSN` argument. It must still name the database itself so a `DEV_SLUG` stack cannot land on the base one, carry a query string like `?sslmode=require` across the swap, and never echo a DSN. Pure shell, no Docker, no database |
+| `test-dev-isolation` | Prove two worktrees get two stacks: the slug is derived from the worktree, the Redis logical database and the port pair are claimed from one machine-global registry rather than hashed, a port with a foreign listener is skipped, an exhausted block is refused rather than doubled up, and the integration lane's template is per worktree. Pure shell, no Docker, no database |
+| `test-secret-scan` | Prove `secret-scan` still catches: plant a credential-shaped token in each file `.gitleaks.toml` exempts, and require the scan to fail anyway. An over-broad allowlist reports "no leaks found" like a clean tree, and this is the only thing that tells them apart. CI runs it right after the scan |
+| `test-sbom-sign` | Prove `sbom-sign` signs what is unsigned and skips what already carries a bundle at least as new as itself. A Rekor entry is permanent, so a re-run that signs again leaves the first entry corroborating nothing, and it looks like a clean run. cosign is stubbed; what is under test is which files reach it |
+| `check-craft-doc` | Assert AGENTS.md still carries its `## Craftsmanship` section, a cheap doc floor so the gate's rules stay pinned to the rulebook. A `check-backend` prerequisite |
 
 ## Root-only (SBOM / supply chain)
 
@@ -329,72 +329,52 @@ Neither costs anything to check, and skipping them costs a debugging session.
 |---|---|
 | `sbom` | Generate the three source-tree SBOMs (CycloneDX + SPDX 2.2.1 + SPDX 3.0) from a clean `git archive HEAD` export, license-enriched, then normalize and parity-check them. syft/grant/cosign run as digest-pinned Docker images; `jq`, `git` and `tar` run on the host. License enrichment queries the Go module proxy and npm registry, so the run needs network |
 | `sbom-normalize` / `sbom-parity` | Reconcile syft's three writers to one repo-relative file set / assert all three enumerate it identically. `sbom` runs both; parity fails the build on any diff |
-| `sbom-check` | The license gate — grant against `.grant.yaml` (16 allowed licenses, `require-license` and `require-known-license` both on). Reads the CycloneDX document only |
-| `sbom-validate` | Validate each document against its own format — CycloneDX via `cyclonedx validate`, SPDX 2.2.1 via a hash-pinned `pyspdxtools`, SPDX 3.0.1 via the vendored schema in `sbom-schemas/`. Parity proves the three agree; this proves each is well-formed |
-| `sbom-sign` | Keyless cosign signature per SBOM (`*.cosign.bundle`); needs an OIDC token, so in practice CI's isolated `sign` job. Depends on `sbom-parity`, never on `sbom` — a signature must cover normalized bytes that already agree |
+| `sbom-check` | The license gate: grant against `.grant.yaml` (16 allowed licenses, `require-license` and `require-known-license` both on). Reads the CycloneDX document only |
+| `sbom-validate` | Validate each document against its own format: CycloneDX via `cyclonedx validate`, SPDX 2.2.1 via a hash-pinned `pyspdxtools`, SPDX 3.0.1 via the vendored schema in `sbom-schemas/`. Parity proves the three agree; this proves each is well-formed |
+| `sbom-sign` | Keyless cosign signature per SBOM (`*.cosign.bundle`); needs an OIDC token, so in practice CI's isolated `sign` job. Depends on `sbom-parity`, never on `sbom`, because a signature must cover normalized bytes that already agree |
 
-Full detail: [supply-chain.md](supply-chain.md). This lane is **not** part of `make check`.
+Full detail: [supply-chain.md](supply-chain.md). This lane is not part of `make check`.
 
 ## Root-only (desktop build, macOS arm64)
 
-Builds the self-contained folder that runs the whole stack with no Docker.
-Output lands in `build/desktop/` (git-ignored). Not part of `make check`, and
-not run in CI.
+Builds the self-contained folder that runs the whole stack with no Docker. Output lands in `build/desktop/` (git-ignored). Not part of `make check`, and not run in CI.
 
 | Target | What it does |
 |---|---|
-| `desktop` | **The whole folder**, at `build/desktop/margince/` (~128 MB). Reuses an already-built Postgres and event bus — `desktop-deps` builds each only when its output is missing, so a routine app rebuild takes seconds instead of paying the ~5-minute Postgres compile again |
+| `desktop` | **The whole folder**, at `build/desktop/margince/` (~128 MB). Reuses an already-built Postgres and event bus: `desktop-deps` builds each only when its output is missing, so a routine app rebuild takes seconds instead of the ~5-minute Postgres compile |
 | `desktop-rebuild` | Force everything, Postgres and the bus included |
-| `desktop-postgres` | The relocatable Postgres 16 + pgvector + contrib (~5 min). Compiles from pinned, checksummed source, rewrites the Mach-O load commands to `@rpath`, re-signs every patched binary (arm64 refuses one whose signature `install_name_tool` invalidated), and fails if anything still links to `/opt/homebrew`, `/usr/local`, or the staging prefix. **Rerun after bumping the pinned versions** in `desktop/build/build-postgres.sh` |
-| `desktop-valkey` | The event bus — Valkey, the BSD-licensed drop-in, since Redis 7.4+ ships under RSALv2/SSPL and this binary is redistributed inside a BUSL-1.1 product |
-| `desktop-app` | `api`, `worker`, `migrate` (through `build/composition/`, so the enabled `extensions/` units are linked — a bare `go build` would silently ship without them), the frontend, and the launcher |
+| `desktop-postgres` | The relocatable Postgres 16 + pgvector + contrib (~5 min). Compiles from pinned, checksummed source and rewrites the Mach-O load commands to `@rpath`. It re-signs every patched binary (arm64 refuses one whose signature `install_name_tool` invalidated). It fails if anything still links to `/opt/homebrew`, `/usr/local`, or the staging prefix. **Rerun after bumping the pinned versions** in `desktop/build/build-postgres.sh` |
+| `desktop-valkey` | The event bus: Valkey, the BSD-licensed drop-in, since Redis 7.4+ ships under RSALv2/SSPL and this binary is redistributed inside a BUSL-1.1 product |
+| `desktop-app` | `api`, `worker`, `migrate` (through `build/composition/`, so the enabled `extensions/` units are linked; a bare `go build` would ship without them), the frontend, and the launcher |
 | `desktop-dist` | Assemble `build/desktop/margince/` and verify every binary's signature. Signing happens in staging, never here: `codesign` reads a folder holding a same-named executable plus a `resources/` subdirectory as a legacy bundle |
 | `desktop-clean` | Remove `build/desktop/` entirely |
 
-The built folder cannot run from `build/desktop/` — that path already exceeds
-the 103-byte unix socket limit. Copy it somewhere shorter first. How-to:
-[build-the-desktop-app.md](../how-to/build-the-desktop-app.md); the why:
-[desktop-distribution.md](../explanation/desktop-distribution.md).
+The built folder cannot run from `build/desktop/`, because that path already exceeds the 103-byte unix socket limit. Copy it somewhere shorter first. How-to: [build-the-desktop-app.md](../how-to/build-the-desktop-app.md); the why: [desktop-distribution.md](../explanation/desktop-distribution.md).
 
 ## Root-only (desktop build, Windows x64)
 
-The same folder for Windows, at `build/desktop/margince-windows/`. **These
-targets must run ON Windows** and shell out to `desktop/build/*.ps1` through
-`pwsh`: pgvector has no build system other than `nmake` against MSVC, and the
-event bus needs the MSYS2 toolchain, so neither half cross-builds from macOS.
-A Windows host is not required to have GNU make, which is why
-`desktop/build/build-windows.ps1` is the primary entry point and these are the
-convenience wrapper.
+The same folder for Windows, at `build/desktop/margince-windows/`. These targets must run on Windows and shell out to `desktop/build/*.ps1` through `pwsh`. pgvector has no build system other than `nmake` against MSVC, and the event bus needs the MSYS2 toolchain, so neither half cross-builds from macOS. A Windows host is not required to have GNU make, so `desktop/build/build-windows.ps1` is the primary entry point and these targets are the convenience wrapper.
 
 | Target | What it does |
 |---|---|
 | `desktop-win` | **The whole folder.** Stages Postgres and the bus only when they are missing, so a routine app rebuild does not re-download a 310 MB archive or recompile Redis |
 | `desktop-win-rebuild` | Force everything, Postgres and the bus included |
-| `desktop-win-postgres` | Pin, verify and unpack the upstream PostgreSQL 16 zip, then compile pgvector against it with MSVC and prune to the server tree. Windows resolves DLLs from the loading executable's own directory, so unlike macOS there is nothing to relocate — the compile is only pgvector, which no prebuilt Windows binary provides. **Needs the Visual Studio C++ workload** |
-| `desktop-win-bus` | The event bus — Redis 7.2, the last BSD-3 line before the RSALv2/SSPL relicense and the lineage Valkey forked from, since Valkey has no Windows build. Compiled from pinned source under MSYS2, whose runtime DLL travels beside it with its licence. **Needs MSYS2 + `base-devel gcc`** |
+| `desktop-win-postgres` | Pin, verify and unpack the upstream PostgreSQL 16 zip, then compile pgvector against it with MSVC and prune to the server tree. Windows resolves DLLs from the loading executable's own directory, so unlike macOS there is nothing to relocate; the compile is only pgvector, which no prebuilt Windows binary provides. **Needs the Visual Studio C++ workload** |
+| `desktop-win-bus` | The event bus: Redis 7.2, the last BSD-3 line before the RSALv2/SSPL relicense and the lineage Valkey forked from, since Valkey has no Windows build. Compiled from pinned source under MSYS2, whose runtime DLL travels beside it with its licence. **Needs MSYS2 + `base-devel gcc`** |
 | `desktop-win-app` | `api`, `worker`, `migrate` (through `build/composition/`, so the enabled `extensions/` units are linked), the frontend, and the launcher. No signing step: Authenticode needs a purchased certificate, so the first launch warns through SmartScreen |
-| `desktop-win-dist` | Assemble the folder and **run each third-party binary out of it** — the Windows equivalent of the macOS signature check, and the only way a missing DLL is caught here rather than on the user's machine |
+| `desktop-win-dist` | Assemble the folder and **run each third-party binary out of it**: the Windows equivalent of the macOS signature check, and the only way a missing DLL is caught here rather than on the user's machine |
 
 `desktop-clean` removes `build/desktop/` for both platforms.
 
 ## Variables
 
-`GO`, `PG_PORT` (15432), `REDIS_PORT` (16379), `DB_NAME` (margince),
-`OWNER_DSN`, `APP_DSN` — all overridable (`make migrate PG_PORT=5432`).
-The Makefile exports `MARGINCE_ENV=dev` and the `MARGINCE_TEST_*`
-variables so tests find the dev containers.
+`GO`, `PG_PORT` (15432), `REDIS_PORT` (16379), `DB_NAME` (margince), `OWNER_DSN`, `APP_DSN`: all overridable (`make migrate PG_PORT=5432`). The Makefile exports `MARGINCE_ENV=dev` and the `MARGINCE_TEST_*` variables so tests find the dev containers.
 
-`make dev` resolves each DSN in the product's own order — an explicit
-`OWNER_DSN`/`APP_DSN` argument, else `MARGINCE_OWNER_DSN`/`MARGINCE_DSN` (what
-the binaries themselves read), else the compose default. It passes the result as
-an explicit `--dsn`, which is why the resolution happens in the script: `--dsn`
-outranks the environment, so a value set in `.env.local` was inert for the whole
-dev stack before this.
+`make dev` resolves each DSN in the product's own order: an explicit `OWNER_DSN`/`APP_DSN` argument, else `MARGINCE_OWNER_DSN`/`MARGINCE_DSN` (what the binaries themselves read), else the compose default. It passes the result as an explicit `--dsn`. The resolution happens in the script because `--dsn` outranks the environment, so a value set only in `.env.local` would be inert for the dev stack.
 
-Two things the stack keeps for itself whatever DSN it is handed. It **names the
-database**, so `DEV_SLUG=x` reaches `margince_dev_x` on its claimed ports and
-never the base database a supplied DSN happened to name. And `--fresh` still
-refuses when the effective owner DSN is not the compose Postgres, because it
-drops through the compose container while migrations follow the DSN. A query
-string (`?sslmode=require`) survives the swap; a libpq `host=… dbname=…` DSN is
-refused, since a database segment that is not there cannot be replaced.
+The stack keeps two things for itself whatever DSN it is handed:
+
+- It names the database, so `DEV_SLUG=x` reaches `margince_dev_x` on its claimed ports and never the base database a supplied DSN happened to name.
+- `--fresh` refuses when the effective owner DSN is not the compose Postgres, because it drops through the compose container while migrations follow the DSN.
+
+A query string (`?sslmode=require`) survives the swap; a libpq `host=… dbname=…` DSN is refused, since a database segment that is not there cannot be replaced.

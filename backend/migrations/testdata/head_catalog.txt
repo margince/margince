@@ -4618,7 +4618,7 @@ public.knowledge_corpus.knowledge_corpus_min_similarity_range CHECK (((min_simil
 public.knowledge_corpus.knowledge_corpus_pkey PRIMARY KEY (id)
 public.knowledge_corpus.knowledge_corpus_touch CREATE TRIGGER knowledge_corpus_touch BEFORE UPDATE ON public.knowledge_corpus FOR EACH ROW EXECUTE FUNCTION set_updated_at()
 public.knowledge_corpus.managed_source text gen=- def=-
-public.knowledge_corpus.min_similarity double precision NOT NULL gen=- def=0.35
+public.knowledge_corpus.min_similarity double precision gen=- def=-
 public.knowledge_corpus.name text NOT NULL gen=- def=-
 public.knowledge_corpus.reindexing boolean NOT NULL gen=- def=false
 public.knowledge_corpus.topic_statement text NOT NULL gen=- def=-

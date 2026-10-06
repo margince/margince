@@ -7,8 +7,8 @@
 
 package gates
 
-// A 🟢 or 🟡 in an operation's SUMMARY is a claim about that operation's
-// autonomy tier, and it has to be the tier the operation actually declares.
+// A 🟢 or 🟡 in an operation's summary is a claim about that operation's autonomy
+// tier, and it has to be the tier the operation actually declares.
 //
 // The summary is the line with the widest reach of anything in the contract: it
 // becomes the method comment in every generated client and the heading in the

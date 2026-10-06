@@ -6,7 +6,7 @@
 package gates
 
 // The team's frozen outlook and the rep's are the same fact over different
-// books, so they are the same SHAPE or one of them is lying.
+// books, so they must have the same shape.
 //
 // They cannot be one table: the rep's hangs off weekly_review by foreign key
 // and the team's off team_weekly_review. That leaves two column lists which a

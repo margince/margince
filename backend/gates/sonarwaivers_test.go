@@ -6,7 +6,7 @@
 package gates
 
 // A rule waiver in sonar-project.properties has to keep pointing at something,
-// and there are two ways one stops — NEITHER of which announces itself.
+// and there are two ways one stops, neither of which announces itself.
 //
 // A waiver whose id is missing from `sonar.issue.ignore.multicriteria` is not
 // applied at all: the scanner reads that list and nothing else. The entry sits

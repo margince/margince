@@ -5,10 +5,10 @@
 
 package gates
 
-// The FleetWide gate's own falsification, kept beside it: every dispatch shape
-// the tree actually uses, proven accepted, and the shapes it exists to reject —
-// a dispatcher doing a tenant's work, and a fan-out built around the
-// chokepoints — proven rejected. A fitness function is only worth its blocking power
+// The FleetWide gate's own falsification: every dispatch shape the tree uses is
+// proven accepted, and the shapes it exists to reject (a dispatcher doing a
+// tenant's work, and a fan-out built around the chokepoints) are proven
+// rejected. A fitness function is only worth its blocking power
 // if it never blocks a legitimate author — the one that does gets weakened by
 // the contact it stopped, and the weakening is what the next fleet loop walks
 // back in through.
