@@ -96,8 +96,9 @@ join by adding the marker once they meet the bar.
 
 `plain-words.txt` holds general English words and is capped at 999 entries: the whole documentation set
 shares fewer than 1,000 simple words. `technical-names.txt` holds names a reader must learn anyway, such as
-products, protocols and file names. Both lists hold base forms. A page may write `deals` or `connected` when
-the list holds `deal` and `connect`. Inline code and link text that is a path are not checked.
+products, protocols and file names. A general word also covers its regular forms, so a page may write
+`deals` or `connected` when the list holds `deal` and `connect`; a technical name matches only as written.
+Inline code is not checked, and neither is link text that contains a `.` or a `/`, such as a path or a host.
 
 To use a new word, first look for a listed word that says the same thing. If none does, add it to the right
 list in the same pull request, in sorted order. A word that no plain page uses any more must leave the list,
@@ -106,9 +107,8 @@ so the vocabulary cannot grow by accident.
 The rules come from two places. ASD-STE100 Simplified Technical English is the standard for maintenance
 manuals: about 900 approved words, a 20-word limit for a procedure sentence, 25 for a description, and at
 most 6 sentences in a paragraph. Randall Munroe's Up-Goer Five uses only the thousand most common words, and
-shows that plain words expose a fuzzy explanation. The page budget matches what well-run projects do: 15 of
-16 READMEs surveyed (Kubernetes, React, Go, Terraform and CRMs such as Twenty and Odoo) stay under 1,000
-words, with a median near 500.
+shows that plain words expose a fuzzy explanation. The page budget matches what well-run projects do: the
+READMEs of Kubernetes, React, Go and Terraform each stay under 1,000 words.
 
 ## Renaming a term
 

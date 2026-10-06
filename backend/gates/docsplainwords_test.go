@@ -38,7 +38,7 @@ const (
 var plainRequired = []string{"README.md"}
 
 var (
-	plainToken    = regexp.MustCompile(`[A-Za-z][A-Za-z'’-]*`)
+	plainToken    = regexp.MustCompile(`\p{L}[\p{L}'’-]*`)
 	plainPathLink = regexp.MustCompile(`\[[^\]\s]*[./][^\]\s]*\]`)
 	plainStepItem = regexp.MustCompile(`^\s*\d+\.\s+`)
 )
@@ -87,20 +87,25 @@ func plainForms(word string) []string {
 	return forms
 }
 
+// plainVocab keeps the two lists apart: a technical name matches only as
+// written, so "Go" does not admit the ordinary word "go".
+type plainVocab struct {
+	general map[string]bool
+	names   map[string]bool
+}
+
 // plainMatch returns the list entries a word resolves to, one per hyphenated
 // part, or false when any part is unlisted.
-func plainMatch(word string, vocab map[string]bool) ([]string, bool) {
+func plainMatch(word string, vocab plainVocab) ([]string, bool) {
 	trimmed := strings.Trim(word, "'’-")
-	for _, w := range []string{trimmed, strings.ToLower(trimmed)} {
-		if vocab[w] {
-			return []string{w}, true
-		}
+	if vocab.names[trimmed] {
+		return []string{trimmed}, true
 	}
 	var keys []string
 	for _, part := range strings.Split(strings.ToLower(trimmed), "-") {
 		found := false
 		for _, form := range plainForms(part) {
-			if vocab[form] {
+			if vocab.general[form] {
 				keys, found = append(keys, form), true
 				break
 			}
@@ -120,7 +125,7 @@ type plainResult struct {
 	crowded []int
 }
 
-func plainCheck(doc string, vocab map[string]bool) plainResult {
+func plainCheck(doc string, vocab plainVocab) plainResult {
 	res := plainResult{unknown: map[string]int{}, used: map[string]bool{}}
 	lines := barLines(doc)
 	for _, l := range lines {
@@ -160,6 +165,8 @@ func plainCheck(doc string, vocab map[string]bool) plainResult {
 	return res
 }
 
+func plainTooLong(res plainResult) bool { return res.words > plainPageWords }
+
 func TestPlainPagesUseFewerThanAThousandWords(t *testing.T) {
 	t.Parallel()
 	general := readWordList(t, plainWordsFile)
@@ -168,12 +175,12 @@ func TestPlainPagesUseFewerThanAThousandWords(t *testing.T) {
 		t.Errorf("%s lists %d words; the cap is %d. Replace a word on a page with a listed one before adding another.",
 			plainWordsFile, len(general), plainWordCap)
 	}
-	vocab := map[string]bool{}
-	for _, list := range [][]string{general, names} {
-		for _, w := range list {
-			vocab[w] = true
-			vocab[strings.ToLower(w)] = true
-		}
+	vocab := plainVocab{general: map[string]bool{}, names: map[string]bool{}}
+	for _, w := range general {
+		vocab.general[strings.ToLower(w)] = true
+	}
+	for _, w := range names {
+		vocab.names[w] = true
 	}
 	if !sort.StringsAreSorted(general) {
 		t.Errorf("%s is not sorted; keep one word per line in byte order so a diff shows what was added", plainWordsFile)
@@ -198,7 +205,7 @@ func TestPlainPagesUseFewerThanAThousandWords(t *testing.T) {
 		for w := range res.used {
 			used[w] = true
 		}
-		if res.words > plainPageWords {
+		if plainTooLong(res) {
 			t.Errorf("%s has %d words; a plain page holds at most %d. Link to a deeper page instead.", f.path, res.words, plainPageWords)
 		}
 		for w, n := range res.unknown {
@@ -223,7 +230,7 @@ func TestPlainPagesUseFewerThanAThousandWords(t *testing.T) {
 		words []string
 	}{{plainWordsFile, general}, {technicalNamesFile, names}} {
 		for _, w := range list.words {
-			if !used[w] && !used[strings.ToLower(w)] {
+			if !used[w] && (list.rel == technicalNamesFile || !used[strings.ToLower(w)]) {
 				t.Errorf("%s lists %q, which no plain page uses; remove it", list.rel, w)
 			}
 		}
@@ -234,7 +241,10 @@ func TestPlainPagesUseFewerThanAThousandWords(t *testing.T) {
 // reading every page as clean.
 func TestPlainPageRulesFireOnPlantedDefects(t *testing.T) {
 	t.Parallel()
-	vocab := map[string]bool{"the": true, "deal": true, "is": true, "open": true, "a": true, "word": true}
+	vocab := plainVocab{
+		general: map[string]bool{"the": true, "deal": true, "is": true, "open": true, "a": true, "word": true},
+		names:   map[string]bool{"Go": true},
+	}
 	planted := "The deals is opened. The deal is circumnavigated.\n\n" +
 		"1. " + strings.Repeat("word ", 21) + "\n\n" +
 		strings.Repeat("A deal is open. ", 7)
@@ -250,5 +260,14 @@ func TestPlainPageRulesFireOnPlantedDefects(t *testing.T) {
 	}
 	if len(res.crowded) == 0 {
 		t.Error("a seven-sentence paragraph was not reported")
+	}
+	if got := plainCheck("Go is open. A deal is open to go.", vocab).unknown["go"]; got == 0 {
+		t.Error("a technical name admitted its lowercase twin as a general word")
+	}
+	if got := plainCheck("Die Straße ist offen.", vocab).words; got != 4 {
+		t.Errorf("non-ASCII words were not counted: got %d of 4", got)
+	}
+	if !plainTooLong(plainCheck(strings.Repeat("word ", plainPageWords+1), vocab)) {
+		t.Error("a page over the word cap was not reported")
 	}
 }

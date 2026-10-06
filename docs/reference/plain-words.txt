@@ -37,16 +37,14 @@ click
 closed
 cloud
 code
-coding
 command
-companie
 company
 connect
 consent
 contact
 contract
-copie
 copy
+core
 custom
 customer
 daily
@@ -84,8 +82,6 @@ here
 hold
 hook
 host
-hosted
-hosting
 how
 human
 if
@@ -102,6 +98,7 @@ kept
 laptop
 later
 leave
+license
 limit
 list
 log
@@ -118,7 +115,7 @@ more
 most
 much
 must
-named
+name
 need
 never
 new
@@ -139,7 +136,7 @@ outside
 over
 own
 partner
-pas
+pass
 passport
 password
 past
@@ -151,6 +148,7 @@ price
 private
 problem
 product
+production
 profile
 provider
 public
@@ -187,7 +185,7 @@ ship
 show
 sign
 site
-smaller
+small
 so
 source
 stack
@@ -217,7 +215,7 @@ us
 use
 user
 wait
-watching
+watch
 way
 web
 what
