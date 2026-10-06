@@ -17,6 +17,7 @@ import {
   PendingBody,
 } from "../design-system/atoms";
 import { DateInput, isISODate } from "../design-system/dateinput";
+import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
 import { SourceEvidence } from "../design-system/sourceevidence";
 import { calendarDay, dueInstant } from "../format/calendarday";
@@ -320,12 +321,12 @@ export function TaskDetailModal({
   const task: Activity | undefined = query.data;
   return (
     <Modal open onClose={onClose} labelledBy={titleId} placement="right">
-      <div className="drawer-head task-detail-head">
+      <DrawerHead className="task-detail-head">
         <Heading size="large" id={titleId} className="t-h2">
           {task?.subject ?? t("tasks.detail")}
         </Heading>
-      </div>
-      <div className="drawer-body">
+      </DrawerHead>
+      <DrawerBody>
         {query.isPending && <PendingBody label={t("tasks.detailLoading")} />}
         <ErrorLine error={query.error} />
         {task && (
@@ -385,7 +386,7 @@ export function TaskDetailModal({
             )}
           </div>
         )}
-      </div>
+      </DrawerBody>
       {openSource && (
         <SourceActivity
           activityId={openSource}

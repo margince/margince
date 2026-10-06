@@ -12,6 +12,7 @@ import {
   callOf,
   capped,
   childrenHosts,
+  childrenSlot,
   classes,
   cross,
   declarations,
@@ -27,6 +28,7 @@ import {
   fnOf,
   givenTo,
   handedJsx,
+  handedTo,
   isDialogTag,
   isZero,
   jsxOf,
@@ -292,26 +294,16 @@ function width(g: Gate, n: ts.Node) {
   if (!def || wraps(g, n)) return 0;
   return rootsOf(def).filter(isField).length;
 }
-function slotOf(component: ts.Node) {
-  const def = defOf(component);
-  const slot =
-    def &&
-    descendants(def).find(
-      (n) =>
-        ts.isJsxExpression(n) &&
-        /^(props\.)?children$/.test(n.expression?.getText() ?? ""),
-    );
-  return slot && enclosing(slot);
-}
 
 // What a prop on `e` can be: its literal branches, what the caller hands
 // when `e` forwards a prop of its own, and otherwise any value.
 function valuesOf(e: ts.Node, name: string, callers: ts.Node[]): Values {
-  const a = attr(e, name);
-  if (!a) return [undefined];
-  const init = a.initializer;
-  const x = init && ts.isJsxExpression(init) ? init.expression : init;
-  const listed = x && literalsIn(x);
+  const handed = handedTo(e, name);
+  const each = handed === "any" ? [] : handed.map((x) => valueAt(x, callers));
+  return handed === "any" || each.includes("any") ? "any" : each.flat();
+}
+function valueAt(x: ts.Expression | undefined, callers: ts.Node[]): Values {
+  const listed = x ? literalsIn(x) : [undefined];
   if (listed) return listed;
   const [caller, ...rest] = callers;
   const def = caller && defOf(caller);
@@ -344,7 +336,7 @@ function dialogBoxes(g: Gate, e: ts.Node, callers: ts.Node[]): string[][] {
 // box stands outside that root unless it is that root.
 function boxesAt(g: Gate, p: ts.Node): Chain[] {
   const modal = keyIs(p, g.modal);
-  const slot = upper(p) && !modal ? slotOf(p) : undefined;
+  const slot = upper(p) && !modal ? childrenSlot(p) : undefined;
   const def = defOf(p);
   const inner = slot && def ? variantsOf(slot, { at: p, def }) : [[]];
   const own = cross(variantsOf(p), inner, p);
@@ -765,12 +757,12 @@ function plantedModal(body: string) {
   const path = join(dir, "modal.tsx");
   writeFileSync(
     path,
-    `export function Modal({ size = "default", placement = "center", children }) { return <div className={modalClass(placement, size)}>{children}</div>; }
-function modalClass(where: "center" | "right", width: "default" | "wide") { ${body} }\n`,
+    `const KINDS = ["sheet", "card"] as const; type Kind = (typeof KINDS)[number]; export function Modal({ kind, size = "default", placement = "center", children }) { return <div className={modalClass(kind, placement, size)}>{children}</div>; }
+function modalClass(kind: Kind | undefined, where: "center" | "right", width: "default" | "wide") { ${body} }\n`,
   );
   return path;
 }
-const DRAWER_CLASS = `if (where === "right") return width === "wide" ? "modal drawer wide" : "modal drawer"; return "modal";`;
+const DRAWER_CLASS = `if (kind === "sheet") return "modal sheet"; if (where === "right") return width === "wide" ? "modal drawer wide" : "modal drawer"; return "modal";`;
 const classCall = (expression: string) => {
   const code = `const x = <i className={${interpolated(expression)}} />;`;
   const source = parseSource(AT, code);
@@ -852,7 +844,10 @@ const A = () => <><Drawer /><div role="dialog" /><Trigger /><Typed /></>;`;
       ["placement", ["right"]],
       ["size", ["wide"]],
     ]);
-    expect(modalBoxes(given, path)).toEqual([["modal", "drawer", "wide"]]);
+    const drawer = ["modal", "drawer", "wide"];
+    expect(modalBoxes(given, path)).toEqual([drawer]);
+    given.set("kind", "any");
+    expect(modalBoxes(given, path)).toEqual([["modal", "sheet"], drawer]);
     const any = new Map<string, Values>([["placement", "any"]]);
     expect(modalBoxes(any, path)).toEqual([["modal"], ["modal", "drawer"]]);
     const unread = plantedModal('switch (where) { default: return "modal"; }');

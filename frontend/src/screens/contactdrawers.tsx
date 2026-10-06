@@ -7,6 +7,11 @@ import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Badge, Button, Field, Modal, TextInput } from "../design-system/atoms";
+import {
+  DrawerBody,
+  DrawerFoot,
+  DrawerHead,
+} from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
 import { useToast } from "../design-system/toast";
@@ -299,16 +304,16 @@ export function ContactResearchDrawer({
       size="wide"
       placement="right"
     >
-      <div className="drawer-head">
+      <DrawerHead>
         <div className="pe-drawer-title">
           <Heading size="large" id="contact-research-title">
             {t("contact.research.title", { name: contactName })}
           </Heading>
         </div>
         <Badge>{t("contact.research.publicOnly")}</Badge>
-      </div>
+      </DrawerHead>
 
-      <div className="drawer-body">
+      <DrawerBody>
         {/* What was BOUGHT sits above what a public read found: it cost
             money, it is the firmer of the two, and a rep looking somebody up
             should see it before a page crawl's guesses. */}
@@ -352,9 +357,9 @@ export function ContactResearchDrawer({
             ))}
           </>
         )}
-      </div>
+      </DrawerBody>
 
-      <div className="drawer-foot">
+      <DrawerFoot>
         <span className="pe-disclosure t-caption">
           {t("contact.research.evidenceOrOmit")}
         </span>
@@ -371,7 +376,7 @@ export function ContactResearchDrawer({
             })}
           </Button>
         </div>
-      </div>
+      </DrawerFoot>
     </Modal>
   );
 }

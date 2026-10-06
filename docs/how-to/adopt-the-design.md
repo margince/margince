@@ -114,7 +114,7 @@ reader would call broken.
 | `Card` | Keep as is (`onecard.test.ts`); the pane is `Panel`, not `Card`. |
 | `StatCard` | The reading card: the eyebrow as its label, 26px figure in the display face, tabular (down to 20px where five share a narrow row), 12.5px basis, `--pane` ground, 18px radius, 138px min height. `numeric` for figures. |
 | `Skeleton`, `PendingBody`, `EmptyState` | Recolour to tokens; `EmptyState` left-aligned in its pane, one sentence and one verb. |
-| `SegmentedControl`, `TextInput`, `Select`, `ComboBox`, `Kbd`, `Modal`, `Callout`, `Switch` | Token and radius pass only. `Modal placement="right"` becomes the compose drawer's surface (560px, `--paneSolid`). |
+| `SegmentedControl`, `TextInput`, `Select`, `ComboBox`, `Kbd`, `Modal`, `Callout`, `Switch` | Token and radius pass only. `Modal`'s drawer intents become the compose drawer's surface (`drawer` 560px, `drawer-reading` 880px, `--paneSolid`). |
 | `.t-eyebrow` | The one uppercase micro-type: 10.5px, `.08em`. Lower the eyebrow baseline where the restyle removes restatements. |
 
 Stories: update every changed story; the catalog test needs no new rows

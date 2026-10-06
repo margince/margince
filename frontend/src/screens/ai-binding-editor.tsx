@@ -7,6 +7,11 @@ import type { components } from "../api/schema";
 import { useUnsavedGuard } from "../app/unsaved";
 import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import {
+  DrawerBody,
+  DrawerFoot,
+  DrawerHead,
+} from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
 import { Modal } from "../design-system/modal";
 import { useT } from "../i18n";
@@ -130,14 +135,14 @@ export function BindingEditor({
       placement="right"
       size="wide"
     >
-      <div className="drawer-head">
+      <DrawerHead>
         <Heading size="large" id={headingId} className="t-h2 modal-title">
           {draft.kind === "decisions" && base.binding === undefined
             ? t("aiRouting.decisions.add")
             : t("aiRouting.editTitle", { lane: label })}
         </Heading>
-      </div>
-      <div className="drawer-body">
+      </DrawerHead>
+      <DrawerBody>
         {binding && (
           <div className="form-stack">
             <SliceFields
@@ -208,8 +213,8 @@ export function BindingEditor({
             {problemMessageOf(save.error, t)}
           </Callout>
         )}
-      </div>
-      <div className="drawer-foot actions">
+      </DrawerBody>
+      <DrawerFoot className="actions">
         {draft.kind === "decisions" && base.binding !== undefined && (
           <span className="actions-lead">
             <Button
@@ -242,7 +247,7 @@ export function BindingEditor({
             {t("aiRouting.saveBinding")}
           </Button>
         </span>
-      </div>
+      </DrawerFoot>
     </Modal>
   );
 }
