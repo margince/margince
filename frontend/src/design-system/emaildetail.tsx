@@ -165,8 +165,7 @@ export function EmailDetail({
       open={open}
       onClose={onClose}
       labelledBy={titleId}
-      placement="right"
-      size="wide"
+      intent="drawer-reading"
     >
       <div className="emaildetail__head">
         <div className="emaildetail__heading">

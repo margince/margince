@@ -3193,10 +3193,10 @@ describe("the composer's conversation pane", () => {
     expect(
       await screen.findByText("Sending the order over today."),
     ).toBeTruthy();
-    // The drawer, not the centred box: an account's mail keeps the record
-    // beside it whether it opens a conversation or answers one.
-    expect(document.querySelector(".modal-drawer")).not.toBeNull();
-    expect(document.querySelector(".modal-drawer-split")).not.toBeNull();
+    // The reading drawer, whether the mail opens a conversation or answers one.
+    expect(
+      document.querySelector(".modal-drawer.modal-drawer-wide .compose-split"),
+    ).not.toBeNull();
   });
 
   it("draws a message it may not read as a held place, not a gap", async () => {

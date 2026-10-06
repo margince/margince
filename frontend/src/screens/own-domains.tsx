@@ -271,14 +271,16 @@ function AddOwnDomainDialog({ onClose }: Readonly<{ onClose: () => void }>) {
   const t = useT();
   const add = useAddOwnDomain();
   const headingId = useId();
+  const formId = useId();
   const [draft, setDraft] = useState("");
   const domain = draft.trim();
   return (
-    <Modal open onClose={onClose} labelledBy={headingId}>
+    <Modal open onClose={onClose} labelledBy={headingId} intent="form">
       <Heading size="large" id={headingId} className="t-h2 modal-title">
         {t("ownDomains.addLabel")}
       </Heading>
       <form
+        id={formId}
         className="form-stack"
         onSubmit={(event) => {
           event.preventDefault();
@@ -303,19 +305,20 @@ function AddOwnDomainDialog({ onClose }: Readonly<{ onClose: () => void }>) {
             {problemMessageOf(add.error, t)}
           </Callout>
         )}
-        <div className="form-actions">
-          <Button type="button" onClick={onClose}>
-            {t("create.cancel")}
-          </Button>
-          <Button
-            type="submit"
-            variant="primary"
-            disabled={add.isPending || domain === ""}
-          >
-            {t("ownDomains.add")}
-          </Button>
-        </div>
       </form>
+      <div className="actions">
+        <Button type="button" onClick={onClose}>
+          {t("create.cancel")}
+        </Button>
+        <Button
+          type="submit"
+          form={formId}
+          variant="primary"
+          disabled={add.isPending || domain === ""}
+        >
+          {t("ownDomains.add")}
+        </Button>
+      </div>
     </Modal>
   );
 }

@@ -142,7 +142,7 @@ export function DirectSendModal({
     <ConfirmModal
       open={open}
       onClose={onClose}
-      size="wide"
+      intent="form"
       title={t("directSend.title")}
       confirmLabel={t("directSend.confirm")}
       confirmVariant="danger"
