@@ -77,7 +77,12 @@ it("leaves Escape to a dialog raised over it", async () => {
   const page = (dialogOpen: boolean) => (
     <>
       <Popover label="How it stands">Two of three invoices are late.</Popover>
-      <Modal open={dialogOpen} onClose={onDialogClose} labelledBy="edit">
+      <Modal
+        open={dialogOpen}
+        onClose={onDialogClose}
+        labelledBy="edit"
+        intent="form"
+      >
         <Heading size="large" id="edit">
           Edit deal
         </Heading>

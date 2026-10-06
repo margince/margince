@@ -173,13 +173,7 @@ function StageRemove({
       setOpen(false);
     },
   });
-  // Refused while the DELETE is out: reset() clears isPending without
-  // cancelling the request, so a reader who pressed Escape could otherwise
-  // reopen, confirm again, and delete the stage twice.
   const close = () => {
-    if (remove.isPending) {
-      return;
-    }
     remove.reset();
     setOpen(false);
   };

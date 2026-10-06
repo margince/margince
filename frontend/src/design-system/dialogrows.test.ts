@@ -689,14 +689,14 @@ function Inline() { return <Field labelHidden />; }
 function Cited() { const cite = () => <i className="m" />; return <p>{cite()}</p>; }
 function Bare() { const cite = () => <i className="m" />; return cite(); }
 function Refusals() { return <div className="m" />; }
-function Sheet({ children }) { return <Modal>{children}</Modal>; }
-function Side({ children, placement = "right" }) { return <Modal placement={placement}>{children}</Modal>; }
-function Shell({ body }) { return <Modal><div>{body}</div></Modal>; }
+function Sheet({ children }) { return <Modal intent="form">{children}</Modal>; }
+function Side({ children, intent = "drawer" }) { return <Modal intent={intent}>{children}</Modal>; }
+function Shell({ body }) { return <Modal intent="form"><div>{body}</div></Modal>; }
 function Framed({ body }) { return <div className="form-stack">{body}</div>; }
 function Outer({ body }) { return <Framed body={body} />; }
-function Explain({ body }) { return <Modal><div className="form-stack">{body(1)}</div></Modal>; }
-function Opened({ body, open }) { return <Modal>{open && body(1)}</Modal>; }
-function Kept({ body }) { const shown = body(1); return <Modal>{shown}</Modal>; }
+function Explain({ body }) { return <Modal intent="form"><div className="form-stack">{body(1)}</div></Modal>; }
+function Opened({ body, open }) { return <Modal intent="form">{open && body(1)}</Modal>; }
+function Kept({ body }) { const shown = body(1); return <Modal intent="form">{shown}</Modal>; }
 function Line({ control }) { return <div>{control}</div>; }
 function fields() { return <><p /><Field /></>; }
 const held = <><p /><Field /></>;
@@ -712,13 +712,14 @@ const plantedRows = (jsx: string, own = owners()) => {
 };
 const TITLE = '<Heading className="modal-title">A</Heading>';
 const ACTIONS = '<div className="actions" />';
-const inModal = (inner: string) => `<Modal>${TITLE}${inner}${ACTIONS}</Modal>`;
+const inModal = (inner: string) =>
+  `<Modal intent="form">${TITLE}${inner}${ACTIONS}</Modal>`;
 const STACK =
   ".s { display: flex; flex-direction: column; gap: var(--space-3) }";
 const FORM_STACK = STACK.replace(".s", ".form-stack");
 const MARGIN = ".m { margin-top: var(--space-2) }";
 const MARGINED_STACK =
-  '<Modal><div className="s"><Field /><Field className="m" /></div></Modal>';
+  '<Modal intent="form"><div className="s"><Field /><Field className="m" /></div></Modal>';
 const SCOPED =
   ".f .pb { display: flex; flex-direction: column; gap: var(--space-3) }";
 const PARAGRAPH_STACK = '<div className="s"><p /><Field /></div>';
@@ -736,7 +737,7 @@ function plantedAcross(
   const ds = relative(dir, join(srcDir, "design-system"));
   writeFileSync(
     join(dir, "a.tsx"),
-    `import { Modal } from "${ds}/modal";\nimport { B } from "./b";\nexport const A = () => <Modal>${host}</Modal>;\n`,
+    `import { Modal } from "${ds}/modal";\nimport { B } from "./b";\nexport const A = () => <Modal intent="form">${host}</Modal>;\n`,
   );
   writeFileSync(
     join(dir, "b.tsx"),
@@ -899,77 +900,77 @@ const A = () => <><Drawer /><div role="dialog" /><Trigger /><Typed /></>;`;
   });
 
   it.each`
-    spec                                                        | jsx                                                                                                         | verdict                   | sheet
-    ${"catches a field under a paragraph"}                      | ${inModal("<p /><Field />")}                                                                                | ${"flush"}                | ${""}
-    ${"catches a ChoiceList over a Checkbox"}                   | ${inModal("<ChoiceList /><Checkbox />")}                                                                    | ${"flush flush"}          | ${""}
-    ${"passes a lone field between title and actions"}          | ${inModal("<Field />")}                                                                                     | ${"spaced"}               | ${""}
-    ${"passes fields in a .form-stack"}                         | ${inModal('<div className="form-stack"><p /><Field /><Field /></div>')}                                     | ${"spaced spaced"}        | ${""}
-    ${"passes fields whose ConfirmModal stacks them"}           | ${"<ConfirmModal><p /><Field /><Field /></ConfirmModal>"}                                                   | ${"spaced spaced"}        | ${""}
-    ${"reads through a fragment and a condition"}               | ${inModal("<>{a && <Field />}<Field /></>")}                                                                | ${"flush flush"}          | ${""}
-    ${"reads one field a map repeats"}                          | ${inModal("<div>{xs.map((x) => <Field key={x} />)}</div>")}                                                 | ${"flush"}                | ${""}
-    ${"lets two branches of a ternary stand alone"}             | ${inModal("{a ? <Field /> : <Field />}")}                                                                   | ${"spaced spaced"}        | ${""}
-    ${"lifts a lone field out of a bare wrapper"}               | ${inModal("<p /><form><Field /></form>")}                                                                   | ${"flush"}                | ${""}
-    ${"passes fields side by side in a .form-row"}              | ${inModal('<div className="form-stack"><div className="form-row"><Field /><Field /></div></div>')}          | ${"spaced spaced spaced"} | ${""}
-    ${"follows a component that renders field rows"}            | ${inModal("<Rows />")}                                                                                      | ${"flush"}                | ${""}
-    ${"passes that component inside a stack"}                   | ${"<ConfirmModal><Rows /></ConfirmModal>"}                                                                  | ${"spaced"}               | ${""}
-    ${"catches a field margin that doubles the gap"}            | ${'<Modal><div className="s"><Field className="x" /><Field /></div></Modal>'}                               | ${"doubled spaced"}       | ${`${STACK} .x { margin-top: var(--space-3) }`}
-    ${"reads the stack from the stylesheet"}                    | ${'<Modal><div className="s"><Field /><Field /></div></Modal>'}                                             | ${"flush flush"}          | ${".s { display: flex; flex-direction: column }"}
-    ${"joins a stack and a gap spelled by two classes"}         | ${'<Modal><div className="c g"><Field /><Field /></div></Modal>'}                                           | ${"spaced spaced"}        | ${".c { display: flex; flex-direction: column } .g { gap: var(--space-3) }"}
-    ${"reads the gap a Stack is given"}                         | ${inModal('<Stack gap="2"><p /><Field /></Stack>')}                                                         | ${"spaced"}               | ${""}
-    ${"lifts a field out of a render prop"}                     | ${inModal("<p /><Gate>{() => <Field />}</Gate>")}                                                           | ${"flush"}                | ${""}
-    ${"calls a row handed to a prop it cannot place"}           | ${inModal("<View slot={<><Field /><Field /></>} />")}                                                       | ${"unplaced unplaced"}    | ${""}
-    ${"calls a margin in a prop it cannot place"}               | ${inModal('<View slot={<div className="m" />} />')}                                                         | ${"unplaced"}             | ${MARGIN}
-    ${"reads the class a component is handed"}                  | ${inModal('<Card className="s"><Field /><Field /></Card>')}                                                 | ${"spaced spaced"}        | ${STACK}
-    ${"follows a component the dialog renders"}                 | ${inModal("<Body />")}                                                                                      | ${"flush"}                | ${""}
-    ${"catches any margin a dialog stack's child adds"}         | ${inModal('<div className="s"><p /><div className="m" /></div>')}                                           | ${"doubled"}              | ${`${STACK} ${MARGIN}`}
-    ${"catches the action row's margin inside a stack"}         | ${inModal('<div className="form-stack"><Field /><div className="actions" /></div>')}                        | ${"spaced doubled"}       | ${""}
-    ${"catches a margin on a component's root"}                 | ${"<ConfirmModal><Refusals /></ConfirmModal>"}                                                              | ${"doubled"}              | ${`${FORM_STACK} ${MARGIN}`}
-    ${"lets a heavier rule under the stack zero it"}            | ${MARGINED_STACK}                                                                                           | ${"spaced spaced"}        | ${`${STACK} ${MARGIN} .s > .m { margin-top: 0 }`}
-    ${"lets a rule for a child of the stack count the gap"}     | ${MARGINED_STACK}                                                                                           | ${"spaced spaced"}        | ${`${STACK} ${MARGIN} .s > .m { margin-top: var(--space-1) }`}
-    ${"ignores a margin set under another context"}             | ${MARGINED_STACK}                                                                                           | ${"spaced spaced"}        | ${`${STACK} .other .m { margin-top: var(--space-2) }`}
-    ${"ignores an element out of flow"}                         | ${MARGINED_STACK}                                                                                           | ${"spaced spaced"}        | ${`${STACK} ${MARGIN} .m { position: absolute }`}
-    ${"reads :last-child against the row's place"}              | ${'<Modal><div className="s"><Field className="m" /><Field className="m" /></div></Modal>'}                 | ${"doubled spaced"}       | ${`${STACK} ${MARGIN} .m:last-child { margin-top: 0 }`}
-    ${"ignores a vertical margin in a row"}                     | ${'<Modal><div className="r"><Field className="m" /><Field /></div></Modal>'}                               | ${"spaced spaced"}        | ${`.r { display: flex; gap: var(--space-3) } ${MARGIN}`}
-    ${"leaves the title to the title gate"}                     | ${'<Modal><div className="form-stack"><Heading className="modal-title">A</Heading><Field /></div></Modal>'} | ${"spaced"}               | ${""}
-    ${"reads a stack scoped to another host as no stack"}       | ${'<Modal><div className="pb"><p /><Field /></div></Modal>'}                                                | ${"flush"}                | ${SCOPED}
-    ${"reads that stack under its host"}                        | ${'<Modal><div className="f"><div className="pb"><p /><Field /></div></div></Modal>'}                       | ${"spaced"}               | ${SCOPED}
-    ${"lets the dialog stack zero every row's margin"}          | ${MARGINED_STACK}                                                                                           | ${"spaced spaced"}        | ${`${STACK} ${MARGIN} .modal .s > * { margin-block: 0 }`}
-    ${"lets a later two-class rule beat that zero"}             | ${MARGINED_STACK}                                                                                           | ${"spaced doubled"}       | ${`${STACK} .modal .s > * { margin-block: 0 } .modal .m { margin-top: var(--space-2) }`}
-    ${"reads a gap shorthand after its longhand"}               | ${'<Modal><div className="s"><Field /><Field /></div></Modal>'}                                             | ${"spaced spaced"}        | ${".s { display: flex; flex-direction: column; row-gap: 0; gap: var(--space-3) }"}
-    ${"reads a context's ancestors in order"}                   | ${'<Modal><div className="o"><div className="b"><p /><Field /></div></div></Modal>'}                        | ${"flush"}                | ${".o .modal .b { display: flex; flex-direction: column; gap: var(--space-3) }"}
-    ${"weighs :last-child above a later bare class"}            | ${MARGINED_STACK}                                                                                           | ${"spaced doubled"}       | ${`${STACK} .m:last-child { margin-top: var(--space-2) } .m { margin-top: 0 }`}
-    ${"weighs :is() by its heaviest argument"}                  | ${MARGINED_STACK}                                                                                           | ${"spaced doubled"}       | ${`${STACK} :is(.s, .q .r) > * { margin-block: 0 } .s .m { margin-top: var(--space-2) }`}
-    ${"reads a component that wraps Modal as a dialog"}         | ${"<Sheet><p /><Field /></Sheet>"}                                                                          | ${"flush"}                | ${""}
-    ${"reads Modal re-exported under another name"}             | ${"<Pane><p /><Field /></Pane>"}                                                                            | ${"flush"}                | ${""}
-    ${"reads an element with role=dialog as a dialog"}          | ${'<div role="dialog"><p /><Field /></div>'}                                                                | ${"flush"}                | ${""}
-    ${"reads a component with role=dialog as a dialog"}         | ${'<Card role="dialog"><p /><Field /></Card>'}                                                              | ${"flush"}                | ${""}
-    ${"reads a two-value margin with !important"}               | ${'<Modal><div className="s"><Field className="m" /><Field /></div></Modal>'}                               | ${"spaced spaced"}        | ${`${STACK} .m { margin: 0 auto !important }`}
-    ${"reads rows held in a JSX variable"}                      | ${inModal("{held}")}                                                                                        | ${"flush"}                | ${""}
-    ${"reads rows a function returns"}                          | ${inModal("{fields()}")}                                                                                    | ${"flush"}                | ${""}
-    ${"places a prop's rows where the dialog puts them"}        | ${"<Shell body={<><p /><Field /></>} />"}                                                                   | ${"flush"}                | ${""}
-    ${"places a prop's rows in the stack that holds them"}      | ${inModal("<Framed body={<><p /><Field /></>} />")}                                                         | ${"spaced"}               | ${""}
-    ${"follows a prop handed on to another component"}          | ${inModal("<Outer body={<><p /><Field /></>} />")}                                                          | ${"spaced"}               | ${""}
-    ${"places a render prop's rows where it is called"}         | ${"<Explain body={(n) => <><p /><Field /></>} />"}                                                          | ${"spaced"}               | ${""}
-    ${"places a render prop called under a condition"}          | ${"<Opened body={(n) => <><p /><Field /></>} />"}                                                           | ${"flush"}                | ${""}
-    ${"calls a render prop it cannot place unplaced"}           | ${"<Kept body={(n) => <><p /><Field /></>} />"}                                                             | ${"unplaced"}             | ${""}
-    ${"places a prop through a component inside its own prop"}  | ${inModal("<p /><Line control={<Line control={<Field />} />} />")}                                          | ${"flush"}                | ${""}
-    ${"reads the drawer's own box classes"}                     | ${`<Modal placement="right">${PARAGRAPH_STACK}</Modal>`}                                                    | ${"spaced"}               | ${DRAWER_STACK}
-    ${"judges each placement a ternary picks"}                  | ${`<Modal placement={a ? "right" : "center"}>${PARAGRAPH_STACK}</Modal>`}                                   | ${"flush"}                | ${DRAWER_BLOCK}
-    ${"judges every placement an unread value can be"}          | ${`<Modal placement={where}>${PARAGRAPH_STACK}</Modal>`}                                                    | ${"flush"}                | ${DRAWER_BLOCK}
-    ${"reads the placement a wrapper defaults to"}              | ${`<Side>${PARAGRAPH_STACK}</Side>`}                                                                        | ${"spaced"}               | ${DRAWER_STACK}
-    ${"ignores a rule that holds only under a query"}           | ${`<Modal>${PARAGRAPH_STACK}</Modal>`}                                                                      | ${"spaced"}               | ${`${STACK} @media (min-width: 1px) { .s { display: block } }`}
-    ${"lets !important outrank a heavier rule"}                 | ${`<Modal>${PARAGRAPH_STACK}</Modal>`}                                                                      | ${"spaced"}               | ${".s { display: flex !important; flex-direction: column; gap: var(--space-3) } .modal .s { display: block }"}
-    ${"stacks only if every branch of a class does"}            | ${'<Modal><div className={a ? "s" : "t"}><p /><Field /></div></Modal>'}                                     | ${"flush"}                | ${STACK}
-    ${"doubles if any branch of a class margins"}               | ${'<Modal><div className="s"><Field /><Field className={a && "m"} /></div></Modal>'}                        | ${"spaced doubled"}       | ${`${STACK} ${MARGIN}`}
-    ${"doubles if a template's branch margins"}                 | ${'<Modal><div className="s"><Field /><Field className={`f#{a ? " m" : ""}`} /></div></Modal>'}             | ${"spaced doubled"}       | ${`${STACK} ${MARGIN}`}
-    ${"reads a class an interpolation cuts as each it can be"}  | ${'<Modal><div className="s"><Field /><Field className={`m#{k}`} /></div></Modal>'}                         | ${"spaced doubled"}       | ${`${STACK} .mx { margin-top: var(--space-2) }`}
-    ${"weighs :where() as nothing"}                             | ${MARGINED_STACK}                                                                                           | ${"spaced doubled"}       | ${`${STACK} .modal :where(.s) > * { margin-block: 0 } ${MARGIN}`}
-    ${"leaves a field editing in place among text alone"}       | ${inModal("<div><span /><Field labelHidden /></div>")}                                                      | ${"no rows"}              | ${""}
-    ${"still catches the same field with its label shown"}      | ${inModal("<div><span /><Field /></div>")}                                                                  | ${"flush"}                | ${""}
-    ${"catches a field whose label shows in a branch"}          | ${inModal("<div><span /><Field labelHidden={a} /></div>")}                                                  | ${"flush"}                | ${""}
-    ${"leaves a component editing in place alone"}              | ${inModal("<div><span /><Inline /></div>")}                                                                 | ${"no rows"}              | ${""}
-    ${"keeps a local function's element where it is used"}      | ${"<ConfirmModal><Cited /></ConfirmModal>"}                                                                 | ${"no rows"}              | ${`${FORM_STACK} ${MARGIN}`}
-    ${"roots a local function's element the component returns"} | ${"<ConfirmModal><Bare /></ConfirmModal>"}                                                                  | ${"doubled"}              | ${`${FORM_STACK} ${MARGIN}`}
+    spec                                                        | jsx                                                                                                                       | verdict                   | sheet
+    ${"catches a field under a paragraph"}                      | ${inModal("<p /><Field />")}                                                                                              | ${"flush"}                | ${""}
+    ${"catches a ChoiceList over a Checkbox"}                   | ${inModal("<ChoiceList /><Checkbox />")}                                                                                  | ${"flush flush"}          | ${""}
+    ${"passes a lone field between title and actions"}          | ${inModal("<Field />")}                                                                                                   | ${"spaced"}               | ${""}
+    ${"passes fields in a .form-stack"}                         | ${inModal('<div className="form-stack"><p /><Field /><Field /></div>')}                                                   | ${"spaced spaced"}        | ${""}
+    ${"passes fields whose ConfirmModal stacks them"}           | ${"<ConfirmModal><p /><Field /><Field /></ConfirmModal>"}                                                                 | ${"spaced spaced"}        | ${""}
+    ${"reads through a fragment and a condition"}               | ${inModal("<>{a && <Field />}<Field /></>")}                                                                              | ${"flush flush"}          | ${""}
+    ${"reads one field a map repeats"}                          | ${inModal("<div>{xs.map((x) => <Field key={x} />)}</div>")}                                                               | ${"flush"}                | ${""}
+    ${"lets two branches of a ternary stand alone"}             | ${inModal("{a ? <Field /> : <Field />}")}                                                                                 | ${"spaced spaced"}        | ${""}
+    ${"lifts a lone field out of a bare wrapper"}               | ${inModal("<p /><form><Field /></form>")}                                                                                 | ${"flush"}                | ${""}
+    ${"passes fields side by side in a .form-row"}              | ${inModal('<div className="form-stack"><div className="form-row"><Field /><Field /></div></div>')}                        | ${"spaced spaced spaced"} | ${""}
+    ${"follows a component that renders field rows"}            | ${inModal("<Rows />")}                                                                                                    | ${"flush"}                | ${""}
+    ${"passes that component inside a stack"}                   | ${"<ConfirmModal><Rows /></ConfirmModal>"}                                                                                | ${"spaced"}               | ${""}
+    ${"catches a field margin that doubles the gap"}            | ${'<Modal intent="form"><div className="s"><Field className="x" /><Field /></div></Modal>'}                               | ${"doubled spaced"}       | ${`${STACK} .x { margin-top: var(--space-3) }`}
+    ${"reads the stack from the stylesheet"}                    | ${'<Modal intent="form"><div className="s"><Field /><Field /></div></Modal>'}                                             | ${"flush flush"}          | ${".s { display: flex; flex-direction: column }"}
+    ${"joins a stack and a gap spelled by two classes"}         | ${'<Modal intent="form"><div className="c g"><Field /><Field /></div></Modal>'}                                           | ${"spaced spaced"}        | ${".c { display: flex; flex-direction: column } .g { gap: var(--space-3) }"}
+    ${"reads the gap a Stack is given"}                         | ${inModal('<Stack gap="2"><p /><Field /></Stack>')}                                                                       | ${"spaced"}               | ${""}
+    ${"lifts a field out of a render prop"}                     | ${inModal("<p /><Gate>{() => <Field />}</Gate>")}                                                                         | ${"flush"}                | ${""}
+    ${"calls a row handed to a prop it cannot place"}           | ${inModal("<View slot={<><Field /><Field /></>} />")}                                                                     | ${"unplaced unplaced"}    | ${""}
+    ${"calls a margin in a prop it cannot place"}               | ${inModal('<View slot={<div className="m" />} />')}                                                                       | ${"unplaced"}             | ${MARGIN}
+    ${"reads the class a component is handed"}                  | ${inModal('<Card className="s"><Field /><Field /></Card>')}                                                               | ${"spaced spaced"}        | ${STACK}
+    ${"follows a component the dialog renders"}                 | ${inModal("<Body />")}                                                                                                    | ${"flush"}                | ${""}
+    ${"catches any margin a dialog stack's child adds"}         | ${inModal('<div className="s"><p /><div className="m" /></div>')}                                                         | ${"doubled"}              | ${`${STACK} ${MARGIN}`}
+    ${"catches the action row's margin inside a stack"}         | ${inModal('<div className="form-stack"><Field /><div className="actions" /></div>')}                                      | ${"spaced doubled"}       | ${""}
+    ${"catches a margin on a component's root"}                 | ${"<ConfirmModal><Refusals /></ConfirmModal>"}                                                                            | ${"doubled"}              | ${`${FORM_STACK} ${MARGIN}`}
+    ${"lets a heavier rule under the stack zero it"}            | ${MARGINED_STACK}                                                                                                         | ${"spaced spaced"}        | ${`${STACK} ${MARGIN} .s > .m { margin-top: 0 }`}
+    ${"lets a rule for a child of the stack count the gap"}     | ${MARGINED_STACK}                                                                                                         | ${"spaced spaced"}        | ${`${STACK} ${MARGIN} .s > .m { margin-top: var(--space-1) }`}
+    ${"ignores a margin set under another context"}             | ${MARGINED_STACK}                                                                                                         | ${"spaced spaced"}        | ${`${STACK} .other .m { margin-top: var(--space-2) }`}
+    ${"ignores an element out of flow"}                         | ${MARGINED_STACK}                                                                                                         | ${"spaced spaced"}        | ${`${STACK} ${MARGIN} .m { position: absolute }`}
+    ${"reads :last-child against the row's place"}              | ${'<Modal intent="form"><div className="s"><Field className="m" /><Field className="m" /></div></Modal>'}                 | ${"doubled spaced"}       | ${`${STACK} ${MARGIN} .m:last-child { margin-top: 0 }`}
+    ${"ignores a vertical margin in a row"}                     | ${'<Modal intent="form"><div className="r"><Field className="m" /><Field /></div></Modal>'}                               | ${"spaced spaced"}        | ${`.r { display: flex; gap: var(--space-3) } ${MARGIN}`}
+    ${"leaves the title to the title gate"}                     | ${'<Modal intent="form"><div className="form-stack"><Heading className="modal-title">A</Heading><Field /></div></Modal>'} | ${"spaced"}               | ${""}
+    ${"reads a stack scoped to another host as no stack"}       | ${'<Modal intent="form"><div className="pb"><p /><Field /></div></Modal>'}                                                | ${"flush"}                | ${SCOPED}
+    ${"reads that stack under its host"}                        | ${'<Modal intent="form"><div className="f"><div className="pb"><p /><Field /></div></div></Modal>'}                       | ${"spaced"}               | ${SCOPED}
+    ${"lets the dialog stack zero every row's margin"}          | ${MARGINED_STACK}                                                                                                         | ${"spaced spaced"}        | ${`${STACK} ${MARGIN} .modal .s > * { margin-block: 0 }`}
+    ${"lets a later two-class rule beat that zero"}             | ${MARGINED_STACK}                                                                                                         | ${"spaced doubled"}       | ${`${STACK} .modal .s > * { margin-block: 0 } .modal .m { margin-top: var(--space-2) }`}
+    ${"reads a gap shorthand after its longhand"}               | ${'<Modal intent="form"><div className="s"><Field /><Field /></div></Modal>'}                                             | ${"spaced spaced"}        | ${".s { display: flex; flex-direction: column; row-gap: 0; gap: var(--space-3) }"}
+    ${"reads a context's ancestors in order"}                   | ${'<Modal intent="form"><div className="o"><div className="b"><p /><Field /></div></div></Modal>'}                        | ${"flush"}                | ${".o .modal .b { display: flex; flex-direction: column; gap: var(--space-3) }"}
+    ${"weighs :last-child above a later bare class"}            | ${MARGINED_STACK}                                                                                                         | ${"spaced doubled"}       | ${`${STACK} .m:last-child { margin-top: var(--space-2) } .m { margin-top: 0 }`}
+    ${"weighs :is() by its heaviest argument"}                  | ${MARGINED_STACK}                                                                                                         | ${"spaced doubled"}       | ${`${STACK} :is(.s, .q .r) > * { margin-block: 0 } .s .m { margin-top: var(--space-2) }`}
+    ${"reads a component that wraps Modal as a dialog"}         | ${"<Sheet><p /><Field /></Sheet>"}                                                                                        | ${"flush"}                | ${""}
+    ${"reads Modal re-exported under another name"}             | ${'<Pane intent="form"><p /><Field /></Pane>'}                                                                            | ${"flush"}                | ${""}
+    ${"reads an element with role=dialog as a dialog"}          | ${'<div role="dialog"><p /><Field /></div>'}                                                                              | ${"flush"}                | ${""}
+    ${"reads a component with role=dialog as a dialog"}         | ${'<Card role="dialog"><p /><Field /></Card>'}                                                                            | ${"flush"}                | ${""}
+    ${"reads a two-value margin with !important"}               | ${'<Modal intent="form"><div className="s"><Field className="m" /><Field /></div></Modal>'}                               | ${"spaced spaced"}        | ${`${STACK} .m { margin: 0 auto !important }`}
+    ${"reads rows held in a JSX variable"}                      | ${inModal("{held}")}                                                                                                      | ${"flush"}                | ${""}
+    ${"reads rows a function returns"}                          | ${inModal("{fields()}")}                                                                                                  | ${"flush"}                | ${""}
+    ${"places a prop's rows where the dialog puts them"}        | ${"<Shell body={<><p /><Field /></>} />"}                                                                                 | ${"flush"}                | ${""}
+    ${"places a prop's rows in the stack that holds them"}      | ${inModal("<Framed body={<><p /><Field /></>} />")}                                                                       | ${"spaced"}               | ${""}
+    ${"follows a prop handed on to another component"}          | ${inModal("<Outer body={<><p /><Field /></>} />")}                                                                        | ${"spaced"}               | ${""}
+    ${"places a render prop's rows where it is called"}         | ${"<Explain body={(n) => <><p /><Field /></>} />"}                                                                        | ${"spaced"}               | ${""}
+    ${"places a render prop called under a condition"}          | ${"<Opened body={(n) => <><p /><Field /></>} />"}                                                                         | ${"flush"}                | ${""}
+    ${"calls a render prop it cannot place unplaced"}           | ${"<Kept body={(n) => <><p /><Field /></>} />"}                                                                           | ${"unplaced"}             | ${""}
+    ${"places a prop through a component inside its own prop"}  | ${inModal("<p /><Line control={<Line control={<Field />} />} />")}                                                        | ${"flush"}                | ${""}
+    ${"reads the drawer's own box classes"}                     | ${`<Modal intent="drawer">${PARAGRAPH_STACK}</Modal>`}                                                                    | ${"spaced"}               | ${DRAWER_STACK}
+    ${"judges each intent a ternary picks"}                     | ${`<Modal intent={a ? "drawer" : "confirm"}>${PARAGRAPH_STACK}</Modal>`}                                                  | ${"flush"}                | ${DRAWER_BLOCK}
+    ${"judges every intent an unread value can be"}             | ${`<Modal intent={where}>${PARAGRAPH_STACK}</Modal>`}                                                                     | ${"flush"}                | ${DRAWER_BLOCK}
+    ${"reads the intent a wrapper defaults to"}                 | ${`<Side>${PARAGRAPH_STACK}</Side>`}                                                                                      | ${"spaced"}               | ${DRAWER_STACK}
+    ${"ignores a rule that holds only under a query"}           | ${`<Modal intent="form">${PARAGRAPH_STACK}</Modal>`}                                                                      | ${"spaced"}               | ${`${STACK} @media (min-width: 1px) { .s { display: block } }`}
+    ${"lets !important outrank a heavier rule"}                 | ${`<Modal intent="form">${PARAGRAPH_STACK}</Modal>`}                                                                      | ${"spaced"}               | ${".s { display: flex !important; flex-direction: column; gap: var(--space-3) } .modal .s { display: block }"}
+    ${"stacks only if every branch of a class does"}            | ${'<Modal intent="form"><div className={a ? "s" : "t"}><p /><Field /></div></Modal>'}                                     | ${"flush"}                | ${STACK}
+    ${"doubles if any branch of a class margins"}               | ${'<Modal intent="form"><div className="s"><Field /><Field className={a && "m"} /></div></Modal>'}                        | ${"spaced doubled"}       | ${`${STACK} ${MARGIN}`}
+    ${"doubles if a template's branch margins"}                 | ${'<Modal intent="form"><div className="s"><Field /><Field className={`f#{a ? " m" : ""}`} /></div></Modal>'}             | ${"spaced doubled"}       | ${`${STACK} ${MARGIN}`}
+    ${"reads a class an interpolation cuts as each it can be"}  | ${'<Modal intent="form"><div className="s"><Field /><Field className={`m#{k}`} /></div></Modal>'}                         | ${"spaced doubled"}       | ${`${STACK} .mx { margin-top: var(--space-2) }`}
+    ${"weighs :where() as nothing"}                             | ${MARGINED_STACK}                                                                                                         | ${"spaced doubled"}       | ${`${STACK} .modal :where(.s) > * { margin-block: 0 } ${MARGIN}`}
+    ${"leaves a field editing in place among text alone"}       | ${inModal("<div><span /><Field labelHidden /></div>")}                                                                    | ${"no rows"}              | ${""}
+    ${"still catches the same field with its label shown"}      | ${inModal("<div><span /><Field /></div>")}                                                                                | ${"flush"}                | ${""}
+    ${"catches a field whose label shows in a branch"}          | ${inModal("<div><span /><Field labelHidden={a} /></div>")}                                                                | ${"flush"}                | ${""}
+    ${"leaves a component editing in place alone"}              | ${inModal("<div><span /><Inline /></div>")}                                                                               | ${"no rows"}              | ${""}
+    ${"keeps a local function's element where it is used"}      | ${"<ConfirmModal><Cited /></ConfirmModal>"}                                                                               | ${"no rows"}              | ${`${FORM_STACK} ${MARGIN}`}
+    ${"roots a local function's element the component returns"} | ${"<ConfirmModal><Bare /></ConfirmModal>"}                                                                                | ${"doubled"}              | ${`${FORM_STACK} ${MARGIN}`}
   `("$spec", ({ jsx, verdict, sheet }: RowCase) => {
     expect(plantedRows(jsx, sheet ? ownersIn([sheet]) : owners())).toBe(
       verdict,

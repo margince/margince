@@ -261,10 +261,6 @@
 .modal-form {
   width: min(var(--dialogFormWidth), calc(100vw - 40px));
 }
-/* The legacy roomy box, kept until its call sites name an intent. */
-.modal-wide {
-  width: min(720px, calc(100vw - 40px));
-}
 /* The LIGHTBOX: a stored file, read at the size of the screen.
  *
  * The inset is what makes it a lightbox rather than a second page — the
@@ -368,11 +364,6 @@
   flex-direction: column;
   padding: 0;
 }
-/* The legacy SPLIT drawer, kept for the brief's queue: a banded drawer whose
-   width follows the window down. */
-.modal-drawer-split {
-  width: clamp(360px, 62vw, 1040px);
-}
 /* In a dialog the stack's gap is the only space between its rows; a row's own
    margin would add to it. Declared before `.modal .actions`, so its margin wins. */
 .modal .form-stack > * {
@@ -417,16 +408,15 @@
   border-top: 1px solid var(--borderSubtle);
 }
 /* A form or drawer whose body is one `.form-stack` scrolls that body, keeping
-   title and action row in reach. Not split: its two columns size to the drawer.
-   Not a drawer band either: the bands already pin themselves, above. */
+   title and action row in reach. Not a drawer band: the bands pin themselves. */
 @media (min-width: 721px) {
-  :where(.modal-form, .modal-drawer:not(.modal-drawer-split)):where(
+  :where(.modal-form, .modal-drawer):where(
     :has(> .form-stack:not(.drawer-body) + .actions)
   ) {
     display: flex;
     flex-direction: column;
   }
-  :where(.modal-form, .modal-drawer:not(.modal-drawer-split)):where(
+  :where(.modal-form, .modal-drawer):where(
       :has(> .form-stack:not(.drawer-body) + .actions)
     )
     > .form-stack:where(:not(.drawer-body)) {
@@ -438,7 +428,7 @@
     padding: var(--space-1);
   }
   /* The stack scrolls when it overflows, so no row may shrink to fit it. */
-  :where(.modal-form, .modal-drawer:not(.modal-drawer-split)):where(
+  :where(.modal-form, .modal-drawer):where(
       :has(> .form-stack:not(.drawer-body) + .actions)
     )
     > .form-stack:where(:not(.drawer-body))
@@ -462,7 +452,6 @@
   /* A confirm stays a card over the scrim: it asks one question about the
      page it covers, and the page has to stay in view for that. */
   .modal:where(:not(.modal-confirm)),
-  .modal-wide,
   .modal-drawer {
     width: 100vw;
     max-width: 100vw;

@@ -51,7 +51,13 @@ export function PurgeDialog({
   // Not ConfirmModal: its pair always offers a confirm, and the receipt after
   // the purge has nothing left to confirm.
   return (
-    <Modal open onClose={close} labelledBy={headingId} intent="confirm">
+    <Modal
+      open
+      onClose={close}
+      closeDisabled={purge.isPending}
+      labelledBy={headingId}
+      intent="confirm"
+    >
       <Heading size="large" id={headingId} className="t-h2 modal-title">
         {t("capturePurge.title", { value: ruleValue })}
       </Heading>

@@ -1137,6 +1137,7 @@ function PassportCard() {
       <Modal
         open={minting}
         onClose={closeMint}
+        closeDisabled={mint.isPending}
         labelledBy={mintTitleId}
         intent="confirm"
       >
@@ -1670,13 +1671,6 @@ function ResetDataCard() {
       <ConfirmModal
         open={open}
         onClose={() => {
-          // Don't let Escape/backdrop dismiss the dialog mid-request: closing
-          // re-enables the outer button while the first destructive POST is
-          // still in flight (reset.reset() clears mutation state but cannot
-          // abort the sent request), which would allow a second reset.
-          if (reset.isPending) {
-            return;
-          }
           setOpen(false);
           setTyped("");
           reset.reset();

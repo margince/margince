@@ -170,7 +170,12 @@ function DialogAction() {
       <button type="button" onClick={() => setOpen(true)}>
         Merge with…
       </button>
-      <Modal open={open} onClose={() => setOpen(false)} labelledBy="merge">
+      <Modal
+        open={open}
+        onClose={() => setOpen(false)}
+        labelledBy="merge"
+        intent="form"
+      >
         <Heading size="large" id="merge">
           Merge with…
         </Heading>
@@ -234,7 +239,7 @@ it("closes on Escape and on a chosen verb when it sits inside a dialog", async (
   const onDialogClose = vi.fn();
   const user = userEvent.setup();
   render(
-    <Modal open onClose={onDialogClose} labelledBy="deal">
+    <Modal open onClose={onDialogClose} labelledBy="deal" intent="form">
       <Heading size="large" id="deal">
         Deal
       </Heading>
