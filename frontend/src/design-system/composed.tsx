@@ -22,7 +22,7 @@ import {
 import { type Locale, translatePlural, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { Avatar, Badge, Button, OptionCount } from "./atoms";
-import { type BoardDealMail, DealCard } from "./dealcard";
+import { type BoardDealMail, DealCard, type DealCardHooks } from "./dealcard";
 import { EmailEntry, EmailWords } from "./emailentry";
 import { Eyebrow } from "./eyebrow";
 import { type ContactOn, withWhom } from "./participants";
@@ -233,22 +233,21 @@ type PlainBoardProps<Record extends BoardRecord> = BoardHandlers<Record> & {
   renderCard: (record: Record, column: BoardColumn<Record>) => ReactNode;
 };
 
-type DealBoardProps = BoardHandlers<BoardDeal> & {
-  variant?: "deal";
-  columns: BoardMoneyColumn[];
-  /**
-   * Each card's own address. Required, because every card on this board opens a
-   * deal and a card that opens a record is a link — see `DealCard`'s `href`.
-   * A function rather than a field on the deal: the ADDRESS is the screen's
-   * vocabulary and this tier holds no routes.
-   */
-  cardHref: (deal: BoardDeal) => string;
-  onOpen?: (deal: BoardDeal, event: React.MouseEvent) => void;
-  /** Each card's mail flyout — see `DealCard`'s `mailAside`. */
-  mailAside?: (deal: BoardDeal) => ReactNode;
-  /** The zone a close date is read in — see `DealCard`'s `zone`. */
-  zone: string;
-};
+type DealBoardProps = BoardHandlers<BoardDeal> &
+  DealCardHooks & {
+    variant?: "deal";
+    columns: BoardMoneyColumn[];
+    /**
+     * Each card's own address. Required, because every card on this board opens a
+     * deal and a card that opens a record is a link — see `DealCard`'s `href`.
+     * A function rather than a field on the deal: the ADDRESS is the screen's
+     * vocabulary and this tier holds no routes.
+     */
+    cardHref: (deal: BoardDeal) => string;
+    onOpen?: (deal: BoardDeal, event: React.MouseEvent) => void;
+    /** The zone a close date is read in — see `DealCard`'s `zone`. */
+    zone: string;
+  };
 
 type BoardLayoutProps<Record extends BoardRecord> = BoardHandlers<Record> & {
   columns: BoardColumn<Record>[];
@@ -451,6 +450,7 @@ export function PipelineBoard<Record extends BoardRecord>(
           zone={props.zone}
           onOpen={props.onOpen}
           mailAside={props.mailAside}
+          actions={props.cardActions?.(deal)}
           dragHandlers={props.cardDragHandlers?.(deal, column)}
         />
       )}
