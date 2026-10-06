@@ -84,10 +84,7 @@ func TestEmbedReindexRebuildsTheCorpusInOnePassAndHandsTheMarkerBack(t *testing.
 	leadID := re.SeedID(t, `INSERT INTO lead (id, full_name, source, captured_by) VALUES ($1, 'One Pass Lead', 'manual', 'human:x')`)
 
 	runner, completed, failed := jobtest.StartTestJobRunner(t, re.Pool, compose.JobRunnerConfig{
-		CloseDateInterval: time.Hour,
-		ReconcileInterval: time.Hour,
-		TimeScanInterval:  time.Hour,
-		Embedder:          re.embedder,
+		Embedder: re.embedder,
 	})
 	if err := runner.Enqueue(context.Background(), compose.EmbedReindexArgs{Run: re.run, Identity: re.identity}, nil); err != nil {
 		t.Fatalf("enqueueing the run: %v", err)
@@ -180,10 +177,7 @@ func TestEmbedReindexWithNoLiveWorkspaceHandsTheMarkerBack(t *testing.T) {
 	// permanent for this row, so it stops deliberately rather than finishing —
 	// awaiting the wrong terminal state here would hang rather than fail.
 	runner, err := compose.NewJobRunner(re.Pool, slog.New(slog.DiscardHandler), compose.JobRunnerConfig{
-		CloseDateInterval: time.Hour,
-		ReconcileInterval: time.Hour,
-		TimeScanInterval:  time.Hour,
-		Embedder:          re.embedder,
+		Embedder: re.embedder,
 	})
 	if err != nil {
 		t.Fatalf("NewJobRunner: %v", err)

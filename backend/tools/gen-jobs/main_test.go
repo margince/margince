@@ -354,11 +354,8 @@ kinds:
 
 // A cadence mapping is the same hole, on a block whose valid keys are a
 // different pair; it takes its own fixture because only a DISPATCHER may carry
-// one.
-// The misspelled key is the INPUT, not a typo: an unknown key is what the
-// parser must reject, and the assertion names the same string back.
-//
-//nolint:misspell // "postive" is deliberate fixture data — correcting it would make the key valid and the test vacuous
+// one. The misspelled key is the INPUT: an unknown key is what the parser must
+// reject, and the assertion names the same string back.
 func TestParseRejectsAnUnknownKeyInACadenceMapping(t *testing.T) {
 	mustFail(t, validQueues+`
 kinds:
@@ -368,7 +365,7 @@ kinds:
     queue: default
     timeout: 2m
     opts_owner: caller
-    cadence: {operator: Interval, schedule_when_postive: Interval}
+    cadence: {setting: installation.foo_seconds, off_at_zeroo: true}
     fans_out_to: foo_workspace
     fan_out_unit: workspace
   foo_workspace:
@@ -377,7 +374,60 @@ kinds:
     queue: default
     timeout: 2m
     opts_owner: caller
-`, "schedule_when_postive")
+`, "off_at_zeroo")
+}
+
+// A schedule is now an admin's setting, and the dial form it replaced is
+// refused rather than read: a contract still naming a config field would name
+// a value nothing reads.
+func TestParseRejectsACadenceTakenFromConfiguration(t *testing.T) {
+	mustFail(t, validQueues+`
+kinds:
+  foo:
+    role: dispatcher
+    go_type: FooArgs
+    queue: default
+    timeout: 2m
+    opts_owner: caller
+    cadence: {operator: Interval}
+    fans_out_to: foo_workspace
+    fan_out_unit: workspace
+  foo_workspace:
+    role: worker
+    go_type: FooWorkspaceArgs
+    queue: default
+    timeout: 2m
+    opts_owner: caller
+`, "operator")
+}
+
+// A setting cadence compiles to the key the worker reads and the off posture
+// it declares, which is everything the runtime schedule is built from.
+func TestEmitRendersASettingCadence(t *testing.T) {
+	src, err := emitSpecs(mustParse(t, validQueues+`
+kinds:
+  foo:
+    role: dispatcher
+    go_type: FooArgs
+    queue: default
+    timeout: 2m
+    opts_owner: caller
+    cadence: {setting: installation.foo_seconds, off_at_zero: true}
+    fans_out_to: foo_workspace
+    fan_out_unit: workspace
+  foo_workspace:
+    role: worker
+    go_type: FooWorkspaceArgs
+    queue: default
+    timeout: 2m
+    opts_owner: caller
+`), "hash")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if block := specBlock(t, src, "foo"); !strings.Contains(block, `Cadence{Setting: "installation.foo_seconds", OffAtZero: true}`) {
+		t.Errorf("foo rendered as:\n%s\nwant its setting key and off posture", block)
+	}
 }
 
 // Only the first document is decoded and only the first is walked for

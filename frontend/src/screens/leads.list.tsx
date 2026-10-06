@@ -11,7 +11,7 @@ import { replaceDial, useUrlParams } from "../app/urlstate";
 import { Badge, SegmentedControl } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { CellStrip } from "../design-system/listtable";
-import { useToast } from "../design-system/toast";
+import { useOwnToast } from "../design-system/toast";
 import { formatDateAbbrev, formatNumber } from "../format/format";
 import { leadIdentityName } from "../format/leadname";
 import { useLocale, useT } from "../i18n";
@@ -261,7 +261,7 @@ function LeadsWorkbench({
   // What the last bulk write did to a row the current view then stopped
   // showing — a successful assign out of "Mine" must never look like nothing
   // happened (or like a failure).
-  const toast = useToast();
+  const assignedAway = useOwnToast({ leavesWithCaller: true });
   const showingMine = state.query.filters.owner_id === viewerId;
   // Only ids the list currently holds count as selected: a row that left the
   // result set (refetched away, paged out, filtered out) must not linger as
@@ -474,7 +474,7 @@ function LeadsWorkbench({
                 );
                 // Each run says its own thing; a sentence about the last one
                 // must not stand beside this one's rows.
-                toast.dismiss();
+                assignedAway.withdraw();
                 const moved = outcomes.filter((o) => !o.error);
                 if (
                   action.kind === "assign" &&
@@ -482,18 +482,17 @@ function LeadsWorkbench({
                   action.ownerId !== viewerId &&
                   moved.length > 0
                 ) {
-                  // The verb goes through `action` rather than into the
-                  // message: the region draws it, so it is one control on one
-                  // ground rather than a `Button` hand-placed on the toast's
-                  // dark plate, and the region withdraws the message once it
-                  // has been pressed.
-                  toast.show(
+                  // The verb goes through `action`: the region draws it as one
+                  // control on one ground, not a `Button` hand-placed on the
+                  // toast's dark plate, and withdraws the message once pressed.
+                  assignedAway.show(
                     t("lead.assignedAway", {
                       names: moved.map((o) => o.name).join(", "),
                       owner: action.ownerName,
                     }),
                     {
                       action: {
+                        kind: "open",
                         label: t("list.showAll"),
                         onAct: () =>
                           state.setQuery((q) => {

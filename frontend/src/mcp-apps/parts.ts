@@ -19,7 +19,6 @@
 // the components already guarantee they do.
 
 import { meshOf, meshStyle, monogramOf } from "../design-system/avatarmesh";
-import type { CalloutTone } from "../design-system/callout";
 import type { PanelTone } from "../design-system/panel";
 import type { StrengthBand } from "../design-system/strengthmeter";
 import { el, heading } from "./bridge";
@@ -57,22 +56,9 @@ export function panel(
   return section;
 }
 
-/** panelRow mirrors `PanelRow`: one row, ruled from the row above it. */
-export function panelRow(className?: string): HTMLElement {
-  return el(
-    "div",
-    className === undefined ? "panel-row" : `panel-row ${className}`,
-  );
-}
-
 /** panelBody mirrors `PanelBody`. */
 export function panelBody(): HTMLElement {
   return el("div", "panel-body");
-}
-
-/** panelFoot is the panel's footer band, under a rule. */
-export function panelFoot(): HTMLElement {
-  return el("footer", "panel-foot");
 }
 
 /**
@@ -101,28 +87,46 @@ export function avatar(
 }
 
 /**
- * meter mirrors `Meter` dense and flat: a proportion as a thin bar, named for
- * assistive technology. A share that is not known draws an empty trough that
- * is hidden from assistive technology rather than announced as a meter with no
- * value: an absent factor is not a factor of zero, and the em dash beside it
- * already says so in words.
+ * button mirrors `Button`: the same `btn` classes the app's sheet draws, as a
+ * plain button because a view has no form to submit. `onPress` is the whole
+ * behaviour, and `busy` mirrors `pending` — aria-disabled rather than disabled,
+ * so focus stays where the reader put it while the write is out.
  */
-export function meter(share: number | null, label: string): HTMLElement {
-  const bar = el("div", "meterbar meterbar-dense meterbar-flat");
-  const fill = el("span");
-  bar.appendChild(fill);
-  if (share === null) {
-    bar.setAttribute("aria-hidden", "true");
-    return bar;
+export function button(
+  label: string,
+  variant: "primary" | "ghost",
+  onPress: () => void,
+  busy = false,
+): HTMLElement {
+  const node = el("button", `btn btn-${variant}`, label);
+  node.setAttribute("type", "button");
+  if (busy) {
+    node.setAttribute("aria-busy", "true");
+    node.setAttribute("aria-disabled", "true");
+    return node;
   }
-  const percent = Math.round(Math.min(1, Math.max(0, share)) * 100);
-  bar.setAttribute("role", "meter");
-  bar.setAttribute("aria-label", label);
-  bar.setAttribute("aria-valuemin", "0");
-  bar.setAttribute("aria-valuemax", "100");
-  bar.setAttribute("aria-valuenow", String(percent));
-  fill.style.width = `${percent}%`;
-  return bar;
+  node.addEventListener("click", onPress);
+  return node;
+}
+
+/**
+ * keepFocus runs a renderer that rebuilds the whole card and puts focus back on
+ * the button the reader was on, matched by its label. A press re-renders for its
+ * busy state, and a rebuilt document would otherwise drop a keyboard or
+ * screen-reader user to the top of the page mid-action.
+ */
+export function keepFocus(root: HTMLElement, draw: () => void): void {
+  const active = document.activeElement;
+  const label =
+    active instanceof HTMLButtonElement && root.contains(active)
+      ? active.textContent
+      : null;
+  draw();
+  if (label === null) return;
+  const same = [...root.querySelectorAll("button")].find(
+    (b) => b.textContent === label,
+  );
+  same?.focus();
 }
 
 /** strengthMeter mirrors `StrengthMeter`: three rising bars beside the word. */
@@ -133,25 +137,5 @@ export function strengthMeter(band: StrengthBand, word: string): HTMLElement {
   bars.setAttribute("aria-hidden", "true");
   for (let i = 0; i < 3; i++) bars.appendChild(el("i"));
   node.append(bars, word);
-  return node;
-}
-
-/**
- * callout mirrors `Callout` as a standing notice: a bordered note whose title
- * says the news and whose text says the rest. No live role, because Callout
- * gives a notice with no `kind` none — a verdict drawn with the panel is read
- * with it, not announced over it.
- */
-export function callout(
-  tone: CalloutTone,
-  title: string,
-  text: string,
-): HTMLElement {
-  const node = el("div", `callout callout-${tone}`);
-  const body = el("div", "callout-body");
-  const copy = el("div", "callout-copy");
-  copy.append(el("p", "callout-title", title), el("div", "callout-text", text));
-  body.appendChild(copy);
-  node.appendChild(body);
   return node;
 }

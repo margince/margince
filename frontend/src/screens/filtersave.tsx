@@ -136,6 +136,7 @@ export function SaveFilterModal({
     <ConfirmModal
       open={open}
       onClose={close}
+      intent="form"
       title={t("filters.saveTitle")}
       confirmLabel={t(asList ? "filters.saveListConfirm" : "views.save")}
       confirmDisabled={trimmed === ""}

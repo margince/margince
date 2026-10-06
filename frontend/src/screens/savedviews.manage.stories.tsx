@@ -34,6 +34,10 @@ export const ManageViewsOpen: Story = {
           views={[
             view("v1", "German customers"),
             view("v2", "Churned in 2026"),
+            view(
+              "v3",
+              "Manufacturing accounts with an open deal over fifty thousand",
+            ),
           ]}
         />
       </StoryProviders>
@@ -44,5 +48,6 @@ export const ManageViewsOpen: Story = {
     await userEvent.click(
       await canvas.findByRole("button", { name: "Manage views" }),
     );
+    await within(document.body).findByRole("dialog");
   },
 };

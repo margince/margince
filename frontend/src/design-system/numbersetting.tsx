@@ -18,6 +18,9 @@ import "./numbersetting.css";
  * description stays on the field and the refusal is ADDED to it, so a reader
  * hears the rule and how they broke it.
  *
+ * `lowestOn` is for a setting whose `min` of 0 means off: a value between 0
+ * and `lowestOn` is refused too, so 0 and `lowestOn..max` are the choices.
+ *
  * Typing the stored value back is no edit at all. A draft is held against the
  * value it was typed over, so the box shows the stored value again the moment
  * that value moves — a save landing, a refetch, a colleague's change — rather
@@ -28,6 +31,7 @@ export function NumberSetting({
   value,
   min,
   max,
+  lowestOn,
   refusal,
   onCommit,
   disabled,
@@ -37,6 +41,7 @@ export function NumberSetting({
   value: number;
   min: number;
   max: number;
+  lowestOn?: number;
   refusal: string;
   onCommit: (next: number) => void;
   disabled?: boolean;
@@ -69,7 +74,8 @@ export function NumberSetting({
       live.text.trim() === "" ||
       !Number.isInteger(next) ||
       next < min ||
-      next > max
+      next > max ||
+      (lowestOn !== undefined && next !== 0 && next < lowestOn)
     ) {
       setRefused(true);
       return;

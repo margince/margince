@@ -99,7 +99,7 @@ func TestEveryStageableWriteAppliesTheVersionItStages(t *testing.T) {
 
 	reaching := handlesReachingPinForWrite(t)
 	registry := NewRegistry(&recordingApprovals{}, nil)
-	RegisterCoreTools(registry, elsewhereProvider{}, fixedStages{semantic: "won"}, nil, noConflicts{}, nil, nil)
+	RegisterCoreTools(registry, elsewhereProvider{}, fixedStages{semantic: "won"}, nil, noConflicts{}, nil, nil, nil)
 	RegisterCommsTools(registry, &recordingComms{}, elsewhereProvider{})
 	RegisterLifecycleTools(registry, elsewhereProvider{}, nil, inertLifecycle{}, inertLifecycle{}, inertLifecycle{})
 

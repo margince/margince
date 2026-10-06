@@ -3084,10 +3084,11 @@ func (e BulkLeftBehindKind) Valid() bool {
 
 // Defines values for BulkRecordType.
 const (
-	BulkRecordTypeCompany BulkRecordType = "company"
-	BulkRecordTypeContact BulkRecordType = "contact"
-	BulkRecordTypeDeal    BulkRecordType = "deal"
-	BulkRecordTypeLead    BulkRecordType = "lead"
+	BulkRecordTypeCompany      BulkRecordType = "company"
+	BulkRecordTypeContact      BulkRecordType = "contact"
+	BulkRecordTypeDeal         BulkRecordType = "deal"
+	BulkRecordTypeLead         BulkRecordType = "lead"
+	BulkRecordTypeWorklistItem BulkRecordType = "worklist_item"
 )
 
 // Valid indicates whether the value is a known member of the BulkRecordType enum.
@@ -3100,6 +3101,8 @@ func (e BulkRecordType) Valid() bool {
 	case BulkRecordTypeDeal:
 		return true
 	case BulkRecordTypeLead:
+		return true
+	case BulkRecordTypeWorklistItem:
 		return true
 	default:
 		return false
@@ -3159,6 +3162,7 @@ const (
 	BulkVerbAddTag         BulkVerb = "add_tag"
 	BulkVerbAddToList      BulkVerb = "add_to_list"
 	BulkVerbArchive        BulkVerb = "archive"
+	BulkVerbComplete       BulkVerb = "complete"
 	BulkVerbCreateTask     BulkVerb = "create_task"
 	BulkVerbReassignOwner  BulkVerb = "reassign_owner"
 	BulkVerbRemoveFromList BulkVerb = "remove_from_list"
@@ -3173,6 +3177,8 @@ func (e BulkVerb) Valid() bool {
 	case BulkVerbAddToList:
 		return true
 	case BulkVerbArchive:
+		return true
+	case BulkVerbComplete:
 		return true
 	case BulkVerbCreateTask:
 		return true
@@ -6514,6 +6520,24 @@ func (e ContactMomentEvidenceType) Valid() bool {
 	case ContactMomentEvidenceTypeRelationshipChange:
 		return true
 	case ContactMomentEvidenceTypeTask:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ContactMomentMayBeDonePromiseType.
+const (
+	ContactMomentMayBeDonePromiseTypeClaim ContactMomentMayBeDonePromiseType = "claim"
+	ContactMomentMayBeDonePromiseTypeTask  ContactMomentMayBeDonePromiseType = "task"
+)
+
+// Valid indicates whether the value is a known member of the ContactMomentMayBeDonePromiseType enum.
+func (e ContactMomentMayBeDonePromiseType) Valid() bool {
+	switch e {
+	case ContactMomentMayBeDonePromiseTypeClaim:
+		return true
+	case ContactMomentMayBeDonePromiseTypeTask:
 		return true
 	default:
 		return false
@@ -9949,6 +9973,45 @@ func (e HealthDimensionRating) Valid() bool {
 	case HealthDimensionRatingGood:
 		return true
 	case HealthDimensionRatingStrong:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for HealthDimensionReasonCode.
+const (
+	HealthDimensionReasonCodeDealsAllStalled  HealthDimensionReasonCode = "deals_all_stalled"
+	HealthDimensionReasonCodeDealsNoneStalled HealthDimensionReasonCode = "deals_none_stalled"
+	HealthDimensionReasonCodeDealsSomeStalled HealthDimensionReasonCode = "deals_some_stalled"
+	HealthDimensionReasonCodeLastMet          HealthDimensionReasonCode = "last_met"
+	HealthDimensionReasonCodeMeetingBooked    HealthDimensionReasonCode = "meeting_booked"
+	HealthDimensionReasonCodeNeverWritten     HealthDimensionReasonCode = "never_written"
+	HealthDimensionReasonCodeQuiet            HealthDimensionReasonCode = "quiet"
+	HealthDimensionReasonCodeSeveralContacts  HealthDimensionReasonCode = "several_contacts"
+	HealthDimensionReasonCodeSingleThreaded   HealthDimensionReasonCode = "single_threaded"
+)
+
+// Valid indicates whether the value is a known member of the HealthDimensionReasonCode enum.
+func (e HealthDimensionReasonCode) Valid() bool {
+	switch e {
+	case HealthDimensionReasonCodeDealsAllStalled:
+		return true
+	case HealthDimensionReasonCodeDealsNoneStalled:
+		return true
+	case HealthDimensionReasonCodeDealsSomeStalled:
+		return true
+	case HealthDimensionReasonCodeLastMet:
+		return true
+	case HealthDimensionReasonCodeMeetingBooked:
+		return true
+	case HealthDimensionReasonCodeNeverWritten:
+		return true
+	case HealthDimensionReasonCodeQuiet:
+		return true
+	case HealthDimensionReasonCodeSeveralContacts:
+		return true
+	case HealthDimensionReasonCodeSingleThreaded:
 		return true
 	default:
 		return false
@@ -14005,6 +14068,45 @@ func (e ResolveInputCheckOutcome) Valid() bool {
 	case ResolveInputCheckOutcomeRemindLater:
 		return true
 	case ResolveInputCheckOutcomeValueCorrect:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RestoreLeftBehindKind.
+const (
+	RestoreLeftBehindKindCompanyDomain           RestoreLeftBehindKind = "company_domain"
+	RestoreLeftBehindKindCompanyRelationshipType RestoreLeftBehindKind = "company_relationship_type"
+	RestoreLeftBehindKindContactChannelIdentity  RestoreLeftBehindKind = "contact_channel_identity"
+	RestoreLeftBehindKindContactEmail            RestoreLeftBehindKind = "contact_email"
+	RestoreLeftBehindKindContactPhone            RestoreLeftBehindKind = "contact_phone"
+	RestoreLeftBehindKindList                    RestoreLeftBehindKind = "list"
+	RestoreLeftBehindKindPartner                 RestoreLeftBehindKind = "partner"
+	RestoreLeftBehindKindRelationship            RestoreLeftBehindKind = "relationship"
+	RestoreLeftBehindKindTag                     RestoreLeftBehindKind = "tag"
+)
+
+// Valid indicates whether the value is a known member of the RestoreLeftBehindKind enum.
+func (e RestoreLeftBehindKind) Valid() bool {
+	switch e {
+	case RestoreLeftBehindKindCompanyDomain:
+		return true
+	case RestoreLeftBehindKindCompanyRelationshipType:
+		return true
+	case RestoreLeftBehindKindContactChannelIdentity:
+		return true
+	case RestoreLeftBehindKindContactEmail:
+		return true
+	case RestoreLeftBehindKindContactPhone:
+		return true
+	case RestoreLeftBehindKindList:
+		return true
+	case RestoreLeftBehindKindPartner:
+		return true
+	case RestoreLeftBehindKindRelationship:
+		return true
+	case RestoreLeftBehindKindTag:
 		return true
 	default:
 		return false
@@ -18482,6 +18584,7 @@ const (
 	WorklistReasonKindFirstAsked         WorklistReasonKind = "first_asked"
 	WorklistReasonKindLegalDeadline      WorklistReasonKind = "legal_deadline"
 	WorklistReasonKindMaterial           WorklistReasonKind = "material"
+	WorklistReasonKindMeetingBooked      WorklistReasonKind = "meeting_booked"
 	WorklistReasonKindMeetingSoon        WorklistReasonKind = "meeting_soon"
 	WorklistReasonKindMeetingUnprepared  WorklistReasonKind = "meeting_unprepared"
 	WorklistReasonKindNoChampion         WorklistReasonKind = "no_champion"
@@ -18532,6 +18635,8 @@ func (e WorklistReasonKind) Valid() bool {
 	case WorklistReasonKindLegalDeadline:
 		return true
 	case WorklistReasonKindMaterial:
+		return true
+	case WorklistReasonKindMeetingBooked:
 		return true
 	case WorklistReasonKindMeetingSoon:
 		return true
@@ -22685,7 +22790,7 @@ type AiProviderKeyTestResultReason string
 // AiProviderSettings One provider's configuration. An entry no lane binds is held to its shape only, so a
 // host can be set before anything is bound to it.
 type AiProviderSettings struct {
-	// BaseUrl Where the provider is reached. Required on `openai_compatible` while a lane binds it, and on `jev_compatible` while the decisions lane binds it (the FULL decision endpoint, posted to as written). Optional elsewhere; empty means the adapter's compiled default.
+	// BaseUrl Where the provider is reached. Required on `openai_compatible` while a lane binds it, and on `jev_compatible` while the decisions lane binds it (the FULL decision endpoint, posted to as written). Optional elsewhere; empty means the adapter's compiled default. Refused on `gemini_vertex`, whose host follows from `location`.
 	BaseUrl *string `json:"base_url,omitempty"`
 
 	// Location The Vertex AI location a `gemini_vertex` provider is served from, which is where Google
@@ -22722,8 +22827,8 @@ type AiRouting struct {
 
 	// Profile The location ladder (§4). `sovereign` means zero egress by construction: a cloud
 	// provider on any tier is refused, and so is a local provider pointed at another host.
-	// `eu_hosted` promises EU inference: a broker lane must pin EU-region hosts, and a
-	// `gemini_vertex` lane must name an EU location.
+	// `eu_hosted` and `cloud_frontier` refuse no binding on residency grounds: where a lane is served is the
+	// connection's and the location's to say.
 	Profile AiRoutingProfile `json:"profile"`
 
 	// Providers Provider name to what that provider is configured with, independent of any lane: its
@@ -22738,8 +22843,8 @@ type AiRouting struct {
 
 // AiRoutingProfile The location ladder (§4). `sovereign` means zero egress by construction: a cloud
 // provider on any tier is refused, and so is a local provider pointed at another host.
-// `eu_hosted` promises EU inference: a broker lane must pin EU-region hosts, and a
-// `gemini_vertex` lane must name an EU location.
+// `eu_hosted` and `cloud_frontier` refuse no binding on residency grounds: where a lane is served is the
+// connection's and the location's to say.
 type AiRoutingProfile string
 
 // AiRoutingEffective What each tier will send OpenRouter once saved, the connection's keys and the product default merged in. Only tiers whose binding sends a block.
@@ -22901,7 +23006,8 @@ type AiTaskSettings struct {
 	Thinking *string `json:"thinking,omitempty"`
 }
 
-// AiTierBinding defines model for AiTierBinding.
+// AiTierBinding One tier's binding. A key this schema does not declare is refused with a 422 naming its
+// path, on every routing write.
 type AiTierBinding struct {
 	// BaseUrl On a tier, the provider's host as resolved from `providers`; on write it is accepted
 	// only when empty or equal to the provider's, and a different one is a 422
@@ -24349,7 +24455,7 @@ type AttentionItem struct {
 	Undo *AppliedUndo `json:"undo,omitempty"`
 
 	// Version The version of the row this item's own verbs write to, present where it names one — a
-	// task today. Carried for the reason `email_summary` carries one: a lane that offers
+	// task or a promise today. Carried for the reason `email_summary` carries one: a lane that offers
 	// `complete` and `snooze` has to name the row those presses condition on, or two contacts
 	// acting on one task each overwrite the other and neither is told.
 	Version *RowVersion `json:"version,omitempty"`
@@ -24550,9 +24656,12 @@ type AuditHistoryEntry struct {
 	// flag belong to the link, not to either record, and projecting them as a record's own
 	// fields would invent fields it does not have — which is also why edge entries never
 	// appear in `/field-history`.
-	Edge       *HistoryEdge       `json:"edge,omitempty"`
-	Id         openapi_types.UUID `json:"id"`
-	OccurredAt time.Time          `json:"occurred_at"`
+	Edge *HistoryEdge       `json:"edge,omitempty"`
+	Id   openapi_types.UUID `json:"id"`
+
+	// LeftBehind Set on the answer to putting back an archive, and omitted everywhere else: what the archive took down with the record that the restore could not bring back (a link the record's owner has since replaced, a list or tag archived in between). One entry per thing, by kind only: a caller allowed to restore the record is not thereby allowed to read a list, tag or link, so no id is returned. Absent means nothing was left.
+	LeftBehind *[]RestoreLeftBehind `json:"left_behind,omitempty"`
+	OccurredAt time.Time            `json:"occurred_at"`
 
 	// OnBehalfOf Granting human's user id for agent actions.
 	OnBehalfOf *openapi_types.UUID `json:"on_behalf_of,omitempty"`
@@ -25215,7 +25324,10 @@ type BulkChangeExecuteRequest struct {
 	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
 
 	// RecordType The kind of record a bulk change acts on. One change acts on one kind. A lead takes every
-	// verb but `archive`: a lead leaves the queue by being disqualified, which has no bulk verb.
+	// verb but `archive` and `complete`: a lead leaves the queue by being disqualified, which has
+	// no bulk verb.
+	// A `worklist_item` is a task or a promise (a conversation claim) as the Worklist lists it,
+	// named by the id its row carries; `complete` is its only verb, and no other kind takes it.
 	RecordType BulkRecordType `json:"record_type"`
 
 	// TagId The tag. Required for `add_tag` and `remove_tag` and refused for every other verb.
@@ -25230,7 +25342,9 @@ type BulkChangeExecuteRequest struct {
 	// `addListMember` and `removeListMember` do, and change nothing on the record itself.
 	// `add_tag` and `remove_tag` put the tag `tag_id` names on the record or take it off, exactly
 	// as `applyTag` and `removeTag` do. `create_task` files one new task, described by `task`,
-	// under each record, exactly as `createTask` does.
+	// under each record, exactly as `createTask` does. `complete` marks a `worklist_item` done:
+	// a task exactly as `updateActivity` with `is_done: true` does, a promise exactly as
+	// `settleConversationClaim` with `outcome: done` does.
 	Verb BulkVerb `json:"verb"`
 }
 
@@ -25252,7 +25366,10 @@ type BulkChangePreview struct {
 	ExpiresAt *time.Time `json:"expires_at,omitempty"`
 
 	// RecordType The kind of record a bulk change acts on. One change acts on one kind. A lead takes every
-	// verb but `archive`: a lead leaves the queue by being disqualified, which has no bulk verb.
+	// verb but `archive` and `complete`: a lead leaves the queue by being disqualified, which has
+	// no bulk verb.
+	// A `worklist_item` is a task or a promise (a conversation claim) as the Worklist lists it,
+	// named by the id its row carries; `complete` is its only verb, and no other kind takes it.
 	RecordType BulkRecordType `json:"record_type"`
 
 	// RequiresConfirmation True above 10 records: executing needs `confirm_token`.
@@ -25265,7 +25382,9 @@ type BulkChangePreview struct {
 	// `addListMember` and `removeListMember` do, and change nothing on the record itself.
 	// `add_tag` and `remove_tag` put the tag `tag_id` names on the record or take it off, exactly
 	// as `applyTag` and `removeTag` do. `create_task` files one new task, described by `task`,
-	// under each record, exactly as `createTask` does.
+	// under each record, exactly as `createTask` does. `complete` marks a `worklist_item` done:
+	// a task exactly as `updateActivity` with `is_done: true` does, a promise exactly as
+	// `settleConversationClaim` with `outcome: done` does.
 	Verb BulkVerb `json:"verb"`
 }
 
@@ -25283,7 +25402,10 @@ type BulkChangePreviewRequest struct {
 	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
 
 	// RecordType The kind of record a bulk change acts on. One change acts on one kind. A lead takes every
-	// verb but `archive`: a lead leaves the queue by being disqualified, which has no bulk verb.
+	// verb but `archive` and `complete`: a lead leaves the queue by being disqualified, which has
+	// no bulk verb.
+	// A `worklist_item` is a task or a promise (a conversation claim) as the Worklist lists it,
+	// named by the id its row carries; `complete` is its only verb, and no other kind takes it.
 	RecordType BulkRecordType `json:"record_type"`
 
 	// TagId The tag. Required for `add_tag` and `remove_tag` and refused for every other verb.
@@ -25298,7 +25420,9 @@ type BulkChangePreviewRequest struct {
 	// `addListMember` and `removeListMember` do, and change nothing on the record itself.
 	// `add_tag` and `remove_tag` put the tag `tag_id` names on the record or take it off, exactly
 	// as `applyTag` and `removeTag` do. `create_task` files one new task, described by `task`,
-	// under each record, exactly as `createTask` does.
+	// under each record, exactly as `createTask` does. `complete` marks a `worklist_item` done:
+	// a task exactly as `updateActivity` with `is_done: true` does, a promise exactly as
+	// `settleConversationClaim` with `outcome: done` does.
 	Verb BulkVerb `json:"verb"`
 }
 
@@ -25356,7 +25480,10 @@ type BulkOperation struct {
 	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
 
 	// RecordType The kind of record a bulk change acts on. One change acts on one kind. A lead takes every
-	// verb but `archive`: a lead leaves the queue by being disqualified, which has no bulk verb.
+	// verb but `archive` and `complete`: a lead leaves the queue by being disqualified, which has
+	// no bulk verb.
+	// A `worklist_item` is a task or a promise (a conversation claim) as the Worklist lists it,
+	// named by the id its row carries; `complete` is its only verb, and no other kind takes it.
 	RecordType BulkRecordType `json:"record_type"`
 	Skipped    []BulkSkip     `json:"skipped"`
 
@@ -25378,13 +25505,18 @@ type BulkOperation struct {
 	// `addListMember` and `removeListMember` do, and change nothing on the record itself.
 	// `add_tag` and `remove_tag` put the tag `tag_id` names on the record or take it off, exactly
 	// as `applyTag` and `removeTag` do. `create_task` files one new task, described by `task`,
-	// under each record, exactly as `createTask` does.
+	// under each record, exactly as `createTask` does. `complete` marks a `worklist_item` done:
+	// a task exactly as `updateActivity` with `is_done: true` does, a promise exactly as
+	// `settleConversationClaim` with `outcome: done` does.
 	Verb BulkVerb `json:"verb"`
 }
 
 // BulkRecordState The facts a bulk change can move on a record.
 type BulkRecordState struct {
 	Archived bool `json:"archived"`
+
+	// Done For `complete`, whether the task or promise is done.
+	Done *bool `json:"done,omitempty"`
 
 	// Listed For a list verb, whether the record is on the Shortlist.
 	Listed  *bool               `json:"listed,omitempty"`
@@ -25398,7 +25530,10 @@ type BulkRecordState struct {
 }
 
 // BulkRecordType The kind of record a bulk change acts on. One change acts on one kind. A lead takes every
-// verb but `archive`: a lead leaves the queue by being disqualified, which has no bulk verb.
+// verb but `archive` and `complete`: a lead leaves the queue by being disqualified, which has
+// no bulk verb.
+// A `worklist_item` is a task or a promise (a conversation claim) as the Worklist lists it,
+// named by the id its row carries; `complete` is its only verb, and no other kind takes it.
 type BulkRecordType string
 
 // BulkSampleRow One record the change would alter, as it is and as it would be.
@@ -25440,6 +25575,7 @@ type BulkSkip struct {
 	// purged. `value_taken`: another live record now holds its email or domain.
 	// `no_previous_owner`: it had no owner before the reassignment. Undoing `create_task` archives
 	// each task the change created, and skips one completed or edited since as `changed_since_batch`.
+	// Undoing `complete` opens each task or promise again, and skips one changed since the same way.
 	Reason BulkSkipReason `json:"reason"`
 }
 
@@ -25456,6 +25592,7 @@ type BulkSkip struct {
 // purged. `value_taken`: another live record now holds its email or domain.
 // `no_previous_owner`: it had no owner before the reassignment. Undoing `create_task` archives
 // each task the change created, and skips one completed or edited since as `changed_since_batch`.
+// Undoing `complete` opens each task or promise again, and skips one changed since the same way.
 type BulkSkipReason string
 
 // BulkTask The task `create_task` files under every record of the selection.
@@ -25482,7 +25619,9 @@ type BulkUndoRequest struct {
 // `addListMember` and `removeListMember` do, and change nothing on the record itself.
 // `add_tag` and `remove_tag` put the tag `tag_id` names on the record or take it off, exactly
 // as `applyTag` and `removeTag` do. `create_task` files one new task, described by `task`,
-// under each record, exactly as `createTask` does.
+// under each record, exactly as `createTask` does. `complete` marks a `worklist_item` done:
+// a task exactly as `updateActivity` with `is_done: true` does, a promise exactly as
+// `settleConversationClaim` with `outcome: done` does.
 type BulkVerb string
 
 // BuyerRoomAccess Whether the session admits the caller to content right now. `live` — the room
@@ -26136,6 +26275,10 @@ type CaptureSettings struct {
 	// own business and is not touched, because there is no member such a message could be
 	// held for.
 	MailSharing bool `json:"mail_sharing"`
+
+	// MailSyncIntervalSeconds How long a mailbox waits after a successful sync before the next one, in seconds.
+	// Applies from each mailbox's next sync. Default 120.
+	MailSyncIntervalSeconds int `json:"mail_sync_interval_seconds"`
 
 	// SharedPostureAllowed Whether a seat may put their mailbox in the `shared` posture at all — colleagues
 	// reading a captured message the moment it lands, before anything has judged it.
@@ -29831,7 +29974,12 @@ type Contact360CommitteeMember struct {
 
 	// PhotoUrl Where to stream their portrait, or null — the client draws the deterministic monogram.
 	PhotoUrl *string `json:"photo_url,omitempty"`
-	Role     string  `json:"role"`
+
+	// Role The stakeholder's recorded buying role, EMPTY where the seat records
+	// none: a deal_stakeholder may be seated without one, since the schema
+	// requires a role only for billing_contact. A client that treats this as
+	// a label to show should check it before showing it.
+	Role string `json:"role"`
 }
 
 // Contact360DealRole One stakeholder seat this contact holds on a deal.
@@ -30254,6 +30402,14 @@ type ContactMoment struct {
 	// Headline The reason in one line, written from the evidence — never a model's paraphrase of it.
 	Headline string `json:"headline"`
 
+	// MayBeDone Present when the moment is a promise we owe AND we wrote to the contact after it was
+	// made: the card asks whether that email kept it, and never decides on its own. `Done`
+	// completes the task (`PATCH /activities/{id}` with `is_done`) or settles the claim
+	// (`POST /claims/{id}/settle` with `done`). `Not yet` dismisses this moment through
+	// `POST /contacts/{id}/moment/dismiss`; the email is part of its fingerprint, so a
+	// later email asks again.
+	MayBeDone *ContactMomentMayBeDone `json:"may_be_done,omitempty"`
+
 	// RecommendedAction What to do about it: a TYPED descriptor, not a label the client has to interpret.
 	//
 	// Kind, destination and prefill together mean a client renders only buttons whose path
@@ -30341,6 +30497,25 @@ type ContactMomentEvidence struct {
 
 // ContactMomentEvidenceType defines model for ContactMomentEvidence.Type.
 type ContactMomentEvidenceType string
+
+// ContactMomentMayBeDone Present when the moment is a promise we owe AND we wrote to the contact after it was
+// made: the card asks whether that email kept it, and never decides on its own. `Done`
+// completes the task (`PATCH /activities/{id}` with `is_done`) or settles the claim
+// (`POST /claims/{id}/settle` with `done`). `Not yet` dismisses this moment through
+// `POST /contacts/{id}/moment/dismiss`; the email is part of its fingerprint, so a
+// later email asks again.
+type ContactMomentMayBeDone struct {
+	// EmailActivityId The newest attested outbound email to the contact sent after the promise was made.
+	EmailActivityId openapi_types.UUID `json:"email_activity_id"`
+	PromiseId       openapi_types.UUID `json:"promise_id"`
+
+	// PromiseType `task` — an open task. `claim` — a `commitment_ours` claim with no task.
+	PromiseType ContactMomentMayBeDonePromiseType `json:"promise_type"`
+	WroteAt     time.Time                         `json:"wrote_at"`
+}
+
+// ContactMomentMayBeDonePromiseType `task` — an open task. `claim` — a `commitment_ours` claim with no task.
+type ContactMomentMayBeDonePromiseType string
 
 // ContactMomentRule Which rung of the fixed ladder selected this moment (ADR-0096 D2), in priority order.
 // Named in the response so the same evidence cannot render differently across clients.
@@ -34325,12 +34500,52 @@ type HealthDimension struct {
 	// Rating Three values, not a scale. A dimension that cannot be computed is ABSENT rather than rated `unknown`: absence is a fact about the reading, where a rating is a claim about the account.
 	Rating HealthDimensionRating `json:"rating"`
 
-	// Reason One sentence naming what this rating was read from.
+	// Reason One sentence naming what this rating was read from, in English. A client that knows `reason_code` renders that instead, in the reader's language.
 	Reason string `json:"reason"`
+
+	// ReasonCode Which sentence `reason` is, so a client can say it in the reader's language. Absent on a
+	// dimension the client rates itself.
+	//
+	// - `never_written`: no message from them and no meeting with them, ever.
+	// - `quiet`: no message from them and no meeting with them for `days` days.
+	// - `meeting_booked`: quiet, but a meeting is booked to start at `at`.
+	// - `last_met`: in touch through a meeting `days` days ago.
+	// - `single_threaded`: in touch, but one contact carries the whole account.
+	// - `several_contacts`: `count` contacts here are in touch with us.
+	// - `deals_all_stalled`: all `count` open deals have stalled.
+	// - `deals_some_stalled`: `count` of `total` open deals have stalled.
+	// - `deals_none_stalled`: `count` open deals, none stalled.
+	ReasonCode *HealthDimensionReasonCode `json:"reason_code,omitempty"`
+
+	// ReasonParams The values the reason names. Each code lists which it reads.
+	ReasonParams *HealthDimensionReasonParams `json:"reason_params,omitempty"`
 }
 
 // HealthDimensionRating Three values, not a scale. A dimension that cannot be computed is ABSENT rather than rated `unknown`: absence is a fact about the reading, where a rating is a claim about the account.
 type HealthDimensionRating string
+
+// HealthDimensionReasonCode Which sentence `reason` is, so a client can say it in the reader's language. Absent on a
+// dimension the client rates itself.
+//
+// - `never_written`: no message from them and no meeting with them, ever.
+// - `quiet`: no message from them and no meeting with them for `days` days.
+// - `meeting_booked`: quiet, but a meeting is booked to start at `at`.
+// - `last_met`: in touch through a meeting `days` days ago.
+// - `single_threaded`: in touch, but one contact carries the whole account.
+// - `several_contacts`: `count` contacts here are in touch with us.
+// - `deals_all_stalled`: all `count` open deals have stalled.
+// - `deals_some_stalled`: `count` of `total` open deals have stalled.
+// - `deals_none_stalled`: `count` open deals, none stalled.
+type HealthDimensionReasonCode string
+
+// HealthDimensionReasonParams The values the reason names. Each code lists which it reads.
+type HealthDimensionReasonParams struct {
+	// At An instant, so the client names its day in the record's own zone.
+	At    *time.Time `json:"at,omitempty"`
+	Count *int       `json:"count,omitempty"`
+	Days  *int       `json:"days,omitempty"`
+	Total *int       `json:"total,omitempty"`
+}
 
 // HeldEntityType defines model for HeldEntityType.
 type HeldEntityType string
@@ -35125,6 +35340,11 @@ type InstallationSettings struct {
 	// 90. A change applies to the next token minted; tokens already issued keep the expiry
 	// they were issued with.
 	OauthAccessTokenTtlMinutes int `json:"oauth_access_token_ttl_minutes"`
+
+	// Operations The worker's operating values: how often each background pass runs, how far ahead a
+	// mailbox subscription is renewed, and how fast one mailbox sends. A running worker reads
+	// them again within a minute of a change, so none needs a restart.
+	Operations OperationSettings `json:"operations"`
 
 	// SignInProviders Every external sign-in provider this deployment holds credentials for, and whether
 	// the installation currently offers it on the login screen. The list is what the
@@ -38339,6 +38559,56 @@ type OpenDealRoomThreadRequest struct {
 	Source *string `json:"source,omitempty"`
 }
 
+// OperationSettings The worker's operating values: how often each background pass runs, how far ahead a
+// mailbox subscription is renewed, and how fast one mailbox sends. A running worker reads
+// them again within a minute of a change, so none needs a restart.
+type OperationSettings struct {
+	// AgentRunnerIntervalSeconds How often scheduled agents are checked for a run that is due, in seconds. Default 30.
+	AgentRunnerIntervalSeconds int `json:"agent_runner_interval_seconds"`
+
+	// CloseDateSweepIntervalSeconds How often deals whose close date has passed are flagged, in seconds. Default 86400.
+	CloseDateSweepIntervalSeconds int `json:"close_date_sweep_interval_seconds"`
+
+	// FollowUpReconcileIntervalSeconds How often stalled deals are checked for a follow-up to propose, in seconds. Default 86400.
+	FollowUpReconcileIntervalSeconds int `json:"follow_up_reconcile_interval_seconds"`
+
+	// GeocodeBackfillIntervalSeconds How often addresses without coordinates are looked up, in seconds, from 300; 0 switches the sweep off. Default 3600.
+	GeocodeBackfillIntervalSeconds int `json:"geocode_backfill_interval_seconds"`
+
+	// GmailWatchRenewWithinHours How far ahead of expiry a Gmail push subscription is renewed, in hours. A watch lasts seven days. Default 48.
+	GmailWatchRenewWithinHours int `json:"gmail_watch_renew_within_hours"`
+
+	// GmailWatchScanIntervalSeconds How often Gmail push subscriptions are checked for renewal, in seconds. Default 21600.
+	GmailWatchScanIntervalSeconds int `json:"gmail_watch_scan_interval_seconds"`
+
+	// GraphWatchRenewWithinHours How far ahead of expiry a Microsoft 365 mail subscription is renewed, in hours. A subscription lasts just under three days. Default 24.
+	GraphWatchRenewWithinHours int `json:"graph_watch_renew_within_hours"`
+
+	// GraphWatchScanIntervalSeconds How often Microsoft 365 mail subscriptions are checked for renewal, in seconds. Default 21600.
+	GraphWatchScanIntervalSeconds int `json:"graph_watch_scan_interval_seconds"`
+
+	// RetentionSweepIntervalSeconds How often data past its retention period is removed, in seconds. Default 86400. It cannot be switched off.
+	RetentionSweepIntervalSeconds int `json:"retention_sweep_interval_seconds"`
+
+	// SendMaxAgeHours How long a delivery held back by the send rate may wait before it stops with a reason, in hours. Default 24.
+	SendMaxAgeHours int `json:"send_max_age_hours"`
+
+	// SendRateLimit How many messages one mailbox may send per window. A burst bound, not a quota. Default 30.
+	SendRateLimit int `json:"send_rate_limit"`
+
+	// SendRateWindowSeconds The window the send rate is counted over, in seconds. Default 60.
+	SendRateWindowSeconds int `json:"send_rate_window_seconds"`
+
+	// TechnicalBackfillIntervalSeconds How often company domains without technical facts are looked up, in seconds, from 300; 0 switches the sweep off. Default 21600.
+	TechnicalBackfillIntervalSeconds int `json:"technical_backfill_interval_seconds"`
+
+	// TimeScanIntervalSeconds How often time-based automation rules are checked, in seconds. Default 3600.
+	TimeScanIntervalSeconds int `json:"time_scan_interval_seconds"`
+
+	// WebhookRetryIntervalSeconds How often failed webhook deliveries are retried, in seconds. Default 30.
+	WebhookRetryIntervalSeconds int `json:"webhook_retry_interval_seconds"`
+}
+
 // OutcomeReview defines model for OutcomeReview.
 type OutcomeReview struct {
 	// ActivityId The note this review was written as. It is where the prose, the author and the audience rules live.
@@ -39442,7 +39712,7 @@ type ProviderLocation struct {
 	// Jurisdiction Whose law the processing happens under, by this build's policy: `eu` exactly when `resident`, `global` for the endpoint that may process anywhere, `us` for the US multi-region and US regions, and `other` for everything else — London and Zürich among them.
 	Jurisdiction ProviderLocationJurisdiction `json:"jurisdiction"`
 
-	// Resident Whether Google keeps ML processing at this location inside the EU, which is what the `eu_hosted` profile admits. This build's list, never Google's: a location Google adds is not resident until this build names it.
+	// Resident Whether Google keeps ML processing at this location inside the EU. This build's list, never Google's: a location Google adds is not resident until this build names it.
 	Resident bool `json:"resident"`
 }
 
@@ -41278,6 +41548,14 @@ type ResponseMetrics struct {
 	// To The end of the window, exclusive — so consecutive windows partition time and a message on a boundary is counted once.
 	To time.Time `json:"to"`
 }
+
+// RestoreLeftBehind One thing a restore of an archive could not bring back with the record.
+type RestoreLeftBehind struct {
+	Kind RestoreLeftBehindKind `json:"kind"`
+}
+
+// RestoreLeftBehindKind defines model for RestoreLeftBehind.Kind.
+type RestoreLeftBehindKind string
 
 // RestrictedRecord defines model for RestrictedRecord.
 type RestrictedRecord struct {
@@ -43947,6 +44225,9 @@ type UpdateCaptureSettingsRequest struct {
 	// MailSharing Toggle the workspace mail-sharing posture; affects correspondence captured from now on — mail, and chat on a transport whose credential belongs to one member.
 	MailSharing *bool `json:"mail_sharing,omitempty"`
 
+	// MailSyncIntervalSeconds Set how long a mailbox waits between syncs, in seconds.
+	MailSyncIntervalSeconds *int `json:"mail_sync_interval_seconds,omitempty"`
+
 	// SharedPostureAllowed Allow a seat to put their mailbox in the `shared` posture. Off by default; see CaptureSettings.shared_posture_allowed for what turning it on asserts.
 	SharedPostureAllowed *bool `json:"shared_posture_allowed,omitempty"`
 
@@ -44279,6 +44560,9 @@ type UpdateDealRoomRequest struct {
 
 // UpdateInstallationSettingsRequest A sparse installation-settings patch (admin/ops, human-only).
 type UpdateInstallationSettingsRequest struct {
+	// AgentRunnerIntervalSeconds Set the value `OperationSettings.agent_runner_interval_seconds` describes.
+	AgentRunnerIntervalSeconds *int `json:"agent_runner_interval_seconds,omitempty"`
+
 	// BaseCurrency ISO-4217 code. Refused with `setting_frozen` once anything has frozen a conversion
 	// rate against the current base.
 	BaseCurrency *string `json:"base_currency,omitempty"`
@@ -44286,6 +44570,9 @@ type UpdateInstallationSettingsRequest struct {
 	// BaseLanguage The language shared AI writing is written in. Never frozen: changing it re-means
 	// nothing already written, so artifacts stay in the language they were written in.
 	BaseLanguage *UpdateInstallationSettingsRequestBaseLanguage `json:"base_language,omitempty"`
+
+	// CloseDateSweepIntervalSeconds Set the value `OperationSettings.close_date_sweep_interval_seconds` describes.
+	CloseDateSweepIntervalSeconds *int `json:"close_date_sweep_interval_seconds,omitempty"`
 
 	// DateFormat Display dates using the UI language, DD.MM.YYYY, MM/DD/YYYY, or YYYY-MM-DD. Defaults to locale; never changes stored dates or reporting boundaries.
 	DateFormat *UpdateInstallationSettingsRequestDateFormat `json:"date_format,omitempty"`
@@ -44319,10 +44606,28 @@ type UpdateInstallationSettingsRequest struct {
 	// margince/margince#2569.
 	FiscalYearStartMonth *int `json:"fiscal_year_start_month,omitempty"`
 
+	// FollowUpReconcileIntervalSeconds Set the value `OperationSettings.follow_up_reconcile_interval_seconds` describes.
+	FollowUpReconcileIntervalSeconds *int `json:"follow_up_reconcile_interval_seconds,omitempty"`
+
 	// ForecastForwardMeasure Which remaining-pipeline reading a projected landing is built from. Never frozen:
 	// it is applied on READ and stores nothing, so changing it re-computes every landing
 	// at once and re-means no stored row.
 	ForecastForwardMeasure *UpdateInstallationSettingsRequestForecastForwardMeasure `json:"forecast_forward_measure,omitempty"`
+
+	// GeocodeBackfillIntervalSeconds Set the value `OperationSettings.geocode_backfill_interval_seconds` describes.
+	GeocodeBackfillIntervalSeconds *int `json:"geocode_backfill_interval_seconds,omitempty"`
+
+	// GmailWatchRenewWithinHours Set the value `OperationSettings.gmail_watch_renew_within_hours` describes.
+	GmailWatchRenewWithinHours *int `json:"gmail_watch_renew_within_hours,omitempty"`
+
+	// GmailWatchScanIntervalSeconds Set the value `OperationSettings.gmail_watch_scan_interval_seconds` describes.
+	GmailWatchScanIntervalSeconds *int `json:"gmail_watch_scan_interval_seconds,omitempty"`
+
+	// GraphWatchRenewWithinHours Set the value `OperationSettings.graph_watch_renew_within_hours` describes.
+	GraphWatchRenewWithinHours *int `json:"graph_watch_renew_within_hours,omitempty"`
+
+	// GraphWatchScanIntervalSeconds Set the value `OperationSettings.graph_watch_scan_interval_seconds` describes.
+	GraphWatchScanIntervalSeconds *int `json:"graph_watch_scan_interval_seconds,omitempty"`
 
 	// Name Rename the company.
 	Name *string `json:"name,omitempty"`
@@ -44359,11 +44664,32 @@ type UpdateInstallationSettingsRequest struct {
 	// always exempt.
 	RequireSso *bool `json:"require_sso,omitempty"`
 
+	// RetentionSweepIntervalSeconds Set the value `OperationSettings.retention_sweep_interval_seconds` describes.
+	RetentionSweepIntervalSeconds *int `json:"retention_sweep_interval_seconds,omitempty"`
+
+	// SendMaxAgeHours Set the value `OperationSettings.send_max_age_hours` describes.
+	SendMaxAgeHours *int `json:"send_max_age_hours,omitempty"`
+
+	// SendRateLimit Set the value `OperationSettings.send_rate_limit` describes.
+	SendRateLimit *int `json:"send_rate_limit,omitempty"`
+
+	// SendRateWindowSeconds Set the value `OperationSettings.send_rate_window_seconds` describes.
+	SendRateWindowSeconds *int `json:"send_rate_window_seconds,omitempty"`
+
+	// TechnicalBackfillIntervalSeconds Set the value `OperationSettings.technical_backfill_interval_seconds` describes.
+	TechnicalBackfillIntervalSeconds *int `json:"technical_backfill_interval_seconds,omitempty"`
+
 	// TimeFormat Display times using the UI language, a 24-hour clock, or a 12-hour clock. Defaults to locale; never changes timezones or stored instants.
 	TimeFormat *UpdateInstallationSettingsRequestTimeFormat `json:"time_format,omitempty"`
 
+	// TimeScanIntervalSeconds Set the value `OperationSettings.time_scan_interval_seconds` describes.
+	TimeScanIntervalSeconds *int `json:"time_scan_interval_seconds,omitempty"`
+
 	// Timezone The IANA reporting zone.
 	Timezone *string `json:"timezone,omitempty"`
+
+	// WebhookRetryIntervalSeconds Set the value `OperationSettings.webhook_retry_interval_seconds` describes.
+	WebhookRetryIntervalSeconds *int `json:"webhook_retry_interval_seconds,omitempty"`
 }
 
 // UpdateInstallationSettingsRequestBaseLanguage The language shared AI writing is written in. Never frozen: changing it re-means
@@ -47741,7 +48067,7 @@ type ListAvailableModelsParams struct {
 	// Omitted, the vendor's whole list comes back in the vendor's own order. A vendor that publishes no such measure cannot honour this: it answers with the full list and no `ranked_by`, rather than inventing an order and calling it a ranking.
 	Top *int `form:"top,omitempty" json:"top,omitempty"`
 
-	// Location The Vertex AI location being edited, for `gemini_vertex` only — which models are served differs by location, and the location is where Google processes the call. Omitted, the lane's stored location is used. Under the `eu_hosted` profile a location outside the EU answers `profile_forbids` before any credential is used. Ignored by every other vendor.
+	// Location The Vertex AI location being edited, for `gemini_vertex` only — which models are served differs by location, and the location is where Google processes the call. Omitted, the lane's stored location is used. Ignored by every other vendor.
 	Location *string `form:"location,omitempty" json:"location,omitempty"`
 
 	// Model Probe ONE model instead of listing: `gemini_vertex` asks the location whether it serves this id (one `countTokens` call, or one `embedContent` when `tier` is `embeddings`). The answer lists just that model when it is served, `unavailable: no_endpoint` when the location does not serve it, and `unreachable` when Google could not be asked. Every other vendor answers `not_published`: it has no per-location availability to probe.
@@ -89429,6 +89755,8 @@ func (siw *ServerInterfaceWrapper) DisposeDedupeCandidate(w http.ResponseWriter,
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -89460,6 +89788,8 @@ func (siw *ServerInterfaceWrapper) UndoDedupeDisposition(w http.ResponseWriter, 
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 

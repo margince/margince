@@ -110,6 +110,21 @@
   }
 }
 
+/* The first column when the row can be ticked for Mark done: the checkbox,
+   then the rank, on one line so the column keeps one width down the queue. */
+.worklist-row-lead {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+/* One width for the box and for the empty slot a row that cannot be ticked
+   keeps in its place, so the ranks and kinds line up down a mixed queue. */
+.worklist-row-lead > :first-child,
+.worklist-row-pick-slot {
+  flex: none;
+  inline-size: var(--space-6);
+}
+
 /* WHAT KIND of work, as the catalog's soft badge: a tint of the tone with its
    hairline, one weight down the column. This span is the CELL and not the
    mark, so it declares nothing the badge already owns — only that a kind may
@@ -156,7 +171,7 @@
 .worklist-row-facts-line {
   display: flex;
   flex-wrap: wrap;
-  gap: 0 var(--space-2);
+  gap: var(--space-2);
   min-width: 0;
 }
 
@@ -186,6 +201,17 @@
 .worklist-row-about,
 .worklist-row-host {
   margin: 0;
+}
+/* A link standing alone on the line rather than inside a sentence owes WCAG
+   2.5.8's 24px target: the caption's 16px line plus a step each way, given back
+   as margin so the line keeps its height, and never narrower than it is tall.
+   Each reaches a step past its line, so the facts line's row gap is two steps
+   and a wrapped line's target starts where this one ends. */
+.worklist-row-about .entity-link {
+  display: inline-block;
+  min-inline-size: var(--space-6);
+  padding-block: var(--space-1);
+  margin-block: calc(-1 * var(--space-1));
 }
 /* The set-asides on the row in hand take the leading edge and push the rest
    of the line to the trailing one, on every line the verbs wrap onto. */

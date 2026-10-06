@@ -3307,7 +3307,8 @@ export interface paths {
          *     leads, each with the `version` it was shown, and one verb: `reassign_owner` (with
          *     `owner_id`), `archive`, `add_to_list` / `remove_from_list` (with the Shortlist's `list_id`,
          *     while lists are switched on), `add_tag` / `remove_tag` (with `tag_id`), or `create_task`
-         *     (with `task`). The answer says which records the change would alter (`affected`), which it
+         *     (with `task`). Or it names up to 500 Worklist tasks and promises (`worklist_item`) and the
+         *     verb `complete`. The answer says which records the change would alter (`affected`), which it
          *     would leave alone and why (`excluded`), and up to three before/after rows to show the user.
          *
          *     Nothing is written. Every record is tried exactly as `executeBulkChange` would change it,
@@ -3343,7 +3344,8 @@ export interface paths {
          * @description The second half of a bulk change. Each record is changed exactly as the single-record
          *     operation would change it (`updateContact`, `updateCompany`, `updateDeal`, `updateLead` for
          *     an owner; `archiveContact`, `archiveCompany`, `archiveDeal` for an archive; `applyTag` and
-         *     `removeTag` for a tag; `createTask` for a task), with its own `audit_log` row and its own
+         *     `removeTag` for a tag; `createTask` for a task; `updateActivity` or `settleConversationClaim`
+         *     for a Worklist item marked done), with its own `audit_log` row and its own
          *     event. Every audit row the change writes carries the same `batch_id`, which
          *     the answer returns.
          *
@@ -11178,7 +11180,7 @@ export interface paths {
                  *     Omitted, the vendor's whole list comes back in the vendor's own order. A vendor that publishes no such measure cannot honour this: it answers with the full list and no `ranked_by`, rather than inventing an order and calling it a ranking.
                  */
                 top?: number;
-                /** @description The Vertex AI location being edited, for `gemini_vertex` only — which models are served differs by location, and the location is where Google processes the call. Omitted, the lane's stored location is used. Under the `eu_hosted` profile a location outside the EU answers `profile_forbids` before any credential is used. Ignored by every other vendor. */
+                /** @description The Vertex AI location being edited, for `gemini_vertex` only — which models are served differs by location, and the location is where Google processes the call. Omitted, the lane's stored location is used. Ignored by every other vendor. */
                 location?: string;
                 /** @description Probe ONE model instead of listing: `gemini_vertex` asks the location whether it serves this id (one `countTokens` call, or one `embedContent` when `tier` is `embeddings`). The answer lists just that model when it is served, `unavailable: no_endpoint` when the location does not serve it, and `unreachable` when Google could not be asked. Every other vendor answers `not_published`: it has no per-location availability to probe. */
                 model?: string;
@@ -11236,12 +11238,13 @@ export interface paths {
          * @description The locations a `gemini_vertex` binding may name, asked of Google with the stored
          *     service-account key's project, plus the `eu` and `us` multi-regions and `global` when
          *     Google's list omits them. A metadata call on Google's global host; it carries no customer
-         *     data, so it is answered under every profile.
+         *     data, so it is asked under every profile except `sovereign`.
          *
          *     `resident` and `jurisdiction` are this build's residency policy, never Google's words: a
          *     location Google adds tomorrow appears as an option and is not resident until this build
-         *     says so. Under `eu_hosted` every location is still listed, and a binding at one with
-         *     `resident: false` is refused on save.
+         *     says so. Under `eu_hosted` and `cloud_frontier` every location is listed and selectable;
+         *     `resident` is information, not a gate. Under `sovereign` no list is served at all
+         *     (`profile_forbids`), because asking Google is cloud egress.
          *
          *     A vendor that cannot be asked is NOT an error — the response is 200 with `unavailable`.
          *     Every vendor but `gemini_vertex` answers `not_published`: it has no location to choose.
@@ -11388,8 +11391,6 @@ export interface paths {
          *       answered and did not refuse the key, but may have refused the body before reading it.
          *       A 200 is not a pass, since no decision server answers an empty request. It passes with
          *       no `model_count`.
-         *     - A decision lane the profile refuses to bind (under `eu_hosted`: `jev`, or `jev_compatible`
-         *       on OpenRouter) answers `profile_forbids` without being dialled.
          *
          *     No request body. The key is the STORED one, never a candidate sent here: a credential
          *     that travels only to be tested is still a credential in a request log. The host is the
@@ -18983,6 +18984,7 @@ export interface components {
              *     they were issued with.
              */
             oauth_access_token_ttl_minutes: number;
+            operations: components["schemas"]["OperationSettings"];
             /**
              * @description How far back the maintenance banner looks before it calls dead work a problem, in
              *     hours. 24 by default, bounded above by River's own seven-day retention — a window
@@ -19094,6 +19096,36 @@ export interface components {
             };
             /** @description Set how long a connector's access token lives, in minutes. Reaches the next token minted. */
             oauth_access_token_ttl_minutes?: number;
+            /** @description Set the value `OperationSettings.agent_runner_interval_seconds` describes. */
+            agent_runner_interval_seconds?: number;
+            /** @description Set the value `OperationSettings.webhook_retry_interval_seconds` describes. */
+            webhook_retry_interval_seconds?: number;
+            /** @description Set the value `OperationSettings.time_scan_interval_seconds` describes. */
+            time_scan_interval_seconds?: number;
+            /** @description Set the value `OperationSettings.close_date_sweep_interval_seconds` describes. */
+            close_date_sweep_interval_seconds?: number;
+            /** @description Set the value `OperationSettings.follow_up_reconcile_interval_seconds` describes. */
+            follow_up_reconcile_interval_seconds?: number;
+            /** @description Set the value `OperationSettings.retention_sweep_interval_seconds` describes. */
+            retention_sweep_interval_seconds?: number;
+            /** @description Set the value `OperationSettings.geocode_backfill_interval_seconds` describes. */
+            geocode_backfill_interval_seconds?: number;
+            /** @description Set the value `OperationSettings.technical_backfill_interval_seconds` describes. */
+            technical_backfill_interval_seconds?: number;
+            /** @description Set the value `OperationSettings.gmail_watch_scan_interval_seconds` describes. */
+            gmail_watch_scan_interval_seconds?: number;
+            /** @description Set the value `OperationSettings.graph_watch_scan_interval_seconds` describes. */
+            graph_watch_scan_interval_seconds?: number;
+            /** @description Set the value `OperationSettings.gmail_watch_renew_within_hours` describes. */
+            gmail_watch_renew_within_hours?: number;
+            /** @description Set the value `OperationSettings.graph_watch_renew_within_hours` describes. */
+            graph_watch_renew_within_hours?: number;
+            /** @description Set the value `OperationSettings.send_rate_limit` describes. */
+            send_rate_limit?: number;
+            /** @description Set the value `OperationSettings.send_rate_window_seconds` describes. */
+            send_rate_window_seconds?: number;
+            /** @description Set the value `OperationSettings.send_max_age_hours` describes. */
+            send_max_age_hours?: number;
             /**
              * @description How far back the maintenance banner looks before it calls dead work a problem, in
              *     hours. 24 by default, bounded above by River's own seven-day retention — a window
@@ -19368,6 +19400,11 @@ export interface components {
              */
             auto_enrich_daily_cap: number;
             site_read: components["schemas"]["SiteReadLimits"];
+            /**
+             * @description How long a mailbox waits after a successful sync before the next one, in seconds.
+             *     Applies from each mailbox's next sync. Default 120.
+             */
+            mail_sync_interval_seconds: number;
             /**
              * @description The workspace's capture-sharing posture, ON by default: captured correspondence is
              *     readable by every colleague who can see the contact. Switched OFF, everything captured
@@ -19689,7 +19726,7 @@ export interface components {
              * @enum {string}
              */
             jurisdiction: "eu" | "us" | "other" | "global";
-            /** @description Whether Google keeps ML processing at this location inside the EU, which is what the `eu_hosted` profile admits. This build's list, never Google's: a location Google adds is not resident until this build names it. */
+            /** @description Whether Google keeps ML processing at this location inside the EU. This build's list, never Google's: a location Google adds is not resident until this build names it. */
             resident: boolean;
         };
         /** @description What may be known about one vendor's credential. Facts about the vendor and whether a key is held, and nothing about the key: it has no read path, and neither does anything derived from it — a length, a prefix or a masked tail would each narrow a brute force while feeling harmless. */
@@ -19745,8 +19782,8 @@ export interface components {
             /**
              * @description The location ladder (§4). `sovereign` means zero egress by construction: a cloud
              *     provider on any tier is refused, and so is a local provider pointed at another host.
-             *     `eu_hosted` promises EU inference: a broker lane must pin EU-region hosts, and a
-             *     `gemini_vertex` lane must name an EU location.
+             *     `eu_hosted` and `cloud_frontier` refuse no binding on residency grounds: where a lane is served is the
+             *     connection's and the location's to say.
              * @enum {string}
              */
             profile: "eu_hosted" | "sovereign" | "cloud_frontier";
@@ -19771,7 +19808,7 @@ export interface components {
          *     host can be set before anything is bound to it.
          */
         AiProviderSettings: {
-            /** @description Where the provider is reached. Required on `openai_compatible` while a lane binds it, and on `jev_compatible` while the decisions lane binds it (the FULL decision endpoint, posted to as written). Optional elsewhere; empty means the adapter's compiled default. */
+            /** @description Where the provider is reached. Required on `openai_compatible` while a lane binds it, and on `jev_compatible` while the decisions lane binds it (the FULL decision endpoint, posted to as written). Optional elsewhere; empty means the adapter's compiled default. Refused on `gemini_vertex`, whose host follows from `location`. */
             base_url?: string;
             upstream?: components["schemas"]["AiOpenRouterUpstream"];
             /**
@@ -19804,6 +19841,10 @@ export interface components {
             /** @description Only models whose licence allows their output to train other models. */
             enforce_distillable_text?: boolean;
         };
+        /**
+         * @description One tier's binding. A key this schema does not declare is refused with a 422 naming its
+         *     path, on every routing write.
+         */
         AiTierBinding: {
             /**
              * @description The adapter serving this tier: fake | anthropic | ollama | vllm | openai_compatible
@@ -20034,6 +20075,43 @@ export interface components {
             /** @description Seconds one crawl may run before it stops and extracts what it has. Default 240. */
             wall_seconds: number;
         };
+        /**
+         * @description The worker's operating values: how often each background pass runs, how far ahead a
+         *     mailbox subscription is renewed, and how fast one mailbox sends. A running worker reads
+         *     them again within a minute of a change, so none needs a restart.
+         */
+        OperationSettings: {
+            /** @description How often scheduled agents are checked for a run that is due, in seconds. Default 30. */
+            agent_runner_interval_seconds: number;
+            /** @description How often failed webhook deliveries are retried, in seconds. Default 30. */
+            webhook_retry_interval_seconds: number;
+            /** @description How often time-based automation rules are checked, in seconds. Default 3600. */
+            time_scan_interval_seconds: number;
+            /** @description How often deals whose close date has passed are flagged, in seconds. Default 86400. */
+            close_date_sweep_interval_seconds: number;
+            /** @description How often stalled deals are checked for a follow-up to propose, in seconds. Default 86400. */
+            follow_up_reconcile_interval_seconds: number;
+            /** @description How often data past its retention period is removed, in seconds. Default 86400. It cannot be switched off. */
+            retention_sweep_interval_seconds: number;
+            /** @description How often addresses without coordinates are looked up, in seconds, from 300; 0 switches the sweep off. Default 3600. */
+            geocode_backfill_interval_seconds: number;
+            /** @description How often company domains without technical facts are looked up, in seconds, from 300; 0 switches the sweep off. Default 21600. */
+            technical_backfill_interval_seconds: number;
+            /** @description How often Gmail push subscriptions are checked for renewal, in seconds. Default 21600. */
+            gmail_watch_scan_interval_seconds: number;
+            /** @description How often Microsoft 365 mail subscriptions are checked for renewal, in seconds. Default 21600. */
+            graph_watch_scan_interval_seconds: number;
+            /** @description How far ahead of expiry a Gmail push subscription is renewed, in hours. A watch lasts seven days. Default 48. */
+            gmail_watch_renew_within_hours: number;
+            /** @description How far ahead of expiry a Microsoft 365 mail subscription is renewed, in hours. A subscription lasts just under three days. Default 24. */
+            graph_watch_renew_within_hours: number;
+            /** @description How many messages one mailbox may send per window. A burst bound, not a quota. Default 30. */
+            send_rate_limit: number;
+            /** @description The window the send rate is counted over, in seconds. Default 60. */
+            send_rate_window_seconds: number;
+            /** @description How long a delivery held back by the send rate may wait before it stops with a reason, in hours. Default 24. */
+            send_max_age_hours: number;
+        };
         /** @description A sparse capture-settings patch (admin/ops). */
         UpdateCaptureSettingsRequest: {
             /** @description Toggle captured-company auto-enrichment. */
@@ -20046,6 +20124,8 @@ export interface components {
             site_read_max_mib?: number;
             /** @description Set the time limit of one website crawl, in seconds. */
             site_read_wall_seconds?: number;
+            /** @description Set how long a mailbox waits between syncs, in seconds. */
+            mail_sync_interval_seconds?: number;
             /** @description Toggle the workspace mail-sharing posture; affects correspondence captured from now on — mail, and chat on a transport whose credential belongs to one member. */
             mail_sharing?: boolean;
             /** @description Toggle the tenant-wide default for reading contact details out of captured mail — its signature and any attached vCard. A mailbox that set its own switch keeps it. */
@@ -24195,8 +24275,37 @@ export interface components {
              * @enum {string}
              */
             rating: "strong" | "good" | "at_risk";
-            /** @description One sentence naming what this rating was read from. */
+            /** @description One sentence naming what this rating was read from, in English. A client that knows `reason_code` renders that instead, in the reader's language. */
             reason: string;
+            reason_code?: components["schemas"]["HealthDimensionReasonCode"];
+            reason_params?: components["schemas"]["HealthDimensionReasonParams"];
+        };
+        /**
+         * @description Which sentence `reason` is, so a client can say it in the reader's language. Absent on a
+         *     dimension the client rates itself.
+         *
+         *     - `never_written`: no message from them and no meeting with them, ever.
+         *     - `quiet`: no message from them and no meeting with them for `days` days.
+         *     - `meeting_booked`: quiet, but a meeting is booked to start at `at`.
+         *     - `last_met`: in touch through a meeting `days` days ago.
+         *     - `single_threaded`: in touch, but one contact carries the whole account.
+         *     - `several_contacts`: `count` contacts here are in touch with us.
+         *     - `deals_all_stalled`: all `count` open deals have stalled.
+         *     - `deals_some_stalled`: `count` of `total` open deals have stalled.
+         *     - `deals_none_stalled`: `count` open deals, none stalled.
+         * @enum {string}
+         */
+        HealthDimensionReasonCode: "never_written" | "quiet" | "meeting_booked" | "last_met" | "single_threaded" | "several_contacts" | "deals_all_stalled" | "deals_some_stalled" | "deals_none_stalled";
+        /** @description The values the reason names. Each code lists which it reads. */
+        HealthDimensionReasonParams: {
+            days?: number;
+            count?: number;
+            total?: number;
+            /**
+             * Format: date-time
+             * @description An instant, so the client names its day in the record's own zone.
+             */
+            at?: string;
         };
         /**
          * @description How the relationship stands, in the parts a reader can act on (AC-company-3).
@@ -25150,6 +25259,12 @@ export interface components {
             /** Format: uuid */
             contact_id: string;
             full_name: string;
+            /**
+             * @description The stakeholder's recorded buying role, EMPTY where the seat records
+             *     none: a deal_stakeholder may be seated without one, since the schema
+             *     requires a role only for billing_contact. A client that treats this as
+             *     a label to show should check it before showing it.
+             */
             role: string;
             /** @description Where to stream their portrait, or null — the client draws the deterministic monogram. */
             photo_url?: string | null;
@@ -25993,6 +26108,31 @@ export interface components {
             evidence: components["schemas"]["ContactMomentEvidence"][];
             recommended_action: components["schemas"]["ContactMomentAction"];
             secondary_actions?: components["schemas"]["ContactMomentAction"][];
+            may_be_done?: components["schemas"]["ContactMomentMayBeDone"];
+        };
+        /**
+         * @description Present when the moment is a promise we owe AND we wrote to the contact after it was
+         *     made: the card asks whether that email kept it, and never decides on its own. `Done`
+         *     completes the task (`PATCH /activities/{id}` with `is_done`) or settles the claim
+         *     (`POST /claims/{id}/settle` with `done`). `Not yet` dismisses this moment through
+         *     `POST /contacts/{id}/moment/dismiss`; the email is part of its fingerprint, so a
+         *     later email asks again.
+         */
+        ContactMomentMayBeDone: {
+            /**
+             * @description `task` — an open task. `claim` — a `commitment_ours` claim with no task.
+             * @enum {string}
+             */
+            promise_type: "task" | "claim";
+            /** Format: uuid */
+            promise_id: string;
+            /**
+             * Format: uuid
+             * @description The newest attested outbound email to the contact sent after the promise was made.
+             */
+            email_activity_id: string;
+            /** Format: date-time */
+            wrote_at: string;
         };
         /**
          * @description Which rung of the fixed ladder selected this moment (ADR-0096 D2), in priority order.
@@ -28093,10 +28233,13 @@ export interface components {
         };
         /**
          * @description The kind of record a bulk change acts on. One change acts on one kind. A lead takes every
-         *     verb but `archive`: a lead leaves the queue by being disqualified, which has no bulk verb.
+         *     verb but `archive` and `complete`: a lead leaves the queue by being disqualified, which has
+         *     no bulk verb.
+         *     A `worklist_item` is a task or a promise (a conversation claim) as the Worklist lists it,
+         *     named by the id its row carries; `complete` is its only verb, and no other kind takes it.
          * @enum {string}
          */
-        BulkRecordType: "contact" | "company" | "deal" | "lead";
+        BulkRecordType: "contact" | "company" | "deal" | "lead" | "worklist_item";
         /**
          * @description What a bulk change does to each record. `reassign_owner` hands the record to `owner_id`;
          *     `archive` retires it exactly as the single-record archive does. `add_to_list` and
@@ -28104,10 +28247,12 @@ export interface components {
          *     `addListMember` and `removeListMember` do, and change nothing on the record itself.
          *     `add_tag` and `remove_tag` put the tag `tag_id` names on the record or take it off, exactly
          *     as `applyTag` and `removeTag` do. `create_task` files one new task, described by `task`,
-         *     under each record, exactly as `createTask` does.
+         *     under each record, exactly as `createTask` does. `complete` marks a `worklist_item` done:
+         *     a task exactly as `updateActivity` with `is_done: true` does, a promise exactly as
+         *     `settleConversationClaim` with `outcome: done` does.
          * @enum {string}
          */
-        BulkVerb: "reassign_owner" | "archive" | "add_to_list" | "remove_from_list" | "add_tag" | "remove_tag" | "create_task";
+        BulkVerb: "reassign_owner" | "archive" | "add_to_list" | "remove_from_list" | "add_tag" | "remove_tag" | "create_task" | "complete";
         /** @description The task `create_task` files under every record of the selection. */
         BulkTask: {
             /** @description What has to be done, as one line. */
@@ -28195,6 +28340,7 @@ export interface components {
          *     purged. `value_taken`: another live record now holds its email or domain.
          *     `no_previous_owner`: it had no owner before the reassignment. Undoing `create_task` archives
          *     each task the change created, and skips one completed or edited since as `changed_since_batch`.
+         *     Undoing `complete` opens each task or promise again, and skips one changed since the same way.
          * @enum {string}
          */
         BulkSkipReason: "not_found" | "not_writable" | "changed_since_preview" | "no_change" | "anchor_company" | "not_previewed" | "refused" | "changed_since_batch" | "merged" | "erased" | "value_taken" | "no_previous_owner";
@@ -28228,6 +28374,8 @@ export interface components {
              * @description For `create_task`, the task filed under the record, once the change ran.
              */
             task_id?: string;
+            /** @description For `complete`, whether the task or promise is done. */
+            done?: boolean;
         };
         /** @description One record the change would alter, as it is and as it would be. */
         BulkSampleRow: {
@@ -34639,6 +34787,13 @@ export interface components {
             undid_audit_log_id?: string | null;
             edge?: components["schemas"]["HistoryEdge"];
             undoable?: components["schemas"]["Undoability"];
+            /** @description Set on the answer to putting back an archive, and omitted everywhere else: what the archive took down with the record that the restore could not bring back (a link the record's owner has since replaced, a list or tag archived in between). One entry per thing, by kind only: a caller allowed to restore the record is not thereby allowed to read a list, tag or link, so no id is returned. Absent means nothing was left. */
+            left_behind?: components["schemas"]["RestoreLeftBehind"][];
+        };
+        /** @description One thing a restore of an archive could not bring back with the record. */
+        RestoreLeftBehind: {
+            /** @enum {string} */
+            kind: "contact_email" | "contact_phone" | "contact_channel_identity" | "relationship" | "company_domain" | "company_relationship_type" | "partner" | "list" | "tag";
         };
         /**
          * @description Set when this history entry changed a LINK between two records rather than a field
@@ -40291,7 +40446,7 @@ export interface components {
             due_group?: "overdue" | "today" | "tomorrow" | "this_week" | "later";
             /**
              * @description The version of the row this item's own verbs write to, present where it names one — a
-             *     task today. Carried for the reason `email_summary` carries one: a lane that offers
+             *     task or a promise today. Carried for the reason `email_summary` carries one: a lane that offers
              *     `complete` and `snooze` has to name the row those presses condition on, or two contacts
              *     acting on one task each overwrite the other and neither is told.
              */
@@ -42027,7 +42182,7 @@ export interface components {
              * @description Which fact this is. The client writes the phrase.
              * @enum {string}
              */
-            kind: "pinned" | "buyer_wrote_last" | "waiting_days" | "overdue" | "due_today" | "closing_soon" | "expected_revenue" | "material" | "below_material" | "quiet_days" | "no_champion" | "champion_unknown" | "promised" | "approved_and_failed" | "blocks_customer_work" | "routine" | "repeated_failure" | "legal_deadline" | "opened_overdue" | "earlier_requests" | "first_asked" | "no_next_step" | "meeting_soon" | "meeting_unprepared" | "response_overdue" | "response_due_soon" | "unassigned" | "stale" | "no_reply_history" | "asks_nothing" | "addressed_elsewhere" | "outcome_unrecorded";
+            kind: "pinned" | "buyer_wrote_last" | "waiting_days" | "overdue" | "due_today" | "closing_soon" | "expected_revenue" | "material" | "below_material" | "quiet_days" | "no_champion" | "champion_unknown" | "promised" | "approved_and_failed" | "blocks_customer_work" | "routine" | "repeated_failure" | "legal_deadline" | "opened_overdue" | "earlier_requests" | "first_asked" | "no_next_step" | "meeting_soon" | "meeting_booked" | "meeting_unprepared" | "response_overdue" | "response_due_soon" | "unassigned" | "stale" | "no_reply_history" | "asks_nothing" | "addressed_elsewhere" | "outcome_unrecorded";
             value?: components["schemas"]["WorklistValue"];
         };
         /**
@@ -60007,7 +60162,7 @@ export interface operations {
                  *     Omitted, the vendor's whole list comes back in the vendor's own order. A vendor that publishes no such measure cannot honour this: it answers with the full list and no `ranked_by`, rather than inventing an order and calling it a ranking.
                  */
                 top?: number;
-                /** @description The Vertex AI location being edited, for `gemini_vertex` only — which models are served differs by location, and the location is where Google processes the call. Omitted, the lane's stored location is used. Under the `eu_hosted` profile a location outside the EU answers `profile_forbids` before any credential is used. Ignored by every other vendor. */
+                /** @description The Vertex AI location being edited, for `gemini_vertex` only — which models are served differs by location, and the location is where Google processes the call. Omitted, the lane's stored location is used. Ignored by every other vendor. */
                 location?: string;
                 /** @description Probe ONE model instead of listing: `gemini_vertex` asks the location whether it serves this id (one `countTokens` call, or one `embedContent` when `tier` is `embeddings`). The answer lists just that model when it is served, `unavailable: no_endpoint` when the location does not serve it, and `unreachable` when Google could not be asked. Every other vendor answers `not_published`: it has no per-location availability to probe. */
                 model?: string;

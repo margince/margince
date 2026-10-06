@@ -5031,7 +5031,8 @@ paths:
         leads, each with the `version` it was shown, and one verb: `reassign_owner` (with
         `owner_id`), `archive`, `add_to_list` / `remove_from_list` (with the Shortlist's `list_id`,
         while lists are switched on), `add_tag` / `remove_tag` (with `tag_id`), or `create_task`
-        (with `task`). The answer says which records the change would alter (`affected`), which it
+        (with `task`). Or it names up to 500 Worklist tasks and promises (`worklist_item`) and the
+        verb `complete`. The answer says which records the change would alter (`affected`), which it
         would leave alone and why (`excluded`), and up to three before/after rows to show the user.
 
         Nothing is written. Every record is tried exactly as `executeBulkChange` would change it,
@@ -5070,7 +5071,8 @@ paths:
         The second half of a bulk change. Each record is changed exactly as the single-record
         operation would change it (`updateContact`, `updateCompany`, `updateDeal`, `updateLead` for
         an owner; `archiveContact`, `archiveCompany`, `archiveDeal` for an archive; `applyTag` and
-        `removeTag` for a tag; `createTask` for a task), with its own `audit_log` row and its own
+        `removeTag` for a tag; `createTask` for a task; `updateActivity` or `settleConversationClaim`
+        for a Worklist item marked done), with its own `audit_log` row and its own
         event. Every audit row the change writes carries the same `batch_id`, which
         the answer returns.
 
@@ -16647,8 +16649,7 @@ paths:
         description: >-
           The Vertex AI location being edited, for `gemini_vertex` only — which models are served
           differs by location, and the location is where Google processes the call. Omitted, the
-          lane's stored location is used. Under the `eu_hosted` profile a location outside the EU
-          answers `profile_forbids` before any credential is used. Ignored by every other vendor.
+          lane's stored location is used. Ignored by every other vendor.
       - name: model
         in: query
         required: false
@@ -16725,12 +16726,13 @@ paths:
         The locations a `gemini_vertex` binding may name, asked of Google with the stored
         service-account key's project, plus the `eu` and `us` multi-regions and `global` when
         Google's list omits them. A metadata call on Google's global host; it carries no customer
-        data, so it is answered under every profile.
+        data, so it is asked under every profile except `sovereign`.
 
         `resident` and `jurisdiction` are this build's residency policy, never Google's words: a
         location Google adds tomorrow appears as an option and is not resident until this build
-        says so. Under `eu_hosted` every location is still listed, and a binding at one with
-        `resident: false` is refused on save.
+        says so. Under `eu_hosted` and `cloud_frontier` every location is listed and selectable;
+        `resident` is information, not a gate. Under `sovereign` no list is served at all
+        (`profile_forbids`), because asking Google is cloud egress.
 
         A vendor that cannot be asked is NOT an error — the response is 200 with `unavailable`.
         Every vendor but `gemini_vertex` answers `not_published`: it has no location to choose.
@@ -16924,8 +16926,6 @@ paths:
           answered and did not refuse the key, but may have refused the body before reading it.
           A 200 is not a pass, since no decision server answers an empty request. It passes with
           no `model_count`.
-        - A decision lane the profile refuses to bind (under `eu_hosted`: `jev`, or `jev_compatible`
-          on OpenRouter) answers `profile_forbids` without being dialled.
 
         No request body. The key is the STORED one, never a candidate sent here: a credential
         that travels only to be tested is still a credential in a request log. The host is the
@@ -17106,8 +17106,7 @@ paths:
     post:
       tags: [Contacts]
       operationId: disposeDedupeCandidate
-      x-agent-access: human-only
-      security: [ { cookieAuth: [] } ]
+      x-mcp-tool: { verb: decide_duplicate, record_type: contact, tier: auto_execute, scope: write }
       summary: Decide one pair — merge through the owner's verb, or dismiss forever.
       description: |
         `merge` requires `winner_id` (one of the pair) and executes `mergeContact`/
@@ -17140,8 +17139,7 @@ paths:
     post:
       tags: [Contacts]
       operationId: undoDedupeDisposition
-      x-agent-access: human-only
-      security: [ { cookieAuth: [] } ]
+      x-mcp-tool: { verb: decide_duplicate, record_type: contact, tier: auto_execute, scope: write }
       summary: Re-open a disposed pair.
       description: |
         A dismissed pair re-opens (the suppression lifts). A merged pair needs the
@@ -27961,7 +27959,7 @@ components:
       description: |
         The installation's identity and reporting basis (ADR-0090). Read by every role,
         changed only by admin/ops.
-      required: [name, timezone, base_currency, base_language, fiscal_year_start_month, dead_work_banner_hours, oauth_access_token_ttl_minutes, forecast_forward_measure, base_currency_locked, max_upload_bytes, sign_in_providers]
+      required: [name, timezone, base_currency, base_language, fiscal_year_start_month, dead_work_banner_hours, oauth_access_token_ttl_minutes, forecast_forward_measure, base_currency_locked, max_upload_bytes, sign_in_providers, operations]
       properties:
         name:
           type: string
@@ -28061,6 +28059,8 @@ components:
             for the code exchange and every refresh rotation alike. 30 days by default, at most
             90. A change applies to the next token minted; tokens already issued keep the expiry
             they were issued with.
+        operations:
+          $ref: '#/components/schemas/OperationSettings'
         dead_work_banner_hours:
           type: integer
           minimum: 1
@@ -28182,6 +28182,21 @@ components:
           minimum: 5
           maximum: 129600
           description: Set how long a connector's access token lives, in minutes. Reaches the next token minted.
+        agent_runner_interval_seconds: { type: integer, minimum: 10, maximum: 3600, description: 'Set the value `OperationSettings.agent_runner_interval_seconds` describes.' }
+        webhook_retry_interval_seconds: { type: integer, minimum: 10, maximum: 3600, description: 'Set the value `OperationSettings.webhook_retry_interval_seconds` describes.' }
+        time_scan_interval_seconds: { type: integer, minimum: 60, maximum: 86400, description: 'Set the value `OperationSettings.time_scan_interval_seconds` describes.' }
+        close_date_sweep_interval_seconds: { type: integer, minimum: 3600, maximum: 604800, description: 'Set the value `OperationSettings.close_date_sweep_interval_seconds` describes.' }
+        follow_up_reconcile_interval_seconds: { type: integer, minimum: 3600, maximum: 604800, description: 'Set the value `OperationSettings.follow_up_reconcile_interval_seconds` describes.' }
+        retention_sweep_interval_seconds: { type: integer, minimum: 3600, maximum: 604800, description: 'Set the value `OperationSettings.retention_sweep_interval_seconds` describes.' }
+        geocode_backfill_interval_seconds: { type: integer, minimum: 0, maximum: 604800, description: 'Set the value `OperationSettings.geocode_backfill_interval_seconds` describes.' }
+        technical_backfill_interval_seconds: { type: integer, minimum: 0, maximum: 604800, description: 'Set the value `OperationSettings.technical_backfill_interval_seconds` describes.' }
+        gmail_watch_scan_interval_seconds: { type: integer, minimum: 600, maximum: 43200, description: 'Set the value `OperationSettings.gmail_watch_scan_interval_seconds` describes.' }
+        graph_watch_scan_interval_seconds: { type: integer, minimum: 600, maximum: 43200, description: 'Set the value `OperationSettings.graph_watch_scan_interval_seconds` describes.' }
+        gmail_watch_renew_within_hours: { type: integer, minimum: 24, maximum: 144, description: 'Set the value `OperationSettings.gmail_watch_renew_within_hours` describes.' }
+        graph_watch_renew_within_hours: { type: integer, minimum: 24, maximum: 60, description: 'Set the value `OperationSettings.graph_watch_renew_within_hours` describes.' }
+        send_rate_limit: { type: integer, minimum: 1, maximum: 1000, description: 'Set the value `OperationSettings.send_rate_limit` describes.' }
+        send_rate_window_seconds: { type: integer, minimum: 10, maximum: 3600, description: 'Set the value `OperationSettings.send_rate_window_seconds` describes.' }
+        send_max_age_hours: { type: integer, minimum: 1, maximum: 168, description: 'Set the value `OperationSettings.send_max_age_hours` describes.' }
         dead_work_banner_hours:
           type: integer
           minimum: 1
@@ -28586,7 +28601,7 @@ components:
       description: |
         The workspace-shared capture posture (ADR-0072, CAP-PARAM-7). Read by every role,
         changed only by admin/ops.
-      required: [auto_enrich, mail_sharing, shared_posture_allowed, signature_enrich, auto_enrich_daily_cap, site_read]
+      required: [auto_enrich, mail_sharing, shared_posture_allowed, signature_enrich, auto_enrich_daily_cap, site_read, mail_sync_interval_seconds]
       properties:
         auto_enrich_daily_cap:
           type: integer
@@ -28600,6 +28615,13 @@ components:
             without a restart. Default 500.
         site_read:
           $ref: '#/components/schemas/SiteReadLimits'
+        mail_sync_interval_seconds:
+          type: integer
+          minimum: 30
+          maximum: 3600
+          description: |
+            How long a mailbox waits after a successful sync before the next one, in seconds.
+            Applies from each mailbox's next sync. Default 120.
         mail_sharing:
           type: boolean
           description: |
@@ -29156,8 +29178,7 @@ components:
         resident:
           type: boolean
           description: >-
-            Whether Google keeps ML processing at this location inside the EU, which is what the
-            `eu_hosted` profile admits. This build's list, never Google's: a location Google adds
+            Whether Google keeps ML processing at this location inside the EU. This build's list, never Google's: a location Google adds
             is not resident until this build names it.
     AiProviderKeyStatus:
       type: object
@@ -29291,8 +29312,8 @@ components:
           description: |
             The location ladder (§4). `sovereign` means zero egress by construction: a cloud
             provider on any tier is refused, and so is a local provider pointed at another host.
-            `eu_hosted` promises EU inference: a broker lane must pin EU-region hosts, and a
-            `gemini_vertex` lane must name an EU location.
+            `eu_hosted` and `cloud_frontier` refuse no binding on residency grounds: where a lane is served is the
+            connection's and the location's to say.
         tiers:
           type: object
           additionalProperties: { $ref: '#/components/schemas/AiTierBinding' }
@@ -29323,6 +29344,7 @@ components:
             Where the provider is reached. Required on `openai_compatible` while a lane binds it,
             and on `jev_compatible` while the decisions lane binds it (the FULL decision endpoint,
             posted to as written). Optional elsewhere; empty means the adapter's compiled default.
+            Refused on `gemini_vertex`, whose host follows from `location`.
         upstream:
           $ref: '#/components/schemas/AiOpenRouterUpstream'
         location:
@@ -29349,8 +29371,13 @@ components:
         data_collection: { type: string, enum: [allow, deny], description: "deny keeps every request off hosts that may store or train on prompts." }
         enforce_distillable_text: { type: boolean, description: "Only models whose licence allows their output to train other models." }
 
+    # Not closed with additionalProperties: AiEmbeddingsBinding extends this by allOf, which a
+    # closed base would reject. The server closes it on every routing write instead.
     AiTierBinding:
       type: object
+      description: |
+        One tier's binding. A key this schema does not declare is refused with a 422 naming its
+        path, on every routing write.
       required: [provider, model]
       properties:
         provider:
@@ -29571,6 +29598,31 @@ components:
         max_mib: { type: integer, description: 'Mebibytes one read may hold, summed over its pages. Default 32.' }
         wall_seconds: { type: integer, description: 'Seconds one crawl may run before it stops and extracts what it has. Default 240.' }
 
+    OperationSettings:
+      type: object
+      additionalProperties: false
+      description: |
+        The worker's operating values: how often each background pass runs, how far ahead a
+        mailbox subscription is renewed, and how fast one mailbox sends. A running worker reads
+        them again within a minute of a change, so none needs a restart.
+      required: [agent_runner_interval_seconds, webhook_retry_interval_seconds, time_scan_interval_seconds, close_date_sweep_interval_seconds, follow_up_reconcile_interval_seconds, retention_sweep_interval_seconds, geocode_backfill_interval_seconds, technical_backfill_interval_seconds, gmail_watch_scan_interval_seconds, graph_watch_scan_interval_seconds, gmail_watch_renew_within_hours, graph_watch_renew_within_hours, send_rate_limit, send_rate_window_seconds, send_max_age_hours]
+      properties:
+        agent_runner_interval_seconds: { type: integer, minimum: 10, maximum: 3600, description: 'How often scheduled agents are checked for a run that is due, in seconds. Default 30.' }
+        webhook_retry_interval_seconds: { type: integer, minimum: 10, maximum: 3600, description: 'How often failed webhook deliveries are retried, in seconds. Default 30.' }
+        time_scan_interval_seconds: { type: integer, minimum: 60, maximum: 86400, description: 'How often time-based automation rules are checked, in seconds. Default 3600.' }
+        close_date_sweep_interval_seconds: { type: integer, minimum: 3600, maximum: 604800, description: 'How often deals whose close date has passed are flagged, in seconds. Default 86400.' }
+        follow_up_reconcile_interval_seconds: { type: integer, minimum: 3600, maximum: 604800, description: 'How often stalled deals are checked for a follow-up to propose, in seconds. Default 86400.' }
+        retention_sweep_interval_seconds: { type: integer, minimum: 3600, maximum: 604800, description: 'How often data past its retention period is removed, in seconds. Default 86400. It cannot be switched off.' }
+        geocode_backfill_interval_seconds: { type: integer, minimum: 0, maximum: 604800, description: 'How often addresses without coordinates are looked up, in seconds, from 300; 0 switches the sweep off. Default 3600.' }
+        technical_backfill_interval_seconds: { type: integer, minimum: 0, maximum: 604800, description: 'How often company domains without technical facts are looked up, in seconds, from 300; 0 switches the sweep off. Default 21600.' }
+        gmail_watch_scan_interval_seconds: { type: integer, minimum: 600, maximum: 43200, description: 'How often Gmail push subscriptions are checked for renewal, in seconds. Default 21600.' }
+        graph_watch_scan_interval_seconds: { type: integer, minimum: 600, maximum: 43200, description: 'How often Microsoft 365 mail subscriptions are checked for renewal, in seconds. Default 21600.' }
+        gmail_watch_renew_within_hours: { type: integer, minimum: 24, maximum: 144, description: 'How far ahead of expiry a Gmail push subscription is renewed, in hours. A watch lasts seven days. Default 48.' }
+        graph_watch_renew_within_hours: { type: integer, minimum: 24, maximum: 60, description: 'How far ahead of expiry a Microsoft 365 mail subscription is renewed, in hours. A subscription lasts just under three days. Default 24.' }
+        send_rate_limit: { type: integer, minimum: 1, maximum: 1000, description: 'How many messages one mailbox may send per window. A burst bound, not a quota. Default 30.' }
+        send_rate_window_seconds: { type: integer, minimum: 10, maximum: 3600, description: 'The window the send rate is counted over, in seconds. Default 60.' }
+        send_max_age_hours: { type: integer, minimum: 1, maximum: 168, description: 'How long a delivery held back by the send rate may wait before it stops with a reason, in hours. Default 24.' }
+
     UpdateCaptureSettingsRequest:
       type: object
       description: A sparse capture-settings patch (admin/ops).
@@ -29580,6 +29632,7 @@ components:
         site_read_max_pages: { type: integer, minimum: 1, maximum: 200, description: 'Set the page limit of one website read.' }
         site_read_max_mib: { type: integer, minimum: 1, maximum: 128, description: 'Set the size limit of one website read, in MiB.' }
         site_read_wall_seconds: { type: integer, minimum: 30, maximum: 600, description: 'Set the time limit of one website crawl, in seconds.' }
+        mail_sync_interval_seconds: { type: integer, minimum: 30, maximum: 3600, description: 'Set how long a mailbox waits between syncs, in seconds.' }
         mail_sharing: { type: boolean, description: 'Toggle the workspace mail-sharing posture; affects correspondence captured from now on — mail, and chat on a transport whose credential belongs to one member.' }
         signature_enrich: { type: boolean, description: 'Toggle the tenant-wide default for reading contact details out of captured mail — its signature and any attached vCard. A mailbox that set its own switch keeps it.' }
         shared_posture_allowed: { type: boolean, description: 'Allow a seat to put their mailbox in the `shared` posture. Off by default; see CaptureSettings.shared_posture_allowed for what turning it on asserts.' }
@@ -34363,7 +34416,43 @@ components:
             the account.
         reason:
           type: string
-          description: One sentence naming what this rating was read from.
+          description: >-
+            One sentence naming what this rating was read from, in English. A client that knows
+            `reason_code` renders that instead, in the reader's language.
+        reason_code:
+          $ref: '#/components/schemas/HealthDimensionReasonCode'
+        reason_params:
+          $ref: '#/components/schemas/HealthDimensionReasonParams'
+
+    HealthDimensionReasonCode:
+      type: string
+      description: |
+        Which sentence `reason` is, so a client can say it in the reader's language. Absent on a
+        dimension the client rates itself.
+
+        - `never_written`: no message from them and no meeting with them, ever.
+        - `quiet`: no message from them and no meeting with them for `days` days.
+        - `meeting_booked`: quiet, but a meeting is booked to start at `at`.
+        - `last_met`: in touch through a meeting `days` days ago.
+        - `single_threaded`: in touch, but one contact carries the whole account.
+        - `several_contacts`: `count` contacts here are in touch with us.
+        - `deals_all_stalled`: all `count` open deals have stalled.
+        - `deals_some_stalled`: `count` of `total` open deals have stalled.
+        - `deals_none_stalled`: `count` open deals, none stalled.
+      enum: [never_written, quiet, meeting_booked, last_met, single_threaded, several_contacts,
+             deals_all_stalled, deals_some_stalled, deals_none_stalled]
+
+    HealthDimensionReasonParams:
+      type: object
+      description: The values the reason names. Each code lists which it reads.
+      properties:
+        days: { type: integer }
+        count: { type: integer }
+        total: { type: integer }
+        at:
+          type: string
+          format: date-time
+          description: An instant, so the client names its day in the record's own zone.
 
     Company360Health:
       type: object
@@ -35641,7 +35730,13 @@ components:
       properties:
         contact_id: { type: string, format: uuid }
         full_name: { type: string }
-        role: { type: string }
+        role:
+          type: string
+          description: |
+            The stakeholder's recorded buying role, EMPTY where the seat records
+            none: a deal_stakeholder may be seated without one, since the schema
+            requires a role only for billing_contact. A client that treats this as
+            a label to show should check it before showing it.
         photo_url:
           type: [string, 'null']
           description: Where to stream their portrait, or null — the client draws the deterministic monogram.
@@ -36876,6 +36971,30 @@ components:
           type: array
           maxItems: 3
           items: { $ref: '#/components/schemas/ContactMomentAction' }
+        may_be_done:
+          $ref: '#/components/schemas/ContactMomentMayBeDone'
+
+    ContactMomentMayBeDone:
+      type: object
+      description: |
+        Present when the moment is a promise we owe AND we wrote to the contact after it was
+        made: the card asks whether that email kept it, and never decides on its own. `Done`
+        completes the task (`PATCH /activities/{id}` with `is_done`) or settles the claim
+        (`POST /claims/{id}/settle` with `done`). `Not yet` dismisses this moment through
+        `POST /contacts/{id}/moment/dismiss`; the email is part of its fingerprint, so a
+        later email asks again.
+      required: [promise_type, promise_id, email_activity_id, wrote_at]
+      properties:
+        promise_type:
+          type: string
+          description: '`task` — an open task. `claim` — a `commitment_ours` claim with no task.'
+          enum: [task, claim]
+        promise_id: { type: string, format: uuid }
+        email_activity_id:
+          type: string
+          format: uuid
+          description: The newest attested outbound email to the contact sent after the promise was made.
+        wrote_at: { type: string, format: date-time }
 
     ContactMomentRule:
       type: string
@@ -39234,8 +39353,11 @@ components:
       type: string
       description: |
         The kind of record a bulk change acts on. One change acts on one kind. A lead takes every
-        verb but `archive`: a lead leaves the queue by being disqualified, which has no bulk verb.
-      enum: [contact, company, deal, lead]
+        verb but `archive` and `complete`: a lead leaves the queue by being disqualified, which has
+        no bulk verb.
+        A `worklist_item` is a task or a promise (a conversation claim) as the Worklist lists it,
+        named by the id its row carries; `complete` is its only verb, and no other kind takes it.
+      enum: [contact, company, deal, lead, worklist_item]
 
     BulkVerb:
       type: string
@@ -39246,8 +39368,10 @@ components:
         `addListMember` and `removeListMember` do, and change nothing on the record itself.
         `add_tag` and `remove_tag` put the tag `tag_id` names on the record or take it off, exactly
         as `applyTag` and `removeTag` do. `create_task` files one new task, described by `task`,
-        under each record, exactly as `createTask` does.
-      enum: [reassign_owner, archive, add_to_list, remove_from_list, add_tag, remove_tag, create_task]
+        under each record, exactly as `createTask` does. `complete` marks a `worklist_item` done:
+        a task exactly as `updateActivity` with `is_done: true` does, a promise exactly as
+        `settleConversationClaim` with `outcome: done` does.
+      enum: [reassign_owner, archive, add_to_list, remove_from_list, add_tag, remove_tag, create_task, complete]
 
     BulkTask:
       type: object
@@ -39317,6 +39441,7 @@ components:
         purged. `value_taken`: another live record now holds its email or domain.
         `no_previous_owner`: it had no owner before the reassignment. Undoing `create_task` archives
         each task the change created, and skips one completed or edited since as `changed_since_batch`.
+        Undoing `complete` opens each task or promise again, and skips one changed since the same way.
       enum: [not_found, not_writable, changed_since_preview, no_change, anchor_company, not_previewed, refused,
              changed_since_batch, merged, erased, value_taken, no_previous_owner]
 
@@ -39347,6 +39472,7 @@ components:
         listed: { type: boolean, description: 'For a list verb, whether the record is on the Shortlist.' }
         tagged: { type: boolean, description: 'For a tag verb, whether the record carries the tag.' }
         task_id: { type: string, format: uuid, description: 'For `create_task`, the task filed under the record, once the change ran.' }
+        done: { type: boolean, description: 'For `complete`, whether the task or promise is done.' }
 
     BulkSampleRow:
       type: object
@@ -47593,6 +47719,25 @@ components:
           $ref: '#/components/schemas/HistoryEdge'
         undoable:
           $ref: '#/components/schemas/Undoability'
+        left_behind:
+          type: array
+          description: >-
+            Set on the answer to putting back an archive, and omitted everywhere else: what the
+            archive took down with the record that the restore could not bring back (a link the
+            record's owner has since replaced, a list or tag archived in between). One entry per
+            thing, by kind only: a caller allowed to restore the record is not thereby allowed to
+            read a list, tag or link, so no id is returned. Absent means nothing was left.
+          items: { $ref: '#/components/schemas/RestoreLeftBehind' }
+
+    RestoreLeftBehind:
+      type: object
+      description: One thing a restore of an archive could not bring back with the record.
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [contact_email, contact_phone, contact_channel_identity, relationship, company_domain,
+                 company_relationship_type, partner, list, tag]
 
     HistoryEdge:
       type: [object, 'null']
@@ -53933,7 +54078,7 @@ components:
           allOf: [{ $ref: '#/components/schemas/RowVersion' }]
           description: |
             The version of the row this item's own verbs write to, present where it names one — a
-            task today. Carried for the reason `email_summary` carries one: a lane that offers
+            task or a promise today. Carried for the reason `email_summary` carries one: a lane that offers
             `complete` and `snooze` has to name the row those presses condition on, or two contacts
             acting on one task each overwrite the other and neither is told.
         occurred_at: { type: string, format: date-time, description: "When a done_for_you receipt actually happened." }
@@ -55867,7 +56012,7 @@ components:
       properties:
         kind:
           type: string
-          enum: [pinned, buyer_wrote_last, waiting_days, overdue, due_today, closing_soon, expected_revenue, material, below_material, quiet_days, no_champion, champion_unknown, promised, approved_and_failed, blocks_customer_work, routine, repeated_failure, legal_deadline, opened_overdue, earlier_requests, first_asked, no_next_step, meeting_soon, meeting_unprepared, response_overdue, response_due_soon, unassigned, stale, no_reply_history, asks_nothing, addressed_elsewhere, outcome_unrecorded]
+          enum: [pinned, buyer_wrote_last, waiting_days, overdue, due_today, closing_soon, expected_revenue, material, below_material, quiet_days, no_champion, champion_unknown, promised, approved_and_failed, blocks_customer_work, routine, repeated_failure, legal_deadline, opened_overdue, earlier_requests, first_asked, no_next_step, meeting_soon, meeting_booked, meeting_unprepared, response_overdue, response_due_soon, unassigned, stale, no_reply_history, asks_nothing, addressed_elsewhere, outcome_unrecorded]
           description: 'Which fact this is. The client writes the phrase.'
         value: { $ref: '#/components/schemas/WorklistValue' }
 

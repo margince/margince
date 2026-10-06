@@ -221,7 +221,9 @@ describe("the deal's committee card", () => {
 
     await userEvent.click(await screen.findByTestId("remove-relationship"));
     await userEvent.click(
-      await screen.findByTestId("remove-relationship-confirm"),
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: en["rel.remove"],
+      }),
     );
 
     expect(deleted).toEqual([`rel-${TALKING}`]);
@@ -335,7 +337,9 @@ describe("the deal's committee card", () => {
     const removes = await screen.findAllByTestId("remove-relationship");
     await userEvent.click(removes[0]);
     await userEvent.click(
-      await screen.findByTestId("remove-relationship-confirm"),
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: en["rel.remove"],
+      }),
     );
     const refusal = await within(await screen.findByRole("dialog")).findByText(
       /Nope/,

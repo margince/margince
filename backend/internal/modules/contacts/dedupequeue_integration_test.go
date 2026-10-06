@@ -307,13 +307,18 @@ var surnamesPastOnePage = []string{
 	"Xiaoping", "Yamaguchi", "Zaytseva",
 }
 
-// asAgent is a non-human principal — the disposition verbs are human-only
-// whatever the transport claims.
+// asAgent is a passport that names no human it acts for: the disposition verbs
+// refuse it whatever the transport claims.
 func (e *dedupeEnv) asAgent() context.Context {
+	return e.asAgentFor(ids.UUID{})
+}
+
+// asAgentFor is a passport acting on behalf of one human.
+func (e *dedupeEnv) asAgentFor(onBehalfOf ids.UUID) context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalAgent, ID: "agent:test", UserID: e.rep,
+		Type: principal.PrincipalAgent, ID: "agent:test", UserID: e.rep, OnBehalfOf: onBehalfOf,
 		Scopes: principal.NewScopeSet(principal.ScopeRead, principal.ScopeWrite),
 		Permissions: principal.Permissions{
 			Objects: map[string]principal.ObjectGrant{
@@ -325,7 +330,7 @@ func (e *dedupeEnv) asAgent() context.Context {
 	})
 }
 
-func TestDedupeDispositionIsHumanOnly(t *testing.T) {
+func TestDedupeDispositionRefusesACallWithNoHumanBehindIt(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 	_, _ = seedContactPair(ctx, t, e, "Pat Human", "pat@human.test", "Patt Human", "patt@human.test", "human.test")
@@ -336,6 +341,36 @@ func TestDedupeDispositionIsHumanOnly(t *testing.T) {
 	}
 	if _, err := e.store.UndoDedupeDisposition(e.asAgent(), c.ID); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("agent undo = %v, want ErrPermissionDenied", err)
+	}
+}
+
+func TestAnAgentActingForAHumanDismissesAndReopensAPair(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	_, _ = seedContactPair(ctx, t, e, "Ann Agent", "ann@agent.test", "Anne Agent", "anne@agent.test", "agent.test")
+	c := openCandidates(ctx, t, e, "contact")[0]
+	agent := e.asAgentFor(e.rep)
+
+	dismissed, err := e.store.DisposeDedupeCandidate(agent, c.ID, "not_a_duplicate", nil)
+	if err != nil {
+		t.Fatalf("agent dismiss: %v", err)
+	}
+	if dismissed.Disposition != "not_a_duplicate" || dismissed.DisposedBy == nil || *dismissed.DisposedBy != e.rep {
+		t.Fatalf("dismissed row = %+v, want not_a_duplicate disposed by the human the agent acts for", dismissed)
+	}
+	if rows := openCandidates(ctx, t, e, "contact"); len(rows) != 0 {
+		t.Fatalf("the dismissed pair still lists open (%d rows)", len(rows))
+	}
+
+	reopened, err := e.store.UndoDedupeDisposition(agent, c.ID)
+	if err != nil {
+		t.Fatalf("agent reopen: %v", err)
+	}
+	if reopened.Disposition != "open" {
+		t.Fatalf("reopened row = %+v, want open", reopened)
+	}
+	if rows := openCandidates(ctx, t, e, "contact"); len(rows) != 1 {
+		t.Fatalf("the re-opened pair lists %d times, want 1", len(rows))
 	}
 }
 

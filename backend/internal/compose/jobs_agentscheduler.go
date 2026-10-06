@@ -47,15 +47,6 @@ const (
 // AgentSchedulerConfig is the agent scheduler's slice of the runner's boot
 // configuration.
 type AgentSchedulerConfig struct {
-	// Interval is the dispatcher's cadence — the operator-facing
-	// --runner-interval, taken verbatim as the River schedule. It paces the
-	// FLEET fan-out, not an agent's own schedule: the catalog's daily due hour
-	// is what decides when a brief runs, and this dial only decides how
-	// promptly a due occurrence is noticed and how often a claimable backlog is
-	// drained.
-	//
-	// Non-positive schedules no agent dispatch; api/jobs.yaml declares it.
-	Interval time.Duration
 	// Service is the assembled Surface-B runner one workspace's pass ticks —
 	// the SAME instance the role's cg:overnight-agent consumer resumes parked
 	// runs through, so a deployment holds one governed registry and one brain
@@ -73,9 +64,7 @@ type AgentSchedulerConfig struct {
 }
 
 // addAgentSchedulerJobs registers the scheduler workers and returns the
-// dispatcher's periodic schedule for the caller to append. A non-positive
-// interval registers the workers but no schedule — the posture the declaration
-// states and jobschedule.go resolves.
+// dispatcher's periodic schedule for the caller to append.
 func addAgentSchedulerJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig) []*river.PeriodicJob {
 	if cfg.AgentScheduler.Service == nil {
 		return nil

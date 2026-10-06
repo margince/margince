@@ -9,6 +9,11 @@ import {
   Textarea,
   TextInput,
 } from "../design-system/atoms";
+import {
+  DrawerBody,
+  DrawerFoot,
+  DrawerHead,
+} from "../design-system/drawerbands";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
@@ -71,103 +76,114 @@ export function ReviewTemplateEditor({
           !(q.options ?? []).some((option) => option.trim())),
     );
   return (
-    <Modal open onClose={onClose} labelledBy="review-template-heading">
-      <Heading
-        size="large"
-        id="review-template-heading"
-        className="t-h2 modal-title"
-      >
-        {template.label}
-      </Heading>
-      <p>{t("reviewTemplates.editHint")}</p>
-      <div className="form-stack">
-        {questions.map((question, index) => (
-          <div key={question.key} className="form-stack">
-            <Field label={t("reviewTemplates.question")} required>
-              {(control) => (
-                <TextInput
-                  {...control}
-                  value={question.label}
-                  disabled={save.isPending}
-                  onChange={(event) =>
-                    change(index, { label: event.target.value })
-                  }
-                />
-              )}
-            </Field>
-            <Field label={t("reviewTemplates.answerType")}>
-              {(control) => (
-                <Select
-                  {...control}
-                  value={question.type}
-                  disabled={save.isPending}
-                  options={[
-                    { value: "text", label: t("cf.type.text") },
-                    { value: "multiselect", label: t("cf.type.multiselect") },
-                  ]}
-                  onChange={(value) =>
-                    change(index, {
-                      type: value === "multiselect" ? "multiselect" : "text",
-                      options: [],
-                    })
-                  }
-                />
-              )}
-            </Field>
-            {question.type === "multiselect" && (
-              <Field label={t("reviewTemplates.options")} required>
+    <Modal
+      open
+      onClose={onClose}
+      labelledBy="review-template-heading"
+      intent="drawer"
+    >
+      <DrawerHead>
+        <Heading
+          size="large"
+          id="review-template-heading"
+          className="t-h2 modal-title"
+        >
+          {template.label}
+        </Heading>
+        <p>{t("reviewTemplates.editHint")}</p>
+      </DrawerHead>
+      <DrawerBody>
+        <div className="form-stack">
+          {questions.map((question, index) => (
+            <div key={question.key} className="form-stack">
+              <Field label={t("reviewTemplates.question")} required>
                 {(control) => (
-                  <Textarea
+                  <TextInput
                     {...control}
-                    rows={5}
+                    value={question.label}
                     disabled={save.isPending}
-                    value={(question.options ?? []).join("\n")}
                     onChange={(event) =>
-                      change(index, { options: event.target.value.split("\n") })
+                      change(index, { label: event.target.value })
                     }
                   />
                 )}
               </Field>
-            )}
-            <Checkbox
-              label={t("reviewTemplates.requiredChoice")}
-              checked={question.required}
-              disabled={save.isPending}
-              onChange={() => change(index, { required: !question.required })}
-            />
-            <Button
-              variant="ghost"
-              disabled={save.isPending || questions.length === 1}
-              onClick={() =>
-                setQuestions((current) =>
-                  current.filter((q) => q.key !== question.key),
-                )
-              }
-            >
-              {t("reviewTemplates.removeQuestion")}
-            </Button>
-          </div>
-        ))}
-        <Button
-          variant="ghost"
-          disabled={save.isPending}
-          onClick={() =>
-            setQuestions((current) => [
-              ...current,
-              {
-                key: `question_${crypto.randomUUID()}`,
-                label: "",
-                type: "text",
-                required: false,
-              },
-            ])
-          }
-        >
-          {t("reviewTemplates.addQuestion")}
-        </Button>
-        <ErrorLine error={save.error} />
-      </div>
-      <div className="actions">
+              <Field label={t("reviewTemplates.answerType")}>
+                {(control) => (
+                  <Select
+                    {...control}
+                    value={question.type}
+                    disabled={save.isPending}
+                    options={[
+                      { value: "text", label: t("cf.type.text") },
+                      { value: "multiselect", label: t("cf.type.multiselect") },
+                    ]}
+                    onChange={(value) =>
+                      change(index, {
+                        type: value === "multiselect" ? "multiselect" : "text",
+                        options: [],
+                      })
+                    }
+                  />
+                )}
+              </Field>
+              {question.type === "multiselect" && (
+                <Field label={t("reviewTemplates.options")} required>
+                  {(control) => (
+                    <Textarea
+                      {...control}
+                      rows={5}
+                      disabled={save.isPending}
+                      value={(question.options ?? []).join("\n")}
+                      onChange={(event) =>
+                        change(index, {
+                          options: event.target.value.split("\n"),
+                        })
+                      }
+                    />
+                  )}
+                </Field>
+              )}
+              <Checkbox
+                label={t("reviewTemplates.requiredChoice")}
+                checked={question.required}
+                disabled={save.isPending}
+                onChange={() => change(index, { required: !question.required })}
+              />
+              <Button
+                variant="ghost"
+                disabled={save.isPending || questions.length === 1}
+                onClick={() =>
+                  setQuestions((current) =>
+                    current.filter((q) => q.key !== question.key),
+                  )
+                }
+              >
+                {t("reviewTemplates.removeQuestion")}
+              </Button>
+            </div>
+          ))}
+          <Button
+            variant="ghost"
+            disabled={save.isPending}
+            onClick={() =>
+              setQuestions((current) => [
+                ...current,
+                {
+                  key: `question_${crypto.randomUUID()}`,
+                  label: "",
+                  type: "text",
+                  required: false,
+                },
+              ])
+            }
+          >
+            {t("reviewTemplates.addQuestion")}
+          </Button>
+          <ErrorLine error={save.error} />
+        </div>
+      </DrawerBody>
+      <DrawerFoot className="actions">
         <Button variant="ghost" disabled={save.isPending} onClick={onClose}>
           {t("deals.cancel")}
         </Button>
@@ -190,7 +206,7 @@ export function ReviewTemplateEditor({
         >
           {t("reviewTemplates.save")}
         </Button>
-      </div>
+      </DrawerFoot>
     </Modal>
   );
 }

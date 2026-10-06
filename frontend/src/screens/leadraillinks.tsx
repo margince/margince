@@ -274,6 +274,7 @@ function LeadProjectAttachButton({
             setOpen(false);
           }
         }}
+        intent="form"
         title={label}
         confirmLabel={label}
         confirmDisabled

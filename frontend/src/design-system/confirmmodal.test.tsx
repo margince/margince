@@ -1,9 +1,15 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render as rtlRender, screen } from "@testing-library/react";
+import {
+  cleanup,
+  render as rtlRender,
+  screen,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ConfirmModal } from "./confirmmodal";
+import type { ModalIntent } from "./modal";
 
 // ConfirmModal is the extracted state-driven confirm-dialog shape that used
 // to live duplicated inline in the deals.tsx terminal-stage advance confirm
@@ -61,6 +67,28 @@ describe("ConfirmModal", () => {
       </ConfirmModal>,
     );
     expect(document.querySelector(".dot-confirm")).toBeTruthy();
+  });
+
+  it("draws the tier it is given, an automatic one included", () => {
+    rtlRender(
+      <ConfirmModal
+        open
+        onClose={vi.fn()}
+        title="Move to Won?"
+        tier="auto"
+        confirmLabel="Confirm"
+        onConfirm={vi.fn()}
+      >
+        <p>Moving this deal to a terminal stage.</p>
+      </ConfirmModal>,
+    );
+    expect(
+      within(screen.getByRole("heading", { name: /Move to Won/ })).getByRole(
+        "img",
+        { name: "automatic" },
+      ),
+    ).toBeTruthy();
+    expect(document.querySelector(".dot-confirm")).toBeNull();
   });
 
   it("fires onConfirm when the confirm button is clicked", async () => {
@@ -271,5 +299,76 @@ describe("ConfirmModal", () => {
       </ConfirmModal>,
     );
     expect(screen.getByRole("dialog").querySelector(".form-stack")).toBeNull();
+  });
+});
+
+describe("the box a confirm sits in", () => {
+  function boxOf(
+    box:
+      | { intent?: Exclude<ModalIntent, "full"> }
+      | { size?: "wide"; placement?: "right" },
+  ) {
+    rtlRender(
+      <ConfirmModal
+        open
+        onClose={vi.fn()}
+        title="Reject this offer?"
+        confirmLabel="Reject"
+        onConfirm={vi.fn()}
+        {...box}
+      >
+        <p>The buyer is told.</p>
+      </ConfirmModal>,
+    );
+    return screen.getByRole("dialog", { name: "Reject this offer?" }).className;
+  }
+
+  it("is the confirm card unless the caller names another", () => {
+    expect(boxOf({})).toBe("modal modal-confirm");
+  });
+
+  it("takes the intent the caller names", () => {
+    expect(boxOf({ intent: "form" })).toBe("modal modal-form");
+  });
+
+  it("hands a legacy pair to Modal as it is", () => {
+    expect(boxOf({ placement: "right", size: "wide" })).toBe(
+      "modal modal-drawer modal-drawer-wide",
+    );
+  });
+
+  it("refuses the lightbox, which clips a body past the viewport", () => {
+    rtlRender(
+      <ConfirmModal
+        open
+        onClose={vi.fn()}
+        title="Full"
+        confirmLabel="Go"
+        onConfirm={vi.fn()}
+        // @ts-expect-error a confirm never takes the full intent
+        intent="full"
+      >
+        <p>Body</p>
+      </ConfirmModal>,
+    );
+    expect(screen.getByRole("dialog", { name: "Full" })).toBeInTheDocument();
+  });
+
+  it("refuses an intent beside a legacy prop", () => {
+    rtlRender(
+      <ConfirmModal
+        open
+        onClose={vi.fn()}
+        title="Both"
+        confirmLabel="Go"
+        onConfirm={vi.fn()}
+        intent="form"
+        // @ts-expect-error one call takes an intent or the legacy pair
+        placement="right"
+      >
+        <p>Body</p>
+      </ConfirmModal>,
+    );
+    expect(screen.getByRole("dialog", { name: "Both" })).toBeInTheDocument();
   });
 });

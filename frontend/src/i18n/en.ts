@@ -614,7 +614,6 @@ export const en = {
   "worklist.bandCount_one": "{count} item",
   "worklist.bandCount_other": "{count} items",
   "brief.focus.context": "View details",
-  "brief.focus.back": "Back to Focus",
   "brief.queue.back": "Back to Worklist",
   "brief.queue.title": "Worklist",
   "brief.queue.show": "Show Worklist",
@@ -738,7 +737,6 @@ export const en = {
   "brief.readings.unavailable.leads": "Tasks unavailable",
   "brief.readings.unavailable.decisions": "Source unavailable",
   "brief.feed.incomplete": "No items loaded. Some work could not be checked.",
-  "brief.feed.fullWorklist": "Open full Worklist",
   "brief.week.workRecorded": "Work completed this week.",
   "brief.week.leads_one": "{count} lead assigned.",
   "brief.week.leads_other": "{count} leads assigned.",
@@ -836,6 +834,10 @@ export const en = {
     "{count} field reverts to its value before this change:",
   "history.undo.confirmBody_other":
     "{count} fields revert to their values before this change:",
+  "history.undo.leftBehind_one":
+    "Put back. {count} item could not come back with it.",
+  "history.undo.leftBehind_other":
+    "Put back. {count} items could not come back with it.",
   "history.undo.versionSkew":
     "The record changed while open. The history was reloaded; review the change again before undoing it.",
   "history.undo.noBeforeImage":
@@ -1143,6 +1145,10 @@ export const en = {
   "deal.undated": "no close date",
   "deal.lastMail": "Last email",
   "deal.mail.title": "Previous emails",
+  "deal.openDeal": "Open deal",
+  "deal.card.summary": "Deal summary: {name}",
+  "deal.card.email": "Write email: {name}",
+  "deal.card.addTask": "Add task: {name}",
   "deal.mail.sent": "Sent {ago}",
   "deal.mail.received": "Received {ago}",
   "deal.mail.none": "No email on this deal yet",
@@ -1533,6 +1539,7 @@ export const en = {
   "unit.companies": "companies",
   "unit.deals": "deals",
   "unit.leads": "leads",
+  "unit.worklistItems": "tasks and commitments",
   "unit.partners": "partners",
   "unit.products": "products",
   "unit.offerTemplates": "offer templates",
@@ -1802,7 +1809,7 @@ export const en = {
   // "Commercial · Good" was read from, and a rating a reader cannot interpret
   // is one they have to take on trust.
   "co.health.means.relationship":
-    "Whether contacts at this company are still in touch: who wrote, how recently and which side started.",
+    "Whether contacts at this company are still in touch: who wrote, when the last meeting took place or the next one is booked, and which side started.",
   "co.health.means.commercial":
     "Whether open deals are moving: their stages and how long each has been idle.",
   "co.health.means.payment":
@@ -1813,6 +1820,28 @@ export const en = {
   "co.health.payment.overdue": "Payment is overdue.",
   "co.health.payment.late": "Typically pays {days} days after due.",
   "co.health.payment.onTime": "Pays on time.",
+  // The server's reason codes for the relationship and commercial ratings.
+  "co.health.reason.neverWritten": "No message from them and no meeting yet.",
+  "co.health.reason.quiet_one": "No reply and no meeting for {days} day.",
+  "co.health.reason.quiet_other": "No reply and no meeting for {days} days.",
+  "co.health.reason.meetingBooked": "A meeting is booked for {at}.",
+  "co.health.reason.lastMet_one": "Last met them {days} day ago.",
+  "co.health.reason.lastMet_other": "Last met them {days} days ago.",
+  "co.health.reason.singleThreaded":
+    "In contact, but one contact carries the whole account.",
+  "co.health.reason.severalContacts_one": "{count} contact here is in touch.",
+  "co.health.reason.severalContacts_other":
+    "{count} contacts here are in touch.",
+  "co.health.reason.dealsAllStalled_one": "The one open deal has stalled.",
+  "co.health.reason.dealsAllStalled_other":
+    "All {count} open deals have stalled.",
+  "co.health.reason.dealsSomeStalled_one":
+    "{count} of {total} open deals has stalled.",
+  "co.health.reason.dealsSomeStalled_other":
+    "{count} of {total} open deals have stalled.",
+  "co.health.reason.dealsNoneStalled_one": "{count} open deal, not stalled.",
+  "co.health.reason.dealsNoneStalled_other":
+    "{count} open deals, none stalled.",
   "company.partnerSetUp": "Set up partner program",
   "signal.kind.stalled_deal": "Deal stalled",
   "signal.kind.champion_left": "Champion left",
@@ -3570,6 +3599,19 @@ export const en = {
   "bulk.doneLeads_other": "{count} leads changed.",
   "bulk.undoneLeads_one": "{count} lead put back.",
   "bulk.undoneLeads_other": "{count} leads put back.",
+  "bulk.doneWorklistItems_one": "{count} item marked done.",
+  "bulk.doneWorklistItems_other": "{count} items marked done.",
+  "bulk.undoneWorklistItems_one": "{count} item reopened.",
+  "bulk.undoneWorklistItems_other": "{count} items reopened.",
+  "bulk.titleComplete": "Mark selected {unit} done?",
+  "bulk.confirmComplete": "Mark done",
+  "bulk.stateDone": "Done",
+  "bulk.stateOpen": "Open",
+  "bulk.reason.no_change_done": "Already in that state",
+  "worklist.bulk.selectAll_one": "Select the {count} item shown",
+  "worklist.bulk.selectAll_other": "Select all {count} items shown",
+  "worklist.bulk.clear": "Clear selection",
+  "worklist.bulk.markDone": "Mark done",
 
   "deal.offers": "Offers",
   "deal.newOffer": "New offer",
@@ -4695,6 +4737,10 @@ export const en = {
   "compose.threadHeading": "This thread",
   "compose.continueHeading": "Continue thread?",
   "compose.threadLeave": "New email",
+  "compose.threadShow": "Show this thread",
+  "compose.threadHide": "Hide this thread",
+  "compose.choicesShow": "Show earlier threads",
+  "compose.choicesHide": "Hide earlier threads",
   "compose.messageCount_one": "{count} message",
   "compose.messageCount_other": "{count} messages",
   "compose.threadContinuing": "Last exchange in this thread",
@@ -9399,10 +9445,6 @@ export const en = {
   "aiRouting.location.label": "Location",
   "aiRouting.location.help":
     "Where Google processes the calls this lane makes.",
-  "aiRouting.location.residentHelp":
-    "The eu_hosted profile admits only the locations marked EU resident.",
-  "aiRouting.location.forbidden":
-    "This location is outside the EU, so the eu_hosted profile refuses it. Choose an EU-resident location.",
   "aiRouting.location.loading":
     "Asking Google which locations this key can reach…",
   "aiRouting.location.noKey":
@@ -9419,7 +9461,6 @@ export const en = {
   "aiRouting.location.group.global": "Global",
   "aiRouting.location.resident": "EU resident",
   "aiRouting.location.nonResident": "Not resident",
-  "aiRouting.location.notResident": "outside the EU",
   "aiRouting.probe.checking": "Checking whether {location} serves this model…",
   "aiRouting.probe.served": "Served in {location}.",
   "aiRouting.probe.notServed":
@@ -9645,6 +9686,69 @@ export const en = {
   "agentConnections.ttl.refusal":
     "Enter a whole number of minutes from 5 to 129,600.",
   "agentConnections.updateFailed": "Setting not changed",
+  "operations.schedules.title": "Background schedules",
+  "operations.schedules.sub":
+    "How often each background pass runs. A running worker picks up a change within a minute: the pass runs once, then continues at the new interval.",
+  "operations.pacing.title": "Send pacing",
+  "operations.pacing.sub":
+    "How fast one mailbox may send. A change applies to the next send.",
+  "operations.adminOnly":
+    "Only an administrator or operations user can change this.",
+  "operations.updateFailed": "Setting not changed",
+  "operations.refusal": "Enter a whole number in the range shown.",
+  "operations.agentRunner.label": "Agent runs (seconds)",
+  "operations.agentRunner.help":
+    "How often scheduled agents are checked for a run that is due, 10 to 3,600.",
+  "operations.webhookRetry.label": "Webhook retries (seconds)",
+  "operations.webhookRetry.help":
+    "How often failed webhook deliveries are retried, 10 to 3,600.",
+  "operations.timeScan.label": "Time-based automations (seconds)",
+  "operations.timeScan.help":
+    "How often rules that fire on time are checked, 60 to 86,400.",
+  "operations.closeDate.label": "Overdue close dates (seconds)",
+  "operations.closeDate.help":
+    "How often deals past their close date are flagged, 3,600 to 604,800.",
+  "operations.followUp.label": "Follow-up proposals (seconds)",
+  "operations.followUp.help":
+    "How often stalled deals are checked for a follow-up to propose, 3,600 to 604,800.",
+  "operations.retention.label": "Data retention (seconds)",
+  "operations.retention.help":
+    "How often data past its retention period is removed, 3,600 to 604,800. Always on.",
+  "operations.geocode.label": "Address lookup sweep (seconds)",
+  "operations.geocode.help":
+    "How often addresses without coordinates are looked up, 300 to 604,800, or 0 for off.",
+  "operations.technical.label": "Technical lookup sweep (seconds)",
+  "operations.technical.help":
+    "How often domains without technical facts are looked up, 300 to 604,800, or 0 for off.",
+  "operations.gmailWatchScan.label": "Gmail push check (seconds)",
+  "operations.gmailWatchScan.help":
+    "How often Gmail push subscriptions are checked for renewal, 600 to 43,200.",
+  "operations.graphWatchScan.label": "Microsoft 365 push check (seconds)",
+  "operations.graphWatchScan.help":
+    "How often Microsoft 365 mail subscriptions are checked for renewal, 600 to 43,200.",
+  "operations.gmailWatchRenew.label": "Gmail renewal margin (hours)",
+  "operations.gmailWatchRenew.help":
+    "How long before its 7-day expiry a Gmail subscription is renewed, 24 to 144.",
+  "operations.graphWatchRenew.label": "Microsoft 365 renewal margin (hours)",
+  "operations.graphWatchRenew.help":
+    "How long before its 3-day expiry a Microsoft 365 subscription is renewed, 24 to 60.",
+  "operations.sendRateLimit.label": "Messages per window",
+  "operations.sendRateLimit.help":
+    "How many messages one mailbox may send in one window, 1 to 1,000.",
+  "operations.sendRateWindow.label": "Window (seconds)",
+  "operations.sendRateWindow.help":
+    "The window messages are counted over, 10 to 3,600.",
+  "operations.sendMaxAge.label": "Longest wait (hours)",
+  "operations.sendMaxAge.help":
+    "How long a held-back message may wait before it stops with a reason, 1 to 168.",
+  "captureMailSync.title": "Mail sync",
+  "captureMailSync.sub":
+    "How often each connected mailbox is checked for new mail.",
+  "captureMailSync.interval.label": "Sync interval (seconds)",
+  "captureMailSync.interval.help":
+    "Time between one mailbox’s syncs, 30 to 3,600. Applies from each mailbox’s next sync.",
+  "captureMailSync.interval.refusal":
+    "Enter a whole number of seconds from 30 to 3,600.",
 
   "ownDomains.companyTitle": "Company domains",
   "captureExclusions.title": "Capture exclusions",
@@ -10285,6 +10389,7 @@ export const en = {
   "contact.memory.replied": "Replied",
   "contact.memory.unanswered": "Unanswered",
 
+  "contact.mayBeDone.notYet": "Not yet",
   "contact.rail.blocked": "Blocked",
   "contact.rail.direction": "Direction",
   "contact.rail.lastReply": "Last reply",
@@ -11425,6 +11530,7 @@ export const en = {
   "worklist.handled.about": "Record",
   "worklist.handled.when": "When",
   "worklist.handled.noRecord": "No record",
+  "worklist.handled.hiddenRecord": "Record not available",
   "worklist.handled.wayBack": "Undo",
   "worklist.handled.putBackDone": "Already undone",
   "worklist.handled.truncated": "List truncated. More items exist.",
@@ -11574,6 +11680,8 @@ export const en = {
   "worklist.because.opened_overdue":
     "recorded after its deadline, from imported history",
   "worklist.because.meeting_soon": "starting soon",
+  "worklist.because.meeting_booked": "meeting booked",
+  "worklist.because.meeting_booked.value": "meeting booked for {value}",
   "worklist.because.meeting_unprepared": "nothing prepared",
   "worklist.because.outcome_unrecorded": "no outcome recorded",
   "worklist.because.response_overdue": "reply overdue",

@@ -10,15 +10,15 @@
 // scope is.
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type ReactNode, useId, useState } from "react";
+import { type ReactNode, useState } from "react";
 import { api } from "../api/client";
 import { ifMatch, requireVersion } from "../api/version";
 import { useCanWrite } from "../app/capability";
-import { Badge, Button, EmptyState, Modal } from "../design-system/atoms";
+import { Badge, Button, EmptyState } from "../design-system/atoms";
+import { ConfirmModal } from "../design-system/confirmmodal";
 import { DataTable } from "../design-system/datatable";
 import { ErrorLine } from "../design-system/errorline";
 import { type Fact, FactList } from "../design-system/factlist";
-import { Heading } from "../design-system/heading";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { useT } from "../i18n";
 import { QueryGate, throwProblem } from "./common";
@@ -113,7 +113,6 @@ export function RelationshipRows({
 }>) {
   const t = useT();
   const queryClient = useQueryClient();
-  const headingId = useId();
   const copy = scopeCopy(scope);
   // The object half of each verb's gate, asked as the server asks it
   // (relationship:create on an add, :update on an edit, :delete on a
@@ -320,47 +319,27 @@ export function RelationshipRows({
           );
         }}
       </QueryGate>
-      <Modal
+      <ConfirmModal
         open={removing !== null}
+        // The mutation is reset with the dialog, not just the row it was aimed
+        // at, so the next seat's dialog never opens on an earlier refusal.
         onClose={() => {
           setRemoving(null);
           remove.reset();
         }}
-        labelledBy={headingId}
+        title={t("rel.remove")}
+        confirmLabel={t("rel.remove")}
+        confirmVariant="danger"
+        onConfirm={() => {
+          if (removing) {
+            remove.mutate(removing);
+          }
+        }}
+        pending={remove.isPending}
       >
-        <Heading size="large" id={headingId} className="t-h2 modal-title">
-          {t("rel.remove")}
-        </Heading>
-        <p className="relationshiprows-remove-lede">{t("rel.removeConfirm")}</p>
+        <p>{t("rel.removeConfirm")}</p>
         <ErrorLine error={remove.error} />
-        <div className="form-actions">
-          <Button
-            // The mutation is reset with the dialog, not just the row it was
-            // aimed at: a failed remove left its sentence behind, and the next
-            // seat's dialog opened carrying an error for a write nobody had
-            // attempted on it.
-            onClick={() => {
-              setRemoving(null);
-              remove.reset();
-            }}
-            disabled={remove.isPending}
-          >
-            {t("create.cancel")}
-          </Button>
-          <Button
-            variant="danger"
-            onClick={() => {
-              if (removing) {
-                remove.mutate(removing);
-              }
-            }}
-            disabled={remove.isPending}
-            data-testid="remove-relationship-confirm"
-          >
-            {t("rel.remove")}
-          </Button>
-        </div>
-      </Modal>
+      </ConfirmModal>
     </>
   );
 }

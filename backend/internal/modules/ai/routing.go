@@ -156,9 +156,6 @@ func ParseRouting(raw []byte) (RoutingConfig, error) {
 	if err != nil {
 		return RoutingConfig{}, err
 	}
-	if err := cfg.ResidencyGap(); err != nil {
-		return RoutingConfig{}, err
-	}
 	return cfg, nil
 }
 

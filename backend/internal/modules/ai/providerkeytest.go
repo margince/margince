@@ -159,10 +159,6 @@ func probeDecisionKey(
 ) KeyTest {
 	out := KeyTest{Provider: provider}
 	lane := boundDecisionLane(cfg, provider)
-	if decisionLaneForbidden(cfg.Profile, lane) {
-		out.Reason = KeyTestProfileForbids
-		return out
-	}
 	client, err := build(lane, keys)
 	if err != nil {
 		out.Reason = keyTestRefusal(unavailableFor(err))

@@ -35,6 +35,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `basevaluespelling_test.go` | H2 | One deal's base-currency value is computed in two packages that cannot import each other, and the two computations must agree. |
 | `benchrecordswitch_test.go` | H2 | Both bench harnesses ask the same variable whether to publish a record, and both answer only to the same value. |
 | `bookinginvite_test.go` | H2 | What booking a meeting claims to do and what it does, held against each other. |
+| `briefcachemirror_test.go` | H2 | The brief cache's upsert is spelled in two places and they must stay one statement. |
 | `captureledgerstatuses_test.go` | H2 | The disposition ledger's status vocabulary is defined by the column's own constraint, and nowhere else. |
 | `coderabbitpathrules_test.go` | H3 | What .coderabbit.yaml tells the reviewer about backend Go, held against what is true. |
 | `companyprofilevocabulary_test.go` | H3 | The company-profile vocabulary is spelled in eight places, and widening seven of them without the eighth fails here. |
@@ -214,6 +215,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `consumersubscribed_test.go` | H3 | Every event consumer is actually subscribed. |
 | `contactattachlock_test.go` | H2 | A relationship carrying a contact is written under that contact's row lock. |
 | `contactprofilefieldwriter_test.go` | H2 | contacts.writeContactProfileField is the one writer of contact\_profile\_field, and the one place the precedence rule lives: a machine fill claims an unanswered field, a human's acceptance replaces what is there. |
+| `contactprosecoverage_test.go` | H3 | Every table with a foreign key to contact and a column prose fits in is registered or carries a reason. |
 | `contactreaders_test.go` | H2 | `contact` is an RBAC object, and until this gate nothing held the object half of that anywhere outside the module that owns it. |
 | `contractlistpaging_test.go` | H2 | A list that can be cut says where it was cut. |
 | `contractproducers_test.go` | H2 | A field the contract promises and nobody writes is invisible. |
@@ -442,6 +444,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `contentionprobe_test.go` | H2 | A contention probe that cannot see the backend it is waiting for. |
 | `dealforecastmovement_test.go` | H2 | A deal row changes through one door, and that door records the forecast. |
 | `dealmoneypairwriters_test.go` | H2 | The deal money pairing rule is decided in one function, and this fails when a second place decides it. |
+| `docsplainwords_test.go` | H2 | A page whose first line is \<!-- prose:plain --> or \<!-- prose:plain max-words=N --> is written in plain words: short sentences and a vocabulary of fewer than 1,000 general words plus named technical terms, and with the optional limit, at most N words. |
 | `docsprose_test.go` | H2 | Every Markdown page meets the house prose bar in docs/reference/docs-prose-style.md. |
 | `errmatch_test.go` | H2 | Postgres failures are classified by SQLSTATE or constraint name (the storekit.UniqueViolation / CheckViolation helpers), never by message text, which breaks on a locale change, a driver upgrade, or an unrelated error that mentions the same identifier. |
 | `evidencedeletes_test.go` | H2 | No domain code deletes an evidence row. |

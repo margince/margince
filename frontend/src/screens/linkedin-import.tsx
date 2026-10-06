@@ -108,6 +108,7 @@ function LinkedInProfileRow() {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<string | null>(null);
   const headingId = useId();
+  const formId = useId();
 
   const stored = account.data?.profile_url ?? "";
   // Adopt the server value until the member starts typing, so a save or a
@@ -169,11 +170,18 @@ function LinkedInProfileRow() {
           </Button>
         }
       />
-      <Modal open={editing} onClose={close} labelledBy={headingId}>
+      <Modal
+        open={editing}
+        onClose={close}
+        labelledBy={headingId}
+        intent="form"
+      >
         <Heading size="large" id={headingId} className="t-h2 modal-title">
           {t("linkedinImport.editProfileTitle")}
         </Heading>
         <form
+          id={formId}
+          className="form-stack"
           onSubmit={(event) => {
             event.preventDefault();
             if (dirty) {
@@ -187,49 +195,45 @@ function LinkedInProfileRow() {
             }
           }}
         >
-          <div className="form-stack">
-            <Field label={t("linkedinImport.profileLabel")}>
-              {(control) => (
-                <TextInput
-                  {...control}
-                  type="url"
-                  inputMode="url"
-                  data-testid="linkedin-profile-url"
-                  placeholder={t("linkedinImport.profilePlaceholder")}
-                  value={value}
-                  onChange={(e) => setDraft(e.target.value)}
-                />
-              )}
-            </Field>
-            {save.isError && (
-              <Callout
-                kind="outcome"
-                tone="danger"
-                title={t("linkedinImport.saveFailed")}
-              >
-                {problemMessageOf(save.error, t)}
-              </Callout>
+          <Field label={t("linkedinImport.profileLabel")}>
+            {(control) => (
+              <TextInput
+                {...control}
+                type="url"
+                inputMode="url"
+                data-testid="linkedin-profile-url"
+                placeholder={t("linkedinImport.profilePlaceholder")}
+                value={value}
+                onChange={(e) => setDraft(e.target.value)}
+              />
             )}
-          </div>
-          <div className="actions">
-            <Button type="button" onClick={close} disabled={save.isPending}>
-              {t("create.cancel")}
-            </Button>
-            {/* An unchanged URL and a save in flight are two different
-                unavailabilities, and the design system draws them differently:
-                `disabled` for the precondition the reader can fix by typing,
-                `pending` for the write they have already started, which keeps
-                the button focusable so the wait is announced from it. */}
-            <Button
-              variant="primary"
-              type="submit"
-              disabled={!dirty}
-              pending={save.isPending}
+          </Field>
+          {save.isError && (
+            <Callout
+              kind="outcome"
+              tone="danger"
+              title={t("linkedinImport.saveFailed")}
             >
-              {t("linkedinImport.saveProfile")}
-            </Button>
-          </div>
+              {problemMessageOf(save.error, t)}
+            </Callout>
+          )}
         </form>
+        <div className="actions">
+          <Button type="button" onClick={close} disabled={save.isPending}>
+            {t("create.cancel")}
+          </Button>
+          {/* `disabled` for an unchanged URL the reader fixes by typing;
+              `pending` keeps a started save focusable so its wait is announced. */}
+          <Button
+            variant="primary"
+            type="submit"
+            form={formId}
+            disabled={!dirty}
+            pending={save.isPending}
+          >
+            {t("linkedinImport.saveProfile")}
+          </Button>
+        </div>
       </Modal>
     </>
   );

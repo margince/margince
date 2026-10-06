@@ -2,8 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import { type LibraryItem, libraryItems } from "./library";
-import { LibraryTable } from "./listlibrary";
+import { LibraryTable, NewShortlistAction } from "./listlibrary";
 import {
   listsMe,
   liveList,
@@ -12,6 +13,7 @@ import {
   TEAM_ID,
   teamsPage,
 } from "./lists.fixtures";
+import { DEFAULT_AUDIENCE } from "./listsharing";
 import type { SavedView } from "./savedviews.queries";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
@@ -113,4 +115,27 @@ export const ArchivedRow: Story = {
       ),
       "shared",
     ),
+};
+
+/** New Shortlist pressed: its name, what it is for, its record type and audience. */
+export const StartingAShortlist: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": listsMe(true, [TEAM_ID]),
+      "GET /teams": () => jsonResponse(teamsPage),
+    });
+    return (
+      <StoryProviders>
+        <NewShortlistAction defaultAudience={DEFAULT_AUDIENCE} />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", {
+        name: "New Shortlist",
+      }),
+    );
+    await within(document.body).findByRole("dialog");
+  },
 };

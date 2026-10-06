@@ -65,6 +65,7 @@ import {
 } from "./writeto";
 import "./contact360.css";
 import { buyingRoleLabel } from "./companycontacts/summary";
+import { navigateKeepingReturn, WorklistReturnLink } from "./worklist.return";
 
 type Contact360 = components["schemas"]["Contact360"];
 type ContactMomentAction = components["schemas"]["ContactMomentAction"];
@@ -223,7 +224,7 @@ function ContactTabPanel({
 // the typed descriptor exists so a button whose path does not exist is never
 // rendered, and silently doing something else would be worse than the 404 it
 // was meant to prevent.
-function runContactMomentAction(
+export function runContactMomentAction(
   action: ContactMomentAction,
   t: ReturnType<typeof useT>,
   handlers: Readonly<{
@@ -262,7 +263,7 @@ function runContactMomentAction(
       return;
     case "record":
       if (destination.entity_id) {
-        navigate({ screen: "deals", id: destination.entity_id });
+        navigateKeepingReturn({ screen: "deals", id: destination.entity_id });
       }
       return;
     case "activity_log":
@@ -444,10 +445,10 @@ export function ContactPageV2({
       <ContactWriteTo contactId={id} onWrite={() => openComposer("")}>
         <div className="record-sheet">
           <RecordView
-            // The contact's context, in the details pane beside the work: what is
-            // true of the CONTACT does not belong to whichever part of them is open,
-            // so it does not move when a tab changes. The same pane, fold and
-            // memory of it as every other record page.
+            back={<WorklistReturnLink />}
+            // The contact's context, in the details pane beside the work: it is
+            // true of the CONTACT, not of the open tab, so a tab change leaves
+            // it put. The same pane, fold and memory as every other record.
             // At phone width there is no column to fold: the same cards open as
             // the drawer below instead, so the record hands the view no pane at
             // all rather than one that folds to nothing beside nothing.
@@ -491,7 +492,7 @@ export function ContactPageV2({
                 options={CONTACT_TABS}
                 value={tab}
                 onChange={(next) => {
-                  navigate(contactTabRoute(id, next));
+                  navigateKeepingReturn(contactTabRoute(id, next));
                   scrollPageToTop();
                 }}
                 // The switch for the details pane, at the end of the tab row: it
@@ -611,7 +612,7 @@ export function ContactPageV2({
           // than answering the press with nothing.
           closeReason={detailsDirty ? t("record.finishFieldEdit") : undefined}
           labelledBy={detailsTitle}
-          placement="right"
+          intent="drawer"
         >
           <div className="pe-drawer-title">
             <Heading size="large" id={detailsTitle}>
@@ -780,7 +781,7 @@ function ContactMarks({
   // first, and the reveal waits for the anchor to be drawn.
   const showBrief = () => {
     if (tab !== "overview") {
-      navigate(contactTabRoute(view.contact.id, "overview"));
+      navigateKeepingReturn(contactTabRoute(view.contact.id, "overview"));
     }
     revealOnceMounted(BRIEF_ANCHOR);
   };

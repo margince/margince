@@ -288,7 +288,7 @@ export function AcceptSuggestionDialog({
       },
     );
   return (
-    <Modal open onClose={onClose} labelledBy={headingId}>
+    <Modal open onClose={onClose} labelledBy={headingId} intent="form">
       <Heading size="large" id={headingId} className="t-h2 modal-title">
         {t("dealSuggestion.acceptTitle", { company: suggestion.company_name })}
       </Heading>

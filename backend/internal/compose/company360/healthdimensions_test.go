@@ -7,10 +7,12 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // The health card's named dimensions (PO-AC-N-10..12, ADR-0095/A146).
@@ -45,7 +47,7 @@ func commercialStrip(open, stalled int) *crmcontracts.Company360StateStrip {
 
 func TestRelationshipIsAbsentOnAnAccountNobodyHasReached(t *testing.T) {
 	health := crmcontracts.Company360Health{ActiveContacts: ptrInt(0)}
-	rateHealthDimensions(&health, nil)
+	rateHealthDimensions(&health, nil, relstrength.ReadInTouch(nil, nil, nil, healthNow))
 
 	// Not "at risk": an unstarted relationship is not a failing one, and rating
 	// it would put a verdict on something that has not begun.
@@ -54,72 +56,123 @@ func TestRelationshipIsAbsentOnAnAccountNobodyHasReached(t *testing.T) {
 	}
 }
 
-func TestRelationshipReadsWhetherBothSidesAreTalking(t *testing.T) {
+// healthNow is the instant every relationship case states its dates against.
+var healthNow = time.Date(2026, 10, 6, 9, 0, 0, 0, time.UTC)
+
+func healthDaysAgo(n int) *time.Time {
+	at := healthNow.AddDate(0, 0, -n)
+	return &at
+}
+
+// The relationship rating reads messages from them AND meetings with them,
+// held or booked ahead, through the one in-touch rule relstrength holds.
+func TestRelationshipReadsWhetherWeAreInTouch(t *testing.T) {
 	cases := []struct {
 		name           string
 		activeContacts int
-		daysSince      *int
+		lastInbound    *time.Time
+		lastMeeting    *time.Time
+		nextMeeting    *time.Time
 		singleThreaded bool
 		want           crmcontracts.HealthDimensionRating
+		code           crmcontracts.HealthDimensionReasonCode
 		reasonHas      string
 	}{
 		{
-			name:           "they have never written",
-			activeContacts: 2,
-			daysSince:      nil,
-			want:           crmcontracts.HealthDimensionRatingAtRisk,
-			reasonHas:      "never written",
+			name: "no message and no meeting, ever", activeContacts: 2,
+			want: crmcontracts.HealthDimensionRatingAtRisk, code: crmcontracts.HealthDimensionReasonCodeNeverWritten,
+			reasonHas: "No message from them",
 		},
 		{
-			name:           "quiet past the threshold",
-			activeContacts: 2,
-			daysSince:      ptrInt(healthQuietDays + 1),
-			want:           crmcontracts.HealthDimensionRatingAtRisk,
-			reasonHas:      "No reply",
+			name: "old message and no meeting", activeContacts: 2, lastInbound: healthDaysAgo(77),
+			want: crmcontracts.HealthDimensionRatingAtRisk, code: crmcontracts.HealthDimensionReasonCodeQuiet,
+			reasonHas: "no meeting for 77 days",
 		},
 		{
-			name:           "in contact, but one contact carries it",
-			activeContacts: 1,
-			daysSince:      ptrInt(3),
+			name: "old message and a meeting held too long ago", activeContacts: 2,
+			lastInbound: healthDaysAgo(77), lastMeeting: healthDaysAgo(40),
+			want: crmcontracts.HealthDimensionRatingAtRisk, code: crmcontracts.HealthDimensionReasonCodeQuiet,
+			reasonHas: "no meeting for 40 days",
+		},
+		{
+			name: "old message but a meeting three weeks ago", activeContacts: 2,
+			lastInbound: healthDaysAgo(77), lastMeeting: healthDaysAgo(21),
+			want: crmcontracts.HealthDimensionRatingStrong, code: crmcontracts.HealthDimensionReasonCodeLastMet,
+			reasonHas: "Last met them 21 days ago",
+		},
+		{
+			name: "old message but a meeting booked ahead", activeContacts: 2,
+			lastInbound: healthDaysAgo(77), nextMeeting: healthDaysAgo(-2),
+			want: crmcontracts.HealthDimensionRatingGood, code: crmcontracts.HealthDimensionReasonCodeMeetingBooked,
+			reasonHas: "is booked",
+		},
+		{
+			name: "only meetings, never a message", activeContacts: 2, lastMeeting: healthDaysAgo(5),
+			want: crmcontracts.HealthDimensionRatingStrong, code: crmcontracts.HealthDimensionReasonCodeLastMet,
+			reasonHas: "Last met",
+		},
+		{
+			name: "met recently, but one contact carries it", activeContacts: 1, lastMeeting: healthDaysAgo(21),
 			singleThreaded: true,
-			want:           crmcontracts.HealthDimensionRatingGood,
-			reasonHas:      "one contact",
+			want:           crmcontracts.HealthDimensionRatingGood, code: crmcontracts.HealthDimensionReasonCodeLastMet,
+			reasonHas: "Last met them 21 days ago",
 		},
 		{
-			name:           "several contacts, recently",
-			activeContacts: 3,
-			daysSince:      ptrInt(3),
-			want:           crmcontracts.HealthDimensionRatingStrong,
-			reasonHas:      "in contact",
+			name: "in touch, but one contact carries it", activeContacts: 1, lastInbound: healthDaysAgo(3),
+			singleThreaded: true,
+			want:           crmcontracts.HealthDimensionRatingGood, code: crmcontracts.HealthDimensionReasonCodeSingleThreaded,
+			reasonHas: "one contact",
+		},
+		{
+			name: "several contacts, recently", activeContacts: 3, lastInbound: healthDaysAgo(3),
+			want: crmcontracts.HealthDimensionRatingStrong, code: crmcontracts.HealthDimensionReasonCodeSeveralContacts,
+			reasonHas: "3 contacts",
 		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			health := crmcontracts.Company360Health{
-				ActiveContacts:       ptrInt(tc.activeContacts),
-				DaysSinceLastInbound: tc.daysSince,
-				SingleThreaded:       ptrBool(tc.singleThreaded),
+				ActiveContacts: ptrInt(tc.activeContacts),
+				SingleThreaded: ptrBool(tc.singleThreaded),
 			}
-			rateHealthDimensions(&health, nil)
+			touch := relstrength.ReadInTouch(tc.lastInbound, tc.lastMeeting, tc.nextMeeting, healthNow)
+			rateHealthDimensions(&health, nil, touch)
 
-			if health.Relationship == nil {
+			got := health.Relationship
+			if got == nil {
 				t.Fatal("relationship is absent on an account with contacts")
 			}
-			if health.Relationship.Rating != tc.want {
-				t.Fatalf("rating = %q, want %q", health.Relationship.Rating, tc.want)
+			if got.Rating != tc.want {
+				t.Fatalf("rating = %q (%s), want %q", got.Rating, got.Reason, tc.want)
 			}
-			if !strings.Contains(health.Relationship.Reason, tc.reasonHas) {
+			if got.ReasonCode == nil || *got.ReasonCode != tc.code {
+				t.Fatalf("reason code = %v, want %q — without it the reader sees the English sentence in every language",
+					got.ReasonCode, tc.code)
+			}
+			if !strings.Contains(got.Reason, tc.reasonHas) {
 				t.Fatalf("reason = %q, want it to name %q — a rating with no sentence behind it is the unexplainable score this model replaced",
-					health.Relationship.Reason, tc.reasonHas)
+					got.Reason, tc.reasonHas)
 			}
 		})
+	}
+}
+
+// The values a translated reason renders travel with the code, or the
+// translation has nothing to say.
+func TestRelationshipReasonCarriesTheValuesItNames(t *testing.T) {
+	health := crmcontracts.Company360Health{ActiveContacts: ptrInt(2), SingleThreaded: ptrBool(false)}
+	rateHealthDimensions(&health, nil, relstrength.ReadInTouch(healthDaysAgo(77), nil, healthDaysAgo(-2), healthNow))
+
+	params := health.Relationship.ReasonParams
+	if params == nil || params.At == nil || !params.At.Equal(*healthDaysAgo(-2)) {
+		t.Fatalf("reason params = %+v, want the booked meeting's start, as an instant", params)
 	}
 }
 
 func TestCommercialIsAbsentWhenTheReaderHasNoDealGrant(t *testing.T) {
 	health := crmcontracts.Company360Health{ActiveContacts: ptrInt(2)}
 	// A nil commercial half is the strip saying the READER cannot see deals.
-	rateHealthDimensions(&health, &crmcontracts.Company360StateStrip{})
+	rateHealthDimensions(&health, &crmcontracts.Company360StateStrip{}, relstrength.InTouch{})
 
 	if health.Commercial != nil {
 		t.Fatalf("commercial = %+v, want absent — a withheld section is not a claim about the account", health.Commercial)
@@ -134,7 +187,7 @@ func TestCommercialIsAbsentWhenTheReaderHasNoDealGrant(t *testing.T) {
 // rule then carried that verdict into the account's overall standing.
 func TestCommercialIsUnratedWhenNothingIsOpen(t *testing.T) {
 	health := crmcontracts.Company360Health{}
-	rateHealthDimensions(&health, commercialStrip(0, 0))
+	rateHealthDimensions(&health, commercialStrip(0, 0), relstrength.InTouch{})
 
 	if health.Commercial != nil {
 		t.Fatalf("commercial = %+v, want absent — there is no verdict to give on a pipeline that does not exist",
@@ -157,7 +210,7 @@ func TestCommercialReadsWhetherWorkIsMoving(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			health := crmcontracts.Company360Health{}
-			rateHealthDimensions(&health, commercialStrip(tc.open, tc.stalled))
+			rateHealthDimensions(&health, commercialStrip(tc.open, tc.stalled), relstrength.InTouch{})
 
 			if health.Commercial == nil {
 				t.Fatal("commercial is absent where the strip carried a reading")

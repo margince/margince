@@ -224,3 +224,27 @@ func TestANestedCommandOfAnUnseeableParentStagesNothing(t *testing.T) {
 		})
 	}
 }
+
+// The dedupe route carries two arms. An agent may dismiss a pair through it, and
+// a merge is merge_records' alone, so the decoder refuses that arm instead of
+// governing a merge as though it were a dismissal.
+func TestTheDedupeDoorRefusesAnAgentsMergeArm(t *testing.T) {
+	id := ids.NewV7().String()
+	merge := operandRequest(http.MethodPost, "/v1/dedupe/candidates", id, "", "", nil)
+
+	_, err := dismissDuplicateCommand(agentPolicy{}, operandWalkDeps(), merge, []byte(`{"disposition":"merge","winner_id":"`+id+`"}`))
+	if err == nil || !strings.Contains(err.Error(), "merge_records") {
+		t.Fatalf("an agent's merge arm = %v, want a refusal that names merge_records", err)
+	}
+
+	for _, body := range []string{``, `{}`, `not json`, `{"disposition":"bogus"}`} {
+		if _, err := dismissDuplicateCommand(agentPolicy{}, operandWalkDeps(), merge, []byte(body)); err == nil {
+			t.Errorf("body %q was staged as a dismissal, want a refusal before it can fail on redemption", body)
+		}
+	}
+
+	call, err := dismissDuplicateCommand(agentPolicy{}, operandWalkDeps(), merge, []byte(`{"disposition":"not_a_duplicate"}`))
+	if err != nil || call == nil {
+		t.Fatalf("an agent's dismissal = %v, %v, want a governed call", call, err)
+	}
+}

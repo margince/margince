@@ -233,15 +233,18 @@ function DeclareDialog({ onClose }: Readonly<{ onClose: () => void }>) {
   const t = useT();
   const add = useAddIdentity();
   const headingId = useId();
+  const formId = useId();
   const [kind, setKind] = useState<Kind>("address");
   const [draft, setDraft] = useState("");
   const value = draft.trim();
   return (
-    <Modal open onClose={onClose} labelledBy={headingId}>
+    <Modal open onClose={onClose} labelledBy={headingId} intent="form">
       <Heading size="large" id={headingId} className="t-h2 modal-title">
         {t("ownerIdentities.addLabel")}
       </Heading>
       <form
+        id={formId}
+        className="form-stack"
         onSubmit={(event) => {
           event.preventDefault();
           if (value === "") {
@@ -250,46 +253,48 @@ function DeclareDialog({ onClose }: Readonly<{ onClose: () => void }>) {
           add.mutate({ kind, value }, { onSuccess: onClose });
         }}
       >
-        <div className="form-stack">
-          <SegmentedControl
-            options={KINDS}
-            value={kind}
-            onChange={setKind}
-            labels={{
-              address: t("ownerIdentities.kind.address"),
-              domain: t("ownerIdentities.kind.domain"),
-            }}
-            label={t("ownerIdentities.kindLabel")}
-          />
-          <TextInput
-            value={draft}
-            aria-label={t("ownerIdentities.valueLabel")}
-            onChange={(event) => setDraft(event.target.value)}
-            placeholder={
-              kind === "address"
-                ? t("ownerIdentities.addressPlaceholder")
-                : t("ownerIdentities.domainPlaceholder")
-            }
-          />
-          {add.isError && (
-            <Callout
-              tone="danger"
-              kind="outcome"
-              title={t("ownerIdentities.addFailed")}
-            >
-              {problemMessageOf(add.error, t)}
-            </Callout>
-          )}
-        </div>
-        <div className="actions">
-          <Button variant="ghost" onClick={onClose} type="button">
-            {t("create.cancel")}
-          </Button>
-          <Button type="submit" disabled={value === "" || add.isPending}>
-            {t("ownerIdentities.confirm")}
-          </Button>
-        </div>
+        <SegmentedControl
+          options={KINDS}
+          value={kind}
+          onChange={setKind}
+          labels={{
+            address: t("ownerIdentities.kind.address"),
+            domain: t("ownerIdentities.kind.domain"),
+          }}
+          label={t("ownerIdentities.kindLabel")}
+        />
+        <TextInput
+          value={draft}
+          aria-label={t("ownerIdentities.valueLabel")}
+          onChange={(event) => setDraft(event.target.value)}
+          placeholder={
+            kind === "address"
+              ? t("ownerIdentities.addressPlaceholder")
+              : t("ownerIdentities.domainPlaceholder")
+          }
+        />
+        {add.isError && (
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t("ownerIdentities.addFailed")}
+          >
+            {problemMessageOf(add.error, t)}
+          </Callout>
+        )}
       </form>
+      <div className="actions">
+        <Button variant="ghost" onClick={onClose} type="button">
+          {t("create.cancel")}
+        </Button>
+        <Button
+          type="submit"
+          form={formId}
+          disabled={value === "" || add.isPending}
+        >
+          {t("ownerIdentities.confirm")}
+        </Button>
+      </div>
     </Modal>
   );
 }

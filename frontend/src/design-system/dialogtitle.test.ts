@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 import {
   attr,
   attrs,
+  childrenSlot,
   classes,
   defOf,
   dialogSet,
@@ -40,6 +41,11 @@ const EXCEPTIONS = [
 ];
 type Title = { where: string; classes: string[]; owner: string | null };
 
+function hostClasses(n: ts.Node) {
+  const host = childrenSlot(n);
+  return host ? classes(host) : [];
+}
+
 const followed = (heading: ts.Node, parent: ts.Node) => {
   const kids = ts.isJsxElement(parent)
     ? parent.children.filter((c) =>
@@ -65,7 +71,8 @@ function titlesIn(path: string, text: string, owners: Owners) {
   };
   const judge = (heading: ts.Node, modal: ts.Node) => {
     const parent = enclosing(heading) ?? modal;
-    const around = parent === modal ? [] : classes(parent);
+    const around =
+      parent === modal ? [] : [...classes(parent), ...hostClasses(parent)];
     const next = followed(heading, parent);
     const own = classes(heading).filter((c) => owners.band.has(c));
     let owner: string | null = null;
@@ -129,7 +136,8 @@ const exempt = (t: Title) => EXCEPTIONS.some((e) => matches(e, t));
 const AT = join(srcDir, "design-system", "planted.tsx");
 const PRELUDE = `import { Modal, Modal as Dialog } from "./modal";
 import { Heading, Heading as H } from "./heading";`;
-const BODY = `function Body({ titleId }) { return <div>${h("id={titleId}")}</div>; }`;
+const BODY = `function Body({ titleId }) { return <div>${h("id={titleId}")}</div>; }
+function Band({ children }) { return <div className="drawer-head">{children}</div>; }`;
 function h(attributes: string) {
   return `<Heading size="large" ${attributes}>A</Heading>`;
 }
@@ -183,6 +191,7 @@ describe("a dialog's Heading title has an owner for the space under it (a <p> ti
     ${"catches a title alone in a column gap container"} | ${modal(`<div className="x">${T}</div><p />`)}                  | ${"orphan"}        | ${COLUMN}
     ${"catches a title in a flex row with a gap"}        | ${modal(`<div className="frow">${T}<button /></div><p />`)}     | ${"orphan"}        | ${ROW}
     ${"catches a title in a bare wrapper"}               | ${modal(`<div>${T}</div>`)}                                     | ${"orphan"}        | ${""}
+    ${"reads the band a component draws around a title"} | ${modal(`<Band>${T}</Band><p />`)}                              | ${"head band"}     | ${""}
     ${"catches a band with content under the title"}     | ${modal(`<div className="band">${T}<p /></div>`)}               | ${"orphan"}        | ${".band { padding-bottom: var(--space-3) }"}
     ${"catches a band that :has() paints on its parent"} | ${modal(`<div className="x">${T}</div><p />`)}                  | ${"orphan"}        | ${".a:has(> .x) { padding-bottom: var(--space-3) }"}
     ${"treats only a <p> as a title outside scope"}      | ${modal('<p id="t">A</p>')}                                     | ${"no title"}      | ${""}
