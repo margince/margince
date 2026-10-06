@@ -80,6 +80,12 @@ const decl = (body: string, prop: string) =>
   body.match(new RegExp(`(?:^|[;\\s])${prop}\\s*:\\s*([^;]+)`))?.[1];
 
 type Edges = { top?: string; bottom?: string };
+// `!important` marks the declaration, so every side it fans out to keeps it.
+function boxOf(value: string): string[] {
+  const important = /!\s*important/.test(value);
+  const v = splitTopLevel(value.replace(/!\s*important/, ""), " \t\n");
+  return important ? v.map((side) => `${side} !important`) : v;
+}
 const SIDE =
   /(?:^|[;\s])(margin|padding)(-top|-bottom|-block|-block-start|-block-end)?\s*:\s*([^;]+)/g;
 // In source order, so a later shorthand overrides an earlier longhand.
@@ -87,7 +93,7 @@ function sides(body: string, box: "margin" | "padding"): Edges {
   const out: Edges = {};
   for (const [, prop, side = "", value] of body.matchAll(SIDE)) {
     if (prop !== box) continue;
-    const v = splitTopLevel(value, " \t\n");
+    const v = boxOf(value);
     if (["", "-block", "-top", "-block-start"].includes(side)) out.top = v[0];
     if (["-bottom", "-block-end"].includes(side)) out.bottom = v[0];
     if (side === "") out.bottom = v[2] ?? v[0];
@@ -108,7 +114,7 @@ const GAP = /(?:^|[;\s])(row-gap|column-gap|gap)\s*:\s*([^;]+)/g;
 function gaps(body: string) {
   const out: { rowGap?: string; columnGap?: string } = {};
   for (const [, prop, value] of body.matchAll(GAP)) {
-    const box = splitTopLevel(value, " \t\n");
+    const box = boxOf(value);
     if (prop !== "column-gap") out.rowGap = box[0];
     if (prop !== "row-gap") out.columnGap = box.at(-1);
   }
@@ -279,7 +285,7 @@ export function ownersIn(sheets: readonly string[]): Owners {
       index(owners.placed, rule);
     }
   }
-  for (const { selector, body } of sheets.flatMap(rulesIn)) {
+  for (const { selector, body } of held) {
     const traits = traitsOf(body);
     const names = selectorList(selector)
       .flatMap(subjectsOf)
@@ -691,7 +697,7 @@ export function dialogSet(
 }
 
 const DECLARATION =
-  /^(?:export\s+(?:default\s+)?)?(?:function\s+([A-Z]\w*)|const\s+([A-Z]\w*)\s*=)/gm;
+  /^(?:export\s+(?:default\s+)?)?(?:function\s+([A-Z]\w*)|const\s+([A-Z]\w*)\s*(?::[^=]*)?=)/gm;
 function declaredIn(text: string) {
   const starts = [...text.matchAll(DECLARATION)];
   return starts.map((m, i) => ({
@@ -724,7 +730,7 @@ export function textCensus(texts: readonly string[]) {
   const files = texts.map((t) => {
     const text = t
       .replace(/\/\*[\s\S]*?\*\//g, "")
-      .replace(/^\s*\/\/.*$/gm, "");
+      .replace(/(^|\s)\/\/.*$/gm, "$1");
     return { text, seen: new Map<string, boolean>() };
   });
   const visible = (file: (typeof files)[number], name: string) => {

@@ -103,10 +103,11 @@ const keyIs = (n: ts.Node, key: string) => {
 };
 const childOfJsx = (n: ts.Node) =>
   !!n.parent && (ts.isJsxElement(n.parent) || ts.isJsxFragment(n.parent));
-const isDialog = ({ keys }: Pick<Keys, "keys">, n: ts.Node) =>
-  upper(n)
-    ? isDialogTag(n.getSourceFile(), tag(n), keys)
-    : literal(n, "role") === "dialog";
+// A component that renders a dialog around its children; `role` alone marks a box.
+const wraps = ({ keys }: Pick<Keys, "keys">, n: ts.Node) =>
+  upper(n) && isDialogTag(n.getSourceFile(), tag(n), keys);
+const isDialog = (g: Pick<Keys, "keys">, n: ts.Node) =>
+  literal(n, "role") === "dialog" || wraps(g, n);
 const dialogsIn = (source: ts.SourceFile, keys: ReadonlySet<string>) =>
   elementsIn(source).filter((n) => isDialog({ keys }, n));
 // A call and the component it calls, whose props the call hands values.
@@ -288,7 +289,7 @@ const isField = (n: ts.Node) =>
 function width(g: Gate, n: ts.Node) {
   if (isField(n)) return 1;
   const def = defOf(n);
-  if (!def || isDialog(g, n)) return 0;
+  if (!def || wraps(g, n)) return 0;
   return rootsOf(def).filter(isField).length;
 }
 function slotOf(component: ts.Node) {
@@ -347,7 +348,7 @@ function boxesAt(g: Gate, p: ts.Node): Chain[] {
   const def = defOf(p);
   const inner = slot && def ? variantsOf(slot, { at: p, def }) : [[]];
   const own = cross(variantsOf(p), inner, p);
-  if (!upper(p) || !isDialog(g, p)) return own.map((cls) => [cls]);
+  if (!wraps(g, p)) return own.map((cls) => [cls]);
   const boxes = dialogBoxes(g, p, []);
   if (modal) return cross(own, boxes, p).map((cls) => [cls]);
   return own.flatMap((cls) => boxes.map((box) => [cls, box]));
@@ -430,7 +431,7 @@ function stacks(g: Gate, v: View, parent: ts.Node, across = true) {
 function boxesOf(g: Gate, n: ts.Node, hops = 3, call?: Call): string[][] {
   const own = variantsOf(n, call).flatMap((v) => expanded(g.owners, v, n));
   const def = defOf(n);
-  if (!def || hops === 0 || isDialog(g, n)) return own;
+  if (!def || hops === 0 || wraps(g, n)) return own;
   return rootsOf(def)
     .flatMap((r) => boxesOf(g, r, hops - 1, { at: n, def }))
     .flatMap((cls) => own.map((o) => [...cls, ...o]));
@@ -563,7 +564,7 @@ function scopeOf(
   const guests: Guest[] = [];
   for (const n of inside) {
     const def = defOf(n);
-    if (!def || isDialog(g, n) || isField(n)) continue;
+    if (!def || wraps(g, n) || isField(n)) continue;
     const file = def.getSourceFile().fileName;
     if (file === source.fileName) add(plain, def);
     else {
@@ -811,8 +812,11 @@ function Sheet({ children }) { return <Pane>{children}</Pane>; }
 function Drawer({ children }) { return <Sheet>{children}</Sheet>; }
 function Trigger({ children }) { return <Row>{children}<Modal /></Row>; }
 // <Modal> in a comment
-const A = () => <><Drawer /><div role="dialog" /><Trigger /></>;`;
-    expect(textCensus([text]).dialogs).toBe(5);
+const Typed: FC<P> = ({ children }) => <Modal>{children}</Modal>;
+const A = () => <><Drawer /><div role="dialog" /><Trigger /><Typed /></>;`;
+    expect(textCensus([text]).dialogs).toBe(7);
+    const trailing = `${text}\nconst B = () => <p />; // <Modal> after code`;
+    expect(textCensus([trailing]).dialogs).toBe(7);
   });
 
   it("follows a guest's guest into a third file", () => {
@@ -864,6 +868,10 @@ const A = () => <><Drawer /><div role="dialog" /><Trigger /></>;`;
     ${"`m#{k} base`"}                             | ${[["m*", "base"]]}
     ${"`a #{b} c`"}                               | ${[["a", "c"]]}
     ${'cx("a", open && `b-#{x ? "on" : "off"}`)'} | ${[["a"], ["a", "b-on"], ["a", "b-off"]]}
+    ${'"tone-" + level'}                          | ${[["tone-*"]]}
+    ${'"m" + (a ? "x y" : "z")'}                  | ${[["mx", "y"], ["mz"]]}
+    ${'cx("a") + " b"'}                           | ${[["a", "b"]]}
+    ${'"x-" + look(s)'}                           | ${[["x-*"]]}
   `("reads $expression as its branches", ({ expression, variants }) => {
     expect(classCall(expression)()).toEqual(variants);
   });
@@ -871,6 +879,12 @@ const A = () => <><Drawer /><div role="dialog" /><Trigger /></>;`;
   it("refuses a class list past its branch cap", () => {
     const five = 'cx(a && "a", b && "b", c && "c", d && "d", e && "e")';
     expect(classCall(five)).toThrow(/more than 16 class branches/);
+    const leaves = (n: number, p: string) =>
+      `(${Array.from({ length: n - 1 }, (_, i) => `k === ${i} ? "${p}${i}" : `).join("")}"")`;
+    expect(classCall(leaves(17, "c"))).toThrow(/more than 16/);
+    expect(classCall(`${leaves(9, "a")} || ${leaves(9, "b")}`)).toThrow(
+      /than 16/,
+    );
   });
 
   it.each`
@@ -931,6 +945,8 @@ const A = () => <><Drawer /><div role="dialog" /><Trigger /></>;`;
     ${"reads a component that wraps Modal as a dialog"}         | ${"<Sheet><p /><Field /></Sheet>"}                                                                          | ${"flush"}                | ${""}
     ${"reads Modal re-exported under another name"}             | ${"<Pane><p /><Field /></Pane>"}                                                                            | ${"flush"}                | ${""}
     ${"reads an element with role=dialog as a dialog"}          | ${'<div role="dialog"><p /><Field /></div>'}                                                                | ${"flush"}                | ${""}
+    ${"reads a component with role=dialog as a dialog"}         | ${'<Card role="dialog"><p /><Field /></Card>'}                                                              | ${"flush"}                | ${""}
+    ${"reads a two-value margin with !important"}               | ${'<Modal><div className="s"><Field className="m" /><Field /></div></Modal>'}                               | ${"spaced spaced"}        | ${`${STACK} .m { margin: 0 auto !important }`}
     ${"reads rows held in a JSX variable"}                      | ${inModal("{held}")}                                                                                        | ${"flush"}                | ${""}
     ${"reads rows a function returns"}                          | ${inModal("{fields()}")}                                                                                    | ${"flush"}                | ${""}
     ${"places a prop's rows where the dialog puts them"}        | ${"<Shell body={<><p /><Field /></>} />"}                                                                   | ${"flush"}                | ${""}

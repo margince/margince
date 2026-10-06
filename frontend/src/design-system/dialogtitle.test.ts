@@ -169,6 +169,8 @@ describe("a dialog's Heading title has an owner for the space under it (a <p> ti
       ".band { padding: 0 0 var(--space-4) }",
       ".a:has(> .inner) { padding-bottom: var(--space-3) }",
       ".none { margin-bottom: 0 !important; padding-bottom: unset }",
+      ".short { margin: 0 auto !important }",
+      "@media (min-width: 1px) { .wide { display: grid; gap: var(--space-3) } }",
     ]);
     expect([[...own.gap], [...own.band]]).toEqual([["grid"], ["band", "a"]]);
   });

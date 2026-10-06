@@ -25,7 +25,10 @@ export function classNamesOn(source: ts.SourceFile, on?: string): ClassName[] {
       add(node.text, node);
       return;
     }
-    if (ts.isTemplateExpression(node)) {
+    const concatenated =
+      ts.isBinaryExpression(node) &&
+      node.operatorToken.kind === ts.SyntaxKind.PlusToken;
+    if (ts.isTemplateExpression(node) || concatenated) {
       const names = read.texts(node).flatMap((t) => tokensOf(t, false));
       add([...new Set(names)].join(" "), node);
       return;
@@ -155,8 +158,13 @@ function readerFor(
     if (ts.isIdentifier(n)) return followed(n, texts, [CUT], (v) => v);
     if (ts.isConditionalExpression(n)) return chosen(n).flatMap(texts);
     if (ts.isParenthesizedExpression(n)) return texts(n.expression);
-    return ts.isBinaryExpression(n) ? binaryTexts(n) : [CUT];
+    return ts.isBinaryExpression(n) ? binaryTexts(n) : listTexts(n);
   };
+  // An empty list may be a call that computes a string (`look(state)`): unread.
+  const listTexts = (n: ts.Node): string[] =>
+    ts.isCallExpression(n) || ts.isArrayLiteralExpression(n)
+      ? lists(n).map((l) => l.join(" ").replaceAll("*", CUT) || CUT)
+      : [CUT];
   const binaryTexts = (n: ts.BinaryExpression): string[] => {
     const kind = n.operatorToken.kind;
     if (kind === ts.SyntaxKind.AmpersandAmpersandToken) {
@@ -177,11 +185,12 @@ function readerFor(
     const kind = n.operatorToken.kind;
     if (kind === ts.SyntaxKind.AmpersandAmpersandToken) {
       const { yes, no } = ways(n.left);
-      return [...(no ? [[]] : []), ...(yes ? lists(n.right) : [])];
+      return capped([...(no ? [[]] : []), ...(yes ? lists(n.right) : [])]);
     }
-    if (kind === ts.SyntaxKind.PlusToken)
-      return product([lists(n.left), lists(n.right)], join, []);
-    return joins(kind) ? [...lists(n.left), ...lists(n.right)] : [[]];
+    if (kind === ts.SyntaxKind.PlusToken) {
+      return texts(n).map((t) => tokensOf(t, true));
+    }
+    return joins(kind) ? capped([...lists(n.left), ...lists(n.right)]) : [[]];
   };
   // A conditional is the union of its branches, as is a wrapper of one part.
   const words = (v: string) => v.split(/\s+/).filter(Boolean);
@@ -196,11 +205,11 @@ function readerFor(
     return ts.isBinaryExpression(n) ? binary(n) : compound(n);
   };
   const compound = (n: ts.Node): string[][] => {
-    if (ts.isConditionalExpression(n)) return chosen(n).flatMap(lists);
+    if (ts.isConditionalExpression(n)) return capped(chosen(n).flatMap(lists));
     if (ts.isCallExpression(n) || ts.isArrayLiteralExpression(n)) {
       return product(partsOf(n).map(lists), join, []);
     }
-    const branches = partsOf(n).flatMap(lists);
+    const branches = capped(partsOf(n).flatMap(lists));
     return branches.length > 0 ? branches : [[]];
   };
   return { bound, texts, lists };
