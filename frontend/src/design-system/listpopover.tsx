@@ -4,11 +4,14 @@
 import {
   type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
+  useCallback,
+  useEffect,
   useId,
+  useRef,
   useState,
 } from "react";
-import { usePhoneViewport } from "../app/viewport";
-import { useT } from "../i18n";
+import { useFoldedViewport } from "../app/viewport";
+import { usePlural, useT } from "../i18n";
 import { problemMessageOf } from "../screens/common";
 import { useActiveOptionVisible } from "./anchoredpopup";
 import { Button, type ButtonVariant, SearchField } from "./atoms";
@@ -56,7 +59,8 @@ type ListPopoverProps = Readonly<{
   /**
    * Called with the picked option and `done`, which closes the panel. Call it
    * at once for a pick that writes nothing, or once the write lands, so a
-   * refused write keeps the panel open over its `error`.
+   * refused write keeps the panel open over its `error`. A second pick is
+   * refused until `pending` falls or the panel closes.
    */
   onPick: (option: ListPopoverOption, done: () => void) => void;
   /** The caller's write is in flight: every row refuses a second pick. */
@@ -87,14 +91,18 @@ export function ListPopover({
   onOpenChange,
   ...list
 }: ListPopoverProps) {
-  const phone = usePhoneViewport();
+  // Modal's own fold, so no width draws a panel the sheet would also draw.
+  const phone = useFoldedViewport();
   const titleId = useId();
   const [ownOpen, setOwnOpen] = useState(false);
   const open = openProp ?? ownOpen;
-  const setOpen = (next: boolean) => {
-    setOwnOpen(next);
-    onOpenChange?.(next);
-  };
+  const setOpen = useCallback(
+    (next: boolean) => {
+      setOwnOpen(next);
+      onOpenChange?.(next);
+    },
+    [onOpenChange],
+  );
   const search = (
     <ListSearch
       title={title}
@@ -169,6 +177,7 @@ function ListSearch({
   done: () => void;
 }>) {
   const t = useT();
+  const plural = usePlural();
   const listboxId = useId();
   const [term, setTerm] = useState("");
   const [active, setActive] = useState(-1);
@@ -179,8 +188,17 @@ function ListSearch({
   const optionId = (index: number) => `${listboxId}-option-${index}`;
   useActiveOptionVisible(true, active, listboxId);
 
+  // `pending` arrives a render after the pick, so a double press lands in
+  // between; the latch holds from the press until the write has answered.
+  const picked = useRef(false);
+  useEffect(() => {
+    if (list.pending !== true) {
+      picked.current = false;
+    }
+  }, [list.pending]);
   const pick = (row: ListPopoverOption) => {
-    if (row.disabled !== true && list.pending !== true) {
+    if (row.disabled !== true && list.pending !== true && !picked.current) {
+      picked.current = true;
       list.onPick(row, done);
     }
   };
@@ -228,11 +246,18 @@ function ListSearch({
       {found.failure !== null && (
         <ErrorLine>{problemMessageOf(found.failure.cause, t)}</ErrorLine>
       )}
-      {status !== null && (
-        <p className="listpopover-status" aria-live="polite">
-          {status}
-        </p>
-      )}
+      {/* Always mounted: a live region announces a change to its text, not
+          its own arrival. */}
+      <p
+        className={status === null ? "sr-only" : "listpopover-status"}
+        aria-live="polite"
+      >
+        {status ??
+          (rows.length > 0 &&
+            plural("picker.results", rows.length, {
+              count: String(rows.length),
+            }))}
+      </p>
       <div className="listpopover-list">
         <div
           role="listbox"

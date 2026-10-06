@@ -173,11 +173,9 @@ export function Popover({
         return;
       }
       event.preventDefault();
+      // Focus goes back to the trigger through `panelFocus`, once the panel
+      // has really gone: a controlled caller may refuse the close.
       setOpen(false);
-      // Back to the button that opened it. Escape with the focus left in a
-      // panel that has just been removed drops a keyboard reader at the top of
-      // the document, several sections above the reading they were on.
-      trigger.current?.focus();
     };
     const onPointer = (event: MouseEvent) => {
       if (!(event.target instanceof Node)) {

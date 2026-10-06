@@ -4,7 +4,14 @@
 
 import "@testing-library/jest-dom/vitest";
 
-import { cleanup, render, screen, within } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -15,15 +22,20 @@ import type { RecordTag } from "./tags.queries";
 
 const COMPANY = "01a06151-0000-7000-8000-000000000001";
 
-const ON_RECORD = {
+const ON_RECORD: RecordTag = {
   tag_id: "t-2",
   name: "Renewal",
-} as RecordTag;
+  archived: false,
+  assigned_at: "2026-06-01T09:00:00Z",
+};
 
 function mount({
   truncated = false,
   apply = () => new Response(null, { status: 204 }),
-}: Readonly<{ truncated?: boolean; apply?: () => Response }> = {}) {
+}: Readonly<{
+  truncated?: boolean;
+  apply?: () => Response | Promise<Response>;
+}> = {}) {
   const applied: unknown[] = [];
   installFetchStub({
     "GET /tags": () =>
@@ -115,6 +127,47 @@ describe("the add-tag picker", () => {
       "This record is locked.",
     );
     expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("takes one apply from a double press on a word", async () => {
+    const user = userEvent.setup();
+    const applied = mount();
+    const panel = await openPicker(user);
+
+    const option = await panel.findByRole("option", { name: "Key Account" });
+    // Two presses in one task: the second lands before any render says the
+    // first is pending.
+    fireEvent.click(option);
+    fireEvent.click(option);
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(applied).toHaveLength(1);
+  });
+
+  it("stays open through Escape while the apply is out, so a late refusal is read", async () => {
+    const user = userEvent.setup();
+    let answer: (response: Response) => void = () => {};
+    mount({
+      apply: () =>
+        new Promise<Response>((resolve) => {
+          answer = resolve;
+        }),
+    });
+    const panel = await openPicker(user);
+    await user.click(await panel.findByRole("option", { name: "Key Account" }));
+
+    await user.keyboard("{Escape}");
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+    answer(
+      jsonResponse(
+        { title: "Forbidden", detail: "This record is locked." },
+        403,
+      ),
+    );
+    expect(await panel.findByRole("alert")).toHaveTextContent(
+      "This record is locked.",
+    );
   });
 
   it("closes on Escape and hands focus back to the trigger", async () => {

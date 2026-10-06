@@ -1424,6 +1424,8 @@ export const de = {
   "ref.notInRoster":
     "Aktuell zugewiesen (nicht mehr in der Liste der Nutzenden)",
   "picker.noMatch": "Kein Treffer",
+  "picker.results_one": "{count} Treffer",
+  "picker.results_other": "{count} Treffer",
 
   // "Funktioniert nicht mehr", nicht "Fehler aufgetreten": die Ansicht ist
   // stehengeblieben, und das ist die Beobachtung, die der Lesende selbst

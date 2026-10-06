@@ -77,6 +77,10 @@ export function AddTagPicker({
       searchLabel={t("tags.pickerLabel")}
       open={open}
       onOpenChange={(next) => {
+        // Held open while the write is out, so its refusal has somewhere to land.
+        if (!next && apply.isPending) {
+          return;
+        }
         setOpen(next);
         // A refusal belongs to the attempt it answered, not to the next opening.
         if (!apply.isPending) {

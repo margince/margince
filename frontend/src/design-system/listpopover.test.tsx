@@ -8,6 +8,7 @@ import {
   fireEvent,
   render,
   screen,
+  waitFor,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -30,13 +31,29 @@ function activeName(): string | null {
   return id ? (document.getElementById(id)?.textContent ?? null) : null;
 }
 
-function stubPhone() {
+function stubWidth(width: number) {
   vi.stubGlobal("matchMedia", (query: string) => ({
-    matches: /max-width:\s*700px/.test(query),
+    matches: width <= Number(/max-width:\s*(\d+)px/.exec(query)?.[1] ?? 0),
     media: query,
     addEventListener: () => {},
     removeEventListener: () => {},
   }));
+}
+
+function liveRegion(): Element | null {
+  return document.querySelector(".listpopover [aria-live]");
+}
+
+function owners(onPick: (option: ListPopoverOption) => void) {
+  return (
+    <ListPopover
+      label="Assign owner"
+      title="Colleagues"
+      searchLabel="Search colleagues"
+      options={OWNERS}
+      onPick={onPick}
+    />
+  );
 }
 
 describe("ListPopover on a desktop", () => {
@@ -159,6 +176,37 @@ describe("ListPopover on a desktop", () => {
     );
     expect(screen.getByRole("dialog")).toBeTruthy();
     expect(screen.getByText("Someone else changed this project.")).toBeTruthy();
+
+    await user.click(screen.getByRole("option", { name: "Otto Fischer" }));
+    expect(onPick).toHaveBeenLastCalledWith(OWNERS[1], expect.any(Function));
+  });
+
+  it("takes one pick from a double press, before the caller says it is pending", async () => {
+    const user = userEvent.setup();
+    const onPick = vi.fn();
+    render(owners(onPick));
+    await user.click(screen.getByRole("button", { name: "Assign owner" }));
+
+    await user.dblClick(screen.getByRole("option", { name: "Anna Weber" }));
+    await user.keyboard("{ArrowDown}{Enter}{Enter}");
+
+    expect(onPick).toHaveBeenCalledTimes(1);
+  });
+
+  it("announces the result count and the empty answer through one standing live region", async () => {
+    const user = userEvent.setup();
+    render(owners(vi.fn()));
+    await user.click(screen.getByRole("button", { name: "Assign owner" }));
+    const live = liveRegion();
+    expect(live?.textContent).toBe("3 results");
+
+    await user.keyboard("an");
+    expect(liveRegion()).toBe(live);
+    expect(live?.textContent).toBe("2 results");
+
+    await user.keyboard("zz");
+    expect(liveRegion()).toBe(live);
+    expect(live?.textContent).toBe("No match");
   });
 
   it("lists a disabled row without letting it be picked, and marks the selected one", async () => {
@@ -295,8 +343,11 @@ describe("ListPopover over a server search", () => {
     const search = vi.fn().mockResolvedValue([{ id: "p-1", name: "Atlas" }]);
     const type = await openSearch(search);
 
+    const live = liveRegion();
+    expect(live?.textContent).toBe("");
     type("atl");
-    expect(screen.getByText("Searching…")).toBeTruthy();
+    expect(liveRegion()).toBe(live);
+    expect(live?.textContent).toBe("Searching…");
     act(() => {
       vi.advanceTimersByTime(249);
     });
@@ -307,6 +358,7 @@ describe("ListPopover over a server search", () => {
 
     expect(search).toHaveBeenCalledTimes(1);
     expect(search).toHaveBeenCalledWith("atl");
+    expect(liveRegion()?.textContent).toBe("1 result");
     expect(screen.getByRole("option", { name: "Atlas" })).toBeTruthy();
     expect(screen.queryByText("Searching…")).toBeNull();
   });
@@ -331,11 +383,40 @@ describe("ListPopover over a server search", () => {
     expect(screen.queryByText("No match")).toBeNull();
     expect(screen.getByRole("alert")).toBeTruthy();
   });
+
+  it("ignores an older answer that lands after a newer one", async () => {
+    let answerFirst: (rows: ListPopoverOption[]) => void = () => {};
+    const search = vi.fn((term: string) =>
+      term === "a"
+        ? new Promise<ListPopoverOption[]>((resolve) => {
+            answerFirst = resolve;
+          })
+        : Promise.resolve([{ id: "p-1", name: "Atlas" }]),
+    );
+    const type = await openSearch(search);
+
+    type("a");
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(250);
+    });
+    type("at");
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(250);
+    });
+    await act(async () => {
+      answerFirst([{ id: "p-2", name: "Zenith" }]);
+    });
+
+    expect(search).toHaveBeenCalledTimes(2);
+    expect(
+      screen.getAllByRole("option").map((option) => option.textContent),
+    ).toEqual(["Atlas"]);
+  });
 });
 
 describe("ListPopover on a phone", () => {
   it("opens the same search in a sheet headed by its title, and closes it on done", async () => {
-    stubPhone();
+    stubWidth(390);
     const user = userEvent.setup();
     render(
       <ListPopover
@@ -356,5 +437,29 @@ describe("ListPopover on a phone", () => {
 
     await user.keyboard("{End}{Enter}");
     expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("closes the sheet on Escape while the list has rows, handing focus back", async () => {
+    stubWidth(390);
+    const user = userEvent.setup();
+    render(owners(vi.fn()));
+    const trigger = screen.getByRole("button", { name: "Assign owner" });
+    await user.click(trigger);
+    expect(screen.getAllByRole("option")).toHaveLength(3);
+
+    await user.keyboard("{Escape}");
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  // Between the phone width and the fold, a panel would sit where the modal
+  // has already turned to a sheet.
+  it("draws the sheet up to the fold Modal draws its own sheet at", async () => {
+    stubWidth(720);
+    const user = userEvent.setup();
+    render(owners(vi.fn()));
+    await user.click(screen.getByRole("button", { name: "Assign owner" }));
+    expect(screen.getByRole("dialog").getAttribute("aria-modal")).toBe("true");
   });
 });

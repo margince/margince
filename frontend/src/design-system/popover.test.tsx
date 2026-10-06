@@ -282,6 +282,43 @@ it("does not open on a settled pointer when the trigger is refused", async () =>
   expect(trigger.getAttribute("aria-expanded")).toBe("false");
 });
 
+// A caller holding the panel open over a write in flight keeps the reader
+// where they are: focus follows a close, not a refused one.
+it("leaves focus in the panel when its caller refuses the close Escape asks for", async () => {
+  const user = userEvent.setup();
+  render(
+    <Popover label="Assign owner" open onOpenChange={() => {}} dialog>
+      <button type="button">Anna Weber</button>
+    </Popover>,
+  );
+  const inside = screen.getByRole("button", { name: "Anna Weber" });
+  inside.focus();
+
+  await user.keyboard("{Escape}");
+
+  expect(screen.getByRole("dialog")).toBeTruthy();
+  expect(document.activeElement).toBe(inside);
+});
+
+it("hands focus back to the trigger when Escape closes a panel focus was in", async () => {
+  const user = userEvent.setup();
+  render(
+    <Popover label="Assign owner" dialog>
+      <button type="button">Anna Weber</button>
+    </Popover>,
+  );
+  const trigger = screen.getByRole("button", { name: "Assign owner" });
+  await user.click(trigger);
+  expect(document.activeElement).toBe(
+    screen.getByRole("button", { name: "Anna Weber" }),
+  );
+
+  await user.keyboard("{Escape}");
+
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(document.activeElement).toBe(trigger);
+});
+
 it("follows a caller that holds the open state, and tells it of every change", async () => {
   const user = userEvent.setup();
   const onOpenChange = vi.fn();

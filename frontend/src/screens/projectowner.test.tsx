@@ -6,6 +6,7 @@ import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
+  fireEvent,
   render as rtlRender,
   screen,
   waitFor,
@@ -66,7 +67,12 @@ type Recorded = {
 };
 
 function stubApi(
-  response: { body: Record<string, unknown>; status?: number },
+  response: {
+    body: Record<string, unknown>;
+    status?: number;
+    /** Holds the PATCH's answer until it settles. */
+    held?: Promise<void>;
+  },
   calls: Recorded[],
 ) {
   vi.stubGlobal(
@@ -97,6 +103,7 @@ function stubApi(
         const body = rawBody ? JSON.parse(String(rawBody)) : null;
         const headers = request ? request.headers : new Headers(init?.headers);
         calls.push({ url, method, body, ifMatch: headers.get("If-Match") });
+        await response.held;
         return jsonResponse(response.body, response.status ?? 200);
       }
       return jsonResponse({ data: [], page: { has_more: false } });
@@ -149,6 +156,52 @@ describe("AssignProjectOwnerAction", () => {
 
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(calls).toHaveLength(0);
+  });
+
+  it("sends one PATCH for a double press on a colleague", async () => {
+    const calls: Recorded[] = [];
+    stubApi({ body: { ...project, owner_id: "u-42", version: 6 } }, calls);
+    const user = userEvent.setup();
+    render(<AssignProjectOwnerAction project={project} />);
+
+    const panel = await openPicker(user);
+    const option = await panel.findByRole("option", { name: "Jane Doe" });
+    // Two presses in one task: the second lands before any render says the
+    // first is pending.
+    fireEvent.click(option);
+    fireEvent.click(option);
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(calls).toHaveLength(1);
+  });
+
+  it("stays open through Escape while the PATCH is out, so a late refusal is read", async () => {
+    const calls: Recorded[] = [];
+    let release: () => void = () => {};
+    stubApi(
+      {
+        body: { title: "Conflict", detail: "the project was changed" },
+        status: 409,
+        held: new Promise<void>((resolve) => {
+          release = resolve;
+        }),
+      },
+      calls,
+    );
+    const user = userEvent.setup();
+    render(<AssignProjectOwnerAction project={project} />);
+
+    const panel = await openPicker(user);
+    await user.click(await panel.findByRole("option", { name: "Jane Doe" }));
+    await waitFor(() => expect(calls).toHaveLength(1));
+
+    await user.keyboard("{Escape}");
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+    release();
+    expect(await panel.findByRole("alert")).toHaveTextContent(
+      "the project was changed",
+    );
   });
 
   it("keeps the list open over a 409, saying why, and reopens clean", async () => {

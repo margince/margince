@@ -1406,6 +1406,8 @@ export const vi = {
   "ref.notInRoster":
     "Hiện đang được giao (không còn trong danh sách người dùng)",
   "picker.noMatch": "Không có kết quả",
+  "picker.results_one": "{count} kết quả",
+  "picker.results_other": "{count} kết quả",
 
   "app.errorTitle": "Màn hình này đã ngừng hoạt động.",
   "app.errorBody": "Hãy thử lại. Nếu vẫn tiếp tục lỗi, hãy tải lại trang.",

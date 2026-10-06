@@ -83,6 +83,10 @@ export function AssignProjectOwnerAction({
       reasonId={disabledReasonId}
       open={open}
       onOpenChange={(next) => {
+        // Held open while the write is out, so its refusal has somewhere to land.
+        if (!next && mutation.isPending) {
+          return;
+        }
         setOpen(next);
         // A refusal belongs to the attempt it answered, not to the next opening.
         if (!mutation.isPending) {
