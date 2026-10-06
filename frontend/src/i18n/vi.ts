@@ -6587,7 +6587,6 @@ export const vi = {
   "connectors.oauthConnected": "Đã tạo kết nối",
   "connectors.oauthNotConnected": "Chưa kết nối được gì",
   "connectors.connectFailed": "Không thể kết nối",
-  "connectors.imapConnectFailed": "Chưa kết nối hộp thư",
 
   // The "Add a connection" affordance (Task 1): one verb in the card's header
   // opens a dialog listing the providers still addable, each with the sentence
@@ -6627,6 +6626,8 @@ export const vi = {
   "connectors.imapSubmitCta": "Kết nối",
   "connectors.imapNeeded": "Cần có để kết nối",
   "connectors.imapStillNeeded": "Còn thiếu: {fields}",
+  "connectors.imapRange": "Từ {min} đến {max}",
+  "connectors.imapOutOfRange": "Ngoài phạm vi: {fields}",
   "connectors.imapLoginRejected":
     "Hộp thư từ chối thông tin đăng nhập này. Hãy kiểm tra máy chủ, email và mật khẩu ứng dụng.",
   "connectors.imapUnreachable": "Không liên lạc được với máy chủ thư.",
@@ -8709,8 +8710,7 @@ export const vi = {
   "users.link.urlLabel": "Liên kết đặt mật khẩu",
   "users.link.copy": "Sao chép liên kết",
   "users.link.copied": "Đã sao chép",
-  "users.link.copyFailed":
-    "Hãy bôi đen liên kết trong trường rồi sao chép thủ công.",
+  "users.link.copyFailed": "Hãy bôi đen liên kết ở trên rồi sao chép thủ công.",
   "users.link.expires": "Hết hạn {when}.",
   "users.link.failedTitle": "Không tạo được liên kết",
   "users.link.failed":

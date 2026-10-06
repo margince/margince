@@ -50,12 +50,7 @@ const FLOW: components["schemas"]["AiTaskFlow"] = {
 export const InTheSheet: Story = {
   render: () => (
     <StoryProviders>
-      <Modal
-        open
-        onClose={() => {}}
-        labelledBy="outcome-title"
-        placement="right"
-      >
+      <Modal open onClose={() => {}} labelledBy="outcome-title" intent="drawer">
         <Heading size="large" id="outcome-title" className="modal-title">
           {en["aiFigures.recentCalls"]}
         </Heading>

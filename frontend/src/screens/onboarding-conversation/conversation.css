@@ -1442,40 +1442,9 @@
   text-align: center;
 }
 
-.ob-connect-dialog-body {
-  margin-top: var(--space-4);
-}
-
-.ob-connect-dialog-actions {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--gapActions);
-  margin-top: var(--space-4);
-}
-
-/* In a dialog's stack the gap already pays --space-3 of that --space-4. */
-.modal .form-stack > .ob-connect-dialog-actions {
-  margin-top: calc(var(--space-4) - var(--space-3));
-}
-
-.ob-connect-dialog-actions .btn {
-  width: 100%;
-}
-
-/* Same shape as the primary above it, one weight quieter: a bare label with no
-   padding sat in a row with a 44px-tall button and gave the reader a two-line
-   hit area for the choice that undoes the whole dialog. */
-.ob-connect-dialog-notnow {
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--r-sm);
-  border: 0;
-  background: none;
-  cursor: pointer;
-}
-
-.ob-connect-dialog-notnow:hover {
-  background: var(--bgHover);
+.ob-connect-dialog-title:has(+ .form-stack),
+.ob-connect-dialog-intro:has(+ .form-stack) {
+  margin-bottom: var(--space-4);
 }
 
 /* The authorization form itself keeps left-aligned labels — a form reads

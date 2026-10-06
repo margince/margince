@@ -146,13 +146,7 @@ export function TaskSheet({
     save.mutate({ overrides: next, version: stored.data.version });
   };
   return (
-    <Modal
-      open
-      onClose={onClose}
-      labelledBy={titleId}
-      placement="right"
-      size="wide"
-    >
+    <Modal open onClose={onClose} labelledBy={titleId} intent="drawer-reading">
       <DrawerHead>
         <Heading size="large" id={titleId} className="t-h2 modal-title">
           {route.display_name}

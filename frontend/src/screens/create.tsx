@@ -20,6 +20,7 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
+import { RecordFormDialog } from "../design-system/recordformdialog";
 import {
   RecordPicker,
   type RecordPickerCandidate,
@@ -32,11 +33,7 @@ import {
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { ProblemError, problemExistingId, problemMessageOf } from "./common";
-import {
-  catalogOfScreen,
-  RecordFormDialog,
-  useSettledOpen,
-} from "./create.dialog";
+import { catalogOfScreen, useSettledOpen } from "./create.dialog";
 import {
   type NameOffers,
   OfferedNameControl,

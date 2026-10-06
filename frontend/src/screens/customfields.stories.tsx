@@ -332,6 +332,24 @@ export const CardAddDialog: Story = {
   },
 };
 
+// Relabelling a live field: one input, so the dialog is the short-form box.
+export const CardRenameDialog: Story = {
+  render: () => {
+    installFetchStub(CARD_ROUTES);
+    return (
+      <StoryProviders>
+        <CustomFieldsAdmin />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    const [edit] = await body.findAllByRole("button", { name: "Edit label" });
+    await userEvent.click(edit);
+    await body.findByRole("dialog", { name: "Edit label" });
+  },
+};
+
 // A seat that may read the catalogue and change nothing: the add row is absent
 // (an action-only affordance makes no claim about the data by not being there)
 // and the posture line says so once for the whole section.

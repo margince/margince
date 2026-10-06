@@ -47,6 +47,7 @@ The undo is scoped the way the verb was: undoing your own snooze never brings ba
 ### How do I see all my tasks?
 To see all your open tasks in Margince, open **Home**, press **Show Worklist**, and choose the **Tasks** pill under **Work type**.
 Tasks are grouped by when they are due: overdue and today's come first, then **Due tomorrow**, **Due this week** and **Later**. There is no separate "Due today" heading.
+A task more than 30 days overdue leaves the Worklist and its counts. A pin keeps it there while the pin is one of your 50 newest. The task stays open, keeps its due date, and still shows on the record it is on.
 A company also has a **Tasks** tab with its own tasks; a contact has no Tasks tab.
 Also called: my to-dos, tasks due today, open tasks, task list.
 

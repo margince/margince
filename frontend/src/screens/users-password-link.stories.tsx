@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
 import { PasswordLinkModal } from "./users-password-link";
 
@@ -9,10 +10,19 @@ import { PasswordLinkModal } from "./users-password-link";
 // the three states it can be in are three sets of props rather than three
 // server fixtures — and all three matter: the link is shown once, so the
 // pending and failed states are what a reader sees when it is not.
+
+// A full-length token, because a short one fits any box.
 const LINK = {
-  url: "https://margince.example/set-password/9f2c1a7e",
+  url: "https://margince.example/#/reset-password?token=Qm9vdHN0cmFwLXRva2VuLWZvci1kYW5hLWtlc3NsZXItMjAyNg",
   expiresAt: "2026-08-15T09:00:00Z",
 };
+
+// The whole link is on screen: nothing waits past the block's right edge.
+async function linkFits({ canvasElement }: { canvasElement: HTMLElement }) {
+  const body = within(canvasElement.ownerDocument.body);
+  const link = await body.findByTestId("password-link-url");
+  await expect(link.scrollWidth).toBeLessThanOrEqual(link.clientWidth);
+}
 
 const meta: Meta<typeof PasswordLinkModal> = {
   title: "Settings/People/Members/Password link",
@@ -29,6 +39,7 @@ export default meta;
 type Story = StoryObj<typeof PasswordLinkModal>;
 
 export const Minted: Story = {
+  play: linkFits,
   render: () => (
     <PasswordLinkModal
       onClose={() => undefined}
@@ -41,16 +52,13 @@ export const Minted: Story = {
   ),
 };
 
-// The narrow case this dialog was built for, and the only one worth a variant:
-// `.users-link-row` claims it "wraps to two lines on a narrow card rather than
-// overflowing it", with the URL input at `flex: 1 1 20rem` beside a Copy button.
-// 20rem does not fit a 390px phone, so the wrap is load-bearing — and the link is
-// a live account-takeover credential the admin has to read off the screen to
-// dictate, so a URL clipped by an overflowing row is the failure that matters
-// here. The modal is `size="wide"`, which is the other half of the question.
+// The narrow case: a live account-takeover credential the admin may have to
+// read off the screen to dictate, so a clipped URL is the failure that matters.
+// On a phone the confirm stays a card over the scrim, narrower still.
 export const MintedPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
+  play: linkFits,
   render: () => (
     <PasswordLinkModal
       onClose={() => undefined}
