@@ -128,7 +128,6 @@ export function AddEmploymentModal({
           {(control) => (
             <>
               <RecordPicker
-                label={t("contact.rail.employer")}
                 id={control.id}
                 aria-describedby={control["aria-describedby"]}
                 searchTargets={searchTargets}

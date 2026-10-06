@@ -246,7 +246,6 @@ function EmploymentMatchModal({
         <Field label={t("contact.rail.employer")}>
           {(control) => (
             <RecordPicker
-              label={t("contact.rail.employer")}
               id={control.id}
               aria-describedby={control["aria-describedby"]}
               searchTargets={searchCompanyCandidates}

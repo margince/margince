@@ -443,7 +443,6 @@ function referenceControl(
   return (
     <>
       <RecordPicker
-        label={fieldLabel(field, t)}
         id={control.id}
         aria-describedby={control["aria-describedby"]}
         aria-invalid={control["aria-invalid"]}

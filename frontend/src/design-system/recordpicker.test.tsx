@@ -11,6 +11,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { ProblemError } from "../screens/common";
+import { Field } from "./atoms";
 import { RecordPicker, type RecordPickerCandidate } from "./recordpicker";
 
 // RecordPicker is the extracted debounced search→candidate-list→pick pattern
@@ -337,5 +338,34 @@ describe("RecordPicker", () => {
     expect(
       screen.queryByText("The request failed. No cause reported."),
     ).toBeNull();
+  });
+
+  it("takes its name from a Field's label, once, and from its own label standing alone", () => {
+    rtlRender(
+      <>
+        <Field label="Employer">
+          {(control) => (
+            <RecordPicker
+              {...control}
+              searchTargets={vi.fn()}
+              onPick={vi.fn()}
+            />
+          )}
+        </Field>
+        <RecordPicker
+          label="Find a colleague"
+          searchTargets={vi.fn()}
+          onPick={vi.fn()}
+        />
+      </>,
+    );
+
+    const employer = screen.getByRole("searchbox", { name: "Employer" });
+    expect(employer.getAttribute("aria-label")).toBeNull();
+    expect(employer.getAttribute("placeholder")).toBeNull();
+    const colleague = screen.getByRole("searchbox", {
+      name: "Find a colleague",
+    });
+    expect(colleague.getAttribute("placeholder")).toBe("Find a colleague");
   });
 });
