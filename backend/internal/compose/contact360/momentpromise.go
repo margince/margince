@@ -20,6 +20,15 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// The claim keys the promise cards are stored under. A dismissal matches its
+// key exactly, so these spellings are shipped data and never change.
+const (
+	openTaskKey      = "moment:open_promise"
+	overdueTaskKey   = "moment:overdue_task"
+	overdueClaimRung = "moment:overdue_promise"
+	openClaimRung    = "moment:open_promise_claim"
+)
+
 // openPromiseMoment: something is owed and its date has not passed. Dated or
 // not — the transcript reader files "I'll send you the whitepaper" without a
 // date, and it is owed either way.
@@ -79,7 +88,7 @@ func openPromiseFrom(ctx context.Context, now time.Time, task crmcontracts.Activ
 	// suppressing it — hiding the promise at the moment it became theirs to
 	// deliver.
 	return crmcontracts.ContactMoment{
-		ClaimKey:            "moment:open_promise",
+		ClaimKey:            openTaskKey,
 		Rule:                crmcontracts.ContactMomentRuleOpenPromise,
 		RuleVersion:         ptr(ruleVersion),
 		EvidenceFingerprint: fingerprintOf(evidence) + heldMarker(ctx, task),
@@ -249,7 +258,7 @@ func owedPromises(page *crmcontracts.Contact360) []owedwork.Item {
 // says something different about it.
 func overdueTaskCard(ctx context.Context, now time.Time, task crmcontracts.Activity) crmcontracts.ContactMoment {
 	moment := openPromiseFrom(ctx, now, task)
-	moment.ClaimKey = "moment:overdue_task"
+	moment.ClaimKey = overdueTaskKey
 	moment.Rule = crmcontracts.ContactMomentRuleOverduePromise
 	return moment
 }
@@ -272,7 +281,7 @@ func overdueClaimCard(now time.Time, claim crmcontracts.ConversationClaim) crmco
 		ObservedAt: claim.DueAt,
 	}}
 	return crmcontracts.ContactMoment{
-		ClaimKey:            claimMomentKey("moment:overdue_promise", claim),
+		ClaimKey:            claimMomentKey(overdueClaimRung, claim),
 		Rule:                crmcontracts.ContactMomentRuleOverduePromise,
 		RuleVersion:         ptr(ruleVersion),
 		EvidenceFingerprint: fingerprintOf(evidence),
@@ -327,7 +336,7 @@ func openClaimCard(now time.Time, claim crmcontracts.ConversationClaim) crmcontr
 		ObservedAt: claim.OccurredAt,
 	}}
 	return crmcontracts.ContactMoment{
-		ClaimKey:            claimMomentKey("moment:open_promise_claim", claim),
+		ClaimKey:            claimMomentKey(openClaimRung, claim),
 		Rule:                crmcontracts.ContactMomentRuleOpenPromise,
 		RuleVersion:         ptr(ruleVersion),
 		EvidenceFingerprint: fingerprintOf(evidence),

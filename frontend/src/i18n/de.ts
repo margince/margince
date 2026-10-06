@@ -10145,6 +10145,7 @@ export const de = {
   "contact.memory.replied": "Beantwortet",
   "contact.memory.unanswered": "Unbeantwortet",
 
+  "contact.mayBeDone.notYet": "Noch nicht",
   "contact.rail.blocked": "Blockiert",
   "contact.rail.direction": "Richtung",
   "contact.rail.lastReply": "Letzte Antwort",

@@ -25992,6 +25992,31 @@ export interface components {
             evidence: components["schemas"]["ContactMomentEvidence"][];
             recommended_action: components["schemas"]["ContactMomentAction"];
             secondary_actions?: components["schemas"]["ContactMomentAction"][];
+            may_be_done?: components["schemas"]["ContactMomentMayBeDone"];
+        };
+        /**
+         * @description Present when the moment is a promise we owe AND we wrote to the contact after it was
+         *     made: the card asks whether that email kept it, and never decides on its own. `Done`
+         *     completes the task (`PATCH /activities/{id}` with `is_done`) or settles the claim
+         *     (`POST /claims/{id}/settle` with `done`). `Not yet` dismisses this moment through
+         *     `POST /contacts/{id}/moment/dismiss`; the email is part of its fingerprint, so a
+         *     later email asks again.
+         */
+        ContactMomentMayBeDone: {
+            /**
+             * @description `task` — an open task. `claim` — a `commitment_ours` claim with no task.
+             * @enum {string}
+             */
+            promise_type: "task" | "claim";
+            /** Format: uuid */
+            promise_id: string;
+            /**
+             * Format: uuid
+             * @description The newest attested outbound email to the contact sent after the promise was made.
+             */
+            email_activity_id: string;
+            /** Format: date-time */
+            wrote_at: string;
         };
         /**
          * @description Which rung of the fixed ladder selected this moment (ADR-0096 D2), in priority order.

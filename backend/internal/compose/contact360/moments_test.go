@@ -280,6 +280,12 @@ func assertActionsAreHonest(t *testing.T, moment crmcontracts.ContactMoment) {
 			}
 			continue
 		}
+		// Done on a may-be-done card opens nothing: the page completes the
+		// promise that may_be_done names.
+		if action.Destination == nil && moment.MayBeDone != nil &&
+			action.Kind == crmcontracts.ContactMomentActionKindCompleteTask {
+			continue
+		}
 		if action.Destination == nil {
 			t.Errorf("%s: %q is offered as %q with no destination, so pressing it does nothing",
 				moment.Rule, action.Label, action.State)
@@ -875,7 +881,7 @@ func TestDismissingOnePromiseShowsTheNext(t *testing.T) {
 	// The reader puts that one away. The second promise is untouched.
 	next := deriveMomentPast(readerCtx(), now, page, func(m crmcontracts.ContactMoment) bool {
 		return m.ClaimKey == first.ClaimKey
-	})
+	}, asIs)
 	if next.Rule == crmcontracts.ContactMomentRuleNothingNeeded {
 		t.Fatal("dismissing one promise reported the contact as needing nothing, " +
 			"while a second promise is still open")
@@ -902,7 +908,7 @@ func TestDismissingEveryPromiseReachesTheQuietState(t *testing.T) {
 			OccurredAt:       &said,
 		}},
 	}
-	got := deriveMomentPast(readerCtx(), now, page, func(crmcontracts.ContactMoment) bool { return true })
+	got := deriveMomentPast(readerCtx(), now, page, func(crmcontracts.ContactMoment) bool { return true }, asIs)
 	if got.Rule != crmcontracts.ContactMomentRuleNothingNeeded {
 		t.Errorf("rule = %q, want nothing_needed once every card is dismissed", got.Rule)
 	}
