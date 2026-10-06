@@ -491,6 +491,16 @@ describe("which characters a bare address takes", () => {
     ]);
   });
 
+  it("links no scheme glued to the word before it", () => {
+    render(
+      <Markdown
+        source="wordhttps://example.com/x and überhttps://example.com/y"
+        autolink
+      />,
+    );
+    expect(screen.queryByRole("link")).toBeNull();
+  });
+
   it("reads the scheme in any case", () => {
     expect(linked("Open HTTPS://Example.test/Path now")).toEqual([
       "HTTPS://Example.test/Path",

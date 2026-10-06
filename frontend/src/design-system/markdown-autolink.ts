@@ -10,10 +10,10 @@ import type { Block, Inline, Run } from "./markdown-parse";
  *
  * A parenthesis belongs to the address only as a balanced pair, as in
  * `/reset/(token)`; a lone `)` closes the prose around it. Trailing sentence
- * punctuation stays outside.
+ * punctuation stays outside, and a scheme glued to a word is not an address.
  */
 export const URL_PATTERN =
-  /https?:\/\/(?:[^\s<>"'()\]]|\([^\s<>"'()\]]*\))*(?:[^\s<>"'()\].,;:!?]|\([^\s<>"'()\]]*\))/gi;
+  /(?<![\p{L}\p{N}_])https?:\/\/(?:[^\s<>"'()\]]|\([^\s<>"'()\]]*\))*(?:[^\s<>"'()\].,;:!?]|\([^\s<>"'()\]]*\))/giu;
 
 /**
  * The parsed document for prose nobody vetted: every bare address becomes a
@@ -70,7 +70,8 @@ function showDestination(link: Extract<Inline, { kind: "link" }>): Inline[] {
     if (link.children[0].text === link.href) return [shown];
   }
   return [
-    ...autolinkInline(link.children),
+    // The label stays as written: an address in it is a claim, not a link.
+    ...link.children,
     { kind: "text", text: " (" },
     shown,
     { kind: "text", text: ")" },

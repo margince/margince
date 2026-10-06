@@ -104,6 +104,29 @@ describe("TimelineText on a note", () => {
     );
   });
 
+  it("holds a note's block content in block elements, never in a span", () => {
+    const { container } = render(
+      row("note", "## Summary\n\n- point one\n\nA closing paragraph."),
+    );
+    const blocks = container.querySelectorAll(".tl-text :is(div, p, ul, h2)");
+    expect(blocks.length).toBeGreaterThan(0);
+    for (const block of blocks) {
+      expect(block.parentElement?.closest("span")).toBeNull();
+    }
+  });
+
+  it("shows a label that looks like an address as text, then the real one", () => {
+    const { container } = render(
+      row("note", "[https://trusted.example](https://other.example)"),
+    );
+    expect(
+      screen.getAllByRole("link").map((a) => a.getAttribute("href")),
+    ).toEqual(["https://other.example"]);
+    expect(container.querySelector(".tl-text-clamp")?.textContent).toBe(
+      "https://trusted.example (https://other.example)",
+    );
+  });
+
   it("leaves a mail body's markdown characters as text", () => {
     render(row("email", "## Summary\n\n- point one"));
     expect(screen.queryByRole("heading", { name: "Summary" })).toBeNull();

@@ -10,7 +10,7 @@ import {
   StickyNote,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { Fragment, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useLayoutEffect, useMemo, useState } from "react";
 import type { components } from "../api/schema";
 import { splitEmailBody } from "../format/emailtext";
 import {
@@ -713,11 +713,12 @@ function TimelineText({
   const email = kind === "email";
   const [open, setOpen] = useState(false);
   const [tailOpen, setTailOpen] = useState(false);
-  // Measured, not guessed from a character count: the clamp is three VISUAL
-  // lines at the column's width, and a guess that comes in short leaves clipped
-  // text with no control to reach it.
+  // Measured, not guessed: the clamp is three VISUAL lines at the column's
+  // width, and a short guess leaves clipped text with no control to reach it.
   const [clipped, setClipped] = useState(false);
-  const bodyRef = useRef<HTMLSpanElement>(null);
+  const [el, setEl] = useState<HTMLElement | null>(null);
+  // A note's markdown is block content, which a <span> may not hold.
+  const Block = kind === "note" ? "div" : "span";
   // The tail is what the reader is spared; `trimmed` is what the row shows and
   // what the clamp measures, so the split has to happen before that effect.
   const parts = useMemo(
@@ -739,7 +740,6 @@ function TimelineText({
   }
 
   useLayoutEffect(() => {
-    const el = bodyRef.current;
     // Nothing to measure while expanded: scrollHeight equals clientHeight, and
     // re-measuring there would drop the control that collapses it again. Empty
     // text renders nothing, so there is nothing that could be clipped.
@@ -756,20 +756,20 @@ function TimelineText({
     const observer = new ResizeObserver(measure);
     observer.observe(el);
     return () => observer.disconnect();
-  }, [open, trimmed]);
+  }, [el, open, trimmed]);
 
   if (!trimmed) {
     return null;
   }
   return (
-    <span className="tl-text">
-      <span ref={bodyRef} className={open ? "tl-text-full" : "tl-text-clamp"}>
-        {kind === "note" ? (
+    <Block className="tl-text">
+      <Block ref={setEl} className={open ? "tl-text-full" : "tl-text-clamp"}>
+        {Block === "div" ? (
           <Markdown source={trimmed} autolink />
         ) : (
           linkify(trimmed)
         )}
-      </span>
+      </Block>
       {(clipped || open) && (
         <button
           type="button"
@@ -796,7 +796,7 @@ function TimelineText({
           {tailOpen && <span className="tl-text-tail">{linkify(tail)}</span>}
         </>
       )}
-    </span>
+    </Block>
   );
 }
 
