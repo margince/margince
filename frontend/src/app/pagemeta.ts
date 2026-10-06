@@ -2,9 +2,14 @@ import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useEntityName } from "../screens/entityref";
 import { opensAFocusedFiltersPage } from "../screens/filtersaddress";
-import { SCREEN_ENTITY } from "./entity";
 import { EXTENSION_SCREEN, findExtension } from "./extensions";
-import { NAV, type NavLevelEntry, type NavSection } from "./nav";
+import {
+  NAV,
+  type NavLevelEntry,
+  type NavSection,
+  recordKindOf,
+  reservedPageTitle,
+} from "./nav";
 import type { Route, Screen } from "./router";
 
 // What the chrome knows about a page before the page renders: its name, its
@@ -195,7 +200,7 @@ export function useRouteSubject(route: Route): string {
   // A record kind, and only then: an id segment that names no record is a
   // screen's own state — the settings tab, for one — and the subject is still
   // the page.
-  const recordKind = route.id ? SCREEN_ENTITY[route.screen] : undefined;
+  const recordKind = recordKindOf(route);
   const { name, reading } = useEntityName(
     recordKind ?? "contact",
     recordKind && route.id,
@@ -206,5 +211,8 @@ export function useRouteSubject(route: Route): string {
   if (unit) {
     return unit.name;
   }
-  return resolveTitle(route.screen, navItem?.labelKey, t);
+  const reserved = reservedPageTitle(route);
+  return reserved
+    ? t(reserved)
+    : resolveTitle(route.screen, navItem?.labelKey, t);
 }

@@ -325,6 +325,7 @@ function AttachDialog({
   }
   return (
     <ConfirmModal
+      intent="form"
       open
       onClose={onClose}
       title={moving ? words.move : words.attach}

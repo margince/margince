@@ -3,7 +3,7 @@ import { SETTINGS_SCREEN } from "../screens/settingsnav";
 import {
   GRIDDED_RECORD_SCREENS,
   GRIDDED_SCREENS,
-  opensCreateForm,
+  opensReservedPage,
 } from "./nav";
 import type { Route } from "./router";
 
@@ -22,7 +22,7 @@ export function useReadingColumn(route: Route): {
 } {
   const shown = useDeferredValue(route);
   // A RECORD id makes one: `#/companies` and `#/deals/new` are both lists.
-  const recordPage = shown.id !== undefined && !opensCreateForm(shown);
+  const recordPage = shown.id !== undefined && !opensReservedPage(shown);
   const griddedRecord = recordPage && GRIDDED_RECORD_SCREENS.has(shown.screen);
   // The id-less half of the same policy: a screen that reads down but is not a
   // record, so there is no id to key on. Brief is the one today.

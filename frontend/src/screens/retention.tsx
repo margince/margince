@@ -184,7 +184,12 @@ function PolicyRow({
           ) : null
         }
       />
-      <Modal open={editing} onClose={toggleEditor} labelledBy={editorTitleId}>
+      <Modal
+        open={editing}
+        onClose={toggleEditor}
+        labelledBy={editorTitleId}
+        intent="form"
+      >
         {/* The scope names WHICH policy is open, because the dialog covers the
             row that would otherwise have said. */}
         <Heading size="large" id={editorTitleId} className="t-h2 modal-title">
@@ -237,14 +242,9 @@ function PolicyRow({
               />
             )}
           </Field>
-          {/* A Switch and not a Checkbox, because flipping it IS the pause:
-                there is no Save to press afterwards, and the dialog only opens
-                for an operator who holds the update grant, so the one thing
-                that can make it refuse a press is a write already in flight —
-                which explains itself by finishing and needs no `reason`. It is
-                `pending` rather than `disabled` precisely because of that: an
-                unavailable control and one that is mid-write are different
-                facts, and only the second one ends on its own. */}
+          {/* A Switch because flipping it IS the pause, with no Save after it.
+              `pending`, not `disabled`: the only refusal here is a write in
+              flight, which ends on its own and needs no `reason`. */}
           <Switch
             label={t("retention.enabled")}
             checked={policy.enabled}
@@ -257,7 +257,25 @@ function PolicyRow({
             }
           />
           <ErrorLine error={patch.error} />
-          <div className="retention-actions">
+        </div>
+        <div className="actions">
+          {/* The confirm REPLACES this dialog rather than stacking on it: two
+              dialogs trap focus in the wrong one and share one Escape key. */}
+          {canDelete && (
+            <span className="actions-lead">
+              <Button
+                variant="danger"
+                onClick={() => {
+                  setEditing(false);
+                  onDelete();
+                }}
+              >
+                {t("retention.delete")}
+              </Button>
+            </span>
+          )}
+          <span className="actions-pair">
+            <Button onClick={toggleEditor}>{t("deals.cancel")}</Button>
             <Button
               variant="primary"
               disabled={days === null || patch.isPending}
@@ -275,26 +293,7 @@ function PolicyRow({
             >
               {t("retention.save")}
             </Button>
-            {/* Closing keeps the draft exactly where the old inline panel
-                  left it — the fields are re-seeded on the next open, so a
-                  dismissed dialog abandons the edit rather than saving it. */}
-            <Button onClick={toggleEditor}>{t("deals.cancel")}</Button>
-            {/* The confirm REPLACES this dialog rather than stacking on top of
-                it: two dialogs at once trap focus in the wrong one and share
-                one Escape key, and the question "delete, or did you mean
-                pause?" has to be the only thing on screen when it is asked. */}
-            {canDelete && (
-              <Button
-                variant="danger"
-                onClick={() => {
-                  setEditing(false);
-                  onDelete();
-                }}
-              >
-                {t("retention.delete")}
-              </Button>
-            )}
-          </div>
+          </span>
         </div>
       </Modal>
     </>
@@ -547,6 +546,7 @@ export function RetentionCard() {
             open={adding}
             onClose={() => setAdding(false)}
             labelledBy={addTitleId}
+            intent="form"
           >
             <Heading size="large" id={addTitleId} className="t-h2 modal-title">
               {t("retention.addPolicy")}

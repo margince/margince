@@ -1,11 +1,16 @@
+/* The page heads itself, as the contacts list beside it does, one shell step
+   above its content. */
+.vcard-import-title {
+  margin: 0 0 var(--space-4);
+}
+
 /* One line per card, in the order the file listed them, so a reader checking
    an import against the stack of cards on their desk can go down both at once.
    The name leads because that is what they are looking for. */
 .vcard-import-report {
   list-style: none;
-  /* No interval of its own: the dialog's stack spaces this list the way it
-     spaces the dropzone and the refusal above it, and a margin here as well is
-     that one interval said twice. */
+  /* No interval of its own: the page's stack spaces this list the way it
+     spaces the dropzone and the refusal above it. */
   margin: 0;
   padding: 0;
 }

@@ -47,8 +47,19 @@ const outstanding: (() => void)[] = [];
  * leak this guards against arrives.
  */
 function installClipboard(value: object | undefined): () => void {
-  const original = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+  const restore = holdClipboard();
   Object.defineProperty(navigator, "clipboard", { value, configurable: true });
+  return restore;
+}
+
+/**
+ * Register the way back to the clipboard standing now, without replacing it.
+ *
+ * A Storybook `play` holds before `userEvent.setup()`: setup installs a stub of
+ * its own and nothing in a browser catalog ever detaches it.
+ */
+export function holdClipboard(): () => void {
+  const original = Object.getOwnPropertyDescriptor(navigator, "clipboard");
   let installed = true;
   const restore = () => {
     // Undoing twice would reinstate what stood before THIS stub, which by then

@@ -3,12 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
-import { Button, Field, TextInput } from "../design-system/atoms";
 import { LocaleProvider } from "../i18n";
-import { RecordFormDialog } from "./create.dialog";
+import { Button, Field, TextInput } from "./atoms";
+import { RecordFormDialog } from "./recordformdialog";
 
 const meta = {
-  title: "Patterns/Create record/Dialog",
+  title: "Components/Overlays and layering/Record form dialog",
   component: RecordFormDialog,
   parameters: { layout: "padded" },
   decorators: [

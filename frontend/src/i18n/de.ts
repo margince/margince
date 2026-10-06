@@ -1424,6 +1424,8 @@ export const de = {
   "ref.notInRoster":
     "Aktuell zugewiesen (nicht mehr in der Liste der Nutzenden)",
   "picker.noMatch": "Kein Treffer",
+  "picker.results_one": "{count} Treffer",
+  "picker.results_other": "{count} Treffer",
 
   // "Funktioniert nicht mehr", nicht "Fehler aufgetreten": die Ansicht ist
   // stehengeblieben, und das ist die Beobachtung, die der Lesende selbst
@@ -4064,7 +4066,7 @@ export const de = {
     "Eine .vcf-Datei, das Exportformat für Kontakte aus Telefonen und E-Mail-Programmen. Eine Karte stammt vom Kontakt selbst, daher brauchen importierte Karten keine Freigabe.",
   "vcardImport.choose": ".vcf-Datei auswählen",
   "vcardImport.working": "Karten werden gelesen…",
-  "vcardImport.done": "Schließen",
+  "vcardImport.back": "Zurück zu den Kontakten",
   "vcardImport.noCards": "Die Datei enthält keine Karten.",
   "vcardImport.failed":
     "Die Karten wurden nicht importiert. Versuche es erneut.",
@@ -5441,6 +5443,8 @@ export const de = {
     "Importiere eine CSV-Datei mit Leads, Kontakten oder Unternehmen. Es wird nichts geschrieben, bevor du geprüft hast, was der Import tun wird.",
   "import.startLabel": "CSV-Datei importieren",
   "import.start": "Import starten",
+  "import.continue": "Import weiterführen",
+  "import.back": "Zurück zum Datenimport",
   "import.objectLabel": "Zeilentyp",
   "import.object.lead": "Interessenten",
   "import.object.company": "Unternehmen",
@@ -5454,6 +5458,8 @@ export const de = {
   "import.fileLabel": "CSV-Datei",
   "import.choose": "Datei auswählen",
   "import.chooseAnother": "Andere Datei auswählen",
+  "import.discardFile":
+    "Neu beginnen entfernt den angefangenen Import von dieser Seite, samt Datei, Spaltenzuordnung und Bericht.",
   "import.profiled": "Ausgewertete Zeilen ab Dateianfang: {rows}.",
   "import.mappingTable": "Spaltenzuordnung",
   "import.col.column": "Spalte",
@@ -6666,7 +6672,6 @@ export const de = {
   "connectors.oauthConnected": "Verbunden",
   "connectors.oauthNotConnected": "Nichts verbunden",
   "connectors.connectFailed": "Verbindung fehlgeschlagen",
-  "connectors.imapConnectFailed": "Postfach nicht verbunden",
 
   // Das "Verbindung hinzufügen"-Element (Task 1): ein Button in der Kopfzeile
   // der Karte öffnet einen Dialog mit allen noch verfügbaren Anbietern, jeder
@@ -6704,6 +6709,8 @@ export const de = {
   "connectors.imapSubmitCta": "Verbinden",
   "connectors.imapNeeded": "Pflichtfelder",
   "connectors.imapStillNeeded": "Erforderlich: {fields}",
+  "connectors.imapRange": "Von {min} bis {max}",
+  "connectors.imapOutOfRange": "Außerhalb des Bereichs: {fields}",
   "connectors.imapLoginRejected":
     "Das Postfach hat diese Zugangsdaten abgelehnt. Prüfe Server, E-Mail-Adresse und App-Passwort.",
   "connectors.imapUnreachable":
@@ -8795,7 +8802,7 @@ export const de = {
   "users.link.copy": "Link kopieren",
   "users.link.copied": "Kopiert",
   "users.link.copyFailed":
-    "Kopieren fehlgeschlagen. Markiere den Link im Feld und kopiere ihn von Hand.",
+    "Kopieren fehlgeschlagen. Markiere den Link oben und kopiere ihn von Hand.",
   "users.link.expires": "Läuft am {when} ab.",
   "users.link.failedTitle": "Link nicht erstellt",
   "users.link.failed":
@@ -11137,8 +11144,6 @@ export const de = {
   "project.assignOwner": "Einem Teammitglied zuweisen",
   "project.assignOwnerTitle": "Einem Teammitglied zuweisen",
   "project.assignOwnerSearch": "Teammitglieder suchen",
-  "project.assignOwnerNoneSelected": "Wähle zuerst ein Teammitglied",
-  "project.assignOwnerConfirm": "Zuweisen",
   "project.assignOwnerDone": "{name} zugewiesen",
   "project.description": "Beschreibung",
   "project.targetEnd": "Geplantes Enddatum",

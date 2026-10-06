@@ -12,7 +12,7 @@ import {
 import type { MessageKey } from "../i18n/en";
 import { opensAFocusedFiltersPage } from "../screens/filtersaddress";
 import { CUSTOM_SCREEN, customNavItems } from "./custom";
-import { SCREEN_ENTITY } from "./entity";
+import { type EntityKind, SCREEN_ENTITY } from "./entity";
 import { EXTENSION_SCREEN } from "./extensions";
 import type { Route, Screen } from "./router";
 import {
@@ -215,21 +215,38 @@ export const GRIDDED_RECORD_SCREENS: ReadonlySet<Screen> = new Set([
   "projects",
 ]);
 
-// The one id segment that is not a record id: `#/deals/new` is the deals LIST
-// with its create form open (App.tsx, DealsRoute), so it is scanned across like
-// every other list and must not take the record column.
+// Id segments that name a page rather than a record, each on its own screen
+// only: `#/leads/new` is the lead whose id is "new".
 export const CREATE_ID = "new";
+export const IMPORT_ID = "import";
 
-// The screen that segment belongs to, spelled once. Deals is the only route
-// that reads `new` as a create form, so anywhere else the word is an ordinary
-// id: `#/leads/new` is the lead whose id happens to be "new" and is as much a
-// record as any other.
-const CREATE_SCREEN: Screen = "deals";
+// A `titleKey` marks a page of its own below the list; without one the segment
+// is a state of the list itself (`#/deals/new` is the list with its form open).
+const RESERVED_SEGMENTS: Readonly<
+  Partial<Record<Screen, { id: string; titleKey?: MessageKey }>>
+> = {
+  deals: { id: CREATE_ID },
+  contacts: { id: IMPORT_ID, titleKey: "vcardImport.title" },
+};
 
-// Whether the route's id is that create segment rather than a record id — the
-// question the shell's column policy asks before it calls a page a record.
-export function opensCreateForm(route: Route): boolean {
-  return route.screen === CREATE_SCREEN && route.id === CREATE_ID;
+export function opensReservedPage(route: Route): boolean {
+  return (
+    route.id !== undefined && RESERVED_SEGMENTS[route.screen]?.id === route.id
+  );
+}
+
+// The trail, the agent's subject and the rail read a reserved page's name here.
+export function reservedPageTitle(route: Route): MessageKey | undefined {
+  return opensReservedPage(route)
+    ? RESERVED_SEGMENTS[route.screen]?.titleKey
+    : undefined;
+}
+
+// The trail, the page heading, the agent's subject and the rail all ask this.
+export function recordKindOf(route: Route): EntityKind | undefined {
+  return route.id === undefined || opensReservedPage(route)
+    ? undefined
+    : SCREEN_ENTITY[route.screen];
 }
 
 // Screens that keep the same reading column on every address they answer,
@@ -345,22 +362,26 @@ function primaryLevel(route: Route): NavTrailLevel {
         ...forkItems(group.headingKey),
       ],
     })),
-    ancestor: opensARecord(route) || opensAFocusedFiltersPage(route),
+    ancestor: opensAPageBelow(route),
     path: [],
     badgeIds: BADGE_SCREENS,
     barIds: MOBILE_PRIMARY,
   };
 }
 
-// The active row is only an ANCESTOR exactly where the top bar's trail ends in a
-// page below it, and the two are decided by the same predicates: a record
-// (`SCREEN_ENTITY`, the trail's record branch) and a page below the Filters and
-// views library (`opensAFocusedFiltersPage`, the trail's filters branch). One
-// predicate per question is what keeps every `aria-current="page"` on the same
-// page; `route.id !== undefined` would demote the row on a segment that opens
-// no page, such as `#/filters/views`, the library itself.
-function opensARecord(route: Route): boolean {
-  return route.id !== undefined && SCREEN_ENTITY[route.screen] !== undefined;
+// Whether the active row is only the SECTION the page sits in rather than the
+// page itself: true exactly where the top bar's trail ends in a page of its own
+// below the screen. That is a record, a reserved segment that names its own page
+// (`#/contacts/import`), or a page below the Filters and views library. The trail
+// asks the same three predicates, which keeps exactly one element claiming
+// `aria-current="page"`; `route.id !== undefined` would demote the row on a
+// segment that opens no page, such as `#/filters/views`, the library itself.
+function opensAPageBelow(route: Route): boolean {
+  return (
+    recordKindOf(route) !== undefined ||
+    reservedPageTitle(route) !== undefined ||
+    opensAFocusedFiltersPage(route)
+  );
 }
 
 // Which primary row a route makes current. It is the route's screen for every

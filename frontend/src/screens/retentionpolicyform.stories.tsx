@@ -34,7 +34,7 @@ const ADD_TITLE = "retention-add-policy-title";
 function Dialog({ onDone }: Readonly<{ onDone: () => void }>) {
   const t = useT();
   return (
-    <Modal open onClose={onDone} labelledBy={ADD_TITLE}>
+    <Modal open onClose={onDone} labelledBy={ADD_TITLE} intent="form">
       <Heading size="large" id={ADD_TITLE} className="t-h2 modal-title">
         {t("retention.addPolicy")}
       </Heading>

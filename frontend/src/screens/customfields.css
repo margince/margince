@@ -32,6 +32,11 @@
   gap: var(--space-2);
 }
 
+/* The intro wraps; the badge keeps its word whole. */
+.cf-builder-head > .badge {
+  flex: none;
+}
+
 /* The rename and archive buttons in a field row, which shipped as an
    undeclared class doing nothing: the pair ran together on the browser's
    inter-word space. */

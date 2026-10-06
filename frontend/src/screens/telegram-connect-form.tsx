@@ -43,6 +43,7 @@ export function TelegramConnectForm({
 }>) {
   const t = useT();
   const headingId = useId();
+  const formId = useId();
   const queryClient = useQueryClient();
   const [botToken, setBotToken] = useState("");
 
@@ -106,7 +107,7 @@ export function TelegramConnectForm({
   const resolved = connect.isSuccess ? connect.data : null;
 
   return (
-    <Modal open={open} onClose={onClose} labelledBy={headingId}>
+    <Modal open={open} onClose={onClose} labelledBy={headingId} intent="form">
       <Heading size="large" id={headingId} className="t-h2 modal-title">
         {connection
           ? t("connectors.telegramEditTitle")
@@ -139,16 +140,18 @@ export function TelegramConnectForm({
           </div>
         </>
       ) : (
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (!ready) {
-              return;
-            }
-            connect.mutate(botToken.trim());
-          }}
-        >
-          <div className="form-stack">
+        <>
+          <form
+            id={formId}
+            className="form-stack"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (!ready || connect.isPending) {
+                return;
+              }
+              connect.mutate(botToken.trim());
+            }}
+          >
             {/* A parked binding still reads as parked while its token is replaced. */}
             {connection && (
               <div>
@@ -181,7 +184,7 @@ export function TelegramConnectForm({
                 {errorMessage}
               </Callout>
             )}
-          </div>
+          </form>
           <div className="actions">
             <Button
               type="button"
@@ -193,6 +196,7 @@ export function TelegramConnectForm({
             <Button
               variant="primary"
               type="submit"
+              form={formId}
               disabled={!connect.isPending && !ready}
               pending={connect.isPending}
               busyLabel={t("create.saving")}
@@ -202,7 +206,7 @@ export function TelegramConnectForm({
                 : t("connectors.telegramSubmitCta")}
             </Button>
           </div>
-        </form>
+        </>
       )}
     </Modal>
   );

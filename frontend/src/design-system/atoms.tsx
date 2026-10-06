@@ -23,7 +23,11 @@ import { formatNumber } from "../format/format";
 import { useLocale } from "../i18n";
 import { useAnchoredToTrigger } from "./anchored";
 import { meshOf, meshStyle, monogramOf } from "./avatarmesh";
-import { coveredByDialog, useDialogFocus } from "./dialogfocus";
+import {
+  coveredByDialog,
+  panelsOpenedFrom,
+  useDialogFocus,
+} from "./dialogfocus";
 import { Heading, type HeadingElement, type HeadingSize } from "./heading";
 import { swallowWhileBusy, useSinglePress } from "./presslatch";
 import { useScrollRegion } from "./scrollregion";
@@ -1366,11 +1370,14 @@ export function OverflowMenu({
       if (event.key !== "Escape") {
         return;
       }
-      // A dialog opened from this menu owns Escape while it is up. Closing
-      // both layers on one keypress would take the reader back past the menu
-      // they were choosing from, and they would have to reopen it to pick
-      // something else.
-      if (coveredByDialog(trigger.current)) {
+      // A dialog or panel opened from this menu owns Escape while it is up.
+      // Closing both layers on one keypress would take the reader back past
+      // the menu they were choosing from, and they would have to reopen it to
+      // pick something else.
+      if (
+        coveredByDialog(trigger.current) ||
+        panelsOpenedFrom(panel.current).length > 0
+      ) {
         return;
       }
       setOpen(false);
@@ -1380,10 +1387,16 @@ export function OverflowMenu({
       if (!(event.target instanceof Node)) {
         return;
       }
-      // A dialog this menu opened is portalled to the body, so every click
-      // inside it looks like a click outside the menu. Closing on those would
-      // hide the item the dialog has to give focus back to when it closes.
-      if (event.target instanceof Element && event.target.closest(".overlay")) {
+      // A dialog or a panel this menu opened is portalled to the body, so every
+      // click inside it looks like a click outside the menu. Closing on those
+      // would hide the item it has to give focus back to when it closes.
+      const target = event.target;
+      if (
+        (target instanceof Element && target.closest(".overlay")) ||
+        panelsOpenedFrom(panel.current).some((opened) =>
+          opened.contains(target),
+        )
+      ) {
         return;
       }
       // The panel lives at the body, not inside the wrapper, so "outside" is
