@@ -137,17 +137,19 @@ func fieldsThatMovedSince(ctx context.Context, tx pgx.Tx, row AuditRow) ([]strin
 }
 
 // columnsThatMoved names the image keys that are columns of the record and
-// hold something other than the image's value now. A timestamp is the same
-// value in any zone, and the audit image is spelled in the writer's zone where
+// hold something other than the image's value now. A timestamp column is the
+// same value in any zone, and the audit image is spelled in the writer's zone where
 // the row is read in the session's, so those two compare as instants.
 func columnsThatMoved(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUID, asked []byte) ([]string, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT k.key, to_jsonb(r) -> k.key, k.value
+		SELECT k.key, to_jsonb(r) -> k.key, k.value,
+		       EXISTS (SELECT 1 FROM pg_attribute a
+		               WHERE a.attrelid = $3::regclass AND a.attname = k.key AND a.atttypid = 'timestamptz'::regtype)
 		FROM jsonb_each($2::jsonb) AS k(key, value)
 		JOIN `+pgx.Identifier{entityType}.Sanitize()+` r ON r.id = $1
 		WHERE to_jsonb(r) ? k.key
 		  AND to_jsonb(r) -> k.key IS DISTINCT FROM k.value
-		ORDER BY 1`, id, asked)
+		ORDER BY 1`, id, asked, pgx.Identifier{entityType}.Sanitize())
 	if err != nil {
 		return nil, err
 	}
@@ -155,11 +157,12 @@ func columnsThatMoved(ctx context.Context, tx pgx.Tx, entityType string, id ids.
 	var moved []string
 	for rows.Next() {
 		var key string
+		var timestamp bool
 		var live, stated json.RawMessage
-		if err := rows.Scan(&key, &live, &stated); err != nil {
+		if err := rows.Scan(&key, &live, &stated, &timestamp); err != nil {
 			return nil, err
 		}
-		if !sameInstant(live, stated) {
+		if !timestamp || !sameInstant(live, stated) {
 			moved = append(moved, key)
 		}
 	}
@@ -180,12 +183,21 @@ func sameInstant(a, b json.RawMessage) bool {
 	return err == nil && left.Equal(right)
 }
 
+// asSet spells a jsonb expression with an array's elements in a canonical
+// order: a child table is read back in no promised order, so two spellings of
+// one set of rows differ only by position.
+func asSet(expr string) string {
+	return `(CASE WHEN jsonb_typeof(` + expr + `) = 'array' THEN (SELECT COALESCE(jsonb_agg(e ORDER BY e::text), '[]'::jsonb)
+		FROM jsonb_array_elements(` + expr + `) e) ELSE ` + expr + ` END)`
+}
+
 // childFieldsThatMoved names the image keys the record holds in tables of
 // their own (a contact's social profiles, emails and phones; a company's
 // domains and relationship types), which are not in the row's jsonb. Their
 // current value is the one the latest later entry that wrote the key left, so
 // a colleague's edit refuses the restore, and a walk back through the history
-// still works because each reversal writes the value it restores.
+// still works because each reversal writes the value it restores. A write that
+// reaches those tables without auditing the key is not seen.
 func childFieldsThatMoved(ctx context.Context, tx pgx.Tx, row AuditRow, asked []byte) ([]string, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT k.key
@@ -200,7 +212,7 @@ func childFieldsThatMoved(ctx context.Context, tx pgx.Tx, row AuditRow, asked []
 			ORDER BY later.occurred_at DESC, later.id DESC
 			LIMIT 1) latest
 		WHERE NOT to_jsonb(r) ? k.key
-		  AND latest.value IS DISTINCT FROM k.value
+		  AND `+asSet("latest.value")+` IS DISTINCT FROM `+asSet("k.value")+`
 		ORDER BY 1`, row.EntityID, asked, row.EntityType, row.ID)
 	if err != nil {
 		return nil, err

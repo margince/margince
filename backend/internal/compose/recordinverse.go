@@ -120,6 +120,8 @@ func fillOf(row AuditRow) (contacts.FillRetraction, bool) {
 const (
 	entityTypeLead    = "lead"
 	entityTypeContact = "contact"
+	entityTypeCompany = "company"
+	entityTypeProject = "project"
 	auditActionUpdate = "update"
 )
 

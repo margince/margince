@@ -10,6 +10,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -117,4 +118,19 @@ func recordHistoryEntryToWire(e RecordHistoryEntry) crmcontracts.AuditHistoryEnt
 		}
 	}
 	return out
+}
+
+// leftBehindToWire names what a restore of the record's archive could not
+// bring back, against the restored record.
+func leftBehindToWire(record crmcontracts.Id, left []storekit.LeftBehind) *[]crmcontracts.BulkLeftBehind {
+	if len(left) == 0 {
+		return nil
+	}
+	out := make([]crmcontracts.BulkLeftBehind, len(left))
+	for i, one := range left {
+		out[i] = crmcontracts.BulkLeftBehind{
+			Id: record, Kind: crmcontracts.BulkLeftBehindKind(one.Kind), RefId: openapi_types.UUID(one.ID),
+		}
+	}
+	return &out
 }

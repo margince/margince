@@ -71,10 +71,11 @@ func (s RestoreSeam) reverseByVerb(
 		return privacy.RecordHistoryEntry{}, inverseWriteRefusal(err)
 	}
 	entry, err := s.readRestoreEntry(ctx, entityType, id, row.ID)
-	for _, left := range report.LeftBehind {
-		entry.LeftBehind = append(entry.LeftBehind, privacy.LeftBehind{Kind: left.Kind, RefID: left.ID})
+	if err != nil {
+		return privacy.RecordHistoryEntry{}, err
 	}
-	return entry, err
+	entry.LeftBehind = report.LeftBehind
+	return entry, nil
 }
 
 // perform runs the module verb that undoes the entry, and answers what an
@@ -120,7 +121,7 @@ func (r recordInverses) archiveCreated(ctx context.Context, pool *pgxpool.Pool, 
 		archive = func(tx pgx.Tx) error {
 			return r.contacts.ArchiveContactTx(ctx, tx, ids.From[ids.ContactKind](row.EntityID), &ifVersion)
 		}
-	case string(recordTypeCompany):
+	case entityTypeCompany:
 		archive = func(tx pgx.Tx) error {
 			return r.contacts.ArchiveCompanyTx(ctx, tx, ids.From[ids.CompanyKind](row.EntityID), &ifVersion)
 		}
@@ -178,7 +179,7 @@ func (r recordInverses) unarchive(ctx context.Context, tx pgx.Tx, row AuditRow, 
 	switch row.EntityType {
 	case entityTypeContact:
 		return r.contacts.RestoreContactTx(ctx, tx, ids.From[ids.ContactKind](row.EntityID), &ifVersion, with)
-	case string(recordTypeCompany):
+	case entityTypeCompany:
 		return r.contacts.RestoreCompanyTx(ctx, tx, ids.From[ids.CompanyKind](row.EntityID), &ifVersion, with)
 	case entityTypeDeal:
 		return r.deals.RestoreDealTx(ctx, tx, ids.From[ids.DealKind](row.EntityID), &ifVersion, with)

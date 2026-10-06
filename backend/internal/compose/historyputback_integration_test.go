@@ -130,22 +130,6 @@ func TestAnAmountStepCanBePutBackOnceALaterMoneyChangeWasPutBack(t *testing.T) {
 	}
 }
 
-func TestAReadOnlySeatIsNotOfferedAPutBackItCannotPress(t *testing.T) {
-	e := integration.Setup(t)
-	admin := e.Admin()
-	viewer := e.As(e.Rep3, []ids.UUID{e.Team2}, integration.ReadOnlyPerms)
-	id := e.SeedContact(t, "Read Only Contact", nil)
-	title := "VP"
-	if _, err := e.Contacts.UpdateContact(admin, ids.From[ids.ContactKind](id), contacts.UpdateContactInput{Title: &title}); err != nil {
-		t.Fatal(err)
-	}
-	entry := latestAuditRowID(t, e, "contact", id, "update")
-	got := advisoryAnswer(viewer, t, e, "contact", id, entry)
-	if got.Undoable || got.Reason != string(ReasonNotWritableByCaller) {
-		t.Errorf("a read-only seat is told %+v, want not_writable_by_caller", got)
-	}
-}
-
 func TestRestoringAnArchivedCompanyNamesTheLinkItCouldNotBringBack(t *testing.T) {
 	e := integration.Setup(t)
 	admin := e.Admin()
@@ -167,8 +151,8 @@ func TestRestoringAnArchivedCompanyNamesTheLinkItCouldNotBringBack(t *testing.T)
 	if err != nil {
 		t.Fatalf("restore: %v", err)
 	}
-	if len(answer.LeftBehind) == 0 {
-		t.Error("the restore says nothing of the employment link it left archived")
+	if len(answer.LeftBehind) != 1 || answer.LeftBehind[0].Kind != "relationship" {
+		t.Errorf("the restore answered %+v, want the one employment link it left archived", answer.LeftBehind)
 	}
 }
 
@@ -242,14 +226,18 @@ func TestSocialLinksWalkBackThroughTheirOwnHistory(t *testing.T) {
 	}
 }
 
-// The seat that may read a record and write none is shown the same refusal on
-// every record type the history serves.
-func TestAReadOnlySeatIsToldItMayNotWriteACompanyOrDealChange(t *testing.T) {
+// The seat that may read a record and write none is shown the refusal the
+// press would give, not a button, on every record type with a write gate.
+func TestAReadOnlySeatIsToldItMayNotWriteAContactCompanyOrDealChange(t *testing.T) {
 	e := integration.Setup(t)
 	admin := e.Admin()
 	viewer := e.As(e.Rep3, []ids.UUID{e.Team2}, integration.ReadOnlyPerms)
+	title, industry, renamed := "VP", "Software", "Renamed"
+	contact := e.SeedContact(t, "Read Only Contact", nil)
+	if _, err := e.Contacts.UpdateContact(admin, ids.From[ids.ContactKind](contact), contacts.UpdateContactInput{Title: &title}); err != nil {
+		t.Fatal(err)
+	}
 	company := e.SeedCompany(t, "Read Only Co", nil)
-	industry := "Software"
 	if _, err := e.Contacts.UpdateCompany(admin, ids.From[ids.CompanyKind](company), contacts.UpdateCompanyInput{Industry: &industry}); err != nil {
 		t.Fatal(err)
 	}
@@ -258,14 +246,66 @@ func TestAReadOnlySeatIsToldItMayNotWriteACompanyOrDealChange(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	renamed := "Renamed"
 	if _, err := e.Deals.UpdateDeal(admin, ids.From[ids.DealKind](ids.UUID(deal.Id)), deals.UpdateDealInput{Name: &renamed}); err != nil {
 		t.Fatal(err)
 	}
-	for entityType, id := range map[string]ids.UUID{"company": company, "deal": ids.UUID(deal.Id)} {
+	for entityType, id := range map[string]ids.UUID{"contact": contact, "company": company, "deal": ids.UUID(deal.Id)} {
 		entry := latestAuditRowID(t, e, entityType, id, "update")
 		if got := advisoryAnswer(viewer, t, e, entityType, id, entry); got.Undoable || got.Reason != string(ReasonNotWritableByCaller) {
 			t.Errorf("%s: a read-only seat is told %+v, want not_writable_by_caller", entityType, got)
 		}
+	}
+}
+
+// Only a timestamp column is compared as an instant: a title that happens to
+// spell the same instant in another zone is still somebody else's text.
+func TestATextThatSpellsTheSameInstantIsStillAColleaguesEdit(t *testing.T) {
+	e := integration.Setup(t)
+	admin := e.Admin()
+	id := e.SeedContact(t, "Look Alike", nil)
+	contactID := ids.From[ids.ContactKind](id)
+	set := func(ctx context.Context, title string) {
+		t.Helper()
+		if _, err := e.Contacts.UpdateContact(ctx, contactID, contacts.UpdateContactInput{Title: &title}); err != nil {
+			t.Fatalf("set title %q: %v", title, err)
+		}
+	}
+	set(admin, "Chair")
+	set(admin, "2026-12-09T10:00:00Z")
+	entry := latestAuditRowID(t, e, "contact", id, "update")
+	set(opsSeat(e), "2026-12-09T17:00:00+07:00")
+	if got := advisoryAnswer(admin, t, e, "contact", id, entry); got.Undoable {
+		t.Error("a colleague's different text was read as the same value because it parses as the same instant")
+	}
+}
+
+// A company's domains come back from their table in no promised order, so a
+// walk back through two edits must not read the same set as moved.
+func TestDomainsWalkBackWhateverOrderTheyAreReadIn(t *testing.T) {
+	e := integration.Setup(t)
+	admin := e.Admin()
+	id := e.SeedCompany(t, "Two Domains", nil)
+	companyID := ids.From[ids.CompanyKind](id)
+	tag := id.String()[:8]
+	set := func(domains ...string) {
+		t.Helper()
+		in := make([]contacts.CompanyDomainInput, len(domains))
+		for i, d := range domains {
+			in[i] = contacts.CompanyDomainInput{Domain: d + "-" + tag + ".test", IsPrimary: i == 0}
+		}
+		if _, err := e.Contacts.UpdateCompany(admin, companyID, contacts.UpdateCompanyInput{Domains: &in}); err != nil {
+			t.Fatalf("set domains %v: %v", domains, err)
+		}
+	}
+	set("x", "y")
+	two := latestAuditRowID(t, e, "company", id, "update")
+	set("z")
+	one := latestAuditRowID(t, e, "company", id, "update")
+	seam := restoreSeamFor(e)
+	if _, err := seam.Restore(admin, "company", id, one, currentVersion(t, e, "company", id)); err != nil {
+		t.Fatalf("putting back the single domain: %v", err)
+	}
+	if got := advisoryAnswer(admin, t, e, "company", id, two); !got.Undoable {
+		t.Errorf("the earlier two-domain edit reads %q (%s) after the later one was put back", got.Reason, got.Detail)
 	}
 }

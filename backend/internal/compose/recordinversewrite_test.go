@@ -14,6 +14,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -121,5 +122,28 @@ func TestAnInverseIsRefusedFromItsPortsBeforeItReadsTheTrail(t *testing.T) {
 	}
 	if _, err := (recordInverses{}).unarchive(systemSeatCtx(), nil, AuditRow{EntityType: "project"}, 1); err == nil {
 		t.Error("a project was un-archived")
+	}
+}
+
+// Every record type a history serves has a write gate, and a seat that may only
+// read is refused by the object grant before any row is read. A type added to
+// the served list without a case here answers a fault, not a refusal.
+func TestEveryServedRecordTypeRefusesAReadOnlySeatItsUpdateGrant(t *testing.T) {
+	for _, entityType := range undoableRecordTypes {
+		seat := func(grant principal.ObjectGrant) context.Context {
+			return principal.WithActor(context.Background(), principal.Principal{
+				Type: principal.PrincipalHuman, ID: "human:test", UserID: ids.NewV7(),
+				Permissions: principal.Permissions{Objects: map[string]principal.ObjectGrant{entityType: grant}},
+			})
+		}
+		if err := requireUpdateGrant(seat(principal.ObjectGrant{Read: true}), entityType); !errors.Is(err, apperrors.ErrPermissionDenied) {
+			t.Errorf("%s: a read-only seat got %v, want permission denied", entityType, err)
+		}
+		if err := requireUpdateGrant(seat(principal.ObjectGrant{Read: true, Update: true}), entityType); err != nil {
+			t.Errorf("%s: a seat holding update got %v, want nil", entityType, err)
+		}
+	}
+	if err := requireUpdateGrant(context.Background(), "relationship"); err == nil {
+		t.Error("a type no history serves was given a grant answer")
 	}
 }

@@ -131,11 +131,6 @@ func recordIsVisibleToCaller(ctx context.Context, tx pgx.Tx, entityType string, 
 // owner column. Reaching it through the ordinary gate refuses every activity,
 // which is a button that says the caller may not edit a record they can.
 func recordIsWritableByCaller(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUID) error {
-	// The object grant first, as the record's own update does: row scope alone
-	// admits a seat that may read every record and write none.
-	if err := requireUpdateGrant(ctx, entityType); err != nil {
-		return err
-	}
 	if entityType == entityTypeActivity {
 		return auth.EnsureActivityWritable(ctx, tx, id)
 	}
@@ -311,15 +306,9 @@ func (s *Server) wireReversal(pool *pgxpool.Pool) {
 	})
 }
 
-// The object names requireUpdateGrant switches on, plain constants so the
-// grant census resolves each door.
-const (
-	entityTypeCompany = "company"
-	entityTypeProject = "project"
-)
-
-// requireUpdateGrant asks the object grant the record's own update asks, one
-// literal per served type so the grant census can see each door.
+// requireUpdateGrant asks the object grant the record's own update asks. One
+// literal per type, because the grant census resolves only literals and
+// constants.
 func requireUpdateGrant(ctx context.Context, entityType string) error {
 	switch entityType {
 	case entityTypeContact:

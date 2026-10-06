@@ -217,6 +217,7 @@ function UndoButton({
       restore.onRestored();
     },
     onError: (error) => {
+      setLeftBehind(0);
       const code = problemCodeOf(error);
       if (code === VERSION_SKEW_CODE) {
         // The record moved rather than the change being unrestorable. Re-read

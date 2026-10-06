@@ -79,14 +79,6 @@ func (h Handlers) RestoreRecordChange(w http.ResponseWriter, r *http.Request,
 		return
 	}
 	wire := recordHistoryEntryToWire(entry)
-	if len(entry.LeftBehind) > 0 {
-		left := make([]crmcontracts.BulkLeftBehind, len(entry.LeftBehind))
-		for i, one := range entry.LeftBehind {
-			left[i] = crmcontracts.BulkLeftBehind{
-				Id: id, Kind: crmcontracts.BulkLeftBehindKind(one.Kind), RefId: openapi_types.UUID(one.RefID),
-			}
-		}
-		wire.LeftBehind = &left
-	}
+	wire.LeftBehind = leftBehindToWire(id, entry.LeftBehind)
 	httperr.WriteJSON(w, http.StatusOK, wire)
 }
