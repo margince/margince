@@ -34,15 +34,15 @@ const SignatureMaxRunes = 2000
 
 // EmailSignature is the caller's sign-off as the settings tab shows it.
 type EmailSignature struct {
-	// Body empty means unsigned, which is the state of every member who has
-	// never written one — and, until this table existed, of everyone.
+	// Body empty means none written; the send path then closes with a plain
+	// greeting and the member's name instead.
 	Body      string
 	UpdatedAt *time.Time
 }
 
 // GetMyEmailSignature reads the caller's own signature. A member who has never
 // written one has no row, and that is not an error: an empty body is the honest
-// answer and the send path treats it as "sign nothing".
+// answer, and the send path closes with a plain greeting and the member's name.
 func (s *Store) GetMyEmailSignature(ctx context.Context) (EmailSignature, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.UserID == ids.Nil {
@@ -67,8 +67,8 @@ func (s *Store) GetMyEmailSignature(ctx context.Context) (EmailSignature, error)
 
 // SaveMyEmailSignature upserts the caller's own row.
 //
-// An empty body CLEARS it: a member emptying the field means "send my mail
-// unsigned", not "leave what was there". The row survives the clearing so the
+// An empty body CLEARS it: a member emptying the field means "sign off with
+// the plain closing", not "leave what was there". The row survives the clearing so the
 // audit trail keeps both sides of the change.
 func (s *Store) SaveMyEmailSignature(ctx context.Context, body string) (EmailSignature, error) {
 	actor, ok := principal.Actor(ctx)

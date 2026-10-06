@@ -5,7 +5,7 @@
 
 package gates
 
-// A filter the contract declares and the store can bind is OFFERED to an agent.
+// A filter the contract declares and the store can bind is offered to an agent.
 //
 // list_records publishes the intersection of two vocabularies: what the
 // contract's own list operation declares, and what the store behind the seam

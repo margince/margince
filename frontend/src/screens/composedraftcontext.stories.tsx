@@ -8,9 +8,9 @@ import {
   AccountDraftContext,
   DraftOffer,
   DraftReasons,
-  openCited,
   type PendingAction,
 } from "./composedraftcontext";
+import { openCitation } from "./record360";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 // The drawer's own sheet. In the app it arrives through compose.tsx's
 // side-effect import; this file takes only a TYPE from compose.tsx, so the
@@ -225,13 +225,13 @@ export const OfferFailedDark: Story = {
 /**
  * What the draft was written from, in the two shapes State D draws: the "Based
  * on" line for scanning before reading the draft, and the "Why this draft?"
- * chips for checking one input after. `openCited` is the real handler the
+ * chips for checking one input after. `openCitation` is the real handler the
  * composer passes, so a chip routes exactly where the drawer sends it.
  */
 export const Reasons: Story = {
   render: () => (
     <StoryProviders>
-      <DraftReasons reasons={REASONS} onOpenRecord={openCited} />
+      <DraftReasons reasons={REASONS} onOpenRecord={openCitation} />
     </StoryProviders>
   ),
 };

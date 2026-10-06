@@ -7,7 +7,7 @@
 
 package gates
 
-// A sort the list OFFERS is a sort the server ACCEPTS.
+// A sort the list offers is a sort the server accepts.
 //
 // Tagged `!integration` with the sibling reference census, whose AST helpers it
 // shares: reaching for them from a build they are not in is a typecheck failure

@@ -1,14 +1,14 @@
 # System requirements
 
-This document tells you what an installation needs. Two deployment shapes
-are possible: **single node** and **separate nodes**. On a single node, all
+An installation runs in one of two shapes: **single node** or **separate
+nodes**. On a single node, all
 services run on one host. With separate nodes, the api, the worker, the web
 server and the database each run on their own node. The two shapes use the
 same installation mechanism and the same configuration.
 
 The sizes below apply when the AI functions use a cloud provider. A model on
-the installation's own hardware needs more memory and possibly a GPU — see
-*Self-hosted AI models*. The AI functions are optional: without a model
+the installation's own hardware needs more memory and possibly a GPU (see
+*Self-hosted AI models*). The AI functions are optional: without a model
 binding, the rest of the product operates normally.
 
 ## Software
@@ -72,7 +72,7 @@ change.
 For the database disk, use the single-node table above. The other nodes do
 not need disk space.
 
-- **Put the api in the same availability zone as the database.** Each page
+- **Keep the api in the database's availability zone.** Each page
   load waits for the round-trip latency. A placement across regions makes the
   product slow. More CPU does not correct this.
 - Make sure that the api and the worker can connect to Redis and to the
@@ -130,7 +130,7 @@ necessary, and these are the only options in the `sovereign` profile (zero
 egress).
 
 The model host comes in addition to the node tables above. The sizes below
-assume the default model class (Gemma 3 — `gemma3` on Ollama,
+assume the default model class (Gemma 3: `gemma3` on Ollama,
 `google/gemma-3-12b-it` on vLLM), the 40,960-token context window the Ollama
 adapter asks for, and an embedding model (for example `bge-m3`) on the same
 host. Plan **50 GB disk** for model files.
@@ -148,7 +148,7 @@ host. Plan **50 GB disk** for model files.
 - A task can escalate from a local model to a cloud tier, and the embeddings
   lane is bound separately from the tiers. For a fully local installation,
   bind every tier *and* the embeddings lane to a local model, or use the
-  `sovereign` profile — it refuses a cloud provider on every lane at start.
+  `sovereign` profile, which refuses a cloud provider on every lane at start.
 
 ## Availability
 

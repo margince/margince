@@ -3266,6 +3266,12 @@
       "data": {
         "type": "object",
         "properties": {
+          "ai_disclosure": {
+            "type": "string"
+          },
+          "ai_generated": {
+            "type": "boolean"
+          },
           "body": {
             "type": "string"
           },
@@ -3292,8 +3298,21 @@
               ]
             }
           },
+          "not_saved": {
+            "type": "string"
+          },
+          "saved_draft_id": {
+            "type": "string",
+            "format": "uuid"
+          },
           "subject": {
             "type": "string"
+          },
+          "to": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         },
         "required": [

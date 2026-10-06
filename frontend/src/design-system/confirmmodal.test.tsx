@@ -237,4 +237,39 @@ describe("ConfirmModal", () => {
         .disabled,
     ).toBe(false);
   });
+
+  it("stacks the body and its error in one form stack", () => {
+    rtlRender(
+      <ConfirmModal
+        open
+        onClose={vi.fn()}
+        title="Mark lost?"
+        confirmLabel="Mark lost"
+        onConfirm={vi.fn()}
+        error="The deal changed."
+      >
+        <p>Body copy</p>
+        <p>More copy</p>
+      </ConfirmModal>,
+    );
+    const stack = screen.getByRole("dialog").querySelector(".form-stack");
+    expect(
+      [...(stack?.children ?? [])].map((child) => child.textContent),
+    ).toEqual(["Body copy", "More copy", "The deal changed."]);
+  });
+
+  it("draws no empty stack for a body that holds nothing", () => {
+    rtlRender(
+      <ConfirmModal
+        open
+        onClose={vi.fn()}
+        title="Sign out everywhere?"
+        confirmLabel="Sign out"
+        onConfirm={vi.fn()}
+      >
+        {false}
+      </ConfirmModal>,
+    );
+    expect(screen.getByRole("dialog").querySelector(".form-stack")).toBeNull();
+  });
 });

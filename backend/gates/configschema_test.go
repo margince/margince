@@ -5,8 +5,8 @@
 
 package gates
 
-// The margince.yaml schema is editor tooling, and editor tooling that lies is
-// worse than none: an operator trusts the squiggle. These hold it to the loader.
+// The margince.yaml editor schema agrees with the config loader on what a file
+// may contain. These hold it to the loader.
 
 import (
 	"encoding/json"

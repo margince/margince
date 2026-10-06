@@ -130,6 +130,22 @@ func (e Envelope) At() time.Time {
 	return at
 }
 
+// Greeting renders the opening line in this envelope's language, band and
+// register. A Sie draft greets by full name where "Herr" or "Frau" would go,
+// because no gender is ever known; without a surname, or in any other register
+// or language, it is the familiar Greeting. Both names are folded to one line
+// first, so a stored name cannot open a paragraph of its own.
+func (e Envelope) Greeting(firstName, lastName string) string {
+	firstName, lastName = NameLine(firstName), NameLine(lastName)
+	if e.Lang() != textlang.German || e.Register != string(textlang.RegisterSie) || lastName == "" {
+		return Greeting(e.Lang(), e.Band(), firstName)
+	}
+	return fill(formalGermanGreeting, NameLine(firstName+" "+lastName))
+}
+
+// formalGermanGreeting is the Sie opening the shared drafting rules prescribe.
+const formalGermanGreeting = "Guten Tag %s,"
+
 // Band reads the envelope's conversation state back as a typed value.
 func (e Envelope) Band() convstate.Band { return convstate.Band(e.ConversationState) }
 

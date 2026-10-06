@@ -5,7 +5,7 @@
 
 package gates
 
-// A human-only operation says so at the TRANSPORT, not only in the gate.
+// A human-only operation says so at the transport, not only in the gate.
 //
 // The contract's preamble promises defence in depth: an operation marked
 // `x-agent-access: human-only` also narrows the global `security:` so an agent

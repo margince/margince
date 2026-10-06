@@ -219,6 +219,10 @@ func TestAClientWithNoListIsNotPublished(t *testing.T) {
 
 type unlistedClient struct{ model.Client }
 
+func (unlistedClient) Health() model.ProviderHealthStatus {
+	return model.ProviderHealthStatus{Health: model.HealthOK}
+}
+
 func TestEveryPickerStateHasAKeyTestReading(t *testing.T) {
 	cases := map[ModelAvailability]KeyTestReason{
 		AvailabilityNoKey:          KeyTestNoKey,

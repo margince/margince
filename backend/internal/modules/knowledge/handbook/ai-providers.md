@@ -32,7 +32,7 @@ location to repeat on each model tier.
 To add or replace a provider's key in Margince, open the provider's sheet and
 choose **Add** (or **Replace**) under **Connection**, paste the key, and choose
 **Save key**.
-The key is never shown again, to anyone: Margince keeps it sealed and only says
+The key is never shown again, to anyone. Margince keeps it sealed and only says
 whether one is held. **Test** asks the vendor whether it accepts the key.
 **Remove** deletes the key; every kind of work bound to that provider stops
 until a new one is saved.
@@ -46,7 +46,7 @@ These three reach their vendor's own service, so they ask for nothing else.
 To connect OpenRouter, or any service that speaks the OpenAI interface, open the
 **OpenAI-compatible** sheet, add the service's key, pick it under **Service**,
 and choose **Save connection**.
-- A listed service — OpenRouter, Mistral, Together, Groq, DeepSeek — fills its
+- A listed service (OpenRouter, Mistral, Together, Groq, DeepSeek) fills its
   own host, shown under the choice.
 - For any other, choose **Other OpenAI-compatible service** and fill in **Host**
   with its address without a version at the end: `https://api.mistral.ai`, not
@@ -58,7 +58,8 @@ its editor, and cannot be saved until the host is set here.
 To keep OpenRouter's processing inside the EU, choose **OpenRouter (EU)** under
 **Service** on the **OpenAI-compatible** sheet. Requests then go to OpenRouter's
 EU address, which processes them only inside the EU and sends them only to
-providers there; it counts as EU inference under the **eu_hosted** profile.
+providers there. It counts as EU processing when your installation requires EU
+hosting, which the screen calls the **eu_hosted** profile.
 It needs an OpenRouter Business or Enterprise plan, and only EU-eligible models
 are served there.
 
@@ -83,8 +84,8 @@ If **Test** says Google accepted the key but refused the call, the service
 account is missing the **Vertex AI User** role or the project has not enabled
 the Vertex AI API.
 The **Location** is where Google processes every call: **eu**, the EU
-multi-region, keeps processing in the EU and is the usual choice. Under the
-**eu_hosted** profile, only EU locations can be chosen.
+multi-region, keeps processing in the EU and is the usual choice. When your
+installation requires EU hosting, only EU locations can be chosen.
 Changing the location asks Google whether it serves every model you have bound
 on Gemini on Vertex AI. If one is not served there, the change is refused and
 names the model.
@@ -100,9 +101,9 @@ Settings → AI shows when they last synced and what changed for each provider.
 Anthropic, OpenAI, Google Gemini and Gemini on Vertex AI are priced from
 models.dev when their key is usable; the OpenRouter models a model tier uses are
 priced from OpenRouter's own list. Other providers keep the prices you set. A new
-chat or embedding model your key lists is added when models.dev prices it in the
-same lane. A price you set by hand is never changed by
-the sync; remove it to hand the model back. Turn **Auto-sync daily** off to
+chat or embedding model your key lists is added when models.dev prices it as the
+same kind of model. A price you set by hand is never changed by the sync; remove it to
+hand the model back. Turn **Auto-sync daily** off to
 stop the daily run, or choose **Refresh model prices** to run it now.
 Gemini on Vertex AI lists its models only for a location a model tier uses, so
 it adds new models once one of its models is bound.
@@ -127,3 +128,26 @@ A model tier says its provider has no host when the provider cannot be reached
 until one is set: **OpenAI-compatible** and **Jev-compatible** have no address
 of their own. Open that provider's sheet under **Providers**, pick its
 **Service**, and choose **Save connection**; the tier can then be saved.
+
+### How do I see whether an AI provider is working?
+To see whether an AI provider is working in Margince, open **Settings**, then **System health**, and read the **AI provider status** card; **AI models** also shows a second badge on each provider under **Providers**.
+The card lists only providers that are not answering normally, with why, **Started** and **Next check**. It reads "All AI providers are answering." when none is listed.
+It shows the view of the server and the background worker together, learned from their calls, and only roles with access to AI diagnostics can open it.
+Also called: is the AI down, AI outage, model provider health, AI provider status.
+
+### What does "Out of credit", "Key rejected", "Unreachable" or "Degraded" mean on an AI provider?
+"Out of credit" means the provider account has no credit or quota left: top it up. "Key rejected" means the provider refused the API key: replace it under **Providers**. "Unreachable" means the provider's host is not answering: check its status page. "Degraded" means some requests fail but calls still go through.
+Margince checks again by itself; a successful key **Test** clears it at once, and saving a key within about 30 seconds. The first three stop calls until then.
+Also called: provider badge, provider status, credit exhausted, 401, API key refused.
+
+### What happens to an AI task while its provider is down?
+While a provider is out of credit, rejecting its key or unreachable, Margince skips it. Three server errors in a row also count as unreachable. A task with another model on a working provider uses that one. Timeouts only mark a provider **Degraded**, which skips nothing.
+When every model a task can use is blocked, background work such as mail checks and enrichment waits. It tries again at the provider's next check without using up its attempts. A request someone makes in the app fails at once with a message to contact their administrator. Search indexing is the exception: it is refused and tries again on its own schedule.
+Under **Settings**, then **AI models**, the dot before such a task in **AI tasks** turns red; select the task's name to read what it does in this state.
+Also called: AI task stuck, task waiting, deferred AI work, AI outage per task.
+
+### What does a provider badge on AI models mean?
+A badge next to a provider under **Providers** means Margince has found it not answering: **Out of credit**, **Key rejected**, **Unreachable** or **Degraded**.
+Fix the cause named on **Settings**, then **System health**, in the **AI provider status** card; testing a new key under **Providers** clears it at once.
+A rate-limit reply or a "no permission for this model" refusal does not mark a provider: Margince tries the next model. Only three timeouts in a row mark it **Degraded**.
+Also called: provider status, provider down, API key refused, out of credit.

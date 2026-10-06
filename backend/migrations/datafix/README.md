@@ -2,7 +2,7 @@
 
 One-time rewrites of existing installation data. They are **not** migrations:
 `margince-migrate` never runs this folder, because their run time grows with an
-installation's data and migrations run at api boot (margince#6692).
+installation's data and migrations run at api boot.
 
 An operator runs a data fix once, after the release that needs it is live, at a
 quiet time, and batched where the installation is large. Each file states what it
@@ -24,8 +24,8 @@ reads what an earlier one wrote, and `1790871111` comes again after the
 
 ## Running one
 
-Each file assumes one transaction, as the migration runner used to give it
-(`SET LOCAL lock_timeout` only holds inside one). Run it like this, so that a
+Each file assumes it runs in one transaction (`SET LOCAL lock_timeout` holds only
+inside one). Run it like this, so that a
 failure rolls everything back:
 
 ```
@@ -38,7 +38,7 @@ once (for example by restricting the first statement to a range of
 
 ## Limits
 
-- `1790871111…down.sql` was written as the rollback of the whole feature. Besides
+- `1790871111…down.sql` is the rollback of the whole feature. Besides
   undoing the fix, it relabels every capture-created `mailbox_history`
   acquisition that the sent-mail rule does not cover, including ones the running
   application created correctly, and opens notice cases for them. Use it only

@@ -5,9 +5,9 @@
 
 package gates
 
-// A record held under a statutory retention obligation is unavailable in
-// EVERY ordinary read path (A165/ADR-0114 §2): lists, timelines, search,
-// exports, embeddings, agent grounding. This gate derives the readers of the
+// A record held under a statutory retention obligation is unavailable in every
+// ordinary read path: lists, timelines, search, exports, embeddings, agent
+// grounding. This gate derives the readers of the
 // activity table from the tree and asks each how it excludes a held row,
 // because a reader that forgets is indistinguishable from one that never
 // existed — until a supervisory authority asks why an erased subject's

@@ -16,7 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// A seat's fitness to receive work has ONE spelling, wherever it is asked.
+// A seat's fitness to receive work has one spelling, wherever it is asked.
 //
 // eligibilityColumns are the user columns that decide it. A second reader of
 // this SET is a second answer to "may this contact receive a record", and the

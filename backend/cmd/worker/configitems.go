@@ -58,15 +58,10 @@ func workerConfigItems(fs *flag.FlagSet, env *cliflags.Env) (*config.Registry, e
 // them, owned by the composition root rather than by any one package.
 func workerUnflaggedItems() []config.Item {
 	both := []string{config.RoleAPI, config.RoleWorker}
-	worker := []string{config.RoleWorker}
 	return []config.Item{
 		{
 			Name: compose.ProviderModeEnv, Kind: config.KindString, Default: "live", Roles: both,
 			Doc: "enrichment provider: live|offline|off; an unknown value is a boot error rather than a silently disabled feature",
-		},
-		{
-			Name: jobDrainWindowEnv, FlagName: "job-drain-window", Kind: config.KindDuration, Default: "20s", Roles: worker,
-			Doc: "how long a job already running at shutdown is given to finish before its context is cancelled; the termination grace period must cover it plus 5s and teardown",
 		},
 	}
 }

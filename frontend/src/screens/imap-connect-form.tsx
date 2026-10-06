@@ -210,111 +210,108 @@ export function ImapMailboxForm({
 
   return (
     <form
-      className="imap-mailbox-form"
       onSubmit={(event) => {
         event.preventDefault();
         submit();
       }}
     >
-      {/* Before the fields, not after: a contact connecting a mailbox from
-          Settings is told the same thing onboarding tells them, and reading
-          it after typing a password is reading it too late. */}
-      <div className="imap-mailbox-span">
-        <CaptureNotice />
-      </div>
-      <Field
-        label={t("connectors.imapHost")}
-        required
-        error={needed(host.trim() === "")}
-      >
-        {(control) => (
-          <TextInput
-            {...control}
-            value={host}
-            onChange={(event) => setHost(event.target.value)}
-          />
-        )}
-      </Field>
-      <Field label={t("connectors.imapPort")}>
-        {(control) => (
-          <TextInput
-            {...control}
-            type="number"
-            min={1}
-            max={65535}
-            value={port}
-            onChange={(event) => setPort(event.target.value)}
-          />
-        )}
-      </Field>
-      <Field
-        label={t("connectors.imapUsername")}
-        required
-        error={needed(username.trim() === "")}
-      >
-        {(control) => (
-          <TextInput
-            {...control}
-            type="email"
-            autoComplete="email"
-            value={username}
-            onChange={(event) => setUsername(event.target.value)}
-          />
-        )}
-      </Field>
-      <Field
-        label={t("connectors.imapSecret")}
-        required
-        error={needed(secret === "")}
-      >
-        {(control) => (
-          <TextInput
-            {...control}
-            type="password"
-            autoComplete="off"
-            value={secret}
-            onChange={(event) => setSecret(event.target.value)}
-          />
-        )}
-      </Field>
-      <Field label={t("connectors.imapMailbox")}>
-        {(control) => (
-          <TextInput
-            {...control}
-            value={mailbox}
-            onChange={(event) => setMailbox(event.target.value)}
-          />
-        )}
-      </Field>
-      <Field label={t("connectors.imapMaxMessages")}>
-        {(control) => (
-          <TextInput
-            {...control}
-            type="number"
-            min={1}
-            max={200}
-            value={maxMessages}
-            onChange={(event) => setMaxMessages(event.target.value)}
-          />
-        )}
-      </Field>
-      <p className="t-caption imap-mailbox-span">
-        {t("connectors.imapSecretHint")}
-      </p>
-      {errorMessage && (
+      <div className="imap-mailbox-form">
+        {/* Before the fields: read after typing a password, it comes too late. */}
         <div className="imap-mailbox-span">
-          <Callout
-            tone="danger"
-            kind="outcome"
-            title={t("connectors.imapConnectFailed")}
-          >
-            {errorMessage}
-          </Callout>
+          <CaptureNotice />
         </div>
-      )}
-      {renderActions(
-        <div className="actions imap-mailbox-span">{actions}</div>,
-      )}
+        <Field
+          label={t("connectors.imapHost")}
+          required
+          error={needed(host.trim() === "")}
+        >
+          {(control) => (
+            <TextInput
+              {...control}
+              value={host}
+              onChange={(event) => setHost(event.target.value)}
+            />
+          )}
+        </Field>
+        <Field label={t("connectors.imapPort")}>
+          {(control) => (
+            <TextInput
+              {...control}
+              type="number"
+              min={1}
+              max={65535}
+              value={port}
+              onChange={(event) => setPort(event.target.value)}
+            />
+          )}
+        </Field>
+        <Field
+          label={t("connectors.imapUsername")}
+          required
+          error={needed(username.trim() === "")}
+        >
+          {(control) => (
+            <TextInput
+              {...control}
+              type="email"
+              autoComplete="email"
+              value={username}
+              onChange={(event) => setUsername(event.target.value)}
+            />
+          )}
+        </Field>
+        <Field
+          label={t("connectors.imapSecret")}
+          required
+          error={needed(secret === "")}
+        >
+          {(control) => (
+            <TextInput
+              {...control}
+              type="password"
+              autoComplete="off"
+              value={secret}
+              onChange={(event) => setSecret(event.target.value)}
+            />
+          )}
+        </Field>
+        <Field label={t("connectors.imapMailbox")}>
+          {(control) => (
+            <TextInput
+              {...control}
+              value={mailbox}
+              onChange={(event) => setMailbox(event.target.value)}
+            />
+          )}
+        </Field>
+        <Field label={t("connectors.imapMaxMessages")}>
+          {(control) => (
+            <TextInput
+              {...control}
+              type="number"
+              min={1}
+              max={200}
+              value={maxMessages}
+              onChange={(event) => setMaxMessages(event.target.value)}
+            />
+          )}
+        </Field>
+        <p className="t-caption imap-mailbox-span">
+          {t("connectors.imapSecretHint")}
+        </p>
+        {errorMessage && (
+          <div className="imap-mailbox-span">
+            <Callout
+              tone="danger"
+              kind="outcome"
+              title={t("connectors.imapConnectFailed")}
+            >
+              {errorMessage}
+            </Callout>
+          </div>
+        )}
+      </div>
+      {renderActions(<div className="actions">{actions}</div>)}
     </form>
   );
 }

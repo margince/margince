@@ -5,7 +5,7 @@
 
 package gates
 
-// The viewer and the server must fold whitespace by the SAME set, or a citation
+// The viewer and the server must fold whitespace by the same set, or a citation
 // opens a document with nothing marked.
 //
 // The server locates a claim's quote under `claims.CollapseSpace`, which splits

@@ -7,8 +7,8 @@
 
 package gates
 
-// A nullable column in a unique key is held by NULLS NOT DISTINCT, not by a
-// sentinel.
+// A nullable column in a unique key is held by NULLS NOT DISTINCT rather than
+// by a sentinel.
 //
 // A NULL is distinct from every other NULL, so a natural key with a nullable
 // column does not constrain the rows where that column is null. COALESCEing to a

@@ -314,6 +314,13 @@ func (w *siteDeepReadWorker) storeResolvedLogo(ctx context.Context, args SiteDee
 	if claim.CompanyID != nil {
 		base = companyLogoKey(wsID, ids.From[ids.CompanyKind](*claim.CompanyID))
 	}
+	// Declared before the bytes exist: a read that has already answered for its
+	// marks leaves this key named by nothing, and the ledger is what collects it.
+	if err := w.contacts.RecordLogoIntent(ctx, base); err != nil {
+		w.log.WarnContext(ctx, "declaring the resolved logo provisional failed",
+			"read", args.SiteReadID.String(), "err", err)
+		return ""
+	}
 	key, err := contacts.PutLogo(ctx, w.blob, base, logo.PNG)
 	if err != nil {
 		// A failed Put can still have left a partial object, and no row names

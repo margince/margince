@@ -10,7 +10,7 @@ import { stable } from "../format/collate";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { useAiStatus } from "./ai-admin";
-import { BindingEditor, reachableProviders } from "./ai-binding-editor";
+import { BindingEditor } from "./ai-binding-editor";
 import { useAiHealth } from "./ai-health";
 import {
   type ModelCatalogue,
@@ -18,7 +18,9 @@ import {
   useAiModelCatalogue,
   withBorrowedRows,
 } from "./ai-models";
+import { invalidateProviderHealth } from "./ai-provider-health";
 import { useProviderKeys } from "./ai-provider-key-hooks";
+import { reachableProviders } from "./ai-provider-reach";
 import { DECISION_PROVIDERS } from "./ai-routing-fields";
 import { type Lane, TiersTable } from "./ai-routing-lane";
 import { ROUTING_KEY, type RoutingRead, useRouting } from "./ai-routing-query";
@@ -313,6 +315,7 @@ function FirstBinding({
     onSuccess: async (saved) => {
       queryClient.setQueryData(ROUTING_KEY, saved);
       await queryClient.invalidateQueries({ queryKey: ["ai-status"] });
+      await invalidateProviderHealth(queryClient);
     },
   });
   const startable = startableProviders(providers);

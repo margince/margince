@@ -163,6 +163,9 @@ func (s *Store) StartExtractionReadQueued(
 		if _, err := resolveAttachmentParent(ctx, tx, attachmentID, principal.ActionUpdate); err != nil {
 			return err
 		}
+		if err := refuseWithheldBytes(ctx, tx, attachmentID); err != nil {
+			return err
+		}
 		readID := ids.NewV7()
 		// In-flight uniqueness is arbitrated by uq_attachment_extraction_inflight
 		// itself: DO NOTHING rather than catching the violation keeps the

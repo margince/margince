@@ -5,8 +5,8 @@
 
 package gates
 
-// The disposition ledger's status vocabulary has ONE definition, and it is the
-// column's own constraint.
+// The disposition ledger's status vocabulary is defined by the column's own
+// constraint, and nowhere else.
 //
 // Two readers have to account for every state a sender's question can end in:
 // the capture-activity funnel decides which bucket each settled verdict counts

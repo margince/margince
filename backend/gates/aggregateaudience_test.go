@@ -5,8 +5,7 @@
 
 package gates
 
-// A reader that COUNTS messages asks the audience, exactly as one that shows
-// them does.
+// A reader that counts messages asks the audience, as one that shows them does.
 //
 // A held message must not be visible in the shape of an aggregate either. A
 // relationship-strength score counting a founder's correspondence with their

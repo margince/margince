@@ -5,7 +5,8 @@
 
 package gates
 
-// The audit_log enum-coherence gate as a fitness function. crm.yaml's
+// The audit_log action and actor_type vocabularies in crm.yaml match the
+// table's CHECK constraints. crm.yaml's
 // AuditLogEntry.action / .actor_type are duplicated as Postgres CHECK
 // constraints (audit_log_action_check / audit_log_actor_type_check), the
 // effective set being the highest-numbered migration that re-states each.

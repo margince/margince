@@ -5,7 +5,7 @@
 
 package gates
 
-// Which capture providers are a MAILBOX is answered on both sides of the wire,
+// Which capture providers are a mailbox is answered on both sides of the wire,
 // and the two answers must be the same three names.
 //
 // The server refuses every mail-shaped operation for a calendar — the four

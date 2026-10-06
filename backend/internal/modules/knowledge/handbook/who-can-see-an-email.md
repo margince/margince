@@ -1,14 +1,11 @@
 # Who can see an email
 
-Who can see an email in Margince is the question the product gets asked most,
-and the answer is spread over several settings, so it is worth one page.
-
-Two different things decide who can read an email, and **a "no" from either is a
+Two things decide who can read an email in Margince, and **a "no" from either is a
 no**:
 
-1. **Record visibility** — who may discover the contact, company or deal the
+1. **Record visibility**: who may discover the contact, company or deal the
    message is filed against.
-2. **The message's own audience** — who may read *this* message, whatever they
+2. **The message's own audience**: who may read *this* message, whatever they
    can see elsewhere.
 
 The message's audience is not overridden by seniority. A user who can read every
@@ -20,10 +17,25 @@ Private mail keeps no attachment files. That covers a message on a thread held
 as personal, from a sender that thread's verdict saw. It also covers a message
 from a sender your verdict judged a personal correspondent in the last 14 days.
 Margince keeps such a message's files out of the file store, and the stored
-original carries none of their bytes. The message itself is kept. A sender
-verdict does not apply to a sender you marked as business on the Senders page,
-one you have replied to, or a contact you correspond with. This covers new mail
-only: mail that arrived before the verdict keeps its files.
+original carries none of their bytes. The message itself is kept, and still
+lists each file by name and size, with its kind where the filename shows one,
+marked as not kept. A sender verdict does not apply to a sender you marked as
+business on the Senders page, one you have replied to, or a contact you
+correspond with.
+
+Mail that arrived before the verdict loses its files later, once you have had
+time to change your mind. On a thread held as personal, its files stop being
+kept a week after you held it yourself, or a month after Margince did; the
+stored copies are deleted in the day after that. Sharing the thread back before
+then keeps them. This skips archived mail, mail under a legal hold or inside
+its legal retention period, mail a privacy request is about, and mail a
+colleague also imported.
+
+Mail from a sender judged personal is deleted whole by the personal-mail
+cleanup on the same schedule. Marking the sender as business first stops it.
+The cleanup also keeps mail under a legal hold or inside its retention period,
+mail a privacy request is about, and a colleague's copy of mail they imported
+too.
 
 ### Who can see an email I captured or sent?
 To see who can read an email in Margince, open the message from a timeline: the line under its subject shows **Team**, **Shared**, **Participants**, **Selected** or **Withheld**, with a sentence saying what that means.
@@ -46,13 +58,13 @@ Every Margince message row carries one audience mark:
 | **Selected** | Only those named can read it |
 | **Withheld** | You are not one of them |
 
-"Team" never means a team in the Teams sense — it is about the audience, not a
-named group. Who may discover the linked record still decides whether the row
+"Team" here describes the audience. It does not mean a named team.
+Who may discover the linked record still decides whether the row
 appears at all.
 
-A withheld message is **not hidden**. You see the row — its date, its direction,
-and the record it is filed against — with the content withheld: "This message is
-not shared with you." You learn that a conversation happened and nothing about
+A withheld message still shows up. You see its date, its direction and the
+record it is filed against, with the content withheld: "This message is not
+shared with you". You learn that a conversation happened and nothing about
 what was said in it.
 
 ### Why is an email hidden from me?
@@ -63,9 +75,7 @@ Also called: email not visible, cannot read email, content for participants only
 
 ## Why this one is held
 
-A held Margince message carries a reason, and the product names nine of them
-rather than leaving you to guess. A verdict nobody can see is a verdict nobody
-can correct.
+A held Margince message carries a reason, so you can see why it is held:
 
 | Reason | What happened |
 |---|---|
@@ -79,20 +89,19 @@ can correct.
 | **Held: no record** | Something judged the sender, so it is filed under nothing |
 | **Held: no counterparty** | It named nobody a record could be created for |
 
-Which of those a later verdict can clear is the whole design:
+A later verdict clears some of these and not others:
 
-- **Held until classified** is exactly what a verdict is for, and clears.
-- **Kept private** is a lock. Nothing but a human's own decision writes it, and
-  the derivation refuses to move a row carrying it.
+- **Held until classified** clears when a verdict arrives.
+- **Kept private** is a lock. Only a human's own decision sets it, and nothing
+  automatic changes it.
 - **Held: counterparty mail** and **Marked confidential** both outrank a later
   verdict. A classifier concluding a thread is ordinary says nothing about
   whether you want your lawyer's mail in a shared CRM.
-- **Held by the company** is not a mailbox posture and no verdict clears it.
-  Only an administrator turning sharing back on opens those rows, and only for
-  mail captured afterwards.
-- **Held: no counterparty** is the one hold that a link lifts. No judgement was
-  made about anyone, so it means only "nothing has filed it yet", and it stops
-  being true the moment something does.
+- **Held by the company** comes from the company setting, and no verdict
+  clears it. Only an administrator turning sharing back on opens that mail, and
+  only mail captured afterwards.
+- **Held: no counterparty** is the one hold that filing the message lifts. It
+  means only "nothing has filed it yet", and it ends the moment something does.
 
 The reason itself is withheld along with the content, because a reason like
 "held because personnel" describes what the message is about.
@@ -110,28 +119,28 @@ Also called: mailbox privacy, mail posture, share my inbox.
 The mailbox posture is set at **Settings → Connections**, under each mailbox, as
 **Mail visibility**.
 
-**Held until classified** — the default for every new mailbox. A message stays
+**Held until classified** is the default for every new mailbox. A message stays
 with whoever was on it until a classifier judges the thread ordinary business.
 Nothing is shared before a decision, so a classifier that is down or out of
-budget leaves mail held rather than open.
+budget leaves mail held instead of open.
 
-**Always held** — the same, minus the classifier. You share a thread yourself,
+**Always held** works the same way, without the classifier. You share a thread yourself,
 one at a time.
 
-**Shared with the team** — readable the moment it lands. Off unless an
+**Shared with the team** makes mail readable the moment it lands. Off unless an
 administrator allows it for the company, because reading an employee's mailbox
 into a shared CRM is what a works-council agreement covers in Germany and
 Austria. Margince does not verify that one exists.
 
-Changing the posture governs mail captured **afterwards**. The same dialog offers
-to narrow what is already captured; it only ever narrows, because re-opening what
-was captured under a stricter answer is a separate decision.
+Changing the posture applies to mail captured afterwards. The same dialog offers
+to narrow what is already captured. It never widens captured mail; to open older
+mail, share its threads one by one.
 
 ### How do I turn email sharing off for the whole company?
 To turn email sharing off for everyone in Margince, an administrator opens **Settings → Capture rules** and switches off **Share captured mail with the team** in the **Email sharing** card.
 1. Open **Settings**, then **Capture rules**.
 2. In **Email sharing**, switch **Share captured mail with the team** off and save.
-From then on, new mail is visible only to those on each message: "With email sharing off, the CRM is hard to use."
+From then on, new mail is visible only to those on each message. The card warns: "With email sharing off, the CRM is hard to use".
 The same card holds **Allow mailboxes to share on arrival**, which makes **Shared with the team** available to mailboxes.
 Only an administrator or operations user can change this.
 
@@ -141,11 +150,11 @@ Only an administrator or operations user can change this.
 shared with colleagues at all. On by default.
 
 Turned off, every message captured from then on is held to its participants
-whatever any mailbox asks for. The app warns you honestly: "With email sharing
-off, the CRM is hard to use."
+whatever any mailbox asks for. The app warns you: "With email sharing off, the
+CRM is hard to use."
 
-It is everybody's business rather than one seat's, which is why it lives with the
-company rules and not on your own connections page.
+It affects everybody, so it lives with the company rules instead of on your own
+connections page.
 
 ### How do I keep all mail with a contact or company private?
 To keep your mail with one contact or one company private in Margince, open their page and use **Private correspondence**: **Keep private** for the address, or **Keep all of {domain} private** for the whole firm.
@@ -176,11 +185,10 @@ Also called: release an email, unhide a thread, make an email public.
 
 ## Sharing a thread
 
-You change a captured message's audience by **sharing its thread**, not by
-editing the row.
+You change a captured message's audience by **sharing its thread**.
 
 Sharing releases **your own hold only**. If a colleague is still holding the same
-message, the response tells you how many other seats are — and never who. The
+message, Margince tells you how many other seats are, but never who. The
 **Held threads** card says the same: "A thread opens only when every recipient
 agrees."
 
@@ -200,24 +208,24 @@ Also called: restrict a message, message permissions.
 
 **Change visibility** asks "Who may read this message?": everyone in the company,
 participants only, or a named set of colleagues and teams. It is offered on
-messages logged by hand, not on mail a mailbox captured.
+messages logged by hand. Mail a mailbox captured does not offer it.
 
-**It reaches exactly one message.** The control says so: "Applies to this message
+**It changes one message.** The control says so: "Applies to this message
 only, not to the thread or the contact."
 
 That is the difference from sharing, above. **Share with the company** on a
 thread "Applies to the whole thread." and releases your own hold on all of it;
-changing a message's visibility moves that one row.
+changing a message's visibility changes that one message.
 
 ## What you can see of other seats' capture
 
-Your own connections need no permission from anyone — it is your own mail.
+Your own connections need no permission from anyone, because it is your own mail.
 
 Messages that arrived through a company-wide connection, like the Telegram bot,
 belong to nobody in particular and are shown to seats granted that access.
 
-**No permission grant ever reaches a colleague's mailbox.** The company-wide view
-never returns another seat's personal rows.
+**No permission reaches a colleague's mailbox.** The company-wide view never
+shows mail from another seat's own mailbox.
 
 ## Where each control lives
 

@@ -6,7 +6,7 @@
 package gates
 
 // The browser spells the company-profile vocabulary five more times, and every
-// one of them fails SILENTLY when it falls short.
+// one of them fails silently when it falls short.
 //
 // companyprofilevocabulary_test.go holds the Go mirrors against the
 // company_profile_field CHECK. It cannot read TypeScript, so the five

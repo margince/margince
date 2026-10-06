@@ -5,7 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { GrantSpec } from "../app/mefixture";
 import { pickOption, pickSuggestion } from "../design-system/select-testing";
-import { reachableProviders } from "./ai-binding-editor";
+import { reachableProviders } from "./ai-provider-reach";
 import { AiRoutingCard } from "./ai-routing";
 import {
   BOUND,

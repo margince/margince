@@ -5,16 +5,17 @@
 
 package gates
 
-// PII reach as a fitness function. tableownership_test.go proves a package
-// only writes tables it owns; it says NOTHING about whether Art. 17 erasure
-// reaches every table that holds a data subject. Without that guarantee the
-// activity timeline and attachments survive an erasure verbatim, still
-// full-text searchable. This test closes it: piiTables is the explicit
-// registry of PII-bearing tables, and every entry must be a WRITE target of
-// privacy/erasure.go (so erasure reaches it) and — unless it is an opaque
-// derived artifact — a READ target of privacy/sar.go (so an Art. 15 SAR
-// discloses it). A new PII table that skips erasure or SAR fails here instead
-// of shipping a silent leak.
+// Every table registered as holding personal data is reached by Art. 17 erasure
+// and, unless it is an opaque derived artifact, by the Art. 15 access report.
+// tableownership_test.go proves a package only writes tables it owns; it says
+// NOTHING about whether Art. 17 erasure reaches every table that holds a data
+// subject. Without that guarantee the activity timeline and attachments survive
+// an erasure verbatim, still full-text searchable. This test closes it:
+// piiTables is the explicit registry of PII-bearing tables, and every entry
+// must be a WRITE target of privacy/erasure.go (so erasure reaches it) and —
+// unless it is an opaque derived artifact — a READ target of privacy/sar.go (so
+// an Art. 15 SAR discloses it). A new PII table that skips erasure or SAR fails
+// here instead of shipping a silent leak.
 
 import (
 	"regexp"
@@ -417,6 +418,20 @@ var piiTables = map[string]piiHandling{
 	// reason: a contact asking what is held about them is owed the record that
 	// they said stop, and when.
 	"communication_suppression": {erasureWrite: true, sarRead: true},
+	// A rep's standing vouch that a machine-level refusal may be overruled.
+	// Not consent, not a lawful basis, but a human decision on the record
+	// about this subject — erased with them like the suppression above, and
+	// disclosed for the same reason: a subject is owed the record that a
+	// human decided to write to them anyway, and why.
+	//
+	// The retention sweep deletes it outright, by contact in retentionactions.go
+	// and by lead in retention_leadrecord.go, so each arm is declared and a
+	// sweep that stops deleting either one fails here.
+	"communication_override": {
+		erasureWrite:   true,
+		sarRead:        true,
+		retentionPurge: []string{"contact_id = $1", "lead_id = $1"},
+	},
 
 	"preference_token": {erasureWrite: true, sarForbidden: true},
 

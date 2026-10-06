@@ -191,46 +191,45 @@ export function ContractRenewModal({
       <Heading size="large" id={titleId} className="modal-title">
         {t("contracts.renew.title")}
       </Heading>
-      <p>{t("contracts.renew.hint")}</p>
-
-      <ContractTermsFields
-        draft={draft}
-        setDraft={setDraft}
-        currency={contractCurrency}
-      />
-
-      {/* Never required: the API path this mirrors has always accepted a
-          renewal with no deal, and a picker that refused to submit without
-          one would refuse an agreement the server has always allowed. */}
-      {anchor == null ? (
-        <Callout kind="standing" title={t("contracts.renew.dealWithheldTitle")}>
-          {t("contracts.renew.dealWithheldCompany")}
-        </Callout>
-      ) : (
-        <Field
-          label={t("contracts.renew.deal")}
-          hint={t("contracts.renew.dealHint")}
-        >
-          {(props) => (
-            <Select
-              {...props}
-              value={dealId}
-              onChange={setDealId}
-              disabled={deals.isPending}
-              options={[
-                { value: "", label: t("contracts.renew.dealNone") },
-                ...(deals.data ?? []).map((deal) => ({
-                  value: deal.id,
-                  label: deal.name,
-                })),
-              ]}
-            />
-          )}
-        </Field>
-      )}
-
-      <ErrorLine error={renew.error} />
-
+      <div className="form-stack">
+        <p>{t("contracts.renew.hint")}</p>
+        <ContractTermsFields
+          draft={draft}
+          setDraft={setDraft}
+          currency={contractCurrency}
+        />
+        {/* Never required: the server accepts a renewal with no deal. */}
+        {anchor == null ? (
+          <Callout
+            kind="standing"
+            title={t("contracts.renew.dealWithheldTitle")}
+          >
+            {t("contracts.renew.dealWithheldCompany")}
+          </Callout>
+        ) : (
+          <Field
+            label={t("contracts.renew.deal")}
+            hint={t("contracts.renew.dealHint")}
+          >
+            {(props) => (
+              <Select
+                {...props}
+                value={dealId}
+                onChange={setDealId}
+                disabled={deals.isPending}
+                options={[
+                  { value: "", label: t("contracts.renew.dealNone") },
+                  ...(deals.data ?? []).map((deal) => ({
+                    value: deal.id,
+                    label: deal.name,
+                  })),
+                ]}
+              />
+            )}
+          </Field>
+        )}
+        <ErrorLine error={renew.error} />
+      </div>
       <div className="actions">
         <Button onClick={onClose}>{t("create.cancel")}</Button>
         <Button
@@ -320,22 +319,22 @@ export function ContractStatusModal({
         {t("contracts.statusChange.title")}
       </Heading>
 
-      <Field label={t("contracts.statusChange.label")}>
-        {(props) => (
-          <Select
-            {...props}
-            value={status}
-            onChange={(value) => setStatus(value as ContractStatus)}
-            options={ASSERTABLE_STATUSES.map((value) => ({
-              value,
-              label: t(STATUS_LABEL_KEY[value]),
-            }))}
-          />
-        )}
-      </Field>
-
-      <ErrorLine error={assert.error} />
-
+      <div className="form-stack">
+        <Field label={t("contracts.statusChange.label")}>
+          {(props) => (
+            <Select
+              {...props}
+              value={status}
+              onChange={(value) => setStatus(value as ContractStatus)}
+              options={ASSERTABLE_STATUSES.map((value) => ({
+                value,
+                label: t(STATUS_LABEL_KEY[value]),
+              }))}
+            />
+          )}
+        </Field>
+        <ErrorLine error={assert.error} />
+      </div>
       <div className="actions">
         <Button onClick={onClose}>{t("create.cancel")}</Button>
         {/* recordAssignment (patch.go) records a SET regardless of whether
@@ -449,36 +448,34 @@ export function ContractCancelModal({
       <Heading size="large" id={titleId} className="modal-title">
         {t("contracts.cancel.title")}
       </Heading>
-      <p>{t("contracts.cancel.hint")}</p>
-
-      <Field label={t("contracts.cancel.noticeOn")} required>
-        {(props) => (
-          <TextInput
-            {...props}
-            type="date"
-            value={noticeOn}
-            onChange={(e) => setNoticeOn(e.target.value)}
-          />
-        )}
-      </Field>
-
-      <Field
-        label={t("contracts.cancel.effectiveOn")}
-        hint={t("contracts.cancel.effectiveOnHint")}
-        required
-      >
-        {(props) => (
-          <TextInput
-            {...props}
-            type="date"
-            value={effectiveOn}
-            onChange={(e) => setEffectiveOn(e.target.value)}
-          />
-        )}
-      </Field>
-
-      <ErrorLine error={cancel.error} />
-
+      <div className="form-stack">
+        <p>{t("contracts.cancel.hint")}</p>
+        <Field label={t("contracts.cancel.noticeOn")} required>
+          {(props) => (
+            <TextInput
+              {...props}
+              type="date"
+              value={noticeOn}
+              onChange={(e) => setNoticeOn(e.target.value)}
+            />
+          )}
+        </Field>
+        <Field
+          label={t("contracts.cancel.effectiveOn")}
+          hint={t("contracts.cancel.effectiveOnHint")}
+          required
+        >
+          {(props) => (
+            <TextInput
+              {...props}
+              type="date"
+              value={effectiveOn}
+              onChange={(e) => setEffectiveOn(e.target.value)}
+            />
+          )}
+        </Field>
+        <ErrorLine error={cancel.error} />
+      </div>
       <div className="actions">
         <Button onClick={onClose}>{t("create.cancel")}</Button>
         <Button

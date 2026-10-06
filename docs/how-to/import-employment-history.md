@@ -11,7 +11,7 @@ installation, matching rules, backfill and recovery.
 2. Start the event relay, normal workers and the company auto-enrichment consumer. The employment sweep processes newly retained current-employment and job-history claims without calling Surfe again.
 3. Check the existing company auto-enrichment setting and daily research budget. Company creation emits the normal event that schedules research through this policy. Linking is durable even if research is disabled or fails. Use the company's research view to inspect and retry research.
 4. Verify one empty phone can be added and survives refresh. Rehearse history linking on a test contact and confirm the reciprocal company contact list excludes former/unknown work.
-5. Preview existing purchases, then apply bounded batches as described below. The migration leaves pre-upgrade purchases for this deliberate backfill; it does not bulk-import them on startup.
+5. Preview existing purchases, then apply bounded batches as described below. The migration does not bulk-import pre-upgrade purchases on startup; the backfill below applies them.
 
 ## Matching and review
 

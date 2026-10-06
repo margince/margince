@@ -18,6 +18,7 @@ import { LocaleProvider } from "../i18n";
 import { AiBudgetCard } from "./ai-admin";
 import { allowance, feature, status } from "./ai-admin.testkit";
 import { AiFeatureTable } from "./ai-feature-table";
+import { openTaskDetails } from "./ai-task-details-testing";
 
 afterEach(() => {
   cleanup();
@@ -141,6 +142,28 @@ it("names a carrier the preview could not count as unavailable", async () => {
   expect(within(list).getByText(/Company scans:\s*Unavailable/)).toBeTruthy();
   expect(within(list).getByText(/Website reads:\s*3/)).toBeTruthy();
 });
+// The budget count is what a raise would resume; work waiting on the provider
+// is its own line, shown only when there is some.
+it("shows the provider wait beside the carrier's budget count", async () => {
+  const user = userEvent.setup({ delay: null });
+  mount();
+  await user.click(
+    await screen.findByRole("button", { name: "Edit allowance" }),
+  );
+  await user.click(screen.getByRole("button", { name: "Preview effects" }));
+  const waiting = await screen.findByText(
+    "Recorded work waiting on the allowance",
+  );
+  const list = waiting.closest("details");
+  if (!(list instanceof HTMLElement)) {
+    throw new Error("the deferred work is not a disclosure");
+  }
+  expect(
+    within(list).getAllByText(
+      "Waiting for the AI provider: 2. It resumes by itself when the provider answers.",
+    ),
+  ).toHaveLength(1);
+});
 it("keeps a rejected draft visible after a concurrent edit", async () => {
   const user = userEvent.setup({ delay: null });
   mount(undefined, true);
@@ -167,7 +190,7 @@ it("allows management to read without offering an editor", async () => {
 
 // A task's tier is fixed by the task contract, and what the tier is bound to
 // is edited on the Model tiers card — so the task table offers no edit of its
-// own, only the resolved chain and where the task sits in the contract.
+// own, only the resolved chain, whose model id waits behind its provider.
 it("reads a task's resolved chain with no edit control", async () => {
   render(
     <LocaleProvider initial="en">
@@ -175,14 +198,18 @@ it("reads a task's resolved chain with no edit control", async () => {
     </LocaleProvider>,
   );
   const user = userEvent.setup({ delay: null });
+  expect(await openTaskDetails(user, feature.display_name)).toHaveTextContent(
+    `${feature.task} · ${feature.execution_mode}`,
+  );
+  await user.click(screen.getByRole("button", { name: /example-model/ }));
   expect(
-    screen.getByText(`${feature.task} · ${feature.execution_mode}`),
-  ).toBeTruthy();
-  await user.click(screen.getByText("example-model"));
-  expect(screen.queryByRole("button")).toBeNull();
+    screen.getByRole("region", { name: /example-model/ }),
+  ).toHaveTextContent("example-model");
+  expect(screen.queryByRole("button", { name: /edit/i })).toBeNull();
   expect(screen.queryByText(/edit shared binding/i)).toBeNull();
 });
-it("explains each routing impact in operational language", () => {
+it("explains each routing impact in operational language", async () => {
+  const user = userEvent.setup({ delay: null });
   render(
     <LocaleProvider initial="en">
       <AiFeatureTable
@@ -222,11 +249,15 @@ it("explains each routing impact in operational language", () => {
     </LocaleProvider>,
   );
 
-  expect(screen.getByText("Waiting on allowance")).toBeTruthy();
-  expect(screen.getByText("Different model selected")).toBeTruthy();
-  expect(screen.getByText("Decision model changed")).toBeTruthy();
-  expect(screen.getByText("Fallback chain changed")).toBeTruthy();
-  expect(screen.getByText("No model configured")).toBeTruthy();
+  for (const [name, says] of [
+    ["Blocked activity", "Waiting on allowance"],
+    ["Changed activity", "Different model selected"],
+    ["Decision activity", "Decision model changed"],
+    ["Fallback activity", "Fallback chain changed"],
+    ["Unconfigured activity", "No model configured"],
+  ]) {
+    expect(await openTaskDetails(user, name)).toHaveTextContent(says);
+  }
 });
 it("withholds model identities from an allowance reader without routing access", async () => {
   mount({ ai_budget: ["read"], ai_diagnostics: ["read"] });
@@ -272,7 +303,8 @@ it("saves a fixed company override without discarding the per-user value", async
     },
   ]);
 });
-it("puts decision-first rows on top, then rows that declare a skip, then the rest", () => {
+it("puts decision-first rows on top, then rows that declare a skip, then the rest", async () => {
+  const user = userEvent.setup({ delay: null });
   const row = (task: string, extra: Partial<typeof feature> = {}) => ({
     ...feature,
     task,
@@ -304,7 +336,7 @@ it("puts decision-first rows on top, then rows that declare a skip, then the res
   const order = screen
     .getAllByRole("row")
     .slice(1)
-    .map((tr) => within(tr).getByText(/^Activity /).textContent);
+    .map((tr) => within(tr).getByText(/^Activity \w+$/).textContent);
   expect(order).toEqual([
     "Activity c_first",
     "Activity e_first",
@@ -312,10 +344,19 @@ it("puts decision-first rows on top, then rows that declare a skip, then the res
     "Activity a_plain",
     "Activity d_plain",
   ]);
-  expect(screen.getAllByText("Decision model first")).toHaveLength(2);
+  for (const [name, first] of [
+    ["Activity c_first", true],
+    ["Activity a_plain", false],
+  ] as const) {
+    const details = await openTaskDetails(user, name);
+    expect(within(details).queryByText("Decision model first") !== null).toBe(
+      first,
+    );
+  }
 });
 
-it("shows a badge only for a departure, and no disclosure for a single candidate", () => {
+it("shows a badge only for a departure, and no disclosure for a single candidate", async () => {
+  const user = userEvent.setup({ delay: null });
   render(
     <LocaleProvider initial="en">
       <AiFeatureTable
@@ -331,8 +372,12 @@ it("shows a badge only for a departure, and no disclosure for a single candidate
       />
     </LocaleProvider>,
   );
-  expect(screen.getByText("Continues beyond allowance")).toBeTruthy();
-  expect(screen.queryByText("Decision model first")).toBeNull();
+  expect(await openTaskDetails(user, "Embed")).toHaveTextContent(
+    "Continues beyond allowance",
+  );
+  const quiet = await openTaskDetails(user, feature.display_name);
+  expect(quiet).not.toHaveTextContent("Continues beyond allowance");
+  expect(quiet).not.toHaveTextContent("Decision model first");
   expect(screen.queryAllByRole("group")).toHaveLength(0);
 });
 
@@ -358,6 +403,7 @@ it("names only the lead of a multi-candidate row, not the rungs behind it", () =
 });
 
 it("the task table says decision model first, and why another feature skips it", async () => {
+  const user = userEvent.setup({ delay: null });
   render(
     <LocaleProvider initial="en">
       <AiFeatureTable
@@ -385,16 +431,18 @@ it("the task table says decision model first, and why another feature skips it",
     </LocaleProvider>,
   );
 
-  // The lane leads, where it processes, and the ladder that answers after it.
-  const decisionRow = (await screen.findByText("jev-classify")).closest("td");
-  expect(decisionRow?.textContent).toBe(
-    "jev_compatiblejev-classify↓thengeminiexample-model",
+  // The row names the model that answers; the decision model in front of it
+  // is in the task's details, with its provider.
+  const decisionRow = screen.getByText("Classify correspondence").closest("tr");
+  expect(decisionRow?.querySelector("td:nth-child(3)")?.textContent).toBe(
+    "geminiexample-model",
   );
-  // A feature the lane does not serve keeps its ladder, with the reason beside it.
-  expect(screen.getAllByText("example-model")).toHaveLength(2);
-  expect(
-    screen.getByText(
-      "Decision model not used: this activity takes only a local decision provider.",
-    ),
-  ).toBeInTheDocument();
+  const first = await openTaskDetails(user, "Classify correspondence");
+  expect(first).toHaveTextContent(
+    "Decision model firstjev_compatiblejev-classify",
+  );
+  // A feature the lane does not serve says why, in its own details.
+  expect(await openTaskDetails(user, "Triage a site")).toHaveTextContent(
+    "Decision model not used: this activity takes only a local decision provider.",
+  );
 });
