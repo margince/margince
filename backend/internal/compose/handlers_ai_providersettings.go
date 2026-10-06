@@ -24,7 +24,7 @@ func (h aiRoutingHandlers) SetAiProviderSettings(w http.ResponseWriter, r *http.
 		return
 	}
 	var req crmcontracts.AiProviderSettings
-	if !httperr.Decode(w, r, &req) {
+	if !httperr.DecodeClosed(w, r, &req, routingBlockIsOwned) {
 		return
 	}
 	cfg, err := h.store.SetProviderSettings(r.Context(), provider, providerSettingsFromWire(req))

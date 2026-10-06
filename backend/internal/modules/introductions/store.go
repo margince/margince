@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -25,9 +26,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
-// The bounds a reader actually reads. A reason is a paragraph and a note is a
-// short mail; past these nobody reads either, and the colleague deciding is
-// the contact who pays for a wall of text.
+// The contract's maxLength for each text field, in characters. A reason is a
+// paragraph and a note is a short mail; the colleague deciding is the one who
+// pays for a wall of text.
 const (
 	reasonBound = 2000
 	noteBound   = 4000
@@ -113,6 +114,11 @@ func (s *Store) Create(ctx context.Context, req NewRequest) (ids.UUID, error) {
 		return ids.UUID{}, err
 	}
 
+	req, err = admitAsk(req)
+	if err != nil {
+		return ids.UUID{}, err
+	}
+
 	id := ids.NewV7()
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		if err := auth.EnsureVisibleLive(ctx, tx, "contact", req.ContactID); err != nil {
@@ -139,11 +145,9 @@ func (s *Store) Create(ctx context.Context, req NewRequest) (ids.UUID, error) {
 			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
 			id, req.ContactID, actor.UserID, req.IntroducerUser,
 			req.RouteType, req.ThroughContactID,
-			truncate(req.InternalReason, reasonBound),
-			truncate(req.ValueForTarget, reasonBound),
-			truncate(req.ForwardableNote, noteBound),
-			noteOrigin(req.NoteGeneratedBy), req.NoteAIGenerated,
-			fallbackOrNone(req.FallbackPolicy), req.NameDropAllowed,
+			req.InternalReason, req.ValueForTarget, req.ForwardableNote,
+			req.NoteGeneratedBy, req.NoteAIGenerated,
+			req.FallbackPolicy, req.NameDropAllowed,
 			req.DueAt, capturedBy)
 		if err != nil {
 			// The partial unique index is the duplicate guard, not a
@@ -237,6 +241,9 @@ func (s *Store) Decide(
 	ctx context.Context, id ids.UUID, answer Status, reason string,
 	suggested *ids.UUID, version int,
 ) error {
+	if err := tooLong("reason", reason, reasonBound); err != nil {
+		return err
+	}
 	if answer == StatusSuggestOther && suggested == nil {
 		return &values.ParseError{
 			Field: "suggested_user_id", Code: "required",
@@ -339,6 +346,9 @@ func (s *Store) Complete(ctx context.Context, id ids.UUID, activity *ids.UUID, v
 
 // Cancel withdraws the ask.
 func (s *Store) Cancel(ctx context.Context, id ids.UUID, reason string, version int) error {
+	if err := tooLong("reason", reason, reasonBound); err != nil {
+		return err
+	}
 	return s.move(ctx, id, func() Status { return StatusCancelled }, version, func(cur *Request) error {
 		return May(cur.Status, StatusCancelled, s.roleOf(ctx, cur))
 	}, func(ctx context.Context, tx pgx.Tx, cur *Request) (pgconn.CommandTag, error) {
@@ -420,12 +430,17 @@ func (s *Store) move(
 	})
 }
 
-// truncate bounds a field at what a reader will actually read.
-func truncate(s string, bound int) string {
-	if len(s) <= bound {
-		return s
+// tooLong refuses text past the contract's limit. It counts runes because
+// the contract and Postgres both count characters: a byte count refuses text
+// they accept, and cutting at a byte can split a character into invalid UTF-8.
+func tooLong(field, text string, limit int) error {
+	if utf8.RuneCountInString(text) <= limit {
+		return nil
 	}
-	return s[:bound]
+	return &values.ParseError{
+		Field: field, Code: "too_long",
+		Message: fmt.Sprintf("%s is at most %d characters; shorten it", field, limit),
+	}
 }
 
 func nullIfEmpty(s string) *string {
@@ -435,24 +450,46 @@ func nullIfEmpty(s string) *string {
 	return &s
 }
 
-// noteOrigin defaults to human. A note whose origin nobody stated was typed by
-// somebody, and claiming a machine wrote it would be a false disclosure in the
-// direction that matters least — but claiming a human wrote a model's prose is
-// the one that matters, so the caller states it explicitly when it is true.
-func noteOrigin(v string) string {
-	switch v {
-	case "model", "deterministic":
-		return v
-	default:
-		return "human"
+// admitAsk defaults an unstated enum and refuses a stated one the contract does
+// not admit. Unstated is a contact typing with no fallback.
+func admitAsk(req NewRequest) (NewRequest, error) {
+	if req.NoteGeneratedBy == "" {
+		req.NoteGeneratedBy = "human"
 	}
+	if req.FallbackPolicy == "" {
+		req.FallbackPolicy = "none"
+	}
+	return req, validateAsk(req)
 }
 
-func fallbackOrNone(v string) string {
-	switch v {
-	case "name_drop", "next_route":
-		return v
-	default:
-		return "none"
+// validateAsk refuses what the contract does not admit. The enums are
+// refused rather than defaulted: an unknown note origin recorded as `human`
+// would disclose model prose as typed.
+func validateAsk(req NewRequest) error {
+	if req.InternalReason == "" {
+		return &values.ParseError{Field: "internal_reason", Code: "required", Message: "internal_reason is required"}
+	}
+	if err := tooLong("internal_reason", req.InternalReason, reasonBound); err != nil {
+		return err
+	}
+	if err := tooLong("value_for_target", req.ValueForTarget, reasonBound); err != nil {
+		return err
+	}
+	if err := tooLong("forwardable_note", req.ForwardableNote, noteBound); err != nil {
+		return err
+	}
+	if !crmcontracts.IntroNoteOrigin(req.NoteGeneratedBy).Valid() {
+		return notAllowed("note_generated_by", "human, model or deterministic")
+	}
+	if !crmcontracts.IntroFallbackPolicy(req.FallbackPolicy).Valid() {
+		return notAllowed("fallback_policy", "none, name_drop or next_route")
+	}
+	return nil
+}
+
+func notAllowed(field, allowed string) error {
+	return &values.ParseError{
+		Field: field, Code: "value_not_allowed",
+		Message: fmt.Sprintf("%s must be %s", field, allowed),
 	}
 }

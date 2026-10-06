@@ -85,3 +85,20 @@ func TestEnablingBookingsWithoutAUsableCalendarNamesTheProvider(t *testing.T) {
 		}
 	}
 }
+
+// The contract lists the providers a profile may name; a disabled profile is
+// held to it too, so an unknown value is never stored.
+func TestSavingAProfileRefusesAProviderOutsideTheContract(t *testing.T) {
+	e := setupSend(t)
+	store := e.store(nil).WithPublicBaseURL("https://crm.example.test")
+	profile := defaultSchedulingProfile()
+	profile.Enabled = false
+	profile.Provider = "zoom"
+
+	_, err := store.SaveSchedulingProfile(e.as(principal.RowScopeAll), profile)
+
+	var refusal *SchedulingArgumentError
+	if !errors.As(err, &refusal) || refusal.Field != "provider" || refusal.Code != "invalid" {
+		t.Fatalf("saving provider zoom answered %v, want an invalid refusal naming provider", err)
+	}
+}

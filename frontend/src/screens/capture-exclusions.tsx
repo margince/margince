@@ -318,6 +318,7 @@ function ExcludeDialog({
   const add = useAddExclusion();
   const headingId = useId();
   const denialId = useId();
+  const formId = useId();
   const [scope, setScope] = useState<Scope>("user");
   const [kind, setKind] = useState<Kind>("address");
   const [draft, setDraft] = useState("");
@@ -337,11 +338,12 @@ function ExcludeDialog({
   const refused = effectiveScope === "workspace" && !canManageWorkspace;
   const value = draft.trim();
   return (
-    <Modal open onClose={onClose} labelledBy={headingId}>
+    <Modal open onClose={onClose} labelledBy={headingId} intent="form">
       <Heading size="large" id={headingId} className="t-h2 modal-title">
         {t("captureExclusions.addLabel")}
       </Heading>
       <form
+        id={formId}
         className="form-stack"
         onSubmit={(event) => {
           event.preventDefault();
@@ -442,20 +444,21 @@ function ExcludeDialog({
             {problemMessageOf(add.error, t)}
           </Callout>
         )}
-        <div className="form-actions">
-          <Button type="button" onClick={onClose}>
-            {t("create.cancel")}
-          </Button>
-          <Button
-            type="submit"
-            variant="primary"
-            disabled={add.isPending || value === ""}
-            reasonId={refused ? denialId : undefined}
-          >
-            {t("captureExclusions.add")}
-          </Button>
-        </div>
       </form>
+      <div className="actions">
+        <Button type="button" onClick={onClose}>
+          {t("create.cancel")}
+        </Button>
+        <Button
+          type="submit"
+          form={formId}
+          variant="primary"
+          disabled={add.isPending || value === ""}
+          reasonId={refused ? denialId : undefined}
+        >
+          {t("captureExclusions.add")}
+        </Button>
+      </div>
     </Modal>
   );
 }
