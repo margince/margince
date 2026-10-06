@@ -42,6 +42,7 @@ func TestATaskMoreThanAMonthOverdueLeavesTheWorklistUnlessPinned(t *testing.T) {
 	}
 	agedOut := logOn("Send the revised quote", 31)
 	recent := logOn("Confirm the workshop date", 29)
+	boundary := logOn("Book the kickoff room", 30)
 	pinned := logOn("Chase the signed contract", 31)
 	pushedOut := logOn("Return the signed NDA", 31)
 	pin := func(rowID string) {
@@ -61,11 +62,12 @@ func TestATaskMoreThanAMonthOverdueLeavesTheWorklistUnlessPinned(t *testing.T) {
 	pin(pinned)
 
 	day := assembleFeed(e.Admin(), t, e, now)
-	if got := taskIDsOn(day.Planned); !slices.Equal(got, sorted(recent, pinned)) {
-		t.Errorf("the planned lane carries %v, want the 29-day task %s and the pinned one %s", got, recent, pinned)
+	kept := sorted(recent, boundary, pinned)
+	if got := taskIDsOn(day.Planned); !slices.Equal(got, kept) {
+		t.Errorf("the planned lane carries %v, want the 29-day, exactly-30-day and pinned tasks %v", got, kept)
 	}
-	if day.Counts.Planned != 2 {
-		t.Errorf("the planned count is %d, want 2: the badge must drop what the page drops", day.Counts.Planned)
+	if day.Counts.Planned != len(kept) {
+		t.Errorf("the planned count is %d, want 3: the badge must drop what the page drops", day.Counts.Planned)
 	}
 
 	feed := newAttentionService(e.Pool, approvals.NewService(e.DB()), func() time.Time { return now })
@@ -80,8 +82,8 @@ func TestATaskMoreThanAMonthOverdueLeavesTheWorklistUnlessPinned(t *testing.T) {
 		}
 	}
 	slices.Sort(queued)
-	if !slices.Equal(queued, sorted(recent, pinned)) {
-		t.Errorf("the Worklist queue carries tasks %v, want %s and the pinned %s", queued, recent, pinned)
+	if !slices.Equal(queued, kept) {
+		t.Errorf("the Worklist queue carries tasks %v, want %v", queued, kept)
 	}
 
 	load, err := e.Activities.OverdueLoadByAssignee(e.Admin(), now)
@@ -94,8 +96,8 @@ func TestATaskMoreThanAMonthOverdueLeavesTheWorklistUnlessPinned(t *testing.T) {
 			boardCount = row.Overdue
 		}
 	}
-	if boardCount != 2 {
-		t.Errorf("the team board counts %d overdue, want the 2 the rep's own day shows", boardCount)
+	if boardCount != len(kept) {
+		t.Errorf("the team board counts %d overdue, want the 3 the rep's own day shows", boardCount)
 	}
 
 	entity, kind := "contact", "task"

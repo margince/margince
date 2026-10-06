@@ -26,8 +26,8 @@ const worklistAgeOutDays = 30
 func worklistAgeOutClause(asOf time.Time, pinner string, arg func(any) int) string {
 	floor := arg(asOf.AddDate(0, 0, -worklistAgeOutDays))
 	return sprintf(`(a.kind <> 'task' OR a.due_at IS NULL OR a.due_at >= $%d
-		OR EXISTS (SELECT 1 FROM %s wp WHERE wp.source = $%d AND wp.row_id = a.id::text))`,
-		floor, effectivePinsSQL(pinner, arg), arg(string(crmcontracts.WorklistItemSourceTask)))
+		OR (%s, a.id::text) IN (SELECT reader_id, row_id FROM %s wp WHERE wp.source = $%d))`,
+		floor, pinner, effectivePinsSQL(arg), arg(string(crmcontracts.WorklistItemSourceTask)))
 }
 
 // worklistClauses are the narrowings that make a read the Worklist's.
