@@ -7,8 +7,8 @@ package compose
 
 // A canceled meeting is no interaction, in every fold that asks when we last
 // had one: the colleague and contact graph edges, deal engagement, the
-// ghosted-thread scan, the account's newest message and the follow-up
-// reconciler. Each meeting lands through the calendar Sink and is called off
+// ghosted-thread scan, the account's newest message, a deal's quiet facts and
+// the follow-up reconciler. Each meeting lands through the calendar Sink and is called off
 // through its cancel path, the rows a live calendar pull produces.
 
 import (
@@ -21,7 +21,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/search"
@@ -30,43 +29,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
-
-// foldMeeting is one calendar meeting as the Sink lands it.
-type foldMeeting struct {
-	event     string
-	at        time.Time
-	direction string
-	links     []datasource.EntityRef
-	parties   []connector.MessageParticipant
-}
-
-func (m foldMeeting) capture(t *testing.T, e *integration.Env) ids.UUID {
-	t.Helper()
-	ref, err := calendarSink(e).Upsert(calendarOwnerCtx(e, e.AdminUser), connector.NormalizedRecord{
-		EntityType: "activity",
-		NaturalKey: connector.NaturalKey{SourceSystem: calendarSystem, SourceID: m.event},
-		Fields: capture.ActivityFields{
-			Kind: "meeting", Subject: "Fold review", OccurredAt: m.at, Direction: m.direction,
-		},
-		Links:        m.links,
-		Participants: m.parties,
-		Source:       calendarSystem + ":" + m.event,
-		CapturedBy:   "connector:" + calendarSystem,
-		Raw:          []byte(`{"id":"` + m.event + `"}`),
-	}.WithProviderAttestedParticipants(true))
-	if err != nil {
-		t.Fatalf("capturing meeting %s: %v", m.event, err)
-	}
-	return ref.ID
-}
-
-func (m foldMeeting) cancel(t *testing.T, e *integration.Env) {
-	t.Helper()
-	key := connector.NaturalKey{SourceSystem: calendarSystem, SourceID: m.event}
-	if err := calendarSink(e).CancelMeeting(calendarOwnerCtx(e, e.AdminUser), key, m.at); err != nil {
-		t.Fatalf("canceling meeting %s: %v", m.event, err)
-	}
-}
 
 func contactLink(contact ids.UUID) []datasource.EntityRef {
 	return []datasource.EntityRef{{Type: "contact", ID: contact}}
@@ -123,22 +85,22 @@ func TestACanceledMeetingIsNoGraphEdgesLastInteraction(t *testing.T) {
 		{Email: "dana@fold.example", Role: connector.ParticipantRoleAttendee},
 		{Email: "eli@fold.example", Role: connector.ParticipantRoleAttendee},
 	}
-	held := foldMeeting{event: "evt-fold-held", at: now.AddDate(0, 0, -10), links: contactLink(dana), parties: parties}
-	called := foldMeeting{event: "evt-fold-called", at: now.AddDate(0, 0, -2), links: contactLink(dana), parties: parties}
-	touched := []ids.UUID{held.capture(t, e), called.capture(t, e)}
-	called.cancel(t, e)
+	held := integration.CalendarMeeting{Event: "evt-fold-held", At: now.AddDate(0, 0, -10), Links: contactLink(dana), Parties: parties}
+	called := integration.CalendarMeeting{Event: "evt-fold-called", At: now.AddDate(0, 0, -2), Links: contactLink(dana), Parties: parties}
+	touched := []ids.UUID{held.Capture(t, e), called.Capture(t, e)}
+	called.Cancel(t, e)
 
 	assertLastAtHeld := func(path string) {
 		t.Helper()
 		if got := e.WsCount(t, `SELECT count(*) FROM graph_interaction_edge
 		                         WHERE user_id = $1 AND contact_id = $2 AND last_at = $3`,
-			e.AdminUser, dana, held.at); got != 1 {
+			e.AdminUser, dana, held.At); got != 1 {
 			t.Errorf("%s: the colleague edge's last_at is not the held meeting — a canceled one is no interaction", path)
 		}
 		if got := e.WsCount(t, `SELECT count(*) FROM graph_contact_edge
 		                         WHERE contact_a = least($1::uuid, $2::uuid) AND contact_b = greatest($1::uuid, $2::uuid)
 		                           AND last_at = $3`,
-			dana, eli, held.at); got != 1 {
+			dana, eli, held.At); got != 1 {
 			t.Errorf("%s: the contact edge's last_at is not the held meeting — a canceled one is no interaction", path)
 		}
 	}
@@ -161,8 +123,8 @@ func TestACanceledMeetingIsNoDealEngagement(t *testing.T) {
 		t.Fatalf("seating the stakeholder: %v", err)
 	}
 	logMail(t, e, contact, "inbound", now.AddDate(0, 0, -3))
-	pitch := foldMeeting{event: "evt-fold-pitch", at: now.AddDate(0, 0, -2), direction: "outbound", links: contactLink(contact)}
-	pitch.capture(t, e)
+	pitch := integration.CalendarMeeting{Event: "evt-fold-pitch", At: now.AddDate(0, 0, -2), Direction: "outbound", Links: contactLink(contact)}
+	pitch.Capture(t, e)
 
 	engaged := func() bool {
 		var found []ids.UUID
@@ -176,7 +138,7 @@ func TestACanceledMeetingIsNoDealEngagement(t *testing.T) {
 	if !engaged() {
 		t.Fatal("their reply and our booked meeting do not engage the stakeholder — the case below proves nothing")
 	}
-	pitch.cancel(t, e)
+	pitch.Cancel(t, e)
 	if engaged() {
 		t.Error("a canceled meeting still counts as our side of the exchange")
 	}
@@ -188,10 +150,10 @@ func TestACanceledMeetingIsNotTheGhostedScansNewestInteraction(t *testing.T) {
 	company := e.SeedCompany(t, "Fold Ghost Co", nil)
 	e.WsExec(t, `UPDATE company SET lifecycle = 'opportunity' WHERE id = $1`, company)
 	contact := employedAt(t, e, company, "Gale Ghost")
-	foldMeeting{event: "evt-fold-theirs", at: now.AddDate(0, 0, -20), direction: "inbound", links: contactLink(contact)}.
-		capture(t, e)
-	ours := foldMeeting{event: "evt-fold-ours", at: now.AddDate(0, 0, -16), direction: "outbound", links: contactLink(contact)}
-	ours.capture(t, e)
+	integration.CalendarMeeting{Event: "evt-fold-theirs", At: now.AddDate(0, 0, -20), Direction: "inbound", Links: contactLink(contact)}.
+		Capture(t, e)
+	ours := integration.CalendarMeeting{Event: "evt-fold-ours", At: now.AddDate(0, 0, -16), Direction: "outbound", Links: contactLink(contact)}
+	ours.Capture(t, e)
 
 	ghosted := func() bool {
 		var found []ghostedCandidate
@@ -205,7 +167,7 @@ func TestACanceledMeetingIsNotTheGhostedScansNewestInteraction(t *testing.T) {
 	if !ghosted() {
 		t.Fatal("our unanswered meeting does not read as ghosted — the case below proves nothing")
 	}
-	ours.cancel(t, e)
+	ours.Cancel(t, e)
 	if ghosted() {
 		t.Error("a canceled meeting is still the account's newest interaction, so the account reads as ghosted")
 	}
@@ -217,8 +179,8 @@ func TestACanceledMeetingIsNotTheAccountsNewestMessage(t *testing.T) {
 	acct := quietAccount{company: ids.From[ids.CompanyKind](company), now: time.Now().UTC()}
 	acct.contact = employedAt(t, e, company, "Rae Reply")
 	logMail(t, e, acct.contact, "outbound", acct.now.AddDate(0, 0, -10))
-	chat := foldMeeting{event: "evt-fold-chat", at: acct.now.AddDate(0, 0, -2), links: contactLink(acct.contact)}
-	chat.capture(t, e)
+	chat := integration.CalendarMeeting{Event: "evt-fold-chat", At: acct.now.AddDate(0, 0, -2), Links: contactLink(acct.contact)}
+	chat.Capture(t, e)
 
 	asksForAReply := func() bool {
 		page := pageOf(t, e, acct)
@@ -232,7 +194,7 @@ func TestACanceledMeetingIsNotTheAccountsNewestMessage(t *testing.T) {
 	if asksForAReply() {
 		t.Fatal("a meeting after our mail still reads as no reply — the case below proves nothing")
 	}
-	chat.cancel(t, e)
+	chat.Cancel(t, e)
 	if !asksForAReply() {
 		t.Error("a canceled meeting still answers our mail, so the no-reply suggestion never fires")
 	}
@@ -242,12 +204,12 @@ func TestACanceledMeetingIsNoFollowUpEvidence(t *testing.T) {
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Fold follow-up", e.pipeline, e.open, &e.Rep1)
 	e.seedInteraction(t, deal, "call", "Discovery call", 5)
-	called := foldMeeting{
-		event: "evt-fold-review", at: time.Now().UTC().Add(-2 * time.Hour),
-		links: []datasource.EntityRef{{Type: "deal", ID: deal}},
+	called := integration.CalendarMeeting{
+		Event: "evt-fold-review", At: time.Now().UTC().Add(-2 * time.Hour),
+		Links: []datasource.EntityRef{{Type: "deal", ID: deal}},
 	}
-	called.capture(t, e.Env)
-	called.cancel(t, e.Env)
+	called.Capture(t, e.Env)
+	called.Cancel(t, e.Env)
 
 	if err := e.reconcile(); err != nil {
 		t.Fatal(err)
@@ -258,5 +220,43 @@ func TestACanceledMeetingIsNoFollowUpEvidence(t *testing.T) {
 	if _, proposal := e.followUpApproval(t, deal); proposal.EvidenceKind != "call" {
 		t.Errorf("the follow-up cites a %q, want the call — a canceled meeting left no conversation behind",
 			proposal.EvidenceKind)
+	}
+}
+
+func TestACanceledMeetingIsNotADealSidesLastWord(t *testing.T) {
+	e := integration.Setup(t)
+	pipeline, open, _ := integration.DealFixture(t, e)
+	dealUUID := e.SeedDeal(t, "Fold quiet deal", pipeline, open, nil)
+	deal := ids.From[ids.DealKind](dealUUID)
+	onDeal := []datasource.EntityRef{{Type: "deal", ID: dealUUID}}
+	now := time.Now().UTC()
+	subject, outbound, sent := "Terms", "outbound", now.AddDate(0, 0, -6)
+	if _, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+		Kind: "email", Subject: &subject, Direction: &outbound, OccurredAt: &sent, Source: "manual",
+		Links: []activities.ActivityLinkInput{{EntityType: "deal", EntityID: dealUUID}},
+	}); err != nil {
+		t.Fatalf("logging our mail: %v", err)
+	}
+	invite := integration.CalendarMeeting{Event: "evt-fold-quiet", At: now.AddDate(0, 0, -2), Direction: outbound, Links: onDeal}
+	invite.Capture(t, e)
+
+	lastOutboundKind := func() string {
+		var facts deals.QuietFacts
+		inWorkspaceTx(t, e, func(tx pgx.Tx) error {
+			var err error
+			facts, err = deals.ReadQuietFacts(e.Admin(), tx, deal)
+			return err
+		})
+		if facts.LastOutbound == nil {
+			t.Fatal("the deal has no outbound side at all")
+		}
+		return facts.LastOutbound.Kind
+	}
+	if got := lastOutboundKind(); got != "meeting" {
+		t.Fatalf("our last word = %q before the cancel, want the meeting — the case below proves nothing", got)
+	}
+	invite.Cancel(t, e)
+	if got := lastOutboundKind(); got != "email" {
+		t.Errorf("our last word = %q, want the mail — a canceled meeting said nothing", got)
 	}
 }

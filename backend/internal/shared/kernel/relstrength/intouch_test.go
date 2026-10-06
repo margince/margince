@@ -89,6 +89,24 @@ func TestTheCountingRuleRefusesMeetingsThatDidNotHappen(t *testing.T) {
 	}
 }
 
+// The Go predicate and the SQL one answer every meeting status alike.
+func TestTheGoAndSQLMeetingRulesAgree(t *testing.T) {
+	t.Parallel()
+	meeting := MeetingCountsSQL("a")
+	for _, status := range []string{"booked", "held", "canceled", "no_show"} {
+		inSQL := strings.Contains(meeting, "'"+status+"'")
+		if MeetingStatusCounts(status) != inSQL {
+			t.Errorf("status %q: Go counts it = %v, SQL %q admits it = %v", status, !inSQL, meeting, inSQL)
+		}
+	}
+	if !MeetingStatusCounts("") || !strings.Contains(meeting, "IS NULL") {
+		t.Error("an untracked meeting must count in both rules")
+	}
+	if InteractionCounts("meeting", "canceled") || !InteractionCounts("email", "") || InteractionCounts("note", "") {
+		t.Error("InteractionCounts must refuse a canceled meeting and a note, and admit an email")
+	}
+}
+
 func optionalDaysAgo(n int) *time.Time {
 	if n < 0 {
 		return nil
