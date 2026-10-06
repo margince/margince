@@ -35,6 +35,7 @@
    any list, and the exception is what a reader is scanning for. */
 .visibility-limited {
   background: var(--bgChip);
+  color: var(--textPrimary);
   border-color: var(--borderStrong);
 }
 
