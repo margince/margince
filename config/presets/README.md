@@ -54,10 +54,9 @@ Commit the records only together with the same `thinking_level:` in
 weights that host serves. `openrouter_cloud.yaml` instead picks the best model
 per tier. `premium` is Mistral's flagship, `mistral-medium-3-5`. `frontier` is
 `mistral-small-2603`, so premium's fallback reaches a different upstream
-endpoint. Every lane, embeddings included, must name an EU-region endpoint in
+endpoint. Every lane, embeddings included, names an EU-region endpoint in
 `only:`, because an unpinned lane or a `routing: {}` lets the broker serve the
-model from any region. `TestAResidencyPresetPinsEveryLaneToAnEURegion` enforces
-this for any preset whose name ends in `_eu.yaml`.
+model from any region.
 
 `openrouter_cloud.yaml` cannot serve `document_extract`: that task sends a PDF,
 and the OpenAI-compatible wire's declarable carriage is text and image only. A

@@ -154,10 +154,7 @@ func TestTheSchemaAndTheParserAgreeOnEveryUpstreamRoutingDeclaration(t *testing.
 	sch := compiledRoutingSchema(t)
 
 	const broker = "provider: openai_compatible, model: m, base_url: 'https://openrouter.ai/api'"
-	// cloud_frontier, because this compares the per-binding shape. Under
-	// eu_hosted the parser also asks every broker lane for an EU `only:` pin —
-	// a rule across the profile and each lane that ai.EURegionPinGap owns, and
-	// that the editor schema does not repeat.
+	// cloud_frontier, because this compares the per-binding shape.
 	tiered := func(binding string) string {
 		return "profile: cloud_frontier\ntiers:\n  premium: {" + binding + "}\nembeddings: {provider: gemini, model: e}\n"
 	}

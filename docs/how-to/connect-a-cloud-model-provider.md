@@ -238,13 +238,10 @@ instead of stored. If Google cannot be asked at that moment, the save goes
 through and the API logs a warning naming the unchecked binding: an outage at
 Google does not block routing edits.
 
-**What `eu_hosted` enforces on Vertex.** Every `gemini_vertex` tier and
-embeddings lane must name an EU location. Any other is refused when the routing
-is saved (or at boot, from a seed) with the tier named, and model discovery
-refuses a non-EU location before it makes any call. The guarantee covers **AI
-inference only**. Connectors, enrichment and mail reach their own services
-whatever the profile says, and the certification judge (`make e2e-ai` `JUDGE=`)
-is not profile-checked because its corpus is synthetic.
+**Scope of the guarantee.** It covers **AI inference only**. Connectors,
+enrichment and mail reach their own services whatever the profile says, and the
+certification judge (`make e2e-ai` `JUDGE=`) is not profile-checked because its
+corpus is synthetic.
 
 ## The sovereign profile refuses every cloud provider
 

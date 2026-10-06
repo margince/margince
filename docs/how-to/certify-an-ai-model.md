@@ -61,11 +61,9 @@ See also [ai-runtime.md](../explanation/ai-runtime.md), [connect-a-cloud-model-p
    ```
 
    `PROFILE=` names the environment class a record is filed under
-   (`cloud_frontier`, the default, `eu_hosted` or `sovereign`). It is enforced:
-   `sovereign` refuses a cloud candidate (not the judge), and `eu_hosted` refuses
-   a broker candidate that `UPSTREAM=` does not pin to EU hosts
-   (`{"only":["mistral/eu"]}`). Under `ROUTING=` it is **ignored**: a record's
-   profile is part of its identity, so it comes from the file that named the
+   (`cloud_frontier`, the default, `eu_hosted` or `sovereign`). `sovereign`
+   refuses a cloud candidate (not the judge). Under `ROUTING=` it is **ignored**:
+   a record's profile is part of its identity, so it comes from the file that named the
    models.
 
 2. The provider's **BYOK key in the environment**, e.g. `GEMINI_API_KEY`,

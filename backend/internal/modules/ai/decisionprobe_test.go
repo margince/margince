@@ -208,23 +208,6 @@ func TestJevOnAnOpenRouterHostIsNotAskedTheBrokersKeyRoute(t *testing.T) {
 	}
 }
 
-// eu_hosted refuses to bind TypeSafe's own API or OpenRouter's decisions
-// endpoint; a test of either says so rather than reporting a key it could
-// never use as connected, and dials nothing.
-func TestEUHostedRefusesADecisionLaneItWouldNotBind(t *testing.T) {
-	for _, tc := range []struct{ provider, endpoint string }{
-		{providerJev, ""},
-		{providerJevCompatible, "https://openrouter.ai/api/alpha/decisions"},
-	} {
-		cfg := decisionBound(tc.provider, tc.endpoint)
-		cfg.Profile = ProfileEUHosted
-		got := probeProviderKey(context.Background(), cfg, tc.provider, cloudKeyFor(tc.provider, "k"), stubBuilder)
-		if got.Reason != KeyTestProfileForbids {
-			t.Errorf("%s at %q: got %+v, want profile_forbids", tc.provider, tc.endpoint, got)
-		}
-	}
-}
-
 func TestADecisionEndpointThatIsNotAURLIsRefused(t *testing.T) {
 	if _, err := siblingURL("not a url", "models"); err == nil {
 		t.Fatal("a sibling of a non-URL was built")

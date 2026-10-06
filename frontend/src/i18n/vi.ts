@@ -753,7 +753,6 @@ export const vi = {
   "brief.readings.unavailable.decisions": "Nguồn không khả dụng",
   "brief.feed.incomplete":
     "Chưa tải được mục nào. Không thể kiểm tra một phần công việc.",
-  "brief.feed.fullWorklist": "Mở danh sách công việc đầy đủ",
   "brief.week.workRecorded": "Có công việc hoàn thành trong tuần.",
   "brief.week.leads_one": "Đã phân công {count} khách hàng tiềm năng.",
   "brief.week.leads_other": "Đã phân công {count} khách hàng tiềm năng.",
@@ -1129,6 +1128,10 @@ export const vi = {
   "deal.undated": "chưa có ngày chốt",
   "deal.lastMail": "Email gần nhất",
   "deal.mail.title": "Các email trước",
+  "deal.openDeal": "Mở deal",
+  "deal.card.summary": "Tóm tắt deal: {name}",
+  "deal.card.email": "Viết email: {name}",
+  "deal.card.addTask": "Thêm công việc: {name}",
   "deal.mail.sent": "Đã gửi {ago}",
   "deal.mail.received": "Đã nhận {ago}",
   "deal.mail.none": "Chưa có email nào về deal này",
@@ -9162,10 +9165,6 @@ export const vi = {
     "Không đọc được tệp. Hãy chọn lại, hoặc dán nội dung của nó.",
   "aiRouting.location.label": "Vị trí",
   "aiRouting.location.help": "Nơi Google xử lý các lệnh gọi của làn này.",
-  "aiRouting.location.residentHelp":
-    "Hồ sơ eu_hosted chỉ chấp nhận các vị trí được đánh dấu lưu trú EU.",
-  "aiRouting.location.forbidden":
-    "Vị trí này nằm ngoài EU, nên hồ sơ eu_hosted từ chối nó. Hãy chọn một vị trí lưu trú EU.",
   "aiRouting.location.loading":
     "Đang hỏi Google khóa này truy cập được những vị trí nào…",
   "aiRouting.location.noKey":
@@ -9182,7 +9181,6 @@ export const vi = {
   "aiRouting.location.group.global": "Toàn cầu",
   "aiRouting.location.resident": "Lưu trú EU",
   "aiRouting.location.nonResident": "Không lưu trú",
-  "aiRouting.location.notResident": "ngoài EU",
   "aiRouting.probe.checking":
     "Đang kiểm tra {location} có phục vụ mô hình này không…",
   "aiRouting.probe.served": "Được phục vụ tại {location}.",

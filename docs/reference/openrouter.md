@@ -135,9 +135,8 @@ it; the embeddings lane may state its own. The serving keys stay on each tier's
 `routing:`, because two models behind one broker need different answers.
 [openrouter-routing-fields.md](openrouter-routing-fields.md) lists every field.
 OpenRouter's EU address, `https://eu.openrouter.ai/api` (Business or Enterprise
-plan), keeps every request in the EU, so `eu_hosted` needs no pin on it. On the
-global address a preset ending in `_eu.yaml` must pin every lane to an
-EU-region slug, which `TestAResidencyPresetPinsEveryLaneToAnEURegion` holds.
+plan), keeps every request in the EU and needs no pin. On the global address,
+pin `only` to an EU-region slug on the connection.
 
 ## 3b. Validated through the config path
 
@@ -355,6 +354,6 @@ block whose lane endpoint is lifted:
 ```
 
 `JEV_COMPATIBLE_API_KEY` carries the OpenRouter key (the `OPENAI_COMPATIBLE_API_KEY`
-value). It takes no `routing:` preferences, so `eu_hosted` refuses it. A bound lane
+value). It takes no `routing:` preferences. A bound lane
 answers only the sites certified for it; the rest go to the ladder
 ([ai-runtime.md](../explanation/ai-runtime.md#the-decision-lane)).

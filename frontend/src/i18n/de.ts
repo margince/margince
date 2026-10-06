@@ -763,7 +763,6 @@ export const de = {
   "brief.readings.unavailable.decisions": "Quelle nicht verfügbar",
   "brief.feed.incomplete":
     "Keine Einträge geladen. Ein Teil der Arbeit konnte nicht geprüft werden.",
-  "brief.feed.fullWorklist": "Vollständige Worklist öffnen",
   "brief.week.workRecorded": "Diese Woche wurde Arbeit erledigt.",
   "brief.week.leads_one": "{count} Lead zugewiesen.",
   "brief.week.leads_other": "{count} Leads zugewiesen.",
@@ -1144,6 +1143,10 @@ export const de = {
   "deal.undated": "kein Abschlussdatum",
   "deal.lastMail": "Letzte E-Mail",
   "deal.mail.title": "Bisherige E-Mails",
+  "deal.openDeal": "Deal öffnen",
+  "deal.card.summary": "Deal-Zusammenfassung: {name}",
+  "deal.card.email": "E-Mail schreiben: {name}",
+  "deal.card.addTask": "Aufgabe hinzufügen: {name}",
   "deal.mail.sent": "Gesendet {ago}",
   "deal.mail.received": "Erhalten {ago}",
   "deal.mail.none": "Noch keine E-Mail zu diesem Deal",
@@ -9256,10 +9259,6 @@ export const de = {
   "aiRouting.location.label": "Standort",
   "aiRouting.location.help":
     "Wo Google die Aufrufe dieser Strecke verarbeitet.",
-  "aiRouting.location.residentHelp":
-    "Das Profil eu_hosted lässt nur die als EU-resident markierten Standorte zu.",
-  "aiRouting.location.forbidden":
-    "Dieser Standort liegt außerhalb der EU, daher lehnt das Profil eu_hosted ihn ab. Wähle einen EU-residenten Standort.",
   "aiRouting.location.loading":
     "Google wird gefragt, welche Standorte dieser Schlüssel erreicht…",
   "aiRouting.location.noKey":
@@ -9276,7 +9275,6 @@ export const de = {
   "aiRouting.location.group.global": "Global",
   "aiRouting.location.resident": "EU-resident",
   "aiRouting.location.nonResident": "Nicht resident",
-  "aiRouting.location.notResident": "außerhalb der EU",
   "aiRouting.probe.checking":
     "Es wird geprüft, ob {location} dieses Modell bedient…",
   "aiRouting.probe.served": "Wird in {location} bedient.",

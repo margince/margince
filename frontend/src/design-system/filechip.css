@@ -23,6 +23,7 @@
   padding: 2px 5px;
   border-radius: var(--r-xs);
   background: var(--bgChip);
+  color: var(--textPrimary);
 }
 /* The name truncates rather than running the row wide: a scanned filename can
    be sixty characters, and the row it sits in carries other facts. */
