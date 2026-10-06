@@ -28,3 +28,13 @@
   padding-block: var(--space-3) 0;
   border-top: 1px solid var(--borderSubtle);
 }
+
+/* In the drawer the form fills the body, so its verbs sit at the foot. */
+.rates-price-drawer > * {
+  display: flex;
+  flex-direction: column;
+  min-block-size: 100%;
+}
+.rates-price-drawer .rates-manual-actions {
+  margin-top: auto;
+}

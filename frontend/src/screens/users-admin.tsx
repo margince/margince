@@ -248,13 +248,13 @@ function InviteAction({ canIssueLink }: Readonly<{ canIssueLink: boolean }>) {
         open={open}
         onClose={() => setOpen(false)}
         labelledBy={formTitleId}
+        intent="form"
       >
         <InviteUserForm
           titleId={formTitleId}
           onInvited={(member) => {
-            // The dialog closes on the write that landed, never before it: a
-            // refused invite has to leave the address and the name where the
-            // admin typed them.
+            // Closes on the write that landed: a refused invite keeps what the
+            // admin typed.
             setOpen(false);
             qc.invalidateQueries({ queryKey: ["users-admin"] });
             // An invite spends a seat, so the capacity readings move with it.

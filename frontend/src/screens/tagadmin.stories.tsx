@@ -172,3 +172,17 @@ export const Merged: Story = {
     await body.findByRole("heading", { name: "Merged" });
   },
 };
+
+/** Editing a word: its name and its colour, committed together. */
+export const EditingTag: Story = {
+  render: () => <Card />,
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    const row = (await body.findByText("Churn Risk")).closest("li");
+    if (!row) {
+      throw new Error("the Churn Risk word is not drawn as a list row");
+    }
+    await userEvent.click(within(row).getByRole("button", { name: "Edit" }));
+    await body.findByRole("dialog", { name: "Edit tag" });
+  },
+};

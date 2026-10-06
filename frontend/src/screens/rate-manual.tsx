@@ -7,6 +7,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { ComboBox } from "../design-system/combobox";
+import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
@@ -22,6 +23,7 @@ import {
 } from "./ai-models";
 import { DECISION_PROVIDERS, PROVIDERS } from "./ai-routing-fields";
 import { problemMessageOf, throwProblem, WriteRefused } from "./common";
+import "./rates.css";
 
 type SheetRow = components["schemas"]["AiModelRate"];
 type PriceWrite = components["schemas"]["SetAiModelRateRequest"];
@@ -45,11 +47,15 @@ export function ModelPriceDialog({
   const t = useT();
   const labelId = useId();
   return (
-    <Modal open onClose={onClose} labelledBy={labelId}>
-      <Heading size="large" id={labelId} className="t-h2 modal-title">
-        {t("settings.rates.modelModalTitle")}
-      </Heading>
-      <PriceForm onDone={onClose} onCancel={onClose} />
+    <Modal open onClose={onClose} labelledBy={labelId} intent="drawer">
+      <DrawerHead>
+        <Heading size="large" id={labelId} className="t-h2 modal-title">
+          {t("settings.rates.modelModalTitle")}
+        </Heading>
+      </DrawerHead>
+      <DrawerBody className="rates-price-drawer">
+        <PriceForm onDone={onClose} onCancel={onClose} />
+      </DrawerBody>
     </Modal>
   );
 }

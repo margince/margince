@@ -3,7 +3,7 @@
 
 import { useMutation } from "@tanstack/react-query";
 import { UserPlus } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useHoldsAdminRole } from "../app/capability";
@@ -66,6 +66,7 @@ export function InviteUserForm({
   onInvited: (member: InvitedMember) => void;
 }>) {
   const t = useT();
+  const formId = useId();
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [greeting, setGreeting] = useState("");
@@ -130,129 +131,136 @@ export function InviteUserForm({
     !invite.isPending;
 
   return (
-    // A real <form>, so Enter submits it — and the house dialog stack, so the
-    // fields sit on the same rhythm as every other settings dialog.
-    <form
-      className="form-stack"
-      onSubmit={(e) => {
-        e.preventDefault();
-        if (canInvite) {
-          invite.mutate({
-            role,
-            teams: placesOnTeams ? teamIds : [],
-            greeting: greetingName,
-          });
-        }
-      }}
-    >
+    <>
       {titleId !== undefined && (
-        <>
-          <Heading size="large" className="t-h3" id={titleId}>
-            {t("users.inviteTitle")}
-          </Heading>
-          <p>{t("users.inviteSub")}</p>
-        </>
+        <Heading size="large" className="t-h3 modal-title" id={titleId}>
+          {t("users.inviteTitle")}
+        </Heading>
       )}
-      <Field label={t("users.emailLabel")} required>
-        {(control) => (
-          <TextInput
-            {...control}
-            placeholder={t("users.emailPlaceholder")}
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        )}
-      </Field>
-      {askName && (
-        <Field label={t("users.nameLabel")} required>
+      {/* A real <form>, so Enter submits it; the title above and the action
+          row below sit outside it so a dialog can pin both while it scrolls. */}
+      <form
+        id={formId}
+        className="form-stack"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (canInvite) {
+            invite.mutate({
+              role,
+              teams: placesOnTeams ? teamIds : [],
+              greeting: greetingName,
+            });
+          }
+        }}
+      >
+        {titleId !== undefined && <p>{t("users.inviteSub")}</p>}
+        <Field label={t("users.emailLabel")} required>
           {(control) => (
             <TextInput
               {...control}
-              placeholder={t("users.namePlaceholder")}
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              placeholder={t("users.emailPlaceholder")}
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
             />
           )}
         </Field>
-      )}
-      {askName && (
-        <Field label={t("users.greetingLabel")} hint={t("users.greetingHint")}>
-          {(control) => (
-            <TextInput
-              {...control}
-              value={greeting}
-              onChange={(e) => setGreeting(e.target.value)}
-            />
-          )}
-        </Field>
-      )}
-      <Field label={t("users.roleLabel")}>
-        {(control) => (
-          <Select
-            {...control}
-            value={offersRole ? role : ""}
-            placeholder={t("users.setRole")}
-            disabled={assignable.isPending}
-            onChange={setRole}
-            options={roleOptions(t, offered)}
-          />
+        {askName && (
+          <Field label={t("users.nameLabel")} required>
+            {(control) => (
+              <TextInput
+                {...control}
+                placeholder={t("users.namePlaceholder")}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            )}
+          </Field>
         )}
-      </Field>
-      {placesOnTeams && (
-        <>
-          {/* The teams the member joins on arrival. A team-scoped role with no
+        {askName && (
+          <Field
+            label={t("users.greetingLabel")}
+            hint={t("users.greetingHint")}
+          >
+            {(control) => (
+              <TextInput
+                {...control}
+                value={greeting}
+                onChange={(e) => setGreeting(e.target.value)}
+              />
+            )}
+          </Field>
+        )}
+        <Field label={t("users.roleLabel")}>
+          {(control) => (
+            <Select
+              {...control}
+              value={offersRole ? role : ""}
+              placeholder={t("users.setRole")}
+              disabled={assignable.isPending}
+              onChange={setRole}
+              options={roleOptions(t, offered)}
+            />
+          )}
+        </Field>
+        {placesOnTeams && (
+          <>
+            {/* The teams the member joins on arrival. A team-scoped role with no
               team edits only its own records, and the preview below says so
               before the invite goes out. */}
-          <fieldset className="users-invite-teams">
-            <legend className="t-name">{t("users.teamsLabel")}</legend>
-            {(teams.data ?? []).flatMap((entry) =>
-              "name" in entry ? (
-                <Checkbox
-                  key={entry.id}
-                  className="t-body"
-                  label={entry.name}
-                  checked={teamIds.includes(entry.id)}
-                  onChange={(event) =>
-                    setTeamIds((current) =>
-                      event.target.checked
-                        ? [...current, entry.id]
-                        : current.filter((id) => id !== entry.id),
-                    )
-                  }
-                />
-              ) : (
-                []
-              ),
-            )}
-            {/* "No teams yet" is a claim about the workspace, so only a roster
+            <fieldset className="users-invite-teams">
+              <legend className="t-name">{t("users.teamsLabel")}</legend>
+              {(teams.data ?? []).flatMap((entry) =>
+                "name" in entry ? (
+                  <Checkbox
+                    key={entry.id}
+                    className="t-body"
+                    label={entry.name}
+                    checked={teamIds.includes(entry.id)}
+                    onChange={(event) =>
+                      setTeamIds((current) =>
+                        event.target.checked
+                          ? [...current, entry.id]
+                          : current.filter((id) => id !== entry.id),
+                      )
+                    }
+                  />
+                ) : (
+                  []
+                ),
+              )}
+              {/* "No teams yet" is a claim about the workspace, so only a roster
                 read to its end may make it: a walk that stopped early would have
                 an admin invite contacts into no team at all on the strength of
                 pages nothing read. */}
-            {teams.data?.length === 0 && !teamsPartial && (
-              <p>{t("users.noTeamsYet")}</p>
-            )}
-            <RosterPartialNote partial={teamsPartial} />
-          </fieldset>
-        </>
-      )}
-      {offersRole && <AccessPreviewPanel role={role} teamIds={teamIds} />}
-      {/* ABOVE the submit row, where the sibling dialogs in this family put a
+              {teams.data?.length === 0 && !teamsPartial && (
+                <p>{t("users.noTeamsYet")}</p>
+              )}
+              <RosterPartialNote partial={teamsPartial} />
+            </fieldset>
+          </>
+        )}
+        {offersRole && <AccessPreviewPanel role={role} teamIds={teamIds} />}
+        {/* ABOVE the submit row, where the sibling dialogs in this family put a
           refusal: under the button it reads as a footnote to the form rather
           than as the answer to the press. */}
-      {error && (
-        <Callout tone="danger" kind="outcome" title={t("users.inviteFailed")}>
-          {error}
-        </Callout>
-      )}
-      {/* `.form-actions` rather than a bare button: `.form-stack` stretches
-          its children, and a submit that fills the dialog reads as a banner
-          rather than as the move the form is for. */}
-      <div className="form-actions">
-        <Button variant="primary" type="submit" disabled={!canInvite}>
+        {error && (
+          <Callout tone="danger" kind="outcome" title={t("users.inviteFailed")}>
+            {error}
+          </Callout>
+        )}
+      </form>
+      {/* `.form-actions` lays the row out where no dialog's `.actions` does. */}
+      <div className="actions form-actions">
+        <Button
+          variant="primary"
+          type="submit"
+          form={formId}
+          disabled={!canInvite}
+        >
           <UserPlus aria-hidden /> {t("users.invite")}
         </Button>
       </div>
-    </form>
+    </>
   );
 }

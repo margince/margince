@@ -348,6 +348,7 @@ function TagDialog({
       open
       onClose={onClose}
       title={existing ? t("tagAdmin.editTitle") : t("tagAdmin.addTitle")}
+      intent="form"
       confirmLabel={existing ? t("tagAdmin.save") : t("tagAdmin.create")}
       confirmDisabled={name.trim() === "" || unversioned}
       pending={pending}
@@ -431,21 +432,26 @@ function MergeDialog({
 
   if (result) {
     return (
-      <Modal open onClose={onClose} labelledBy="tagadmin-merged">
-        <div className="form-stack">
-          <Heading size="large" id="tagadmin-merged">
-            {t("tagAdmin.mergedTitle")}
-          </Heading>
-          {/* Moved and collapsed are counted apart because they are different
-              facts: a record that carried only the source now carries the
-              target, while a record that carried both simply loses a duplicate
-              — and adding them would report records the target did not gain. */}
-          <p>
-            {t("tagAdmin.mergedBody", {
-              moved: formatNumber(result.moved, locale),
-              collapsed: formatNumber(result.collapsed, locale),
-            })}
-          </p>
+      <Modal
+        open
+        onClose={onClose}
+        labelledBy="tagadmin-merged"
+        intent="confirm"
+      >
+        <Heading size="large" id="tagadmin-merged" className="t-h2 modal-title">
+          {t("tagAdmin.mergedTitle")}
+        </Heading>
+        {/* Moved and collapsed are counted apart because they are different
+            facts: a record that carried only the source now carries the
+            target, while a record that carried both simply loses a duplicate
+            — and adding them would report records the target did not gain. */}
+        <p>
+          {t("tagAdmin.mergedBody", {
+            moved: formatNumber(result.moved, locale),
+            collapsed: formatNumber(result.collapsed, locale),
+          })}
+        </p>
+        <div className="actions">
           <Button onClick={onClose}>{t("tagAdmin.done")}</Button>
         </div>
       </Modal>

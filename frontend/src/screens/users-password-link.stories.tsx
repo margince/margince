@@ -47,7 +47,7 @@ export const Minted: Story = {
 // 20rem does not fit a 390px phone, so the wrap is load-bearing — and the link is
 // a live account-takeover credential the admin has to read off the screen to
 // dictate, so a URL clipped by an overflowing row is the failure that matters
-// here. The modal is `size="wide"`, which is the other half of the question.
+// here. On a phone the confirm stays a card over the scrim, narrower still.
 export const MintedPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
