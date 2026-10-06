@@ -99,6 +99,10 @@ func sqlLiterals(t *testing.T, path string) []string {
 var erasureCascadeFiles = []string{
 	"internal/modules/privacy/reportingredaction.go",
 	"internal/modules/privacy/erasure.go",
+	// The per-reader brief cache, which both acts purge: the row holds
+	// generated prose about the subject and no cascade reaches it while the
+	// contact row survives anonymized.
+	"internal/modules/privacy/erasurebriefcache.go",
 	// The subject's TIMELINE and everything derived from it — split out of
 	// erasure.go when that file crossed the size cap. It is the same Art. 17
 	// transaction, so it counts here; leaving it off would let a table look
