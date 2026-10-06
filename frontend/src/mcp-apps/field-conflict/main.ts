@@ -36,7 +36,18 @@ type Outcome =
   | { kind: "approved"; reason?: string }
   | { kind: "failed"; reason: string };
 
-const decided = new WeakMap<HTMLElement, Outcome>();
+// What the reader decided, per document root and keyed by the approval, so a
+// later conflict drawn into the same frame starts undecided.
+const decided = new WeakMap<HTMLElement, Map<string, Outcome>>();
+
+function outcomesOf(root: HTMLElement): Map<string, Outcome> {
+  let found = decided.get(root);
+  if (found === undefined) {
+    found = new Map();
+    decided.set(root, found);
+  }
+  return found;
+}
 
 /** shown renders a stored value as the text a reader sees. */
 function shown(value: unknown): string {
@@ -99,8 +110,9 @@ export function render(
   const conflict = conflictOf(data);
   if (conflict === null) return;
   const again = () => render(root, data, warnings);
+  const outcomes = outcomesOf(root);
   const set = (next: Outcome) => {
-    decided.set(root, next);
+    outcomes.set(conflict.approvalID, next);
     again();
   };
   const card = panel("Edited by hand", { level: "h1" });
@@ -112,7 +124,7 @@ export function render(
       "The rest of the change was applied. These fields were last edited by hand, so the change is waiting for your answer.",
     ),
     table(conflict),
-    choices(conflict, decided.get(root), set),
+    choices(conflict, outcomes.get(conflict.approvalID), set),
   );
   card.appendChild(body);
   root.appendChild(card);
@@ -186,7 +198,13 @@ async function use(
     decision: "approve",
   });
   if (!result.ok) {
-    set({ kind: "failed", reason: result.reason });
+    // A call the host never answered may have approved: offer the finishing
+    // step instead of a retry that would meet "already answered".
+    set(
+      result.unknown === true
+        ? { kind: "approved", reason: result.reason }
+        : { kind: "failed", reason: result.reason },
+    );
     return;
   }
   await finish(conflict, set);

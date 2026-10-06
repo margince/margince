@@ -6,10 +6,9 @@ package compose
 import (
 	"context"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -22,8 +21,8 @@ const notADuplicate = "not_a_duplicate"
 type duplicateQueue struct{ store *contacts.Store }
 
 //nolint:ireturn // the seam is an interface by design: agents may not import the contacts module
-func duplicateQueueSeam(pool *pgxpool.Pool) agents.DuplicateQueue {
-	return duplicateQueue{store: contacts.NewStore(InstallationDB(pool))}
+func duplicateQueueSeam(db *database.DB) agents.DuplicateQueue {
+	return duplicateQueue{store: contacts.NewStore(db)}
 }
 
 func (q duplicateQueue) Dismiss(ctx context.Context, candidate ids.UUID) (agents.DuplicateVerdict, error) {

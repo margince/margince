@@ -193,3 +193,9 @@ ol {
 .refusal {
   color: var(--textSecondary);
 }
+
+.evidence-list {
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}

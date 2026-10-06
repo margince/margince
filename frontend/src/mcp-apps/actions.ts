@@ -15,10 +15,11 @@ import { asRecord, asText, asWarnings, type Warning } from "./types";
 export const CALL_TIMEOUT_MS = 30_000;
 
 /** What a click came to. `reason` is the server's own refusal text where it
- *  gave one, shown as text and never parsed. */
+ *  gave one, shown as text and never parsed. `unknown` marks a call whose
+ *  outcome the host never reported: the write may have landed. */
 export type ActionOutcome =
   | { ok: true; data: unknown; warnings: Warning[] }
-  | { ok: false; reason: string };
+  | { ok: false; reason: string; unknown?: true };
 
 type Pending = {
   resolve: (outcome: ActionOutcome) => void;
@@ -66,7 +67,12 @@ export function callServerTool(
   return new Promise((resolve) => {
     const timer = setTimeout(() => {
       pending.delete(id);
-      resolve({ ok: false, reason: "The host did not answer in time." });
+      resolve({
+        ok: false,
+        reason:
+          "The host did not answer in time, so the change may have gone through.",
+        unknown: true,
+      });
     }, CALL_TIMEOUT_MS);
     pending.set(id, { resolve, timer });
     sendToHost({

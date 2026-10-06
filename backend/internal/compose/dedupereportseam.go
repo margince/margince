@@ -39,32 +39,19 @@ func openDuplicatesFor(pool *pgxpool.Pool) agents.OpenDuplicatesFor {
 		}
 		out := make([]agents.DuplicateCandidate, 0, len(rows))
 		for _, r := range rows {
-			other, createdIsLeft := r.RightID, r.LeftID == id
-			if !createdIsLeft {
+			other := r.RightID
+			if other == id {
 				other = r.LeftID
 			}
 			out = append(out, agents.DuplicateCandidate{
 				CandidateID:   r.ID.String(),
 				OtherRecordID: other.String(),
 				Confidence:    r.Confidence,
-				Evidence:      orientEvidence(decodeEvidence(r.Evidence), createdIsLeft),
+				Evidence:      decodeEvidence(r.Evidence),
 			})
 		}
 		return out, nil
 	}
-}
-
-// orientEvidence makes Left the value on the record this call created and Right
-// the one already here, whichever side of the stored pair each sat on, so a
-// caller reading a row never has to work out which half is its own.
-func orientEvidence(rows []agents.DuplicateEvidence, createdIsLeft bool) []agents.DuplicateEvidence {
-	if createdIsLeft {
-		return rows
-	}
-	for i := range rows {
-		rows[i].Left, rows[i].Right = rows[i].Right, rows[i].Left
-	}
-	return rows
 }
 
 // decodeEvidence renders the stored snapshot for the wire.

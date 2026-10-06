@@ -5,7 +5,6 @@ package auth
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -29,7 +28,7 @@ import (
 func RequireActingForAHuman(ctx context.Context, what string) error {
 	p, ok := principal.Actor(ctx)
 	if !ok {
-		return errors.New("no actor bound to context")
+		return fmt.Errorf("no actor is bound to this call: %w", apperrors.ErrPermissionDenied)
 	}
 	switch p.Type {
 	case principal.PrincipalHuman:

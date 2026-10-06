@@ -18,3 +18,9 @@ export const Held: Story = { args: { data: fieldConflictFixture.data } };
 export const NothingHeld: Story = {
   args: { data: { record_type: "contact", id: "x", fields: {} } },
 };
+
+/** The same card under the dark tokens. */
+export const HeldDark: Story = {
+  args: { data: fieldConflictFixture.data },
+  globals: { theme: "dark" },
+};

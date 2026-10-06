@@ -35,7 +35,7 @@ var agentActsGerman = agentActVocabulary{
 		"advance_project_phase":    "Projekt in die nächste Phase bringen",
 		"annotate_brief":           "Anmerkung zum Morgenbericht hinzufügen",
 		"apply_tag":                "Schlagwort vergeben",
-		"decide_duplicate":         "Ein markiertes Duplikat entscheiden",
+		"decide_duplicate":         "Über ein markiertes Duplikatpaar entscheiden",
 		"book_meeting":             "Termin buchen",
 		"invite_meeting":           "Kalendereinladung senden",
 		"commit_import":            "Import übernehmen",

@@ -58,3 +58,9 @@ export const TagOfferRefused: Story = {
     },
   },
 };
+
+/** The same card under the dark tokens. */
+export const FiledDark: Story = {
+  args: { data: createFollowupsFixture.data },
+  globals: { theme: "dark" },
+};

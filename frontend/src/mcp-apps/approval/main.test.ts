@@ -77,6 +77,25 @@ describe("the approval card", () => {
     expect(cells).toEqual(['{"text":"Hello Anna"}', '["a@b.test"]']);
   });
 
+  it("shows the evidence the proposal was read out of", () => {
+    const root = mount({
+      ...(approvalFixture.data as object),
+      evidence: [{ evidence_snippet: "Anna asked to move to Negotiation." }],
+    });
+    expect(root.querySelector(".evidence-list")?.textContent).toBe(
+      "Anna asked to move to Negotiation.",
+    );
+  });
+
+  it("shows a long nested change in full", () => {
+    const long = "x".repeat(900);
+    const root = mount({
+      ...(approvalFixture.data as object),
+      proposed_change: { body: { text: long } },
+    });
+    expect(root.querySelector("tbody td")?.textContent).toContain(long);
+  });
+
   it("approves through decide_approval and says the assistant still has to run it", async () => {
     const root = mount();
     await press(root, "Approve");

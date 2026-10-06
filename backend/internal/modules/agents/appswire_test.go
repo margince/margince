@@ -392,8 +392,9 @@ func TestAToolWhoseViewIsNotHeldLosesItsUIMetaButKeepsAnswering(t *testing.T) {
 	}
 	// What it carries is the model-only audience and no view: nothing a host
 	// could prefetch.
-	if ui := uiMeta(t, unheld); ui != nil && ui.ResourceURI != "" {
-		t.Errorf("a tool names a view this server is not serving: %v", ui.ResourceURI)
+	if ui := uiMeta(t, unheld); ui == nil || ui.ResourceURI != "" ||
+		len(ui.Visibility) != 1 || ui.Visibility[0] != mcp.VisibilityModel {
+		t.Errorf("a tool whose view is not served carries %+v, want model-only audience and no resource URI", ui)
 	}
 }
 

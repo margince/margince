@@ -342,6 +342,7 @@ func (t createRecord) StageInfo(ctx context.Context, in json.RawMessage) (StageI
 	var args struct {
 		RecordType string          `json:"record_type"`
 		Fields     json.RawMessage `json:"fields"`
+		OfferTag   string          `json:"offer_tag"`
 	}
 	if err := decodeArgs(in, &args); err != nil {
 		return StageInfo{}, err
@@ -354,8 +355,12 @@ func (t createRecord) StageInfo(ctx context.Context, in json.RawMessage) (StageI
 	// This door's wire shape IS the command's field set (same reasoning as
 	// archiveRecord.StageInfo, command.go), so it converts rather than
 	// restating the fields: a field CreateCommand grows fails to compile here
-	// instead of quietly leaving it unset.
-	return StageSubject(ctx, NewCreateCall(t.language, CreateCommand(args)))
+	// instead of quietly leaving it unset. offer_tag is accepted here and left
+	// out of the command: an offer is not part of what an approval binds.
+	return StageSubject(ctx, NewCreateCall(t.language, CreateCommand(struct {
+		RecordType string          `json:"record_type"`
+		Fields     json.RawMessage `json:"fields"`
+	}{args.RecordType, args.Fields})))
 }
 
 // --- log_activity (🟢 write) ---

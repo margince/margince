@@ -8,17 +8,16 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/collections"
+	"github.com/margince/margince/backend/internal/platform/database"
 )
 
 // tagOfferSeam answers what accepting a proposed word would take, through the
 // store apply_tag resolves names with, so an offer and the apply that follows
 // agree on what "the workspace already has this word" means.
-func tagOfferSeam(pool *pgxpool.Pool) agents.TagOfferFor {
-	store := collections.NewStore(InstallationDB(pool))
+func tagOfferSeam(db *database.DB) agents.TagOfferFor {
+	store := collections.NewStore(db)
 	taggable := tagAdapter{store: store}.TaggableTypes()
 	return func(ctx context.Context, recordType, name string) (*agents.TagOffer, error) {
 		word := strings.TrimSpace(name)

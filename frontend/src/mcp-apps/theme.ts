@@ -56,5 +56,6 @@ export function followHostChange(context: unknown): void {
  * no media query to wait for.
  */
 function stateTheme(theme: string): void {
+  if (theme !== "light" && theme !== "dark") return;
   document.documentElement.dataset.theme = theme;
 }

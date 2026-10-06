@@ -17,7 +17,7 @@ import actions from "../actions.json";
 import { badge } from "../badge";
 import { el, onResult } from "../bridge";
 import { button, panel, panelBody } from "../parts";
-import { asRecord, asText, type Warning } from "../types";
+import { asList, asRecord, asText, type Warning } from "../types";
 import "../view.css";
 
 declareActions(actions.approval);
@@ -30,6 +30,7 @@ type Item = {
   proposedBy: string;
   expiresAt: number | null;
   rows: [string, string][];
+  evidence: string[];
 };
 
 type Outcome =
@@ -48,17 +49,12 @@ function outcomesOf(root: HTMLElement): Map<string, Outcome> {
   return found;
 }
 
-/** Longest text shown for one nested value; the full change stays one
- *  read_approval away, and a card must not be a wall of text. */
-const NESTED_LIMIT = 600;
-
 function shown(value: unknown): string {
   if (typeof value === "string" || typeof value === "number")
     return String(value);
   if (typeof value === "boolean") return value ? "yes" : "no";
   if (value === null || value === undefined) return "—";
-  const text = JSON.stringify(value);
-  return text.length > NESTED_LIMIT ? `${text.slice(0, NESTED_LIMIT)}…` : text;
+  return JSON.stringify(value);
 }
 
 /** The members of the staged change, which is what a reader checks before
@@ -84,6 +80,9 @@ function itemOf(raw: unknown): Item | null {
     proposedBy: asText(a.proposed_by),
     expiresAt: Number.isNaN(expires) ? null : expires,
     rows: rowsOf(a.proposed_change),
+    evidence: asList(a.evidence)
+      .map((e) => asText(asRecord(e).evidence_snippet))
+      .filter((snippet) => snippet !== ""),
   };
 }
 
@@ -104,9 +103,18 @@ export function render(
     el("p", "meta", `Proposed by ${item.proposedBy || "an assistant"}`),
   );
   if (item.rows.length > 0) body.appendChild(changeTable(item.rows));
+  if (item.evidence.length > 0) body.appendChild(evidenceList(item.evidence));
   body.appendChild(choices(item, outcomes, again));
   card.appendChild(body);
   root.appendChild(card);
+}
+
+/** The material the proposal was read out of, so the reader can check why it
+ *  was staged before answering. */
+function evidenceList(snippets: string[]): HTMLElement {
+  const list = el("ul", "evidence-list");
+  for (const snippet of snippets) list.appendChild(el("li", "meta", snippet));
+  return list;
 }
 
 function changeTable(rows: [string, string][]): HTMLElement {

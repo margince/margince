@@ -7,7 +7,8 @@ const calls: { tool: string; args: Record<string, unknown> }[] = [];
 const asked: string[] = [];
 let proxies = true;
 const answers: Array<
-  { ok: true; data: unknown; warnings: [] } | { ok: false; reason: string }
+  | { ok: true; data: unknown; warnings: [] }
+  | { ok: false; reason: string; unknown?: true }
 > = [];
 
 vi.mock("../actions", () => ({
@@ -137,5 +138,28 @@ describe("the field-conflict card", () => {
     await press(root, "Ask the assistant to decide");
     expect(calls).toHaveLength(0);
     expect(asked[0]).toContain(APPROVAL);
+  });
+
+  it("offers the finishing step when the host never answered the approval", async () => {
+    answers.push({
+      ok: false,
+      reason: "The host did not answer in time.",
+      unknown: true,
+    });
+    const root = mount();
+    await press(root, "Use the new values");
+    expect(labels(root)).toEqual(["Apply the new values"]);
+  });
+
+  it("starts a different conflict drawn into the same frame undecided", async () => {
+    const root = mount();
+    await press(root, "Keep the current values");
+    const other = JSON.parse(JSON.stringify(fieldConflictFixture.data));
+    other.staged_approval.approval_id = "0195c3a0-0000-7000-8000-0000000000c2";
+    render(root, other, []);
+    expect(labels(root)).toEqual([
+      "Keep the current values",
+      "Use the new values",
+    ]);
   });
 });

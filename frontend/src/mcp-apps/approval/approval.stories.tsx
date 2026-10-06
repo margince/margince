@@ -26,3 +26,9 @@ export const Lapsed: Story = {
     },
   },
 };
+
+/** The same card under the dark tokens. */
+export const PendingDark: Story = {
+  args: { data: approvalFixture.data },
+  globals: { theme: "dark" },
+};
