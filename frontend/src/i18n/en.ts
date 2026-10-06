@@ -573,6 +573,8 @@ export const en = {
   "aiAdmin.coverage":
     "Counts cover durable website reads, company scans and voice builds only. They do not count every scheduled AI pass or guarantee that a request is still eligible to run.",
   "aiAdmin.unavailable": "Unavailable",
+  "aiAdmin.providerWaiting":
+    "Waiting for the AI provider: {waiting}. It resumes by itself when the provider answers.",
   "aiAdmin.impact.blocked": "Waiting on allowance",
   "aiAdmin.impact.model": "Different model selected",
   "aiAdmin.impact.decision": "Decision model changed",
@@ -581,7 +583,6 @@ export const en = {
   "aiAdmin.impact.exempt": "Continues beyond allowance",
   "aiAdmin.activity": "Activity",
   "aiAdmin.model": "Model selected by policy",
-  "aiAdmin.thenLadder": "then",
   "aiAdmin.decisionSkip.unbound": "Decision model not used: none is bound.",
   "aiAdmin.decisionSkip.uncertified":
     "Decision model not used: not certified for this activity.",
@@ -887,6 +888,8 @@ export const en = {
   "history.field.body": "Notes",
   "history.field.emails": "Email addresses",
   "history.field.nudge_dismissal": "Nudge dismissed",
+  "history.field.override_category": "Override category",
+  "history.field.overrides_carried": "Overrides carried",
   "history.field.phones": "Phone numbers",
   "history.field.invitation_status": "Invitation status",
   "history.field.proposal_status": "Meeting proposal status",
@@ -929,6 +932,10 @@ export const en = {
   "history.field.reply_verdict": "Reply result",
   "history.field.reply_verdict_by": "Reply result by",
   "history.field.research_claims_accepted": "Research claims accepted",
+  "history.field.revoked_by": "Revoked by",
+  "history.field.revoked_by_level": "Revoked at level",
+  "history.field.revoked_override": "Revoked override",
+  "history.field.revoked_rows": "Overrides taken back",
   "history.field.scope": "Scope",
   "history.field.stopped": "Stopped",
   "history.field.stops_carried": "Contact blocks copied",
@@ -1385,6 +1392,12 @@ export const en = {
   "common.errorNoCause": "The request failed. No cause reported.",
   "common.assistantUnavailable":
     "The assistant did not respond, so no draft was created. Enter the details manually, or ask an administrator to check the model in Settings under AI.",
+  "common.providerOutOfCredit":
+    "The AI provider has no credit left. Contact your system administrator.",
+  "common.providerUnauthorized":
+    "The AI provider refused the configured credential. Contact your system administrator.",
+  "common.providerUnavailable":
+    "The AI provider is not answering right now. Try again later or contact your system administrator.",
   "common.gatewayUnavailable":
     "The server did not finish the request in time and may still be processing it. Wait before retrying, or the work can run twice.",
   // Every 403 the server codes `permission_denied`, which is two refusals with
@@ -2515,6 +2528,8 @@ export const en = {
   "email.detail.none": "This message",
   "email.detail.attachments_one": "{count} attachment",
   "email.detail.attachments_other": "{count} attachments",
+  "email.detail.attachmentWithheld":
+    "Not kept, because the message is private.",
   "email.detail.showQuoted": "Show quoted history",
   "email.detail.withheldReason": "This message is not shared with you",
   "email.detail.from": "From",
@@ -4507,6 +4522,14 @@ export const en = {
   "compose.savedDraftDeleted": "Saved draft deleted",
   "compose.savedDraftRestored": "Saved draft restored",
   "compose.savedDraftRemove": "Delete saved draft",
+  "compose.savedDraftByAgent": "Agent draft restored. Read it before sending.",
+  "compose.waitingDraftTitle": "Draft waiting",
+  "compose.waitingDraftOpen": "Open draft",
+  "compose.waitingDraftByAgent":
+    "An agent drafted “{subject}” for review. Nothing has been sent.",
+  "compose.waitingDraftByYou":
+    "The unsent email “{subject}” was saved from the composer.",
+  "compose.waitingDraftNoSubject": "No subject",
   "compose.savedDraftChangedTitle": "Draft changed in another window",
   "compose.savedDraftChangedBody":
     "Saving keeps the text on screen. Load the saved version to continue from it instead.",
@@ -4548,6 +4571,10 @@ export const en = {
   "compose.whyThisDraft": "Why this draft?",
   "compose.body": "Body",
   "compose.bodyHint": "Click the text to edit it.",
+  "compose.signOff": "Added when you send",
+  "compose.signOffClosing": "You have no signature, so this closing is added.",
+  "compose.signOffSet": "Set your signature",
+  "compose.signOffFailed": "Could not load the sign-off a send adds.",
   "compose.transport": "Send via",
   "compose.transportEmail": "Email",
   "compose.recipientHint": "Name or address",
@@ -5153,7 +5180,7 @@ export const en = {
   "settings.signatureLabel": "Sign-off",
   "settings.signaturePlaceholder": "Marek Janetzke\nGradion · +49 40 123456",
   "settings.signatureHint":
-    "Plain text. Leave empty to send without a signature. AI drafts never add a sign-off.",
+    "Plain text. If empty, mail closes with a greeting and your name. AI never adds one.",
   "settings.signatureSaving": "Saving…",
   "settings.signatureEdit": "Edit signature",
   "settings.signatureNone": "No sign-off set",
@@ -5658,6 +5685,36 @@ export const en = {
   "jobs.reasonVetted":
     "Reasons, classes and remedies come from the job layer, never the worker’s raw cause. A failure it cannot phrase shows a fixed substitute and no class.",
   "jobs.generatedAt": "As of {time}",
+
+  "settings.providerHealth": "AI provider status",
+  "settings.providerHealthSub":
+    "Whether each AI provider is answering, as this server has seen it.",
+  "providerHealth.adminOnly":
+    "AI provider status covers the whole installation and requires a permission your role does not have.",
+  "providerHealth.healthy": "All AI providers are answering.",
+  "aiProviderHealth.label.degraded": "Degraded",
+  "aiProviderHealth.label.down": "Unreachable",
+  "aiProviderHealth.label.outOfCredit": "Out of credit",
+  "aiProviderHealth.label.unauthorized": "Key rejected",
+  "aiProviderHealth.reason.degraded":
+    "Some requests to this provider are failing. Calls still go through.",
+  "aiProviderHealth.reason.down":
+    "This provider is not reachable. Calls wait until the next check.",
+  "aiProviderHealth.reason.outOfCredit":
+    "The account has no credit left. Calls wait until the next check.",
+  "aiProviderHealth.reason.unauthorized":
+    "The provider rejected the API key. Calls wait until the next check.",
+  "aiProviderHealth.fix.degraded":
+    "Check the provider’s status page, or contact your system administrator.",
+  "aiProviderHealth.fix.down":
+    "Check the provider’s status page and host, or contact your system administrator.",
+  "aiProviderHealth.fix.outOfCredit":
+    "Top up the provider account, or contact your system administrator.",
+  "aiProviderHealth.fix.unauthorized":
+    "Replace the key, or contact your system administrator.",
+  "aiProviderHealth.since": "Started {when}",
+  "aiProviderHealth.nextCheck": "Next check {when}",
+  "aiProviderHealth.nextCheckDue": "Next check is due",
 
   "settings.extIngest": "Refused connector records",
   "settings.extIngestSub":
@@ -9472,10 +9529,29 @@ export const en = {
   "aiRouting.median": "Median {ms} ms",
   "aiTasks.title": "AI tasks",
   "aiTasks.intro":
-    "Edit a task to see how its calls went and to set its thinking level and timeouts. Its tier is fixed by contract; each row shows the tier and the model it runs on now.",
+    "Each row shows a task’s tier and the provider that serves it. Select a task’s name for what it does, its state, and what it does while its provider is down. Edit sets its thinking level and timeouts; its tier is fixed by contract.",
   "aiTasks.whatItDoes": "{task}: what it does",
   "aiTasks.decisionFirst": "Decision model first",
   "aiTasks.viewCalls": "View calls",
+  "aiTasks.deferral.nowEmbedding":
+    "Refused now: search indexing tries again on its own schedule.",
+  "aiTasks.deferral.embedding":
+    "When its provider is down, out of credit or refusing its key, search indexing is refused and tries again on its own schedule.",
+  "aiTasks.dot.ok": "Answering",
+  "aiTasks.dot.bad": "Needs attention",
+  "aiTasks.dot.idle": "No recent calls",
+  "aiTasks.deferral.background":
+    "When every model this task can use is down, out of credit or refusing its key, its work waits and tries again at the provider’s next check, without using up its attempts.",
+  "aiTasks.deferral.interactive":
+    "When every model this task can use is down, out of credit or refusing its key, a request fails at once and asks the user to contact their administrator.",
+  "aiTasks.deferral.nowBackground":
+    "Waiting now: every model this task can use is blocked.",
+  "aiTasks.deferral.nowInteractive":
+    "Failing now: every model this task can use is blocked.",
+  "aiTasks.deferral.skipping":
+    "A blocked provider is skipped, and the next model in line answers.",
+  "aiTasks.embeddingsEdit":
+    "Search and retrieval has no thinking level or timeouts to set. Change its provider and model on the embeddings row under Model tiers.",
   "workingHours.title": "Bookable hours",
   "workingHours.sub": "Personal setting. Only you set your hours.",
   "workingHours.unsetTitle": "Not set yet",

@@ -5,7 +5,7 @@
 
 package gates
 
-// A role resolves its key vault ONCE.
+// A role resolves its key vault once.
 //
 // cmd/worker used to resolve it three times — the Surface-B runner lane, the
 // connector-credential backfill, the job runner — and each read the answer in

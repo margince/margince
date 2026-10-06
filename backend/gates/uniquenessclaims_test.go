@@ -5,10 +5,10 @@
 
 package gates
 
-// A comment that says a declaration is the ONLY one of its kind is not
-// decoration. It is what stops the next author looking — they grep, they find
-// the claim, and they stop. So a false one is worse than silence: silence at
-// least leaves the search on.
+// A comment that says a declaration is the only one of its kind is a claim a
+// test must hold. It is what stops the next author looking — they grep, they
+// find the claim, and they stop. So a false one is worse than silence: silence
+// at least leaves the search on.
 //
 // This tree's own rulebook already says so, in `Reuse before you build`:
 // "a comment may not claim to be the only implementation unless a test holds

@@ -14,6 +14,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/compose/contactcontext"
+	"github.com/margince/margince/backend/internal/compose/draftcore"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
@@ -31,7 +32,7 @@ func FromView(view crmcontracts.Contact360, req Request) Input {
 		SectionsOmitted: omittedNames(view.SectionsOmitted),
 	}
 	if view.Activities != nil {
-		in.Recent = FoldRecent(view.Activities.Data)
+		in.Recent = FoldRecent(view.Activities.Data, req.Envelope.At())
 	}
 	foldCommercial(&in, view)
 	foldProject(&in, view, req.ProjectID)
@@ -41,7 +42,7 @@ func FromView(view crmcontracts.Contact360, req Request) Input {
 }
 
 // ConversationState reads where this correspondence stands off the view's own
-// last-message stamps.
+// last-message stamps and the notes and meetings logged on the record.
 //
 // It lives here rather than in the service because the two stamps it reads are
 // already folded onto the recipient, so the classification and the fields it is
@@ -49,7 +50,11 @@ func FromView(view crmcontracts.Contact360, req Request) Input {
 // at worst reads a correspondence as a first touch — the conservative end, and
 // the one that assumes no history rather than inventing some.
 func ConversationState(view crmcontracts.Contact360, now time.Time) convstate.State {
-	return convstate.Classify(now, instant(view.LastInboundAt), instant(view.LastOutboundAt))
+	var activities []crmcontracts.Activity
+	if view.Activities != nil {
+		activities = view.Activities.Data
+	}
+	return draftcore.ClassifyWithLogged(now, instant(view.LastInboundAt), instant(view.LastOutboundAt), activities)
 }
 
 // instant parses one optional stamp, treating anything unreadable as absent.
@@ -293,7 +298,8 @@ func hoistOverdueOurs(claims []crmcontracts.ConversationClaim, now time.Time) []
 }
 
 // FoldRecent turns a record's newest-first activities into the conversation the
-// draft reads, bounded and with one snippet.
+// draft reads, bounded, with one snippet and the text of every logged touch in
+// the window (see draftcore.IsLoggedTouch).
 //
 // Exported and taking a plain slice because a LEAD's correspondence folds by
 // exactly these rules — how many exchanges are read, which one yields its text,
@@ -303,7 +309,7 @@ func hoistOverdueOurs(claims []crmcontracts.ConversationClaim, now time.Time) []
 // The alternative was a second copy of the loop in the lead's fold, which is
 // how the bound and the newest-inbound rule would come to disagree between two
 // drafts of the same conversation.
-func FoldRecent(activities []crmcontracts.Activity) []ActIn {
+func FoldRecent(activities []crmcontracts.Activity, now time.Time) []ActIn {
 	var out []ActIn
 	readInbound := false
 	for _, activity := range activities {
@@ -318,6 +324,19 @@ func FoldRecent(activities []crmcontracts.Activity) []ActIn {
 		}
 		if activity.Subject != nil {
 			folded.Subject = *activity.Subject
+		}
+		// A meeting that was canceled, missed or is still ahead records no
+		// contact, and taking one of the window's slots would push out one
+		// that did.
+		if draftcore.IsLoggedKind(activity.Kind) {
+			if !draftcore.IsLoggedTouch(activity, now) {
+				continue
+			}
+			if activity.Body != nil {
+				folded.Record = textlang.MessageOpening(*activity.Body, draftInputRecordRunes)
+			}
+			out = append(out, folded)
+			continue
 		}
 		// The newest INBOUND message, and only that one. Our own outbound is
 		// text this side already wrote, and a second inbound invites the draft

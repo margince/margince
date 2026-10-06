@@ -72,6 +72,7 @@ func cliJudgesOwnFamily(candidate, judge ai.ProviderConfig) bool {
 // claudeCLIJudge is a model.Client over `claude -p`. It carries text only: no
 // tools, attachments, streaming or embeddings, which the judge never asks for.
 type claudeCLIJudge struct {
+	model.NoHealth
 	model string
 	// env is where the credential, PATH and passthrough variables come from;
 	// nil is the process environment.

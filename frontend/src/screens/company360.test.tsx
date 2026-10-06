@@ -935,7 +935,7 @@ describe("company view — the citations under a finding", () => {
             ],
           },
         ]}
-        onOpenRecord={(...args) => opened.push(args)}
+        onOpenReceipt={(...args) => opened.push(args)}
         citations="collected"
       />,
     );
@@ -946,8 +946,7 @@ describe("company view — the citations under a finding", () => {
     await userEvent.click(screen.getByText("3 profile fields"));
     expect(opened).toEqual([
       [
-        "profile_field",
-        "pf-1",
+        { entityType: "profile_field", entityId: "pf-1" },
         [
           { entityType: "profile_field", entityId: "pf-1" },
           { entityType: "profile_field", entityId: "pf-2" },

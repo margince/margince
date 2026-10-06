@@ -12,7 +12,7 @@ grant to change, and `ai_diagnostics` read to see the figures.
   its sheet's **Recent calls** splits them by host (OpenRouter only), model or
   tier over 24 h, 7 d or 30 d, with p50, p95 and cost. A row opens the call log
   filtered to those calls.
-- **Model tiers card.** The dot beside a tier opens its health, now with its
+- **Model tiers card.** The dot beside a tier opens its health, with its
   seven-day line and how it sorts its hosts.
 - **AI tasks card.** **Edit** opens a task's sheet. **Recent calls** says how
   many calls got an answer, from which step of the route, and why a step gave a
@@ -33,8 +33,8 @@ shipped default (`sort: throughput`, fp16 or bf16, require parameters); write
 - `max_price` filters out hosts above it; with a sort, it can exclude the host
   the sort would have picked.
 
-The editor asks the server as you type. Each problem is listed with its line and
-key path, and **What OpenRouter will be asked for** shows the merged request in
+The editor asks the server as you type and lists each problem with its line and
+key path. The panel **What OpenRouter will be asked for** shows the merged request in
 plain words, each key marked with where it came from: Margince's default, the
 connection, this tier, or each task.
 

@@ -87,7 +87,7 @@ export const MailboxAsk: Story = {
 export const ScopesInTheContent: Story = {
   render: () => (
     <Ask providerMarkKey="linkedin" headline="Connect LinkedIn">
-      <div className="ob-connect-linkedin-panel">
+      <div className="form-stack ob-connect-linkedin-panel">
         <p className="t-body">Margince would read, from your profile:</p>
         <ul className="t-body">
           <li>your name and headline</li>

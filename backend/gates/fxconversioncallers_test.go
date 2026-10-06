@@ -5,7 +5,7 @@
 
 package gates
 
-// Converting money to the base currency happens in ONE place, and this fails
+// Converting money to the base currency happens in one place, and this fails
 // when a second appears.
 //
 // The rule has four parts — which rate, what a missing one means, what an

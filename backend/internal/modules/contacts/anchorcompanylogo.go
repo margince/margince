@@ -28,6 +28,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/storedobjects"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -70,6 +71,12 @@ func (s *Store) SetAnchorCompanyLogo(ctx context.Context, slot LogoSlot, objectK
 			return fmt.Errorf("set the company logo: %w", err)
 		}
 		supersededKey = supersededObject(previous, objectKey)
+		// Retired on THIS transaction, so the clear and the column that now names
+		// the key commit together. A clear that committed separately could land
+		// while this rolled back, which is the orphan the ledger exists to catch.
+		if err := storedobjects.Clear(ctx, tx, objectKey); err != nil {
+			return err
+		}
 		return recordLogoWrite(ctx, tx, companyID, slot, logoWrite{
 			previousOrigin: previousOrigin, origin: &named,
 			source: CompanySourceHuman, by: by,

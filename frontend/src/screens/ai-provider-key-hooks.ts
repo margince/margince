@@ -3,6 +3,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
+import { invalidateProviderHealth } from "./ai-provider-health";
 import type { CredentialKind } from "./ai-provider-key-entry";
 import { throwProblem } from "./common";
 
@@ -68,6 +69,7 @@ export function useSetProviderKey() {
       queryClient.invalidateQueries({ queryKey: ["ai-provider-keys"] });
       // The locations a key reaches are asked with that key.
       queryClient.invalidateQueries({ queryKey: ["ai-provider-locations"] });
+      invalidateProviderHealth(queryClient);
     },
   });
 }
@@ -86,6 +88,7 @@ export function useRemoveProviderKey() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ai-provider-keys"] });
       queryClient.invalidateQueries({ queryKey: ["ai-provider-locations"] });
+      invalidateProviderHealth(queryClient);
     },
   });
 }

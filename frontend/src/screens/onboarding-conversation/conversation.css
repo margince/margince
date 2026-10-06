@@ -1454,16 +1454,13 @@
   margin-top: var(--space-4);
 }
 
-.ob-connect-dialog-actions .btn {
-  width: 100%;
+/* In a dialog's stack the gap already pays --space-3 of that --space-4. */
+.modal .form-stack > .ob-connect-dialog-actions {
+  margin-top: calc(var(--space-4) - var(--space-3));
 }
 
-/* The panel spaces its own children with a flex gap, so the actions row asks
-   only for the DIFFERENCE between that gap and the beat it gets in the
-   block-flow dialogs — adding its full margin on top of the gap put 28px above
-   this one row and 16px above the identical row in every other dialog. */
-.ob-connect-linkedin-panel .ob-connect-dialog-actions {
-  margin-top: var(--space-1);
+.ob-connect-dialog-actions .btn {
+  width: 100%;
 }
 
 /* Same shape as the primary above it, one weight quieter: a bare label with no
@@ -1484,9 +1481,6 @@
 /* The authorization form itself keeps left-aligned labels — a form reads
    worse centred — inside the otherwise-centred dialog chrome above it. */
 .ob-connect-linkedin-panel {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
   text-align: start;
 }
 

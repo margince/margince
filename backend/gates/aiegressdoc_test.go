@@ -78,7 +78,7 @@ func TestTheEgressPageMatchesTheTaskContract(t *testing.T) {
 			t.Errorf("the egress page says local-only-enforced=%v for %q; the contract says %v. "+
 				"Run make gen", got, name, def.LocalOnly)
 		}
-		if got := egressCell(row, 6) != "—"; got != def.Decision {
+		if got := egressCell(row, 6) != "none"; got != def.Decision {
 			t.Errorf("the egress page says a decision model may read %q's text=%v; the contract "+
 				"declares decision=%v. Run make gen", name, got, def.Decision)
 		}

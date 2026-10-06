@@ -589,8 +589,8 @@ func (bothDoorsComms) DraftEmail(context.Context, ids.UUID, string) (string, str
 	return "", "", errBothDoorsExecuted
 }
 
-func (bothDoorsComms) DraftCompanyEmail(context.Context, []agents.RecordLink, string) (string, string, error) {
-	return "", "", errBothDoorsExecuted
+func (bothDoorsComms) DraftCompanyEmail(context.Context, []agents.RecordLink, string) (agents.FirstDraft, error) {
+	return agents.FirstDraft{}, errBothDoorsExecuted
 }
 
 func (bothDoorsComms) SendEmail(context.Context, ids.UUID, agents.SendEmailArgs) (agents.SendEmailResult, error) {

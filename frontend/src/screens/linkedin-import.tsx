@@ -174,7 +174,6 @@ function LinkedInProfileRow() {
           {t("linkedinImport.editProfileTitle")}
         </Heading>
         <form
-          className="form-stack"
           onSubmit={(event) => {
             event.preventDefault();
             if (dirty) {
@@ -188,32 +187,30 @@ function LinkedInProfileRow() {
             }
           }}
         >
-          {/* Field + TextInput, not a hand-rolled label wrapping a bare <input>:
-              this one box had its own label type, its own padding, its own border
-              and its own focus ring, none of which agreed with the field beside it
-              in any other dialog on the tab. */}
-          <Field label={t("linkedinImport.profileLabel")}>
-            {(control) => (
-              <TextInput
-                {...control}
-                type="url"
-                inputMode="url"
-                data-testid="linkedin-profile-url"
-                placeholder={t("linkedinImport.profilePlaceholder")}
-                value={value}
-                onChange={(e) => setDraft(e.target.value)}
-              />
+          <div className="form-stack">
+            <Field label={t("linkedinImport.profileLabel")}>
+              {(control) => (
+                <TextInput
+                  {...control}
+                  type="url"
+                  inputMode="url"
+                  data-testid="linkedin-profile-url"
+                  placeholder={t("linkedinImport.profilePlaceholder")}
+                  value={value}
+                  onChange={(e) => setDraft(e.target.value)}
+                />
+              )}
+            </Field>
+            {save.isError && (
+              <Callout
+                kind="outcome"
+                tone="danger"
+                title={t("linkedinImport.saveFailed")}
+              >
+                {problemMessageOf(save.error, t)}
+              </Callout>
             )}
-          </Field>
-          {save.isError && (
-            <Callout
-              kind="outcome"
-              tone="danger"
-              title={t("linkedinImport.saveFailed")}
-            >
-              {problemMessageOf(save.error, t)}
-            </Callout>
-          )}
+          </div>
           <div className="actions">
             <Button type="button" onClick={close} disabled={save.isPending}>
               {t("create.cancel")}

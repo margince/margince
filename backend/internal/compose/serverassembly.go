@@ -416,12 +416,11 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 	// so it needs no pool of its own. Nil lane here for the same reason as the
 	// brief's: WithAccountDraft binds the api role's, and without it the
 	// endpoint answers from its deterministic floor rather than 501-ing.
-	s.accountDraftHandlers = accountdraft.NewHandlers(
-		accountdraft.NewService(s.company360Svc, nil).
-			WithEnvelope(draftEnvelope(pool, s.log)).
-			WithEmailSummaries(emailRows(pool)).
-			WithDossier(s.companyDossierSvc),
-	)
+	s.firstDrafts.account = accountdraft.NewService(s.company360Svc, nil).
+		WithEnvelope(draftEnvelope(pool, s.log)).
+		WithEmailSummaries(emailRows(pool)).
+		WithDossier(s.companyDossierSvc)
+	s.accountDraftHandlers = accountdraft.NewHandlers(s.firstDrafts.account)
 	s.company360Handlers = company360.NewHandlers(s.company360Svc)
 	// The contact page is the company page's sibling, so it is wired here
 	// rather than beside the handler sets.

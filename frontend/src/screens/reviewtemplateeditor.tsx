@@ -166,32 +166,30 @@ export function ReviewTemplateEditor({
           {t("reviewTemplates.addQuestion")}
         </Button>
         <ErrorLine error={save.error} />
-        <div className="actions">
-          <Button variant="ghost" disabled={save.isPending} onClick={onClose}>
-            {t("deals.cancel")}
-          </Button>
-          <Button
-            pending={save.isPending}
-            disabled={invalid}
-            onClick={() =>
-              save.mutate({
-                id: template.id,
-                version: template.version,
-                questions: questions.map((q) => ({
-                  ...q,
-                  options:
-                    q.type === "multiselect"
-                      ? q.options
-                          ?.map((option) => option.trim())
-                          .filter(Boolean)
-                      : undefined,
-                })),
-              })
-            }
-          >
-            {t("reviewTemplates.save")}
-          </Button>
-        </div>
+      </div>
+      <div className="actions">
+        <Button variant="ghost" disabled={save.isPending} onClick={onClose}>
+          {t("deals.cancel")}
+        </Button>
+        <Button
+          pending={save.isPending}
+          disabled={invalid}
+          onClick={() =>
+            save.mutate({
+              id: template.id,
+              version: template.version,
+              questions: questions.map((q) => ({
+                ...q,
+                options:
+                  q.type === "multiselect"
+                    ? q.options?.map((option) => option.trim()).filter(Boolean)
+                    : undefined,
+              })),
+            })
+          }
+        >
+          {t("reviewTemplates.save")}
+        </Button>
       </div>
     </Modal>
   );

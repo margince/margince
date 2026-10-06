@@ -67,17 +67,17 @@ export function ReportingComparison({
   }));
   return (
     <Modal open onClose={onClose} labelledBy={title} size="wide">
-      <div className="reporting-dialog">
-        <Heading as="h2" size="medium" id={title}>
-          {t("reporting.compare")}
-        </Heading>
+      <Heading size="large" id={title} className="t-h2 modal-title">
+        {t("reporting.compare")}
+      </Heading>
+      <div className="form-stack">
         <p>{t("reporting.comparisonHelp")}</p>
         {hasMore && (
           <Button variant="ghost" pending={loadingMore} onClick={onLoadMore}>
             {t("reporting.loadOlder")}
           </Button>
         )}
-        <div className="reporting-toolbar">
+        <div className="form-row">
           <Field label={t("reporting.left")}>
             {(field) => (
               <Select

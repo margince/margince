@@ -65,11 +65,6 @@ import {
 } from "./company360";
 import { NewDealAction } from "./companyactions";
 import { CompanyApprovalsPanel } from "./companyapprovals";
-import {
-  citationHasReceipt,
-  citationOpensRecord,
-  openCitation,
-} from "./companycitations";
 import { CompanyContractState, CompanyLastOffer } from "./companycommercial";
 import { CompanyContactsList } from "./companycontacts/contacts";
 import { CoverageBand } from "./companycontacts/summary";
@@ -134,7 +129,12 @@ import {
 import { ContactMeetingBrief } from "./meetingbrief";
 import { useOpenEmail } from "./openemail";
 import { PartnerTab } from "./partners";
-import { RecordSpine, WrittenBy } from "./record360";
+import {
+  type OpenReceipt,
+  openCitation,
+  RecordSpine,
+  WrittenBy,
+} from "./record360";
 import {
   ChronologyFilter,
   ChronologyFooter,
@@ -1062,28 +1062,17 @@ function useChronologySlots({
 // The ORDER belongs to the card that offered the chip, not to the drawer. A
 // reader who clicked the third citation in a sentence expects "next" to mean
 // the fourth citation in THAT sentence — a drawer that built its own order
-// would step somewhere they cannot predict. A card with no ordering to give
-// passes none, and the drawer draws no arrows rather than guessing one.
+// would step somewhere they cannot predict. A sentence with one receipt has
+// nowhere to step, and the drawer draws no arrows rather than guessing one.
 function useCitedReceipt() {
   const [cited, setCited] = useState<CitedRecord | null>(null);
   const [list, setList] = useState<readonly CitedRecord[]>([]);
-  // The message a citation opened, held HERE beside the receipt it opens for
-  // the other kinds: both answer "what did this chip open", and splitting them
-  // would leave a caller wiring two states for one question.
+  // Beside the receipt, because both answer "what did this chip open" and a
+  // caller should not wire two states for one question.
   const [email, setEmail] = useState<string | null>(null);
-  const open = (
-    entityType: string,
-    entityId: string,
-    siblings?: readonly CitedRecord[],
-  ) => {
-    if (citationOpensRecord(entityType)) {
-      openCitation(entityType, entityId);
-      return;
-    }
-    if (citationHasReceipt(entityType)) {
-      setCited({ entityType, entityId });
-      setList(siblings ?? []);
-    }
+  const open: OpenReceipt = (receipt, siblings) => {
+    setCited(receipt);
+    setList(siblings);
   };
   // Wrapping at each end: a reader walking a sentence's citations should not
   // hit a dead stop and have to close the drawer to reach the first one again.
@@ -1105,10 +1094,6 @@ function useCitedReceipt() {
     cited,
     email,
     open,
-    // The message door, on its own. `open` routes a citation by its KIND, and a
-    // message is not a kind the citation renderer hands back — it decides per
-    // row whether a summary is openable and calls this directly, so the host
-    // passes it as `onOpenEmail` beside `onOpenRecord`.
     openEmail: setEmail,
     close: () => setCited(null),
     closeEmail: () => setEmail(null),
@@ -1563,7 +1548,8 @@ function CompanyRecordBody({
             failed={failed}
             onOpenHistory={onOpenHistory}
             onOpenTab={onTab}
-            onOpenRecord={receipt.open}
+            onOpenRecord={openCitation}
+            onOpenReceipt={receipt.open}
             onOpenEmail={receipt.openEmail}
             offerResearch={offerResearch}
             onOpenTasks={() => onTab("tasks")}
@@ -1594,7 +1580,8 @@ function CompanyRecordBody({
         readOnly={readOnly}
         openTaskId={openTaskId}
         onOpenTask={onOpenTask}
-        onOpenRecord={receipt.open}
+        onOpenRecord={openCitation}
+        onOpenReceipt={receipt.open}
         taskUpdate={taskUpdate}
       />
       {/* The composer, anchored on the message a draft_reply suggestion named.
@@ -1710,7 +1697,8 @@ function CompanyRecordBody({
         onOpenHistory={onOpenHistory}
         refusedReasonId={refusedReasonId}
         nameOf={dossierNames}
-        onOpenRecord={receipt.open}
+        onOpenRecord={openCitation}
+        onOpenReceipt={receipt.open}
         onOpenEmail={receipt.openEmail}
       />
     </>
@@ -1781,6 +1769,7 @@ function CompanyOverviewStack({
   failed,
   onOpenHistory,
   onOpenRecord,
+  onOpenReceipt,
   onOpenEmail,
   onOpenTasks,
   onOpenTask,
@@ -1802,13 +1791,10 @@ function CompanyOverviewStack({
   loading: boolean;
   failed: boolean;
   onOpenHistory: () => void;
-  // Where a cited chip leads. Owned by the page, because the profile tab cites
-  // the same records and two owners would mean two receipts open over each
-  // other.
   onOpenRecord: (entityType: string, entityId: string) => void;
-  // Where a cited MESSAGE leads: the page's own email drawer. Beside
-  // onOpenRecord and owned by the same page, for the same reason — two drawers
-  // over one page would open over each other.
+  // The page's own drawers: the profile tab cites the same records, and two
+  // owners would open two drawers over each other.
+  onOpenReceipt: OpenReceipt;
   onOpenEmail: (activityId: string) => void;
   onOpenTasks: () => void;
   // The leading card's own fallback verbs, threaded to `useTodayReading`: a
@@ -1853,6 +1839,7 @@ function CompanyOverviewStack({
     onPrepareMeeting,
     onDraftTo,
     onOpenRecord,
+    onOpenReceipt,
     onOpenEmail,
     onPerform,
     onOpenTask,
@@ -1958,6 +1945,7 @@ function CompanyOverviewStack({
         companyId={company.id}
         nameOf={records}
         onOpenRecord={onOpenRecord}
+        onOpenReceipt={onOpenReceipt}
         onOpenEmail={onOpenEmail}
       />
       {/* The prepared questions are the ones the 360 answers in prose, and
@@ -1969,6 +1957,7 @@ function CompanyOverviewStack({
         <AssistantPanel
           companyId={company.id}
           onOpenRecord={onOpenRecord}
+          onOpenReceipt={onOpenReceipt}
           onOpenEmail={onOpenEmail}
           projects={view?.projects}
         />
@@ -1981,6 +1970,7 @@ function CompanyOverviewStack({
         <GrowthFitPanel
           companyId={company.id}
           onOpenRecord={onOpenRecord}
+          onOpenReceipt={onOpenReceipt}
           onOpenEmail={onOpenEmail}
         />
       )}
@@ -2010,6 +2000,7 @@ function CompanyDealsAndTasksTabs({
   openTaskId,
   onOpenTask,
   onOpenRecord,
+  onOpenReceipt,
   taskUpdate,
 }: Readonly<{
   tab: CompanyTab;
@@ -2022,10 +2013,10 @@ function CompanyDealsAndTasksTabs({
   readOnly: boolean;
   openTaskId: string | null;
   onOpenTask: (activityId: string | null) => void;
-  // Where a recommended step's cited records lead. The page's own receipt, so
-  // a chip opened from the Tasks tab lands where the same chip on the overview
-  // does.
+  // Where a recommended step's citations lead: the page's own, so a chip
+  // opened from the Tasks tab lands where the same chip on the overview does.
   onOpenRecord: (entityType: string, entityId: string) => void;
+  onOpenReceipt: OpenReceipt;
   taskUpdate: ReturnType<typeof useTaskUpdate>;
 }>) {
   const t = useT();
@@ -2083,6 +2074,7 @@ function CompanyDealsAndTasksTabs({
           readOnly={readOnly}
           onOpenTask={onOpenTask}
           onOpenRecord={onOpenRecord}
+          onOpenReceipt={onOpenReceipt}
           update={taskUpdate}
         />
       )}
@@ -2160,6 +2152,7 @@ function CompanyTasksTab({
   readOnly,
   onOpenTask,
   onOpenRecord,
+  onOpenReceipt,
   update,
 }: Readonly<{
   companyId: string;
@@ -2170,6 +2163,7 @@ function CompanyTasksTab({
   readOnly: boolean;
   onOpenTask: (activityId: string) => void;
   onOpenRecord: (entityType: string, entityId: string) => void;
+  onOpenReceipt: OpenReceipt;
   update: ReturnType<typeof useTaskUpdate>;
 }>) {
   const t = useT();
@@ -2212,6 +2206,7 @@ function CompanyTasksTab({
             companyId={companyId}
             view={view}
             onOpenRecord={onOpenRecord}
+            onOpenReceipt={onOpenReceipt}
           />
         )
       }
@@ -2257,6 +2252,7 @@ function CompanyProfileTab({
   refusedReasonId,
   nameOf,
   onOpenRecord,
+  onOpenReceipt,
   onOpenEmail,
 }: Readonly<{
   active: boolean;
@@ -2269,6 +2265,7 @@ function CompanyProfileTab({
   // read the same names and open through the same receipt.
   nameOf?: (entityType: string, entityId: string) => string | undefined;
   onOpenRecord?: (entityType: string, entityId: string) => void;
+  onOpenReceipt: OpenReceipt;
   onOpenEmail?: (activityId: string) => void;
 }>) {
   if (!active) {
@@ -2282,6 +2279,7 @@ function CompanyProfileTab({
       refusedReasonId={refusedReasonId}
       nameOf={nameOf}
       onOpenRecord={onOpenRecord}
+      onOpenReceipt={onOpenReceipt}
       onOpenEmail={onOpenEmail}
     />
   );
@@ -2294,6 +2292,7 @@ function ReferenceDisclosures({
   refusedReasonId,
   nameOf,
   onOpenRecord,
+  onOpenReceipt,
   onOpenEmail,
 }: Readonly<{
   company: Company;
@@ -2304,6 +2303,7 @@ function ReferenceDisclosures({
   refusedReasonId?: string;
   nameOf?: (entityType: string, entityId: string) => string | undefined;
   onOpenRecord?: (entityType: string, entityId: string) => void;
+  onOpenReceipt: OpenReceipt;
   onOpenEmail?: (activityId: string) => void;
 }>): ReactNode {
   return (
@@ -2312,6 +2312,7 @@ function ReferenceDisclosures({
       onOpenHistory={onOpenHistory}
       nameOf={nameOf}
       onOpenRecord={onOpenRecord}
+      onOpenReceipt={onOpenReceipt}
       onOpenEmail={onOpenEmail}
       tools={
         <>

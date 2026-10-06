@@ -27,6 +27,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -83,5 +84,40 @@ func TestAnErasureTombstonesTheAttachmentsItPurged(t *testing.T) {
 		WHERE entity_type = 'attachment' AND entity_id = $1 AND action = 'erase'`, attachment); n != 1 {
 		t.Fatalf("the erasure left %d tombstone(s) on the purged attachment, want 1 — "+
 			"without one, its filename stays readable through the compliance log", n)
+	}
+}
+
+// A withheld file has a row and no object. The erasure deletes the row and
+// asks no object store about it — on an installation with no store, an erasure
+// that counted the empty key as an object to purge would refuse outright.
+func TestAnErasureDeletesAWithheldFileWithoutAnObjectStore(t *testing.T) {
+	e := integration.Setup(t)
+	contact := e.SeedContact(t, "Withheld Subject", &e.Rep1)
+	subject, direction, at := "Private", "inbound", time.Now()
+	mail, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+		Kind: "email", Subject: &subject, Direction: &direction, OccurredAt: &at, Source: "manual",
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
+	})
+	if err != nil {
+		t.Fatalf("logging the subject's mail: %v", err)
+	}
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return e.Activities.RecordWithheldFiles(e.Admin(), tx, ids.From[ids.ActivityKind](ids.UUID(mail.Id)),
+			activities.CapturedFileSource{
+				System: "imap", MessageID: "withheld-subject", CapturedBy: "connector:imap", Category: "email_attachment",
+			}, []activities.WithheldFile{{PartID: "part:1", Filename: "payslip.pdf", ContentType: "application/pdf", ByteSize: 4096}})
+	}); err != nil {
+		t.Fatalf("recording the withheld file: %v", err)
+	}
+	if n := countRows(t, e, `SELECT count(*) FROM attachment WHERE activity_id = $1`, mail.Id); n != 1 {
+		t.Fatalf("the fixture holds %d withheld rows, want 1", n)
+	}
+
+	if err := privacy.NewEraser(InstallationDB(e.Pool)).
+		EraseContact(e.Admin(), contact, "subject request"); err != nil {
+		t.Fatalf("EraseContact with a withheld file and no object store: %v", err)
+	}
+	if n := countRows(t, e, `SELECT count(*) FROM attachment WHERE activity_id = $1`, mail.Id); n != 0 {
+		t.Fatalf("the withheld file's row survived the erasure (%d left)", n)
 	}
 }

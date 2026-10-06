@@ -1235,6 +1235,7 @@ public.attachment.attachment_pkey PRIMARY KEY (id)
 public.attachment.attachment_supersedes_fkey FOREIGN KEY (supersedes_id) REFERENCES attachment(id) ON DELETE SET NULL (supersedes_id)
 public.attachment.attachment_supersedes_not_self CHECK (((supersedes_id IS NULL) OR (supersedes_id <> id)))
 public.attachment.byte_size bigint gen=- def=-
+public.attachment.bytes_withheld boolean NOT NULL gen=- def=false
 public.attachment.captured_by text NOT NULL gen=- def=-
 public.attachment.category text NOT NULL gen=- def='other'::text
 public.attachment.checksum text gen=- def=-
@@ -2117,6 +2118,30 @@ BEGIN
   RETURN NEW;
 END 
 public.communication_instruction_review_id_key CREATE UNIQUE INDEX communication_instruction_review_id_key ON public.communication_instruction USING btree (review_id)
+public.communication_override acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.communication_override.captured_by text NOT NULL gen=- def=-
+public.communication_override.carried_from uuid gen=- def=-
+public.communication_override.category text NOT NULL gen=- def=-
+public.communication_override.communication_override_carried_from_fkey FOREIGN KEY (carried_from) REFERENCES communication_override(id) ON DELETE SET NULL
+public.communication_override.communication_override_category CHECK ((category = ANY (ARRAY['reply_to_inbound'::text, 'requested_followup'::text, 'precontract_quote'::text, 'active_deal_followup'::text, 'customer_service'::text, 'account_notice'::text, 'contract_notice'::text, 'invoice_or_payment'::text, 'security_notice'::text, 'privacy_notice'::text, 'record_confirmation'::text, 'consent_confirmation'::text, 'optout_confirmation'::text, 'marketing'::text])))
+public.communication_override.communication_override_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
+public.communication_override.communication_override_decided_by_level CHECK ((decided_by_level = ANY (ARRAY['user'::text, 'admin'::text])))
+public.communication_override.communication_override_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES lead(id) ON DELETE CASCADE
+public.communication_override.communication_override_names_a_target CHECK (((contact_id IS NULL) <> (lead_id IS NULL)))
+public.communication_override.communication_override_pkey PRIMARY KEY (id)
+public.communication_override.contact_id uuid gen=- def=-
+public.communication_override.decided_by_level text NOT NULL gen=- def=-
+public.communication_override.id uuid NOT NULL gen=- def=uuidv7()
+public.communication_override.lead_id uuid gen=- def=-
+public.communication_override.reason text NOT NULL gen=- def=-
+public.communication_override.recorded_at timestamp with time zone NOT NULL gen=- def=now()
+public.communication_override.revoked_at timestamp with time zone gen=- def=-
+public.communication_override_carried_from CREATE INDEX communication_override_carried_from ON public.communication_override USING btree (carried_from) WHERE (carried_from IS NOT NULL)
+public.communication_override_contact_cascade CREATE INDEX communication_override_contact_cascade ON public.communication_override USING btree (contact_id) WHERE (contact_id IS NOT NULL)
+public.communication_override_lead_cascade CREATE INDEX communication_override_lead_cascade ON public.communication_override USING btree (lead_id) WHERE (lead_id IS NOT NULL)
+public.communication_override_live_contact CREATE INDEX communication_override_live_contact ON public.communication_override USING btree (contact_id, category) WHERE (revoked_at IS NULL)
+public.communication_override_live_lead CREATE INDEX communication_override_live_lead ON public.communication_override USING btree (lead_id, category) WHERE (revoked_at IS NULL)
+public.communication_override_pkey CREATE UNIQUE INDEX communication_override_pkey ON public.communication_override USING btree (id)
 public.communication_review acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.communication_review.approval_id uuid gen=- def=-
 public.communication_review.communication_review_delivery_intent_id_fkey FOREIGN KEY (delivery_intent_id) REFERENCES scheduled_send(id) ON DELETE CASCADE
@@ -4593,7 +4618,7 @@ public.knowledge_corpus.knowledge_corpus_min_similarity_range CHECK (((min_simil
 public.knowledge_corpus.knowledge_corpus_pkey PRIMARY KEY (id)
 public.knowledge_corpus.knowledge_corpus_touch CREATE TRIGGER knowledge_corpus_touch BEFORE UPDATE ON public.knowledge_corpus FOR EACH ROW EXECUTE FUNCTION set_updated_at()
 public.knowledge_corpus.managed_source text gen=- def=-
-public.knowledge_corpus.min_similarity double precision NOT NULL gen=- def=0.35
+public.knowledge_corpus.min_similarity double precision gen=- def=-
 public.knowledge_corpus.name text NOT NULL gen=- def=-
 public.knowledge_corpus.reindexing boolean NOT NULL gen=- def=false
 public.knowledge_corpus.topic_statement text NOT NULL gen=- def=-
@@ -4988,6 +5013,7 @@ BEGIN
 END;
 
 public.mail_draft acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.mail_draft.agent_drafted boolean NOT NULL gen=- def=false
 public.mail_draft.anchor_id uuid NOT NULL gen=- def=-
 public.mail_draft.anchor_type text NOT NULL gen=- def=-
 public.mail_draft.author_id uuid NOT NULL gen=- def=-
@@ -6612,6 +6638,7 @@ public.stage_progression_policy.window_days integer NOT NULL gen=- def=30
 public.stage_progression_policy_pkey CREATE UNIQUE INDEX stage_progression_policy_pkey ON public.stage_progression_policy USING btree (id)
 public.stage_progression_policy_transition_key CREATE UNIQUE INDEX stage_progression_policy_transition_key ON public.stage_progression_policy USING btree (pipeline_id, from_stage_id, to_stage_id)
 public.stored_object_intent acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.stored_object_intent.kind text NOT NULL gen=- def=-
 public.stored_object_intent.recorded_at timestamp with time zone NOT NULL gen=- def=now()
 public.stored_object_intent.storage_key text NOT NULL gen=- def=-
 public.stored_object_intent.stored_object_intent_pkey PRIMARY KEY (storage_key)

@@ -9,6 +9,7 @@ import { AccountMenu } from "../app/account";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { pickOption } from "../design-system/select-testing";
 import { LOCALES, localeNameKey, translate } from "../i18n";
+import { SIGN_OFF_QUERY } from "./composesignoff";
 import { AuditLogCard, SettingsScreen, tabContent } from "./settings";
 import {
   auditEntry,
@@ -225,6 +226,35 @@ describe("SettingsScreen RBAC surfaces", () => {
       throw new Error("the sign-off box is not a textarea");
     }
     expect(reopened.value).not.toContain("nobody meant to keep");
+  });
+
+  // Every open composer previews the sign-off a send appends, and that answer
+  // is read from this signature. Saving it must send them all back to ask.
+  it("saving a signature sends every composer's sign-off preview back to ask", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", settingsBackend());
+    const { client } = render(
+      <SettingsScreen route={settingsHref("account")} />,
+    );
+    await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
+    const preview = [SIGN_OFF_QUERY, "user-a", "Body", "Subject"];
+    client.setQueryData(preview, {
+      text: "Best regards,\nAda",
+      kind: "closing",
+    });
+
+    await user.click(screen.getByRole("button", { name: "Edit signature" }));
+    await user.type(
+      await screen.findByRole("textbox", { name: "Sign-off" }),
+      "Ada Lovelace",
+    );
+    await user.click(
+      within(screen.getByRole("dialog")).getByRole("button", { name: "Save" }),
+    );
+
+    await waitFor(() =>
+      expect(client.getQueryState(preview)?.isInvalidated).toBe(true),
+    );
   });
 
   // A member correcting the name their colleagues see them by. Until this row

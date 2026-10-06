@@ -1,10 +1,9 @@
-# The installable app — manifest, service worker, offline page
+# The installable app: manifest, service worker, offline page
 
 Margince can be installed from the browser as an app: it gets its own window,
 its own icon and its own place in the launcher or on the home screen. It is the
-same web app from the same origin, not a second client. This page says what
-the pieces are, what the service worker is allowed to do, and why it is
-allowed so little.
+same web app from the same origin. Below: what the pieces are, what the service
+worker is allowed to do, and why it is allowed so little.
 
 ## What ships today
 
@@ -30,13 +29,10 @@ takes the browser's own path. A navigation that reaches the server and comes
 back with a 404 or a 500 is passed through untouched; only a fetch that
 rejects (no network, no route to the host) gets the offline page.
 
-That is narrower than a typical PWA on purpose. An earlier worker cached the
-app shell cache-first under a fixed name, `margince-shell-v1`, so its eviction
-step never deleted anything: a browser that loaded the app once kept serving
-that build's `index.html`, and the content-hashed bundle it named, past every
-deploy after it. A shipped screen read as missing for days. A worker that can
-answer the app's own shell from a cache can pin a browser to a build; one that
-answers only the failure case cannot. The offline script does not change
+That is narrower than a typical PWA. A worker that answers the app shell from a
+cache can pin a browser to an old build: the browser keeps serving that build's
+`index.html`, and the content-hashed bundle it names, past every later deploy.
+This one answers only the failure case, so it cannot. The offline script does not change
 that: its name carries a hash of its content and nothing in the app loads it,
 so serving it from the cache can pin no build. When the network works, the app
 always comes from the server.
@@ -46,9 +42,9 @@ not even offline, so an OAuth consent, an MCP discovery document or a
 webhook URL opened in a tab fails the way the browser fails it. The plugin
 reads the list from the keys of the dev server's proxy in
 `frontend/vite.config.ts` (`/v1`, `/setup`, `/oauth`, `/mcp`, `/.well-known`,
-`/webhooks`, `/healthz`, `/readyz`, `/metrics`) and matches them by whole path
+`/webhooks`, `/healthz`, `/readyz`, `/metrics`). It matches them by whole path
 segment, the way the served app routes them rather than the way the dev server
-does: `/mcp` and `/mcp/…` go to the network untouched, while `/mcp-apps/…`
+does. `/mcp` and `/mcp/…` go to the network untouched, while `/mcp-apps/…`
 is shipped files, and a failed navigation there gets the offline page. The
 desktop launcher keeps its own copy of the list (`apiPrefixes` in
 `desktop/launcher/web.go`), and `frontend/vite-proxy.test.ts` fails when that
@@ -56,7 +52,7 @@ copy and the proxy keys disagree.
 
 The worker does **not** use navigation preload. With it on, the browser
 requests every navigation in scope before the worker decides, including the
-ones the worker then leaves alone, and a navigation left alone is fetched a
+ones the worker then leaves alone. A navigation left alone is then fetched a
 second time: two GETs of an address that may carry a single-use token, such as
 an email confirmation or an OAuth callback. The app routes by hash, so the
 worker sees a navigation only when the app launches or reloads, and the
@@ -67,19 +63,19 @@ start-up time preload would hide is paid rarely.
 `frontend/scripts/vite-pwa.ts` runs inside `vite build` and emits three
 files: `sw.js` at the site root, and under `assets/` the offline page
 (`offline-<hash>.html`) and its one script (`offline-<hash>.js`), each named
-for its content. The page lives under `assets/` for a rolling deploy: a
+for its content. The page lives under `assets/` for a rolling deploy. A
 replica still on the previous build answers a name it lacks with 404 (nginx's
-`/assets/` location is `try_files $uri =404`), so the new worker's install
+`/assets/` location is `try_files $uri =404`). The new worker's install then
 fails and is retried instead of caching the app shell as the offline page.
 The worker's source is plain JavaScript, emitted untouched after one line that
 sets `self.__MARGINCE_SW_SETTINGS__` to this build's settings:
 
-- **the cache name**, `margince-offline-<release>-<digest>`, where the release
-  is `MARGINCE_RELEASE_VERSION` (`dev` when unset) and the digest is a hash of
-  the offline page, the worker's source and the pass-through list;
-  `workerCacheName` in `vite-pwa.ts` builds it, and `vite-pwa.test.ts` holds
-  that an identical build keeps the name and that any change to those inputs,
-  or to the release, renames it;
+- **the cache name**, `margince-offline-<release>-<digest>`. The release is
+  `MARGINCE_RELEASE_VERSION` (`dev` when unset) and the digest is a hash of
+  the offline page, the worker's source and the pass-through list.
+  `workerCacheName` in `vite-pwa.ts` builds it. `vite-pwa.test.ts` holds that an
+  identical build keeps the name and that any change to those inputs, or to the
+  release, renames it;
 - the offline page's address and its script's content-hashed address;
 - the pass-through prefixes.
 
@@ -90,12 +86,12 @@ the install fails) and calls `skipWaiting()`.
 On `activate` it deletes **every** cache whose name is not its own (the old
 `margince-shell-v1` included) and calls `clients.claim()`.
 
-The browser fetches the worker script past its HTTP cache: `pwa.ts` registers
+The browser fetches the worker script past its HTTP cache. `pwa.ts` registers
 with `updateViaCache: "none"`, and browsers cap a worker script's HTTP freshness
 at a day in any case. nginx still sends `Cache-Control: no-cache` for `/sw.js`
-and `/manifest.webmanifest`, for any shared cache in front of it, and answers a
-missing one with 404 rather than the app shell: a browser refuses an HTML page
-as a worker script and keeps the worker it had. The offline page and its
+and `/manifest.webmanifest`, for any shared cache in front of it. It answers a
+missing one with 404 rather than the app shell, because a browser refuses an
+HTML page as a worker script and keeps the worker it had. The offline page and its
 script are cached for a year as immutable, which their content-hashed names
 make safe. The desktop launcher (`desktop/launcher/web.go`) serves these files
 with no cache headers of its own and needs none, for the same reason.
@@ -107,7 +103,7 @@ scope and drive it: `frontend/scripts/vite-pwa.test.ts`.
 
 The page is shown when the device cannot reach Margince at all. It carries one
 block per locale the app ships, with the copy from the `offline.*` keys of the
-catalogs, and its styles inline: `tokens.css` and `base.css` compiled into the
+catalogs. Its styles are inline: `tokens.css` and `base.css` compiled into the
 document, so its colours, type and button are the product's own in both
 themes.
 
@@ -139,7 +135,7 @@ never competes with the app's first load. A failed registration is logged with
 `frontend/src/app/serviceworker-registrar.test.ts` fails any shipped module but
 `pwa.ts` that names `navigator.serviceWorker` in code, in any script dialect
 under `frontend/src` or an extension's frontend, so a second registrar cannot
-appear quietly.
+appear unnoticed.
 
 `listenForInstall()` runs from `main.tsx` before the first render, because the
 browser can make its offer before React mounts. It returns the function that
@@ -161,15 +157,15 @@ banner (`app/connectivitybanner.tsx`) says which outage holds:
 - **offline**: the browser reports no network (`navigator.onLine` and the
   `online`/`offline` events). Reads pause on every surface, as they always did.
 - **unreachable**: a request to the api rejected at the network level, outlived
-  its client deadline, or got a bare 502, 503 or 504 (a proxy saying the api is
-  down; the api's own 5xx carries a problem body), and a `/healthz` probe sent
-  at once failed too. One refused path on a working server declares nothing.
+  its client deadline, or got a bare 502, 503 or 504. (A bare 5xx is a proxy
+  saying the api is down; the api's own 5xx carries a problem body.) A
+  `/healthz` probe sent at once failed too. One refused path on a working server declares nothing.
   None of it counts on a model route, where a long wait is the work.
 
-**Only a surface that states the outage holds it open**, because a pause nothing
-explains is a page that never loads: the shell's banner, and the connection
-screen a failed first session check draws, which checks once more as it opens
-so the probe can let the reader in unaided. A public page (unsubscribe,
+Only a surface that states the outage holds it open, because a pause nothing
+explains is a page that never loads. Two surfaces do: the shell's banner, and
+the connection screen a failed first session check draws. That screen checks
+once more as it opens, so the probe can let the reader in unaided. A public page (unsubscribe,
 preferences, booking, a buyer room) states none: a failure there is its own.
 
 Once declared, `/healthz` is asked again after 2 seconds, doubling to a
@@ -225,8 +221,7 @@ already holds is then up to the browser.
 
 ## Left for later
 
-Each of these is a deliberate absence, not an oversight, and each needs its own
-decision before it lands:
+None of these ships today, and each needs its own decision before it lands:
 
 - **Push notifications.** A `push` handler in the worker and a subscription
   the api stores per seat.

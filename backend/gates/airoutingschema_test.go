@@ -5,7 +5,7 @@
 
 package gates
 
-// What the EDITOR accepts, checked against what the parser accepts.
+// What the editor accepts, checked against what the parser accepts.
 //
 // config/ai-routing.schema.json is what a YAML language server reads while an
 // operator types, so it is the first answer they get about whether a binding is

@@ -581,6 +581,8 @@ export const vi = {
   "aiAdmin.coverage":
     "Chỉ đếm các lần đọc website, quét tài khoản và tạo giọng văn được lưu bền vững. Không bao gồm mọi lượt AI theo lịch và không đảm bảo yêu cầu vẫn đủ điều kiện chạy.",
   "aiAdmin.unavailable": "Không khả dụng",
+  "aiAdmin.providerWaiting":
+    "Đang chờ nhà cung cấp AI: {waiting}. Công việc tự chạy tiếp khi nhà cung cấp phản hồi.",
   "aiAdmin.impact.blocked": "Chờ hạn mức",
   "aiAdmin.impact.model": "Đã chọn mô hình khác",
   "aiAdmin.impact.decision": "Đã đổi mô hình quyết định",
@@ -589,7 +591,6 @@ export const vi = {
   "aiAdmin.impact.exempt": "Tiếp tục khi vượt hạn mức",
   "aiAdmin.activity": "Hoạt động",
   "aiAdmin.model": "Mô hình được chính sách chọn",
-  "aiAdmin.thenLadder": "sau đó",
   "aiAdmin.decisionSkip.unbound":
     "Không dùng mô hình quyết định: chưa liên kết mô hình nào.",
   "aiAdmin.decisionSkip.uncertified":
@@ -895,6 +896,8 @@ export const vi = {
   "history.field.body": "Ghi chú",
   "history.field.emails": "Địa chỉ email",
   "history.field.nudge_dismissal": "Đã bỏ qua nhắc nhở",
+  "history.field.override_category": "Loại ghi đè",
+  "history.field.overrides_carried": "Ghi đè đã chuyển",
   "history.field.phones": "S\u1ed1 \u0111i\u1ec7n tho\u1ea1i",
   "history.field.invitation_status": "Trạng thái lời mời",
   "history.field.proposal_status": "Trạng thái đề xuất cuộc họp",
@@ -937,6 +940,10 @@ export const vi = {
   "history.field.reply_verdict": "Đánh giá phản hồi",
   "history.field.reply_verdict_by": "Đánh giá phản hồi bởi",
   "history.field.research_claims_accepted": "Thông tin nghiên cứu đã nhận",
+  "history.field.revoked_by": "Thu hồi bởi",
+  "history.field.revoked_by_level": "Thu hồi ở cấp",
+  "history.field.revoked_override": "Ghi đè đã thu hồi",
+  "history.field.revoked_rows": "Số ghi đè đã thu hồi",
   "history.field.scope": "Phạm vi",
   "history.field.stopped": "Đã dừng",
   "history.field.stops_carried": "Lệnh dừng đã chuyển",
@@ -1373,6 +1380,12 @@ export const vi = {
     "Yêu cầu thất bại. Không có nguyên nhân nào được báo về.",
   "common.assistantUnavailable":
     "Trợ lý chưa phản hồi nên không thể soạn giúp bạn phần này. Quản trị viên có thể kiểm tra liên kết mô hình trong Cài đặt → AI. Không bắt buộc phải có trợ lý — bạn có thể tự nhập các thông tin này.",
+  "common.providerOutOfCredit":
+    "Nhà cung cấp AI đã hết số dư. Hãy liên hệ quản trị viên hệ thống của bạn.",
+  "common.providerUnauthorized":
+    "Nhà cung cấp AI đã từ chối thông tin xác thực được cấu hình. Hãy liên hệ quản trị viên hệ thống của bạn.",
+  "common.providerUnavailable":
+    "Nhà cung cấp AI hiện không phản hồi. Hãy thử lại sau hoặc liên hệ quản trị viên hệ thống của bạn.",
   "common.gatewayUnavailable":
     "Máy chủ chưa hoàn tất yêu cầu này kịp thời. Có thể nó vẫn đang chạy — hãy đợi một lát trước khi thử lại, nếu không cùng một công việc sẽ chạy hai lần.",
   "common.permissionDenied":
@@ -2421,6 +2434,7 @@ export const vi = {
   "email.detail.none": "Thư này",
   "email.detail.attachments_one": "{count} tệp đính kèm",
   "email.detail.attachments_other": "{count} tệp đính kèm",
+  "email.detail.attachmentWithheld": "Không lưu vì thư là riêng tư.",
   "email.detail.showQuoted": "Hiện phần trích dẫn",
   "email.detail.withheldReason": "Thư này không được chia sẻ với bạn",
   "email.detail.from": "Từ",
@@ -4348,6 +4362,15 @@ export const vi = {
   "compose.savedDraftDeleted": "Đã xóa bản nháp đã lưu",
   "compose.savedDraftRestored": "Đã khôi phục bản nháp đã lưu",
   "compose.savedDraftRemove": "Xóa bản nháp đã lưu",
+  "compose.savedDraftByAgent":
+    "Đã khôi phục bản nháp của agent. Hãy đọc trước khi gửi.",
+  "compose.waitingDraftTitle": "Bản nháp đang chờ",
+  "compose.waitingDraftOpen": "Mở bản nháp",
+  "compose.waitingDraftByAgent":
+    "Một agent đã soạn “{subject}” để xem xét. Chưa có gì được gửi.",
+  "compose.waitingDraftByYou":
+    "Email chưa gửi “{subject}” đã được lưu từ trình soạn thảo.",
+  "compose.waitingDraftNoSubject": "Không có tiêu đề",
   "compose.savedDraftChangedTitle": "Bản nháp đã đổi ở cửa sổ khác",
   "compose.savedDraftChangedBody":
     "Khi lưu, nội dung trên màn hình được giữ lại. Tải phiên bản đã lưu để viết tiếp từ đó.",
@@ -4386,6 +4409,11 @@ export const vi = {
   "compose.whyThisDraft": "Vì sao có bản nháp này?",
   "compose.body": "Nội dung",
   "compose.bodyHint": "Nhấp vào văn bản để chỉnh sửa.",
+  "compose.signOff": "Được thêm khi gửi",
+  "compose.signOffClosing":
+    "Bạn chưa có chữ ký, nên lời kết này sẽ được thêm vào.",
+  "compose.signOffSet": "Đặt chữ ký",
+  "compose.signOffFailed": "Không tải được lời kết sẽ được thêm khi gửi.",
   "compose.transport": "Cách gửi",
   "compose.transportEmail": "Email",
   "compose.recipientHint": "Tên hoặc địa chỉ",
@@ -4983,7 +5011,7 @@ export const vi = {
   "settings.signatureLabel": "Lời kết của bạn",
   "settings.signaturePlaceholder": "Nguyễn Minh Anh\nGradion · +84 28 123456",
   "settings.signatureHint":
-    "Chỉ văn bản thuần. Để trống nghĩa là gửi không chữ ký. AI không bao giờ tự viết lời kết — chữ ký này mới là thứ được gửi đi.",
+    "Chỉ văn bản thuần. Để trống thì thư kết bằng một lời kết ngắn kèm tên bạn. Bản nháp AI không tự thêm lời kết.",
   "settings.signatureSaving": "Đang lưu…",
   "settings.signatureEdit": "Sửa chữ ký",
   "settings.signatureNone": "Chưa đặt lời kết",
@@ -5424,6 +5452,36 @@ export const vi = {
   "jobs.reasonVetted":
     "Lý do, lớp lỗi và cách xử lý đều là câu chữ của chính tầng tác vụ, không bao giờ là nguyên nhân thô từ worker. Một lỗi mà tầng đó không diễn đạt được sẽ báo bằng câu thay thế cố định và không mang lớp lỗi nào. Một lớp lỗi được đặt ra cho văn bản chưa kiểm chứng sẽ khiến cảnh báo của bạn dựa trên phỏng đoán.",
   "jobs.generatedAt": "Đọc lúc {time}",
+
+  "settings.providerHealth": "Trạng thái nhà cung cấp AI",
+  "settings.providerHealthSub":
+    "Từng nhà cung cấp AI có đang phản hồi hay không, theo máy chủ này ghi nhận.",
+  "providerHealth.adminOnly":
+    "Trạng thái nhà cung cấp AI áp dụng cho toàn bộ hệ thống và cần một quyền mà vai trò của bạn không có.",
+  "providerHealth.healthy": "Tất cả nhà cung cấp AI đang phản hồi.",
+  "aiProviderHealth.label.degraded": "Suy giảm",
+  "aiProviderHealth.label.down": "Không kết nối được",
+  "aiProviderHealth.label.outOfCredit": "Hết tín dụng",
+  "aiProviderHealth.label.unauthorized": "Khóa bị từ chối",
+  "aiProviderHealth.reason.degraded":
+    "Một số yêu cầu tới nhà cung cấp này đang thất bại. Các lệnh gọi vẫn được gửi đi.",
+  "aiProviderHealth.reason.down":
+    "Không kết nối được tới nhà cung cấp này. Các lệnh gọi chờ đến lần kiểm tra tiếp theo.",
+  "aiProviderHealth.reason.outOfCredit":
+    "Tài khoản đã hết tín dụng. Các lệnh gọi chờ đến lần kiểm tra tiếp theo.",
+  "aiProviderHealth.reason.unauthorized":
+    "Nhà cung cấp đã từ chối khóa API. Các lệnh gọi chờ đến lần kiểm tra tiếp theo.",
+  "aiProviderHealth.fix.degraded":
+    "Hãy xem trang trạng thái của nhà cung cấp, hoặc liên hệ quản trị viên hệ thống của bạn.",
+  "aiProviderHealth.fix.down":
+    "Hãy xem trang trạng thái và máy chủ của nhà cung cấp, hoặc liên hệ quản trị viên hệ thống.",
+  "aiProviderHealth.fix.outOfCredit":
+    "Hãy nạp tín dụng cho tài khoản nhà cung cấp, hoặc liên hệ quản trị viên hệ thống.",
+  "aiProviderHealth.fix.unauthorized":
+    "Hãy thay khóa, hoặc liên hệ quản trị viên hệ thống của bạn.",
+  "aiProviderHealth.since": "Bắt đầu {when}",
+  "aiProviderHealth.nextCheck": "Lần kiểm tra tiếp theo {when}",
+  "aiProviderHealth.nextCheckDue": "Đã đến lúc kiểm tra tiếp",
 
   "settings.extIngest": "Bản ghi bị từ chối từ trình kết nối",
   "settings.extIngestSub":
@@ -9243,10 +9301,29 @@ export const vi = {
   "aiRouting.median": "Trung vị {ms} ms",
   "aiTasks.title": "Tác vụ AI",
   "aiTasks.intro":
-    "Sửa một tác vụ để xem các lệnh gọi của nó diễn ra thế nào và đặt mức suy nghĩ cùng thời gian chờ. Tầng của nó do hợp đồng cố định; mỗi dòng hiển thị tầng và mô hình nó đang chạy.",
+    "Mỗi dòng hiển thị tầng của tác vụ và nhà cung cấp phục vụ nó. Chọn tên tác vụ để xem nó làm gì, trạng thái của nó và nó làm gì khi nhà cung cấp ngừng hoạt động. Sửa để đặt mức suy nghĩ và thời gian chờ; tầng của nó do hợp đồng cố định.",
   "aiTasks.whatItDoes": "{task}: tác vụ này làm gì",
   "aiTasks.decisionFirst": "Mô hình quyết định trước",
   "aiTasks.viewCalls": "Xem lượt gọi",
+  "aiTasks.deferral.nowEmbedding":
+    "Đang bị từ chối: việc lập chỉ mục tìm kiếm sẽ tự thử lại theo lịch riêng.",
+  "aiTasks.deferral.embedding":
+    "Khi nhà cung cấp ngừng hoạt động, hết tín dụng hoặc từ chối khóa, việc lập chỉ mục tìm kiếm bị từ chối và tự thử lại theo lịch riêng.",
+  "aiTasks.dot.ok": "Đang trả lời",
+  "aiTasks.dot.bad": "Cần chú ý",
+  "aiTasks.dot.idle": "Không có lượt gọi gần đây",
+  "aiTasks.deferral.background":
+    "Khi mọi mô hình tác vụ này dùng được đều ngừng hoạt động, hết tín dụng hoặc từ chối khóa, công việc của nó sẽ chờ và thử lại ở lần kiểm tra tiếp theo của nhà cung cấp, không tốn lượt thử.",
+  "aiTasks.deferral.interactive":
+    "Khi mọi mô hình tác vụ này dùng được đều ngừng hoạt động, hết tín dụng hoặc từ chối khóa, yêu cầu sẽ lỗi ngay kèm lời nhắc liên hệ quản trị viên.",
+  "aiTasks.deferral.nowBackground":
+    "Đang chờ: mọi mô hình tác vụ này dùng được đều bị chặn.",
+  "aiTasks.deferral.nowInteractive":
+    "Đang lỗi: mọi mô hình tác vụ này dùng được đều bị chặn.",
+  "aiTasks.deferral.skipping":
+    "Nhà cung cấp bị chặn sẽ được bỏ qua, và mô hình kế tiếp sẽ trả lời.",
+  "aiTasks.embeddingsEdit":
+    "Tìm kiếm và truy xuất không có mức suy nghĩ hay thời gian chờ để đặt. Đổi nhà cung cấp và mô hình ở dòng embeddings trong Các tầng mô hình.",
   "workingHours.title": "Khi nào bạn nhận lịch hẹn",
   "workingHours.sub":
     "Chỉ của riêng bạn. Không ai đặt giúp bạn, và bạn cũng không đặt cho ai.",

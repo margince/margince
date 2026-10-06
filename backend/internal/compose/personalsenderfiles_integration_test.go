@@ -93,9 +93,7 @@ func TestAPersonalSendersFilesAreKeptNowhere(t *testing.T) {
 		t.Fatalf("capturing the personal sender's message: %v", err)
 	}
 
-	if files := filesFor(ctx, t, db, "msg-personal-"+tag); len(files) != 0 {
-		t.Errorf("a personal sender's message stored %d file(s) in the object store", len(files))
-	}
+	requireNamedWithoutBytes(t, filesFor(ctx, t, db, "msg-personal-"+tag))
 	encoded := base64.StdEncoding.EncodeToString(onePDF().Body)
 	if raw := storedOriginal(ctx, t, db, "msg-personal-"+tag); bytes.Contains(raw, []byte(encoded)) {
 		t.Error("the stored original still carries the attachment's bytes")
@@ -208,5 +206,26 @@ func TestAPersonalSendersRefusedFileLeavesNoBytesInTheOriginal(t *testing.T) {
 	}
 	if !bytes.HasPrefix(raw, []byte("From: "+address+"\r\n")) {
 		t.Errorf("the stored original lost its headers: %q", raw)
+	}
+}
+
+// requireNamedWithoutBytes holds a private message's file list: one row for the
+// one file it carried, with its name, type and size, and no stored object.
+func requireNamedWithoutBytes(t *testing.T, files []capturedFile) {
+	t.Helper()
+	if len(files) != 1 {
+		t.Fatalf("a private message left %d attachment row(s), want 1 naming its file", len(files))
+	}
+	f := files[0]
+	if !f.withheld || f.storageKey != "" {
+		t.Errorf("the row has withheld=%v, storage_key=%q; want a withheld row with no object", f.withheld, f.storageKey)
+	}
+	if f.filename != onePDF().Filename || f.byteSize != int64(len(onePDF().Body)) ||
+		f.contentType == nil || *f.contentType != onePDF().ContentType {
+		t.Errorf("the row names %q (%v), %d bytes; want %q (%s), %d bytes",
+			f.filename, f.contentType, f.byteSize, onePDF().Filename, onePDF().ContentType, len(onePDF().Body))
+	}
+	if f.company != nil {
+		t.Errorf("a withheld file rolled up to account %s; a file nobody can open has no place in a library", *f.company)
 	}
 }

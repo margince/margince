@@ -129,6 +129,7 @@ import { OvernightGrantCard } from "./overnight-grant";
 import { OwnDomainsCard } from "./own-domains";
 import { PasswordSettingRow } from "./passwordcard";
 import { ProductsAdmin } from "./products";
+import { ProviderHealthCard } from "./providerhealth";
 import { FxRatesCard, ModelCostsCard } from "./rates";
 import { RecordRolesCard } from "./recordroles";
 import { ReviewTemplatesCard } from "./reviewtemplates";
@@ -152,11 +153,6 @@ import "./settings.css";
 import { ProvidersStat } from "./ai-settings";
 import type { SettingsPageId } from "./settingscatalog";
 import { SettingsBoundary, SettingsHome } from "./settingshome";
-// The catalog, the addresses and the visibility predicate moved to
-// ./settingsnav so `src/app/**` can read them without pulling in every card.
-// Re-exported here because this module's own consumers — the tests, the stories,
-// the testkit — ask for both halves, and splitting their imports would be churn
-// that proves nothing.
 import {
   ADMIN_SEGMENT,
   SETTINGS_SCREEN,
@@ -168,6 +164,7 @@ import {
   useVisibleSettingsPages,
 } from "./settingsnav";
 import { settingsHref, settingsRouteTarget } from "./settingsrouting";
+import { useSaveSignature } from "./settingssignature";
 
 // Re-exported so this module's own consumers — the tests, the stories, the
 // testkit — keep asking one module for both halves. Splitting their imports
@@ -372,15 +369,14 @@ export function tabContent(id: SettingsPageId): ReactNode {
       return (
         <>
           {/* A reindex that costs tokens, then a read of what the background
-              system is holding. They hid beside the custom-field editor before,
-              which put "define a field" and "watch a stalled queue" on one
-              page. */}
+              system is holding: they hid beside the custom-field editor. */}
           <EmbedReindexCard />
           <JobHealthCard />
           {/* Beside the queue reading, not under Capture or Extensions: each
               answers "is something broken in the background". */}
           <CaptureHealthCard />
           <ExtensionIngestHealthCard />
+          <ProviderHealthCard />
         </>
       );
     case "extensions":
@@ -712,7 +708,6 @@ function AccountCard() {
 // line, which is the part a reader recognises their own signature by.
 function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
   const t = useT();
-  const queryClient = useQueryClient();
   const titleId = useId();
   const [open, setOpen] = useState(false);
   const [body, setBody] = useState<string | null>(null);
@@ -726,29 +721,17 @@ function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
       return data ?? { body: "" };
     },
   });
-  const save = useMutation({
-    mutationFn: async (next: string) => {
-      const { data, error } = await api.PUT("/me/email-signature", {
-        body: { body: next },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-    onSuccess: (saved) => {
-      // Hand the edit back to the server's answer. It trims what it stores, so
-      // a member who typed trailing spaces would otherwise keep seeing them
-      // over a row that no longer has them — with Save still lit, offering to
-      // save a difference that exists only in the browser.
-      setBody(saved?.body ?? "");
-      queryClient.invalidateQueries({ queryKey: ["me-email-signature"] });
-      // Committing the edit is what the dialog was opened for, so a save closes
-      // it — and the toast is what says the write landed, on the page the
-      // reader is handed back to.
-      setOpen(false);
-      toast.show(t("settings.saved"));
-    },
+  const save = useSaveSignature((saved) => {
+    // Hand the edit back to the server's answer. It trims what it stores, so
+    // a member who typed trailing spaces would otherwise keep seeing them
+    // over a row that no longer has them — with Save still lit, offering to
+    // save a difference that exists only in the browser.
+    setBody(saved?.body ?? "");
+    // Committing the edit is what the dialog was opened for, so a save closes
+    // it — and the toast is what says the write landed, on the page the
+    // reader is handed back to.
+    setOpen(false);
+    toast.show(t("settings.saved"));
   });
 
   // The saved value until the member types; theirs from then on. Reading state

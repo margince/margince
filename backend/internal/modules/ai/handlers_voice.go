@@ -49,6 +49,9 @@ type Handlers struct {
 	// priceSync is the engine behind the refresh route and /ai/price-sync. Nil on a
 	// role that composed none, which answers 501.
 	priceSync *PriceSync
+	// providers is the process's record of which providers are answering, the
+	// same book the Router reads when it refuses a call.
+	providers *providerBook
 }
 
 // NewHandlers wires the module's stores onto one pool; budget is the
@@ -61,6 +64,7 @@ func NewHandlers(db *database.DB, budget BudgetPolicy) Handlers {
 		voice: NewVoiceStore(db), meter: NewMeter(db), budget: budget,
 		calls: NewCallReadStore(db), rates: NewRateStore(db),
 		feedback:      NewFeedbackStore(db),
+		providers:     sharedProviderHealth,
 		publicProfile: NewPublicProfile("unconfigured", RoutingConfig{}),
 	}
 }

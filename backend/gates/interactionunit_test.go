@@ -6,7 +6,7 @@
 package gates
 
 // Every count that becomes a relationship-strength number counts the shared
-// UNIT, not rows.
+// unit, not rows.
 //
 // A channel message arrives as one row per line, so an afternoon of chat is
 // dozens of rows and one conversation. relstrength.InteractionUnitSQL is what

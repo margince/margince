@@ -7,7 +7,7 @@
 
 package gates
 
-// AGENTS.md is the rulebook — at the root, and in any directory that needs one of
+// AGENTS.md is the rulebook, at the root and in any directory that needs one of
 // its own. The CLAUDE.md beside it contains one line, `@AGENTS.md`, and nothing
 // else. It exists only because Claude Code reads CLAUDE.md and never AGENTS.md.
 //

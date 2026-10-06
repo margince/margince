@@ -6,9 +6,9 @@ behind it: [openrouter.md](openrouter.md).
 
 The routing value is OpenRouter's own request shape: a `provider` object (which
 hosts, and how) and a `reasoning` object (how hard the model thinks). It is held
-by one schema, `$defs/upstreamRouting` in the configuration schema, which
-`backend/gates/airoutingschema_test.go` holds to the parser and
-`GET /ai/routing/schema` serves to the admin screen, each field with its
+by one schema, `$defs/upstreamRouting` in the configuration schema.
+`backend/gates/airoutingschema_test.go` holds it to the parser, and
+`GET /ai/routing/schema` serves it to the admin screen, each field with its
 description, its OpenRouter link and its placement.
 
 | Key | Placement | What it does |
@@ -28,24 +28,31 @@ description, its OpenRouter link and its placement.
 | `provider.data_collection` | connection | `deny` keeps every request off hosts that may store or train on prompts. |
 | `provider.enforce_distillable_text` | connection | Only models whose license allows their output to train other models. |
 
-**A connection key on a tier is refused** by `PUT /ai/routing`, by its path
-(`tiers.cheap_cloud.routing.provider.zdr`) with `moved_to_provider`, unless it
-repeats the connection's own value, which is what a client writing back a
-resolved binding sends. That is what makes loosening a tier's privacy
-impossible: there is no tier value to loosen. A YAML seed or a stored row that
-still carries a tier pin has it lifted onto the connection when it is read.
+## Placement
 
-**Every refusal names its path.** An unknown key at any depth, a value outside a
+`PUT /ai/routing` refuses a connection key on a tier by its path
+(`tiers.cheap_cloud.routing.provider.zdr`) with `moved_to_provider`. The one
+exception is a value that repeats the connection's own, which is what a client
+writing back a resolved binding sends. So a tier cannot loosen the
+connection's privacy: there is no tier value to loosen. A YAML seed or a stored
+row that still carries a tier pin has it lifted onto the connection when it is
+read.
+
+## Refusals
+
+Every refusal names its path. An unknown key at any depth, a value outside a
 vocabulary, a negative price or `effort` beside `max_tokens` is refused as a
-field fault per path, and `POST /ai/routing/preview` lists every one of them
-beside the merged request each tier will send (`effective.tiers`), so the editor
-shows the problems and the request together.
+field fault per path. `POST /ai/routing/preview` lists every one of them beside
+the merged request each tier will send (`effective.tiers`), so the editor shows
+the problems and the request together.
 
-**The flat spelling is still read.** `only`, `ignore`, `quantizations`, `sort`,
+## Flat spelling
+
+The flat spelling is still read. `only`, `ignore`, `quantizations`, `sort`,
 `require_parameters`, `allow_fallbacks`, `preferred_max_latency_p90` and
 `reasoning_effort` at the top level of `routing:` parse at every door (a YAML
-seed, the stored value, `MARGINCE_AICERT_UPSTREAM`), and a value the flat
-spelling can say is stored in it. The binding digest every cached brief is keyed
-on is computed over the stored spelling, so an unchanged binding keeps its
-digest and its wire bytes; a value only the nested spelling can say is stored
-nested. Mixing the two in one value is refused.
+seed, the stored value, `MARGINCE_AICERT_UPSTREAM`). A value the flat spelling
+can say is stored in it. The binding digest every cached brief is keyed on is
+computed over the stored spelling, so an unchanged binding keeps its digest and
+its wire bytes. A value only the nested spelling can say is stored nested.
+Mixing the two in one value is refused.

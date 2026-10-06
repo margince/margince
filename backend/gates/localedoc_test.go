@@ -7,8 +7,8 @@
 
 package gates
 
-// The docs name exactly the locales the tree ships, and the catalogs are the
-// set the Go validators admit.
+// The docs name the locales the tree ships, and the catalogs are the set the Go
+// validators admit.
 //
 // Key parity is compile-time, so how many catalogs a new string lands in is
 // something a contributor needs before pushing, and only a page says — no

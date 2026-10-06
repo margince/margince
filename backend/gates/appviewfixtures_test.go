@@ -5,7 +5,8 @@
 
 package gates
 
-// A view's fixture is the tool's answer, and this is what makes that true.
+// Each MCP App view's test fixture has the member names of the Go result its
+// tool returns.
 //
 // Every MCP App view renders `structuredContent.data` from one tool's result,
 // and the member names its TypeScript reads are a hand-written mirror of the Go

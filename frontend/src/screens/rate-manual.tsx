@@ -170,57 +170,61 @@ export function PriceForm({
     </Field>
   );
 
+  // Not a fragment: in the provider sheet's gap column the footer would gain
+  // that gap on top of its own margin.
   return (
-    <div className="form-stack">
-      {initial ? (
-        <p className="t-sub">
-          {t("aiRates.manual.editing", {
-            model: initial.model_id,
-            lane: t(LANE_LABEL[initial.lane]),
+    <div>
+      <div className="form-stack">
+        {initial ? (
+          <p className="t-sub">
+            {t("aiRates.manual.editing", {
+              model: initial.model_id,
+              lane: t(LANE_LABEL[initial.lane]),
+            })}
+          </p>
+        ) : null}
+        {initial ? null : (
+          <NewPriceIdentity
+            fixedProvider={fixedProvider}
+            typedProvider={typedProvider}
+            onProvider={setProvider}
+            modelId={modelId}
+            onModel={pickModel}
+            lane={lane}
+            boundModels={boundModels}
+          />
+        )}
+        <div className="form-row">
+          {initial ? null : <LaneField lane={lane} onChange={setLane} />}
+          <Field label={t("settings.rates.colEffective")}>
+            {(control) => (
+              <TextInput
+                {...control}
+                type="date"
+                min={today()}
+                value={effectiveDate}
+                onChange={(e) => setEffectiveDate(e.target.value)}
+              />
+            )}
+          </Field>
+        </div>
+        <div className="form-row">
+          {field(t("settings.rates.colInput"), input, setInput, {
+            placeholder: "5.00",
           })}
-        </p>
-      ) : null}
-      {initial ? null : (
-        <NewPriceIdentity
-          fixedProvider={fixedProvider}
-          typedProvider={typedProvider}
-          onProvider={setProvider}
-          modelId={modelId}
-          onModel={pickModel}
-          lane={lane}
-          boundModels={boundModels}
-        />
-      )}
-      <div className="form-row">
-        {initial ? null : <LaneField lane={lane} onChange={setLane} />}
-        <Field label={t("settings.rates.colEffective")}>
-          {(control) => (
-            <TextInput
-              {...control}
-              type="date"
-              min={today()}
-              value={effectiveDate}
-              onChange={(e) => setEffectiveDate(e.target.value)}
-            />
-          )}
-        </Field>
+          {field(t("settings.rates.colOutput"), output, setOutput, {
+            placeholder: "25.00",
+          })}
+        </div>
+        <div className="form-row">
+          {field(t("settings.rates.colCacheRead"), cacheRead, setCacheRead)}
+          {field(t("settings.rates.colCacheWrite"), cacheWrite, setCacheWrite)}
+        </div>
+        {malformed ? (
+          <ErrorLine>{t("aiRates.manual.malformed")}</ErrorLine>
+        ) : null}
+        <WriteRefused titleKey="settings.rates.notSaved" message={error} />
       </div>
-      <div className="form-row">
-        {field(t("settings.rates.colInput"), input, setInput, {
-          placeholder: "5.00",
-        })}
-        {field(t("settings.rates.colOutput"), output, setOutput, {
-          placeholder: "25.00",
-        })}
-      </div>
-      <div className="form-row">
-        {field(t("settings.rates.colCacheRead"), cacheRead, setCacheRead)}
-        {field(t("settings.rates.colCacheWrite"), cacheWrite, setCacheWrite)}
-      </div>
-      {malformed ? (
-        <ErrorLine>{t("aiRates.manual.malformed")}</ErrorLine>
-      ) : null}
-      <WriteRefused titleKey="settings.rates.notSaved" message={error} />
       <div className="actions rates-manual-actions">
         <Button variant="ghost" onClick={onCancel}>
           {t("create.cancel")}

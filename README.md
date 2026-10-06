@@ -1,6 +1,6 @@
 # Margince
 
-**A CRM that fills itself. A forecast that shows its evidence.**
+*A CRM that fills itself. A forecast that shows its evidence.*
 
 Product site: **[margince.com](https://margince.com)** · AI-native CRM ·
 coming autumn 2026. This repository is where it is built, and you get the
@@ -19,42 +19,42 @@ forecast number is something you can open and read the deals behind.
 We hit that wall ourselves. So we are building Margince: a fast core for
 the 80% every sales team needs, plus a governed agent surface. The AI you
 already pay for (Claude, Copilot, your own) works inside your customer
-data, not next to it.
+data.
 
-Three things matter:
+What matters:
 
 **Your agents do the real work.** An agent connects over MCP or plain
 REST. It gets tools, and every action it takes is logged.
 
-An agent never has more rights than the contact who lent it a passport. We
-check that colleague's seat and permissions on *every* call, not once at the
-start. So if you remove someone at 09:00, their agent stops at 09:00.
+An agent never has more rights than the colleague who lent it a passport. We
+check that colleague's seat and permissions on *every* call, from the first to
+the last. So if you remove someone at 09:00, their agent stops at 09:00.
 
 An agent can never approve its own work. Approvals, consent, data-subject
 requests and pipeline settings are closed to agent credentials. There is
 no way in.
 
 Every action is written to an append-only log naming the passport, the
-contact behind it, and the rule that allowed it. A database trigger refuses
+colleague behind it, and the rule that allowed it. A database trigger refuses
 any update or delete, and the role the application runs as holds only
-SELECT and INSERT. Be precise about what that buys: it stops the running
-software, not an operator holding the schema owner's credentials.
+SELECT and INSERT. That stops the running software; it does not stop an
+operator holding the schema owner's credentials.
 
 There is also a cap on how much one passport can send in a day. An
-operator sets the number, and no approval lifts it — a seat can hand
-back some budgets mid-window, but sending is not one of them.
+operator sets the number, and no approval lifts it. A seat can hand back
+some budgets mid-window, but sending is not one of them.
 
 Each action has an autonomy tier. Most are 🟢: they run, and they are
-logged. We tried asking a contact to confirm work they had already allowed.
-It made the agent weaker than the contact behind it, not safer. A smaller
-🟡 set still stops and waits for a contact. Which action is which comes
+logged. Asking a user to confirm work they had already allowed made the
+agent weaker than the user behind it, and no safer. A smaller 🟡 set still
+stops and waits for a human. Which action is which comes
 from the contract, so nobody keeps that list by hand:
 [docs/reference/agent-tools.md](docs/reference/agent-tools.md). The full
 reasoning is in
 [docs/explanation/agent-surface.md](docs/explanation/agent-surface.md).
 
-**You change it by changing the code.** No config screens, no metadata
-engine, no ceiling. Need a custom field or a workflow? That is a normal
+**You change it by changing the code.** There are no config screens and no
+metadata engine, and so no ceiling on what you can change. Need a custom field or a workflow? That is a normal
 code change in your own copy. Types, tests and extension seams protect
 it, and upstream never touches those seams. You can do it, a partner can
 do it, or we can.
@@ -65,7 +65,7 @@ one folder on a laptop with no Docker at all. There is no Gradion-run SaaS
 in this repository.
 
 Whether your data stays inside that boundary is a configuration you
-choose, not a property of the product. Bind the AI tasks to a local model
+choose. Bind the AI tasks to a local model
 (Ollama or vLLM) and nothing leaves; bind one to a cloud provider and the
 text that task reads goes there. The `sovereign` profile refuses every
 cloud provider outright, and
@@ -73,12 +73,12 @@ cloud provider outright, and
 whether its text can leave the installation. Read that before promising
 anyone this runs air-gapped.
 
-Sub-100ms interactions is the budget, not a marketing line. Every budget
-is published with its last measurement. The ones nobody has measured yet
+Opening a contact, company or deal has a 100ms server budget. Every budget is
+published with its last measurement. The ones nobody has measured yet
 say so, instead of being left out:
 [docs/reference/performance-budgets.md](docs/reference/performance-budgets.md).
 
-Built by [Gradion](https://gradion.com) — around 250 engineers,
+Built by [Gradion](https://gradion.com): around 250 engineers,
 independent, ISO 27001, with systems running behind €9bn of revenue.
 Licensed BUSL-1.1. We are replacing our own HubSpot with it first. If it
 cannot carry our pipeline, it does not ship.
@@ -95,23 +95,23 @@ behaviour.
 
 **Start here:**
 
-- **[docs/handbook/README.md](docs/handbook/README.md)** — how to *use*
+- **[docs/handbook/README.md](docs/handbook/README.md)**: how to *use*
   the product. No code, no API. Just the app.
-- **[CONTRIBUTING.md](CONTRIBUTING.md)** — the gates, licensing, and
+- **[CONTRIBUTING.md](CONTRIBUTING.md)**: the gates, licensing, and
   the AI-disclosure rules.
-- **[docs/explanation/backend-onboarding.md](docs/explanation/backend-onboarding.md)** —
+- **[docs/explanation/backend-onboarding.md](docs/explanation/backend-onboarding.md)**:
   the backend contributor hub: the map of the codebase, a reading order,
   and how to add a feature.
-- **[docs/README.md](docs/README.md)** — the full documentation index.
+- **[docs/README.md](docs/README.md)**: the full documentation index.
 
 Also: open work lives in
 [GitHub issues](https://github.com/margince/margince/issues) ·
-[AGENTS.md](AGENTS.md) — the engineering rules ·
-[SECURITY.md](SECURITY.md) — how to report a vulnerability (privately) ·
+[AGENTS.md](AGENTS.md): the engineering rules ·
+[SECURITY.md](SECURITY.md): how to report a vulnerability (privately) ·
 [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) ·
 [CHANGELOG.md](CHANGELOG.md).
 
-Everything below this line is for contacts (and agents) working on the code.
+Everything below this line is for humans (and agents) working on the code.
 
 ## Quick start
 
@@ -134,9 +134,9 @@ dev server passes `/v1` (and the health probes) through to the api behind
 it on :18080, so one port serves both the UI and the contract. Sign in as
 `admin@demo.test`. The password depends on whether you have seeded:
 
-- **After `make seed-dev`** — `demo-password-123`. The seed **chose** that
+- **After `make seed-dev`**: `demo-password-123`. The seed **chose** that
   password. It is not in any config file.
-- **Straight after `make dev`, not seeded** —
+- **Straight after `make dev`, not seeded**:
   `operator-supplied-first-password`, from
   `config/margince-admin-password`. The app asks you to replace it at
   once, and nothing else works until you do.
@@ -187,7 +187,7 @@ root commands, and `make -C backend help` lists every backend target.
 The merge gate is `make check`. It is `check-backend` (build, vet, lint,
 arch-lint, unit and fitness tests, contract drift, and the script gates)
 plus `check-fe` (the frontend lane). The real-Postgres lane is
-`make test-integration` — it runs in parallel on per-package clone
+`make test-integration`; it runs in parallel on per-package clone
 databases and needs `make db-up`. The CI pipeline that runs these as
 required checks is
 [docs/explanation/ci-pipeline.md](docs/explanation/ci-pipeline.md).
@@ -197,9 +197,9 @@ build, served separately from the API binary, and a plain client of the
 same `/v1` contract as everything else. It has no back doors.
 
 **Connect an agent.** The api serves the governed tool surface at `/mcp`,
-on the same origin as `/oauth/*` and the discovery documents — but only
-when the deployment turns the connector on (`mcp.connector_enabled`),
-which also requires `--public-base-url`, because the OAuth handshake has
+on the same origin as `/oauth/*` and the discovery documents. It does so
+only when the deployment turns the connector on (`mcp.connector_enabled`).
+That also requires `--public-base-url`, because the OAuth handshake has
 to name a canonical external origin. Without it none of those routes are
 mounted and the command below reaches nothing. Then a client needs only
 the URL:
@@ -209,8 +209,8 @@ claude mcp add --transport http margince <base>/mcp
 ```
 
 It walks discovery, client registration, the consent screen and the token
-exchange by itself. On that screen a contact lends one of their own
-passports, and the connection gets exactly that passport's scopes. You can
+exchange by itself. On that screen a user lends one of their own
+passports, and the connection gets that passport's scopes and no more. You can
 also mint a passport directly (`POST /v1/passports`, session-authed). The
 same token works as a REST bearer credential, and it is governed the same
 way.
@@ -243,13 +243,12 @@ enforce per-client throttling at the proxy.
   read from a request body. Publishing always goes through the outbox to
   Redis Streams, and consumers de-duplicate, because the bus delivers at
   least once.
-- **One installation, one company.** This is not multi-tenant
-  software, and it does not pretend to be. Boot refuses a second
-  workspace. No table has row-level security. Isolation is SQL predicates
+- **One installation, one company.** One installation serves one
+  company, and boot refuses a second workspace. No table has row-level security. Isolation is SQL predicates
   in the application, reached only through the one workspace-transaction
-  helper — and `scripts/check-rls-store-path.sh` refuses to let a module
-  leave that path. A row outside your scope answers 404, not 403, so
-  nobody can learn that a record exists. The reasoning:
+  helper, and `scripts/check-rls-store-path.sh` refuses to let a module
+  leave that path. A row outside your scope answers 404 (where 403 would
+  confirm it exists), so nobody can learn that a record exists. The reasoning:
   [docs/explanation/authorization.md](docs/explanation/authorization.md).
 - **Layout.** One Go module under `backend/`. `shared/*` holds
   stdlib-only leaves, `platform/*` is plumbing that owns no domain,
@@ -262,31 +261,30 @@ enforce per-client throttling at the proxy.
 
 ## What is in it, and what is not
 
-Every answer below is generated or comes from the contract. We do not keep
-a feature list in this file, because a hand-kept list goes stale and a
-stale list is worse than none.
+Every answer below is generated or comes from the contract. This file keeps
+no feature list, because a hand-kept list goes stale.
 
-- **What each module owns** — its tables, its shape, its HTTP surface:
+- **What each module owns**: its tables, its shape, its HTTP surface:
   [docs/reference/modules.md](docs/reference/modules.md).
-- **The whole HTTP surface** — `backend/api/crm.yaml`. Every operation is
-  mounted. The ones not built yet answer 501, not 404, so the gap is
-  visible from outside.
-- **The agent tools** — every tool, its tier, and the scope it spends:
+- **The whole HTTP surface**: `backend/api/crm.yaml`. Every operation is
+  mounted. The ones not built yet answer 501 (where a 404 would hide them),
+  so the gap is visible from outside.
+- **The agent tools**: every tool, its tier, and the scope it spends:
   [docs/reference/agent-tools.md](docs/reference/agent-tools.md).
   [docs/reference/mcp-info.md](docs/reference/mcp-info.md) is the same
-  surface exactly as a client receives it.
-- **Who may do what** —
+  surface as a client receives it.
+- **Who may do what**:
   [docs/reference/rbac-matrix.md](docs/reference/rbac-matrix.md),
   generated from the seeded policy.
-- **What changed** — [CHANGELOG.md](CHANGELOG.md).
+- **What changed**: [CHANGELOG.md](CHANGELOG.md).
 
-Three things are missing on purpose. We name them because anyone judging
+Three things are missing by choice. We name them because anyone judging
 this product will look for them.
 
 - **Outbound cadences.** Deferred in the contract:
   `/sequences, /sequences/{id}/steps, /enrollments (outbound cadences;
   sends gated)`. The automation catalog can write a draft and put it in
-  front of a contact — it has `draft_email`, not `send_email`. So a team
+  front of a human: it has `draft_email` and no `send_email`. So a team
   whose daily work is unattended outbound sequences is not served yet.
 - **Telephony and click-to-call.** Deferred in the contract.
 - **Hosted SaaS and multi-tenancy.** Not in this repository. One
@@ -294,18 +292,18 @@ this product will look for them.
 
 ## Working conventions (where findings go)
 
-Findings are routed, not lost:
+Where each kind of finding goes:
 
 - **Implementation decisions** go in the commit message and the PR that
   makes the change. Git history is the record.
-- **Decisions that bind future work** — a security posture, a contract
-  shape, a persistence choice — go to the maintainers, who keep the
+- **Decisions that bind future work** (a security posture, a contract
+  shape, a persistence choice) go to the maintainers, who keep the
   decision records. What binds a change here is enforced by a gate, and a
   gate that refuses tells you what to do instead.
-- **Anything you find but do not fix** — a bug, a gap, a follow-up —
-  becomes a labelled GitHub issue in this repo. One exception, and it is
-  not a preference: a weakness someone could exploit goes to a private
-  security advisory, never to a public issue or pull request. This
+- **Anything you find but do not fix** (a bug, a gap, a follow-up)
+  becomes a labelled GitHub issue in this repo. The one exception is a
+  rule: a weakness someone could exploit goes to a private security
+  advisory, never to a public issue or pull request. This
   repository is public, and a report that lands before the fix puts every
   deployment at risk. See [SECURITY.md](SECURITY.md).
 - **Open work** lives in GitHub issues. There is no status file. An issue
@@ -317,39 +315,37 @@ Findings are routed, not lost:
 [AGENTS.md](AGENTS.md) is the rulebook, and the only copy of it. It covers
 what decides a question here, how a change is shipped, the layout rules
 that bind a diff, and the craftsmanship bar the pre-push gate applies. It
-also carries the rules this codebase learned the expensive way.
+also carries the rules this codebase learned from review.
 
-We deliberately do not repeat those rules here. A rule written in two
-places becomes two rules the moment somebody edits one of them, and the
-copy nobody maintains is the one a reader believes.
+The rules are in AGENTS.md only, so they cannot drift from a copy.
 
 ## License
 
-**Business Source License 1.1** (`BUSL-1.1`) — see [LICENSE](LICENSE).
+**Business Source License 1.1** (`BUSL-1.1`); see [LICENSE](LICENSE).
 Licensor: Gradion Pte. Ltd. (Singapore). It is source-available, **not**
 OSI open source: the full source is public and free to read, run and
 modify.
 
 - **Free** for your own internal production use, up to **10 Seats**. A
-  Seat is an identified contact with credentials. AI agents, service
+  Seat is an identified individual with credentials. AI agents, service
   accounts and external data subjects are **not** Seats. Above those ten,
   the published price is a flat €25 per acting seat per month, with read
-  seats unlimited and free — no charge per contact, and no markup on AI
-  tokens. That applies whether you self-host or a partner hosts for you.
+  seats unlimited and free. There is no charge per contact and no markup
+  on AI tokens. That applies whether you self-host or a partner hosts for you.
   The commercial terms live at [margince.com](https://margince.com); this
   file describes the licence, which is [LICENSE](LICENSE).
 - Hosting or reselling it as a service to other companies needs an
   **Authorized Hosting Partner** agreement.
-- **Every release becomes Apache 2.0 two years after it ships.** The BUSL
-  text allows up to four years; we hold ours to two. This happens per
-  release, so each release converts on its own date. A current version is
+- **Each release turns Apache 2.0 after two years.** The BUSL
+  text allows up to four years from release; we hold ours to two. Each release converts
+  on its own date. A current version is
   never itself under Apache.
 
-**One thing the licence text does not tell you.** If `MARGINCE_ENV` is
+**What the licence text does not say.** If `MARGINCE_ENV` is
 anything other than `dev` or `test`, the binary needs a licence token from
 Gradion, and it refuses to start without one. That applies at the first
-Seat, not the eleventh. So the 10-Seat grant is a legal permission, not a
-self-serve path: today you have to ask us for a token. If that blocks you,
+Seat, and not only from the eleventh. So the 10-Seat grant is a legal
+permission without a self-serve path: today you have to ask us for a token. If that blocks you,
 please say so in an issue. It is a product decision, and knowing who it
 stops is what would change it.
 

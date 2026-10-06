@@ -68,58 +68,56 @@ export function ResolveSheet({
       <Heading size="large" id={titleID} className="modal-title">
         {labels.title}
       </Heading>
-      <ChoiceList
-        legend={labels.outcomeLegend}
-        value={outcome}
-        choices={labels.outcomes}
-        onChange={setOutcome}
-      />
+      <div className="form-stack">
+        <ChoiceList
+          legend={labels.outcomeLegend}
+          value={outcome}
+          choices={labels.outcomes}
+          onChange={setOutcome}
+        />
 
-      {/* An answer that HIDES a finding says why. The next contact to meet the
-          number is owed the reason it is not flagged, and the two suppressing
-          outcomes are the only ones that take it away from them. */}
-      {needsReason && (
-        <Field label={labels.reason} hint={labels.reasonHelp}>
-          {(control) => (
-            <TextInput
-              {...control}
-              value={reason}
-              onChange={(event) => setReason(event.target.value)}
-            />
-          )}
-        </Field>
-      )}
+        {/* A hidden finding owes the next reader the reason it is not flagged. */}
+        {needsReason && (
+          <Field label={labels.reason} hint={labels.reasonHelp}>
+            {(control) => (
+              <TextInput
+                {...control}
+                value={reason}
+                onChange={(event) => setReason(event.target.value)}
+              />
+            )}
+          </Field>
+        )}
 
-      {/* A deferral names when it comes back, or it is a dismissal wearing a
-          different word. */}
-      {needsRemind && (
-        <Field label={labels.remindAt}>
-          {(control) => (
-            <DateInput
-              {...control}
-              value={remindAt}
-              onChange={(event) => setRemindAt(asDate(event.target.value))}
-            />
-          )}
-        </Field>
-      )}
+        {/* A deferral without a date is a dismissal. */}
+        {needsRemind && (
+          <Field label={labels.remindAt}>
+            {(control) => (
+              <DateInput
+                {...control}
+                value={remindAt}
+                onChange={(event) => setRemindAt(asDate(event.target.value))}
+              />
+            )}
+          </Field>
+        )}
 
-      {/* Optional, and bounded. Left empty the server applies its own ceiling;
-          past the ceiling it refuses rather than shortening, so the help text
-          says the limit rather than letting somebody discover it. */}
-      {needsReason && (
-        <Field label={labels.expiresAt} hint={labels.expiresHelp}>
-          {(control) => (
-            <DateInput
-              {...control}
-              value={expiresAt}
-              onChange={(event) => setExpiresAt(asDate(event.target.value))}
-            />
-          )}
-        </Field>
-      )}
+        {/* Past the server's ceiling the date is refused, not shortened, so the
+            hint states the limit. */}
+        {needsReason && (
+          <Field label={labels.expiresAt} hint={labels.expiresHelp}>
+            {(control) => (
+              <DateInput
+                {...control}
+                value={expiresAt}
+                onChange={(event) => setExpiresAt(asDate(event.target.value))}
+              />
+            )}
+          </Field>
+        )}
 
-      <ErrorLine error={error} />
+        <ErrorLine error={error} />
+      </div>
 
       <div className="card-actions">
         <Button onClick={onClose}>{labels.cancel}</Button>

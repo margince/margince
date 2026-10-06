@@ -5,8 +5,8 @@
 
 package gates
 
-// The Google connectors are built for the registry in ONE function, because
-// putting one INTO the registry is a decision about REACHABILITY and that
+// The Google connectors are built for the registry in one function, because
+// putting one into the registry is a decision about reachability and that
 // decision has been wrong once.
 //
 // An installation can supply its Google app from either of two places: the pair

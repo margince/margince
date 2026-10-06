@@ -1226,6 +1226,11 @@
   display: block;
   margin-top: var(--space-1);
 }
+/* In a row's body the text sits --space-2 below the line above, and the
+   body's own --space-1 gap already pays part of that. */
+.timeline .tl-body > .tl-text {
+  margin-top: calc(var(--space-2) - var(--space-1));
+}
 
 /* A note's body on its own plate: the rep's aside about the record, told
    apart from the correspondence around it before a word of either is read.
