@@ -137,7 +137,7 @@ describe("TeamAct", () => {
     ).toBeInTheDocument();
     // The set-password link, in the same dialog the roster hands it over in.
     expect(
-      await screen.findByDisplayValue("https://crm.example/set-password?t=abc"),
-    ).toBeInTheDocument();
+      (await screen.findByTestId("password-link-url")).textContent,
+    ).toBe("https://crm.example/set-password?t=abc");
   });
 });
