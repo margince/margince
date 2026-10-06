@@ -38,7 +38,7 @@ A failure answers `ok: false` with one `reason`:
 | reason | meaning |
 |---|---|
 | `no_key` | the provider takes a key and none is stored |
-| `profile_forbids` | the installation profile forbids reaching this provider: a cloud provider under `sovereign`, or under `eu_hosted` a decision lane the routing validator refuses (`jev`, or `jev_compatible` on OpenRouter) |
+| `profile_forbids` | the installation profile forbids reaching this provider: a cloud provider under `sovereign` |
 | `no_endpoint` | `openai_compatible` or `jev_compatible` with no binding naming a host yet; bind one first |
 | `auth_failed` | the vendor refused the key: 401 or 403, or Gemini's 400 `API_KEY_INVALID` |
 | `rate_limited` | 429: the vendor is throttling the key, which may still be valid |

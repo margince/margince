@@ -11178,7 +11178,7 @@ export interface paths {
                  *     Omitted, the vendor's whole list comes back in the vendor's own order. A vendor that publishes no such measure cannot honour this: it answers with the full list and no `ranked_by`, rather than inventing an order and calling it a ranking.
                  */
                 top?: number;
-                /** @description The Vertex AI location being edited, for `gemini_vertex` only — which models are served differs by location, and the location is where Google processes the call. Omitted, the lane's stored location is used. Under the `eu_hosted` profile a location outside the EU answers `profile_forbids` before any credential is used. Ignored by every other vendor. */
+                /** @description The Vertex AI location being edited, for `gemini_vertex` only — which models are served differs by location, and the location is where Google processes the call. Omitted, the lane's stored location is used. Ignored by every other vendor. */
                 location?: string;
                 /** @description Probe ONE model instead of listing: `gemini_vertex` asks the location whether it serves this id (one `countTokens` call, or one `embedContent` when `tier` is `embeddings`). The answer lists just that model when it is served, `unavailable: no_endpoint` when the location does not serve it, and `unreachable` when Google could not be asked. Every other vendor answers `not_published`: it has no per-location availability to probe. */
                 model?: string;
@@ -11240,8 +11240,8 @@ export interface paths {
          *
          *     `resident` and `jurisdiction` are this build's residency policy, never Google's words: a
          *     location Google adds tomorrow appears as an option and is not resident until this build
-         *     says so. Under `eu_hosted` every location is still listed, and a binding at one with
-         *     `resident: false` is refused on save.
+         *     says so. Every location is listed and selectable under every profile; `resident` is
+         *     information, not a gate.
          *
          *     A vendor that cannot be asked is NOT an error — the response is 200 with `unavailable`.
          *     Every vendor but `gemini_vertex` answers `not_published`: it has no location to choose.
@@ -11388,8 +11388,6 @@ export interface paths {
          *       answered and did not refuse the key, but may have refused the body before reading it.
          *       A 200 is not a pass, since no decision server answers an empty request. It passes with
          *       no `model_count`.
-         *     - A decision lane the profile refuses to bind (under `eu_hosted`: `jev`, or `jev_compatible`
-         *       on OpenRouter) answers `profile_forbids` without being dialled.
          *
          *     No request body. The key is the STORED one, never a candidate sent here: a credential
          *     that travels only to be tested is still a credential in a request log. The host is the
@@ -19689,7 +19687,7 @@ export interface components {
              * @enum {string}
              */
             jurisdiction: "eu" | "us" | "other" | "global";
-            /** @description Whether Google keeps ML processing at this location inside the EU, which is what the `eu_hosted` profile admits. This build's list, never Google's: a location Google adds is not resident until this build names it. */
+            /** @description Whether Google keeps ML processing at this location inside the EU. This build's list, never Google's: a location Google adds is not resident until this build names it. */
             resident: boolean;
         };
         /** @description What may be known about one vendor's credential. Facts about the vendor and whether a key is held, and nothing about the key: it has no read path, and neither does anything derived from it — a length, a prefix or a masked tail would each narrow a brute force while feeling harmless. */
@@ -19745,8 +19743,8 @@ export interface components {
             /**
              * @description The location ladder (§4). `sovereign` means zero egress by construction: a cloud
              *     provider on any tier is refused, and so is a local provider pointed at another host.
-             *     `eu_hosted` promises EU inference: a broker lane must pin EU-region hosts, and a
-             *     `gemini_vertex` lane must name an EU location.
+             *     `eu_hosted` and `cloud_frontier` refuse no binding on residency grounds: where a lane is served is the
+             *     connection's and the location's to say.
              * @enum {string}
              */
             profile: "eu_hosted" | "sovereign" | "cloud_frontier";
@@ -60007,7 +60005,7 @@ export interface operations {
                  *     Omitted, the vendor's whole list comes back in the vendor's own order. A vendor that publishes no such measure cannot honour this: it answers with the full list and no `ranked_by`, rather than inventing an order and calling it a ranking.
                  */
                 top?: number;
-                /** @description The Vertex AI location being edited, for `gemini_vertex` only — which models are served differs by location, and the location is where Google processes the call. Omitted, the lane's stored location is used. Under the `eu_hosted` profile a location outside the EU answers `profile_forbids` before any credential is used. Ignored by every other vendor. */
+                /** @description The Vertex AI location being edited, for `gemini_vertex` only — which models are served differs by location, and the location is where Google processes the call. Omitted, the lane's stored location is used. Ignored by every other vendor. */
                 location?: string;
                 /** @description Probe ONE model instead of listing: `gemini_vertex` asks the location whether it serves this id (one `countTokens` call, or one `embedContent` when `tier` is `embeddings`). The answer lists just that model when it is served, `unavailable: no_endpoint` when the location does not serve it, and `unreachable` when Google could not be asked. Every other vendor answers `not_published`: it has no per-location availability to probe. */
                 model?: string;

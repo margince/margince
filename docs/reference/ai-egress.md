@@ -27,8 +27,7 @@ is bound, even when the task's own ladder is bound locally. A task that also
 declares `local_only` is asked only by a local decision provider; bound to a cloud
 one, the lane skips it and the ladder answers. A task marked "none" is never
 sent to a decision model. Under `sovereign` the lane must be a local provider on an
-endpoint the installation controls. Under `eu_hosted` it may not reach OpenRouter,
-whose decisions endpoint cannot be pinned to an EU host.
+endpoint the installation controls.
 
 A task with none of these sends its text to whichever provider the operator
 bound for its ladder's rungs, and may retain the prompt for debugging.

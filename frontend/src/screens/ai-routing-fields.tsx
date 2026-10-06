@@ -153,7 +153,6 @@ export function AdapterFields<B extends TierBindingLike>({
   laneName,
   binding,
   catalogue,
-  profile = "",
   vertexLocation = DEFAULT_VERTEX_LOCATION,
   providerSettings,
   disabled,
@@ -176,9 +175,6 @@ export function AdapterFields<B extends TierBindingLike>({
   laneName: string;
   binding: B;
   catalogue: ModelCatalogue;
-  // The draft's profile, which decides the Vertex locations on offer. The
-  // decision lane binds no Vertex model, so it passes neither.
-  profile?: string;
   // Where a lane newly pointed at Vertex starts: another saved Vertex lane's.
   vertexLocation?: string;
   // The bound provider's own settings, which say whether it can be dialled.
@@ -262,7 +258,6 @@ export function AdapterFields<B extends TierBindingLike>({
       {vertex && ownServer && (
         <VertexLocationField
           value={location}
-          profile={profile}
           disabled={disabled}
           onChange={(next) => {
             probe.relocate(next);

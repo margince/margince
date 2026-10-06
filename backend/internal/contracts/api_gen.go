@@ -22722,8 +22722,8 @@ type AiRouting struct {
 
 	// Profile The location ladder (§4). `sovereign` means zero egress by construction: a cloud
 	// provider on any tier is refused, and so is a local provider pointed at another host.
-	// `eu_hosted` promises EU inference: a broker lane must pin EU-region hosts, and a
-	// `gemini_vertex` lane must name an EU location.
+	// `eu_hosted` and `cloud_frontier` refuse no binding on residency grounds: where a lane is served is the
+	// connection's and the location's to say.
 	Profile AiRoutingProfile `json:"profile"`
 
 	// Providers Provider name to what that provider is configured with, independent of any lane: its
@@ -22738,8 +22738,8 @@ type AiRouting struct {
 
 // AiRoutingProfile The location ladder (§4). `sovereign` means zero egress by construction: a cloud
 // provider on any tier is refused, and so is a local provider pointed at another host.
-// `eu_hosted` promises EU inference: a broker lane must pin EU-region hosts, and a
-// `gemini_vertex` lane must name an EU location.
+// `eu_hosted` and `cloud_frontier` refuse no binding on residency grounds: where a lane is served is the
+// connection's and the location's to say.
 type AiRoutingProfile string
 
 // AiRoutingEffective What each tier will send OpenRouter once saved, the connection's keys and the product default merged in. Only tiers whose binding sends a block.
@@ -39442,7 +39442,7 @@ type ProviderLocation struct {
 	// Jurisdiction Whose law the processing happens under, by this build's policy: `eu` exactly when `resident`, `global` for the endpoint that may process anywhere, `us` for the US multi-region and US regions, and `other` for everything else — London and Zürich among them.
 	Jurisdiction ProviderLocationJurisdiction `json:"jurisdiction"`
 
-	// Resident Whether Google keeps ML processing at this location inside the EU, which is what the `eu_hosted` profile admits. This build's list, never Google's: a location Google adds is not resident until this build names it.
+	// Resident Whether Google keeps ML processing at this location inside the EU. This build's list, never Google's: a location Google adds is not resident until this build names it.
 	Resident bool `json:"resident"`
 }
 
@@ -47741,7 +47741,7 @@ type ListAvailableModelsParams struct {
 	// Omitted, the vendor's whole list comes back in the vendor's own order. A vendor that publishes no such measure cannot honour this: it answers with the full list and no `ranked_by`, rather than inventing an order and calling it a ranking.
 	Top *int `form:"top,omitempty" json:"top,omitempty"`
 
-	// Location The Vertex AI location being edited, for `gemini_vertex` only — which models are served differs by location, and the location is where Google processes the call. Omitted, the lane's stored location is used. Under the `eu_hosted` profile a location outside the EU answers `profile_forbids` before any credential is used. Ignored by every other vendor.
+	// Location The Vertex AI location being edited, for `gemini_vertex` only — which models are served differs by location, and the location is where Google processes the call. Omitted, the lane's stored location is used. Ignored by every other vendor.
 	Location *string `form:"location,omitempty" json:"location,omitempty"`
 
 	// Model Probe ONE model instead of listing: `gemini_vertex` asks the location whether it serves this id (one `countTokens` call, or one `embedContent` when `tier` is `embeddings`). The answer lists just that model when it is served, `unavailable: no_endpoint` when the location does not serve it, and `unreachable` when Google could not be asked. Every other vendor answers `not_published`: it has no per-location availability to probe.
