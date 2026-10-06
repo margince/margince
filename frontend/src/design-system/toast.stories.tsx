@@ -144,9 +144,8 @@ export const Refusal: Story = {
 };
 
 /**
- * The verb, which is what this exists for. A toast carrying one never withdraws
- * on a timer: a reader reaching for Undo must not lose it mid-reach, and there
- * is no timeout long enough to be safe that is also short enough to be a toast.
+ * The verb, which is what this exists for. A toast carrying one stays about
+ * eight seconds, and not at all while the pointer or focus is on it.
  *
  * Pressing it runs the inverse write and puts the message down — a message still
  * offering an action it has already taken is a second press waiting to happen.
@@ -165,8 +164,8 @@ export const CarryingAnUndo: Story = {
 
 /**
  * A message the reader has not answered is never taken away by one that is only
- * reporting. Press both: the archive keeps the region until it is dismissed, and
- * the save waits its turn behind it.
+ * reporting. Press both: the archive keeps the region until it goes, and the
+ * save waits its turn behind it.
  */
 export const AVerbOutranksAReport: Story = {
   render: () => (

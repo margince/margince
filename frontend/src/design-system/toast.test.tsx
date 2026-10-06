@@ -100,6 +100,10 @@ const wait = (ms: number) => {
 
 const press = (name: string) => screen.getByRole("button", { name });
 
+// `Button` takes one press per commit and releases its latch in a microtask,
+// which a synchronous `act` never drains; pressing the same trigger again needs this.
+const release = () => act(async () => {});
+
 describe("the toast region", () => {
   it("says nothing until something is shown", () => {
     show();
@@ -161,14 +165,80 @@ describe("the toast region", () => {
 describe("a confirmation carrying a verb", () => {
   const undo = (onAct = () => {}) => ({ action: { label: "Undo", onAct } });
 
-  it("does not withdraw on its own", async () => {
-    // A reader reaching for Undo must not lose it mid-reach, and there is no
-    // timeout long enough to be safe that is also short enough to be a toast.
+  it("withdraws after eight seconds", async () => {
+    // Longer than a report, so a reader reaching for Undo has time to get there.
     const acting = steppedClock();
     show({ options: undo() });
     await acting.click(press("show"));
-    wait(30_000);
+    wait(7900);
     expect(screen.getByRole("status")).toHaveTextContent("Saved.");
+    wait(200);
+    expect(screen.queryByRole("status")).toBeNull();
+  });
+
+  it("holds its clock while a pointer is over it", async () => {
+    const acting = steppedClock();
+    show({ options: undo() });
+    await acting.click(press("show"));
+    await acting.hover(screen.getByRole("status"));
+    wait(30_000);
+    expect(press("Undo")).toBeInTheDocument();
+  });
+
+  it("stays when the caller asks for sticky as well", async () => {
+    const acting = steppedClock();
+    show({ options: { ...undo(), sticky: true } });
+    await acting.click(press("show"));
+    wait(30_000);
+    expect(press("Undo")).toBeInTheDocument();
+  });
+
+  it("closes with one press after several identical ones", async () => {
+    // Three Done presses in a row: one × must clear the region, not the first
+    // of three identical messages queued behind one another.
+    const acting = steppedClock();
+    show({ message: "Task completed", options: undo() });
+    for (let done = 0; done < 3; done += 1) {
+      await acting.click(press("show"));
+      await release();
+    }
+    expect(screen.getAllByRole("status")).toHaveLength(1);
+    await acting.click(press("Close"));
+    expect(screen.queryByRole("status")).toBeNull();
+  });
+
+  it("is replaced by a newer one, whose Undo is the one that runs", async () => {
+    const first = vi.fn();
+    const second = vi.fn();
+    const acting = steppedClock();
+    show({
+      message: "Task completed",
+      options: undo(first),
+      second: "Task completed",
+      secondOptions: undo(second),
+    });
+    await acting.click(press("show"));
+    const replaced = screen.getByRole("status");
+    await acting.click(press("show second"));
+    // A new node, so the arrival animation plays again for the same words.
+    expect(screen.getByRole("status")).not.toBe(replaced);
+    await acting.click(press("Undo"));
+    expect(second).toHaveBeenCalledOnce();
+    expect(first).not.toHaveBeenCalled();
+    expect(screen.queryByRole("status")).toBeNull();
+  });
+
+  it("gives the replacement its own full life", async () => {
+    const acting = steppedClock();
+    show({ options: undo() });
+    await acting.click(press("show"));
+    await release();
+    wait(6000);
+    await acting.click(press("show"));
+    wait(7900);
+    expect(screen.getByRole("status")).toBeInTheDocument();
+    wait(200);
+    expect(screen.queryByRole("status")).toBeNull();
   });
 
   it("runs the verb and then withdraws", async () => {
@@ -204,6 +274,13 @@ describe("a confirmation carrying a verb", () => {
     // own full life rather than the remainder of somebody else's.
     wait(3600);
     expect(screen.queryByRole("status")).toBeNull();
+  });
+
+  it("carries its own way out", async () => {
+    const acting = steppedClock();
+    show({ options: undo() });
+    await acting.click(press("show"));
+    expect(press("Close")).toBeInTheDocument();
   });
 
   it("gives a sticky confirmation its own way out", async () => {

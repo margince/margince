@@ -9,6 +9,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { createPortal } from "react-dom";
@@ -39,9 +40,8 @@ import "./toast.css";
  * itself once `onAct` has run: a message still offering an action it has already
  * taken is a second press waiting to happen.
  *
- * A toast carrying one of these does NOT withdraw on a timer. A reader reaching
- * for Undo must not lose it mid-reach, and there is no timeout long enough to be
- * safe that is also short enough to still be a toast.
+ * A toast carrying one gets the longer `ACTION_TOAST_MS`, held like any toast
+ * while hovered or focused, so a reader reaching for Undo does not lose it.
  */
 export type ToastAction = Readonly<{
   label: string;
@@ -50,6 +50,9 @@ export type ToastAction = Readonly<{
 
 /** How long a confirmation stays before it withdraws itself. */
 const TOAST_MS = 3500;
+
+/** How long a confirmation carrying a verb stays: long enough to reach for it. */
+const ACTION_TOAST_MS = 8000;
 
 /**
  * What the message SAYS about itself, in the five-state vocabulary, as a VALUE
@@ -72,17 +75,19 @@ export const TOAST_TONES = [
 export type ToastTone = (typeof TOAST_TONES)[number];
 
 type ToastMessage = Readonly<{
+  /** Per `show`, so a message replacing one with the same text re-arrives. */
+  id: number;
   node: ReactNode;
   tone: ToastTone;
-  /** Whether it withdraws itself, which decides whether it needs a way out. */
+  /** Kept until something dismisses it. */
   sticky: boolean;
   action: ToastAction | null;
 }>;
 
 export type ToastOptions = Readonly<{
   /**
-   * Keep it until something dismisses it. Implied by `action`, and worth asking
-   * for on its own only where the message is a REFUSAL: a reader who has been
+   * Keep it until something dismisses it. Worth asking for only where the
+   * message is a REFUSAL: a reader who has been
    * told a write did not land should not have that sentence taken away from
    * them three and a half seconds later.
    */
@@ -94,7 +99,7 @@ export type ToastOptions = Readonly<{
    * for a report, `discovery` for something the reader has just been given.
    */
   tone?: ToastTone;
-  /** The verb the message carries. Makes it sticky, and gives it a way out. */
+  /** The verb the message carries. Lengthens its life, and gives it a way out. */
   action?: ToastAction;
 }>;
 
@@ -132,18 +137,14 @@ const NO_REGION: Toast = { show: () => {}, dismiss: () => {} };
  *
  * A confirmation carrying a verb is not interchangeable with one that only
  * reports: the second is a courtesy, the first is the reader's only route back
- * from something they may not have meant. So while a message with an action is
- * on screen, everything arriving QUEUES BEHIND IT rather than replacing it.
- * Otherwise the newest message wins, which is what a reader making two quick
- * saves expects to see.
- *
- * No cap. A cap here would drop a message silently, and what it would be
- * protecting against — several undoable writes queued behind one another, none
- * of them dismissed — is a reader working faster than they can read rather than
- * a runaway.
+ * from something they may not have meant. So a message that only reports QUEUES
+ * BEHIND a message with an action rather than replacing it. Otherwise the newest
+ * message wins — a newer action replaces an older one, because a reader pressing
+ * Done on three tasks wants the latest Undo, not three identical toasts to close.
  */
 export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [queue, setQueue] = useState<readonly ToastMessage[]>([]);
+  const nextId = useRef(0);
 
   const dismiss = useCallback(() => {
     setQueue((waiting) => waiting.slice(1));
@@ -151,20 +152,20 @@ export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
 
   const show = useCallback((message: ReactNode, options?: ToastOptions) => {
     const action = options?.action ?? null;
+    nextId.current += 1;
     const arriving: ToastMessage = {
+      id: nextId.current,
       node: message,
       tone: options?.tone ?? "success",
-      sticky: options?.sticky ?? action !== null,
+      sticky: options?.sticky ?? false,
       action,
     };
     setQueue((waiting) => {
       const shown = waiting[0];
-      // Nothing on screen, or what is on screen is only reporting: the newest
-      // message is the one worth seeing, and the old one has said its piece.
-      if (shown === undefined || shown.action === null) {
-        return [arriving, ...waiting.slice(1)];
+      if (shown !== undefined && shown.action !== null && action === null) {
+        return [...waiting, arriving];
       }
-      return [...waiting, arriving];
+      return [arriving, ...waiting.slice(1)];
     });
   }, []);
 
@@ -252,7 +253,8 @@ export function ToastRegion() {
     if (shown === null || shown.sticky || held) {
       return;
     }
-    const timer = setTimeout(dismiss, TOAST_MS);
+    const life = shown.action === null ? TOAST_MS : ACTION_TOAST_MS;
+    const timer = setTimeout(dismiss, life);
     // The cleanup one of the three hand-copied toasts was missing. A timer
     // belongs to the tree that started it: left running, it fires a state update
     // into a component that is no longer mounted.
@@ -277,7 +279,7 @@ export function ToastRegion() {
     >
       {/* `.arrive` (enter.css): it rises into place from below, which is the
           direction it comes from — the region is anchored to the bottom edge. */}
-      <output className="toast arrive">
+      <output key={shown.id} className="toast arrive">
         <span className={`dot toast-dot-${shown.tone}`} />
         <span className="toast-said">{shown.node}</span>
         {act !== null && (
@@ -292,7 +294,7 @@ export function ToastRegion() {
             {act.label}
           </button>
         )}
-        {shown.sticky && (
+        {(shown.sticky || act !== null) && (
           <button
             type="button"
             className="toast-dismiss"
