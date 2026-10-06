@@ -424,18 +424,19 @@
   border-top: 1px solid var(--borderSubtle);
 }
 /* A form or drawer whose body is one `.form-stack` scrolls that body, keeping
-   title and action row in reach. Not split: its two columns size to the drawer. */
+   title and action row in reach. Not split: its two columns size to the drawer.
+   Not a drawer band either: the bands already pin themselves, above. */
 @media (min-width: 721px) {
   :where(.modal-form, .modal-drawer:not(.modal-drawer-split)):where(
-    :has(> .form-stack + .actions)
+    :has(> .form-stack:not(.drawer-body) + .actions)
   ) {
     display: flex;
     flex-direction: column;
   }
   :where(.modal-form, .modal-drawer:not(.modal-drawer-split)):where(
-      :has(> .form-stack + .actions)
+      :has(> .form-stack:not(.drawer-body) + .actions)
     )
-    > .form-stack {
+    > .form-stack:where(:not(.drawer-body)) {
     flex: 0 1 auto;
     min-block-size: 0;
     overflow-y: auto;

@@ -7,6 +7,11 @@ import { ifMatch } from "../api/version";
 import { useInstallationSettings } from "../app/uploadlimit";
 import { Button, Checkbox, Field, TextInput } from "../design-system/atoms";
 import { isISODate } from "../design-system/dateinput";
+import {
+  DrawerBody,
+  DrawerFoot,
+  DrawerHead,
+} from "../design-system/drawerbands";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { Modal } from "../design-system/modal";
@@ -36,6 +41,7 @@ export function ReportingTargetDialog({
   const { locale } = useLocale();
   const actionLabel = t(target ? "reporting.revise" : "reporting.newTarget");
   const title = useId();
+  const formId = useId();
   const client = useQueryClient();
   const [metric, setMetric] = useState<ReportingMetricID>(
     target?.definition.metric ?? "bookings_won",
@@ -108,29 +114,33 @@ export function ReportingTargetDialog({
     },
   });
   return (
-    <Modal open onClose={onClose} labelledBy={title}>
-      <Heading size="large" id={title} className="t-h2 modal-title">
-        {actionLabel}
-      </Heading>
-      <form
-        onSubmit={(event) => {
-          event.preventDefault();
-          write.mutate({
-            previous: target,
-            input: {
-              metric,
-              scope,
-              pipeline_id: pipeline || undefined,
-              period_kind: periodKind,
-              period_start: periodStart,
-              value,
-              reason,
-              retired,
-            },
-          });
-        }}
-      >
-        <div className="form-stack">
+    <Modal open onClose={onClose} labelledBy={title} intent="drawer">
+      <DrawerHead>
+        <Heading size="large" id={title} className="t-h2 modal-title">
+          {actionLabel}
+        </Heading>
+      </DrawerHead>
+      <DrawerBody>
+        <form
+          id={formId}
+          className="form-stack"
+          onSubmit={(event) => {
+            event.preventDefault();
+            write.mutate({
+              previous: target,
+              input: {
+                metric,
+                scope,
+                pipeline_id: pipeline || undefined,
+                period_kind: periodKind,
+                period_start: periodStart,
+                value,
+                reason,
+                retired,
+              },
+            });
+          }}
+        >
           <QueryGate query={catalog} pendingLabel={t("reporting.metrics")}>
             {(catalog) => (
               <Field label={t("reporting.metrics")}>
@@ -313,33 +323,32 @@ export function ReportingTargetDialog({
             </>
           )}
           <ErrorLine error={write.error} />
-        </div>
-        <div className="actions">
-          <Button variant="ghost" onClick={onClose}>
-            {t("reporting.cancel")}
-          </Button>
-          <Button
-            type="submit"
-            disabled={
-              write.isPending ||
-              !definition ||
-              !amount ||
-              !validTargetNumber(value) ||
-              !targetPeriodReady(reason, periodStart) ||
-              (periodKind === "fiscal_quarter" &&
-                (fiscalStart == null ||
-                  (Number(periodStart.split("-")[1] ?? "01") -
-                    fiscalStart +
-                    12) %
-                    3 !==
-                    0)) ||
-              scope.kind === "managed_teams"
-            }
-          >
-            {actionLabel}
-          </Button>
-        </div>
-      </form>
+        </form>
+      </DrawerBody>
+      <DrawerFoot className="actions">
+        <Button variant="ghost" onClick={onClose}>
+          {t("reporting.cancel")}
+        </Button>
+        <Button
+          type="submit"
+          form={formId}
+          disabled={
+            write.isPending ||
+            !definition ||
+            !amount ||
+            !validTargetNumber(value) ||
+            !targetPeriodReady(reason, periodStart) ||
+            (periodKind === "fiscal_quarter" &&
+              (fiscalStart == null ||
+                (Number(periodStart.split("-")[1] ?? "01") - fiscalStart + 12) %
+                  3 !==
+                  0)) ||
+            scope.kind === "managed_teams"
+          }
+        >
+          {actionLabel}
+        </Button>
+      </DrawerFoot>
     </Modal>
   );
 }

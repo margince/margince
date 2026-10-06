@@ -296,7 +296,7 @@ function PersonalMorning({
           open={Boolean(context)}
           onClose={() => setSelected("")}
           labelledBy={titleId}
-          placement="right"
+          intent="drawer"
         >
           <DrawerHead className="brief-queue-head">
             <Heading size="large" id={titleId} className="t-h2">

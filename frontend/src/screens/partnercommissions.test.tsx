@@ -301,7 +301,11 @@ describe("deciding a commission entry", () => {
     });
 
     // The dialog is up and nothing has been sent.
-    expect(screen.getByTestId("commission-approve-confirm")).toBeTruthy();
+    expect(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: en["commission.decide.approve"],
+      }),
+    ).toBeTruthy();
     expect(urls.length).toBe(before);
   });
 });

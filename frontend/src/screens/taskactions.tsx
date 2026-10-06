@@ -320,7 +320,7 @@ export function TaskDetailModal({
   const query = useActivity(activityId);
   const task: Activity | undefined = query.data;
   return (
-    <Modal open onClose={onClose} labelledBy={titleId} placement="right">
+    <Modal open onClose={onClose} labelledBy={titleId} intent="drawer">
       <DrawerHead className="task-detail-head">
         <Heading size="large" id={titleId} className="t-h2">
           {task?.subject ?? t("tasks.detail")}
@@ -415,27 +415,29 @@ function SourceActivity({
   const query = useActivity(activityId);
   const meeting: Activity | undefined = query.data;
   return (
-    <Modal open onClose={onClose} labelledBy={titleId}>
-      <Heading size="large" id={titleId} className="t-h2 modal-title">
-        {meeting?.subject ?? t("tasks.source")}
-      </Heading>
-      {query.isPending && <PendingBody label={t("tasks.detailLoading")} />}
-      <ErrorLine error={query.error} />
-      {meeting && (
-        <div className="form-stack">
+    <Modal open onClose={onClose} labelledBy={titleId} intent="drawer">
+      <DrawerHead>
+        <Heading size="large" id={titleId} className="t-h2 modal-title">
+          {meeting?.subject ?? t("tasks.source")}
+        </Heading>
+        {meeting && (
           <p className="t-caption">
             {formatDateTime(meeting.occurred_at, locale, recordZone)}
           </p>
-          {/* The transcript, as it was captured. `pre-wrap` because a
-              transcript is line-per-turn and reflowing it into a paragraph
-              takes away the one structure it has. */}
-          {meeting.body && (
-            <p className="t-body" style={{ whiteSpace: "pre-wrap" }}>
-              {meeting.body}
-            </p>
-          )}
-        </div>
-      )}
+        )}
+      </DrawerHead>
+      <DrawerBody>
+        {query.isPending && <PendingBody label={t("tasks.detailLoading")} />}
+        <ErrorLine error={query.error} />
+        {/* The transcript, as it was captured. `pre-wrap` because a
+            transcript is line-per-turn and reflowing it into a paragraph
+            takes away the one structure it has. */}
+        {meeting?.body && (
+          <p className="t-body" style={{ whiteSpace: "pre-wrap" }}>
+            {meeting.body}
+          </p>
+        )}
+      </DrawerBody>
     </Modal>
   );
 }
