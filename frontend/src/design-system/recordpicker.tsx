@@ -34,31 +34,24 @@ type RecordPickerName =
     }>
   | Readonly<{ id: string; label?: undefined }>;
 
-export function RecordPicker({
-  label,
-  searchTargets,
-  onPick,
-  selected,
-  disabled = false,
-  id,
-  "aria-describedby": describedBy,
-  "aria-invalid": invalid,
-}: Readonly<{
-  "aria-describedby"?: string;
-  "aria-invalid"?: boolean;
-  searchTargets: (q: string) => Promise<RecordPickerCandidate[]>;
-  onPick: (candidate: RecordPickerCandidate) => void;
-  selected?: RecordPickerCandidate | null;
-  // Inert while the caller's own write for this pick is still in flight, so a
-  // second choice cannot race the first. Disabled rather than unmounted: the
-  // list and the typed query stay on screen, which is what the user needs to
-  // see if the write comes back refused.
-  disabled?: boolean;
-}> &
-  RecordPickerName) {
-  const t = useT();
-  const [term, setTerm] = useState("");
-  const [candidates, setCandidates] = useState<RecordPickerCandidate[]>([]);
+export type CandidateSearch<T> = Readonly<{
+  candidates: readonly T[];
+  /** The CURRENT term has an answer behind it. */
+  answered: boolean;
+  failure: Readonly<{ cause: unknown }> | null;
+  /** A term is waiting on its answer: debouncing or in flight. */
+  pending: boolean;
+}>;
+
+/**
+ * The debounced search behind `RecordPicker` and `ListPopover`. A stale answer
+ * is ignored, not aborted; an empty term or no `searchTargets` asks nothing.
+ */
+export function useCandidateSearch<T>(
+  searchTargets: ((q: string) => Promise<readonly T[]>) | undefined,
+  term: string,
+): CandidateSearch<T> {
+  const [candidates, setCandidates] = useState<readonly T[]>([]);
   // Whether the CURRENT term has an answer behind it. An empty candidate list
   // means two different things without it — nothing matched, or nothing has
   // been asked yet — and only one of them is worth telling the reader.
@@ -76,6 +69,7 @@ export function RecordPicker({
   const [searchFailure, setSearchFailure] = useState<{
     readonly cause: unknown;
   } | null>(null);
+  const [waiting, setWaiting] = useState(false);
 
   // A NEW search space empties the list, at once.
   //
@@ -110,15 +104,17 @@ export function RecordPicker({
 
   useEffect(() => {
     const query = term.trim();
-    if (!query) {
+    if (!query || !searchTargets) {
       setCandidates([]);
       setSearchFailure(null);
       setAnswered(false);
+      setWaiting(false);
       return;
     }
     // The previous answer stops standing the moment the term moves: a list
     // left on screen under a newly typed query describes the old one.
     setAnswered(false);
+    setWaiting(true);
     let cancelled = false;
     const timer = setTimeout(async () => {
       try {
@@ -131,6 +127,7 @@ export function RecordPicker({
           // reader looking at a company whose contacts are all archived could
           // not tell "nobody here" from a field that had not responded yet.
           setAnswered(true);
+          setWaiting(false);
         }
       } catch (error) {
         if (!cancelled) {
@@ -139,6 +136,7 @@ export function RecordPicker({
           // A refusal is not an empty answer: the failure line below says what
           // went wrong, and "nothing matched" underneath it would contradict it.
           setAnswered(false);
+          setWaiting(false);
         }
       }
     }, SEARCH_DEBOUNCE_MS);
@@ -147,6 +145,39 @@ export function RecordPicker({
       clearTimeout(timer);
     };
   }, [term, searchTargets]);
+
+  return { candidates, answered, failure: searchFailure, pending: waiting };
+}
+
+export function RecordPicker({
+  label,
+  searchTargets,
+  onPick,
+  selected,
+  disabled = false,
+  id,
+  "aria-describedby": describedBy,
+  "aria-invalid": invalid,
+}: Readonly<{
+  "aria-describedby"?: string;
+  "aria-invalid"?: boolean;
+  searchTargets: (q: string) => Promise<RecordPickerCandidate[]>;
+  onPick: (candidate: RecordPickerCandidate) => void;
+  selected?: RecordPickerCandidate | null;
+  // Inert while the caller's own write for this pick is still in flight, so a
+  // second choice cannot race the first. Disabled rather than unmounted: the
+  // list and the typed query stay on screen, which is what the user needs to
+  // see if the write comes back refused.
+  disabled?: boolean;
+}> &
+  RecordPickerName) {
+  const t = useT();
+  const [term, setTerm] = useState("");
+  const {
+    candidates,
+    answered,
+    failure: searchFailure,
+  } = useCandidateSearch(searchTargets, term);
 
   return (
     // A named wrapper, because the search field inside it has to FILL it: the

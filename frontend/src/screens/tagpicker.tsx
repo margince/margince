@@ -1,110 +1,107 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useId, useMemo, useState } from "react";
+import { Plus } from "lucide-react";
+import { useMemo, useState } from "react";
 
-import { Button, EmptyState, Modal, SearchField } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
-import { Heading } from "../design-system/heading";
+import {
+  ListPopover,
+  type ListPopoverOption,
+} from "../design-system/listpopover";
 import { TagPill } from "../design-system/tagpill";
 import { useT } from "../i18n";
+import { problemMessageOf } from "./common";
 import type { RecordTag, TaggableType } from "./tags.queries";
 import { useApplyTag, useTagVocabulary } from "./tags.queries";
-import "./tagpicker.css";
 
 /**
- * The add-tag dialog: pick a word the workspace already has.
+ * The add-tag verb: pick a word the workspace already has.
  *
  * It cannot create one. The vocabulary is governed — only Admin and Ops coin a
  * word — so a picker that minted one on a name it did not recognise would hand
  * every seat the authority the governance exists to withhold, and a
  * misspelling would become a permanent second tag nobody chose.
  *
- * When nothing matches, the dialog says who CAN add one. That is the whole of
+ * When nothing matches, the list says who CAN add one. That is the whole of
  * the no-match path: there is no request flow, because a rep who needs a word
  * asks an admin the way they would ask for anything else.
  */
-export function AddTagDialog({
+export function AddTagPicker({
   entityType,
   entityID,
   current,
-  onClose,
 }: Readonly<{
   entityType: TaggableType;
   entityID: string;
   /** What the record already carries, so the list can say so rather than
    * offering a word twice and answering the second try with a conflict. */
   current: readonly RecordTag[];
-  onClose: () => void;
 }>) {
   const t = useT();
-  const titleID = useId();
-  const [query, setQuery] = useState("");
-  const vocabulary = useTagVocabulary();
+  const [open, setOpen] = useState(false);
+  // Read on opening: the verb sits on every record a seat may write, and most
+  // visits never open it.
+  const vocabulary = useTagVocabulary(open);
   const apply = useApplyTag(entityType, entityID);
 
-  const normalized = query.trim().toLowerCase();
   const applied = useMemo(
     () => new Set(current.map((tag) => tag.tag_id)),
     [current],
   );
-
-  const matches = useMemo(() => {
-    const all = vocabulary.data?.tags ?? [];
-    if (normalized === "") {
-      // Nothing typed: the whole vocabulary, which for a workspace-sized word
-      // list is the useful default. A "recently used" section would need a
-      // per-seat history nothing records yet, and inventing an order from the
-      // words themselves would be a ranking nobody asked for.
-      return all;
-    }
-    return all.filter((tag) => tag.name.toLowerCase().includes(normalized));
-  }, [vocabulary.data, normalized]);
+  // The whole vocabulary, in the server's order: a "recently used" section
+  // would need a per-seat history nothing records yet.
+  const options = useMemo(
+    () =>
+      vocabulary.data?.tags.map((tag): ListPopoverOption => {
+        const already = applied.has(tag.id);
+        return {
+          id: tag.id,
+          name: tag.name,
+          face: <TagPill name={tag.name} tone={tag.color} />,
+          hint: already ? t("tags.alreadyAdded") : undefined,
+          disabled: already,
+        };
+      }),
+    [vocabulary.data, applied, t],
+  );
 
   return (
-    <Modal open onClose={onClose} labelledBy={titleID} intent="form">
-      <Heading size="large" id={titleID} className="t-h2 modal-title">
-        {t("tags.add")}
-      </Heading>
-      <div className="form-stack">
-        <SearchField
-          aria-label={t("tags.pickerLabel")}
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-        />
-        <div className="tagpicker-list">
-          {matches.map((tag) => {
-            const already = applied.has(tag.id);
-            return (
-              <Button
-                key={tag.id}
-                variant="ghost"
-                className="tagpicker-option"
-                disabled={already || apply.isPending}
-                onClick={() => {
-                  apply.mutate(tag.id, { onSuccess: onClose });
-                }}
-              >
-                <TagPill name={tag.name} tone={tag.color} />
-                {already && <span>{t("tags.alreadyAdded")}</span>}
-              </Button>
-            );
-          })}
-        </div>
-        {/* A search that found nothing is a RESULT, not something the dialog
-            says about itself — so it is the empty plate and not a notice. */}
-        {normalized !== "" && matches.length === 0 && (
-          <EmptyState>{t("tags.noMatch")}</EmptyState>
-        )}
-        {/* The catalog was cut. Say so, because a reader who cannot find a word
-            in a SHORT list concludes the workspace lacks it and asks an admin
-            to coin the duplicate this dialog exists to prevent. */}
-        {vocabulary.data?.truncated && (
+    <ListPopover
+      label={
+        <>
+          <Plus aria-hidden /> {t("tags.add")}
+        </>
+      }
+      title={t("tags.add")}
+      searchLabel={t("tags.pickerLabel")}
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        // A refusal belongs to the attempt it answered, not to the next opening.
+        if (!apply.isPending) {
+          apply.reset();
+        }
+      }}
+      options={vocabulary.isError ? [] : options}
+      empty={
+        vocabulary.isError
+          ? problemMessageOf(vocabulary.error, t)
+          : t("tags.noMatch")
+      }
+      pending={apply.isPending}
+      error={apply.isError ? problemMessageOf(apply.error, t) : undefined}
+      onPick={(option, done) => apply.mutate(option.id, { onSuccess: done })}
+      footer={
+        // The catalog was cut. Say so, because a reader who cannot find a word
+        // in a SHORT list concludes the workspace lacks it and asks an admin
+        // to coin the duplicate this picker exists to prevent.
+        vocabulary.data?.truncated && (
           <Callout kind="standing" title={t("tags.catalogTruncatedTitle")}>
             {t("tags.catalogTruncated")}
           </Callout>
-        )}
-      </div>
-    </Modal>
+        )
+      }
+    />
   );
 }

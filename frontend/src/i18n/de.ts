@@ -10999,8 +10999,6 @@ export const de = {
   "project.assignOwner": "Einem Teammitglied zuweisen",
   "project.assignOwnerTitle": "Einem Teammitglied zuweisen",
   "project.assignOwnerSearch": "Teammitglieder suchen",
-  "project.assignOwnerNoneSelected": "Wähle zuerst ein Teammitglied",
-  "project.assignOwnerConfirm": "Zuweisen",
   "project.assignOwnerDone": "{name} zugewiesen",
   "project.description": "Beschreibung",
   "project.targetEnd": "Geplantes Enddatum",

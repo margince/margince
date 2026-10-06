@@ -4,37 +4,56 @@
 
 import "@testing-library/jest-dom/vitest";
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { en } from "../i18n/en";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
-import { AddTagDialog } from "./tagpicker";
-
-// The catalog is capped and carries no cursor, so a workspace past the cap gets
-// a CUT list. A missing word then reads as a word the workspace does not have,
-// and the reader asks an admin to coin the duplicate this dialog prevents.
+import { AddTagPicker } from "./tagpicker";
+import type { RecordTag } from "./tags.queries";
 
 const COMPANY = "01a06151-0000-7000-8000-000000000001";
 
-function mount(truncated: boolean) {
+const ON_RECORD = {
+  tag_id: "t-2",
+  name: "Renewal",
+} as RecordTag;
+
+function mount({
+  truncated = false,
+  apply = () => new Response(null, { status: 204 }),
+}: Readonly<{ truncated?: boolean; apply?: () => Response }> = {}) {
+  const applied: unknown[] = [];
   installFetchStub({
     "GET /tags": () =>
       jsonResponse({
-        data: [{ id: "t-1", workspace_id: "w", name: "Key Account" }],
+        data: [
+          { id: "t-1", workspace_id: "w", name: "Key Account" },
+          { id: "t-2", workspace_id: "w", name: "Renewal" },
+        ],
         page: { has_more: truncated, next_cursor: null },
       }),
+    "POST /tags/t-1/apply": (body) => {
+      applied.push(body);
+      return apply();
+    },
   });
   render(
     <StoryProviders>
-      <AddTagDialog
+      <AddTagPicker
         entityType="company"
         entityID={COMPANY}
-        current={[]}
-        onClose={() => {}}
+        current={[ON_RECORD]}
       />
     </StoryProviders>,
   );
+  return applied;
+}
+
+async function openPicker(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole("button", { name: en["tags.add"] }));
+  return within(await screen.findByRole("dialog"));
 }
 
 afterEach(() => {
@@ -42,19 +61,89 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("the add-tag dialog", () => {
-  // The control: a notice that never draws would pass the case below for the
-  // wrong reason.
-  it("says nothing about length when the whole catalog fits", async () => {
-    mount(false);
-    expect(await screen.findByText("Key Account")).toBeInTheDocument();
-    expect(screen.queryByText(en["tags.catalogTruncated"])).toBeNull();
+describe("the add-tag picker", () => {
+  it("applies the picked word to the record and closes", async () => {
+    const user = userEvent.setup();
+    const applied = mount();
+    const panel = await openPicker(user);
+
+    await user.click(await panel.findByRole("option", { name: "Key Account" }));
+
+    expect(applied).toEqual([{ entity_type: "company", entity_id: COMPANY }]);
+    expect(await screen.findByRole("button", { name: en["tags.add"] })).toBe(
+      document.activeElement,
+    );
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
-  it("says the list is cut when the catalog was truncated", async () => {
-    mount(true);
+  it("offers a word the record carries once, as already added", async () => {
+    const user = userEvent.setup();
+    mount();
+    const panel = await openPicker(user);
+
+    const renewal = await panel.findByRole("option", { name: /Renewal/ });
+    expect(renewal).toHaveAttribute("aria-disabled", "true");
+    expect(renewal).toHaveTextContent(en["tags.alreadyAdded"]);
+  });
+
+  it("says who can coin a word the search does not find", async () => {
+    const user = userEvent.setup();
+    mount();
+    const panel = await openPicker(user);
+    await panel.findByRole("option", { name: "Key Account" });
+
+    await user.type(panel.getByRole("combobox"), "Partner");
+
+    expect(panel.getByText(en["tags.noMatch"])).toBeInTheDocument();
+    expect(panel.queryByRole("option")).toBeNull();
+  });
+
+  it("keeps the list open over a refused apply, saying why", async () => {
+    const user = userEvent.setup();
+    mount({
+      apply: () =>
+        jsonResponse(
+          { title: "Forbidden", detail: "This record is locked." },
+          403,
+        ),
+    });
+    const panel = await openPicker(user);
+
+    await user.click(await panel.findByRole("option", { name: "Key Account" }));
+
+    expect(await panel.findByRole("alert")).toHaveTextContent(
+      "This record is locked.",
+    );
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("closes on Escape and hands focus back to the trigger", async () => {
+    const user = userEvent.setup();
+    mount();
+    await openPicker(user);
+
+    await user.keyboard("{Escape}");
+
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.getByRole("button", { name: en["tags.add"] })).toBe(
+      document.activeElement,
+    );
+  });
+
+  // The catalog is capped and carries no cursor, so a workspace past the cap
+  // gets a CUT list, and a missing word reads as one the workspace lacks.
+  it("says the list is cut when the catalog was truncated, and only then", async () => {
+    const user = userEvent.setup();
+    mount({ truncated: true });
+    const panel = await openPicker(user);
     expect(
-      await screen.findByText(en["tags.catalogTruncated"]),
+      await panel.findByText(en["tags.catalogTruncated"]),
     ).toBeInTheDocument();
+    cleanup();
+
+    mount();
+    const whole = await openPicker(user);
+    await whole.findByRole("option", { name: "Key Account" });
+    expect(whole.queryByText(en["tags.catalogTruncated"])).toBeNull();
   });
 });

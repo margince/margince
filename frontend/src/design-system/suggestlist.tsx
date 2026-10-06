@@ -3,6 +3,7 @@
 
 import {
   type KeyboardEvent as ReactKeyboardEvent,
+  type ReactNode,
   type RefObject,
   useCallback,
   useId,
@@ -171,6 +172,27 @@ function navigateList(
   return false;
 }
 
+export type ListKey = "ArrowDown" | "ArrowUp" | "Home" | "End";
+
+/**
+ * Where a walking key moves the active row (-1: none yet). The first ArrowUp
+ * reaches the last row, as Select's does, and nothing wraps: a jump from the
+ * last row to the first hides from the reader that they reached the end.
+ */
+export function walkedTo(current: number, key: ListKey, count: number): number {
+  if (key === "Home") {
+    return 0;
+  }
+  if (key === "End") {
+    return count - 1;
+  }
+  const step = key === "ArrowDown" ? 1 : -1;
+  if (current === -1) {
+    return step === 1 ? 0 : count - 1;
+  }
+  return Math.min(Math.max(current + step, 0), count - 1);
+}
+
 export function useSuggestList({
   anchorRef,
   popupRef,
@@ -218,25 +240,11 @@ export function useSuggestList({
     close();
   };
 
-  // One arrow press, as a move over the row indices. Split from `navigate`
-  // because it is the only part of the grammar with a rule of its own worth
-  // reading whole — where the first press lands, and what happens at the ends.
   const walk = (step: 1 | -1) => {
     setOpen(true);
-    setActive((current) => {
-      // Nothing highlighted yet, so the first press reaches for the END the
-      // direction points at — ArrowUp to the last row, the way Select's
-      // `startingActive` does. Clamping both directions to zero put the two keys
-      // on the same row and left the last option reachable only by walking the
-      // whole list.
-      if (current === -1) {
-        return step === 1 ? 0 : matches.length - 1;
-      }
-      // Deliberately does not wrap, for the reason Select's list does not: a
-      // jump from the last row back to the first hides from the reader that they
-      // reached the end.
-      return Math.min(Math.max(current + step, 0), matches.length - 1);
-    });
+    setActive((current) =>
+      walkedTo(current, step === 1 ? "ArrowDown" : "ArrowUp", matches.length),
+    );
   };
 
   const navigate = (event: ReactKeyboardEvent) =>
@@ -313,38 +321,73 @@ export function SuggestPopup({
     >
       <div className="suggest-list">
         {list.matches.map((row, index) => (
-          // biome-ignore lint/a11y/useKeyWithClickEvents: the keyboard path is the driving text box's own keydown handling
-          // biome-ignore lint/a11y/useFocusableInteractive: an option in an aria-activedescendant listbox must NOT be focusable — focus stays in the text box, which is what keeps typing working
-          <div // NOSONAR: keyboard path is the text box's own keydown; an activedescendant option must not be focusable
+          <SuggestOption
             key={row.value}
             id={list.optionDomId(index)}
-            role="option"
-            aria-selected={selected !== undefined && row.value === selected}
-            className={[
-              "suggest-option",
-              index === list.active ? "is-active" : "",
-            ]
-              .filter(Boolean)
-              .join(" ")}
-            onMouseDown={(event) => {
-              // The press must not take focus off the text box before the click
-              // lands: blur closes the list, and the click would then arrive at
-              // nothing.
-              event.preventDefault();
-            }}
-            onClick={() => list.pick(index)}
-            onMouseEnter={() => list.setActive(index)}
+            active={index === list.active}
+            selected={selected !== undefined && row.value === selected}
+            hint={row.hint}
+            onPick={() => list.pick(index)}
+            onHover={() => list.setActive(index)}
           >
-            <span className="suggest-option-value">
-              {row.label ?? row.value}
-            </span>
-            {row.hint && (
-              <span className="suggest-option-hint">{row.hint}</span>
-            )}
-          </div>
+            {row.label ?? row.value}
+          </SuggestOption>
         ))}
       </div>
     </div>,
     document.body,
+  );
+}
+
+/**
+ * One option row of a listbox a text box drives (`SuggestPopup`, `ListPopover`).
+ * A `disabled` row stays listed and readable, as Select's does, and takes no press.
+ */
+export function SuggestOption({
+  id,
+  active,
+  selected,
+  disabled,
+  hint,
+  onPick,
+  onHover,
+  children,
+}: Readonly<{
+  id: string;
+  active: boolean;
+  selected: boolean;
+  disabled?: boolean;
+  hint?: string;
+  onPick: () => void;
+  onHover: () => void;
+  children: ReactNode;
+}>) {
+  return (
+    // biome-ignore lint/a11y/useKeyWithClickEvents: the keyboard path is the driving text box's own keydown handling
+    // biome-ignore lint/a11y/useFocusableInteractive: an option in an aria-activedescendant listbox must NOT be focusable — focus stays in the text box, which is what keeps typing working
+    <div // NOSONAR: keyboard path is the text box's own keydown; an activedescendant option must not be focusable
+      id={id}
+      role="option"
+      aria-selected={selected}
+      aria-disabled={disabled === true || undefined}
+      className={[
+        "suggest-option",
+        active ? "is-active" : "",
+        disabled ? "is-disabled" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+      onMouseDown={(event) => {
+        // The press must not take focus off the text box before the click
+        // lands: blur closes the list, and the click would then arrive at
+        // nothing.
+        event.preventDefault();
+      }}
+      onClick={disabled ? undefined : onPick}
+      onMouseEnter={onHover}
+    >
+      <span className="suggest-option-value">{children}</span>
+      {hint && <span className="suggest-option-hint">{hint}</span>}
+    </div>
   );
 }

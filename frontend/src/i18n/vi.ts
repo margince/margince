@@ -10917,8 +10917,6 @@ export const vi = {
   "project.assignOwner": "Giao cho một đồng nghiệp",
   "project.assignOwnerTitle": "Giao cho một đồng nghiệp",
   "project.assignOwnerSearch": "Tìm đồng nghiệp",
-  "project.assignOwnerNoneSelected": "Hãy chọn một đồng nghiệp trước",
-  "project.assignOwnerConfirm": "Giao",
   "project.assignOwnerDone": "Đã giao cho {name}",
   "project.description": "Mô tả",
   "project.targetEnd": "Ngày kết thúc dự kiến",

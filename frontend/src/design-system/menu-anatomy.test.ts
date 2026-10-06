@@ -141,6 +141,15 @@ const SURFACES: readonly Surface[] = [
       "the component caps the height to the room on the side it opened toward, inline",
   },
   {
+    selector: ".popover-panel.listpopover-panel",
+    sheet: "design-system/listpopover.css",
+    rows: [],
+    floor:
+      "a fixed 20rem, so the panel holds still while a server search answers under it",
+    ceiling:
+      "the list inside it scrolls at the ceiling, so the search box above the rows stays in view",
+  },
+  {
     selector: ".settingssearch-list",
     sheet: "app/shell.css",
     rows: [".settingssearch-hit"],

@@ -281,3 +281,57 @@ it("does not open on a settled pointer when the trigger is refused", async () =>
   expect(screen.queryByText("Two of three invoices are late.")).toBeNull();
   expect(trigger.getAttribute("aria-expanded")).toBe("false");
 });
+
+it("follows a caller that holds the open state, and tells it of every change", async () => {
+  const user = userEvent.setup();
+  const onOpenChange = vi.fn();
+  const page = (open: boolean) => (
+    <Popover label="How it stands" open={open} onOpenChange={onOpenChange}>
+      Two of three invoices are late.
+    </Popover>
+  );
+  const { rerender } = render(page(false));
+
+  await user.click(screen.getByRole("button", { name: "How it stands" }));
+  expect(onOpenChange).toHaveBeenLastCalledWith(true);
+  expect(screen.queryByText("Two of three invoices are late.")).toBeNull();
+
+  rerender(page(true));
+  expect(screen.getByText("Two of three invoices are late.")).toBeTruthy();
+  await user.keyboard("{Escape}");
+  expect(onOpenChange).toHaveBeenLastCalledWith(false);
+});
+
+it("refuses to open while a reason stands against it, and names the reason", async () => {
+  const user = userEvent.setup();
+  render(
+    <>
+      <p id="why">Only an admin assigns owners.</p>
+      <Popover label="Assign owner" variant="ghost" reasonId="why">
+        Colleagues
+      </Popover>
+    </>,
+  );
+  const trigger = screen.getByRole("button", { name: "Assign owner" });
+
+  await user.click(trigger);
+
+  expect(screen.queryByText("Colleagues")).toBeNull();
+  expect(trigger.getAttribute("aria-describedby")).toContain("why");
+});
+
+it("announces a panel of controls as a non-modal dialog", async () => {
+  const user = userEvent.setup();
+  render(
+    <Popover label="Add tag" variant="ghost" dialog>
+      <button type="button">Renewal</button>
+    </Popover>,
+  );
+  const trigger = screen.getByRole("button", { name: "Add tag" });
+  expect(trigger.getAttribute("aria-haspopup")).toBe("dialog");
+
+  await user.click(trigger);
+
+  const panel = screen.getByRole("dialog", { name: "Add tag" });
+  expect(panel.getAttribute("aria-modal")).toBeNull();
+});

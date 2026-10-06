@@ -2,15 +2,15 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { screen, userEvent, within } from "storybook/test";
 import { AssignProjectOwnerAction } from "./projectowner";
 import type { Project } from "./projects.form";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The one path that hands a project directly to a NAMED colleague, via the
 // server's existing owner_id field rather than the bulk transfer endpoint.
-// The state worth looking at is the search itself: a candidate found by a
-// real name, not a fixed three-entry dropdown.
+// The state worth looking at is the open list: the workspace's colleagues by
+// name, the current owner marked, narrowed as the reader types.
 
 const meta: Meta = {
   title: "Records/Project 360/Assign to a colleague",
@@ -32,12 +32,22 @@ const project: Project = {
   owner_id: null,
 };
 
-function Action() {
+function Action({ owner = null }: Readonly<{ owner?: string | null }>) {
   installFetchStub({
     "GET /users": () =>
       jsonResponse({
         data: [
           { id: "u-42", display_name: "Jane Doe", email: "jane@example.test" },
+          {
+            id: "u-7",
+            display_name: "Omar Haddad",
+            email: "omar@example.test",
+          },
+          {
+            id: "u-9",
+            display_name: "Lena Brandt",
+            email: "lena@example.test",
+          },
         ],
         page: { has_more: false },
       }),
@@ -46,7 +56,7 @@ function Action() {
   });
   return (
     <StoryProviders>
-      <AssignProjectOwnerAction project={project} />
+      <AssignProjectOwnerAction project={{ ...project, owner_id: owner }} />
     </StoryProviders>
   );
 }
@@ -54,16 +64,33 @@ function Action() {
 /** The trigger as it sits beside Archive and Share — closed. */
 export const Default: Story = { render: () => <Action /> };
 
-/** Opened, searched, and the named colleague found. */
+async function openList(canvasElement: HTMLElement) {
+  await userEvent.click(
+    await within(canvasElement).findByRole("button", {
+      name: "Assign to a colleague",
+    }),
+  );
+  return within(await screen.findByRole("dialog"));
+}
+
+/** Opened: the colleagues by name, the current owner marked. */
+export const OpenOnTheRoster: Story = {
+  render: () => <Action owner="u-7" />,
+  play: async ({ canvasElement }) => {
+    const panel = await openList(canvasElement);
+    await panel.findByRole("option", { name: "Omar Haddad" });
+  },
+};
+
+/** Opened and narrowed to the named colleague. */
 export const SearchingForAColleague: Story = {
   render: () => <Action />,
   play: async ({ canvasElement }) => {
-    const body = within(canvasElement.ownerDocument.body);
-    await userEvent.click(await body.findByTestId("assign-project-owner"));
+    const panel = await openList(canvasElement);
     await userEvent.type(
-      await body.findByRole("searchbox", { name: "Search colleagues" }),
+      panel.getByRole("combobox", { name: "Search colleagues" }),
       "Jane",
     );
-    await body.findByRole("button", { name: "Jane Doe" });
+    await panel.findByRole("option", { name: "Jane Doe" });
   },
 };

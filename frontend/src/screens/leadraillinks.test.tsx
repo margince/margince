@@ -237,16 +237,60 @@ describe("LeadScreen: the rail's own deal and project verbs", () => {
       }),
     );
     const dialog = screen.getByRole("dialog");
-    await userEvent.type(within(dialog).getByRole("searchbox"), "Beacon");
+    await userEvent.type(within(dialog).getByRole("combobox"), "Beacon");
     await userEvent.click(
-      await within(dialog).findByRole("button", { name: /Beacon rollout/ }),
+      await within(dialog).findByRole("option", { name: /Beacon rollout/ }),
     );
 
     await waitFor(() => expect(patched.length).toBe(1));
     expect(patched[0]).toMatchObject({ project_id: "pr-2" });
-    // The dialog closes on the write it made, the same shape the account's
-    // own project attach follows.
+    // The list closes on the write it made.
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  it("keeps the picker open over a refused attach, saying why, until Escape hands focus back", async () => {
+    const user = userEvent.setup();
+    stubLeadScreenFetch(async (url, method) => {
+      if (method === "GET" && url.includes("/projects")) {
+        return jsonResponse({
+          data: [{ id: "pr-2", name: "Beacon rollout", key: "BEA" }],
+        });
+      }
+      if (method === "PATCH" && url.includes("/leads/l-1")) {
+        return jsonResponse(
+          { title: "Forbidden", detail: "This lead is locked." },
+          403,
+        );
+      }
+      if (url.includes("/leads/l-1")) {
+        return jsonResponse(lead);
+      }
+      return jsonResponse({ data: [] });
+    });
+
+    render(
+      <RecordShell>
+        <LeadScreen id="l-1" />
+      </RecordShell>,
+    );
+
+    await screen.findByRole("heading", { level: 1, name: "Jonas Petersen" });
+    const rail = document.querySelector(".co-rail") as HTMLElement;
+    const attach = within(rail).getByRole("button", {
+      name: en["lead.rail.project.attach"],
+    });
+    await user.click(attach);
+    const dialog = within(screen.getByRole("dialog"));
+    await user.type(dialog.getByRole("combobox"), "Beacon");
+    await user.click(
+      await dialog.findByRole("option", { name: /Beacon rollout/ }),
+    );
+
+    expect(await dialog.findByText("This lead is locked.")).toBeTruthy();
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.activeElement).toBe(attach);
   });
 
   it("the rail's Qualify verb opens the same dialog the header's own does", async () => {
