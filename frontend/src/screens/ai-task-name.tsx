@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import type { ReactNode } from "react";
 import { Popover } from "../design-system/popover";
 import { useT } from "../i18n";
 
@@ -12,9 +13,15 @@ import { useT } from "../i18n";
 export function TaskName({
   name,
   summary,
-}: Readonly<{ name: string; summary: string | undefined }>) {
+  details,
+}: Readonly<{
+  name: string;
+  summary: string | undefined;
+  // What else the reader may want behind the name, below what the task does.
+  details?: ReactNode;
+}>) {
   const t = useT();
-  if (!summary) return <span>{name}</span>;
+  if (!summary && details == null) return <span>{name}</span>;
   return (
     <Popover
       className="evmark-trigger"
@@ -27,7 +34,8 @@ export function TaskName({
         </>
       }
     >
-      {summary}
+      {summary ? <p>{summary}</p> : null}
+      {details}
     </Popover>
   );
 }

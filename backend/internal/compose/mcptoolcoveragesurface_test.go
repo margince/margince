@@ -35,6 +35,7 @@ import (
 	"path/filepath"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -459,8 +460,8 @@ func isToolNameByte(b byte) bool {
 // its headline number was unreadable.
 //
 // There are TWO surfaces and they are not comparable. Surface A is the MCP
-// catalog a contact's assistant is offered — broad, because a contact is there to
-// correct a wrong reach. Surface B is a scheduled agent's declared allowlist —
+// catalog a user's assistant is offered: broad, because a user is there to
+// correct a wrong reach. Surface B is a scheduled agent's declared allowlist:
 // five to seven tools, because the run is unattended and every listed tool is
 // paid for on every step of every run. Reporting one coverage number over both
 // reports a menu nobody is served.
@@ -471,18 +472,18 @@ func writeCoverageSurfaces(p *strings.Builder, r mcpToolCoverage) {
 	p.WriteString("## The two surfaces\n\n")
 	p.WriteString("A tool being \"untried\" means something different on each, so the numbers above " +
 		"are Surface A's.\n\n")
-	p.WriteString("| | Surface A — MCP | Surface B — scheduled agents |\n|---|---|---|\n")
-	p.WriteString("| Who drives it | a contact, watching | a job on a timer, unattended |\n")
-	fmt.Fprintf(p, "| Menu | %d tools, the whole catalog | %d tools, declared per agent |\n",
-		r.Totals.Tools, smallestAgentMenu(r.Agents))
-	p.WriteString("| A wrong reach | the contact corrects it | nobody is there |\n")
+	p.WriteString("| | Surface A: MCP | Surface B: scheduled agents |\n|---|---|---|\n")
+	p.WriteString("| Who drives it | a user, watching | a job on a timer, unattended |\n")
+	fmt.Fprintf(p, "| Menu | %d tools, the whole catalog | %s tools, declared per agent |\n",
+		r.Totals.Tools, agentMenuRange(r.Agents))
+	p.WriteString("| A wrong reach | the user corrects it | nobody is there |\n")
 	p.WriteString("| Graded by | the use-case lane on this page | " +
 		"[ai-certification.md](ai-certification.md) |\n\n")
 
 	p.WriteString("### Surface B, as the contract declares it\n\n")
-	p.WriteString("From `backend/api/ai-tasks.yaml`. The allowlist NARROWS and never grants — every " +
+	p.WriteString("From `backend/api/ai-tasks.yaml`. The allowlist narrows and never grants: every " +
 		"call still passes the same admission gate\n")
-	p.WriteString("against the same passport — and an empty one is a build error, because it would " +
+	p.WriteString("against the same passport. An empty one is a build error, because it would " +
 		"read as \"no narrowing\" and hand back the whole catalog.\n\n")
 	p.WriteString("| Agent | Tools | Attaches |\n|---|---:|---|\n")
 	for _, a := range r.Agents {
@@ -491,16 +492,16 @@ func writeCoverageSurfaces(p *strings.Builder, r mcpToolCoverage) {
 	p.WriteString("\n")
 
 	p.WriteString("### What this page cannot see\n\n")
-	fmt.Fprintf(p, "**The shipped units add %d more MCP tools to the same registry**, and this page "+
+	fmt.Fprintf(p, "The shipped units add **%d more MCP tools** to the same registry, and this page "+
 		"cannot price them.\n", r.Totals.UnitTools)
 	p.WriteString("A unit is its own Go module and the architecture forbids the core importing one, " +
 		"so the composed catalog is unreachable\n")
 	p.WriteString("from the package that generates this page. The names below come from what each " +
 		"unit published; the token cost is an\n")
 	p.WriteString("installation's own arithmetic. No use case requires any of them.\n\n")
-	p.WriteString("**Zero is not the same claim as \"a unit ships no operations.\"** A unit operation " +
+	p.WriteString("A count of zero does not mean a unit ships no operations. A unit operation " +
 		"declaring `x-agent-access: human-only`\n")
-	p.WriteString("stays REST/UI-reachable but is never agent-reachable — it requests no MCP tool at " +
+	p.WriteString("stays REST/UI-reachable but is never agent-reachable. It requests no MCP tool at " +
 		"all, so it carries no entry here to count\n")
 	p.WriteString("or price, on a vanilla install or otherwise (`docs/how-to/add-an-extension.md`).\n\n")
 	p.WriteString("| Tool | Unit |\n|---|---|\n")
@@ -508,28 +509,32 @@ func writeCoverageSurfaces(p *strings.Builder, r mcpToolCoverage) {
 		fmt.Fprintf(p, "| `%s` | `%s` |\n", tool.Name, tool.Unit)
 	}
 	if len(r.UnitTools) == 0 {
-		p.WriteString("| _no unit ships a tool_ | — |\n")
+		p.WriteString("| _no unit ships a tool_ | - |\n")
 	}
 	p.WriteString("\n")
 	p.WriteString("**The listing is also scope-filtered per caller.** A tool on this page is offered " +
 		"to a caller whose passport carries its\n")
-	p.WriteString("scope, and to no other — so a reader must not read a row here as \"every " +
+	p.WriteString("scope, and to no other. So a row here does not mean \"every " +
 		"assistant sees this\". A case cannot drive a tool\n")
 	p.WriteString("its passport is not served, and one that tried would fail for a reason that is " +
 		"not the product's.\n\n")
 }
 
-// smallestAgentMenu is the narrowest declared allowlist, for the surface
+// agentMenuRange is the narrowest and widest declared allowlist, for the surface
 // comparison. Zero when no agent is declared, which the caller renders as-is
 // rather than hiding.
-func smallestAgentMenu(agents []agentSurfaceRow) int {
-	smallest := 0
+func agentMenuRange(agents []agentSurfaceRow) string {
+	smallest, largest := 0, 0
 	for _, a := range agents {
 		if smallest == 0 || len(a.Tools) < smallest {
 			smallest = len(a.Tools)
 		}
+		largest = max(largest, len(a.Tools))
 	}
-	return smallest
+	if smallest == largest {
+		return strconv.Itoa(smallest)
+	}
+	return fmt.Sprintf("%d to %d", smallest, largest)
 }
 
 // TestTheScenarioReaderSeesACommentedList holds the fix for a reader that failed

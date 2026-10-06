@@ -5,16 +5,14 @@
 
 package gates
 
-// The concurrency-guard obligation as a fitness function: every
-// single-row-by-id UPDATE of a mutable entity carries SOME guard — the
-// optimistic version (storekit.ApplyWithVersion / ApplyGuarded), a held
-// row lock (LockRow / LockPair + ApplyLocked), an advisory lock, an
-// in-statement FOR UPDATE, or a checked conditional write (the
-// RowsAffected CAS shape). An unguarded by-id UPDATE is the
-// last-writer-wins bug class this repo removed from storekit; this test
-// keeps raw SQL from reintroducing it. Set-based writes (relinks,
-// sweeps over a WHERE that is not the primary key) are out of scope by
-// construction — they are not read-modify-write on one row.
+// Every single-row-by-id UPDATE of a mutable entity carries a guard: the
+// optimistic version (storekit.ApplyWithVersion / ApplyGuarded), a held row
+// lock (LockRow / LockPair + ApplyLocked), an advisory lock, an in-statement
+// FOR UPDATE, or a checked conditional write (the RowsAffected CAS shape). An
+// unguarded by-id UPDATE is the last-writer-wins bug class this repo removed
+// from storekit; this test keeps raw SQL from reintroducing it. Set-based
+// writes (relinks, sweeps over a WHERE that is not the primary key) are out of
+// scope by construction — they are not read-modify-write on one row.
 //
 // Exceptions are explicit, keyed by package path + function, each with
 // the rationale that ratified it; a reasonless or stale waiver fails.

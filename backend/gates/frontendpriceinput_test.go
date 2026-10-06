@@ -5,9 +5,9 @@
 
 package gates
 
-// The frontend's price pattern accepts exactly what the server's price parser
-// and the contract pattern accept, so a value the form lets through is not
-// refused for its shape. If the two disagree the form either sends a request
+// The frontend's price pattern accepts what the server's price parser and the
+// contract pattern accept, so a value the form lets through is not refused for
+// its shape. If the two disagree the form either sends a request
 // that can only be refused or refuses a price the sheet would have kept.
 //
 // The browser's pattern is a declared mirror of the server's domain, and this is

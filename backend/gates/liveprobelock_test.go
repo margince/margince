@@ -5,7 +5,7 @@
 
 package gates
 
-// A live-probed write of a HELD row locks its subject.
+// A live-probed write of a held row locks its subject.
 //
 // auth.EnsureWritableLive narrows the window between deciding and writing; it
 // does not close it. The probe reads a snapshot, the write is a later statement

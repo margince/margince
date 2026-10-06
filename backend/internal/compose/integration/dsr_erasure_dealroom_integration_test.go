@@ -26,9 +26,9 @@ import (
 	"github.com/margince/margince/backend/internal/modules/dealrooms"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // roomErasureAdmin is the seat this suite acts as: enough to create the deal
@@ -214,7 +214,8 @@ func TestErasingASubjectTombstonesTheSeatSoTheAuditLogStopsAtIt(t *testing.T) {
 
 	if err := privacy.NewEraser(e.DB()).EraseContact(
 		e.As(e.AdminUser, nil, roomErasureAdmin), seeded.contact.UUID,
-		"an erasure request from the subject"); err != nil {
+		"an erasure request from the subject",
+	); err != nil {
 		t.Fatalf("erasing the subject: %v", err)
 	}
 
@@ -248,7 +249,8 @@ func TestErasingASubjectTakesTheCommentsTheyWroteWithThem(t *testing.T) {
 	}
 
 	if err := privacy.NewEraser(e.DB()).EraseContact(
-		e.As(e.AdminUser, nil, roomErasureAdmin), buyer.contact.UUID, "subject request"); err != nil {
+		e.As(e.AdminUser, nil, roomErasureAdmin), buyer.contact.UUID, "subject request",
+	); err != nil {
 		t.Fatalf("EraseContact → %v", err)
 	}
 
@@ -274,7 +276,8 @@ func sellerSays(t *testing.T, e *Env, room ids.DealRoomID, body string) {
 	if _, err := dealrooms.NewStore(e.DB()).OpenThread(
 		e.As(e.AdminUser, nil, roomErasureAdmin), room, dealrooms.OpenThreadInput{
 			Body: body, Source: "manual",
-		}); err != nil {
+		},
+	); err != nil {
 		t.Fatalf("posting the colleague's comment: %v", err)
 	}
 }
@@ -286,33 +289,28 @@ func commentsBy(t *testing.T, e *Env, seat ids.DealRoomParticipantID) int {
 	return e.WsCount(t, `SELECT count(*) FROM deal_room_comment WHERE author_participant_id = $1`, seat)
 }
 
-// A subject holding the tombstone address is REFUSED, not half-erased.
+// The tombstone address cannot reach a contact record at all.
 //
-// ParseEmail admits erased@example.invalid, so a contact can carry it, and a seat is
-// resolved by address alone — so after one erasure that address names every seat any
-// erasure has wiped. There is no predicate that tells them apart afterwards: proceeding
-// would either destroy other subjects' comments or skip this subject's own seat and
-// leave their sessions live. The erasure says so and changes nothing.
-func TestASubjectHoldingTheTombstoneAddressIsRefused(t *testing.T) {
+// This is where the erasure's own guard stops being reachable for new data: a seat is
+// resolved by ADDRESS, so a subject holding the one an erasure writes would be
+// indistinguishable from every seat already wiped. values.ParseEmail refuses it, so the
+// state the eraser refuses can no longer be created — and the eraser keeps refusing it
+// for rows written before that, which TestEraseDealRoomSeatsRefusesTheTombstoneAddress
+// in the privacy package covers directly.
+func TestTheTombstoneAddressCannotBeStoredOnAContact(t *testing.T) {
 	e := Setup(t)
-	buyer := seedBuyerInARoom(t, e, "erased@example.invalid")
-	said := "Send the redlines to me directly"
-	buyerSays(t, e, buyer, said)
+	ctx := e.As(e.AdminUser, nil, roomErasureAdmin)
 
-	err := privacy.NewEraser(e.DB()).EraseContact(
-		e.As(e.AdminUser, nil, roomErasureAdmin), buyer.contact.UUID, "subject request")
-	if !errors.Is(err, apperrors.ErrConflict) {
-		t.Fatalf("EraseContact → %v, want a conflict: an erasure that cannot tell this subject's "+
-			"seats from another erased subject's must refuse rather than guess", err)
-	}
-
-	// And nothing moved. A refusal that had already written would be the half-erasure
-	// the refusal exists to prevent, and the whole act runs in one transaction.
-	name, email, revoked := readSeat(t, e, buyer.seat)
-	if name != "Rita Reviewer" || email != "erased@example.invalid" || revoked {
-		t.Errorf("the seat reads name=%q email=%q revoked=%v after a refusal", name, email, revoked)
-	}
-	if n := commentsBy(t, e, buyer.seat); n != 1 {
-		t.Errorf("%d comment(s) remain after a refusal, want the one that was there", n)
+	_, err := contacts.NewStore(e.DB()).CreateContact(ctx, contacts.CreateContactInput{
+		FullName: "Rita Reviewer", Source: "manual",
+		Emails: []contacts.ContactEmailInput{
+			{Email: values.ErasedEmail, EmailType: "work", IsPrimary: true},
+		},
+	})
+	var parse *values.ParseError
+	if !errors.As(err, &parse) || parse.Code != "email_reserved" {
+		t.Fatalf("CreateContact → %v, want the reserved-address refusal: any other failure lets "+
+			"a change that stops rejecting the address pass this test, and such a subject's "+
+			"seats are then indistinguishable from every seat already erased", err)
 	}
 }

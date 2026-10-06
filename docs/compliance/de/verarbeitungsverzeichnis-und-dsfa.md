@@ -1,11 +1,11 @@
 # Verzeichnis von Verarbeitungstätigkeiten und Datenschutz-Folgenabschätzung
 
-> Vorlage. Jede Zeile nennt den Code-Pfad, der die Zusage durchsetzt — damit
+> Vorlage. Jede Zeile nennt den Code-Pfad, der die Zusage durchsetzt, damit
 > prüfbar ist, ob das Verzeichnis das Produkt beschreibt oder eine Absicht.
 
 **Verantwortlicher:** [Firma, Anschrift] · **Stand:** [Datum]
 
-## Teil A — Verzeichnis nach Art. 30 DSGVO
+## Teil A: Verzeichnis nach Art. 30 DSGVO
 
 ### A.1 Erfassung dienstlicher E-Mail-Korrespondenz
 
@@ -25,7 +25,7 @@
 | --- | --- |
 | Zweck | Vertraulichkeit privater und beraterlicher Korrespondenz |
 | Rechtsgrundlage | Art. 5 Abs. 1 lit. c DSGVO (Datenminimierung); § 26 Abs. 1 BDSG |
-| Besonderheit | **Fällt die Klassifikation aus, bleibt alles zurückgehalten.** Nicht verfügbar oder ohne Budget bedeutet zurückgehalten, nie freigegeben |
+| Besonderheit | Fällt die Klassifikation aus, bleibt alles zurückgehalten. Nicht verfügbar oder ohne Budget bedeutet zurückgehalten, nie freigegeben |
 | Durchsetzung | `activities/audiencerecompute.go` leitet die Sichtbarkeit als das Strengste ab, was ein erfassendes Postfach verlangt; `platform/auth` prüft sie bei jedem Lesen |
 
 ### A.3 Automatisierte Klassifikation von Absendern und Threads
@@ -36,7 +36,7 @@
 | Rechtsgrundlage | Art. 6 Abs. 1 lit. f DSGVO |
 | Modellbetrieb | lokal, siehe `docs/reference/ai-egress.md` |
 | Menschliches Eingreifen | Die Seite „Absender“ zeigt jede Entscheidung; eine Korrektur ist endgültig und wird von der Maschine nicht überschrieben |
-| Besonderheit | **Nicht verfügbar oder ohne Budget bedeutet zurückgehalten.** Ein Ausfall führt nie zu einer Freigabe |
+| Besonderheit | Nicht verfügbar oder ohne Budget bedeutet zurückgehalten. Ein Ausfall führt nie zu einer Freigabe |
 | Durchsetzung | `compose/captureverdict.go`, `compose/confidentialityverdict.go`; die Vorrangregel in `capture/senderoverride.go` |
 
 ### A.4 Vernichtung auf Verlangen der beschäftigten Person
@@ -49,7 +49,7 @@
 | Ausnahme | Handelsbriefe innerhalb der gesetzlichen Frist werden **nicht** vernichtet und als übersprungen ausgewiesen |
 | Durchsetzung | `privacy/purge.go` über dieselben Executoren wie die Aufbewahrungssteuerung; die Frist als `correspondenceFloorPredicate`, einmal geschrieben und von einem Gate gehalten |
 
-## Teil B — Datenschutz-Folgenabschätzung nach Art. 35 DSGVO
+## Teil B: Datenschutz-Folgenabschätzung nach Art. 35 DSGVO
 
 ### B.1 Warum eine DSFA erforderlich ist
 
@@ -62,15 +62,15 @@ automatisiert bewertet, in einem Verhältnis struktureller Unterlegenheit.
 | --- | --- | --- |
 | Kolleginnen lesen private Korrespondenz | Voreinstellung `classified`; nur gewöhnliche Threads werden freigegeben | `capture/birthdecision.go` |
 | Eine Administratorin liest zurückgehaltene Inhalte | Die Zugriffsprüfung kennt keine Administratorausnahme | `platform/auth/inheritedscope.go` |
-| Der Klassifikator irrt und gibt Vertrauliches frei | Genau eine Antwort öffnet; alle übrigen halten. Öffnende Antworten unter der Schwelle gelten als unsicher und halten | `compose/confidentialityverdictkinds.go` |
-| Ein Ausfall führt zur Freigabe | Kein Modell, kein Budget, keine Antwort — alles bleibt zurückgehalten | dieselbe Datei; kein `default`-Zweig |
+| Der Klassifikator irrt und gibt Vertrauliches frei | Nur eine Antwort öffnet; alle übrigen halten. Öffnende Antworten unter der Schwelle gelten als unsicher und halten | `compose/confidentialityverdictkinds.go` |
+| Ein Ausfall führt zur Freigabe | Kein Modell, kein Budget, keine Antwort: alles bleibt zurückgehalten | dieselbe Datei; kein `default`-Zweig |
 | Inhalte verlassen die Infrastruktur | Beide Vertraulichkeitsaufgaben laufen lokal | `docs/reference/ai-egress.md`, erzeugt |
 | Leistungskontrolle über Metadaten | Verwertungsverbot in der Betriebsvereinbarung | vertraglich, nicht technisch |
 | Ein Kollege veröffentlicht, was ein anderer zurückhält | Die Sichtbarkeit ist das Strengste über alle erfassenden Postfächer | `activities/audiencerecompute.go` |
 
 ### B.3 Verbleibendes Risiko
 
-**Ein neuer Absender ist zurückgehalten, nicht abwesend.** Seine erste Nachricht
+**Ein neuer Absender ist zurückgehalten.** Seine erste Nachricht
 wird gespeichert, bis eine Entscheidung fällt.
 
 **Der Klassifikator irrt.** Die asymmetrische Schwelle verschiebt Fehler in

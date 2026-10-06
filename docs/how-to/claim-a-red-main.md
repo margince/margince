@@ -1,17 +1,16 @@
 # Claim a red `main`
 
-`main` goes red here often, and on purpose: merging past a red required check is
-a standing decision, so a break reaches the tip and every open pull request
-inherits it through its merge commit. At the number of sessions this repository
-runs at once, that means several of them notice the same failure within minutes
-and all reach for the same fix.
+`main` goes red here often, by design: merging past a red required check is a
+standing decision, so a break reaches the tip and every open pull request
+inherits it through its merge commit. With many sessions running at once,
+several of them notice the same failure within minutes and all reach for the
+same fix.
 
-That race is the thing this page removes. It costs a session its whole context
-window to diagnose a red lane, and the second and third session to do it produce
-nothing — one duplicate pull request, or two, and the original author's fix
-lands anyway.
+A claim removes that race. Diagnosing a red lane costs a session its whole
+context window, and the second and third sessions to do it produce nothing but
+duplicate pull requests while the original author's fix lands anyway.
 
-**The claim is a draft pull request wearing `claim: main-red`.** One command
+The claim is a **draft pull request** labelled `claim: main-red`. One command
 finds it, and it exists before the fix does.
 
 ## Before you investigate a failure you did not cause
@@ -21,25 +20,23 @@ gh pr list --state open --label "claim: main-red" \
   --json number,title,body,updatedAt,author
 ```
 
-Read the bodies, not just the titles. Each claim lists the lanes and tests it
-covers, and **that list is what you match against** — not "is `main` red", which
-is nearly always yes.
+Read the bodies as well as the titles. Each claim lists the lanes and tests it
+covers, and you match your failure against that list. Whether `main` is red is
+nearly always yes, so it tells you nothing.
 
-**If a claim covers your failure** — stop. Do not investigate it, do not open a
-second fix, and do not sit and poll it either: waiting burns the tokens this
-page exists to save. Your own pull request is red for a reason that is not
-yours, so carry on with your own work and look again when you are ready to
-merge.
+**If a claim covers your failure**, stop. Do not investigate it, do not open a
+second fix, and do not sit and poll it either: waiting burns the tokens a claim
+saves. Your own pull request is red for a reason that is not yours, so carry on
+with your own work and look again when you are ready to merge.
 
-**If nothing covers it** you are first for this cause, even when another claim
-is open for a different one. `main` is regularly red for two unrelated reasons
-at once — on 2026-09-08 it was red for three — and a claim naming one of them
-says nothing about the others.
+**If nothing covers it**, you are first for this cause, even when another claim
+is open for a different one. `main` is regularly red for two or more unrelated
+reasons at once, and a claim naming one of them says nothing about the others.
 
 ## Opening a claim
 
-Do this **before** you start diagnosing, not after you have a fix. The whole
-value is in the minutes it saves the next session.
+Open the claim **before** you start diagnosing. Its value is in the minutes it
+saves the next session.
 
 ```sh
 git switch -c red/<lane-or-test-slug> origin/main
@@ -50,92 +47,79 @@ gh pr create --draft --label "claim: main-red" \
   --body "$(printf 'Claiming:\n- TestOne\n- TestTwo\n\nCause: unknown so far.\n')"
 ```
 
-**A pull request with no diff is allowed, and this one has none.** GitHub asks
-only that the head branch carry a commit the base does not, which the empty
-commit provides — so the claim opens before a single line is written, which is
-the whole point of it. Do not talk yourself out of the empty commit and wait
-until you have a fix to show: by then the second session has already started.
+**A pull request with no diff is allowed.** GitHub asks only that the head
+branch carry a commit the base does not, and the empty commit provides one, so
+the claim opens before a line of the fix is written. Do not wait until you have
+a fix to show: by then the second session has already started.
 
-It is close to free, and for a reason worth knowing: `ci.yml` guards the
-`changes` classifier itself on `draft == false`, so on a draft it never runs and
-every lane gated on its output skips with it. Measured on a zero-diff draft,
-fourteen of sixteen checks skipped and only the `ci` fan-in reported. CodeRabbit
-does not review a draft either — `.coderabbit.yaml` sets `drafts: false`.
-
-**The cheapness comes from being a draft, not from the diff being empty.** That
-is what makes the claim usable once you start work: push your investigation to
-it, and it stays as cheap as it was while it was empty. It gets expensive at the
-moment you mark it ready, which is the moment it should.
-
-An empty commit is also the honest first state — you are claiming the work, not
-reporting a fix.
+A draft runs almost no CI and gets no CodeRabbit review. `ci.yml` runs the
+`changes` classifier only on `draft == false`, so every lane gated on its output
+skips, and `.coderabbit.yaml` sets `drafts: false`. The draft state keeps it
+cheap whatever the diff holds, so push your investigation to it as you work. It
+costs CI only once you mark it ready.
 
 If `main-health` has already filed a `main is red:` issue, assign yourself to it
-in the same breath. Unassigned reads as unclaimed, and the issue is where anyone
+at the same time. Unassigned reads as unclaimed, and the issue is where anyone
 not watching pull requests will look.
 
-## Keeping it honest
+## Keep the body current
 
 **The body is the interface.** Another session decides whether to stand down by
-reading your list, so keep it current: add a test when you find the failure is
-wider than you thought, and say so if it turns out narrower. A claim that quietly
-covers less than it lists is how a real failure ends up owned by nobody.
+reading your list, so keep it current: add a test when the failure turns out
+wider than you thought, and say so if it turns out narrower. A claim that covers
+less than it lists leaves a real failure owned by nobody.
 
 **Say what you learn.** A comment naming the cause, or naming what you ruled
-out, is worth more to the next session than the diff — it is the part they would
-otherwise pay to rediscover.
+out, saves the next session from rediscovering it, and is worth more than the
+diff.
 
 ## Releasing it
 
-- **Fixed** — mark the pull request ready and merge it. The claim goes with it.
-- **Abandoned** — close the draft, and say in a comment what you found, so the
-  next session starts from your evidence rather than from nothing.
-- **Not actually broken** — close it and say why the verdict was wrong. A claim
+- **Fixed**: mark the pull request ready and merge it. The claim goes with it.
+- **Abandoned**: close the draft, and say in a comment what you found, so the
+  next session starts from your evidence.
+- **Not actually broken**: close it and say why the verdict was wrong. A claim
   left open over a green `main` stops somebody looking at a real failure later.
-- **Somebody else fixed the cause** — close it and name the pull request that
-  did. The rule above only releases a claim its own change fixes, so a claim
-  whose cause another change fixed stays open with nothing to merge it away, and
-  a dead problem sits at the top of the list the next session reads first.
+- **Somebody else fixed the cause**: close it and name the pull request that
+  did. Merging releases only a claim fixed by its own change. A claim fixed by
+  another change stays open, and a dead problem sits at the top of the list the
+  next session reads first.
 
 ## When two sessions claim the same thing
 
 Listing the open claims and then creating one is not atomic. Two sessions
 reaching the same red within the same few seconds both find nothing and both
-open a claim — the race arriving through the mechanism built to end it.
+open a claim.
 
-**The lower pull request number wins.** It is the one that existed first, every
-session can see it, and no clock has to agree. If yours is the higher number and
-its covered tests overlap:
+**The lower pull request number wins.** It existed first, every session can see
+it, and no clock has to agree. If yours is the higher number and its covered
+tests overlap:
 
 - close yours, with a comment pointing at the winner;
-- if you had already found something, say it on the winner's claim before you
-  go — that is the part they would otherwise pay to rediscover;
+- post what you found on the winner's claim before you close yours;
 - carry on with your own work.
 
-Overlap is per test, not per pull request. If your claim covers three tests and
-only one is also on the winner's list, drop that one from your body and keep
-going: the other two are still unclaimed, and dropping them would leave them
-owned by nobody.
+Overlap is per test. If your claim covers three tests and only one is also on
+the winner's list, drop that one from your body and keep going: the other two
+are still unclaimed, and dropping them would leave them owned by nobody.
 
 ## Taking over a stale claim
 
-A session can die, and a claim it left behind would otherwise block the repository
-for good. **A claim with no commit and no comment for 90 minutes may be taken
-over.** Say so in a comment on it first, so the original session sees what
+A session can die, and a claim it left behind would block the repository for
+good. A claim with no commit and no comment for **90 minutes** may be taken
+over. Say so in a comment on it first, so the original session sees what
 happened if it wakes up, then carry on in your own branch.
 
-Ninety minutes rather than ten: diagnosing a red integration lane genuinely takes
-that long, and a threshold short enough to catch a dead session is short enough
-to steal work from a live one.
+The threshold is 90 minutes because diagnosing a red integration lane takes
+that long. A threshold short enough to catch a dead session quickly would also
+take work from a live one.
 
 ## When several causes are in flight
 
 Each cause gets its own claim, and they land in whatever order they are ready.
-Be aware of the trap that follows: because required checks run against the merge
-commit, **two pull requests each fixing half of a red `main` are both red, and
-neither can go green while the other is unmerged.** Branch protection then
-refuses both.
+Required checks run against the merge commit, so **two pull requests each
+fixing half of a red `main` are both red.** Neither can go green while the other
+is unmerged, and branch protection refuses both.
 
-The way out is one branch merging both fixes — its merge commit carries the
-whole repair, so it is green and needs no administrator bypass. This happened on
-2026-09-08 and cost several hours; the record is issue #4852.
+The way out is one branch merging both fixes. Its merge commit carries the whole
+repair, so it is green and needs no administrator bypass.

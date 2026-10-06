@@ -7,6 +7,7 @@ import type { GrantSpec } from "../app/mefixture";
 import { feature, status } from "./ai-admin.testkit";
 import { AiRoutingCard } from "./ai-routing";
 import { backendFor, jsonResponse, render } from "./ai-routing.testkit";
+import { openTaskDetails } from "./ai-task-details-testing";
 import { AiTasksCard } from "./ai-tasks";
 
 // The AI tasks card and the per-tier facts the Model tiers rows join from the
@@ -112,11 +113,13 @@ describe("AiTasksCard", () => {
         return withDiagnostics(EVERYTHING)(input, init);
       }),
     );
+    const user = userEvent.setup({ delay: null });
     render(<AiTasksCard />);
 
-    const row = (await screen.findByText(feature.display_name)).closest("tr");
-    if (!row) throw new Error("the task has no row");
-    expect(within(row).getByText("Custom")).toBeTruthy();
+    await screen.findByText(feature.display_name);
+    expect(await openTaskDetails(user, feature.display_name)).toHaveTextContent(
+      "Custom",
+    );
   });
 
   // `/ai/status` answers an empty task list to a seat without routing read,

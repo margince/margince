@@ -5,9 +5,9 @@
 
 package gates
 
-// array_length answers NULL for an EMPTY array, not 0, so a CHECK that bounds
-// a length with it evaluates to UNKNOWN for `{}` — and Postgres ACCEPTS a row
-// on an UNKNOWN check. A constraint written to require at least one element
+// array_length answers NULL for an empty array rather than 0, so a CHECK that
+// bounds a length with it evaluates to UNKNOWN for `{}`, and Postgres accepts a
+// row on an UNKNOWN check. A constraint written to require at least one element
 // therefore admits the one value it exists to refuse. array_upper, array_lower
 // and array_ndims answer NULL for `{}` too and carry the identical hole.
 //

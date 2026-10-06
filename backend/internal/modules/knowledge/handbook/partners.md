@@ -1,9 +1,9 @@
 # Partners and commission
 
 A **partner** in Margince is a company that brings you business or helps you win
-it — a hosting firm, a consultancy, an alliance. A partner is not a separate
-record: it is extra partner terms on a company that already exists, so the same
-company page shows both its own business and its partner life. The terms are a
+it: a hosting firm, a consultancy, an alliance. A partner is a company that
+already exists, with partner terms added, so the same company page shows both
+its own business and its partner life. The terms are a
 role, a certification status, a margin tier and a relationship stage.
 
 A deal names the partner behind it, and a won deal a partner sourced earns them
@@ -82,24 +82,24 @@ won; nobody creates it by hand. An influenced deal earns nothing.
 
 The partner's margin tier is frozen onto the commission at the moment it accrues,
 so changing a partner's tier later does not rewrite what they have already
-earned. A partner with no tier earns nothing, and no commission row is written at
-all — which is different from writing a zero. "We owe them nothing" and "we owe
-them nothing yet" are not the same claim, and a zero row would blur them.
+earned. A partner with no tier earns nothing, and no commission line appears at
+all. A zero would say "we owe them nothing"; no line says "we owe them nothing
+yet".
 
 If a partner earned commission on a win, reopening the deal does not delete it. A
-reversal row is added and the original is marked **Reversed**. A deal that was
-won, reopened and won again shows three rows. Nothing is rewritten.
+reversal line is added and the original is marked **Reversed**. A deal that was
+won, reopened and won again shows three lines. Nothing is rewritten.
 
 ### How do I approve or pay a partner's commission?
-To approve or mark a partner's commission paid in Margince, open the partner company's **Partner** tab and use the row's action in its **Commission** panel.
-1. **Approve** an **Accrued** row: "It pays nothing: settle the payment in your finance system, then mark it paid here."
-2. **Mark as paid** an **Approved** row once your finance system has paid it. Margince moves no money.
-3. **Reverse** a row that should not stand, with a **Reversal reason**. An offsetting row is added; nothing is deleted.
+To approve or mark a partner's commission paid in Margince, open the partner company's **Partner** tab and use the line's action in its **Commission** panel.
+1. **Approve** an **Accrued** line: "It pays nothing: settle the payment in your finance system, then mark it paid here."
+2. **Mark as paid** an **Approved** line once your finance system has paid it. Margince moves no money.
+3. **Reverse** a line that should not stand, with a **Reversal reason**. An offsetting line is added; nothing is deleted.
 Without permission the column reads **No permission to decide**. Also called: pay a partner, partner payout, referral fee.
 
 ### The commission ledger
 
-The **Commission** panel on a partner's page carries a row per deal: the
+The **Commission** panel on a partner's page carries a line per deal: the
 **Deal**, what was **Earned**, the **Rate**, the **Deal value** it was taken
 from, and a **Status**. Above it sits **Outstanding**, accrued or approved.
 Nothing earned yet reads "No commission yet".

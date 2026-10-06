@@ -5,6 +5,7 @@ import { Check, ChevronDown } from "lucide-react";
 import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { contentSizedPopupBox, type PopupFrame } from "./anchoredpopup";
+import { Button } from "./atoms";
 import { usePrefersReducedMotion } from "./motion";
 import { type Listbox, useSelectListbox } from "./selectlistbox";
 import "./select.css";
@@ -97,6 +98,22 @@ export type SelectProps = Readonly<{
   // cancel must not also do that here — that would fight the very key that
   // just moved focus away.
   onLeave?: () => void;
+  // The closed face's SHAPE. `field` (the default) is the form-column box every
+  // other dropdown wears. `button` draws the same trigger as a filled
+  // `--controlHeight` button: a value that is the one thing a reader sets on a
+  // record and stands beside its name, where a field box reads as a form that
+  // wandered into the header and a pale chip reads as metadata nobody can act
+  // on. The listbox, the keyboard contract and the ARIA are the same either
+  // way; only the face changes.
+  appearance?: "field" | "button";
+  // Busy, as opposed to refused: a write the pick started has not answered.
+  // The field face pairs it with the caller's `disabled`; the button face
+  // hands it to Button as `pending`, which refuses the press while keeping
+  // focus where the reader put it.
+  "aria-busy"?: boolean;
+  // Names this trigger for a layout suite that measures it, without pinning
+  // the primitive's class (every dropdown shares it) or the copy on its face.
+  testId?: string;
 }>;
 
 export function Select(props: SelectProps) {
@@ -275,12 +292,15 @@ function TriggerButton({
   field: Readonly<{
     id?: string;
     className?: string;
+    appearance?: "field" | "button";
+    testId?: string;
     disabled?: boolean;
     required?: boolean;
     "aria-label"?: string;
     "aria-labelledby"?: string;
     "aria-describedby"?: string;
     "aria-invalid"?: boolean;
+    "aria-busy"?: boolean;
   }>;
   listbox: Listbox;
   animate: boolean;
@@ -290,40 +310,39 @@ function TriggerButton({
   adornment?: ReactNode;
 }>) {
   const { open, active } = listbox;
-  return (
-    <button
-      type="button"
-      ref={listbox.trigger}
-      id={field.id}
-      className={["input", "select-control", field.className ?? ""]
-        .filter(Boolean)
-        .join(" ")}
-      // The chevron's turn resolves here for the same reason the popup's entry
-      // does — one decision, in one place the suite can assert — and `none`
-      // leaves the END state: the chevron still points at an open list, it just
-      // gets there without a tween.
-      data-motion={animate ? "in" : "none"}
-      // NOSONAR: an ARIA combobox over a native <select>, which no engine lets
-      // us style past its closed face — see the module comment.
-      role="combobox"
-      aria-expanded={open}
-      aria-haspopup="listbox"
-      // Only while open: an aria-controls pointing at an element that is not in
-      // the document is an invalid reference, which axe reports and a screen
-      // reader cannot follow.
-      aria-controls={open ? listbox.listboxId : undefined}
-      aria-activedescendant={
-        open && active !== -1 ? listbox.optionDomId(active) : undefined
-      }
-      aria-label={field["aria-label"]}
-      aria-labelledby={field["aria-labelledby"]}
-      aria-describedby={field["aria-describedby"]}
-      aria-invalid={field["aria-invalid"]}
-      aria-required={field.required}
-      disabled={field.disabled}
-      onClick={listbox.onTriggerClick}
-      onKeyDown={listbox.onKeyDown}
-    >
+  // Everything the closed face says to assistive tech and to the listbox, the
+  // same whichever box it is drawn in: the combobox contract does not change
+  // with the face.
+  const trigger = {
+    ref: listbox.trigger,
+    id: field.id,
+    "data-testid": field.testId,
+    // The chevron's turn resolves here for the same reason the popup's entry
+    // does — one decision, in one place the suite can assert — and `none`
+    // leaves the END state: the chevron still points at an open list, it just
+    // gets there without a tween.
+    "data-motion": animate ? "in" : "none",
+    // NOSONAR: an ARIA combobox over a native <select>, which no engine lets
+    // us style past its closed face — see the module comment.
+    role: "combobox",
+    "aria-expanded": open,
+    "aria-haspopup": "listbox",
+    // Only while open: an aria-controls pointing at an element that is not in
+    // the document is an invalid reference, which axe reports and a screen
+    // reader cannot follow.
+    "aria-controls": open ? listbox.listboxId : undefined,
+    "aria-activedescendant":
+      open && active !== -1 ? listbox.optionDomId(active) : undefined,
+    "aria-label": field["aria-label"],
+    "aria-labelledby": field["aria-labelledby"],
+    "aria-describedby": field["aria-describedby"],
+    "aria-invalid": field["aria-invalid"],
+    "aria-required": field.required,
+    onClick: listbox.onTriggerClick,
+    onKeyDown: listbox.onKeyDown,
+  } as const;
+  const content = (
+    <>
       {/* The closed face repeats the selected option's adornment, so a picker
           whose options are told apart BY the mark still shows which one is
           chosen once the list is shut. Hidden from assistive tech for the same
@@ -343,6 +362,44 @@ function TriggerButton({
       >
         {face}
       </span>
+    </>
+  );
+  if (field.appearance === "button") {
+    // Through Button rather than its classes: the box, the fill, the press
+    // and the busy contract are that component's, and a second spelling of
+    // them here is a second place for them to drift. `aria-busy` becomes
+    // `pending`, which keeps focus on the control while the write is out
+    // instead of dropping it the way a native `disabled` does. The chevron
+    // takes the control's own icon size, so it names none.
+    return (
+      <Button
+        {...trigger}
+        variant="primary"
+        className={["select-button", field.className ?? ""]
+          .filter(Boolean)
+          .join(" ")}
+        disabled={field.disabled}
+        pending={field["aria-busy"]}
+        // `pending` swallows the press; the keys that open the list are
+        // refused here, or a keyboard reader could pick mid-write.
+        onKeyDown={field["aria-busy"] ? undefined : listbox.onKeyDown}
+      >
+        {content}
+        <ChevronDown className="select-chevron" aria-hidden="true" />
+      </Button>
+    );
+  }
+  return (
+    <button
+      type="button"
+      {...trigger}
+      className={["input", "select-control", field.className ?? ""]
+        .filter(Boolean)
+        .join(" ")}
+      aria-busy={field["aria-busy"]}
+      disabled={field.disabled}
+    >
+      {content}
       <ChevronDown className="select-chevron" size={16} aria-hidden="true" />
     </button>
   );

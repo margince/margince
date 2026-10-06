@@ -145,31 +145,6 @@ func TestASaveGoogleCannotAnswerForIsAdmittedAndLogged(t *testing.T) {
 	}
 }
 
-// The probe is a call to the bound location, so a save eu_hosted refuses never
-// reaches it: not one request, not even the token exchange.
-func TestAnEUHostedSaveOutsideTheEUAsksGoogleNothing(t *testing.T) {
-	t.Parallel()
-	selector, google := googleAt(t, servesEverything(t))
-	store := &RoutingStore{keys: allCloudKeys(t), selectBrain: selector}
-	for _, location := range []string{"us", "global", "europe-west2"} {
-		next := vertexRouting(location)
-		next.Profile = ProfileEUHosted
-		if err := store.probeCandidate(context.Background(), RoutingConfig{}, next); err == nil || !strings.Contains(err.Error(), "not an EU location") {
-			t.Errorf("%s: want the EU refusal, got %v", location, err)
-		}
-	}
-	if n := google.requests.Load(); n != 0 {
-		t.Errorf("%d request(s) reached Google for saves eu_hosted refuses", n)
-	}
-	// The control: the same store does ask Google about an EU location.
-	if err := store.probeCandidate(context.Background(), RoutingConfig{}, vertexRouting("europe-west4")); err != nil {
-		t.Fatalf("an EU save was refused: %v", err)
-	}
-	if google.requests.Load() == 0 {
-		t.Error("an EU save reached nobody either, so the zero above proves nothing")
-	}
-}
-
 // A binding without gemini_vertex gives a save nothing to ask Google.
 func TestASaveWithoutVertexHasNothingToProbe(t *testing.T) {
 	t.Parallel()

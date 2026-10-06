@@ -2,9 +2,9 @@
 
 **Tested 2026-09-02** against `openai/gpt-oss-120b` and
 `mistralai/mistral-large-2512` through this tree's own certification lane, on
-commit `b63dc2c60`. Every figure below is a measurement from that day, not an
-estimate. Re-measure before trusting the numbers: OpenRouter's host roster,
-their prices and their speeds all move.
+commit `b63dc2c60`. Every figure below is a measurement from that day.
+Re-measure before trusting the numbers: OpenRouter's host roster, their prices
+and their speeds all move.
 
 Related: [configuration.md](configuration.md) for the environment variables,
 [connect-a-cloud-model-provider.md](../how-to/connect-a-cloud-model-provider.md) for
@@ -13,23 +13,22 @@ ready-made binding.
 
 ## 1. What the broker does, and why it needs configuring
 
-OpenRouter is not a vendor. It is a gateway in front of many inference hosts,
-and a model id names a *set* of them. On the day of the test
-`openai/gpt-oss-120b` had **21 endpoints**.
+OpenRouter is a gateway in front of many inference hosts, and a model id names
+a *set* of them. On the day of the test, 21 hosts served `openai/gpt-oss-120b`.
 
 They are not interchangeable:
 
-- **quantization spans fp4 → bf16** — different answer quality
-- **`max_completion_tokens` spans 8,192 → 117,964** — a long generation
+- **quantization spans fp4 → bf16**, so answer quality differs
+- **`max_completion_tokens` spans 8,192 → 117,964**, so a long generation
   truncates on some and not others
 - **30-minute uptime spanned 35.1% → 100%**
 
-Its default choice among them is documented as: skip hosts with an outage in
-the last 30 seconds, then weight by the **inverse square of price** (a $1/M host
-is 9× more likely than a $3/M one). The choice is remade **per request**.
+Its documented default choice among them: skip hosts with an outage in the last
+30 seconds, then weight by the inverse square of price (a $1/M host is 9× more
+likely than a $3/M one). The choice is remade per request.
 
 So an unconfigured binding gets a different serving stack per call, and the
-product cannot see which. That is what this page exists to fix.
+product cannot see which. The routing settings on this page fix that.
 
 ## 2. What that cost us, measured
 
@@ -37,20 +36,19 @@ One certification run of `draft_reply`, 38 candidate calls, no preferences:
 
 | | value |
 |---|---|
-| upstreams reached | **8** — DeepInfra ×9, AkashML ×6, CoreWeave ×6, SiliconFlow ×5, Novita ×4, BaseTen ×3, Nebius ×3, Google ×2 |
+| upstreams reached | **8**: DeepInfra ×9, AkashML ×6, CoreWeave ×6, SiliconFlow ×5, Novita ×4, BaseTen ×3, Nebius ×3, Google ×2 |
 | latency p50 / p90 / p99 | 19.0s / 38.0s / **304.2s** |
 | scenarios whose 3 repeats were split across hosts | **8 of 9** |
 
 The last row is the serious one. `RUNS=3` exists to sample one thing three
-times and take the median. One scenario —
-`first_message_from_an_intent_alone` — was served by **five** different hosts
-across its three repeats. A median over five serving stacks at two precisions is
-not a median of anything, and the record reported it as one number.
+times and take the median. One scenario, `first_message_from_an_intent_alone`,
+was served by five different hosts across its three repeats. The record
+reported one median over five serving stacks at two precisions.
 
-**The control that proves it is the judge.** `mistral-large-2512` ran in the
-same runs, through the same adapter and the same HTTP client, at p90 2.8s
-against the candidate's 38s. It has **two** endpoints and both are first-party
-Mistral. There was never a lottery to lose.
+The judge is the control. `mistral-large-2512` ran in the same runs, through the
+same adapter and the same HTTP client, at p90 2.8s against the candidate's 38s.
+It has two endpoints and both are first-party Mistral, so routing could not
+vary.
 
 ## 3. The default this product ships
 
@@ -61,8 +59,8 @@ routing:
   provider: {sort: throughput, quantizations: [fp16, bf16], require_parameters: true}
 ```
 
-Reliability over price — deliberately the **inverse** of the broker's own
-default. Measured against the same corpus, same night:
+It favours reliability over price, the inverse of the broker's own default.
+Measured against the same corpus, same night:
 
 | `draft_reply` | baseline | with the default |
 |---|---|---|
@@ -74,10 +72,10 @@ default. Measured against the same corpus, same night:
 | mean output tokens | 670 | 701 |
 | whole run, wall clock | 1,268s | **156s** |
 
-17× at p50, 82× at p99, and the reproducibility defect gone. Mean output tokens
-went slightly *up*, so it is not faster for having answered less.
+17× at p50, 82× at p99, and no split repeats. Mean output tokens went slightly
+*up*, so the speed does not come from shorter answers.
 
-It generalizes. `cold_start`, run the same way:
+`cold_start`, run the same way, shows the same effect:
 
 | `cold_start` | baseline | with the default |
 |---|---|---|
@@ -87,23 +85,23 @@ It generalizes. `cold_start`, run the same way:
 | wall clock | 463s | **119s** |
 
 The certification record for `draft_reply` also moved: reliability
-`0.963 → 1.0`, `reported_invalid 1 → 0`, `judge_score_p50 75 → 85`. Treat the score
-gain as suggestive rather than settled — it is one run of 27 against a record
-from a different day.
+`0.963 → 1.0`, `reported_invalid 1 → 0`, `judge_score_p50 75 → 85`. Treat the
+score gain as suggestive: it is one run of 27 against a record from a different
+day.
 
 **Cost: roughly 2.4× per call.** Taken from OpenRouter's own `usage.cost`, not
-from our `est_cost_microusd` — see §7.
+from our `est_cost_microusd`; see section 7.
 
 ### Why these three
 
-- **`sort: throughput` is the lever.** It is what collapses the tail. With it
-  set, the other two change almost nothing measurable.
-- **`quantizations` buys comparability, not speed.** Pinning precision is what
-  makes repeated calls comparable at all. It earns its place as a *guardrail*:
-  the day the fastest host drops out, the sort would otherwise fall to an fp4
-  host and answer quality would shift with nothing to show it.
+- **`sort: throughput` is the lever.** It collapses the tail. With it set, the
+  other two change almost nothing measurable.
+- **`quantizations` buys comparability.** Pinning precision makes repeated
+  calls comparable at all. It is a guardrail: the day the fastest host drops
+  out, the sort would otherwise fall to an fp4 host and answer quality would
+  shift with nothing to show it.
 - **`require_parameters` makes a soft preference a rule.** OpenRouter already
-  prefers hosts supporting `response_format`; this stops it being a preference.
+  prefers hosts supporting `response_format`; this makes it a requirement.
 
 ### Opting out
 
@@ -112,39 +110,39 @@ Three states, and the last two are different:
 | written | means |
 |---|---|
 | no `routing:` key | the default above |
-| `routing: {}` | **explicitly nothing** — the broker's own price-weighted routing |
-| `routing: {…}` | exactly what is written |
+| `routing: {}` | **explicitly nothing**: the broker's own price-weighted routing |
+| `routing: {…}` | what is written, and nothing else |
 
 ### Pinning a region
 
 Neither the default nor `{}` says anything about *where* a call is served. The
-broker lists each model's endpoints by slug, and a region is part of the slug:
-`mistral/eu` is Mistral's EU endpoint, while the base slug `mistral` matches
-every region Mistral serves from and a variant such as `mistral/zdr` names a
-retention policy rather than a place. Only `only: [<provider>/<region>]` keeps a
-call in a region, and OpenRouter answers 404 when no endpoint matches rather
-than falling back elsewhere. Read a model's endpoints at
-`https://openrouter.ai/api/v1/models/<model id>/endpoints` before binding it: a
+broker lists each model's endpoints by slug, and a region is part of the slug.
+`mistral/eu` is Mistral's EU endpoint. The base slug `mistral` matches every
+region Mistral serves from, and a variant such as `mistral/zdr` names a
+retention policy, not a place. Only `only: [<provider>/<region>]` keeps a call
+in a region, and OpenRouter answers 404 when no endpoint matches instead of
+falling back elsewhere. Read a model's endpoints at
+`https://openrouter.ai/api/v1/models/<model id>/endpoints` before binding it. A
 model with no EU endpoint cannot be pinned to the EU at all, and the list
-changes — `mistral-medium-3-5` had none until the broker added `mistral/eu`.
+changes: `mistral-medium-3-5` had none until the broker added `mistral/eu`.
 
-**Where a request is served is the connection's; how a model is served is the
-tier's.** `only`, `ignore`, `allow_fallbacks`, `zdr`, `data_collection` and
+**Connection keys and tier keys.** Where a request is served belongs to the
+connection, and how a model is served belongs to the tier. `only`,
+`ignore`, `allow_fallbacks`, `zdr`, `data_collection` and
 `enforce_distillable_text` are set once, as `providers.openai_compatible.upstream`
-(the OpenRouter settings section of its provider sheet), and reach every lane on
+(the OpenRouter settings section of its provider sheet). They reach every lane on
 it; the embeddings lane may state its own. The serving keys stay on each tier's
 `routing:`, because two models behind one broker need different answers.
-[openrouter-routing-fields.md](openrouter-routing-fields.md) lists every field. OpenRouter's EU address, `https://eu.openrouter.ai/api`
-(Business or Enterprise plan), keeps every request in the EU, so `eu_hosted` needs no pin
-on it; on the global address a preset ending in `_eu.yaml` must pin every lane to an
-EU-region slug, which `TestAResidencyPresetPinsEveryLaneToAnEURegion` holds.
+[openrouter-routing-fields.md](openrouter-routing-fields.md) lists every field.
+OpenRouter's EU address, `https://eu.openrouter.ai/api` (Business or Enterprise
+plan), keeps every request in the EU and needs no pin. On the global address,
+pin `only` to an EU-region slug on the connection.
 
 ## 3b. Validated through the config path
 
-The figures in §3 were taken with the preferences injected by hand. They were
-then re-taken through `ROUTING=config/presets/openrouter_cloud.yaml`, where the
-default is *inherited from config* rather than supplied — which is what a
-deployment actually does:
+The figures in section 3 were taken with the preferences injected by hand. They
+were then re-taken through `ROUTING=config/presets/openrouter_cloud.yaml`, where
+the default is inherited from config, as in a deployment:
 
 | | `draft_reply` | | `cold_start` | |
 |---|---|---|---|---|
@@ -155,22 +153,21 @@ deployment actually does:
 | upstreams | 8 | **1** | 8 | **1** |
 | split repeats | 8 of 9 | **0 of 9** | 7 of 9 | **0 of 9** |
 
-The `draft_reply` p99 is a single 76.9-second call — on the pinned host, with
-`finish_reason: stop` and 718 tokens, so a normal response the gateway sat on.
-Excluding it: p50 972ms, p90 1,380ms, max 2,632ms. That is §6's second tail,
-which this default does not address and is not meant to.
+The `draft_reply` p99 is a single 76.9-second call on the pinned host, with
+`finish_reason: stop` and 718 tokens: a normal response the gateway sat on.
+Excluding it: p50 972ms, p90 1,380ms, max 2,632ms. That is the second tail
+described in section 6, which this default does not address.
 
-Note the judge for these runs was `gemini-3.5-flash`, not the `mistral-large`
-the earlier records used: the preset binds `mistral-large` at `premium`, and the
+The judge for these runs was `gemini-3.5-flash`, not the `mistral-large` the
+earlier records used. The preset binds `mistral-large` at `premium`, and the
 runner refuses a judge that leads a task it would also grade. Latency and
-upstream attribution are judge-independent; **scores across the two are not
-comparable.**
+upstream attribution are judge-independent; scores across the two judges are
+not comparable.
 
 ## 4. Hard filters versus soft preferences
 
-**This is the distinction that matters most.** A hard filter removes a host from
-the candidate set. A soft preference only reorders it. **Only a hard filter can
-bound a tail.**
+A hard filter removes a host from the candidate set. A soft preference only
+reorders it. Only a hard filter bounds a tail.
 
 | field | effect | hard? |
 |---|---|---|
@@ -180,28 +177,26 @@ bound a tail.**
 | `max_price` † | `{prompt, completion}` $/M; *blocks the request* if nothing qualifies | **hard** |
 | `sort` | `throughput` \| `price` \| `latency`; **disables load balancing** | reorders |
 | `preferred_max_latency_p90` | percentile cutoff, rolling 5-min window | **soft** |
-| `allow_fallbacks` | host switching on failure; default true | — |
+| `allow_fallbacks` | host switching on failure; default true | n/a |
 
 † **`max_price` is not settable in this tree.** The table is the broker's field
-set, and this row is the one `OpenRouterRouting` has no member for — the routing
-config is parsed with `KnownFields(true)`, so an operator who copies it into a
-`routing:` block gets a parse error at boot rather than a price ceiling. It is
-unimplemented deliberately: §5 measured its p99 at **387 seconds**, and a field
-that dangerous is better absent than merely discouraged. Adding it would mean a
+set, and `OpenRouterRouting` has no member for this row. The routing config is
+parsed with `KnownFields(true)`, so an operator who copies it into a `routing:`
+block gets a parse error at boot instead of a price ceiling. It is left out
+because section 5 measured its p99 at 387 seconds. Adding it would mean a
 struct member, a schema property and a parity case.
 
-Not academic. In the A/B, the arm that set **only** the soft latency
-preference (`preferred_max_latency_p90: 8`) was the **worst arm measured**:
-p90 43.7s against the baseline's 38s, with one call taking **231 seconds**.
-Asking politely for speed was worse than asking for nothing.
+The soft preference alone did harm. In the A/B, the arm that set only
+`preferred_max_latency_p90: 8` was the worst arm measured: p90 43.7s against
+the baseline's 38s, with one call taking 231 seconds. It did worse than setting
+nothing.
 
 ## 5. What was tried and rejected
 
 Two interleaved A/B rounds, 8 arms × 20 samples each, 320 samples total. Arms
-were round-robined rather than run one at a time, so the broker's own load
-change through the night could not be attributed to whichever arm was running.
-Round 2, with `A_baseline` and `G_nitro` repeated from round 1 as drift
-controls:
+were round-robined, not run one at a time, so the broker's own load change
+through the night could not be attributed to whichever arm was running. Round
+2, with `A_baseline` and `G_nitro` repeated from round 1 as drift controls:
 
 | arm | p50 | p90 | p99 | $/1k calls | upstreams |
 |---|---|---|---|---|---|
@@ -214,138 +209,102 @@ controls:
 | `only: [cerebras, groq]` | 2,609 | 3,513 | 3,857 | 0.971 | Groq ×14, Cerebras ×6 |
 | `sort` + `max_price` | 2,702 | **141,484** | **386,985** | 1.068 | Groq ×11, Cerebras ×9 |
 
-**`max_price` is excluded from the default, and from the tree** (§4's
-footnote). Its p99 was **387 seconds**, the
-worst arm of either round: a price ceiling cannot exclude what the sort then
-prefers.
+**`max_price` is excluded.** It is in neither the default nor the tree (see the
+footnote in section 4). Its p99 was 387 seconds, the worst arm of either round:
+a price ceiling cannot exclude what the sort then prefers.
 
 **`only`/`ignore` are excluded.** They reach the same host as the sort while
 throwing away the failover breadth a sort leaves intact.
 
-**Prefer `sort: throughput` over the `:nitro` suffix.** All three of `:nitro`,
-`only: [cerebras]` and the default landed on Cerebras ×20, yet `:nitro`'s p90
-was ~3× the other two. It also carries priority-service-tier eligibility. And
-the suffix form **fails open on a typo**: `gpt-oss-120b:baseten` was silently
-ignored and routed to CoreWeave — no error. (`@baseten` and `/baseten` at least
+**Prefer `sort: throughput` over the `:nitro` suffix.** `:nitro`,
+`only: [cerebras]` and the default all landed on Cerebras ×20, yet `:nitro`'s
+p90 was ~3× the other two. It also carries priority-service-tier eligibility.
+And the suffix form fails open on a typo: `gpt-oss-120b:baseten` was ignored
+without an error and routed to CoreWeave. (`@baseten` and `/baseten` at least
 return a 400.)
 
 **`reasoning_effort: low` is an operator knob, not a default.** It won every
-latency percentile *and* cost 36% less — and cost **20 points of certification
-score** (`judge_score_p50` 85 → 65) with mean output falling 961 → 259 tokens.
+latency percentile and cost 36% less. It also cost 20 points of certification
+score (`judge_score_p50` 85 → 65), with mean output falling 961 → 259 tokens.
 Structural reliability stayed 1.0: the answers still parse, validate and pass
-their caps. They are simply worse answers.
-
-> This is the methodological warning worth keeping. On latency and cost alone
-> that arm won everything, and shipping from that evidence would have introduced
-> a 20-point quality regression **invisibly** — no error, no failed cap, no
-> changed verdict count. Only the graded lane could see it. A latency benchmark
-> cannot choose a model configuration for a quality-sensitive task.
+their caps. They are worse answers. Latency and cost alone would have chosen
+this arm; only the graded lane showed the 20-point quality drop.
 
 **`session_id` pins without making anything faster.** A stable key is
-OpenRouter's sticky-routing key and it works exactly as documented — 20/20
-samples on one host in both rounds. But it pins to whatever host it landed on
-*first*: in round 1 that was Parasail, a mid-latency fp4 host, and p50 stayed
-8.9s. It is a reproducibility instrument, and a candidate for getting
-reproducibility *without* narrowing the candidate set. This tree does not send
-it yet.
+OpenRouter's sticky-routing key and it works as documented: 20/20 samples on
+one host in both rounds. But it pins to whatever host it landed on *first*. In
+round 1 that was Parasail, a mid-latency fp4 host, and p50 stayed 8.9s. It is a
+reproducibility instrument, and a candidate for getting reproducibility
+*without* narrowing the candidate set. This tree does not send it yet.
 
 ## 6. Gateway hangs are a separate tail
 
-2 of 56 samples (3.6%) hung past a 400-second client deadline — one on the
-baseline, **one on the fastest arm**. Both returned bodies of pure whitespace:
-the gateway pads the connection with newlines to hold it open, then never
-answers.
+2 of 56 samples (3.6%) hung past a 400-second client deadline: one on the
+baseline, one on the fastest arm. Both returned bodies of pure whitespace. The
+gateway pads the connection with newlines to hold it open, then never answers.
 
-So there are two independent tails. Upstream choice explains the 30–90s band and
-the preferences above collapse it. A gateway stall is arm-independent, and only
-a client deadline plus a retry bounds it — `ai.CallCeiling` (300s) and the
-certification lane's 3-attempt re-drive are what carried the runs through.
+So there are two independent tails. Upstream choice explains the 30–90s band,
+and the preferences above collapse it. A gateway stall is arm-independent, and
+only a client deadline plus a retry bounds it. `ai.CallCeiling` (300s) and the
+certification lane's 3-attempt re-drive carried the runs through.
 
 OpenRouter's own guidance agrees: provider-layer failover is automatic, but a
 gateway-level incident needs client-side retry.
 
 ## 7. Do not judge the cost from `est_cost_microusd`
 
-Between the two `draft_reply` runs our own figure moved only **264 → 268
-microUSD**, which reads as "free". It is priced from `ai_model_rate`, which keys
-on **model** — and the entire price difference here is **per upstream**
-(Cerebras $0.35/M prompt against CoreWeave $0.03/M, ~11×).
+Between the two `draft_reply` runs our own figure moved only 264 → 268
+microUSD, which reads as "free". It is priced from `ai_model_rate`, which keys
+on model, and the entire price difference here is per upstream (Cerebras
+$0.35/M prompt against CoreWeave $0.03/M, ~11×).
 
-OpenRouter returns the true figure as `usage.cost` on every response and this
-tree does not read it. Until it does, the honest cost of this default is the
-A/B's own column: **~2.4×**.
+OpenRouter returns the true figure as `usage.cost` on every response, and this
+tree does not read it. Until it does, use the A/B's own cost column: about
+2.4×.
 
 ## 8. What the trace records
 
-Since the change that added this page's subject, `ai_call` carries:
+`ai_call` carries:
 
-- **`served_provider`** — the upstream that actually served, from the response's
+- **`served_provider`**: the upstream that served the call, from the response's
   `provider` field. Empty on a direct vendor, which reports none.
-- **`finish_reason`** — so a truncated answer and a complete one are different
+- **`finish_reason`**, so a truncated answer and a complete one are different
   rows.
-- **`cached_tokens` and `cache_write_tokens`** — read from the response's
-  `usage.prompt_tokens_details`, both already inside `prompt_tokens`. An upstream
-  that caches (Anthropic through the broker is the one that charges for the
-  write) therefore prices at its cache rates rather than as plain input.
+- **`cached_tokens` and `cache_write_tokens`**, read from the response's
+  `usage.prompt_tokens_details`, both already inside `prompt_tokens`. An
+  upstream that caches (Anthropic through the broker is the one that charges for
+  the write) therefore prices at its cache rates, not as plain input.
 
-`served_identity_source` deliberately stays `'echo'` for this wire: the
-broker's `model` field is our own request reflected back, so we now know **who**
-served without knowing **what** they served. Collapsing the two would launder an
-echo into a report.
+`served_identity_source` stays `'echo'` for this wire. The broker's `model`
+field is our own request reflected back, so we know who served without knowing
+what model they served. Reporting the echo as the served model would be false.
 
-The certification lane's payload trace carries the same two per call, which is
-what makes a run attributable at all.
+The certification lane's payload trace carries the same two per call, so every
+run is attributable to a host.
 
-## 9. Postmortem: why this took so long to find
+## 9. What hosts report that needs care
 
-It presented as flaky model behaviour for months and was none of those things.
-
-1. **The evidence was never recorded.** `openAICompatChatResponse` decoded
-   `model`, `content` and `usage` and nothing else. Eight hosts therefore looked
-   like one. Every symptom — a 300-second call, a score that moved between runs,
-   an occasional empty answer — was real, attributable, and had nowhere to be
-   attributed *to*.
-2. **The honest label was already there and was not enough.** `servedSource`
-   correctly tagged this wire `echo`, and the adapter's own comment said the
-   model field "merely reflects back the requested model id". The tree knew the
-   field was untrustworthy; nobody had added the field that *is*.
-3. **The stable control was mistaken for a well-behaved model.** The judge's p90
-   of 2.8s was read as "the judge is fine". It was two endpoints versus 21.
-4. **Aggregates hid it.** Pooling all models across a run put the fast Gemini
-   tiers next to the broker calls and dragged the median down by an order of
-   magnitude. The first honest comparison needed filtering to one model *and*
-   one task.
-5. **A latency fix nearly became a quality regression.** See the block quote in
-   §5.
-6. **Populating a field exposed a check that would have silently passed.**
-   Reading `reasoning_tokens` for the first time revealed that some hosts report
-   more reasoning tokens than completion tokens (DeepInfra 817 vs 787, Parasail
-   1117 vs 1069, AkashML 1234 vs 1121). The certification lane grades an answer
-   as `TokensOut - ReasoningTokens`; that goes negative, and a negative answer
-   count can never exceed a `max_tokens` cap. The ceiling would have looked
-   present and never fired. The adapter now bounds the reported value by the
-   completion it breaks down. Other hosts err the other way — BaseTen reported
-   0 reasoning tokens on a response whose reasoning text was plainly there — so
-   the field is bounded, never invented.
-7. **A paid call could return silence.** A reasoning model spends its output
-   budget thinking before the answer starts, both charged to the same cap, so a
-   cap that binds mid-thought returns `content: null` with every generated token
-   under `reasoning`. Reading `content` alone returned empty text with **no
-   error** — so no retry, no log. Confirmed once in 225 calls, at the one call
-   site in the tree that opts out of `ai.ReasoningOutputMaxTokens`, whose comment
-   describes this exact failure.
-
-The through-line: **every one of these was invisible rather than wrong.** No
-exception, no failing test, no red check. The lesson worth carrying is the one
-in `AGENTS.md` about a census that can fail short — a measurement that cannot
-see a defect reports success, and success is indistinguishable from correctness
-until somebody records the missing field.
+- **Reasoning tokens can exceed completion tokens.** Some hosts report more
+  reasoning tokens than completion tokens (DeepInfra 817 vs 787, Parasail 1117
+  vs 1069, AkashML 1234 vs 1121). The certification lane grades an answer as
+  `TokensOut - ReasoningTokens`. Unbounded, that goes negative, and a negative
+  answer count never exceeds a `max_tokens` cap, so the cap would never fire.
+  The adapter caps the reported value at the completion count. Other hosts err
+  the other way (BaseTen reported 0 reasoning tokens on a response whose
+  reasoning text was plainly there), so the field is bounded, never invented.
+- **A cap that binds mid-thought returns `content: null`.** A reasoning model
+  spends its output budget thinking before the answer starts, and both count
+  against the same cap. When the cap binds mid-thought, every generated token
+  is under `reasoning`, and reading `content` alone returns empty text with no
+  error, so no retry and no log. Read `reasoning` too. This was seen once in 225
+  calls, at the one call site in the tree that opts out of
+  `ai.ReasoningOutputMaxTokens`, whose comment describes this failure.
 
 ## 10. Re-evaluating later
 
-The raw data, the harness and the working notes are not in this tree — they were
-session artefacts under `.tmp/openrouter-stability/`, which is deliberately not
-committed. What is reproducible from here:
+The raw data, the harness and the working notes were session artefacts under
+`.tmp/openrouter-stability/`, which is not committed.
+What is reproducible from here:
 
 ```sh
 # One task, baseline then tuned, back to back.
@@ -362,7 +321,8 @@ make e2e-ai TASK=draft_reply RUNS=3 ... \
 ```
 
 Then compare `served_provider` and `latency_ms` across the two traces, per task
-and per model — pooling either one hides the effect (§9.4).
+and per model. Pooling models or tasks hides the effect: fast tiers of another
+model drag the median down by an order of magnitude.
 
 The host roster is worth re-reading before each round:
 
@@ -371,19 +331,20 @@ curl -s https://openrouter.ai/api/v1/models/openai/gpt-oss-120b/endpoints \
   | jq '.data.endpoints[] | {provider_name, quantization, max_completion_tokens, uptime_last_30m}'
 ```
 
-Two things to re-check specifically, because both would change the default:
-whether Cerebras is still the throughput leader, and whether it still serves at
-fp16 — the `quantizations` clause admits it today, and a re-quantized host would
-silently fall out of the candidate set.
+Re-check two things, because both would change the default: whether Cerebras
+is still the throughput leader, and whether it still serves at fp16. The
+`quantizations` clause admits it today, and a re-quantized host would drop out
+of the candidate set without any error.
 
 ## 11. The decisions endpoint
 
 OpenRouter also brokers TypeSafe Jev at
 `POST https://openrouter.ai/api/alpha/decisions`, billed on input tokens only.
 It is one server on the Jev wire, so it binds the routing config's `decisions:`
-lane under `jev_compatible`, whose provider host (`providers.jev_compatible.base_url`)
-is the FULL endpoint; nothing is appended. **Preset: OpenRouter** fills it, and
-`openrouter_cloud.yaml` carries a commented block whose lane endpoint is lifted:
+lane under `jev_compatible`. That provider host
+(`providers.jev_compatible.base_url`) is the full endpoint; nothing is appended.
+**Preset: OpenRouter** fills it, and `openrouter_cloud.yaml` carries a commented
+block whose lane endpoint is lifted:
 
 ```yaml
     decisions:
@@ -393,6 +354,6 @@ is the FULL endpoint; nothing is appended. **Preset: OpenRouter** fills it, and
 ```
 
 `JEV_COMPATIBLE_API_KEY` carries the OpenRouter key (the `OPENAI_COMPATIBLE_API_KEY`
-value). It takes no `routing:` preferences, so `eu_hosted` refuses it. A bound lane
+value). It takes no `routing:` preferences. A bound lane
 answers only the sites certified for it; the rest go to the ladder
 ([ai-runtime.md](../explanation/ai-runtime.md#the-decision-lane)).

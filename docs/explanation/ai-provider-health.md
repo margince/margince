@@ -36,26 +36,26 @@ text says so (`api key not valid`, `invalid api key`, `reported as leaked`), nev
 model. An empty balance is recognised from a 402 or from text such as `credit balance
 is too low`.
 
-**Health belongs to the provider, not to a tier.** Every tier bound to one provider
+**Health belongs to the provider.** Every tier bound to one provider
 sees the same state, so the failure of one tier's call blocks the others and one
 fixed key unblocks them all.
 
-**A 429 that is a throttle is not a health state.** It says "slow down", not "stop":
+**A throttling 429 leaves health alone.** It says "slow down", not "stop":
 the ladder escalates to the next rung as before, and a rung that is merely busy
 never marks its provider blocked. Only a quota 429 means the account is empty.
 
-**The router skips a blocked rung with no call.** No request leaves the process, no
+**The router skips a blocked rung.** No request leaves the process, no
 timeout is waited out and nothing is charged or traced as a provider error (`attemptLadder` in
 `tracing.go`, `serveAttempt` in `router.go`). When every rung is blocked the router
 returns `ErrProviderDown` carrying the provider, its health and the moment of the
 next probe.
 
-**A lane treats it as a deferral, exactly like the budget stop.** `IsDeferral`
-covers both: the attempt is refunded, the item waits until the retry moment and the
-pass stops, so an outage no longer parks senders as unsure or spends the attempts of
-enrichment and River jobs. The call that trips an out-of-credit or rejected-key status
-is refunded too, as is a call that finds the host unreachable (down trips at once)
-and every failed probe while blocked: each returns a deferral that keeps the cause, so
+**A lane treats it as a deferral.** It is handled like the budget stop, and
+`IsDeferral` covers both: the attempt is refunded, the item waits until the retry
+moment and the pass stops. An outage no longer parks senders as unsure or spends the
+attempts of enrichment and River jobs. The call that trips an out-of-credit or rejected-key status
+is refunded too. So is a call that finds the host unreachable (down trips at once),
+and every failed probe while blocked. Each returns a deferral that keeps the cause, so
 an interactive user gets the reason-specific 503 on the first call. The first two 5xx of a run of
 three are charged, being ordinary failures, and the third trips down and is refunded.
 Timeouts are never refunded: three in a row make the provider degraded, which blocks
@@ -72,8 +72,8 @@ message telling the user to contact their system administrator
 (`internal/compose/modelfailure`). Nobody waits out a timeout to learn the same.
 
 `GET /ai/provider-health` lists the providers that are not answering normally, from
-a view shared between the API and the worker through Redis: every process
-publishes its status changes and the request reads the merged view, where the worst or
+a view shared between the API and the worker through Redis. Every process
+publishes its status changes, and the request reads the merged view. The worst or
 blocking status wins, so an outage only the worker saw still shows. Without Redis a
 process shows only its own view. Keys expire after about half an hour, so a status is
 refreshed every 10 minutes while the provider stays unhealthy. It is not a probe. Settings → AI models marks the
@@ -81,6 +81,8 @@ provider and Settings → System health shows the **AI provider status** card. W
 is reopened by an operator:
 [recover-after-a-provider-outage.md](../how-to/recover-after-a-provider-outage.md).
 The budget's own deferral is above, under *The monthly budget* in [ai-runtime.md](ai-runtime.md).
+What each task does in an outage, row by row, is generated into
+[ai-provider-outages.md](../reference/ai-provider-outages.md).
 
 ## What is not covered
 

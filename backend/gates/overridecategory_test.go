@@ -5,7 +5,7 @@
 
 package gates
 
-// A rep's override names a category from the SAME closed vocabulary the send
+// A rep's override names a category from the same closed vocabulary the send
 // engine resolves against — commsauthz.Categories() — and the
 // communication_override_category CHECK constraint restates that vocabulary by
 // hand, because SQL cannot call the Go package. category.go says so in

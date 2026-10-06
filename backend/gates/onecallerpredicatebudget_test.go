@@ -5,7 +5,7 @@
 
 package gates
 
-// The ceiling on a statement whose predicate the CALLER wrote is one number,
+// The ceiling on a statement whose predicate the caller wrote is one number,
 // declared in platform/database as CallerPredicateBudget.
 //
 // It was two. The filter preview and the search query plan each declared five

@@ -5,9 +5,9 @@
 
 package gates
 
-// The LIVENESS obligation as a fitness function: a write that targets one
-// standing row of a table which can be archived either REFUSES an archived row,
-// DECLARES that it deliberately reaches one, or is ratified with a reason.
+// A write that targets one standing row of a table which can be archived either
+// refuses an archived row, declares that it reaches one by design, or is
+// ratified with a reason.
 //
 // It is the fourth of the four obligations a write in this tree owes, and it was
 // the only one with no gate. The other three each have theirs — tableownership

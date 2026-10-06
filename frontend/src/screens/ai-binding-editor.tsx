@@ -12,12 +12,13 @@ import { Modal } from "../design-system/modal";
 import { useT } from "../i18n";
 import { isConflict, readLatest, writeSlice } from "./ai-binding-write";
 import { TierRecentCalls } from "./ai-call-figures";
-import {
-  type AvailableModels,
-  type ModelCatalogue,
-  useAvailableModels,
-} from "./ai-models";
+import { type ModelCatalogue, useAvailableModels } from "./ai-models";
 import { invalidateProviderHealth } from "./ai-provider-health";
+import {
+  missingKey,
+  reachableProviders,
+  useKeylessProbes,
+} from "./ai-provider-reach";
 import {
   AdapterFields,
   DECISION_PROVIDERS,
@@ -25,11 +26,7 @@ import {
   openRouterPreset,
   PROVIDERS,
 } from "./ai-routing-fields";
-import {
-  boundProviders,
-  ROUTING_KEY,
-  type RoutingRead,
-} from "./ai-routing-query";
+import { ROUTING_KEY, type RoutingRead } from "./ai-routing-query";
 import { type SliceValue, sameSlice, sliceOf } from "./ai-routing-slice";
 import {
   laneBrokered,
@@ -126,77 +123,93 @@ export function BindingEditor({
   const keyMissing = binding ? missingKey(binding.provider, keys) : false;
   const busy = !canManage || save.isPending;
   return (
-    <Modal open onClose={onClose} labelledBy={headingId} size="wide">
-      <Heading size="large" id={headingId} className="t-h2 modal-title">
-        {draft.kind === "decisions" && base.binding === undefined
-          ? t("aiRouting.decisions.add")
-          : t("aiRouting.editTitle", { lane: label })}
-      </Heading>
-      {binding && (
-        <div className="form-stack">
-          <SliceFields
-            draft={draft}
-            current={base.binding?.provider}
-            routing={opened.routing}
-            keys={keys}
-            catalogue={catalogue}
-            disabled={busy}
-            onChange={setDraft}
-          />
-          <NotListedHint
-            provider={binding.provider}
-            model={binding.model}
-            lane={laneName(draft)}
-          />
-          <TierRecentCalls
-            tier={callTier(draft)}
-            broker={laneBrokered(draft.binding, opened.routing)}
-          />
-          <ServingSection
-            key={`${binding.provider}|${binding.model}`}
-            value={draft}
-            routing={opened.routing}
-            disabled={busy}
-            onValid={onServingValid}
-            onChange={(next) => {
-              if (draft.kind === "tier")
-                setDraft({
-                  ...draft,
-                  binding: { ...draft.binding, routing: next },
-                });
-              if (draft.kind === "embeddings")
-                setDraft({
-                  ...draft,
-                  binding: { ...draft.binding, routing: next },
-                });
-            }}
-          />
-        </div>
-      )}
-      {keyMissing && (
-        <Callout
-          tone="warning"
-          kind="standing"
-          title={t("aiRouting.keyMissing")}
-        >
-          {t("aiRouting.keyMissingHelp", { provider: binding?.provider ?? "" })}
-        </Callout>
-      )}
-      {conflict && (
-        <Callout
-          tone="warning"
-          kind="standing"
-          title={t("aiAdmin.routingStale")}
-        >
-          {t("aiRouting.conflictHelp")}
-        </Callout>
-      )}
-      {save.isError && !isConflict(save.error) && (
-        <Callout tone="danger" kind="outcome" title={t("aiRouting.saveFailed")}>
-          {problemMessageOf(save.error, t)}
-        </Callout>
-      )}
-      <div className="actions">
+    <Modal
+      open
+      onClose={onClose}
+      labelledBy={headingId}
+      placement="right"
+      size="wide"
+    >
+      <div className="drawer-head">
+        <Heading size="large" id={headingId} className="t-h2 modal-title">
+          {draft.kind === "decisions" && base.binding === undefined
+            ? t("aiRouting.decisions.add")
+            : t("aiRouting.editTitle", { lane: label })}
+        </Heading>
+      </div>
+      <div className="drawer-body">
+        {binding && (
+          <div className="form-stack">
+            <SliceFields
+              draft={draft}
+              current={base.binding?.provider}
+              routing={opened.routing}
+              keys={keys}
+              catalogue={catalogue}
+              disabled={busy}
+              onChange={setDraft}
+            />
+            <NotListedHint
+              provider={binding.provider}
+              model={binding.model}
+              lane={laneName(draft)}
+            />
+            <TierRecentCalls
+              tier={callTier(draft)}
+              broker={laneBrokered(draft.binding, opened.routing)}
+            />
+            <ServingSection
+              key={`${binding.provider}|${binding.model}`}
+              value={draft}
+              routing={opened.routing}
+              disabled={busy}
+              onValid={onServingValid}
+              onChange={(next) => {
+                if (draft.kind === "tier")
+                  setDraft({
+                    ...draft,
+                    binding: { ...draft.binding, routing: next },
+                  });
+                if (draft.kind === "embeddings")
+                  setDraft({
+                    ...draft,
+                    binding: { ...draft.binding, routing: next },
+                  });
+              }}
+            />
+          </div>
+        )}
+        {keyMissing && (
+          <Callout
+            tone="warning"
+            kind="standing"
+            title={t("aiRouting.keyMissing")}
+          >
+            {t("aiRouting.keyMissingHelp", {
+              provider: binding?.provider ?? "",
+            })}
+          </Callout>
+        )}
+        {conflict && (
+          <Callout
+            tone="warning"
+            kind="standing"
+            title={t("aiAdmin.routingStale")}
+          >
+            {t("aiRouting.conflictHelp")}
+          </Callout>
+        )}
+        {save.isError && !isConflict(save.error) && (
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t("aiRouting.saveFailed")}
+          >
+            {problemMessageOf(save.error, t)}
+          </Callout>
+        )}
+      </div>
+      <div className="drawer-foot actions">
         {draft.kind === "decisions" && base.binding !== undefined && (
           <span className="actions-lead">
             <Button
@@ -270,7 +283,6 @@ function SliceFields({
           laneName={draft.tier}
           binding={draft.binding}
           catalogue={catalogue}
-          profile={routing.profile}
           vertexLocation={vertexLocation}
           providerSettings={routing.providers?.[draft.binding.provider] ?? {}}
           disabled={disabled}
@@ -293,7 +305,6 @@ function SliceFields({
             laneName="embeddings"
             binding={draft.binding}
             catalogue={catalogue}
-            profile={routing.profile}
             vertexLocation={vertexLocation}
             providerSettings={routing.providers?.[draft.binding.provider] ?? {}}
             disabled={disabled}
@@ -396,70 +407,6 @@ function NotListedHint({
       {t("aiRouting.notListed", { provider })}
     </p>
   );
-}
-
-// The adapters an editor offers: those this installation can use, and the one
-// the binding names now even if it no longer can — dropping that would erase
-// the lane's own state from its own editor. A vendor with a key row is usable
-// once a key is sealed; a keyless one (ollama, vllm) once the availability
-// probe reached it; `fake` only where the routing document already binds it.
-// While the key list has not arrived nothing is hidden; once it has, a keyless
-// adapter stays out until its probe answers, since an option that appears late
-// costs less than one offered and then refused.
-export function reachableProviders(
-  all: readonly string[],
-  keys: readonly KeyStatus[] | undefined,
-  current: string | undefined,
-  probes: KeylessProbes = NO_PROBES,
-  routing?: RoutingRead["routing"],
-): readonly string[] {
-  if (!keys) return all;
-  const status = new Map(keys.map((k) => [k.provider, k]));
-  return all.filter((provider) => {
-    if (provider === current) return true;
-    if (provider === "fake") {
-      return (
-        routing !== undefined && boundProviders(routing)?.has(provider) === true
-      );
-    }
-    if (isKeyless(provider)) {
-      const answer = probes.get(provider);
-      return answer !== undefined && !answer.unavailable;
-    }
-    const entry = status.get(provider);
-    return !entry || entry.configured || entry.optional;
-  });
-}
-
-const KEYLESS_ADAPTERS = ["ollama", "vllm"] as const;
-
-function isKeyless(provider: string): boolean {
-  return KEYLESS_ADAPTERS.some((adapter) => adapter === provider);
-}
-
-type KeylessProbes = ReadonlyMap<string, AvailableModels | undefined>;
-const NO_PROBES: KeylessProbes = new Map();
-
-// What each keyless chat adapter answers when asked, for the lane being edited.
-// Two queries that fire only while the editor is mounted, and not at all for
-// the decision lane, whose adapters both take a key.
-function useKeylessProbes(lane: string, enabled: boolean): KeylessProbes {
-  const ollama = useAvailableModels("ollama", lane, enabled);
-  const vllm = useAvailableModels("vllm", lane, enabled);
-  return new Map([
-    ["ollama", ollama.data],
-    ["vllm", vllm.data],
-  ]);
-}
-
-// A provider that takes a key and holds none. Keyless adapters (no entry in
-// the key list) and optional-key ones are never missing a key.
-export function missingKey(
-  provider: string,
-  keys: readonly KeyStatus[] | undefined,
-): boolean {
-  const entry = keys?.find((k) => k.provider === provider);
-  return entry !== undefined && !entry.configured && !entry.optional;
 }
 
 // A decision model and its host name one adapter's endpoint, so a provider

@@ -33,9 +33,9 @@ type LinkedInReachAccount struct {
 	CompanyID   ids.UUID
 	DisplayName string
 	Connections int
-	// ContactsOnFile counts the CONFIRMED matches only. The gap between it and
-	// Connections is the answer the import was for: contacts you know at this
-	// account who are not in the CRM.
+	// ContactsOnFile counts the confirmed matches only. The gap between it and
+	// Connections is connections at this account with no confirmed contact; a
+	// suggested or unmatched one may still be on file.
 	ContactsOnFile int
 }
 

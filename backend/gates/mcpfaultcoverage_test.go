@@ -5,8 +5,8 @@
 
 package gates
 
-// A module's typed refusal must be legible on EVERY surface that can reach it,
-// not just the one it was written for.
+// A module's typed refusal must be legible on every surface that can reach it,
+// including the ones it was not written for.
 //
 // The trap this gate closes: a module maps its own typed errors onto 422 wire
 // shapes inside an HTTP helper (`writeStoreErr` and its siblings). That helper

@@ -11,12 +11,8 @@
   margin-bottom: var(--space-3);
 }
 
-/* The inline staged-draft editor, inside the card it edits: the fields stacked,
-   with air between them and above the gate that submits them. */
+/* The inline staged-draft editor, set off from the card it edits. */
 .approval-editor {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
   margin-top: var(--space-3);
 }
 

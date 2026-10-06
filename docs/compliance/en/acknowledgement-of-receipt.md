@@ -21,13 +21,13 @@ Place, date: ________________  Signature: ________________
 
 ## Notes for whoever issues it
 
-- **Before the connection, not after.** Article 13 requires the information at
+- **Before the connection.** Article 13 requires the information at
   the moment of collection. A sheet signed after the first sync evidences an
   information that arrived too late.
 - **Per employee and per version.** When what the system does changes, the
-  information is handed out again and acknowledged again — an acknowledgement
+  information is handed out again and acknowledged again, because an acknowledgement
   covers only the version it names.
-- **Austria: this sheet carries more than the record.** With no works council
+- **Austria:** this sheet carries more than the record there. With no works council
   there can be no works agreement, and introducing a system capable of
   monitoring conduct needs each affected employee's individual agreement. There
   this sheet has to be extended with an express statement of agreement;

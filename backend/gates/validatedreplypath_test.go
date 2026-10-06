@@ -5,7 +5,7 @@
 
 package gates
 
-// A model reply this tree can REFUSE must be asked for through the validated
+// A model reply this tree can refuse must be asked for through the validated
 // lane, so the refusal reaches the model that can act on it.
 //
 // `CompleteValidated` re-asks with the validator's own message appended

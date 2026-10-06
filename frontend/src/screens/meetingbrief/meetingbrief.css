@@ -57,9 +57,6 @@
 }
 
 .mb-background {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
   padding-top: var(--space-3);
 }
 

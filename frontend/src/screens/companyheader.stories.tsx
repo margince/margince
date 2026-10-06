@@ -7,7 +7,8 @@ import type { components } from "../api/schema";
 import { company360 } from "./company.fixtures";
 import { CompanyActionBadges } from "./companyheader";
 import { CompanyHeaderActions } from "./companyheaderactions";
-import { CompanyIdentityFacts, CompanySubtitle } from "./companyheaderfacts";
+import { CompanyIdentityFacts } from "./companyheaderfacts";
+import { CompanyNameLine } from "./companylifecycle";
 import { CompanyMarks } from "./companymarks";
 import {
   installFetchStub,
@@ -40,6 +41,10 @@ const company: Company = {
   legal_name: "Brandt Automotive GmbH",
   lifecycle: "customer",
   owner_id: "u-1",
+  // The reader may change this account, which is the header's ordinary state
+  // and the one its editable pieces (stage, owner) are drawn in. Absent reads
+  // as NOT writable, so the stage would draw as a read-only badge throughout.
+  writable: true,
   visibility: "workspace",
   industry: "Automotive",
   size_band: "51-200",
@@ -130,7 +135,17 @@ function Header({
   return (
     <StoryProviders>
       <div style={{ maxWidth: 640 }}>
-        <CompanySubtitle company={record} />
+        {/* The nameBadge slot; the name itself is RecordView's and is left
+            out here. */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "baseline",
+            gap: "var(--space-3)",
+          }}
+        >
+          <CompanyNameLine company={record} />
+        </div>
         <div style={{ marginTop: "var(--space-2)" }}>
           <CompanyMarks company={record} />
         </div>
@@ -192,7 +207,7 @@ export const AuthorNamed: Story = {
 
 // The ordinary shape of a customer: `customer` in the lifecycle AND in the
 // relationship types, plus a second relationship that is separately true. The
-// header says "Customer" ONCE — the editable lifecycle badge beside the name —
+// header says "Customer" ONCE — the lifecycle button beside the name —
 // and draws "Partner" beside it. The relationship whose word the lifecycle is
 // already printing does not draw again; the one it is not still does, because an
 // account can be a partner and a customer and hiding the second would make a
@@ -203,6 +218,33 @@ export const CustomerAndPartner: Story = {
       view={withWayIn}
       record={{ ...company, relationship_types: ["customer", "partner"] }}
     />
+  ),
+};
+
+// The account's stage, the header's one real control: a filled button at the
+// control height beside the name, opening the stage list. It was an inline
+// value in the pills row, 24px tall, and read as a tag nobody could act on.
+export const LifecycleOpen: Story = {
+  render: () => <Header view={withWayIn} />,
+  play: async () => {
+    await userEvent.click(
+      await screen.findByRole("combobox", { name: "Lifecycle" }),
+    );
+  },
+};
+
+// The same, in the dark theme, where the accent fill lifts and the list
+// stands on the elevated surface.
+export const LifecycleOpenDark: Story = {
+  ...LifecycleOpen,
+  globals: { theme: "dark" },
+};
+
+// A reader who may not change the stage is shown the stage, not a button that
+// refuses: the record belongs to somebody else.
+export const LifecycleReadOnly: Story = {
+  render: () => (
+    <Header view={withWayIn} record={{ ...company, writable: false }} />
   ),
 };
 

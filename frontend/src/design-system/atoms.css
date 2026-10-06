@@ -692,8 +692,8 @@
    behind it. Declared here rather than by each host, because every host that
    styled it reached a slightly different answer and the same record then drew
    one figure two ways.
-   No ink of its own: it inherits the host's, so the figure goes quiet beside a
-   quiet label and dark beside a pressed one. The minimum width is what keeps a
+   Its own ink, not the host's: a quiet label's --textSecondary reads under
+   4.5:1 on the chip in dark, so the figure stays primary. The minimum width is what keeps a
    column of chips the same size from 1 to 99, and the centring is what keeps
    the digit in the middle of it. */
 .optioncount {
@@ -704,6 +704,7 @@
   padding-inline: var(--space-1);
   border-radius: var(--r-xs);
   background: var(--bgChip);
+  color: var(--textPrimary);
   font: var(--fontBodySmall);
 }
 
@@ -719,6 +720,7 @@
      thing that CAN take a second line, so it does. */
   flex-wrap: wrap;
   background: var(--bgChip);
+  color: var(--textPrimary);
   border-radius: var(--r-sm);
   padding: 3px;
   gap: 2px;
@@ -843,6 +845,7 @@
 
 .kbd {
   background: var(--bgChip);
+  color: var(--textPrimary);
   border: 1px solid var(--borderStrong);
   border-bottom-width: 2px;
   border-radius: var(--r-xs);

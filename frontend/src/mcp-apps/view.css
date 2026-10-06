@@ -135,6 +135,7 @@ ol {
   block-size: var(--space-6);
   border-radius: var(--r-sm);
   background: var(--bgChip);
+  color: var(--textPrimary);
   font-weight: var(--fontWeightMedium);
   font-variant-numeric: tabular-nums;
 }

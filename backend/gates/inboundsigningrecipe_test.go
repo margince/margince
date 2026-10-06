@@ -5,7 +5,7 @@
 
 package gates_test
 
-// The signing scope is ONE invariant spelled on both sides of a wire.
+// The signing scope is one invariant spelled on both sides of a wire.
 //
 // The verifier reads it from extension.ScopeInbound; the member reads it from a
 // `curl` the connector's screen generates and pastes into a terminal. Neither

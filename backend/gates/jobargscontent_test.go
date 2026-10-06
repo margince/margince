@@ -5,7 +5,7 @@
 
 package gates
 
-// Job args carry REFERENCES, never content. The erasure engine neutralizes an
+// Job args carry references, never content. The erasure engine neutralizes an
 // in-flight job by scrubbing the row the job names — comms_outbound goes to
 // `parked` and the waking job finds nothing to send. That only works while the
 // job holds an id and not a copy: args carrying a body or an address would be a

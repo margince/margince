@@ -140,14 +140,14 @@ function SourceEmailBody({
   const subject = presentation.summary.subject?.trim() || t("email.noSubject");
   return (
     <section className="sourceemail">
-      <Heading size="small" className="sourceemail__label">
-        {t("tasks.sourceEmail")}
-      </Heading>
-      <p className="sourceemail__subject">{subject}</p>
-      <EmailEnvelope presentation={presentation} formatWhen={formatWhen} />
-      <div className="sourceemail__body">
-        <EmailText body={presentation.body ?? ""} />
+      <div className="sourceemail__envelope">
+        <Heading size="small" className="sourceemail__label">
+          {t("tasks.sourceEmail")}
+        </Heading>
+        <p className="sourceemail__subject">{subject}</p>
+        <EmailEnvelope presentation={presentation} formatWhen={formatWhen} />
       </div>
+      <EmailText body={presentation.body ?? ""} />
     </section>
   );
 }
