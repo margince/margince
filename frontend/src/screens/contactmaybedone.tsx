@@ -60,7 +60,7 @@ export function MayBeDoneVerbs({
               : undefined
           }
         >
-          <CheckSquare size={15} aria-hidden="true" />
+          <CheckSquare aria-hidden="true" />
           {done.label}
         </Button>
       </span>
