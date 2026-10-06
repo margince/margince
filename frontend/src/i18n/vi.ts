@@ -10361,6 +10361,22 @@ export const vi = {
     "Các điều kiện sẽ bị xóa vì chúng dùng trường của khách hàng tiềm năng.",
   "filters.switch.confirm": "Chuyển và xóa",
   "filters.showMore": "Hiển thị tối đa 100",
+  "filters.save": "Lưu",
+  "filters.unsavedFilter": "Bộ lọc chưa lưu",
+  "filters.footMore": "Thêm tùy chọn cho bộ lọc này",
+  "filters.exporting": "Đang xuất…",
+  "filters.saveAsNew": "Lưu thành chế độ xem mới",
+  "filters.saveTitle": "Lưu bộ lọc này",
+  "filters.namePlaceholder":
+    "{records} ở Đức, không có hoạt động trong 45 ngày",
+  "filters.keepAs": "Giữ dưới dạng",
+  "filters.keepViewHint":
+    "Chỉ bạn tìm thấy được. Số lượng được đếm lại mỗi lần bạn mở.",
+  "filters.keepListHint":
+    "Được kiểm tra 15 phút một lần và ghi lại bản ghi nào vào hay rời danh sách. Chọn ai có thể tìm thấy.",
+  "filters.purpose": "Mục đích (không bắt buộc)",
+  "filters.viewSaved": "Đã lưu chế độ xem",
+  "filters.listCreated": "Đã tạo danh sách động “{name}”",
   "filters.emptyGroup": "Nhóm trống không khớp với bản ghi nào.",
   "filters.field": "Tr\u01b0\u1eddng",
   "filters.field.amount": "Giá trị quy đổi",
@@ -10448,9 +10464,6 @@ export const vi = {
   "filters.date.mode": "C\u00e1ch nh\u1eadp ng\u00e0y",
   "filters.date.daysAgoCount":
     "{field}: s\u1ed1 ng\u00e0y tr\u01b0\u1edbc h\u00f4m nay",
-  "filters.saveList": "L\u01b0u th\u00e0nh danh s\u00e1ch \u0111\u1ed9ng",
-  "filters.saveListTitle":
-    "L\u01b0u b\u1ed9 l\u1ecdc n\u00e0y th\u00e0nh danh s\u00e1ch \u0111\u1ed9ng",
   "filters.saveListConfirm": "L\u01b0u danh s\u00e1ch",
   "filters.propose.label":
     "M\u00f4 t\u1ea3 danh s\u00e1ch b\u1eb1ng l\u1eddi th\u01b0\u1eddng",
@@ -10772,7 +10785,6 @@ export const vi = {
     "Trang \u0111\u1ea7u c\u1ee7a k\u1ebft qu\u1ea3 kh\u1edbp \u2014 \u0111\u1ee7 \u0111\u1ec3 ki\u1ec3m tra b\u1ed9 l\u1ecdc, kh\u00f4ng ph\u1ea3i to\u00e0n b\u1ed9.",
   "filters.noMatches":
     "Không có {records} nào khớp các điều kiện này. Hãy nới lỏng một điều kiện: chuyển một liên kết sang “hoặc”, hoặc xóa điều kiện cụ thể nhất.",
-  "filters.loadView": "T\u1ea3i b\u1ed9 l\u1ecdc \u0111\u00e3 l\u01b0u",
   "filters.pickRecord": "Ch\u1ecdn m\u1ed9t",
   "filters.searchRecords": "Tìm kiếm công ty",
   "filters.typeToSearch": "Nhập để tìm",

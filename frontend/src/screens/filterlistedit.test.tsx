@@ -46,6 +46,7 @@ afterEach(() => {
 function builder(
   list = liveList,
   patch = (_body: unknown) => jsonResponse(list),
+  create = (_body: unknown) => jsonResponse(list, 201),
 ) {
   installFetchStub({
     "GET /me": listsMe(true),
@@ -53,6 +54,7 @@ function builder(
     "GET /filters/vocabulary": () => jsonResponse(COMPANY_VOCAB),
     "POST /filters/preview": () => jsonResponse(PREVIEW),
     [`PATCH /lists/${LIVE_ID}`]: patch,
+    "POST /lists": create,
   });
   return render(
     <StoryProviders>
@@ -133,15 +135,55 @@ describe("editing a Live List's filter", () => {
     ).toBeInTheDocument();
   });
 
-  it("offers no save to a list the reader may not change", async () => {
-    builder({ ...liveList, can_edit: false });
-    await screen.findByText(en["filters.builderTitle"]);
-    await vi.waitFor(() =>
-      expect(
-        screen.getAllByRole("button", { name: en["filters.saveList"] }),
-      ).not.toHaveLength(0),
+  it("offers saving as a new view from More, beside the list's own save", async () => {
+    builder();
+    const user = userEvent.setup();
+    expect(await screen.findByRole("button", { name: saveTo })).toBeVisible();
+    await user.click(
+      screen.getByRole("button", { name: en["filters.footMore"] }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: en["filters.saveAsNew"] }),
+    );
+
+    const dialog = await screen.findByRole("dialog", {
+      name: en["filters.saveTitle"],
+    });
+    expect(
+      within(dialog).getByRole("radio", { name: /^Saved view/ }),
+    ).toBeChecked();
+  });
+
+  it("saves a list the reader may not change through the one Save dialog", async () => {
+    const created: unknown[] = [];
+    builder({ ...liveList, can_edit: false }, undefined, (body) => {
+      created.push(body);
+      return jsonResponse({ ...liveList, id: "copy" }, 201);
+    });
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: en["filters.save"] }),
     );
     expect(screen.queryByRole("button", { name: saveTo })).toBeNull();
+    const dialog = await screen.findByRole("dialog");
+    await user.click(within(dialog).getByRole("radio", { name: /^Live List/ }));
+    await user.type(
+      within(dialog).getByRole("textbox", { name: en["views.name"] }),
+      "My copy",
+    );
+    await user.click(
+      within(dialog).getByRole("button", {
+        name: en["filters.saveListConfirm"],
+      }),
+    );
+
+    await vi.waitFor(() => expect(window.location.hash).toBe("#/lists/copy"));
+    expect(created[0]).toMatchObject({
+      name: "My copy",
+      entity_type: "company",
+      list_type: "dynamic",
+      definition: liveList.definition,
+    });
   });
 });
 

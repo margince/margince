@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { SaveFilterListAction } from "./filterlist";
+import { SaveFilterModal } from "./filtersave";
 import { listsMe, liveList, TEAM_ID, teamsPage } from "./lists.fixtures";
 import { ListSettingsAction } from "./listsettings";
 import { ListAudienceFields } from "./listsharing";
@@ -39,22 +39,22 @@ export const TeamAudience: Story = {
   },
 };
 
+// Saving a filter as a Live List asks the same question, before anything is
+// saved.
 export const SaveAsLiveList: Story = {
   render: () => {
     routes();
     return (
       <StoryProviders>
-        <SaveFilterListAction
-          resource="company"
+        <SaveFilterModal
+          open
+          onClose={() => undefined}
+          tab="companies"
           tree={newGroup("and", [newLeaf("industry", "eq", "Manufacturing")])}
+          initialKeep="list"
+          onSaved={() => undefined}
         />
       </StoryProviders>
-    );
-  },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(
-      await canvas.findByRole("button", { name: "Save as Live List" }),
     );
   },
 };

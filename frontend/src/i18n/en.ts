@@ -10629,6 +10629,21 @@ export const en = {
     "The conditions are cleared, because they name lead fields.",
   "filters.switch.confirm": "Switch and clear",
   "filters.showMore": "Show up to 100",
+  "filters.save": "Save",
+  "filters.unsavedFilter": "Unsaved filter",
+  "filters.footMore": "More for this filter",
+  "filters.exporting": "Exporting…",
+  "filters.saveAsNew": "Save as new view",
+  "filters.saveTitle": "Save this filter",
+  "filters.namePlaceholder": "German {records}, quiet for 45 days",
+  "filters.keepAs": "Keep it as",
+  "filters.keepViewHint":
+    "Only you can find it. It counts again each time you open it.",
+  "filters.keepListHint":
+    "Checked every 15 minutes, and records who joins and leaves. Choose who can find it.",
+  "filters.purpose": "Purpose (optional)",
+  "filters.viewSaved": "View saved",
+  "filters.listCreated": "Live List “{name}” created",
   "filters.emptyGroup": "An empty group matches nothing.",
   "filters.field": "Field",
   "filters.field.amount": "Converted amount",
@@ -10713,8 +10728,6 @@ export const en = {
   "filters.date.daysAgo": "Days ago",
   "filters.date.mode": "How the date is given",
   "filters.date.daysAgoCount": "{field}: days before today",
-  "filters.saveList": "Save as Live List",
-  "filters.saveListTitle": "Save this filter as a Live List",
   "filters.saveListConfirm": "Save list",
   "filters.propose.label": "Describe the list in plain words",
   "filters.propose.hint":
@@ -11003,7 +11016,6 @@ export const en = {
     "First page of matches, for checking the filter. Not the full selection.",
   "filters.noMatches":
     "No {records} match these conditions. Loosen one: switch a connector to “or”, or remove the most specific condition.",
-  "filters.loadView": "Load saved filter",
   "filters.pickRecord": "Select record",
   "filters.searchRecords": "Search companies",
   "filters.typeToSearch": "Type to search",

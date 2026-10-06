@@ -66,11 +66,15 @@ const READ_SEAT = {
 };
 
 function routes(
-  options: Readonly<{ matches?: number; refused?: boolean }> = {},
+  options: Readonly<{
+    matches?: number;
+    refused?: boolean;
+    listsOn?: boolean;
+  }> = {},
 ): void {
   const matches = options.matches ?? 3;
   installFetchStub({
-    "GET /me": listsMe(false),
+    "GET /me": listsMe(options.listsOn === true),
     "GET /filters/vocabulary": () => jsonResponse(VOCABULARY),
     "POST /filters/preview": (body) => {
       if (options.refused) {
@@ -128,6 +132,28 @@ export const OneCompleteCondition: Story = {
     const canvas = within(canvasElement);
     await addCity(canvas, "Berlin");
     await canvas.findByText("3 contacts match");
+  },
+};
+
+// Complete, so the band under the editor says the filter is not kept yet and
+// offers the one emerald Save, with the exports in More beside it.
+export const CompleteWithFooter: Story = {
+  render: newContactFilter(),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await addCity(canvas, "Berlin");
+    await canvas.findByText("Unsaved filter");
+  },
+};
+
+// Save asks once: a name, and with lists on whether to keep it as a saved
+// view or as a Live List.
+export const SaveModalOpen: Story = {
+  render: newContactFilter({ listsOn: true }),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await addCity(canvas, "Berlin");
+    await userEvent.click(await canvas.findByRole("button", { name: "Save" }));
   },
 };
 

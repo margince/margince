@@ -18,7 +18,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { Button } from "../design-system/atoms";
-import { ErrorLine } from "../design-system/errorline";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { throwProblem } from "./common";
@@ -48,28 +47,35 @@ const LABEL: Record<Format, MessageKey> = {
  * the engine refuses, and an export button that answers 422 has told the reader
  * nothing they could not have been spared.
  *
- * It is exported because a caller has to know BEFORE it renders: a surface that
- * gives this menu a slot of its own draws that slot for any element handed to
- * it, so a refusal spelled as `null` arrives as an empty band. Two places
- * deciding the same thing would drift the first time the condition moves.
+ * Asked before the menu holding the items is drawn: a menu whose items all
+ * refuse is a trigger that opens onto nothing.
  */
 export function canExportFilter(tree: Node): boolean {
   return isComplete(tree);
 }
 
-/** "Export" beside the builder, one item per format. */
-export function ExportFilterMenu({
-  resource,
-  tree,
-}: Readonly<{ resource: FilterResource; tree: Node }>) {
-  const t = useT();
-  const run = useMutation({
-    // The tree arrives as a variable rather than through a closure: the click
-    // belongs to the committed render, so what it hands over cannot be older
-    // than the filter the reader is looking at.
-    mutationFn: async (input: Readonly<{ format: Format }>) => {
+/**
+ * One export, run. Held by the page rather than by the items, because the
+ * items live in a menu that closes as they are pressed, and a refusal has to
+ * stay on screen after it does.
+ */
+export function useFilterExport() {
+  return useMutation({
+    // Everything arrives as a variable: the press belongs to the committed
+    // render, so the tree it hands over is the filter the reader is looking at.
+    mutationFn: async (
+      input: Readonly<{
+        format: Format;
+        resource: FilterResource;
+        tree: Node;
+      }>,
+    ) => {
       const { data, error, response } = await api.POST("/exports", {
-        body: { object: resource, filter: encode(tree), format: input.format },
+        body: {
+          object: input.resource,
+          filter: encode(input.tree),
+          format: input.format,
+        },
         // The body is a rendered file, not a document to parse. Asking for text
         // keeps CSV intact — JSON.parse over a CSV would throw, and over the
         // JSON format it would reparse bytes we are about to write out verbatim.
@@ -84,36 +90,34 @@ export function ExportFilterMenu({
         // is the true one; the fallback only covers a response that sent none.
         filenameFromDisposition(
           response.headers.get("Content-Disposition"),
-          `${resource}-export.${input.format}`,
+          `${input.resource}-export.${input.format}`,
         ),
         MIME[input.format],
       );
     },
   });
+}
 
-  if (!canExportFilter(tree)) {
-    return null;
-  }
+export type FilterExportRun = ReturnType<typeof useFilterExport>;
 
+/** "Export CSV" and "Export JSON", as items of the menu that holds them. */
+export function ExportFilterItems({
+  run,
+  resource,
+  tree,
+}: Readonly<{ run: FilterExportRun; resource: FilterResource; tree: Node }>) {
+  const t = useT();
   return (
     <>
-      {/* Two labelled buttons rather than a menu. There are exactly two formats,
-          so a menu would hide a short list behind a click — and the saved-view
-          rail beside this already spends the one unlabelled "…" this header can
-          afford. Two of those side by side is a header where nothing says which
-          is which, which is what the rendered screen showed. */}
       {FORMATS.map((format) => (
         <Button
           key={format}
           disabled={run.isPending}
-          onClick={() => run.mutate({ format })}
+          onClick={() => run.mutate({ format, resource, tree })}
         >
           {t(LABEL[format])}
         </Button>
       ))}
-      {/* The server's own reason: a bulk read can be refused for something a
-          reader can act on, and "request failed" is not one of them. */}
-      <ErrorLine inline error={run.error} />
     </>
   );
 }

@@ -154,3 +154,10 @@
   margin: 0;
   padding-inline-start: var(--space-5);
 }
+
+/* The filter footer: the state on the leading edge, Save on the trailing one.
+ * The band lays its children out in a flow of its own, so the row takes the
+ * whole of it, or the trailing edge would be wherever the caption ends. */
+.filters-foot {
+  flex: 1 1 auto;
+}

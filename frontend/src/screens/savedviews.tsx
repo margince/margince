@@ -2,7 +2,6 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Bookmark } from "lucide-react";
-import { Button, OverflowMenu } from "../design-system/atoms";
 import { NamePrompt } from "../design-system/nameprompt";
 import { SurfaceState } from "../design-system/surfacestate";
 import { useT } from "../i18n";
@@ -11,13 +10,10 @@ import type { ViewResource } from "./filtersaddress";
 import type { ListQuery, SavedViewTab } from "./listquery";
 import { ManageViewsButton } from "./savedviews.manage";
 import {
-  filterStateFrom,
-  filterTreeOf,
   type SavedView,
   useSavedViews,
   useSaveView,
 } from "./savedviews.queries";
-import { isComplete, type Node } from "./segmentpredicate";
 
 // A saved view is the reader's own list state, by name: the search, the sort,
 // the filters, the archived toggle and the page size they were looking at.
@@ -147,24 +143,18 @@ export function useSavedViewTabs(resource: ViewResource): SavedViewTab[] {
 }
 
 /**
- * "Save this view", named through the catalog's one name-and-save dialog.
+ * "Save this view", named through the catalog's one name-and-save dialog
+ * (`NamePrompt`) and never one of its own, so every surface asks this question
+ * the same way.
  *
- * What differs between a list's dials and the segment builder's tree is WHAT
- * gets saved, so that arrives as the blob to store. The dialog itself is not
- * this module's to own: it used to be a hand-rolled `Modal` here, which is how a
- * second surface asking the same question ends up asking it differently.
- *
- * `blob` is read at save time rather than at render time: it is the committed
- * render's state that the mutation is given, never a closure the observer might
- * still hold from an earlier one.
+ * The list's dials are read at the press: it is the committed render's state
+ * that the mutation is given, never a closure the observer might still hold
+ * from an earlier one.
  */
 function SaveViewButton({
   resource,
-  blob,
-}: Readonly<{
-  resource: ViewResource;
-  blob: () => Record<string, unknown>;
-}>) {
+  query,
+}: Readonly<{ resource: ViewResource; query: ListQuery }>) {
   const t = useT();
   const { create } = useSaveView();
 
@@ -181,7 +171,10 @@ function SaveViewButton({
       // generic "request failed" instead of the reason the server gave.
       problem={create.isError ? problemMessageOf(create.error, t) : undefined}
       onSave={(name, done) =>
-        create.mutate({ resource, name, query: blob() }, { onSuccess: done })
+        create.mutate(
+          { resource, name, query: listStateFrom(query) },
+          { onSuccess: done },
+        )
       }
     />
   );
@@ -233,67 +226,11 @@ export function SaveViewAction({
           {null}
         </SurfaceState>
       )}
-      {narrowed && (
-        <SaveViewButton resource={resource} blob={() => listStateFrom(query)} />
-      )}
+      {narrowed && <SaveViewButton resource={resource} query={query} />}
       {/* Beside Save, because it is the same set of the reader's own views:
           a tab can be pressed but not named or removed, so this is the only
           place a view that has served its purpose can go. */}
       {views.data && <ManageViewsButton views={views.data} />}
     </>
-  );
-}
-
-/**
- * "Save this view" beside the segment builder.
- *
- * The same completeness rule the count and the preview use, for the same reason:
- * an incomplete tree is one the engine refuses, so saving it would store a view
- * that fails the moment anybody opens it. `isComplete` is the one place that
- * judgement lives.
- */
-export function SaveFilterViewAction({
-  resource,
-  tree,
-}: Readonly<{ resource: ViewResource; tree: Node }>) {
-  if (!isComplete(tree)) {
-    return null;
-  }
-  return (
-    <SaveViewButton resource={resource} blob={() => filterStateFrom(tree)} />
-  );
-}
-
-/**
- * The reader's saved filters for this object, each one click from being loaded.
- *
- * A menu rather than a picker: loading a view is an ACTION, and a select would
- * keep claiming the loaded view is what the builder holds long after the reader
- * has edited it into something else.
- *
- * A view whose stored tree cannot be read is left out, matching the list rail's
- * rule — an entry that lights up and restores nothing is worse than no entry.
- */
-export function LoadFilterViewMenu({
-  resource,
-  onLoad,
-}: Readonly<{ resource: ViewResource; onLoad: (tree: Node) => void }>) {
-  const t = useT();
-  const views = useSavedViews(resource);
-  const readable = (views.data ?? []).flatMap((view) => {
-    const tree = filterTreeOf(view);
-    return tree ? [{ id: view.id, name: view.name, tree }] : [];
-  });
-  if (readable.length === 0) {
-    return null;
-  }
-  return (
-    <OverflowMenu label={t("filters.loadView")}>
-      {readable.map((view) => (
-        <Button key={view.id} onClick={() => onLoad(view.tree)}>
-          {view.name}
-        </Button>
-      ))}
-    </OverflowMenu>
   );
 }

@@ -6,6 +6,8 @@ import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { meFixture } from "../app/mefixture";
+import { useHash } from "../app/router";
+import { UnsavedGuard } from "../app/unsaved";
 import { pickOption } from "../design-system/select-testing";
 import { en } from "../i18n/en";
 import type { FilterVocabulary } from "./filterdata";
@@ -44,6 +46,7 @@ const DEAL_VOCAB: FilterVocabulary = {
 };
 
 const ADD = en["filters.addClause"];
+const SAVE = en["filters.save"];
 const START_HINT = "Add a condition to see how many contacts match.";
 const FINISH_HINT = "Finish the condition to see how many contacts match.";
 
@@ -111,8 +114,10 @@ describe("the calm start", () => {
     // and the empty tree is not worth a request.
     expect(screen.queryByText("Matching records")).toBeNull();
     expect(screen.queryByRole("status")).toBeNull();
-    expect(screen.queryByRole("button", { name: "Save view" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Export CSV" })).toBeNull();
+    expect(screen.queryByRole("button", { name: SAVE })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: en["filters.footMore"] }),
+    ).toBeNull();
     expect(previews(seen)).toHaveLength(0);
   });
 
@@ -407,70 +412,37 @@ describe("switching the record type", () => {
   });
 });
 
-describe("saving and exporting", () => {
-  it("offers no save until the filter is one the engine would accept", async () => {
+describe("keeping and exporting", () => {
+  const editor = () =>
+    screen
+      .getByRole("heading", { name: "Find contacts where…" })
+      .closest(".panel");
+
+  it("draws the footer band only once the filter is one the engine would accept", async () => {
     const { wrapper } = mount({ match_count: 2 });
     const user = userEvent.setup();
     render(<FiltersScreen id="contacts" />, { wrapper });
 
     await user.click(await screen.findByRole("button", { name: ADD }));
     // A clause with an empty value is refused per-leaf as filter_value_invalid,
-    // so saving it would store a view nobody can open.
-    expect(screen.queryByRole("button", { name: "Save view" })).toBeNull();
-
-    await user.type(screen.getByLabelText("Value"), "ann");
-
-    expect(
-      await screen.findByRole("button", { name: "Save view" }),
-    ).toBeTruthy();
-  });
-
-  it("saves the tree under the key the server validates as a filter", async () => {
-    const { written, wrapper } = mount({ match_count: 2 });
-    const user = userEvent.setup();
-    render(<FiltersScreen id="contacts" />, { wrapper });
-
-    await user.click(await screen.findByRole("button", { name: ADD }));
-    await user.type(screen.getByLabelText("Value"), "ann");
-    await user.click(await screen.findByRole("button", { name: "Save view" }));
-    await user.type(screen.getByLabelText("Name"), "Anns");
-    await user.click(screen.getByRole("button", { name: "Save" }));
-
-    await waitFor(() => {
-      expect(written).toHaveLength(1);
-    });
-    // `contacts`, not `contact` — the two endpoint families spell the same object
-    // differently, and sending the filter vocabulary's word here would 422.
-    // And the tree goes under `filter`, carrying no editor ids.
-    expect(written[0]?.body).toEqual({
-      resource: "contacts",
-      name: "Anns",
-      query: {
-        filter: { and: [{ field: "full_name", op: "eq", value: "ann" }] },
-      },
-    });
-  });
-
-  it("draws the footer band only once there is something to keep", async () => {
-    const { wrapper } = mount({ match_count: 2 });
-    const user = userEvent.setup();
-    render(<FiltersScreen id="contacts" />, { wrapper });
-    const editor = () =>
-      screen
-        .getByRole("heading", { name: "Find contacts where…" })
-        .closest(".panel");
-
-    await user.click(await screen.findByRole("button", { name: ADD }));
-    // A band drawn for an unfinished filter would rule an empty strip under
-    // the editor: everything in it sends the tree, and this one is refused.
+    // so every verb in the band would send a tree the engine refuses.
     expect(editor()?.querySelector(".panel-foot")).toBeNull();
+    expect(screen.queryByRole("button", { name: SAVE })).toBeNull();
 
     await user.type(screen.getByLabelText("Value"), "ann");
 
-    expect(editor()?.querySelector(".panel-foot")).not.toBeNull();
+    const foot = await screen.findByText(en["filters.unsavedFilter"]);
+    expect(foot.closest(".panel-foot")).not.toBeNull();
+    expect(
+      screen.getByRole("button", { name: en["filters.footMore"] }),
+    ).toBeTruthy();
+    // From here the emerald belongs to Save, and to nothing else.
+    const primary = document.querySelectorAll(".btn-primary");
+    expect(primary).toHaveLength(1);
+    expect(primary[0]?.textContent).toBe(SAVE);
   });
 
-  it("exports the filter on screen, under the name the server gave it", async () => {
+  it("exports the filter on screen from More, under the name the server gave it", async () => {
     const createObjectURL = vi.fn(() => "blob:test");
     const revokeObjectURL = vi.fn();
     Object.defineProperties(URL, {
@@ -483,17 +455,33 @@ describe("saving and exporting", () => {
     ) {
       anchors.push(this);
     });
-    const { written, wrapper } = mount({ match_count: 2 });
+    let answer = () => {};
+    const { written, wrapper } = mountFilters({
+      preview: { match_count: 2 },
+      vocabularies: { contact: CONTACT_VOCAB },
+      exportAnswered: new Promise<void>((resolve) => {
+        answer = resolve;
+      }),
+    });
     const user = userEvent.setup();
     render(<FiltersScreen id="contacts" />, { wrapper });
 
     await user.click(await screen.findByRole("button", { name: ADD }));
     await user.type(screen.getByLabelText("Value"), "ann");
-    await user.click(await screen.findByRole("button", { name: "Export CSV" }));
+    await user.click(
+      await screen.findByRole("button", { name: en["filters.footMore"] }),
+    );
+    await user.click(screen.getByRole("button", { name: "Export CSV" }));
 
-    await waitFor(() => {
-      expect(written).toHaveLength(1);
-    });
+    // The menu closed on the press, so the band is what says a file is coming.
+    const exporting = await screen.findByText(en["filters.exporting"]);
+    expect(exporting.closest(".panel-foot")).not.toBeNull();
+    expect(exporting.getAttribute("role")).toBe("status");
+    answer();
+    await waitFor(() =>
+      expect(screen.queryByText(en["filters.exporting"])).toBeNull(),
+    );
+    expect(written).toHaveLength(1);
     // The tree on screen, not a saved view's id: what gets exported is what the
     // count just said, through the one filter engine.
     expect(written[0]?.body).toEqual({
@@ -504,7 +492,7 @@ describe("saving and exporting", () => {
     expect(anchors[0]?.download).toBe("contacts-slice.csv");
   });
 
-  it("says so when an export is refused, instead of leaving the reader waiting", async () => {
+  it("says so beside the footer when an export is refused", async () => {
     const { wrapper } = mount({ match_count: 2 });
     const user = userEvent.setup();
     render(<FiltersScreen id="contacts" />, { wrapper });
@@ -514,14 +502,140 @@ describe("saving and exporting", () => {
     await screen.findByText("2 contacts match");
     // Only the export's answer changes, so the failure path is the real one —
     // a Problem body the screen has to read, not a thrown string.
+    const served = globalThis.fetch;
     vi.stubGlobal("fetch", refusing("/exports", REFUSED_EXPORT, 403));
+    await user.click(
+      screen.getByRole("button", { name: en["filters.footMore"] }),
+    );
     await user.click(screen.getByRole("button", { name: "Export JSON" }));
 
     // The SERVER's reason, not "request failed": a refused bulk read can be
-    // refused for something a reader can act on.
-    expect((await screen.findByRole("alert")).textContent).toBe(
-      "Bulk record read is human-only.",
+    // refused for something a reader can act on. The menu that asked has
+    // closed, so the band is where it lands.
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toBe("Bulk record read is human-only.");
+    expect(alert.closest(".panel-foot")).not.toBeNull();
+
+    // The refusal was about that filter: one rebuilt after the footer went
+    // away is a filter nobody has tried to export.
+    vi.stubGlobal("fetch", served);
+    await user.clear(screen.getByLabelText("Value"));
+    expect(screen.queryByText(en["filters.unsavedFilter"])).toBeNull();
+    await user.type(screen.getByLabelText("Value"), "ann");
+    expect(await screen.findByText(en["filters.unsavedFilter"])).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+});
+
+/** The app's shape in miniature: the guard above the page the address picks. */
+function Guarded() {
+  const hash = useHash();
+  return (
+    <UnsavedGuard
+      address={hash}
+      onKeep={(kept) => {
+        window.location.hash = kept;
+      }}
+    >
+      {(shown) => {
+        const tab = GUARDED_PAGES[shown];
+        return tab ? (
+          <FiltersScreen key={shown} id={tab} />
+        ) : (
+          <p>{`Arrived at ${shown}`}</p>
+        );
+      }}
+    </UnsavedGuard>
+  );
+}
+
+const GUARDED_PAGES: Readonly<Record<string, "contacts" | "companies">> = {
+  "#/filters/contacts": "contacts",
+  "#/filters/companies": "companies",
+};
+
+describe("leaving a filter", () => {
+  const ASKS = en["unsaved.title"];
+
+  function guarded(listsOn = false) {
+    window.location.hash = "#/filters/contacts";
+    const { wrapper } = mountFilters({
+      listsOn,
+      preview: { match_count: 2 },
+      vocabularies: { contact: CONTACT_VOCAB },
+    });
+    render(<Guarded />, { wrapper });
+  }
+
+  async function complete(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(await screen.findByRole("button", { name: ADD }));
+    await user.type(screen.getByLabelText("Value"), "ann");
+  }
+
+  it("never asks about a half-built condition", async () => {
+    guarded();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: ADD }));
+    window.location.hash = "#/home";
+
+    expect(await screen.findByText("Arrived at #/home")).toBeTruthy();
+    expect(screen.queryByRole("dialog", { name: ASKS })).toBeNull();
+  });
+
+  it("asks before a complete filter nobody kept is left behind", async () => {
+    guarded();
+    const user = userEvent.setup();
+    await complete(user);
+    window.location.hash = "#/home";
+
+    expect(await screen.findByRole("dialog", { name: ASKS })).toBeTruthy();
+    expect(screen.getByDisplayValue("ann")).toBeTruthy();
+  });
+
+  it("goes to the view it just saved without asking", async () => {
+    guarded();
+    const user = userEvent.setup();
+    await complete(user);
+    await user.click(await screen.findByRole("button", { name: SAVE }));
+    await user.type(screen.getByRole("textbox", { name: "Name" }), "Anns");
+    await user.click(screen.getByRole("button", { name: "Save view" }));
+
+    expect(
+      await screen.findByText("Arrived at #/filters/contacts/v-new"),
+    ).toBeTruthy();
+    expect(screen.queryByRole("dialog", { name: ASKS })).toBeNull();
+  });
+
+  it("goes to the Live List it just created without asking", async () => {
+    guarded(true);
+    const user = userEvent.setup();
+    await complete(user);
+    await user.click(await screen.findByRole("button", { name: SAVE }));
+    await user.click(screen.getByRole("radio", { name: /^Live List/ }));
+    await user.type(screen.getByRole("textbox", { name: "Name" }), "Anns");
+    await user.click(
+      screen.getByRole("button", { name: en["filters.saveListConfirm"] }),
     );
+
+    expect(await screen.findByText("Arrived at #/lists/new-list")).toBeTruthy();
+    expect(screen.queryByRole("dialog", { name: ASKS })).toBeNull();
+  });
+
+  it("asks once when switching the record type clears a complete filter", async () => {
+    guarded();
+    const user = userEvent.setup();
+    await complete(user);
+    await user.click(screen.getByRole("button", { name: "Companies" }));
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
+    await user.click(screen.getByRole("button", { name: "Switch and clear" }));
+
+    expect(
+      await screen.findByRole("heading", {
+        level: 1,
+        name: "New company filter",
+      }),
+    ).toBeTruthy();
+    expect(screen.queryByRole("dialog", { name: ASKS })).toBeNull();
   });
 });
 

@@ -10,10 +10,11 @@
 // line under the editor says what would make there be.
 
 import { useState } from "react";
-import { navigate } from "../app/router";
+import { useGuardedLeave } from "../app/unsaved";
 import { SegmentedControl } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody } from "../design-system/panel";
+import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import {
   PREVIEW_PAGE,
@@ -22,9 +23,9 @@ import {
 } from "./filterdata";
 import { useFilterDraft } from "./filterdraft";
 import { FilterEditor, vocabularyState } from "./filtereditor";
-import { ExportFilterMenu } from "./filterexport";
+import { useFilterExport } from "./filterexport";
+import { FilterFoot } from "./filterfoot";
 import { FocusedHead, FocusedPending } from "./filterhead";
-import { SaveFilterListAction } from "./filterlist";
 import {
   EditingListNotice,
   SaveToListAction,
@@ -43,8 +44,8 @@ import {
   UNIT_LABEL,
   VIEW_OF,
 } from "./filtersaddress";
+import { type SavedKind, SaveFilterModal } from "./filtersave";
 import { useList } from "./lists.queries";
-import { SaveFilterViewAction } from "./savedviews";
 import { filterTreeOf, useSavedViews } from "./savedviews.queries";
 import {
   fieldsNamed,
@@ -155,12 +156,14 @@ function FilterBuildPage({
   initial?: Node | null;
 }>) {
   const t = useT();
+  const toast = useToast();
   const [draft, dispatch] = useFilterDraft(() =>
     initial ? rootGroup(initial) : newGroup("and"),
   );
   // The request's page size, which the table's own size dial sets.
   const [limit, setLimit] = useState(PREVIEW_PAGE);
   const [switchTo, setSwitchTo] = useState<ObjectTab | null>(null);
+  const [saving, setSaving] = useState(false);
   const { edited, opening } = useOpenListFromAddress(
     editing.kind === "list" ? editing.listId : undefined,
     tab,
@@ -170,13 +173,18 @@ function FilterBuildPage({
   const vocabulary = useFilterVocabulary(resource);
   const preview = useFilterPreview(resource, draft.tree, limit);
   const shown = useResultsShown(draft.tree, preview);
+  const exportRun = useFilterExport();
+  const complete = isComplete(draft.tree);
+  // A half-built condition is nothing to lose; a complete one is a filter the
+  // reader could have kept. Every way off the page that already asked, or
+  // kept the filter, leaves through here so the guard does not ask again.
+  const leave = useGuardedLeave(editing.kind === "new" && complete);
 
   if (opening) {
     return <FocusedPending title={title} label={t("lists.loading")} />;
   }
 
   const empty = draft.tree.children.length === 0;
-  const complete = isComplete(draft.tree);
   const records = t(UNIT_LABEL[tab]);
   const switchTab = (next: ObjectTab) => {
     if (next === tab) {
@@ -186,10 +194,20 @@ function FilterBuildPage({
     // returns to the last one they looked at. Conditions name one type's
     // fields, so leaving a type with some on screen asks first.
     if (empty) {
-      navigate({ screen: "filters", id: next });
+      leave({ screen: "filters", id: next });
       return;
     }
     setSwitchTo(next);
+  };
+  const saved = (kind: SavedKind, id: string, name: string) => {
+    setSaving(false);
+    if (kind === "view") {
+      toast.show(t("filters.viewSaved"));
+      leave({ screen: "filters", id: tab, id2: id });
+      return;
+    }
+    toast.show(t("filters.listCreated", { name }));
+    leave({ screen: "lists", id });
   };
 
   return (
@@ -224,12 +242,17 @@ function FilterBuildPage({
         // and an unfinished one is a tree the engine refuses.
         footer={
           complete ? (
-            <>
-              <ExportFilterMenu resource={resource} tree={draft.tree} />
-              <SaveFilterViewAction resource={VIEW_OF[tab]} tree={draft.tree} />
-              {edited && <SaveToListAction edited={edited} tree={draft.tree} />}
-              <SaveFilterListAction resource={resource} tree={draft.tree} />
-            </>
+            <FilterFoot
+              resource={resource}
+              tree={draft.tree}
+              onSave={() => setSaving(true)}
+              exportRun={exportRun}
+              saveTo={
+                edited ? (
+                  <SaveToListAction edited={edited} tree={draft.tree} />
+                ) : undefined
+              }
+            />
           ) : undefined
         }
       >
@@ -262,6 +285,13 @@ function FilterBuildPage({
           onLimit={setLimit}
         />
       )}
+      <SaveFilterModal
+        open={saving}
+        onClose={() => setSaving(false)}
+        tab={tab}
+        tree={draft.tree}
+        onSaved={saved}
+      />
       <ConfirmModal
         open={switchTo !== null}
         onClose={() => setSwitchTo(null)}
@@ -271,7 +301,7 @@ function FilterBuildPage({
         confirmLabel={t("filters.switch.confirm")}
         onConfirm={() => {
           if (switchTo) {
-            navigate({ screen: "filters", id: switchTo });
+            leave({ screen: "filters", id: switchTo });
           }
           setSwitchTo(null);
         }}

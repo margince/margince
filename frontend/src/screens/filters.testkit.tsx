@@ -41,6 +41,12 @@ export type FiltersServer = Readonly<{
   listAnswered?: Promise<void>;
   /** What `POST /lists` answers. */
   created?: Partial<List>;
+  /** A problem `POST /views` and `POST /lists` answer instead of a create. */
+  createRefused?: Readonly<{ status: number; detail: string }>;
+  /** Held open until it resolves: every `POST /views` and `POST /lists`. */
+  createAnswered?: Promise<void>;
+  /** Held open until it resolves: every export. */
+  exportAnswered?: Promise<void>;
   listsFail?: boolean;
   viewsFail?: boolean;
   /** Both catalog reads say they stopped at the server's cap. */
@@ -118,6 +124,12 @@ function isRow(value: unknown): value is Row {
 
 const notFound = () => json({ title: "Not found", status: 404 }, 404);
 
+const problem = (refusal: Readonly<{ status: number; detail: string }>) =>
+  new Response(JSON.stringify({ title: "Refused", ...refusal }), {
+    status: refusal.status,
+    headers: { "Content-Type": "application/problem+json" },
+  });
+
 const searchOf = (sent: Sent) =>
   new URL(sent.url, "https://x.local").searchParams;
 
@@ -127,6 +139,9 @@ function viewsServer(server: FiltersServer) {
   let reads = 0;
   const write = (sent: Sent, id: string | undefined): Response => {
     const body = isRow(sent.body) ? sent.body : {};
+    if (sent.method === "POST" && server.createRefused) {
+      return problem(server.createRefused);
+    }
     if (sent.method === "POST") {
       const made = { id: "v-new", owner_id: "u-1", version: 1, ...body };
       views = [...views, made];
@@ -160,8 +175,11 @@ function viewsServer(server: FiltersServer) {
       : views;
     return page(rows, server.truncated === true);
   };
-  return (sent: Sent, path: string) => {
+  return async (sent: Sent, path: string) => {
     const id = /^\/views\/([^/]+)$/.exec(path)?.[1];
+    if (sent.method === "POST") {
+      await server.createAnswered;
+    }
     return sent.method === "GET" ? read(sent, id) : write(sent, id);
   };
 }
@@ -189,11 +207,14 @@ async function listsCatalog(server: FiltersServer, sent: Sent) {
 /** The lists: the catalog, one list by id, and a create. */
 function listsServer(server: FiltersServer) {
   const lists = server.lists ?? [];
-  return (sent: Sent, path: string) => {
+  return async (sent: Sent, path: string) => {
     const id = /^\/lists\/([^/]+)$/.exec(path)?.[1];
     if (sent.method === "POST") {
+      await server.createAnswered;
       const body = isRow(sent.body) ? sent.body : {};
-      return json({ id: "new-list", ...body, ...server.created }, 201);
+      return server.createRefused
+        ? problem(server.createRefused)
+        : json({ id: "new-list", ...body, ...server.created }, 201);
     }
     if (server.listsFail) {
       return refused();
@@ -249,7 +270,10 @@ function readsServer(
         truncated: false,
       });
     },
-    "/exports": exported,
+    "/exports": async () => {
+      await server.exportAnswered;
+      return exported();
+    },
   };
 }
 

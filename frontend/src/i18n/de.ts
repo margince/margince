@@ -10486,6 +10486,21 @@ export const de = {
     "Die Bedingungen werden gelöscht, weil sie Lead-Felder nennen.",
   "filters.switch.confirm": "Wechseln und löschen",
   "filters.showMore": "Bis zu 100 anzeigen",
+  "filters.save": "Speichern",
+  "filters.unsavedFilter": "Nicht gespeicherter Filter",
+  "filters.footMore": "Mehr zu diesem Filter",
+  "filters.exporting": "Wird exportiert…",
+  "filters.saveAsNew": "Als neue Ansicht speichern",
+  "filters.saveTitle": "Diesen Filter speichern",
+  "filters.namePlaceholder": "Deutsche {records}, seit 45 Tagen ruhig",
+  "filters.keepAs": "Speichern als",
+  "filters.keepViewHint":
+    "Nur du findest sie. Bei jedem Öffnen wird neu gezählt.",
+  "filters.keepListHint":
+    "Wird alle 15 Minuten geprüft und hält fest, wer hinzukommt und wer geht. Wähle, wer sie finden kann.",
+  "filters.purpose": "Zweck (optional)",
+  "filters.viewSaved": "Ansicht gespeichert",
+  "filters.listCreated": "Live-Liste „{name}“ erstellt",
   "filters.emptyGroup": "Eine leere Gruppe trifft auf nichts zu.",
   "filters.field": "Feld",
   "filters.field.amount": "Umgerechneter Betrag",
@@ -10570,8 +10585,6 @@ export const de = {
   "filters.date.daysAgo": "Vor Tagen",
   "filters.date.mode": "Wie das Datum angegeben wird",
   "filters.date.daysAgoCount": "{field}: Tage vor heute",
-  "filters.saveList": "Als Live-Liste speichern",
-  "filters.saveListTitle": "Diesen Filter als Live-Liste speichern",
   "filters.saveListConfirm": "Liste speichern",
   "filters.propose.label": "Beschreibe die Liste in eigenen Worten",
   "filters.propose.hint":
@@ -10861,7 +10874,6 @@ export const de = {
     "Erste Seite der Treffer, zum Prüfen des Filters. Nicht die vollständige Auswahl.",
   "filters.noMatches":
     "Keine {records} passen zu diesen Bedingungen. Lockere eine: Stell eine Verknüpfung auf „oder“ um, oder entferne die genaueste Bedingung.",
-  "filters.loadView": "Gespeicherten Filter laden",
   "filters.pickRecord": "Datensatz auswählen",
   "filters.searchRecords": "Unternehmen durchsuchen",
   "filters.typeToSearch": "Zum Suchen tippen",
