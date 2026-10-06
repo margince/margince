@@ -43,9 +43,9 @@ func (e *Env) ConnectorOwnerCtx(owner ids.UUID, connectorName string) context.Co
 		UserID: owner, OnBehalfOf: owner,
 		Permissions: principal.Permissions{
 			Objects: map[string]principal.ObjectGrant{
-				"activity": {Create: true, Read: true, Update: true},
-				"contact":  {Create: true, Read: true, Update: true},
-				"company":  {Create: true, Read: true, Update: true},
+				objActivity: {Create: true, Read: true, Update: true},
+				objContact:  {Create: true, Read: true, Update: true},
+				objCompany:  {Create: true, Read: true, Update: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},

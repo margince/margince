@@ -40,7 +40,7 @@ func MeetingStatusCounts(status string) bool {
 
 // InteractionCounts is InteractionCountsSQL for a reader holding the row in Go.
 func InteractionCounts(kind, meetingStatus string) bool {
-	return IsInteractionKind(kind) && (kind != "meeting" || MeetingStatusCounts(meetingStatus))
+	return IsInteractionKind(kind) && (kind != kindMeeting || MeetingStatusCounts(meetingStatus))
 }
 
 // MeetingTookPlaceSQL is a meeting that counts as contact we had: not called
