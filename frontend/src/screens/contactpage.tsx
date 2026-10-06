@@ -65,7 +65,7 @@ import {
 } from "./writeto";
 import "./contact360.css";
 import { buyingRoleLabel } from "./companycontacts/summary";
-import { keptWorklistReturn, WorklistReturnLink } from "./worklist.return";
+import { navigateWithinRecord, WorklistReturnLink } from "./worklist.return";
 
 type Contact360 = components["schemas"]["Contact360"];
 type ContactMomentAction = components["schemas"]["ContactMomentAction"];
@@ -493,7 +493,7 @@ export function ContactPageV2({
                 options={CONTACT_TABS}
                 value={tab}
                 onChange={(next) => {
-                  navigate(contactTabRoute(id, next), keptWorklistReturn());
+                  navigateWithinRecord(contactTabRoute(id, next));
                   scrollPageToTop();
                 }}
                 // The switch for the details pane, at the end of the tab row: it
@@ -782,7 +782,7 @@ function ContactMarks({
   // first, and the reveal waits for the anchor to be drawn.
   const showBrief = () => {
     if (tab !== "overview") {
-      navigate(contactTabRoute(view.contact.id, "overview"));
+      navigateWithinRecord(contactTabRoute(view.contact.id, "overview"));
     }
     revealOnceMounted(BRIEF_ANCHOR);
   };

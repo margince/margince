@@ -4,13 +4,13 @@
 import { Sparkles } from "lucide-react";
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
-import { navigate } from "../app/router";
 import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { forReader } from "../format/collate";
 import { formatDayMonth, formatNumber, INTL_LOCALE } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { contactTabRoute } from "./contacttab";
+import { navigateWithinRecord } from "./worklist.return";
 
 type Contact360 = components["schemas"]["Contact360"];
 
@@ -74,7 +74,9 @@ export function ContactConfirmCallout({
       actions={
         <Button
           variant="link"
-          onClick={() => navigate(contactTabRoute(view.contact.id, "research"))}
+          onClick={() =>
+            navigateWithinRecord(contactTabRoute(view.contact.id, "research"))
+          }
         >
           {t("contact.confirm.review")}
         </Button>

@@ -3,7 +3,13 @@
 
 import { ArrowLeft } from "lucide-react";
 import { createContext, type ReactNode, useContext } from "react";
-import { parseHash, routeHash, type Screen } from "../app/router";
+import {
+  navigate,
+  parseHash,
+  type Route,
+  routeHash,
+  type Screen,
+} from "../app/router";
 import {
   currentParams,
   hashWithParams,
@@ -53,6 +59,14 @@ export function worklistReturn(params: UrlParams): UrlParams | undefined {
  */
 export function keptWorklistReturn(): UrlParams | undefined {
   return worklistReturn(currentParams());
+}
+
+/**
+ * Move to another tab of the record on screen. Every in-record tab move goes
+ * through here so none of them drops the way back.
+ */
+export function navigateWithinRecord(route: Route): void {
+  navigate(route, keptWorklistReturn());
 }
 
 /** `href` with the drawer's dials added, when it addresses a returning record. */

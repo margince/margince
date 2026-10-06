@@ -2,7 +2,6 @@ import { CheckSquare, FileText, Search, Send, Users } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
-import { navigate } from "../app/router";
 import { Button, EmptyState } from "../design-system/atoms";
 import { PanelBody } from "../design-system/panel";
 import { formatDate, formatNumber } from "../format/format";
@@ -22,6 +21,7 @@ import {
   WithheldNotice,
 } from "./record360";
 import "./record360/record360.css";
+import { navigateWithinRecord } from "./worklist.return";
 
 // WHAT NEEDS A CONTACT TODAY, as the contact page assembles it: the move the
 // server selected at the top of the panel, and the record's own open tasks
@@ -157,7 +157,10 @@ function MomentMove({
               );
               if (activity?.kind === "email" && onOpenEmail && item.id)
                 onOpenEmail(item.id);
-              else navigate(contactTabRoute(view.contact.id, "timeline"));
+              else
+                navigateWithinRecord(
+                  contactTabRoute(view.contact.id, "timeline"),
+                );
             }}
           />
         ) : undefined

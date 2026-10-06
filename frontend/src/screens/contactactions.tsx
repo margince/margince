@@ -18,6 +18,7 @@ import type { Transport } from "./contacttransports";
 import { primaryTransportAction, useTransports } from "./contacttransports";
 import { EmailVerb } from "./recordemail";
 import { ShareAction } from "./share";
+import { navigateWithinRecord } from "./worklist.return";
 
 // The header's verbs on the contact record page (contactpage.tsx): writing,
 // calling, meeting, logging, and the menu that holds everything else.
@@ -119,13 +120,15 @@ export function ContactActions({
       <IconAction
         label={t("contact.action.call")}
         icon={<Phone aria-hidden="true" />}
-        onClick={() => navigate(contactTabRoute(contactId, "timeline"))}
+        onClick={() =>
+          navigateWithinRecord(contactTabRoute(contactId, "timeline"))
+        }
       />
       <IconAction
         label={t("contact.action.meetings")}
         icon={<CalendarDays aria-hidden="true" />}
         onClick={() =>
-          navigate({ screen: "contacts", id: contactId, id2: "meetings" })
+          navigateWithinRecord(contactTabRoute(contactId, "meetings"))
         }
       />
       {/* A hairline between reaching the record and recording what happened
@@ -189,7 +192,9 @@ export function ContactActions({
               />
               <AddToShortlistAction entityType="contact" entityId={contactId} />
               <Button
-                onClick={() => navigate(contactTabRoute(contactId, "timeline"))}
+                onClick={() =>
+                  navigateWithinRecord(contactTabRoute(contactId, "timeline"))
+                }
               >
                 {t("record.fullHistory")}
               </Button>

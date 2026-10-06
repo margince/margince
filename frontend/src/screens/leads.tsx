@@ -96,7 +96,7 @@ export { terminalBadge } from "./leadstanding";
 import { AddToShortlistAction } from "./addtoshortlist";
 import { leadKey, leadScoreKey, leadWriteKeys } from "./leadkeys";
 import { RecordListsPanel } from "./recordlists";
-import { keptWorklistReturn, WorklistReturnLink } from "./worklist.return";
+import { navigateWithinRecord, WorklistReturnLink } from "./worklist.return";
 
 export { LeadsScreen } from "./leads.list";
 
@@ -964,10 +964,7 @@ function useLeadTab(recordId: string): [LeadTab, (next: LeadTab) => void] {
   return [
     isLeadTab(addressed) ? addressed : "overview",
     (next: LeadTab) =>
-      navigate(
-        { screen: "leads", id: recordId, id2: next },
-        keptWorklistReturn(),
-      ),
+      navigateWithinRecord({ screen: "leads", id: recordId, id2: next }),
   ];
 }
 
