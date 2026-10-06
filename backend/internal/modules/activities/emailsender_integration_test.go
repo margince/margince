@@ -66,7 +66,37 @@ func TestTheEnvelopeNamesEachPartyOnce(t *testing.T) {
 	if len(email.To) != 2 {
 		t.Fatalf("To reads %+v, want the seat once and the unresolved stranger", email.To)
 	}
-	if email.To[0].UserId == nil || email.To[1].Address != "stranger@fold.test" {
-		t.Fatalf("To reads %+v, want the seat first and the bare stranger kept", email.To)
+	if email.To[0].UserId == nil || email.To[0].Address != "rep-"+e.rep.String()+"@load.test" {
+		t.Fatalf("To reads %+v, want the seat first with their own address", email.To)
+	}
+	if email.To[1].Address != "stranger@fold.test" {
+		t.Fatalf("To reads %+v, want the bare stranger kept", email.To)
+	}
+}
+
+// A sender writing from their SECOND address still folds: the contact row
+// borrows the address the message stated, not their primary one.
+func TestTheFoldRecognisesASecondaryAddress(t *testing.T) {
+	e := setupLoad(t)
+	contact := ids.NewV7()
+	e.exec(t, `INSERT INTO contact (id, full_name, source, captured_by)
+		VALUES ($1, 'Buyer Contact', 'seed', 'system')`, contact)
+	e.exec(t, `INSERT INTO contact_email (contact_id, email, is_primary, source, captured_by)
+		VALUES ($1, 'primary@fold.test', true, 'seed', 'system'),
+		       ($1, 'second@fold.test', false, 'seed', 'system')`, contact)
+	activity := ids.NewV7()
+	e.exec(t, `INSERT INTO activity (id, kind, direction, subject, occurred_at, source, captured_by)
+		VALUES ($1, 'email', 'inbound', 'hello', now(), 'seed', 'system')`, activity)
+	e.exec(t, `INSERT INTO activity_participant (id, activity_id, role, contact_id)
+		VALUES ($1, $2, 'from', $3)`, ids.NewV7(), activity, contact)
+	e.exec(t, `INSERT INTO activity_participant (id, activity_id, role, address)
+		VALUES ($1, $2, 'from', 'second@fold.test')`, ids.NewV7(), activity)
+
+	email, err := storeKnowing(e).GetEmailPresentation(e.as(), ids.From[ids.ActivityKind](activity), nil)
+	if err != nil {
+		t.Fatalf("reading the message: %v", err)
+	}
+	if len(email.From) != 1 || email.From[0].Address != "second@fold.test" || email.From[0].ContactId == nil {
+		t.Fatalf("From reads %+v, want the one contact carrying the address the message stated", email.From)
 	}
 }

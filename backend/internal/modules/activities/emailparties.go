@@ -80,21 +80,31 @@ func readEmailParties(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (emailP
 	// resigns. This is the case livemember_test names as outside its rule: a row
 	// resolved by id to render a name does not ask whether the contact still
 	// works here.
-	// The contact's own primary address, for a row capture resolved to a
-	// contact without keeping an address — the logged path writes those. It
-	// rides the SCOPED contact join, so an address surfaces only where the
-	// contact itself may be named.
+	// The contact's own address, for a row capture resolved to a contact
+	// without keeping an address — the logged path writes those. The address
+	// the MESSAGE stated wins over the contact's primary one, so the fold
+	// below recognises the bare header row it duplicates even when the sender
+	// wrote from a secondary address. It rides the SCOPED contact join, so an
+	// address surfaces only where the contact itself may be named.
 	rows, err := tx.Query(ctx, `
 		SELECT ap.role, coalesce(ap.address, ''), p.id,
 		       coalesce(p.full_name, u.display_name, ap.display_name), ap.user_id,
-		       coalesce(u.email, ''), coalesce(pe.email, '')
+		       coalesce(u.email, ''), coalesce(stated_pe.email, own_pe.email, '')
 		  FROM activity_participant ap
 		  `+contactJoin+`
 		  LEFT JOIN app_user u ON u.id = ap.user_id
 		  LEFT JOIN LATERAL (
 		       SELECT e.email FROM contact_email e
+		        WHERE e.contact_id = p.id AND e.archived_at IS NULL
+		          AND EXISTS (
+		           SELECT 1 FROM activity_participant stated
+		            WHERE stated.activity_id = ap.activity_id AND stated.role = ap.role
+		              AND lower(stated.address) = e.email)`+
+		contactaddress.ReachableOrder+` LIMIT 1) stated_pe ON p.id IS NOT NULL
+		  LEFT JOIN LATERAL (
+		       SELECT e.email FROM contact_email e
 		        WHERE e.contact_id = p.id AND e.archived_at IS NULL`+
-		contactaddress.ReachableOrder+` LIMIT 1) pe ON p.id IS NOT NULL
+		contactaddress.ReachableOrder+` LIMIT 1) own_pe ON p.id IS NOT NULL
 		 WHERE ap.activity_id = $1
 		   AND ap.role IN ('from', 'to', 'cc', 'bcc')
 		 ORDER BY CASE ap.role

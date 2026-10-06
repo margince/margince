@@ -4,8 +4,10 @@ SET LOCAL lock_timeout = '3s';
 -- importer mirrored carries a `from` participant row per linked contact. The
 -- writer is fixed; this corrects the ROLES of the rows already written: each
 -- linked contact takes the role its address appears on in the stated headers.
--- Nothing is deleted and no address moves between rows — the fixed writer
--- keeps a contact row and the bare header rows side by side, and so does the
+-- No address moves between rows, and the one delete below removes only a row
+-- that would land exactly on an identical row already holding its header role
+-- — two copies of one statement, of which one remains. The fixed writer keeps
+-- a contact row and the bare header rows side by side, and so does the
 -- repair. A row whose role is already the header's is left exactly as it is,
 -- which is what makes mail the fixed writer logged a no-op here.
 --
@@ -31,8 +33,10 @@ SELECT a.id, a.direction
          SELECT 1 FROM activity_participant h
           WHERE h.activity_id = a.id AND h.role IN ('from', 'to', 'cc')
             AND h.address IS NOT NULL
+            -- The column is stored lowercased, so only the header side is
+            -- folded and the email index carries the probe.
             AND (SELECT count(DISTINCT e.contact_id) FROM contact_email e
-                  WHERE lower(e.email) = lower(h.address)) > 1);
+                  WHERE e.email = lower(h.address)) > 1);
 
 -- What the rows said before, for the audit entry at the end.
 CREATE TEMP TABLE before_rows ON COMMIT DROP AS

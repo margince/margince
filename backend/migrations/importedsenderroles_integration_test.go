@@ -73,6 +73,9 @@ func readParticipants(ctx context.Context, t *testing.T, conn *pgx.Conn, activit
 		}
 		out = append(out, r)
 	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
+	}
 	return out
 }
 
@@ -141,6 +144,21 @@ func TestAnImportedEmailsSenderIsWhoItsHeadersName(t *testing.T) {
 	})
 	if n := auditCount(ctx, t, conn, damaged); n != 1 {
 		t.Errorf("audit rows for the repaired email: got %d, want 1 (two runs, one change)", n)
+	}
+	// The audit row carries both participant sets, not just a marker: three
+	// senders before the repair, one after.
+	var sendersBefore, sendersAfter int
+	if err := conn.QueryRow(ctx, `
+		SELECT (SELECT count(*) FROM jsonb_array_elements(before->'participants') r
+		         WHERE r->>'role' = 'from' AND r->>'contact_id' IS NOT NULL),
+		       (SELECT count(*) FROM jsonb_array_elements(after->'participants') r
+		         WHERE r->>'role' = 'from' AND r->>'contact_id' IS NOT NULL)
+		  FROM audit_log WHERE entity_type = 'activity' AND entity_id = $1`,
+		damaged).Scan(&sendersBefore, &sendersAfter); err != nil {
+		t.Fatal(err)
+	}
+	if sendersBefore != 3 || sendersAfter != 1 {
+		t.Errorf("the audit row says %d contact senders became %d, want 3 became 1", sendersBefore, sendersAfter)
 	}
 }
 
