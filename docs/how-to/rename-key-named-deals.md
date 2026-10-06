@@ -82,8 +82,9 @@ value is wrong; check it against the query above first.
   has edited stays.
 - Archived deals are untouched.
 - The new name is `source_title` when the export has one that differs from
-  the key, otherwise `<company> · <stage>`, folded to one line with control
-  characters dropped.
+  the key, otherwise `<company> · <stage>`, folded to one line: tabs become
+  spaces, other control and text-direction characters are dropped, and runs
+  of spaces collapse to one.
 - Each rename goes through the ordinary update path: its own audit entry and
   `deal.updated` event, written by `system:deal_key_names`.
 
