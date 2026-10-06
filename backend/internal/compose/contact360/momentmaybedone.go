@@ -12,6 +12,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -84,18 +85,21 @@ type owedPromise struct {
 	kind   crmcontracts.ContactMomentMayBeDonePromiseType
 	id     crmcontracts.Id
 	madeAt time.Time
+	// holder is the plain card's holder marker, so a Not yet given while a
+	// colleague held the task lifts once it becomes the reader's.
+	holder string
 }
 
 // promiseBehind finds the task or claim a promise card was built from. A card
 // from any other rung has none.
-func promiseBehind(moment crmcontracts.ContactMoment, page *crmcontracts.Contact360) (owedPromise, bool) {
+func promiseBehind(ctx context.Context, moment crmcontracts.ContactMoment, page *crmcontracts.Contact360) (owedPromise, bool) {
 	if moment.ClaimKey == overdueTaskKey || moment.ClaimKey == openTaskKey {
 		if page.NextSteps == nil || len(moment.Evidence) == 0 || moment.Evidence[0].Id == nil {
 			return owedPromise{}, false
 		}
 		for _, task := range page.NextSteps.Data {
 			if task.Id == *moment.Evidence[0].Id {
-				return owedPromise{kind: crmcontracts.ContactMomentMayBeDonePromiseTypeTask, id: task.Id, madeAt: task.OccurredAt}, true
+				return owedPromise{kind: crmcontracts.ContactMomentMayBeDonePromiseTypeTask, id: task.Id, madeAt: task.OccurredAt, holder: heldMarker(ctx, task)}, true
 			}
 		}
 		return owedPromise{}, false
@@ -119,11 +123,11 @@ func promiseBehind(moment crmcontracts.ContactMoment, page *crmcontracts.Contact
 
 // mayBeDone turns a promise card into the question whether our last email
 // kept it, when that email went out strictly after the promise was made.
-func mayBeDone(moment crmcontracts.ContactMoment, page *crmcontracts.Contact360, sent *wroteTo, zone *time.Location) (crmcontracts.ContactMoment, bool) {
+func mayBeDone(ctx context.Context, moment crmcontracts.ContactMoment, page *crmcontracts.Contact360, sent *wroteTo, zone *time.Location) (crmcontracts.ContactMoment, bool) {
 	if sent == nil {
 		return crmcontracts.ContactMoment{}, false
 	}
-	promise, ok := promiseBehind(moment, page)
+	promise, ok := promiseBehind(ctx, moment, page)
 	if !ok || !sent.at.After(promise.madeAt) {
 		return crmcontracts.ContactMoment{}, false
 	}
@@ -145,9 +149,9 @@ func mayBeDone(moment crmcontracts.ContactMoment, page *crmcontracts.Contact360,
 		ClaimKey:            "moment:may_be_done:" + promise.id.String(),
 		Rule:                moment.Rule,
 		RuleVersion:         moment.RuleVersion,
-		EvidenceFingerprint: fingerprintOf(evidence),
+		EvidenceFingerprint: fingerprintOf(evidence) + promise.holder,
 		Headline:            fmt.Sprintf("You may have done this — you wrote to them on %s", at.In(zone).Format("2 Jan")),
-		WhyNow:              moment.Headline + ". " + moment.WhyNow,
+		WhyNow:              strings.TrimRight(moment.Headline, ".") + ". " + moment.WhyNow,
 		// An inference from timing, not an observed fact: the email may be
 		// about something else entirely.
 		Confidence:  crmcontracts.ContactMomentConfidenceMedium,
@@ -172,10 +176,11 @@ func mayBeDone(moment crmcontracts.ContactMoment, page *crmcontracts.Contact360,
 // so the plain promise card comes back rather than the walk moving past the
 // promise.
 func proposer(
+	ctx context.Context,
 	page *crmcontracts.Contact360, sent *wroteTo, zone *time.Location, dismissed func(crmcontracts.ContactMoment) bool,
 ) func(crmcontracts.ContactMoment) crmcontracts.ContactMoment {
 	return func(moment crmcontracts.ContactMoment) crmcontracts.ContactMoment {
-		if question, ok := mayBeDone(moment, page, sent, zone); ok && !dismissed(question) {
+		if question, ok := mayBeDone(ctx, moment, page, sent, zone); ok && !dismissed(question) {
 			return question
 		}
 		return moment

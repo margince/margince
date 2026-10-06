@@ -36,7 +36,7 @@ func sentAt(at time.Time) *wroteTo {
 }
 
 func askedWith(page *crmcontracts.Contact360, sent *wroteTo, dismissed func(crmcontracts.ContactMoment) bool) crmcontracts.ContactMoment {
-	return deriveMomentPast(readerCtx(), now, page, dismissed, proposer(page, sent, time.UTC, dismissed))
+	return deriveMomentPast(readerCtx(), now, page, dismissed, proposer(readerCtx(), page, sent, time.UTC, dismissed))
 }
 
 func neverDismissed(crmcontracts.ContactMoment) bool { return false }
@@ -138,7 +138,7 @@ func TestTheQuestionNamesTheDayInTheRecordZone(t *testing.T) {
 		t.Fatalf("loading the zone: %v", err)
 	}
 	sent := sentAt(time.Date(2026, 8, 3, 20, 0, 0, 0, time.UTC))
-	got := deriveMomentPast(readerCtx(), now, page, neverDismissed, proposer(page, sent, saigon, neverDismissed))
+	got := deriveMomentPast(readerCtx(), now, page, neverDismissed, proposer(readerCtx(), page, sent, saigon, neverDismissed))
 	if got.Headline != "You may have done this — you wrote to them on 4 Aug" {
 		t.Errorf("headline = %q, want the day in the record zone", got.Headline)
 	}
@@ -171,5 +171,39 @@ func TestDoneIsWithheldFromAReaderWhoCannotWriteThePromise(t *testing.T) {
 				t.Errorf("Done state = %q, want %q", moment.RecommendedAction.State, c.want)
 			}
 		})
+	}
+}
+
+// Handing a colleague's task to the reader changes whose promise it is, so a
+// Not yet given while the colleague held it must not keep the question away.
+func TestReassigningATaskRearmsItsNotYet(t *testing.T) {
+	ctx := readerCtx()
+	viewer, _ := principal.Actor(ctx)
+	page, _ := overdueTaskPage()
+	page.NextSteps.Data[0].AssigneeId = ptr(openapi_types.UUID(ids.NewV7()))
+	sent := sentAt(now.Add(-time.Hour))
+	ask := func() crmcontracts.ContactMoment {
+		return deriveMomentPast(ctx, now, page, neverDismissed, proposer(ctx, page, sent, time.UTC, neverDismissed))
+	}
+
+	theirs := ask()
+	page.NextSteps.Data[0].AssigneeId = ptr(openapi_types.UUID(viewer.UserID))
+	ours := ask()
+	if theirs.MayBeDone == nil || ours.MayBeDone == nil {
+		t.Fatalf("this test needs the question both times: %q, %q", theirs.Headline, ours.Headline)
+	}
+	if theirs.EvidenceFingerprint == ours.EvidenceFingerprint {
+		t.Error("the question keeps its fingerprint across a reassignment, so a Not yet given " +
+			"while a colleague held the task hides it once it is the reader's")
+	}
+}
+
+// A promise whose subject ends in a full stop is not followed by a second one.
+func TestTheQuestionDoesNotDoubleThePromisesFullStop(t *testing.T) {
+	page, _ := overdueTaskPage()
+	page.NextSteps.Data[0].Subject = ptr("Send the deck.")
+	got := askedWith(page, sentAt(now.Add(-time.Hour)), neverDismissed)
+	if !strings.HasPrefix(got.WhyNow, "You owe them: Send the deck. ") || strings.Contains(got.WhyNow, "..") {
+		t.Errorf("why_now = %q, want one full stop after the promise", got.WhyNow)
 	}
 }

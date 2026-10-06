@@ -30,7 +30,7 @@ export function MayBeDoneVerbs({
   const refresh = [["contact360", contactId]] as const;
   const task = useTaskUpdate(refresh);
   const claim = useClaimSettle(refresh);
-  const notYet = useMomentDismiss(contactId);
+  const notYet = useMomentDismiss();
   const done = moment.recommended_action;
   const blocked = done.state === "blocked";
   const pending = task.isPending || claim.isPending || notYet.isPending;
@@ -70,8 +70,11 @@ export function MayBeDoneVerbs({
           disabled={pending}
           onClick={() =>
             notYet.mutate({
-              claim_key: moment.claim_key,
-              evidence_fingerprint: moment.evidence_fingerprint,
+              contactId,
+              body: {
+                claim_key: moment.claim_key,
+                evidence_fingerprint: moment.evidence_fingerprint,
+              },
             })
           }
         >
@@ -83,14 +86,20 @@ export function MayBeDoneVerbs({
   );
 }
 
-// Putting one moment away for this reader while its evidence stands.
-function useMomentDismiss(contactId: string) {
+// Putting one moment away for this reader while its evidence stands. The
+// contact rides with the press, so a page that moved on between the press and
+// the answer still refreshes the contact the dismissal was for.
+function useMomentDismiss() {
   const t = useT();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (
-      body: components["schemas"]["DismissContactMomentRequest"],
-    ) => {
+    mutationFn: async ({
+      contactId,
+      body,
+    }: {
+      contactId: string;
+      body: components["schemas"]["DismissContactMomentRequest"];
+    }) => {
       const { error } = await api.POST("/contacts/{id}/moment/dismiss", {
         params: { path: { id: contactId } },
         body,
@@ -99,7 +108,7 @@ function useMomentDismiss(contactId: string) {
         throwProblem(error, t);
       }
     },
-    onSuccess: () =>
+    onSuccess: (_data, { contactId }) =>
       queryClient.invalidateQueries({ queryKey: ["contact360", contactId] }),
   });
 }

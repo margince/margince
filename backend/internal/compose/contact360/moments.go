@@ -106,7 +106,7 @@ func (s *Service) momentsSection(ctx context.Context, tx pgx.Tx, contactID ids.C
 	if err != nil {
 		return err
 	}
-	moment := deriveMomentPast(ctx, now, out, dismissed, proposer(out, sent, zone, dismissed))
+	moment := deriveMomentPast(ctx, now, out, dismissed, proposer(ctx, out, sent, zone, dismissed))
 	momentaction.Withhold(ctx, &moment)
 	out.Moment = &moment
 	return nil

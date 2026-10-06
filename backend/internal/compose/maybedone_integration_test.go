@@ -29,8 +29,9 @@ import (
 
 func TestAnEmailAfterTheTaskProposesItDoneAndNotYetHoldsUntilTheNext(t *testing.T) {
 	e := integration.Setup(t)
-	contact := seedLinkedContact(t, e, "anna@kunde.example")
-	other := seedLinkedContact(t, e, "bert@kunde.example")
+	const anna, bert = "anna@kunde.example", "bert@kunde.example"
+	contact := seedLinkedContact(t, e, anna)
+	other := seedLinkedContact(t, e, bert)
 	contactID := ids.From[ids.ContactKind](contact)
 
 	task := logTaskFor(t, e, contact, "Send demo email", at(time.Now().Add(-48*time.Hour)))
@@ -39,15 +40,15 @@ func TestAnEmailAfterTheTaskProposesItDoneAndNotYetHoldsUntilTheNext(t *testing.
 	svc := pageAsOf(e, filed.Add(3*time.Hour))
 	read := func() crmcontracts.ContactMoment { return momentOf(e.Admin(), t, svc, contactID) }
 
-	logEmailFor(e.Admin(), t, e, contact, "outbound", true, filed.Add(-time.Hour))
-	logEmailFor(e.Admin(), t, e, contact, "inbound", false, after)
-	logEmailFor(e.Admin(), t, e, other, "outbound", true, after)
-	logEmailFor(e.Admin(), t, e, contact, "outbound", false, after)
+	logEmailFor(e.Admin(), t, e, contact, anna, "outbound", true, filed.Add(-time.Hour))
+	logEmailFor(e.Admin(), t, e, contact, anna, "inbound", false, after)
+	logEmailFor(e.Admin(), t, e, other, bert, "outbound", true, after)
+	logEmailFor(e.Admin(), t, e, contact, anna, "outbound", false, after)
 	if got := read(); got.MayBeDone != nil || got.Headline != "You owe them: Send demo email" {
 		t.Fatalf("card = %q, want the overdue card: no attested email to them came after the task", got.Headline)
 	}
 
-	sent := logEmailFor(e.Admin(), t, e, contact, "outbound", true, after)
+	sent := logEmailFor(e.Admin(), t, e, contact, anna, "outbound", true, after)
 	question := read()
 	if question.MayBeDone == nil || ids.UUID(question.MayBeDone.PromiseId) != task ||
 		ids.UUID(question.MayBeDone.EmailActivityId) != sent {
@@ -66,7 +67,7 @@ func TestAnEmailAfterTheTaskProposesItDoneAndNotYetHoldsUntilTheNext(t *testing.
 		t.Fatalf("after Not yet the card is %q, want the overdue card back", got.Headline)
 	}
 
-	later := logEmailFor(e.Admin(), t, e, contact, "outbound", true, after.Add(time.Hour))
+	later := logEmailFor(e.Admin(), t, e, contact, anna, "outbound", true, after.Add(time.Hour))
 	if got := read(); got.MayBeDone == nil || ids.UUID(got.MayBeDone.EmailActivityId) != later {
 		t.Errorf("after a later email the card is %q, want the question asked again", got.Headline)
 	}
@@ -86,12 +87,13 @@ func TestOnlyAReaderWhoMayOpenTheEmailIsAskedAboutIt(t *testing.T) {
 	}
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, perms)
 	colleague := e.As(e.Rep3, []ids.UUID{e.Team2}, perms)
-	contact := seedLinkedContact(t, e, "carla@kunde.example")
+	const carla = "carla@kunde.example"
+	contact := seedLinkedContact(t, e, carla)
 	contactID := ids.From[ids.ContactKind](contact)
 
 	task := logTaskFor(t, e, contact, "Send the pricing sheet", at(time.Now().Add(-48*time.Hour)))
 	filed := readTask(t, e, task).OccurredAt
-	sent := logEmailFor(author, t, e, contact, "outbound", true, filed.Add(time.Hour))
+	sent := logEmailFor(author, t, e, contact, carla, "outbound", true, filed.Add(time.Hour))
 	if _, err := e.Activities.SetAudience(author, ids.From[ids.ActivityKind](sent),
 		activities.SetAudienceInput{Audience: "participants"}); err != nil {
 		t.Fatalf("limiting the email to its participants: %v", err)
@@ -126,12 +128,12 @@ func momentOf(as context.Context, t *testing.T, svc *contact360.Service, contact
 
 // logEmailFor writes one email linked to the contact through the activity
 // writer. attested is the provider's filing of it as sent by us.
-func logEmailFor(as context.Context, t *testing.T, e *integration.Env, contact ids.UUID, direction string, attested bool, occurred time.Time) ids.UUID {
+func logEmailFor(as context.Context, t *testing.T, e *integration.Env, contact ids.UUID, address, direction string, attested bool, occurred time.Time) ids.UUID {
 	t.Helper()
 	subject := "Your demo"
 	row, _, err := e.Activities.LogActivity(as, activities.LogActivityInput{
 		Kind: "email", Subject: &subject, Direction: &direction, OccurredAt: &occurred, Source: "manual",
-		CounterpartyEmail: "anna@kunde.example", CounterpartyOutboundAttested: attested,
+		CounterpartyEmail: address, CounterpartyOutboundAttested: attested,
 		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 	})
 	if err != nil {

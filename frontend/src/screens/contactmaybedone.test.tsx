@@ -94,6 +94,20 @@ describe("a promise our last email may have kept", () => {
         return jsonResponse({ ...TASK, is_done: true, version: 5 });
       },
     });
+    // The pinned version travels as If-Match, which the route stub does not
+    // see, so the request is read on its way past.
+    const routed = globalThis.fetch;
+    const pinned: (string | null)[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+        const request =
+          input instanceof Request ? input : new Request(String(input), init);
+        if (request.method === "PATCH")
+          pinned.push(request.headers.get("If-Match"));
+        return routed(input, init);
+      }),
+    );
     show(QUESTION);
 
     expect(screen.getByText(QUESTION.headline)).toBeTruthy();
@@ -101,6 +115,7 @@ describe("a promise our last email may have kept", () => {
     await waitFor(() =>
       expect(patched).toHaveBeenCalledWith({ is_done: true }),
     );
+    expect(pinned).toEqual([String(TASK.version)]);
   });
 
   it("settles a claim with no task as done", async () => {
