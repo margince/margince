@@ -7,9 +7,10 @@
 
 package gates
 
-// A page whose first line is <!-- prose:plain --> is written in plain words: a short
-// page, short sentences, and a vocabulary of fewer than 1,000 general words plus
-// named technical terms. The method and how to add a word are in
+// A page whose first line is <!-- prose:plain --> is written in plain words: short
+// sentences and a vocabulary of fewer than 1,000 general words plus
+// named technical terms. A page that must stay short adds max-words=N to the
+// marker. The method and how to add a word are in
 // docs/reference/docs-prose-style.md#plain-pages.
 
 import (
@@ -18,27 +19,29 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 )
 
 const (
-	plainMarker        = "<!-- prose:plain -->"
+	plainMarker        = "prose:plain"
 	plainWordsFile     = "docs/reference/plain-words.txt"
 	technicalNamesFile = "docs/reference/technical-names.txt"
 	plainWordCap       = 999
-	plainPageWords     = 1000
 	plainStepWords     = 20
 	plainSentenceWords = 25
 	plainParagraphMax  = 6
 )
 
-// plainRequired are pages that must stay enrolled: the README is the first page
-// a stranger reads, so it cannot leave the bar by dropping its marker.
-var plainRequired = []string{"README.md"}
+// plainRequired are pages that must stay enrolled, with the most words each may
+// hold: the README is the first page a stranger reads, so it can neither leave
+// the bar nor drop its length limit.
+var plainRequired = map[string]int{"README.md": 1000}
 
 var (
 	plainToken    = regexp.MustCompile(`\p{L}[\p{L}'’-]*`)
+	plainHeader   = regexp.MustCompile(`^<!--\s*prose:plain(?:\s+max-words=(\d+))?\s*-->$`)
 	plainPathLink = regexp.MustCompile(`\[[^\]\s]*[./][^\]\s]*\]`)
 	plainStepItem = regexp.MustCompile(`^\s*\d+\.\s+`)
 )
@@ -165,7 +168,25 @@ func plainCheck(doc string, vocab plainVocab) plainResult {
 	return res
 }
 
-func plainTooLong(res plainResult) bool { return res.words > plainPageWords }
+// plainEnrolment reads a page's first line: whether it is a plain page, and the
+// most words it may hold, where 0 means no length limit.
+func plainEnrolment(doc string) (enrolled bool, maxWords int) {
+	first, _, _ := strings.Cut(doc, "\n")
+	m := plainHeader.FindStringSubmatch(strings.TrimSpace(first))
+	if m == nil {
+		return false, 0
+	}
+	if m[1] != "" {
+		n, err := strconv.Atoi(m[1])
+		if err != nil {
+			return true, 1
+		}
+		return true, n
+	}
+	return true, 0
+}
+
+func plainTooLong(res plainResult, maxWords int) bool { return maxWords > 0 && res.words > maxWords }
 
 func TestPlainPagesUseFewerThanAThousandWords(t *testing.T) {
 	t.Parallel()
@@ -188,6 +209,7 @@ func TestPlainPagesUseFewerThanAThousandWords(t *testing.T) {
 
 	used := map[string]bool{}
 	enrolled := map[string]bool{}
+	limits := map[string]int{}
 	for _, f := range trackedFiles(t) {
 		if f.symlink || !strings.HasSuffix(f.path, ".md") {
 			continue
@@ -196,17 +218,18 @@ func TestPlainPagesUseFewerThanAThousandWords(t *testing.T) {
 		if err != nil {
 			t.Fatalf("read %s: %v", f.path, err)
 		}
-		first, _, _ := strings.Cut(string(raw), "\n")
-		if strings.TrimSpace(first) != plainMarker {
+		ok, maxWords := plainEnrolment(string(raw))
+		if !ok {
 			continue
 		}
 		enrolled[f.path] = true
+		limits[f.path] = maxWords
 		res := plainCheck(string(raw), vocab)
 		for w := range res.used {
 			used[w] = true
 		}
-		if plainTooLong(res) {
-			t.Errorf("%s has %d words; a plain page holds at most %d. Link to a deeper page instead.", f.path, res.words, plainPageWords)
+		if plainTooLong(res, maxWords) {
+			t.Errorf("%s has %d words; its marker allows at most %d. Link to a deeper page instead.", f.path, res.words, maxWords)
 		}
 		for w, n := range res.unknown {
 			t.Errorf("%s uses %q (%d×), which is in neither %s nor %s. Use a listed word, or add a technical name.",
@@ -220,9 +243,10 @@ func TestPlainPagesUseFewerThanAThousandWords(t *testing.T) {
 			t.Errorf("%s:%d: paragraph has more than %d sentences; split it", f.path, line, plainParagraphMax)
 		}
 	}
-	for _, rel := range plainRequired {
-		if !enrolled[rel] {
-			t.Errorf("%s must carry %s: it is the first page a reader opens", rel, plainMarker)
+	for rel, want := range plainRequired {
+		if !enrolled[rel] || limits[rel] == 0 || limits[rel] > want {
+			t.Errorf("%s must start with <!-- %s max-words=%d --> (or a lower limit): it is the first page a reader opens",
+				rel, plainMarker, want)
 		}
 	}
 	for _, list := range []struct {
@@ -267,7 +291,21 @@ func TestPlainPageRulesFireOnPlantedDefects(t *testing.T) {
 	if got := plainCheck("Die Straße ist offen.", vocab).words; got != 4 {
 		t.Errorf("non-ASCII words were not counted: got %d of 4", got)
 	}
-	if !plainTooLong(plainCheck(strings.Repeat("word ", plainPageWords+1), vocab)) {
-		t.Error("a page over the word cap was not reported")
+	if !plainTooLong(plainCheck(strings.Repeat("word ", 11), vocab), 10) {
+		t.Error("a page over its word limit was not reported")
+	}
+	if plainTooLong(plainCheck(strings.Repeat("word ", 11), vocab), 0) {
+		t.Error("a page with no word limit was reported as too long")
+	}
+	for doc, want := range map[string]int{
+		"<!-- prose:plain -->\n# A":                0,
+		"<!-- prose:plain max-words=1000 -->\n# A": 1000,
+	} {
+		if ok, got := plainEnrolment(doc); !ok || got != want {
+			t.Errorf("marker %q read as enrolled=%v limit=%d, want limit %d", doc, ok, got, want)
+		}
+	}
+	if ok, _ := plainEnrolment("# A\n`<!-- prose:plain -->`"); ok {
+		t.Error("a page quoting the marker below its first line was enrolled")
 	}
 }

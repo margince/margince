@@ -1,44 +1,37 @@
+<!-- prose:plain max-words=1000 -->
 # Contributing to Margince
 
-Margince is source-available (BUSL-1.1) and AI-native: most of this code
-is authored by agents under human accountability. Contributions are
-welcome, and held to the same craftsmanship bar as our own AI-authored code.
+Margince is source-available under the Business Source License (BUSL-1.1). AI agents write most of
+its code, and a human is accountable for each change. Your changes are welcome, and they must meet the
+same rules as the code our own agents write.
 
-Participation is covered by our [Code of Conduct](CODE_OF_CONDUCT.md),
-which includes one clause specific to a repository built this way:
-submitting volume you cannot explain is treated as disrespect for
-reviewers' time.
+The [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) covers how we work together. It adds one rule:
+to send more code than you can explain wastes the time of the reviewers.
 
-## Human accountability
+## You answer for your change
 
-**You are accountable for every line you submit, and must be able to
-explain every line.** AI assistance is welcome and expected;
-unexplainable, slop-flooded contributions are not. If you cannot explain
-why a line is there, what it does, and why it is correct, it is not
-ready. "The model wrote it" does not answer a review question.
+**You are accountable for every line you send.** You must explain every line. We expect you
+to use AI help. We refuse a change you cannot explain, and more code than the task needs. If you cannot say
+why a line is there, what it does and why it is right, it is not ready. "The model wrote it" does not
+answer a review question.
 
-This is the project's one non-negotiable rule. The disclosures below keep
-a human answerable for the result; they do not discourage AI use.
+This rule never changes. The AI note below keeps a human accountable, and it does not stop you from
+using AI.
 
-## AI disclosure
+## Say how you used AI
 
-Disclose AI involvement proportionately in the PR description:
+In the pull request text, say how you used AI:
 
-- **Assisted**: you wrote/directed it with AI help (autocomplete,
-  review, refactor). The default.
-- **Generated**: AI produced substantial portions you then reviewed
-  and own.
+- **Assisted**: you wrote it, and AI helped you write, review or change the shape of code. This is the normal case.
+- **Generated**: AI wrote much of it, and you read it all and own it.
 
-Margince's own build agents do not disclose per PR, because they author
-by design. External contributors disclose so the reviewer knows what
-they are accountable for. Either way, the same gates apply (below).
+Our own agents do not add this note, because all their code is AI code. You add it so the reviewer knows
+what you answer for. The same checks run in both cases.
 
-## A working tree in four commands
+## Start the stack
 
-You need **Go ≥ 1.27**, **Docker**, `golangci-lint`, and Node with pnpm
-for the frontend half. `package.json` pins the pnpm version in
-`packageManager`, and both Corepack and pnpm itself switch to that
-version, so every checkout uses the same one.
+You need Go 1.27 or later, Docker, `golangci-lint`, and Node with pnpm for the web app. The
+`packageManager` field in `package.json` sets the pnpm version, and both Corepack and pnpm switch to it.
 
 ```
 make install    # FE deps, gate tools, and the git hooks — run once
@@ -47,101 +40,79 @@ make migrate    # core + custom migrations
 make dev        # the whole stack: the app on :8080, the api behind it, worker
 ```
 
-Two things to know about `make dev`. It starts **this worktree's** stack
-and leaves every other one alone, so a second checkout can run at the same
-time. (`make dev-sweep` is the machine-wide clear, and the only thing that
-touches somebody else's stack.) And the API is **compiled**: Vite
-hot-reloads the frontend, the binary does not, so every backend change
-needs `make dev-stop && make dev`. `make dev` alone fails, because this
-worktree's stack still holds the ports and the boot refuses to talk over a
-server from an older build. A stale binary looks the same as a broken
-feature.
+Two things to know about `make dev`:
 
-Full target list: [docs/reference/make-targets.md](docs/reference/make-targets.md).
+- It starts the stack of this worktree only, so two copies can run at once. Only `make dev-sweep` stops
+  every stack on the machine.
+- Vite shows web app changes as you type, but the API is a built program. After a backend change, run
+  `make dev-stop && make dev`. A `make dev` by itself fails: the old stack holds the ports, and the start
+  refuses to run over an older server. An old API looks the same as a bug.
+
+[docs/reference/make-targets.md](docs/reference/make-targets.md) lists every command.
 
 ## Branch, commit, merge
 
-- **Branch off `main`**: `git switch -c <type>/<slug> origin/main`.
-  Direct pushes to `main` are blocked; there is no other path to merge.
-- **Conventional commit subjects**, scoped to the module:
-  `fix(deals): a closed deal reports the stage it closed in`.
-  Write the subject as the behaviour after the change, rather than the
-  task you performed.
-- **Squash-merge** is the house style, and only over green checks.
+- Make a branch from `main`: `git switch -c <type>/<slug> origin/main`. You cannot push to `main`, and
+  there is no other way to merge.
+- Write each commit subject in the Conventional Commits form, with the module as its scope:
+  `fix(deals): a closed deal reports the stage it closed in`. Say how the product works after the
+  change, not the task you worked on.
+- We merge with squash, and only when every check is green.
 
 ### Contributing from a fork
 
-A pull request from a fork runs the same `ci` gates as internal work, and
-`ci` is the one check a merge requires. A maintainer approves the
-workflow run before it starts, so expect a short wait on a first push.
-SonarCloud's token is withheld from fork-triggered workflows, so that
-analysis does not report on a fork PR; it is not a required check.
+A pull request from a fork runs the same `ci` checks as our own work, and `ci` is the one check a merge
+needs. A maintainer approves the run before it starts, so expect a short wait. A fork run gets no SonarCloud
+token, so SonarCloud does not report, and a merge does not need it.
 
-## The gates
+## The checks
 
-Every change (code, docs, and config alike) lands through the same
-loop your PR will run:
+Code, docs and settings all go through the same checks.
 
-1. **`make check`** is the merge gate: build, vet, lint (baseline +
-   new-code strict), arch-lint, unit + fitness tests, generated-code
-   drift, contract breaking-change, test-lane hygiene, image pins, and
-   the file-length ratchet. It already includes the frontend lane
-   (`check-fe`), so there is nothing to add on top. `make test-integration`
-   is the separate real-Postgres lane: tenant isolation, GDPR erasure,
-   audit immutability (needs `make db-up`). It fails loudly without a
-   database instead of skipping, because a skipped security gate looks
-   like a passing one.
-2. The **craftsmanship gate** (`craft static --strict`) runs on every
-   push once you run `make hooks`. It blocks `BLOCKER` and `MAJOR`
-   findings in the backend code you touched: a swallowed error, a sleep
-   in a test, a bare `any` in a signature, a two-bool signature, an
-   assertion-free test, or a function over 80 code lines (160 in
-   `*_test.go`). A comment-only line does not count toward that ceiling;
-   a trailing comment does not exempt its code line. `MINOR` is advisory.
-   There is no backlog: `make craft-static` is green on `main`, and CI
-   runs the same bar. Waive a false positive in source with a reason,
-   `//craft:ignore <check> <reason>`; that is the only way to stand a
-   finding down, and the next developer to touch the line reads the
-   reason. The binary is checksum-pinned and fetched by
-   `scripts/craft-pin.sh` on first use, so your laptop and CI give the
-   same verdict.
-3. **CI must be all green before merge**: the same deterministic gates
-   plus automated review and static analysis. Address findings
-   instead of dismissing them; squash-merge is the house style.
+- `make check` is the merge check. It builds, lints and tests the code. It also checks the generated
+  code, changes to the API contract, the image pins and file length, and the web app (`check-fe`).
+- `make test-integration` is a separate run against a real Postgres, and needs `make db-up`. It tests
+  that a workspace sees only its own data, GDPR erase requests, and an audit log no one can change. With
+  no database it fails and does not skip, because a skipped security check looks the same as a passed one.
+- The craftsmanship gate (`craft static --strict`) runs on each push once you run `make hooks`. It blocks
+  each `BLOCKER` and `MAJOR` finding in the backend code you changed. A `MINOR` finding does not block.
+- Every check in CI must be green before a merge: the same checks, plus review bots and SonarCloud. Fix
+  what they find, and do not dismiss it.
 
-Write it right the first time: match the surrounding file, comments say
-*why* not *what*, never swallow an error, and tests prove behaviour or
-they are noise.
+The craftsmanship gate finds a dropped error, a sleep in a test, and a test that checks nothing. It
+also finds an `any` type or two `bool` values in a signature, and a function over 80 code lines (160 in
+`*_test.go`). A line with only a comment does not count against that limit, but a comment after code
+does not free its line.
+
+`make craft-static` is green on `main`, and CI runs the same check. If a finding is wrong, mark it in the source with a reason: `//craft:ignore <check> <reason>`.
+That is the only way to stand a finding down, and the next developer to touch the line reads the reason.
+`scripts/craft-pin.sh` gets the tool and checks its checksum, so your laptop and CI agree.
+
+Write it right the first time. Match the file you change. A comment says why, not what. Never
+drop an error. A test must prove how the code works, or it is noise.
 
 ## Where things go
 
-- Implementation decisions go in the commit message and PR
-  description that makes the change. Git history is the record.
-- Open work lives in GitHub issues (there is no status file);
-  start there, and read [AGENTS.md](AGENTS.md) for the binding
-  engineering rules.
-- Defects and proposals go to GitHub issues, which are templated: a bug,
-  a **deferred follow-up**, a capability gap or proposal, or a
-  documentation defect. A deferred follow-up is anything you found and
-  chose not to fix in the change at hand; it becomes an issue instead of
-  a comment in the source. Security vulnerabilities go through
-  [SECURITY.md](SECURITY.md) (private reporting), never a public issue.
-- **This repository is public.** Nothing you write in an issue, a PR, or
-  a commit may carry a secret, customer or personal data, a local
-  machine path, or a private document's path or contents. Write the rule
-  out instead of citing something a reader cannot open.
+- What you decide in your work goes in the commit message and the pull request text. The git history
+  is the record.
+- Open work is in GitHub issues, and there is no status file. Start there, and read
+  [AGENTS.md](AGENTS.md) for the rules every change must follow.
+- Each GitHub issue starts from a form: a bug, a deferred
+  follow-up, a missing feature or proposal, or a problem in the docs.
+- A deferred follow-up is a problem you leave for later: an issue, not a comment in the code.
+- A security problem goes in private, as [SECURITY.md](SECURITY.md) explains. Never open a public issue
+  for it.
+- This repository is public. Never put a secret, customer or personal data, a local path, or a private
+  document or its path in an issue, pull request or commit. Write the rule out instead of pointing to
+  something a reader cannot open.
 
-Margince is built contract-first: `backend/api/crm.yaml` is the
-authoritative surface. No separate specification outranks the running
-software, its contract, its tests and its docs. If an older document
-disagrees with the tree, name the conflict and keep going. Why it is
-arranged that way:
-[docs/principles/the-record-is-the-code.md](docs/principles/the-record-is-the-code.md).
+`backend/api/crm.yaml` is the API contract, and the code follows it. The running software, its
+contract, its tests and its docs come first. If an older document disagrees with the code, name the
+conflict and keep going.
+[docs/principles/the-record-is-the-code.md](docs/principles/the-record-is-the-code.md) explains why.
 
-## Before you open a PR
+## Before you open a pull request
 
-- Keep the PR scoped, and let it tell a story: what, why, and how it
-  was verified.
-- Run the pre-submit self-check in [AGENTS.md](AGENTS.md) →
-  *Craftsmanship*.
-- `make check` is green locally.
+- Keep the pull request small, and make it tell the story: what changed, why, and how you checked it.
+- Check your change against the Craftsmanship section of [AGENTS.md](AGENTS.md).
+- `make check` is green on your machine.

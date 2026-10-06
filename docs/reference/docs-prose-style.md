@@ -83,32 +83,36 @@ Other gates check other parts of a docs change. `docscodepaths_test.go` checks t
 
 ## Plain pages
 
-A page that carries `<!-- prose:plain -->` as its first line is held to a stricter bar, checked by
-`backend/gates/docsplainwords_test.go`. `README.md` is the first plain page and must stay one. Other pages
-join by adding the marker once they meet the bar.
+A page whose first line is `<!-- prose:plain -->` is held to a stricter bar, checked by
+`backend/gates/docsplainwords_test.go`. Pages join by adding the marker once they meet the bar.
 
 | Rule | Limit |
 |---|---|
-| Page length | 1,000 words of prose at most |
+| Vocabulary | Only words in `docs/reference/plain-words.txt` or `docs/reference/technical-names.txt` |
 | Sentence length | 20 words in a numbered step, 25 in any other sentence |
 | Paragraph length | 6 sentences |
-| Vocabulary | Only words in `docs/reference/plain-words.txt` or `docs/reference/technical-names.txt` |
+| Page length | Only when the marker sets it: `<!-- prose:plain max-words=1000 -->` |
 
-`plain-words.txt` holds general English words and is capped at 999 entries: the whole documentation set
-shares fewer than 1,000 simple words. `technical-names.txt` holds names a reader must learn anyway, such as
-products, protocols and file names. A general word also covers its regular forms, so a page may write
-`deals` or `connected` when the list holds `deal` and `connect`; a technical name matches only as written.
-Inline code is not checked, and neither is link text that contains a `.` or a `/`, such as a path or a host.
+`plain-words.txt` holds general English words and is capped at 999 entries: all plain pages share fewer
+than 1,000 simple words. `technical-names.txt` holds names a reader must learn anyway, such as products,
+protocols and file names. A general word also covers its regular forms, so a page may write `deals` or
+`connected` when the list holds `deal` and `connect`; a technical name matches only as written. Inline code
+is not checked, and neither is link text that contains a `.` or a `/`, such as a path or a host.
+
+A page a newcomer reads first should also stay short, so it sets `max-words`. `README.md` must carry
+`max-words=1000` or lower. An index or a long guide sets no length limit and is held to the vocabulary and
+sentence rules alone.
 
 To use a new word, first look for a listed word that says the same thing. If none does, add it to the right
 list in the same pull request, in sorted order. A word that no plain page uses any more must leave the list,
 so the vocabulary cannot grow by accident.
 
 The rules come from two places. ASD-STE100 Simplified Technical English is the standard for maintenance
-manuals: about 900 approved words, a 20-word limit for a procedure sentence, 25 for a description, and at
-most 6 sentences in a paragraph. Randall Munroe's Up-Goer Five uses only the thousand most common words, and
-shows that plain words expose a fuzzy explanation. The page budget matches what well-run projects do: the
-READMEs of Kubernetes, React, Go and Terraform each stay under 1,000 words.
+manuals: a dictionary of about 900 approved words, a 20-word limit for a procedure sentence, 25 for a
+description, and at most 6 sentences in a paragraph. Randall Munroe's Up-Goer Five uses only the thousand
+most common words, and shows that plain words expose a fuzzy explanation. Both limit the word pool, not the
+length of a page. The README's own length limit follows what well-run projects do: the READMEs of
+Kubernetes, React, Go and Terraform each stay under 1,000 words.
 
 ## Renaming a term
 
