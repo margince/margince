@@ -140,21 +140,14 @@ export function AiFeatureTable({
 
 // Edit stays in the column so every row offers the same door, refused with
 // where this lane's settings live. The tip rides a wrapper because a disabled
-// button takes no pointer or focus events.
+// button takes no pointer events; a screen reader reads the same sentence.
 function UntunableEdit({ name }: Readonly<{ name: string }>) {
   const t = useT();
   const reasonId = useId();
   const reason = t("aiTasks.embeddingsEdit");
   const tip = useTooltip<HTMLSpanElement>(reason);
   return (
-    // Focusable itself: the button is disabled and takes no focus, and a
-    // keyboard reader must still reach the sentence that says why.
-    <span
-      ref={tip.ref}
-      {...tip.trigger}
-      tabIndex={0}
-      aria-describedby={reasonId}
-    >
+    <span ref={tip.ref} {...tip.trigger}>
       <Button reasonId={reasonId} aria-label={`${t("aiRouting.edit")} ${name}`}>
         {t("aiRouting.edit")}
       </Button>
