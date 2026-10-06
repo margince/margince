@@ -141,6 +141,22 @@ func TestEveryWorkflowJobCarriesATimeoutCeiling(t *testing.T) {
 // fetches every browser and would have escaped a list naming chromium.
 var unpinnedInstalls = []string{"playwright install"}
 
+// boundedByCommand asks whether every line that installs carries the bound
+// ITSELF, rather than the run merely containing the word somewhere: a run whose
+// first line is `timeout 3m true` and whose second installs unbounded would
+// otherwise read as bounded.
+func boundedByCommand(run string) bool {
+	for _, line := range strings.Split(run, "\n") {
+		if !isUnpinnedInstall(line) {
+			continue
+		}
+		if !strings.HasPrefix(strings.TrimSpace(line), "timeout ") {
+			return false
+		}
+	}
+	return true
+}
+
 // isUnpinnedInstall is the predicate the scan applies. The table below calls it
 // rather than re-deriving the match, so a change to the list is judged by those
 // cases instead of by two spellings agreeing with each other.
@@ -156,25 +172,34 @@ func isUnpinnedInstall(run string) bool {
 // "the job was cancelled" — which reads as the lane being slow, and sends the
 // next contact to the change under review. The change under review is never the
 // cause, because this step runs before a single test does.
-// A composite action's steps cannot carry timeout-minutes, so the bound they
-// use is the command. Both spellings satisfy the scan, and an install with
-// neither does not.
-func TestEitherSpellingOfTheBoundSatisfiesTheScan(t *testing.T) {
+// Which bound counts depends on WHERE the step runs: GitHub refuses
+// timeout-minutes on a composite action's steps, so only the command bounds one
+// there, while a workflow step takes either. And the bound has to prefix the
+// install itself — a run that merely mentions the word is not bounded.
+func TestTheBoundThatCountsDependsOnWhereTheStepRuns(t *testing.T) {
 	t.Parallel()
 	for _, tc := range []struct {
-		name  string
-		step  workflowStep
-		bound bool
+		name      string
+		step      workflowStep
+		composite bool
+		bound     bool
 	}{
-		{"the step key", workflowStep{Run: "pnpm exec playwright install chromium", TimeoutMinutes: 6}, true},
-		{"the command", workflowStep{Run: "timeout 6m pnpm exec playwright install chromium"}, true},
-		{"neither", workflowStep{Run: "pnpm exec playwright install chromium"}, false},
+		{"workflow, step key", workflowStep{Run: "pnpm exec playwright install chromium", TimeoutMinutes: 6}, false, true},
+		{"workflow, command", workflowStep{Run: "timeout 5m pnpm exec playwright install chromium"}, false, true},
+		{"workflow, neither", workflowStep{Run: "pnpm exec playwright install chromium"}, false, false},
+		// The key GitHub refuses on a composite step: a file carrying it fails
+		// to load, so the scan must not read it as a bound.
+		{"composite, step key", workflowStep{Run: "pnpm exec playwright install chromium", TimeoutMinutes: 6}, true, false},
+		{"composite, command", workflowStep{Run: "timeout 5m pnpm exec playwright install chromium"}, true, true},
+		// The word is in the run, but not on the line that installs.
+		{"the bound is elsewhere", workflowStep{Run: "timeout 3m true\npnpm exec playwright install chromium"}, true, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			probe := &testing.T{}
-			boundedInstalls(probe, "action.yml", "(composite)", []workflowStep{tc.step})
+			boundedInstalls(probe, "action.yml", "(probe)", []workflowStep{tc.step}, tc.composite)
 			if probe.Failed() == tc.bound {
-				t.Errorf("step %+v: failed=%v, want bounded=%v", tc.step, probe.Failed(), tc.bound)
+				t.Errorf("step %+v (composite=%v): failed=%v, want bounded=%v",
+					tc.step, tc.composite, probe.Failed(), tc.bound)
 			}
 		})
 	}
@@ -187,14 +212,14 @@ func TestTheUnpinnedInstallIsBoundedWhereverItRuns(t *testing.T) {
 	for _, path := range workflowFiles(t) {
 		wf := readWorkflowJobs(t, path)
 		for _, name := range slices.Sorted(maps.Keys(wf.Jobs)) {
-			found += boundedInstalls(t, path, name, wf.Jobs[name].Steps)
+			found += boundedInstalls(t, path, name, wf.Jobs[name].Steps, false)
 		}
 	}
 	// Composite actions too: a step that moves into one leaves the workflow
 	// tree, and a scan that only reads workflows would report the move as a
 	// clean tree rather than as the step it stopped watching.
 	for _, path := range compositeActionFiles(t) {
-		found += boundedInstalls(t, path, "(composite)", readCompositeSteps(t, path))
+		found += boundedInstalls(t, path, "(composite)", readCompositeSteps(t, path), true)
 	}
 	if found == 0 {
 		t.Errorf("no step in the workflow or action tree runs any of %q. Either they are gone — delete "+
@@ -205,7 +230,7 @@ func TestTheUnpinnedInstallIsBoundedWhereverItRuns(t *testing.T) {
 
 // boundedInstalls checks one step list and returns how many unpinned installs
 // it held, so the caller can tell an empty corpus from a clean one.
-func boundedInstalls(t *testing.T, path, job string, steps []workflowStep) int {
+func boundedInstalls(t *testing.T, path, job string, steps []workflowStep, composite bool) int {
 	t.Helper()
 	found := 0
 	for _, step := range steps {
@@ -213,12 +238,24 @@ func boundedInstalls(t *testing.T, path, job string, steps []workflowStep) int {
 			continue
 		}
 		found++
-		if step.TimeoutMinutes == 0 && !strings.Contains(step.Run, "timeout ") {
+		// timeout-minutes counts ONLY in a workflow. GitHub refuses the key on
+		// a composite action's steps and the whole action then fails to load,
+		// so accepting it here would pass a file that can never run.
+		if composite {
+			if !boundedByCommand(step.Run) {
+				t.Errorf("%s: step %q installs from an unpinned package repository and the install is "+
+					"not prefixed by a `timeout` command. A composite action's steps cannot carry "+
+					"timeout-minutes — GitHub refuses the key and the action fails to load — so the "+
+					"command is the only bound available here",
+					filepath.Base(path), step.Name)
+			}
+			continue
+		}
+		if step.TimeoutMinutes == 0 && !boundedByCommand(step.Run) {
 			t.Errorf("%s: job %q, step %q installs from an unpinned package repository with no bound "+
 				"of its own, so a stalled mirror spends the job's whole budget and reports as the lane "+
 				"timing out rather than as the install hanging. Either timeout-minutes on the step, or "+
-				"a `timeout` command in the run — which is what a composite action's steps must use, "+
-				"GitHub refusing timeout-minutes there",
+				"a `timeout` command prefixing the install",
 				filepath.Base(path), job, step.Name)
 		}
 	}

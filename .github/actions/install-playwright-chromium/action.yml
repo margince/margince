@@ -87,6 +87,18 @@ runs:
       shell: bash
       run: timeout 5m pnpm exec playwright install-deps chromium
 
+    # The step above is continue-on-error so a failure can be retried, which
+    # means nothing has failed yet when the retry is the step that got skipped.
+    # Without this the action would finish GREEN with the libraries missing and
+    # the screens would fail later, or render wrong and pass.
+    - name: Refuse to continue without the libraries
+      if: steps.deps.outcome == 'failure' && steps.deps.outputs.code == '124'
+      shell: bash
+      run: |
+        echo "::error::the system libraries did not install inside their bound, and a retry would \
+        report dpkg's held lock instead of this" >&2
+        exit 1
+
     - name: Download the Chromium build
       id: browser
       if: steps.cache.outputs.cache-hit != 'true'
