@@ -88,7 +88,6 @@ import {
   MailSyncCard,
   WebsiteReadingCard,
 } from "./capture-settings";
-import { CaptureHealthCard } from "./capturehealth";
 import {
   LoadMoreButton,
   problemMessageOf,
@@ -104,16 +103,13 @@ import { ConnectedAgentsCard } from "./connected-agents";
 import { ConnectorsCard } from "./connectors";
 import { ConsumerMailDomainsCard } from "./consumer-mail-domains";
 import { CustomFieldsAdmin } from "./customfields";
-import { EmbedReindexCard } from "./embedreindex";
 import { EntityRef } from "./entityref";
 import { ExtensionAccessCard } from "./extension-access";
 import { ExtensionUnitsCard } from "./extension-units";
-import { ExtensionIngestHealthCard } from "./extingesthealth";
 import { HeldThreadsCard } from "./held-threads";
 import { ImportCard } from "./import";
 import { InstallationSettingsCard } from "./installation-settings";
 import { ProviderCard } from "./integrations-provider";
-import { JobHealthCard } from "./jobhealth";
 import { KnowledgeCard } from "./knowledge";
 import {
   LeadDisqualifyReasonsCard,
@@ -129,12 +125,10 @@ import { MeetingSettings } from "./meeting-settings";
 import { NotificationSettingsCard } from "./notification-settings";
 import { OAuthAppCard } from "./oauth-app";
 import { OfferTemplatesAdmin } from "./offertemplates";
-import { BackgroundSchedulesCard, SendPacingCard } from "./operationsettings";
 import { OvernightGrantCard } from "./overnight-grant";
 import { OwnDomainsCard } from "./own-domains";
 import { PasswordSettingRow } from "./passwordcard";
 import { ProductsAdmin } from "./products";
-import { ProviderHealthCard } from "./providerhealth";
 import { FxRatesCard, ModelCostsCard } from "./rates";
 import { RecordRolesCard } from "./recordroles";
 import { ReviewTemplatesCard } from "./reviewtemplates";
@@ -142,6 +136,7 @@ import { RolesSettings } from "./roles-settings";
 import { PipelinesCard } from "./settings.pipelines";
 import { PrivacyLanes } from "./settings.privacy";
 import { StageAutomationCard } from "./settings.stageautomation";
+import { SystemHealthPage } from "./settings.systemhealth";
 import {
   DisplayNameSettingRow,
   GreetingNameSettingRow,
@@ -374,23 +369,7 @@ export function tabContent(id: SettingsPageId): ReactNode {
       // could hold the audit grant and be refused the page carrying it.
       return <AuditLogCard />;
     case "system-health":
-      return (
-        <>
-          {/* A reindex that costs tokens, then a read of what the background
-              system is holding: they hid beside the custom-field editor. */}
-          <EmbedReindexCard />
-          <JobHealthCard />
-          {/* How often that work is scheduled and how fast mail leaves, under
-              the reading of what it is holding. */}
-          <BackgroundSchedulesCard />
-          <SendPacingCard />
-          {/* Beside the queue reading, not under Capture or Extensions: each
-              answers "is something broken in the background". */}
-          <CaptureHealthCard />
-          <ExtensionIngestHealthCard />
-          <ProviderHealthCard />
-        </>
-      );
+      return <SystemHealthPage />;
     case "extensions":
       return <ExtensionAccessCard />;
     case "reset":

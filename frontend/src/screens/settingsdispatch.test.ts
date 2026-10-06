@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -91,12 +91,13 @@ const CARDS_THE_REGISTER_REACHED = [
 
 describe("the split lost no card", () => {
   function renderedComponents(): Set<string> {
-    // BOTH FILES, because a page whose cards outgrew settings.tsx's frozen
-    // length moves them into a companion of its own — the privacy lanes did,
-    // and a scan reading only settings.tsx called four surviving cards lost.
-    // The question this asks is "does the product still render it", and the
-    // file a card is written in is not part of that question.
-    const source = ["settings.tsx", "settings.privacy.tsx"]
+    // settings.tsx AND every `settings.<page>.tsx` companion, because a page
+    // whose cards outgrew settings.tsx's frozen length moves them into one —
+    // the privacy lanes did, and a scan reading only settings.tsx called four
+    // surviving cards lost. Found by name rather than listed, so the next
+    // companion is read without anybody remembering to add it here.
+    const source = readdirSync(here)
+      .filter((file) => /^settings(\.[a-z]+)?\.tsx$/.test(file))
       .map((file) => readFileSync(join(here, file), "utf8"))
       .join("\n");
     // The WHOLE file, not just `tabContent`. Several pages dispatch to a tab
