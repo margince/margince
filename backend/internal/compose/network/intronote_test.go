@@ -13,12 +13,15 @@ package network
 // name pasted out of a record with a second paragraph hidden in it.
 
 import (
+	"context"
 	"encoding/json"
 	"strings"
 	"testing"
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
@@ -373,5 +376,139 @@ func TestTheNoteTemplateSurvivesItsOwnParse(t *testing.T) {
 		if _, err := parseIntroNote(string(raw), facts); err != nil {
 			t.Errorf("%s: the template is refused by its own parse: %v", name, err)
 		}
+	}
+}
+
+// On an indirect route the note claims no relationship and names nobody in the
+// middle, in the text and in the model's input.
+//
+// The band and date describe the intermediary's edge rather than the sender's,
+// so stating them would tell a customer the sender knows them when no record
+// says so. Naming the intermediary tells the customer who talked about them,
+// which the route's evidence does not authorise.
+func TestAnIndirectRouteClaimsNoRelationshipAndNamesNobodyInTheMiddle(t *testing.T) {
+	t.Parallel()
+	facts := warmNote()
+	facts.through = "Marta Reyes"
+
+	body := noteFloor(facts).body
+	for _, absent := range []string{"developing", "last around", "Marta Reyes"} {
+		if strings.Contains(body, absent) {
+			t.Errorf("an indirect note states %q:\n%s", absent, body)
+		}
+	}
+	// It still does its job: the customer is addressed and the rep is named.
+	for _, present := range []string{"Philipp", "Lena Fischer"} {
+		if !strings.Contains(body, present) {
+			t.Errorf("an indirect note stopped naming %q:\n%s", present, body)
+		}
+	}
+}
+
+// The same facts are withheld from the model, not only from the template. A
+// prompt handed the intermediary's edge can state it whatever the system prompt
+// says, so a forwarded message's accuracy would depend on the model following
+// an instruction rather than on what it was given.
+func TestAnIndirectRouteHandsTheModelNoEdgeAndNoMiddleName(t *testing.T) {
+	t.Parallel()
+	facts := warmNote()
+	facts.through = "Marta Reyes"
+
+	sent := noteRequest(facts)
+	prompt := sent.System
+	for _, message := range sent.Messages {
+		prompt += "\n" + message.Content
+	}
+	for _, absent := range []string{"developing", "Marta Reyes", "2026-08-20"} {
+		if strings.Contains(prompt, absent) {
+			t.Errorf("the model was handed %q on an indirect route:\n%s", absent, prompt)
+		}
+	}
+	// A direct route still carries both. The withholding is about the route, not
+	// a blanket removal.
+	direct := noteRequest(warmNote())
+	carried := direct.System
+	for _, message := range direct.Messages {
+		carried += "\n" + message.Content
+	}
+	if !strings.Contains(carried, "developing") {
+		t.Errorf("a direct route stopped telling the model the relationship:\n%s", carried)
+	}
+}
+
+// The note is written in the contact's language, and says so when it could not
+// tell.
+//
+// Detected from the CORRESPONDENCE rather than the names: "Brandt GmbH" is not
+// prose and detects as nothing, which is how a German customer came to be
+// written to in English.
+func TestTheNoteSpeaksTheLanguageTheContactWritesIn(t *testing.T) {
+	t.Parallel()
+	german := warmNote()
+	german.lang = textlang.Detect(
+		"Guten Tag, vielen Dank für Ihre Nachricht. Wir prüfen das Angebot und " +
+			"melden uns bis Ende der Woche bei Ihnen zurück.")
+	if german.lang != textlang.German {
+		t.Fatalf("German correspondence detected as %q", german.lang)
+	}
+
+	body := noteFloor(german).body
+	if !strings.Contains(body, "Ich hielt die Vorstellung für sinnvoll.") &&
+		!strings.Contains(body, "Wir stehen in Kontakt") {
+		t.Errorf("a German contact was written to in another language:\n%s", body)
+	}
+}
+
+// An undetermined language is reported rather than defaulted in silence. A
+// reader fluent only in the default cannot tell a fallback from a choice by
+// reading the text, so the wire says it, as voice_degraded already does.
+func TestADraftWhoseLanguageIsUnknownSaysSoOnTheWire(t *testing.T) {
+	t.Parallel()
+	unknown := warmNote()
+	unknown.lang = textlang.Unknown
+
+	out := wireIntroNote(noteFloor(unknown), crmcontracts.WrittenByDeterministic, unknown)
+	if out.LanguageUndetermined == nil || !*out.LanguageUndetermined {
+		t.Errorf("a draft that fell back to the default language reports %v", out.LanguageUndetermined)
+	}
+	// And it is still sendable, in the default: a language hint is not worth
+	// refusing a note over.
+	if out.Body == "" || !strings.Contains(out.Body, "Philipp") {
+		t.Errorf("an undetermined language cost the rep their note:\n%s", out.Body)
+	}
+
+	// A detected language says nothing, so a client can tell the two apart.
+	determined := wireIntroNote(noteFloor(warmNote()), crmcontracts.WrittenByDeterministic, warmNote())
+	if determined.LanguageUndetermined != nil && *determined.LanguageUndetermined {
+		t.Error("a draft written in the contact's own language reported it as undetermined")
+	}
+}
+
+// A reader who may see none of the contact's mail gets no language, and no
+// error.
+//
+// The grant is checked before any query, so this needs no database. The
+// behaviour is worth holding for itself: refusing the whole draft over a
+// language hint would be a worse answer than writing it in the default and
+// saying the language was not determined.
+func TestACallerWithNoActivityGrantGetsNoLanguageRatherThanAnError(t *testing.T) {
+	t.Parallel()
+	// Everything a draft needs EXCEPT the activity read.
+	ctx := principal.WithActor(context.Background(), principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + ids.NewV7().String(),
+		Permissions: principal.Permissions{
+			Objects:  map[string]principal.ObjectGrant{"contact": {Read: true}},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+
+	// A nil transaction is the assertion. The grant is refused before the read,
+	// so touching it would panic.
+	said, err := contactCorrespondence(ctx, nil, ids.New[ids.ContactKind](), time.Now().UTC())
+	if err != nil {
+		t.Fatalf("a denied activity grant answered %v, want no error", err)
+	}
+	if said != "" {
+		t.Errorf("a denied activity grant answered %q, want nothing to detect from", said)
 	}
 }
