@@ -278,6 +278,9 @@ export const deals = [
     pipeline_id: "pl",
     stage_id: "s2",
     company_id: "o-brandt",
+    // The seeded seat carries it, so the card's owner mark and the table's
+    // owner column both have a colleague to name.
+    owner_id: "u1",
     project_id: null as string | null,
     status: "open",
     // The reason a win carries when no signed agreement backs it. Declared on

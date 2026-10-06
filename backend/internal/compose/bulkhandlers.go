@@ -25,13 +25,16 @@ import (
 // way the lifecycle seams build theirs. gate is the one whose volume meter an
 // agent's changed records are admitted against.
 func newBulkEngine(db *database.DB, gate *auth.Gate) *bulkEngine {
+	contactsStore, tasks := contacts.NewStore(db), activities.NewStore(db)
+	targets := bulkTargets(contactsStore, deals.NewStore(db, DealsInstallation()))
+	targets[crmcontracts.BulkRecordTypeWorklistItem] = worklistBulkTarget{tasks: tasks, claims: contactsStore}
 	return &bulkEngine{
 		db:      db,
-		targets: bulkTargets(contacts.NewStore(db), deals.NewStore(db, DealsInstallation())),
+		targets: targets,
 		gate:    gate,
 		now:     func() time.Time { return time.Now().UTC() },
 		tags:    NewCollectionsStore(db.Pool()),
-		tasks:   activities.NewStore(db),
+		tasks:   tasks,
 	}
 }
 

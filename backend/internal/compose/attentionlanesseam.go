@@ -62,6 +62,9 @@ func (c attentionCommitments) DueBy(ctx context.Context, by time.Time, limit int
 	if err != nil {
 		return nil, err
 	}
+	if err := c.store.MarkSettleable(ctx, due); err != nil {
+		return nil, err
+	}
 	promises := make([]attention.Commitment, 0, len(due))
 	for _, row := range due {
 		promises = append(promises, attention.Commitment{
@@ -72,6 +75,8 @@ func (c attentionCommitments) DueBy(ctx context.Context, by time.Time, limit int
 			SourceLabel: row.SourceLabel,
 			OccurredAt:  row.OccurredAt,
 			DueAt:       row.DueAt,
+			Version:     row.Version,
+			ReadOnly:    !row.Settleable,
 		})
 	}
 	return promises, nil

@@ -10,16 +10,16 @@
   "totals": {
     "tools": 81,
     "resources": 11,
-    "tool_catalog_bytes": 251799,
+    "tool_catalog_bytes": 252208,
     "resource_catalog_bytes": 4179,
-    "approx_wire_tokens_total": 63994,
+    "approx_wire_tokens_total": 64096,
     "largest_tool_bytes": 9253,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
-      "description_bytes": 66340,
-      "input_schema_bytes": 57129,
-      "output_schema_bytes": 110983,
-      "description_plus_input_schema_bytes": 123469
+      "description_bytes": 66529,
+      "input_schema_bytes": 57297,
+      "output_schema_bytes": 111035,
+      "description_plus_input_schema_bytes": 123826
     }
   },
   "tools": {
@@ -1158,7 +1158,7 @@
           "readOnlyHint": false,
           "title": "Change many records at once"
         },
-        "description": "Hand up to 500 contacts, companies, deals or leads to one owner, archive them, add them to or take them off a Shortlist, put a tag on or take it off, or file one task under each, in one change — or undo such a change. Call mode preview first and show the user what it says: how many records change, which are left alone and why, and the sample rows. Execute only after they agree. Each record is changed only if it still has the version you sent and you may change it. To undo, pass the batch_id to undo_preview, show the user the answer, and call undo after they agree; a change is undone once, and records changed since are left alone. update_record and archive_record change one record. Above 10 records, execute and undo need the confirm_token their preview answered; it is good once. Keep batch_id from the answer: undo names the change by it. (Governance: runs immediately; requires passport scope \"write\".)",
+        "description": "Hand up to 500 contacts, companies, deals or leads to one owner, archive them, add them to or take them off a Shortlist, put a tag on or take it off, or file one task under each, in one change; or mark up to 500 of the user's Worklist tasks done (record_type worklist_item, verb complete) — or undo such a change. A Worklist commitment is not yours to mark done: it is skipped as commitment_needs_the_user. Call mode preview first and show the user what it says: how many records change, which are left alone and why, and the sample rows. Execute only after they agree. Each record is changed only if it still has the version you sent and you may change it. To undo, pass the batch_id to undo_preview, show the user the answer, and call undo after they agree; a change is undone once, and records changed since are left alone. update_record and archive_record change one record. Above 10 records, execute and undo need the confirm_token their preview answered; it is good once. Keep batch_id from the answer: undo names the change by it. (Governance: runs immediately; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
           "else": {
@@ -1239,12 +1239,13 @@
               "type": "string"
             },
             "record_type": {
-              "description": "A lead takes every verb but archive",
+              "description": "A lead takes every verb but archive and complete. A worklist_item is a Worklist task, and takes complete alone; a Worklist commitment is refused, because the user marks it done",
               "enum": [
                 "contact",
                 "company",
                 "deal",
-                "lead"
+                "lead",
+                "worklist_item"
               ],
               "type": "string"
             },
@@ -1286,7 +1287,8 @@
                 "remove_from_list",
                 "add_tag",
                 "remove_tag",
-                "create_task"
+                "create_task",
+                "complete"
               ],
               "type": "string"
             }
@@ -1391,6 +1393,9 @@
                           "archived": {
                             "type": "boolean"
                           },
+                          "done": {
+                            "type": "boolean"
+                          },
                           "listed": {
                             "type": "boolean"
                           },
@@ -1414,6 +1419,9 @@
                       "before": {
                         "properties": {
                           "archived": {
+                            "type": "boolean"
+                          },
+                          "done": {
                             "type": "boolean"
                           },
                           "listed": {

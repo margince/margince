@@ -109,8 +109,12 @@ export function WorklistRow({
   context,
   acts,
   framed = false,
+  pick,
 }: Readonly<{
   item: WorklistItem;
+  /** The row's selection checkbox, drawn beside its rank where the list
+   *  offers a bulk verb over the row. */
+  pick?: ReactNode;
   /** The way into what this row is ABOUT, drawn among its verbs. The Brief
    *  has no pane beside its list, so its focus rows open a drawer instead. */
   context?: ReactNode;
@@ -264,14 +268,16 @@ export function WorklistRow({
             that claim — so a digit per row spends a column saying again what
             the page says once. `position` is refused in compact rather than
             ignored: see RowDensity. */}
-        {position !== undefined && (
-          <Rank
-            position={position}
-            title={title}
-            selected={selected}
-            onSelect={onSelect}
-          />
-        )}
+        <RowLead pick={pick}>
+          {position !== undefined && (
+            <Rank
+              position={position}
+              title={title}
+              selected={selected}
+              onSelect={onSelect}
+            />
+          )}
+        </RowLead>
         {/* WHAT KIND of work, in its own column at a width that has one, so a
             reader running down the queue reads the kinds as a list without
             reading a title first — and in the warning tone on the rows the day
@@ -666,6 +672,23 @@ function NudgeDismiss({ contactId }: Readonly<{ contactId: string }>) {
     >
       {t("worklist.verb.dismiss")}
     </Button>
+  );
+}
+
+// The rank, with the row's selection checkbox before it where the list offers
+// one; without a checkbox a row lays out exactly as before.
+function RowLead({
+  pick,
+  children,
+}: Readonly<{ pick?: ReactNode; children: ReactNode }>) {
+  if (!pick) {
+    return <>{children}</>;
+  }
+  return (
+    <span className="worklist-row-lead">
+      {pick}
+      {children}
+    </span>
   );
 }
 

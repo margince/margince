@@ -23,7 +23,7 @@ import { SourceEvidence } from "../design-system/sourceevidence";
 import { calendarDay, dueInstant } from "../format/calendarday";
 import { formatDate, formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { DEAL_COMMITMENTS_KEY } from "./activitykeys";
+import { CLAIM_SETTLED_KEYS } from "./activitykeys";
 import { provenanceOf, throwProblem } from "./common";
 import { EntityRef } from "./entityref";
 import "./taskactions.css";
@@ -566,11 +566,9 @@ export function useClaimSettle(invalidateKeys: readonly QueryKey[]) {
       for (const queryKey of invalidateKeys) {
         queryClient.invalidateQueries({ queryKey });
       }
-      // The contact's own page and a deal's watch card list the same open
-      // claims, so either would keep showing a commitment just settled.
-      queryClient.invalidateQueries({ queryKey: ["contact"] });
-      queryClient.invalidateQueries({ queryKey: ["contact360"] });
-      queryClient.invalidateQueries({ queryKey: DEAL_COMMITMENTS_KEY });
+      for (const queryKey of CLAIM_SETTLED_KEYS) {
+        queryClient.invalidateQueries({ queryKey });
+      }
     },
   });
 }

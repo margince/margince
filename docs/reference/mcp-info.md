@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 81 |
 | Resources | 11 |
-| Tool catalog | 245.9 KB |
+| Tool catalog | 246.3 KB |
 | Resource catalog | 4.1 KB |
-| Approx. wire tokens | 63994 |
+| Approx. wire tokens | 64096 |
 | Largest tool | `prep_for_meeting` (9.0 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -30,10 +30,10 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 108.4 KB | 44% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 64.8 KB | 26% | Yes, every step |
-| Input schemas | 55.8 KB | 22% | Yes, every step |
+| Descriptions (incl. governance clause) | 65.0 KB | 26% | Yes, every step |
+| Input schemas | 56.0 KB | 22% | Yes, every step |
 | _Names, annotations, punctuation_ | 16.9 KB | 6% | Partly |
-| **Description + input schema** | **120.6 KB** | **49%** | **the recurring cost** |
+| **Description + input schema** | **120.9 KB** | **49%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -65,7 +65,7 @@ descriptions and input schemas are what each step pays for.
 | [`archive_record`](#archive_record) | Archive a record |  |  | 2.3 KB |
 | [`at_risk_relationships`](#at_risk_relationships) | Relationships going cold | yes |  | 2.6 KB |
 | [`book_meeting`](#book_meeting) | Book a meeting |  |  | 2.5 KB |
-| [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 5.5 KB |
+| [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 5.9 KB |
 | [`catch_me_up_on`](#catch_me_up_on) | Catch me up on a record | yes |  | 3.1 KB |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 3.5 KB |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 2.6 KB |
@@ -1619,15 +1619,17 @@ meeting. Keep the recorded activity id. Do not describe a record-only booking as
 
 ```text
 Hand up to 500 contacts, companies, deals or leads to one owner, archive them, add them to or take
-them off a Shortlist, put a tag on or take it off, or file one task under each, in one change — or
-undo such a change. Call mode preview first and show the user what it says: how many records change,
-which are left alone and why, and the sample rows. Execute only after they agree. Each record is
-changed only if it still has the version you sent and you may change it. To undo, pass the batch_id
-to undo_preview, show the user the answer, and call undo after they agree; a change is undone once,
-and records changed since are left alone. update_record and archive_record change one record. Above
-10 records, execute and undo need the confirm_token their preview answered; it is good once. Keep
-batch_id from the answer: undo names the change by it. (Governance: runs immediately; requires
-passport scope "write".)
+them off a Shortlist, put a tag on or take it off, or file one task under each, in one change; or
+mark up to 500 of the user's Worklist tasks done (record_type worklist_item, verb complete) — or
+undo such a change. A Worklist commitment is not yours to mark done: it is skipped as
+commitment_needs_the_user. Call mode preview first and show the user what it says: how many records
+change, which are left alone and why, and the sample rows. Execute only after they agree. Each
+record is changed only if it still has the version you sent and you may change it. To undo, pass the
+batch_id to undo_preview, show the user the answer, and call undo after they agree; a change is
+undone once, and records changed since are left alone. update_record and archive_record change one
+record. Above 10 records, execute and undo need the confirm_token their preview answered; it is good
+once. Keep batch_id from the answer: undo names the change by it. (Governance: runs immediately;
+requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -1713,12 +1715,13 @@ passport scope "write".)
       "type": "string"
     },
     "record_type": {
-      "description": "A lead takes every verb but archive",
+      "description": "A lead takes every verb but archive and complete. A worklist_item is a Worklist task, and takes complete alone; a Worklist commitment is refused, because the user marks it done",
       "enum": [
         "contact",
         "company",
         "deal",
-        "lead"
+        "lead",
+        "worklist_item"
       ],
       "type": "string"
     },
@@ -1760,7 +1763,8 @@ passport scope "write".)
         "remove_from_list",
         "add_tag",
         "remove_tag",
-        "create_task"
+        "create_task",
+        "complete"
       ],
       "type": "string"
     }
@@ -1871,6 +1875,9 @@ passport scope "write".)
                   "archived": {
                     "type": "boolean"
                   },
+                  "done": {
+                    "type": "boolean"
+                  },
                   "listed": {
                     "type": "boolean"
                   },
@@ -1894,6 +1901,9 @@ passport scope "write".)
               "before": {
                 "properties": {
                   "archived": {
+                    "type": "boolean"
+                  },
+                  "done": {
                     "type": "boolean"
                   },
                   "listed": {

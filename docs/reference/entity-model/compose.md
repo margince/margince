@@ -303,21 +303,21 @@ The 36 tables owned by `compose`, as the migrations build them. [Back to the ent
 | `changed_count` | `integer` | yes |  |
 | `params` | `jsonb`, default `'{}'::jsonb` | yes |  |
 | `passport_id` | `uuid` |  |  |
-| `record_type` | `text` | yes | One of `contact`, `company`, `deal`, `lead`. |
+| `record_type` | `text` | yes | One of `contact`, `company`, `deal`, `lead`, `worklist_item`. |
 | `requested_by` | `text` | yes |  |
 | `requested_for` | `uuid` |  |  |
 | `result` | `jsonb`, default `'{}'::jsonb` | yes |  |
 | `skipped_count` | `integer` | yes |  |
 | `undo_of` | `uuid` |  | Set on an undo: the change it put back. |
 | `undone_by` | `uuid` |  | Set once the change was undone: the undo that put it back. |
-| `verb` | `text` | yes | One of `reassign_owner`, `archive`, `add_to_list`, `remove_from_list`, `add_tag`, `remove_tag` and 1 more. |
+| `verb` | `text` | yes | One of `reassign_owner`, `archive`, `add_to_list`, `remove_from_list`, `add_tag`, `remove_tag` and 2 more. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 
 **Rules**
 
 - `bulk_operation_counts_check`: `CHECK (((changed_count >= 0) AND (skipped_count >= 0)))`
-- `bulk_operation_record_type_check`: `CHECK ((record_type = ANY (ARRAY['contact', 'company', 'deal', 'lead'])))`
-- `bulk_operation_verb_check`: `CHECK ((verb = ANY (ARRAY['reassign_owner', 'archive', 'add_to_list', 'remove_from_list', 'add_tag', 'remove_tag', 'create_task'])))`
+- `bulk_operation_record_type_check`: `CHECK ((record_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'worklist_item'])))`
+- `bulk_operation_verb_check`: `CHECK ((verb = ANY (ARRAY['reassign_owner', 'archive', 'add_to_list', 'remove_from_list', 'add_tag', 'remove_tag', 'create_task', 'complete'])))`
 
 **Indexes**
 
