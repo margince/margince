@@ -133,6 +133,20 @@ func TestLastContactIgnoresWhatIsOnlyScheduled(t *testing.T) {
 	}
 }
 
+func TestACanceledOrNoShowMeetingIsNotTheLastContact(t *testing.T) {
+	for _, status := range []crmcontracts.ActivityMeetingStatus{
+		crmcontracts.ActivityMeetingStatusCanceled, crmcontracts.ActivityMeetingStatusNoShow,
+	} {
+		called := act(crmcontracts.ActivityKindMeeting, testNow.AddDate(0, 0, -2))
+		called.MeetingStatus = &status
+		mail := act(crmcontracts.ActivityKindEmail, testNow.AddDate(0, 0, -6))
+		f := facts{deal: openDeal(), now: testNow, timeline: []crmcontracts.Activity{called, mail}}
+		if last, ok := lastContact(f); !ok || last.Kind != crmcontracts.ActivityKindEmail {
+			t.Errorf("last contact = %v (found %v), want the mail: a %s meeting is no contact", last.Kind, ok, status)
+		}
+	}
+}
+
 func TestACreateTaskArgumentIsAReadyTaskBody(t *testing.T) {
 	// The click sends these arguments as the task's body, unedited. A missing
 	// link or source is a task the server refuses after the reader clicked.

@@ -606,7 +606,7 @@ function SectionSwitcher({
         <span>{label}</span>
         <ChevronDown size={16} aria-hidden />
       </button>
-      <Modal open={open} onClose={close} labelledBy={titleId}>
+      <Modal open={open} onClose={close} labelledBy={titleId} intent="drawer">
         {/* Named by the SECTION: the list is everything Settings holds, and the
             entry the reader came from is marked inside it. */}
         <Heading size="large" id={titleId} className="t-h2 modal-title">

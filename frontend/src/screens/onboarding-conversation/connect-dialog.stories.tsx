@@ -72,11 +72,9 @@ export const MailboxAsk: Story = {
       headline="Connect your Google mailbox"
       intro="Margince reads the mail you send and receive so it can file it against the right account. It never sends on your behalf without you pressing Send."
     >
-      <div className="ob-connect-dialog-actions">
+      <div className="actions">
+        <Button>Not now</Button>
         <Button variant="primary">Continue to Google</Button>
-        <button type="button" className="ob-connect-dialog-notnow">
-          Not now
-        </button>
       </div>
     </Ask>
   ),
@@ -95,11 +93,9 @@ export const ScopesInTheContent: Story = {
           <li>connections you share with a contact</li>
         </ul>
       </div>
-      <div className="ob-connect-dialog-actions">
+      <div className="actions">
+        <Button>Not now</Button>
         <Button variant="primary">Continue to LinkedIn</Button>
-        <button type="button" className="ob-connect-dialog-notnow">
-          Not now
-        </button>
       </div>
     </Ask>
   ),
@@ -114,11 +110,9 @@ export const CredentialAsk: Story = {
       headline="Connect a mailbox over IMAP"
       intro="Margince signs in as you and reads your mail. The password is stored encrypted and is never shown again."
     >
-      <div className="ob-connect-dialog-actions">
+      <div className="actions">
+        <Button>Not now</Button>
         <Button variant="primary">Sign in</Button>
-        <button type="button" className="ob-connect-dialog-notnow">
-          Not now
-        </button>
       </div>
     </Ask>
   ),
@@ -134,11 +128,9 @@ export const MailboxAskGerman: Story = {
       headline="Microsoft-Postfach verbinden"
       intro="Margince liest deine gesendeten und empfangenen Nachrichten, um sie dem richtigen Konto zuzuordnen. Ohne deinen Klick auf Senden wird nichts verschickt."
     >
-      <div className="ob-connect-dialog-actions">
+      <div className="actions">
+        <Button>Nicht jetzt</Button>
         <Button variant="primary">Weiter zu Microsoft</Button>
-        <button type="button" className="ob-connect-dialog-notnow">
-          Nicht jetzt
-        </button>
       </div>
     </Ask>
   ),

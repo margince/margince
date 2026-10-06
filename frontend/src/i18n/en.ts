@@ -6807,7 +6807,6 @@ export const en = {
   "connectors.oauthConnected": "Connected",
   "connectors.oauthNotConnected": "Nothing was connected",
   "connectors.connectFailed": "Could not connect",
-  "connectors.imapConnectFailed": "Mailbox not connected",
 
   // The "Add a connection" affordance (Task 1): one verb in the card's header
   // opens a dialog listing the providers still addable, each with the sentence
@@ -6849,6 +6848,8 @@ export const en = {
   "connectors.imapSubmitCta": "Connect",
   "connectors.imapNeeded": "Required fields",
   "connectors.imapStillNeeded": "Required: {fields}",
+  "connectors.imapRange": "From {min} to {max}",
+  "connectors.imapOutOfRange": "Out of range: {fields}",
   "connectors.imapLoginRejected":
     "The mailbox rejected these credentials. Check host, email and app password.",
   "connectors.imapUnreachable":
@@ -8938,7 +8939,7 @@ export const en = {
   "users.link.copy": "Copy link",
   "users.link.copied": "Copied",
   "users.link.copyFailed":
-    "Copy failed. Select the link in the field and copy it manually.",
+    "Copy failed. Select the link above and copy it manually.",
   "users.link.expires": "Expires {when}.",
   "users.link.failedTitle": "Link not created",
   "users.link.failed":
