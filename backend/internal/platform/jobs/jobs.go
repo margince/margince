@@ -168,11 +168,15 @@ func (r *Runner) Start(ctx context.Context) error {
 
 // RemovePeriodic takes the schedule registered under id off this client.
 // Removing one that is not registered does nothing.
-func (r *Runner) RemovePeriodic(id string) { r.client.PeriodicJobs().RemoveByID(id) }
+func (r *Runner) RemovePeriodic(id string) {
+	//nolint:forbidigo // the schedule book's move of a kind periodicFor already built from its api/jobs.yaml cadence; no other caller
+	r.client.PeriodicJobs().RemoveByID(id)
+}
 
 // AddPeriodic registers a schedule on this client. A job with RunOnStart runs
 // once now, then on its schedule.
 func (r *Runner) AddPeriodic(job *river.PeriodicJob) error {
+	//nolint:forbidigo // puts back a job periodicFor built from its api/jobs.yaml cadence, at the interval its setting now holds; no other caller
 	if _, err := r.client.PeriodicJobs().AddSafely(job); err != nil {
 		return fmt.Errorf("jobs: adding a schedule: %w", err)
 	}

@@ -122,7 +122,7 @@ func TestAHealthySyncPacesTheNextOneAtTheConfiguredInterval(t *testing.T) {
 	// Distinctive on purpose: the default is two minutes, so an interval that
 	// never reached the write would still land inside any bound wide enough to
 	// hold the default, and this test would pass on the wrong number.
-	setMailSyncSeconds(t, ctx, ws, 3600)
+	setMailSyncSeconds(ctx, t, ws, 3600)
 
 	if err := syncOnceOf(ctx, t, reg, "gmail"); err != nil {
 		t.Fatalf("SyncOnce: %v", err)
@@ -150,7 +150,7 @@ func TestARateLimitedSyncHonoursTheProvidersRetryAfter(t *testing.T) {
 // through the capture settings store, and saves the default back when the test
 // ends: the setting is installation-wide and the package's other tests pace at
 // the default.
-func setMailSyncSeconds(t *testing.T, ctx context.Context, ws ids.WorkspaceID, seconds int) {
+func setMailSyncSeconds(ctx context.Context, t *testing.T, ws ids.WorkspaceID, seconds int) {
 	t.Helper()
 	_, pool := setupCaptureDB(t)
 	store := capture.NewSettings(settings.New(pool, settings.NewRegistry(capture.Definitions()...)))

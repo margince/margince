@@ -30,14 +30,14 @@ func (l *periodicLog) AddPeriodic(*river.PeriodicJob) error {
 	return nil
 }
 
-// bookWith schedules close_date_sweep and time_scan from a book holding the
-// given values, the two kinds reading two different settings.
-func bookWith(t *testing.T, closeDate, timeScan time.Duration) (*ScheduleBook, string, string) {
+// bookWith schedules close_date_sweep and time_scan hourly from a book, the two
+// kinds reading two different settings.
+func bookWith(t *testing.T) (*ScheduleBook, string, string) {
 	t.Helper()
 	closeSpec, scanSpec := specFor(t, CloseDateSweepArgs{}.Kind()), specFor(t, TimeScanArgs{}.Kind())
 	book := newScheduleBook(map[string]time.Duration{
-		closeSpec.Cadence.Setting: closeDate,
-		scanSpec.Cadence.Setting:  timeScan,
+		closeSpec.Cadence.Setting: time.Hour,
+		scanSpec.Cadence.Setting:  time.Hour,
 	})
 	book.schedule(closeSpec, CloseDateSweepArgs{}, nil)
 	book.schedule(scanSpec, TimeScanArgs{}, nil)
@@ -45,7 +45,7 @@ func bookWith(t *testing.T, closeDate, timeScan time.Duration) (*ScheduleBook, s
 }
 
 func TestApplyMovesOnlyTheScheduleWhoseSettingChanged(t *testing.T) {
-	book, closeDate, timeScan := bookWith(t, time.Hour, time.Hour)
+	book, closeDate, timeScan := bookWith(t)
 	runner := &periodicLog{}
 	if err := book.apply(map[string]time.Duration{closeDate: 2 * time.Hour, timeScan: time.Hour}, runner); err != nil {
 		t.Fatal(err)
@@ -59,7 +59,7 @@ func TestApplyMovesOnlyTheScheduleWhoseSettingChanged(t *testing.T) {
 }
 
 func TestApplyLeavesTheRunnerAloneWhenNothingChanged(t *testing.T) {
-	book, closeDate, timeScan := bookWith(t, time.Hour, time.Hour)
+	book, closeDate, timeScan := bookWith(t)
 	runner := &periodicLog{}
 	if err := book.apply(map[string]time.Duration{closeDate: time.Hour, timeScan: time.Hour}, runner); err != nil {
 		t.Fatal(err)
@@ -70,7 +70,7 @@ func TestApplyLeavesTheRunnerAloneWhenNothingChanged(t *testing.T) {
 }
 
 func TestApplySwitchesAScheduleOffAndBackOn(t *testing.T) {
-	book, closeDate, timeScan := bookWith(t, time.Hour, time.Hour)
+	book, closeDate, timeScan := bookWith(t)
 	runner := &periodicLog{}
 	if err := book.apply(map[string]time.Duration{closeDate: 0, timeScan: time.Hour}, runner); err != nil {
 		t.Fatal(err)
@@ -90,7 +90,7 @@ func TestApplySwitchesAScheduleOffAndBackOn(t *testing.T) {
 // A schedule taken off River and refused on the way back must not stay off
 // until a restart: the change is retried on the next check.
 func TestApplyRetriesAScheduleTheRunnerRefusedToTakeBack(t *testing.T) {
-	book, closeDate, timeScan := bookWith(t, time.Hour, time.Hour)
+	book, closeDate, timeScan := bookWith(t)
 	moved := map[string]time.Duration{closeDate: 2 * time.Hour, timeScan: time.Hour}
 	runner := &periodicLog{failAdds: 1}
 	if err := book.apply(moved, runner); err == nil {
