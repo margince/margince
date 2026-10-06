@@ -549,7 +549,6 @@ func (c *telegramEnv) ingestJobs(t *testing.T) int {
 func newTelegramWorker(t *testing.T, c *telegramEnv, cfg compose.JobRunnerConfig) (*jobs.Runner, <-chan *river.Event) {
 	t.Helper()
 	integration.ApplyRiverSchema(t)
-	cfg.CloseDateInterval, cfg.ReconcileInterval, cfg.TimeScanInterval = time.Hour, time.Hour, time.Hour
 	cfg.ChannelVault, cfg.ChannelAPI = c.vault, c.api
 	runner, err := compose.NewJobRunner(c.Pool, c.log, cfg)
 	if err != nil {

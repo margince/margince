@@ -244,3 +244,54 @@ export function WebsiteReadingCard() {
     </Panel>
   );
 }
+
+// How often a connected mailbox is checked for new mail. Its own card rather
+// than a row under enrichment: it paces every mailbox's capture, not what is
+// done with a message once it arrives. Mirrored as READ_LIMITS is.
+const MAIL_SYNC_BOUNDS = {
+  mail_sync_interval_seconds: { min: 30, max: 3_600 },
+} as const;
+
+export function MailSyncCard() {
+  const t = useT();
+  const canManage = useCanWrite("capture_settings", "update");
+  const query = useCaptureSettings();
+  const update = useUpdateCaptureSettings();
+  return (
+    <Panel title={t("captureMailSync.title")}>
+      <PanelBody className="form-stack">
+        <PanelIntro>{t("captureMailSync.sub")}</PanelIntro>
+        {!canManage && (
+          <PanelIntro>{t("captureSettings.adminOnly")}</PanelIntro>
+        )}
+        <QueryGate query={query} pendingLabel={t("captureMailSync.title")}>
+          {(settings) => (
+            <SettingList>
+              <NumberSettingRow
+                label={t("captureMailSync.interval.label")}
+                description={t("captureMailSync.interval.help")}
+                testId="capture-mail-sync"
+                value={settings.mail_sync_interval_seconds}
+                {...MAIL_SYNC_BOUNDS.mail_sync_interval_seconds}
+                refusal={t("captureMailSync.interval.refusal")}
+                disabled={!canManage || update.isPending}
+                onCommit={(next) =>
+                  update.mutate({ mail_sync_interval_seconds: next })
+                }
+              />
+            </SettingList>
+          )}
+        </QueryGate>
+        {update.isError && (
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t("captureSettings.updateFailed")}
+          >
+            {problemMessageOf(update.error, t)}
+          </Callout>
+        )}
+      </PanelBody>
+    </Panel>
+  );
+}

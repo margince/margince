@@ -114,7 +114,8 @@ func waitingReplyExistsClause(ctx context.Context, arg func(any) int, asOf time.
 			messageSnoozeLiftedSQL(fmt.Sprintf("$%d", instant), backContent),
 			fmt.Sprintf("$%d", arg(readerAddresses)),
 			neverRelaxed,
-			noKeyset, bookedDiscover) +
+			noKeyset, bookedDiscover,
+			neverRelaxed) +
 		") waiting_thread)", nil
 }
 

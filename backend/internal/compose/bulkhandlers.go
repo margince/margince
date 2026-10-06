@@ -50,8 +50,7 @@ type bulkHandlers struct {
 
 func (h bulkHandlers) PreviewBulkChange(w http.ResponseWriter, r *http.Request) {
 	var body crmcontracts.BulkChangePreviewRequest
-	if err := httperr.DecodeOrRefusal(w, r, &body); err != nil {
-		httperr.Write(w, r, err)
+	if !httperr.Decode(w, r, &body) {
 		return
 	}
 	out, err := h.engine.Preview(r.Context(), bulkChange{
@@ -69,8 +68,7 @@ func (h bulkHandlers) PreviewBulkChange(w http.ResponseWriter, r *http.Request) 
 // claims the key and replays the first answer to a retry.
 func (h bulkHandlers) ExecuteBulkChange(w http.ResponseWriter, r *http.Request, _ crmcontracts.ExecuteBulkChangeParams) {
 	var body crmcontracts.BulkChangeExecuteRequest
-	if err := httperr.DecodeOrRefusal(w, r, &body); err != nil {
-		httperr.Write(w, r, err)
+	if !httperr.Decode(w, r, &body) {
 		return
 	}
 	change := bulkChange{
@@ -113,8 +111,7 @@ func (h bulkHandlers) PreviewBulkUndo(w http.ResponseWriter, r *http.Request, id
 // undone".
 func (h bulkHandlers) UndoBulkChange(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, _ crmcontracts.UndoBulkChangeParams) {
 	var body crmcontracts.BulkUndoRequest
-	if err := httperr.DecodeOrRefusal(w, r, &body); err != nil {
-		httperr.Write(w, r, err)
+	if !httperr.Decode(w, r, &body) {
 		return
 	}
 	var token string

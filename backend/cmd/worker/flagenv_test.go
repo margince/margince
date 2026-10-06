@@ -4,9 +4,7 @@
 package main
 
 import (
-	"strings"
 	"testing"
-	"time"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
@@ -29,23 +27,4 @@ func TestEveryWorkerBootFlagHasAnEnvironmentName(t *testing.T) {
 		t.Error(shortfall)
 	}
 	workerFlagOnly.AssertAllMatched(t)
-}
-
-// An interval set in the environment reaches the role, and one it cannot read
-// refuses the boot naming the variable rather than running the default.
-func TestAnIntervalComesFromTheEnvironmentOrRefusesTheBoot(t *testing.T) {
-	base := []string{"--dsn", "postgres://localhost/x"}
-	t.Setenv("MARGINCE_RUNNER_INTERVAL", "45s")
-	cfg, err := parseWorkerFlags(base)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if cfg.runnerInterval != 45*time.Second {
-		t.Errorf("MARGINCE_RUNNER_INTERVAL=45s produced %s", cfg.runnerInterval)
-	}
-
-	t.Setenv("MARGINCE_RUNNER_INTERVAL", "often")
-	if _, err := parseWorkerFlags(base); err == nil || !strings.Contains(err.Error(), "MARGINCE_RUNNER_INTERVAL") {
-		t.Errorf("MARGINCE_RUNNER_INTERVAL=often gave %v, want a boot error naming the variable", err)
-	}
 }

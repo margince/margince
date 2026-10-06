@@ -107,13 +107,14 @@ func (t *timeoutDef) UnmarshalYAML(node *yaml.Node) error {
 	return nil
 }
 
-// cadenceDef is a dispatcher's schedule: a literal interval, the named
-// operator dial it is taken from, or the explicit on_demand.
+// cadenceDef is a dispatcher's schedule: a literal interval, the setting an
+// admin dials it from, or the explicit on_demand.
 type cadenceDef struct {
-	Fixed                time.Duration
-	Operator             string
-	OnDemand             bool
-	ScheduleWhenPositive string
+	Fixed    time.Duration
+	Setting  string
+	OnDemand bool
+	// OffAtZero lets the setting switch the schedule off by holding zero.
+	OffAtZero bool
 }
 
 // UnmarshalYAML accepts `24h`, `on_demand`, or the mapping form.
@@ -131,13 +132,13 @@ func (c *cadenceDef) UnmarshalYAML(node *yaml.Node) error {
 		return nil
 	}
 	var raw struct {
-		Operator             string `yaml:"operator"`
-		ScheduleWhenPositive string `yaml:"schedule_when_positive"`
+		Setting   string `yaml:"setting"`
+		OffAtZero bool   `yaml:"off_at_zero"`
 	}
 	if err := decodeMapping(node, &raw); err != nil {
 		return fmt.Errorf("cadence: %w", err)
 	}
-	c.Operator, c.ScheduleWhenPositive = raw.Operator, raw.ScheduleWhenPositive
+	c.Setting, c.OffAtZero = raw.Setting, raw.OffAtZero
 	return nil
 }
 

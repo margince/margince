@@ -48,22 +48,6 @@ const (
 // WebhookRetryConfig is the retry sweep's slice of the runner's boot
 // configuration.
 type WebhookRetryConfig struct {
-	// Interval is the dispatcher's cadence — the operator-facing
-	// --webhook-retry-interval, taken verbatim as the River schedule. Nothing
-	// here clamps it: whatever an operator sets is what River schedules on.
-	//
-	// It paces the FLEET fan-out, not one delivery's backoff: the per-delivery
-	// schedule is the exponential ladder the delivery engine already owns, and
-	// this dial only decides how promptly an elapsed backoff is noticed. Every
-	// tick inserts one row per live workspace whether or not that workspace has
-	// anything due, which is why its DEFAULT is tens of seconds rather than the
-	// few a single tenant's ticker could afford. That default happens to equal
-	// the gmail_sync dispatcher's declared scan and is not derived from it — the
-	// two are separate passes with separate costs, and moving one does not move
-	// the other.
-	//
-	// Non-positive schedules no retry dispatch; api/jobs.yaml declares it.
-	Interval time.Duration
 	// Deliverer is the delivery engine one workspace's pass re-attempts
 	// through — the SAME instance the role's cg:webhooks consumer fans out
 	// with, so a deployment holds one signing cipher and one outbound
@@ -75,9 +59,7 @@ type WebhookRetryConfig struct {
 }
 
 // addWebhookRetryJobs registers the retry worker and returns its periodic
-// schedule for the caller to append. A non-positive interval registers the
-// worker but no schedule — the posture the declaration states and
-// jobschedule.go resolves.
+// schedule for the caller to append.
 func addWebhookRetryJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig) []*river.PeriodicJob {
 	if cfg.WebhookRetry.Deliverer == nil {
 		return nil
