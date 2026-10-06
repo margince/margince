@@ -176,7 +176,6 @@ const VALUED_REASONS = {
   first_asked: true,
   meeting_booked: true,
 } as const;
-
 type ValuedReason = keyof typeof VALUED_REASONS;
 
 function valued(kind: WorklistReason["kind"]): kind is ValuedReason {
