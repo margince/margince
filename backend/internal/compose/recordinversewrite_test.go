@@ -116,10 +116,10 @@ func TestAnInverseIsRefusedFromItsPortsBeforeItReadsTheTrail(t *testing.T) {
 	if _, err := failing.Evaluate(systemSeatCtx(), nil, created, Advisory); !errors.Is(err, boom) {
 		t.Errorf("a failed scope read answered %v, want the fault", err)
 	}
-	if err := (recordInverses{}).perform(systemSeatCtx(), nil, created, inverseNone, 1); err == nil {
+	if _, err := (recordInverses{}).perform(systemSeatCtx(), nil, created, inverseNone, 1); err == nil {
 		t.Error("an entry with no module verb was performed")
 	}
-	if err := (recordInverses{}).unarchive(systemSeatCtx(), nil, AuditRow{EntityType: "project"}, 1); err == nil {
+	if _, err := (recordInverses{}).unarchive(systemSeatCtx(), nil, AuditRow{EntityType: "project"}, 1); err == nil {
 		t.Error("a project was un-archived")
 	}
 }

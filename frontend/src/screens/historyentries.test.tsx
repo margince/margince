@@ -118,6 +118,35 @@ describe("putting one change back", () => {
     expect(request.headers.get("If-Match")).toBe("7");
   });
 
+  // A restore that answers 200 and says nothing of what stayed archived reads
+  // as a whole record; the answer names it and the panel says so.
+  it("says what an archive's restore could not bring back", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input instanceof Request ? input.url : input);
+      if (url.includes("/restore")) {
+        return jsonResponse({
+          ...repriced,
+          left_behind: [
+            { id: "d1", kind: "relationship", ref_id: "r1" },
+            { id: "d1", kind: "tag", ref_id: "t1" },
+          ],
+        });
+      }
+      return jsonResponse({ data: [restorable], page: { next_cursor: null } });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    render(
+      <RecordHistory kind="deal" id="d1" currency="EUR" restore={RESTORE} />,
+    );
+
+    await user.click(await screen.findByRole("button", { name: /^undo$/i }));
+
+    expect(
+      await screen.findByText(/2 links, tags or list memberships could not/i),
+    ).toBeTruthy();
+  });
+
   // A greyed control that says nothing is the shape this feature exists to
   // remove: the reason is the information.
   it("states the reason a refused change cannot be put back", async () => {

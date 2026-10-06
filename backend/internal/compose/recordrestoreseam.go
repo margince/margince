@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // NewRestoreSeam assembles the reversal executor over the installation pool and
@@ -130,6 +131,11 @@ func recordIsVisibleToCaller(ctx context.Context, tx pgx.Tx, entityType string, 
 // owner column. Reaching it through the ordinary gate refuses every activity,
 // which is a button that says the caller may not edit a record they can.
 func recordIsWritableByCaller(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUID) error {
+	// The object grant first, as the record's own update does: row scope alone
+	// admits a seat that may read every record and write none.
+	if err := requireUpdateGrant(ctx, entityType); err != nil {
+		return err
+	}
 	if entityType == entityTypeActivity {
 		return auth.EnsureActivityWritable(ctx, tx, id)
 	}
@@ -303,4 +309,31 @@ func (s *Server) wireReversal(pool *pgxpool.Pool) {
 		// because they write a field the ordinary update shape cannot spell.
 		corrections: corrections,
 	})
+}
+
+// The object names requireUpdateGrant switches on, plain constants so the
+// grant census resolves each door.
+const (
+	entityTypeCompany = "company"
+	entityTypeProject = "project"
+)
+
+// requireUpdateGrant asks the object grant the record's own update asks, one
+// literal per served type so the grant census can see each door.
+func requireUpdateGrant(ctx context.Context, entityType string) error {
+	switch entityType {
+	case entityTypeContact:
+		return auth.Require(ctx, entityTypeContact, principal.ActionUpdate)
+	case entityTypeCompany:
+		return auth.Require(ctx, entityTypeCompany, principal.ActionUpdate)
+	case entityTypeDeal:
+		return auth.Require(ctx, entityTypeDeal, principal.ActionUpdate)
+	case entityTypeActivity:
+		return auth.Require(ctx, entityTypeActivity, principal.ActionUpdate)
+	case entityTypeLead:
+		return auth.Require(ctx, entityTypeLead, principal.ActionUpdate)
+	case entityTypeProject:
+		return auth.Require(ctx, entityTypeProject, principal.ActionUpdate)
+	}
+	return fmt.Errorf("compose: %q is not a record type this path writes", entityType)
 }

@@ -203,10 +203,14 @@ function UndoButton({
   // advisory answer below because the two can differ: the read cannot hold a
   // lock, so a change that looked restorable a moment ago may not be one now.
   const [refused, setRefused] = useState<string | null>(null);
+  // What an archive's restore could not bring back, said where it was pressed
+  // so a "done" does not read as a whole record when it is not.
+  const [leftBehind, setLeftBehind] = useState(0);
 
   const putBack = useRecordRestore({
-    onSuccess: () => {
+    onSuccess: (done) => {
       setRefused(null);
+      setLeftBehind(done.left_behind?.length ?? 0);
       setConfirming(false);
       client.invalidateQueries({ queryKey: ["record-history", kind, id] });
       client.invalidateQueries({ queryKey: ["field-history", kind, id] });
@@ -273,6 +277,13 @@ function UndoButton({
         {t(label)}
       </Button>
       {refused && <span>{refused}</span>}
+      {leftBehind > 0 && (
+        <span>
+          {plural("history.undo.leftBehind", leftBehind, {
+            count: formatNumber(leftBehind, locale),
+          })}
+        </span>
+      )}
       <ConfirmModal
         open={confirming}
         onClose={() => setConfirming(false)}

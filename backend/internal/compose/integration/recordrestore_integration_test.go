@@ -844,3 +844,72 @@ func TestEndToEnd_anEntryTouchingAFieldHeldElsewhereIsStillUndoable(t *testing.T
 			reasonOf(entry), detailOf(entry))
 	}
 }
+
+// Putting an archive back answers what the archive took down that did not come
+// back, over the wire a screen reads: a link replaced in between is still
+// archived, and a bare 200 would read as a whole record.
+func TestEndToEnd_anArchiveRestoreNamesTheLinkItCouldNotBringBack(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+
+	var contact contactRecord
+	var oldCo, newCo struct {
+		ID string `json:"id"`
+	}
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"full_name": "Wanda Mover"}, nil, &contact); status != 201 {
+		t.Fatalf("create contact → %d", status)
+	}
+	for name, out := range map[string]*struct {
+		ID string `json:"id"`
+	}{"Old Employer": &oldCo, "New Employer": &newCo} {
+		if status := e.Call(t, "POST", "/v1/companies", AnyMap{"display_name": name}, nil, out); status != 201 {
+			t.Fatalf("create %s → %d", name, status)
+		}
+	}
+	employ := func(company string) {
+		t.Helper()
+		if status := e.Call(t, "POST", "/v1/relationships", AnyMap{
+			"kind": "employment", "contact_id": contact.ID, "company_id": company, "source": "manual",
+		}, nil, nil); status != 201 {
+			t.Fatalf("employ at %s → %d", company, status)
+		}
+	}
+	employ(oldCo.ID)
+	if status := e.Call(t, "DELETE", "/v1/companies/"+oldCo.ID, nil, nil, nil); status != 200 && status != 204 {
+		t.Fatalf("archive company → %d", status)
+	}
+	employ(newCo.ID)
+
+	var archive historyEntry
+	for _, entry := range readHistory(t, e, "company", oldCo.ID).Data {
+		if entry.Action == "archive" {
+			archive = entry
+			break
+		}
+	}
+	if archive.ID == "" {
+		t.Fatal("the company's history holds no archive entry")
+	}
+	var answer struct {
+		LeftBehind []struct {
+			ID    string `json:"id"`
+			Kind  string `json:"kind"`
+			RefID string `json:"ref_id"`
+		} `json:"left_behind"`
+	}
+	var version struct {
+		Version int64 `json:"version"`
+	}
+	if status := e.Call(t, "GET", "/v1/companies/"+oldCo.ID+"?include_archived=true", nil, nil, &version); status != 200 {
+		t.Fatalf("read the archived company → %d", status)
+	}
+	status := e.Call(t, "POST",
+		fmt.Sprintf("/v1/records/company/%s/history/%s/restore", oldCo.ID, archive.ID),
+		nil, map[string]string{"If-Match": fmt.Sprint(version.Version)}, &answer)
+	if status != 200 {
+		t.Fatalf("restore → %d", status)
+	}
+	if len(answer.LeftBehind) != 1 || answer.LeftBehind[0].Kind != "relationship" || answer.LeftBehind[0].ID != oldCo.ID {
+		t.Errorf("left_behind = %+v, want the one employment link, named against the restored company", answer.LeftBehind)
+	}
+}

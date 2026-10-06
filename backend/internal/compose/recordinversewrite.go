@@ -66,31 +66,43 @@ func (s RestoreSeam) reverseByVerb(
 		return privacy.RecordHistoryEntry{}, RefusedRestore{Reason: answer.Reason, Detail: answer.Detail}
 	}
 	marked := storekit.WithReversal(ctx, row.EntityType, row.EntityID, row.ID)
-	if err := s.inverses.perform(marked, s.pool, row, kind, ifVersion); err != nil {
+	report, err := s.inverses.perform(marked, s.pool, row, kind, ifVersion)
+	if err != nil {
 		return privacy.RecordHistoryEntry{}, inverseWriteRefusal(err)
 	}
-	return s.readRestoreEntry(ctx, entityType, id, row.ID)
+	entry, err := s.readRestoreEntry(ctx, entityType, id, row.ID)
+	for _, left := range report.LeftBehind {
+		entry.LeftBehind = append(entry.LeftBehind, privacy.LeftBehind{Kind: left.Kind, RefID: left.ID})
+	}
+	return entry, err
 }
 
-// perform runs the module verb that undoes the entry.
-func (r recordInverses) perform(ctx context.Context, pool *pgxpool.Pool, row AuditRow, kind inverse, ifVersion int64) error {
+// perform runs the module verb that undoes the entry, and answers what an
+// un-archive could not bring back with the record.
+func (r recordInverses) perform(
+	ctx context.Context, pool *pgxpool.Pool, row AuditRow, kind inverse, ifVersion int64,
+) (storekit.RestoreReport, error) {
+	var report storekit.RestoreReport
+	var err error
 	switch kind {
 	case inverseArchive, inverseRearchive:
-		return r.archiveCreated(ctx, pool, row, ifVersion)
+		err = r.archiveCreated(ctx, pool, row, ifVersion)
 	case inverseUnarchive:
-		return database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
-			return r.unarchive(ctx, tx, row, ifVersion)
+		err = database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+			var err error
+			report, err = r.unarchive(ctx, tx, row, ifVersion)
+			return err
 		})
 	case inverseDemote:
-		_, err := r.contacts.DemoteLead(ctx, ids.From[ids.LeadKind](row.EntityID), demoteReason,
+		_, err = r.contacts.DemoteLead(ctx, ids.From[ids.LeadKind](row.EntityID), demoteReason,
 			contacts.OnlyAtVersion(&ifVersion), contacts.NotWorkedOnByAColleagueSince(row.OccurredAt, row.ID))
-		return err
 	case inverseRetractFill:
 		fill, _ := fillOf(row)
-		return r.contacts.RetractFill(ctx, ids.From[ids.ContactKind](row.EntityID), fill, &ifVersion)
+		err = r.contacts.RetractFill(ctx, ids.From[ids.ContactKind](row.EntityID), fill, &ifVersion)
 	case inverseNone:
+		err = fmt.Errorf("compose: entry %s has no module verb that undoes it", row.ID)
 	}
-	return fmt.Errorf("compose: entry %s has no module verb that undoes it", row.ID)
+	return report, err
 }
 
 // archiveCreated archives the record a create made, or archives again one an
@@ -161,20 +173,17 @@ func refuseColleagueWork(ctx context.Context, tx pgx.Tx, row AuditRow) error {
 }
 
 // unarchive brings the record back through its own module's un-archive.
-func (r recordInverses) unarchive(ctx context.Context, tx pgx.Tx, row AuditRow, ifVersion int64) error {
+func (r recordInverses) unarchive(ctx context.Context, tx pgx.Tx, row AuditRow, ifVersion int64) (storekit.RestoreReport, error) {
 	with := storekit.RestoreWith{Erased: archiveIsBehindErasure}
-	var err error
 	switch row.EntityType {
 	case entityTypeContact:
-		_, err = r.contacts.RestoreContactTx(ctx, tx, ids.From[ids.ContactKind](row.EntityID), &ifVersion, with)
+		return r.contacts.RestoreContactTx(ctx, tx, ids.From[ids.ContactKind](row.EntityID), &ifVersion, with)
 	case string(recordTypeCompany):
-		_, err = r.contacts.RestoreCompanyTx(ctx, tx, ids.From[ids.CompanyKind](row.EntityID), &ifVersion, with)
+		return r.contacts.RestoreCompanyTx(ctx, tx, ids.From[ids.CompanyKind](row.EntityID), &ifVersion, with)
 	case entityTypeDeal:
-		_, err = r.deals.RestoreDealTx(ctx, tx, ids.From[ids.DealKind](row.EntityID), &ifVersion, with)
-	default:
-		err = fmt.Errorf("compose: a %s has no un-archive", row.EntityType)
+		return r.deals.RestoreDealTx(ctx, tx, ids.From[ids.DealKind](row.EntityID), &ifVersion, with)
 	}
-	return err
+	return storekit.RestoreReport{}, fmt.Errorf("compose: a %s has no un-archive", row.EntityType)
 }
 
 // inverseWriteRefusal renders a module's refusal as the reason the button would

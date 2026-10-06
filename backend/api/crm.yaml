@@ -47715,6 +47715,14 @@ components:
           $ref: '#/components/schemas/HistoryEdge'
         undoable:
           $ref: '#/components/schemas/Undoability'
+        left_behind:
+          type: array
+          description: >-
+            Set on the answer to putting back an archive, and omitted everywhere else: what the
+            archive took down with the record that the restore could not bring back (a link the
+            record's owner has since replaced, a list or tag archived in between). `id` is the
+            restored record, as in a bulk undo's `left_behind`. Absent means nothing was left.
+          items: { $ref: '#/components/schemas/BulkLeftBehind' }
 
     HistoryEdge:
       type: [object, 'null']

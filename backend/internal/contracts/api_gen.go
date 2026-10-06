@@ -24616,9 +24616,12 @@ type AuditHistoryEntry struct {
 	// flag belong to the link, not to either record, and projecting them as a record's own
 	// fields would invent fields it does not have — which is also why edge entries never
 	// appear in `/field-history`.
-	Edge       *HistoryEdge       `json:"edge,omitempty"`
-	Id         openapi_types.UUID `json:"id"`
-	OccurredAt time.Time          `json:"occurred_at"`
+	Edge *HistoryEdge       `json:"edge,omitempty"`
+	Id   openapi_types.UUID `json:"id"`
+
+	// LeftBehind Set on the answer to putting back an archive, and omitted everywhere else: what the archive took down with the record that the restore could not bring back (a link the record's owner has since replaced, a list or tag archived in between). `id` is the restored record, as in a bulk undo's `left_behind`. Absent means nothing was left.
+	LeftBehind *[]BulkLeftBehind `json:"left_behind,omitempty"`
+	OccurredAt time.Time         `json:"occurred_at"`
 
 	// OnBehalfOf Granting human's user id for agent actions.
 	OnBehalfOf *openapi_types.UUID `json:"on_behalf_of,omitempty"`

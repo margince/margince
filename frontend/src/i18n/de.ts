@@ -853,6 +853,10 @@ export const de = {
     "{count} Feld wird auf seinen Wert vor dieser Änderung zurückgesetzt:",
   "history.undo.confirmBody_other":
     "{count} Felder werden auf ihren Wert vor dieser Änderung zurückgesetzt:",
+  "history.undo.leftBehind_one":
+    "Zurückgesetzt. {count} Verknüpfung, Tag oder Listenzuordnung kam nicht mit zurück.",
+  "history.undo.leftBehind_other":
+    "Zurückgesetzt. {count} Verknüpfungen, Tags oder Listenzuordnungen kamen nicht mit zurück.",
   "history.undo.versionSkew":
     "Der Datensatz wurde geändert, während er geöffnet war. Der Verlauf wurde neu geladen. Prüfe die Änderung erneut, bevor du sie rückgängig machst.",
   "history.undo.noBeforeImage":
