@@ -112,6 +112,12 @@ export function ConfirmAdvanceModal({
   // recorded as won-without-paper when it was not. That falsifies the exact
   // count the reason vocabulary exists to make truthful.
   const [refusedDealId, setRefusedDealId] = useState<string | null>(null);
+  // Still drawn while it animates out after `pending` clears.
+  const [lastAsked, setLastAsked] = useState(pending);
+  if (pending !== null && pending !== lastAsked) {
+    setLastAsked(pending);
+  }
+  const shown = pending ?? lastAsked;
 
   // EVERY way out of this dialog clears what was typed — the buttons, Escape,
   // and the backdrop alike. The component stays mounted between openings, so a
@@ -125,7 +131,7 @@ export function ConfirmAdvanceModal({
     onClose();
   };
 
-  const needsLostReason = pending?.toStage.semantic === "lost";
+  const needsLostReason = shown?.toStage.semantic === "lost";
   // The reason panel appears only once the server has asked for it, and only
   // for the deal it asked about. A win with a signed contract is one click,
   // exactly as before: making every rep justify a win the paperwork already
@@ -173,9 +179,7 @@ export function ConfirmAdvanceModal({
       open={pending !== null}
       onClose={dismiss}
       title={
-        pending
-          ? t("deals.confirmAdvance", { stage: pending.toStage.name })
-          : ""
+        shown ? t("deals.confirmAdvance", { stage: shown.toStage.name }) : ""
       }
       tier={verbTier("progress_deal", tierMap)}
       confirmLabel={t("deals.confirm")}
@@ -190,10 +194,10 @@ export function ConfirmAdvanceModal({
         }
       }}
     >
-      {pending && (
+      {shown && (
         <>
           <p className="t-caption">
-            {t("deals.confirmTerminal", { status: pending.toStage.semantic })}
+            {t("deals.confirmTerminal", { status: shown.toStage.semantic })}
           </p>
           {needsLostReason && (
             <Field label={t("deals.lostReason")}>

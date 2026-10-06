@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useRef } from "react";
 import { useT } from "../i18n";
 import { problemMessageOf } from "../screens/common";
+import { usePrefersReducedMotion } from "./motion";
 
 type ErrorLineProps = Readonly<
   (
@@ -24,7 +25,8 @@ type ErrorLineProps = Readonly<
  * straight; `children` takes a sentence the caller already translated.
  * `inline` draws a `<span>`, for a refusal that sits in its control's row.
  * `standing` drops the alert: a state true when the surface drew is not news.
- * The parent spaces it: the line owns no margin.
+ * The parent spaces it: the line owns no margin. Inside a dialog an alerting
+ * line scrolls itself into view, since a pinned footer's save fails off-screen.
  */
 export function ErrorLine({
   error,
@@ -35,6 +37,7 @@ export function ErrorLine({
   standing,
 }: ErrorLineProps) {
   const t = useT();
+  const line = useScrolledIntoDialogView(standing === true);
   // A `false` error is a guard's short-circuit (`isError && error`), not a
   // failure, and an empty string says nothing an alert could announce.
   const absent =
@@ -51,6 +54,7 @@ export function ErrorLine({
   const Line = inline ? "span" : "p";
   return (
     <Line
+      ref={line}
       role={standing ? undefined : "alert"}
       id={id}
       className={actions ? "t-danger error-line" : "t-danger"}
@@ -59,4 +63,27 @@ export function ErrorLine({
       {actions}
     </Line>
   );
+}
+
+// Keyed on the drawn text, not the props: a caller's `children` is a new
+// element every render, and re-scrolling on each keystroke would yank the form.
+function useScrolledIntoDialogView(standing: boolean) {
+  const line = useRef<HTMLParagraphElement & HTMLSpanElement>(null);
+  const shown = useRef<string | null>(null);
+  const reduced = usePrefersReducedMotion();
+  useEffect(() => {
+    const said = line.current?.textContent ?? null;
+    if (said === shown.current) {
+      return;
+    }
+    shown.current = said;
+    if (!standing && line.current?.closest(".modal")) {
+      // jsdom has no scrollIntoView; the browser always does.
+      line.current.scrollIntoView?.({
+        block: "nearest",
+        behavior: reduced ? "auto" : "smooth",
+      });
+    }
+  });
+  return line;
 }

@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, waitFor } from "storybook/test";
+import { expect, screen, userEvent, waitFor } from "storybook/test";
 import { meFixture } from "../app/mefixture";
 import { ContractForm, SignedFileField } from "./contractform";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
@@ -262,6 +262,44 @@ export const TheWholeForm: Story = {
           onClose={() => {}}
         />
       </StoryProviders>
+    );
+  },
+};
+
+// A refused save on the pinned drawer: the refusal closes the scrolling body,
+// so on a short window it has to bring itself into view.
+export const SaveRefused: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": SESSION,
+      [DOCUMENTS]: () => jsonResponse({ data: [PAPER] }),
+      "PATCH /contracts/c-1": () =>
+        jsonResponse(
+          {
+            title: "Conflict",
+            status: 409,
+            detail: "This agreement changed while you were editing it.",
+          },
+          409,
+        ),
+    });
+    return (
+      <StoryProviders>
+        <ContractForm
+          companyId="o-1"
+          contract={CONTRACT as never}
+          open
+          onClose={() => {}}
+        />
+      </StoryProviders>
+    );
+  },
+  play: async () => {
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Save changes" }),
+    );
+    await expect(await screen.findByRole("alert")).toHaveTextContent(
+      "This agreement changed while you were editing it.",
     );
   },
 };
