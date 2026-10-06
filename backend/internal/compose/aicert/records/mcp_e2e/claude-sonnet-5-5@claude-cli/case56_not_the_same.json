@@ -1,7 +1,7 @@
 {
-  "scenario": "case2_business_card",
+  "scenario": "case56_not_the_same",
   "criteria": [
-    4
+    1
   ],
   "passed": 3,
   "runs": 3,
@@ -12,12 +12,12 @@
   "search": "semantic",
   "self_judged": true,
   "usage": {
-    "input_tokens": 24,
-    "output_tokens": 4394,
-    "cache_creation_input_tokens": 47479,
-    "cache_read_input_tokens": 738075,
+    "input_tokens": 28,
+    "output_tokens": 4653,
+    "cache_creation_input_tokens": 48514,
+    "cache_read_input_tokens": 864200,
     "runs_measured": 3,
     "runs_costed": 3,
-    "cost_usd": 0.3815
+    "cost_usd": 0.4135
   }
 }

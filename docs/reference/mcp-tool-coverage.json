@@ -15,23 +15,23 @@
   "models": [
     {
       "model": "claude-sonnet-5-5@claude-cli",
-      "cases_with_a_committed_run": 29,
-      "cases_that_reached_their_bar": 29,
+      "cases_with_a_committed_run": 31,
+      "cases_that_reached_their_bar": 31,
       "cases_below_their_bar": 0,
-      "runs": 87,
-      "passed": 83,
-      "reliability": 0.9540229885057471,
+      "runs": 93,
+      "passed": 88,
+      "reliability": 0.946236559139785,
       "cases_below_their_bar_named": [],
       "route": "Claude Code CLI"
     },
     {
       "model": "gpt-5.6-sol@codex-cli",
-      "cases_with_a_committed_run": 26,
-      "cases_that_reached_their_bar": 26,
+      "cases_with_a_committed_run": 28,
+      "cases_that_reached_their_bar": 28,
       "cases_below_their_bar": 0,
-      "runs": 78,
-      "passed": 71,
-      "reliability": 0.9102564102564102,
+      "runs": 84,
+      "passed": 75,
+      "reliability": 0.8928571428571429,
       "cases_below_their_bar_named": [],
       "route": "Codex CLI"
     }
@@ -942,7 +942,26 @@
         "create_record"
       ],
       "requires_one_of": [],
-      "by_model": null
+      "by_model": [
+        {
+          "model": "claude-sonnet-5-5@claude-cli",
+          "runs": 3,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true,
+          "driver": "claude:cli",
+          "search": "semantic"
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 3,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true,
+          "driver": "gpt:cli",
+          "search": "semantic"
+        }
+      ]
     },
     {
       "name": "case56_not_the_same",
@@ -956,7 +975,26 @@
         "decide_duplicate"
       ],
       "requires_one_of": [],
-      "by_model": null
+      "by_model": [
+        {
+          "model": "claude-sonnet-5-5@claude-cli",
+          "runs": 3,
+          "passed": 3,
+          "pass_at": 2,
+          "held": true,
+          "driver": "claude:cli",
+          "search": "semantic"
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 3,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true,
+          "driver": "gpt:cli",
+          "search": "semantic"
+        }
+      ]
     },
     {
       "name": "case6_ask_the_company",
@@ -2291,15 +2329,15 @@
       "graded_by_certification_tasks": null,
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
-          "runs": 6,
-          "passed": 5,
+          "runs": 12,
+          "passed": 10,
           "reliability": 0.8333333333333334,
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
-          "runs": 6,
-          "passed": 5,
-          "reliability": 0.8333333333333334,
+          "runs": 12,
+          "passed": 9,
+          "reliability": 0.75,
           "cases_below_their_bar": []
         }
       }
@@ -3159,7 +3197,20 @@
       "driven": true,
       "required_only_as_one_of_a_set": false,
       "graded_by_certification_tasks": null,
-      "measured_by_model": {}
+      "measured_by_model": {
+        "claude-sonnet-5-5@claude-cli": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "gpt-5.6-sol@codex-cli": {
+          "runs": 3,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
+          "cases_below_their_bar": []
+        }
+      }
     },
     {
       "name": "merge_tags",

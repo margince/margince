@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import { AddToShortlistAction } from "./addtoshortlist";
 import { listsMe, MEMBER_ID, shortlist } from "./lists.fixtures";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
@@ -13,17 +14,30 @@ export default meta;
 
 type Story = StoryObj;
 
-export const Offered: Story = {
-  render: () => {
-    installFetchStub({
-      "GET /me": listsMe(true),
-      "GET /lists": () =>
-        jsonResponse({ data: [shortlist], page: { has_more: false } }),
-    });
-    return (
-      <StoryProviders>
-        <AddToShortlistAction entityType="company" entityId={MEMBER_ID} />
-      </StoryProviders>
+function offered() {
+  installFetchStub({
+    "GET /me": listsMe(true),
+    "GET /lists": () =>
+      jsonResponse({ data: [shortlist], page: { has_more: false } }),
+  });
+  return (
+    <StoryProviders>
+      <AddToShortlistAction entityType="company" entityId={MEMBER_ID} />
+    </StoryProviders>
+  );
+}
+
+export const Offered: Story = { render: offered };
+
+/** The verb pressed: which Shortlist, and the note on why. */
+export const Choosing: Story = {
+  render: offered,
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", {
+        name: "Add to Shortlist",
+      }),
     );
+    await within(document.body).findByRole("dialog");
   },
 };

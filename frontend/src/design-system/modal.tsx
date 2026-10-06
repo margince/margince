@@ -29,6 +29,12 @@ export const MODAL_INTENTS = [
 ] as const;
 export type ModalIntent = (typeof MODAL_INTENTS)[number];
 
+// A form with more fields than this is worked through in a drawer.
+export const FORM_DIALOG_MAX_FIELDS = 6;
+export function intentForFieldCount(fields: number): "form" | "drawer" {
+  return fields <= FORM_DIALOG_MAX_FIELDS ? "form" : "drawer";
+}
+
 // The legacy pair stays until every call names an intent; one call takes one or
 // the other, and modal-legacy-census.test.ts counts the pair down.
 export type ModalBox =

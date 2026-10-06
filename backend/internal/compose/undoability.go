@@ -289,7 +289,13 @@ func (e Evaluator) liveState(ctx context.Context, tx pgx.Tx, row AuditRow, patch
 		}
 	}
 	if e.Writable != nil {
-		if err := e.Writable(ctx, tx, row.EntityType, row.EntityID); err != nil {
+		// A replay is an update, so the update grant comes before row scope,
+		// which alone admits a seat that may read every record and write none.
+		err := requireUpdateGrant(ctx, row.EntityType)
+		if err == nil {
+			err = e.Writable(ctx, tx, row.EntityType, row.EntityID)
+		}
+		if err != nil {
 			if !isWriteScopeRefusal(err) {
 				// The port queries, so it can also fail. Reporting a database
 				// fault as a permission decision tells the contact a retry is

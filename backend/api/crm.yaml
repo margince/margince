@@ -47713,6 +47713,25 @@ components:
           $ref: '#/components/schemas/HistoryEdge'
         undoable:
           $ref: '#/components/schemas/Undoability'
+        left_behind:
+          type: array
+          description: >-
+            Set on the answer to putting back an archive, and omitted everywhere else: what the
+            archive took down with the record that the restore could not bring back (a link the
+            record's owner has since replaced, a list or tag archived in between). One entry per
+            thing, by kind only: a caller allowed to restore the record is not thereby allowed to
+            read a list, tag or link, so no id is returned. Absent means nothing was left.
+          items: { $ref: '#/components/schemas/RestoreLeftBehind' }
+
+    RestoreLeftBehind:
+      type: object
+      description: One thing a restore of an archive could not bring back with the record.
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [contact_email, contact_phone, contact_channel_identity, relationship, company_domain,
+                 company_relationship_type, partner, list, tag]
 
     HistoryEdge:
       type: [object, 'null']
