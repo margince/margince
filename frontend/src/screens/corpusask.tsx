@@ -169,18 +169,20 @@ export function AskMarginceModal({
   const answer = ask.data?.corpus.id === corpusId ? ask.data : undefined;
   const claims = useMemo(() => answer?.claims ?? [], [answer]);
   const cited = openCite === null ? undefined : claims[openCite];
+  const citedDoc = useRef<HTMLElement | null>(null);
+  // Stacked on a narrow drawer, the document opens below the answer.
+  useEffect(() => {
+    if (open && cited !== undefined) {
+      citedDoc.current?.scrollIntoView?.({ block: "nearest" });
+    }
+  }, [open, cited]);
 
   return (
-    // The house two-column dialog, and it is a RIGHT-SIDE drawer: `split`
-    // centred has no second column to hold and falls back to the roomy box,
-    // which this content overflowed. The drawer is what the design system
-    // offers for an answer beside the document it came from.
     <Modal
       open={open}
       onClose={onClose}
       labelledBy={titleId}
-      size="split"
-      placement="right"
+      intent="drawer-reading"
     >
       <div className="ask-modal">
         <header className="ask-modal-head">
@@ -278,7 +280,7 @@ export function AskMarginceModal({
             ) : null}
           </section>
           {cited ? (
-            <section className="ask-modal-doc">
+            <section className="ask-modal-doc" ref={citedDoc}>
               <CitedDocument key={cited.chunk_id} claim={cited} />
             </section>
           ) : null}

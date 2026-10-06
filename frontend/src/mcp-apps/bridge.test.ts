@@ -185,6 +185,19 @@ describe("the bridge announces itself", () => {
     expect(document.documentElement.dataset.theme).toBe("dark");
   });
 
+  it("ignores a theme that is neither light nor dark", async () => {
+    // The attribute only has meaning for the two the canon answers; anything else
+    // would stamp a value no token arm matches and strand the document unthemed.
+    const parent = stubParent();
+    await loadBridge(parent.win);
+    deliver(parent.win, "https://host.example", {
+      jsonrpc: "2.0",
+      id: parent.sent[0].msg.id,
+      result: { hostContext: { theme: "sepia" } },
+    });
+    expect(document.documentElement.hasAttribute("data-theme")).toBe(false);
+  });
+
   it("leaves a host that states no theme to the stylesheet, unstamped", async () => {
     // What must NOT happen here is a resolved value: tokens.css answers a dark
     // platform preference on any document not stamped light, and a stamp from

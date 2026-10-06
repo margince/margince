@@ -67,6 +67,16 @@ func TestCreateRecordStageInfoRefusesARecordTypeItCannotWrite(t *testing.T) {
 	}
 }
 
+// offer_tag is an argument of the tool, so the staging door takes it too: a
+// create that routes through an approval is not refused for the offer it carries.
+func TestCreateRecordStageInfoAcceptsAnOfferedTag(t *testing.T) {
+	_, err := createRecord{}.StageInfo(context.Background(),
+		json.RawMessage(`{"record_type":"contact","offer_tag":"K5 Conference 2026","fields":{"full_name":"Ada"}}`))
+	if err != nil {
+		t.Fatalf("staging a create that carries offer_tag answered %v, want the same arguments Handle accepts", err)
+	}
+}
+
 // A `fields` key the record type does not accept is refused by name, not
 // silently dropped.
 func TestCreateGuardsRefuseAnUnknownField(t *testing.T) {

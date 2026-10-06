@@ -157,7 +157,7 @@ func writeMCPInfoIndex(page *strings.Builder, tools []mcpToolEntry, resources []
 			mark = "yes"
 		}
 		view := ""
-		if tool.Meta.UI != nil {
+		if tool.Meta.UI != nil && tool.Meta.UI.ResourceURI != "" {
 			view = "[`" + tool.Meta.UI.ResourceURI + "`](#" + anchor(viewNameOf(tool.Meta.UI.ResourceURI)) + ")"
 		}
 		fmt.Fprintf(page, "| [`%s`](#%s) | %s | %s | %s | %s |\n",
@@ -193,7 +193,7 @@ func writeMCPInfoTools(page *strings.Builder, tools []mcpToolEntry) {
 			fmt.Fprintf(page, "**%s**\n\n", tool.Title)
 		}
 		page.WriteString(verbatimBlock(tool.Description) + "\n")
-		if tool.Meta.UI != nil {
+		if tool.Meta.UI != nil && tool.Meta.UI.ResourceURI != "" {
 			fmt.Fprintf(page, "Renders its result in [`%s`](#%s), visible to %s.\n\n",
 				tool.Meta.UI.ResourceURI, anchor(viewNameOf(tool.Meta.UI.ResourceURI)),
 				"`"+strings.Join(tool.Meta.UI.Visibility, "`, `")+"`")
@@ -209,7 +209,7 @@ func writeMCPInfoTools(page *strings.Builder, tools []mcpToolEntry) {
 
 // viewNameOf turns a view's URI into the heading its section is published
 // under, so the index can link a tool straight to the document that renders it.
-// ui://margince/company-brief.html is the company_brief_view section.
+// ui://margince/create-followups.html is the create_followups_view section.
 func viewNameOf(uri string) string {
 	file := uri[strings.LastIndexByte(uri, '/')+1:]
 	return strings.ReplaceAll(strings.TrimSuffix(file, ".html"), "-", "_") + "_view"

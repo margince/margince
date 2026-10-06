@@ -259,6 +259,7 @@ export function NewShortlistAction({
       <ConfirmModal
         open={open}
         onClose={() => setOpen(false)}
+        intent="form"
         title={t("lists.newShortlistTitle")}
         confirmLabel={t("lists.create")}
         confirmDisabled={name.trim() === ""}

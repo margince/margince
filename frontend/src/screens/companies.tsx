@@ -1245,11 +1245,10 @@ function CompanyPage({
         // on the page, but beside a work column that opens on the reader's ask
         // it no longer needs to be the size of a masthead.
         scale="compact"
-        // Where the account stands, what it is, and the one way in, on the
-        // name's own line, the contact record's own shape.
+        // Where the account stands, the one control on the name's own line.
         nameBadge={<CompanyNameLine company={company} />}
-        // What the account is to us and who may read it, as the pills row
-        // under the name.
+        // What the account is, the way in, what it is to us and who may read
+        // it, as the row under the name.
         pulse={<CompanyMarks company={company} />}
         zone={recordZone}
         // The way in, who holds the account and when its own row was written,

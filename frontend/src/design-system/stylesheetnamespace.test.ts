@@ -28,7 +28,6 @@ const sheets = appStylesheets(frontendRoot).map((file) => ({
 }));
 
 const namespaces = [
-  { prefix: "archive-", home: "screens/archive.css" },
   { prefix: "askai-", home: "screens/ai.css" },
   { prefix: "auth-", home: "screens/auth.css" },
   { prefix: "book-", home: "screens/book.css" },

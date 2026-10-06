@@ -184,7 +184,12 @@ function AddRecordRoleDialog({
     [],
   );
   return (
-    <Modal open onClose={onClose} labelledBy="record-role-add-title">
+    <Modal
+      open
+      onClose={onClose}
+      labelledBy="record-role-add-title"
+      intent="form"
+    >
       <Heading
         size="large"
         className="t-h3 modal-title"
