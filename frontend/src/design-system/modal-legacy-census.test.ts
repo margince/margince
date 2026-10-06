@@ -40,6 +40,7 @@ const BASELINE: Record<string, { legacy: number; bare: number }> = {
   "screens/brief.tsx": { legacy: 1, bare: 0 },
   "screens/commissiondecide.tsx": { legacy: 0, bare: 1 },
   "screens/connectors.tsx": { legacy: 0, bare: 1 },
+  "screens/customfields.tsx": { legacy: 1, bare: 1 },
   "screens/imap-connect-form.tsx": { legacy: 0, bare: 1 },
   "screens/import.tsx": { legacy: 1, bare: 0 },
   "screens/installation-settings.tsx": { legacy: 0, bare: 1 },
