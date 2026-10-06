@@ -27,15 +27,15 @@ func duplicateQueueSeam(pool *pgxpool.Pool) agents.DuplicateQueue {
 
 func (q duplicateQueue) Dismiss(ctx context.Context, candidate ids.UUID) (agents.DuplicateVerdict, error) {
 	row, err := q.store.DisposeDedupeCandidate(ctx, candidate, notADuplicate, nil)
-	return verdictOf(row, err)
+	return duplicateVerdictOf(row, err)
 }
 
 func (q duplicateQueue) Reopen(ctx context.Context, candidate ids.UUID) (agents.DuplicateVerdict, error) {
 	row, err := q.store.UndoDedupeDisposition(ctx, candidate)
-	return verdictOf(row, err)
+	return duplicateVerdictOf(row, err)
 }
 
-func verdictOf(row contacts.DedupeCandidateRow, err error) (agents.DuplicateVerdict, error) {
+func duplicateVerdictOf(row contacts.DedupeCandidateRow, err error) (agents.DuplicateVerdict, error) {
 	if err != nil {
 		return agents.DuplicateVerdict{}, err
 	}
