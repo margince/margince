@@ -7,11 +7,10 @@
 
 package gates
 
-// A page whose first line is <!-- prose:plain --> is written in plain words: short
-// sentences and a vocabulary of fewer than 1,000 general words plus
-// named technical terms. A page that must stay short adds max-words=N to the
-// marker. The method and how to add a word are in
-// docs/reference/docs-prose-style.md#plain-pages.
+// A page whose first line is <!-- prose:plain --> or <!-- prose:plain max-words=N -->
+// is written in plain words: short sentences and a vocabulary of fewer than 1,000
+// general words plus named technical terms, and with the optional limit, at most N words.
+// The method and how to add a word are in docs/reference/docs-prose-style.md#plain-pages.
 
 import (
 	"bufio"
@@ -179,7 +178,8 @@ func plainEnrolment(doc string) (enrolled bool, maxWords int) {
 	if m[1] != "" {
 		n, err := strconv.Atoi(m[1])
 		if err != nil {
-			return true, 1
+			// An unreadable limit must not pass as enrolled, so plainRequired names the marker.
+			return false, 0
 		}
 		return true, n
 	}
@@ -304,6 +304,9 @@ func TestPlainPageRulesFireOnPlantedDefects(t *testing.T) {
 		if ok, got := plainEnrolment(doc); !ok || got != want {
 			t.Errorf("marker %q read as enrolled=%v limit=%d, want limit %d", doc, ok, got, want)
 		}
+	}
+	if ok, _ := plainEnrolment("<!-- prose:plain max-words=99999999999999999999 -->\n# A"); ok {
+		t.Error("a marker whose limit does not parse was enrolled")
 	}
 	if ok, _ := plainEnrolment("# A\n`<!-- prose:plain -->`"); ok {
 		t.Error("a page quoting the marker below its first line was enrolled")

@@ -45,8 +45,8 @@ Two things to know about `make dev`:
 - It starts the stack of this worktree only, so two copies can run at once. Only `make dev-sweep` stops
   every stack on the machine.
 - Vite shows web app changes as you type, but the API is a built program. After a backend change, run
-  `make dev-stop && make dev`. A `make dev` by itself fails: the old stack holds the ports, and the start
-  refuses to run over an older server. An old API looks the same as a bug.
+  `make dev`: it stops the old stack of this worktree and starts a new one. An old API looks the
+  same as a bug.
 
 [docs/reference/make-targets.md](docs/reference/make-targets.md) lists every command.
 

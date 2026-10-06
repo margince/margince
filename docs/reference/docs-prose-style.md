@@ -100,8 +100,8 @@ protocols and file names. A general word also covers its regular forms, so a pag
 is not checked, and neither is link text that contains a `.` or a `/`, such as a path or a host.
 
 A page a newcomer reads first should also stay short, so it sets `max-words`. `README.md` must carry
-`max-words=1000` or lower. An index or a long guide sets no length limit and is held to the vocabulary and
-sentence rules alone.
+`max-words=1000` or lower. Any other page, such as an index or a long guide, may leave `max-words` out; the
+vocabulary, sentence and paragraph rules still apply to it.
 
 To use a new word, first look for a listed word that says the same thing. If none does, add it to the right
 list in the same pull request, in sorted order. A word that no plain page uses any more must leave the list,

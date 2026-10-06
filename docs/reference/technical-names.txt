@@ -45,7 +45,6 @@ React
 Redis
 REST
 SonarCloud
-SQL
 SSRF
 Telegram
 VAT

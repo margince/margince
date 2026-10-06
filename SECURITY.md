@@ -40,10 +40,10 @@ only when you see the hole in use against a real installation. To think that som
 enough. We answer that report within **4 business hours**. We answer with what we need from you, not
 with a ruling on how serious it is.
 
-Two more things then happen. First, our own 24-hour clock to report it starts when we read your report,
-before we confirm it. So we may ask you questions before we know much. Second, the advisory may be public
-before the normal time. Once attackers use a hole, the teams that run Margince need to know so they can
-fix it, and silence helps only the attacker. We tell you before that happens.
+Two more things then happen. First, our own 24-hour clock to report it starts as soon as we hold a
+report we trust, before we confirm it. So we may ask you questions before we know much. Second, the
+advisory may be public before the normal time. Once attackers use a hole, the teams that run Margince
+need to know so they can fix it, and silence helps only the attacker. We tell you before that happens.
 
 What we do, and the dates we must meet: [docs/compliance/cra/README.md](docs/compliance/cra/README.md).
 
@@ -51,9 +51,10 @@ What we do, and the dates we must meet: [docs/compliance/cra/README.md](docs/com
 
 In scope is a problem that breaks a security rule this code says it keeps, such as:
 
-- **Workspace isolation**: a read or write of rows outside the workspace of the caller. No table uses
-  row-level security. Each query keeps to its workspace through a SQL filter, and every query must go
-  through the one workspace transaction helper. So a path that leaves that helper is itself the hole.
+- **Workspace isolation**: a read or write of data of other workspaces. Each installation holds one
+  workspace, so the installation is the line that keeps one workspace from the others. No table uses
+  row-level security or has a workspace field. Every query must go through the one workspace transaction
+  helper, which refuses a call with no workspace. So a path that leaves that helper is itself the hole.
 - **Row scope and RBAC**: access to records outside the own, team or all scope of the caller. This
   includes error, replay and conflict paths. An answer outside the scope must be 404, so no caller learns
   that the record is there.
@@ -80,7 +81,7 @@ branches yet, and we do not copy fixes to older versions. Fixes go to `main`.
 ## No bounty
 
 There is no bug bounty program today and no promise of money. We name you in the advisory and the
-changelog, and we name each reporter whose report we fix.
+changelog, and we name each reporter whose report we fix, unless they ask us not to.
 
 ## Safe harbour
 

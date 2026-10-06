@@ -291,9 +291,9 @@ A generated page, and each `perfbench/` record, says so in its first line. Do no
 ## Reading order for a new developer
 
 1. [tutorials/getting-started.md](tutorials/getting-started.md): get it running.
-2. [explanation/backend-onboarding.md](explanation/backend-onboarding.md): the map of the code.
-3. [architecture.md](explanation/architecture.md), then [contract-first.md](explanation/contract-first.md),
+2. [architecture.md](explanation/architecture.md), then [contract-first.md](explanation/contract-first.md),
    then [authorization.md](explanation/authorization.md).
+3. [explanation/backend-onboarding.md](explanation/backend-onboarding.md): the map of the code.
 4. Then read the page about your change, from the Explanation list above. *How the code writes a
    change* is for most backend changes. For the web app, start at
    [frontend-architecture.md](explanation/frontend-architecture.md).
