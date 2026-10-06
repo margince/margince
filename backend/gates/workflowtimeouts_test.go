@@ -39,20 +39,28 @@ import (
 // covered without anyone remembering to name it here.
 const workflowDir = "../.github/workflows"
 
+// actionDir holds this repository's own composite actions, which run steps the
+// workflow files no longer spell themselves.
+const actionDir = "../.github/actions"
+
 // workflowJobs is the shape this gate needs and nothing more — decoding the
 // whole GitHub schema would couple the gate to fields it does not judge.
 type workflowJobs struct {
 	Jobs map[string]struct {
 		//nolint:tagliatelle // GitHub names this key, not us.
-		TimeoutMinutes int    `yaml:"timeout-minutes"`
-		Uses           string `yaml:"uses"`
-		Steps          []struct {
-			Name string `yaml:"name"`
-			Run  string `yaml:"run"`
-			//nolint:tagliatelle // GitHub names this key, not us.
-			TimeoutMinutes int `yaml:"timeout-minutes"`
-		} `yaml:"steps"`
+		TimeoutMinutes int            `yaml:"timeout-minutes"`
+		Uses           string         `yaml:"uses"`
+		Steps          []workflowStep `yaml:"steps"`
 	} `yaml:"jobs"`
+}
+
+// workflowStep is one step, in a workflow job or a composite action: both
+// spellings carry the same three fields this gate judges.
+type workflowStep struct {
+	Name string `yaml:"name"`
+	Run  string `yaml:"run"`
+	//nolint:tagliatelle // GitHub names this key, not us.
+	TimeoutMinutes int `yaml:"timeout-minutes"`
 }
 
 // workflowFiles lists every workflow this repository runs.
@@ -119,11 +127,28 @@ func TestEveryWorkflowJobCarriesATimeoutCeiling(t *testing.T) {
 	}
 }
 
-// The one command in this tree that installs from a package repository the
-// runner image does not pin. `--with-deps` shells out to apt inside the runner,
-// so it depends on a mirror nobody here controls, and a slow one hangs with no
-// output at all.
-const unpinnedInstall = "playwright install --with-deps"
+// The commands in this tree that install from somewhere the runner image does
+// not pin. `install-deps` shells out to apt inside the runner, so it depends on
+// a mirror nobody here controls, and a slow one hangs with no output at all;
+// the browser download reaches Playwright's own CDN.
+//
+// Two entries because the install is SPLIT: one step that hangs is one fault a
+// reader can name, where the combined `--with-deps` form could only report that
+// something in it did (#6972).
+var unpinnedInstalls = []string{
+	"playwright install --with-deps",
+	"playwright install-deps",
+	"playwright install chromium",
+}
+
+// isUnpinnedInstall is the predicate the scan applies. The table below calls it
+// rather than re-deriving the match, so a change to the list is judged by those
+// cases instead of by two spellings agreeing with each other.
+func isUnpinnedInstall(run string) bool {
+	return slices.ContainsFunc(unpinnedInstalls, func(cmd string) bool {
+		return strings.Contains(run, cmd)
+	})
+}
 
 // A job ceiling bounds the damage; a step ceiling says WHERE.
 //
@@ -138,24 +163,70 @@ func TestTheUnpinnedInstallIsBoundedWhereverItRuns(t *testing.T) {
 	for _, path := range workflowFiles(t) {
 		wf := readWorkflowJobs(t, path)
 		for _, name := range slices.Sorted(maps.Keys(wf.Jobs)) {
-			for _, step := range wf.Jobs[name].Steps {
-				if !strings.Contains(step.Run, unpinnedInstall) {
-					continue
-				}
-				found++
-				if step.TimeoutMinutes == 0 {
-					t.Errorf("%s: job %q, step %q installs from an unpinned package repository with no "+
-						"timeout-minutes of its own, so a stalled mirror spends the job's whole budget and "+
-						"reports as the lane timing out rather than as the install hanging",
-						filepath.Base(path), name, step.Name)
-				}
-			}
+			found += boundedInstalls(t, path, name, wf.Jobs[name].Steps)
 		}
 	}
-	if found == 0 {
-		t.Errorf("no step in the workflow tree runs %q. Either it is gone — delete this gate with it — "+
-			"or the scan stopped matching, which reads exactly like a clean tree", unpinnedInstall)
+	// Composite actions too: a step that moves into one leaves the workflow
+	// tree, and a scan that only reads workflows would report the move as a
+	// clean tree rather than as the step it stopped watching.
+	for _, path := range compositeActionFiles(t) {
+		found += boundedInstalls(t, path, "(composite)", readCompositeSteps(t, path))
 	}
+	if found == 0 {
+		t.Errorf("no step in the workflow or action tree runs any of %q. Either they are gone — delete "+
+			"this gate with them — or the scan stopped matching, which reads exactly like a clean tree",
+			unpinnedInstalls)
+	}
+}
+
+// boundedInstalls checks one step list and returns how many unpinned installs
+// it held, so the caller can tell an empty corpus from a clean one.
+func boundedInstalls(t *testing.T, path, job string, steps []workflowStep) int {
+	t.Helper()
+	found := 0
+	for _, step := range steps {
+		if !isUnpinnedInstall(step.Run) {
+			continue
+		}
+		found++
+		if step.TimeoutMinutes == 0 {
+			t.Errorf("%s: job %q, step %q installs from an unpinned package repository with no "+
+				"timeout-minutes of its own, so a stalled mirror spends the job's whole budget and "+
+				"reports as the lane timing out rather than as the install hanging",
+				filepath.Base(path), job, step.Name)
+		}
+	}
+	return found
+}
+
+// compositeActionFiles lists this repository's own composite actions.
+func compositeActionFiles(t *testing.T) []string {
+	t.Helper()
+	found, err := filepath.Glob(filepath.Join(actionDir, "*", "action.yml"))
+	if err != nil {
+		t.Fatalf("listing composite actions: %v", err)
+	}
+	if len(found) == 0 {
+		t.Fatalf("no composite actions found under %s; a gate reading them would pass vacuously", actionDir)
+	}
+	return found
+}
+
+func readCompositeSteps(t *testing.T, path string) []workflowStep {
+	t.Helper()
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("reading %s: %v", path, err)
+	}
+	var action struct {
+		Runs struct {
+			Steps []workflowStep `yaml:"steps"`
+		} `yaml:"runs"`
+	}
+	if err := yaml.Unmarshal(raw, &action); err != nil {
+		t.Fatalf("parsing %s: %v", path, err)
+	}
+	return action.Runs.Steps
 }
 
 // What the scan above cannot see is a step that reaches the same mirror by
@@ -171,11 +242,13 @@ func TestTheInstallScanMatchesTheCommandAndNotItsNeighbours(t *testing.T) {
 		{"pnpm exec playwright install --with-deps chromium", true},
 		{"pnpm install --frozen-lockfile\npnpm exec playwright install --with-deps chromium", true},
 		{"npx playwright install --with-deps", true},
-		{"pnpm exec playwright install chromium", false},
+		// The split spellings, each an unpinned install in its own right.
+		{"pnpm exec playwright install-deps chromium", true},
+		{"pnpm exec playwright install chromium", true},
 		{"pnpm install --frozen-lockfile --ignore-scripts", false},
 		{"make frontend-e2e", false},
 	} {
-		if got := strings.Contains(tc.run, unpinnedInstall); got != tc.bound {
+		if got := isUnpinnedInstall(tc.run); got != tc.bound {
 			t.Errorf("%q: matched=%v, want %v", tc.run, got, tc.bound)
 		}
 	}
