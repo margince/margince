@@ -109,8 +109,11 @@ func runDatabaseSubcommand(ctx context.Context, pool *pgxpool.Pool, args []strin
 	if len(args) == 0 {
 		return false, nil
 	}
-	if args[0] == "authz-disagreement" {
+	switch args[0] {
+	case "authz-disagreement":
 		return true, runAuthzDisagreement(ctx, pool, args[1:], stdout)
+	case "deal-key-names":
+		return true, runDealKeyNames(ctx, pool, args[1:], stdout)
 	}
 	return false, nil
 }
