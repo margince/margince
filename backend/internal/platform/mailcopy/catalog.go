@@ -148,7 +148,7 @@ func weeklyFigureLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.WeeklyDecided },
 		"Proposals decided",
 		"Entschiedene Vorschläge",
-		"Đề xuất đã quyết định")
+		"Đề xuất đã có quyết định")
 	weeklyDecisionLines(line)
 }
 
@@ -190,7 +190,7 @@ func weeklyQueueLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.WeeklyCarried },
 		"Carried over",
 		"Übertragen",
-		"Chuyển tiếp")
+		"Chuyển sang tuần sau")
 }
 
 // weeklyMovementLines are what actually moved, the way on to the rest of it,

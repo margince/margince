@@ -106,7 +106,7 @@ export const vi = {
   "brief.weekly.legacyDefinitions":
     "Định nghĩa trước đây · Số liệu đã lưu không thay đổi.",
   "brief.weekly.sharedDefinitions":
-    "Cuộc họp khách hàng đã xác nhận và doanh số theo phụ trách lúc chốt · Pipeline mới tính deal mới mở, không tính lượt đạt chuẩn.",
+    "Cuộc họp khách hàng đã xác nhận và doanh số theo người phụ trách lúc chốt · Pipeline mới tính deal mới mở, không tính lượt đạt chuẩn.",
   "brief.weekly.numericPartial":
     "Một số bằng chứng nguồn không khả dụng. Số liệu chỉ gồm bản ghi đọc được và đã định giá.",
   "reporting.edit": "Sửa báo cáo",
@@ -186,7 +186,7 @@ export const vi = {
   "reporting.pipeline_movement": "Pipeline đã thay đổi thế nào?",
   "reporting.metric_reading": "Chi tiết chỉ số",
   "reporting.bookings_won": "Doanh số đã chốt",
-  "reporting.closed_win_rate": "Tỷ lệ thắng trên deal đã chốt",
+  "reporting.closed_win_rate": "Tỷ lệ thắng trên deal đã đóng",
   "reporting.open_pipeline": "Pipeline đang mở",
   "reporting.qualified_pipeline_created": "Pipeline đủ điều kiện đã tạo",
   "reporting.meetings_held": "Cuộc họp đã diễn ra",
@@ -599,7 +599,7 @@ export const vi = {
   "home.receipt.forecast": "Đã đổi danh mục dự báo",
   "home.task.yours": "Việc cần làm của bạn: {action}",
   "home.change.unknown": "Không rõ ai đã thay đổi.",
-  "home.change.stageUnknown": "Giai đoạn không rõ",
+  "home.change.stageUnknown": "Không rõ giai đoạn",
   "home.change.unidentified": "Không rõ",
   "home.change.by": "Người đổi: {actor}",
   "brief.focus.inQueue": "Trong Danh sách công việc",
@@ -616,9 +616,9 @@ export const vi = {
     "Còn {count} mục khẩn cấp trong Danh sách công việc",
   "brief.focus.urgentRemaining_other":
     "Còn {count} mục khẩn cấp trong Danh sách công việc",
-  "brief.focus.remaining": "Còn {count} ưu tiên trong Danh sách công việc",
+  "brief.focus.remaining": "Còn {count} mục ưu tiên trong Danh sách công việc",
   "brief.team.planUnavailable":
-    "Bạn không xem được kế hoạch hiện tại nào của {name}.",
+    "Không có kế hoạch hiện tại nào của {name} mà bạn xem được.",
   "brief.team.noCommitments": "{name} chưa có cam kết trong kế hoạch này.",
   "brief.team.outcomes":
     "{won} thắng · {lost} thua · {moved} deal đã chuyển · {leads} lead đã giao",
@@ -638,7 +638,7 @@ export const vi = {
   "brief.coverage.source.ai_work_health": "Kiểm tra tự động hóa",
   "brief.coverage.source.capture_health": "Kết nối hộp thư",
   "brief.coverage.source.failed_approval": "Hành động đã duyệt thất bại",
-  "brief.coverage.source.relationship_decay": "Quan hệ ít liên lạc",
+  "brief.coverage.source.relationship_decay": "Quan hệ im lặng",
   "brief.coverage.source.meeting_outcome": "Việc tiếp theo sau cuộc họp",
   "brief.coverage.source.meeting": "Cuộc họp sắp tới",
   "brief.coverage.source.deal_at_risk": "Deal bị gắn cờ",
@@ -700,7 +700,7 @@ export const vi = {
   "brief.coverage.source.notice_case": "Thông báo quyền riêng tư",
   "brief.coverage.source.notice": "Thông báo",
   "brief.weekly.learnings.caveat":
-    "Những nhận xét này mô tả mối liên hệ trong công việc đã ghi nhận; chúng không xác lập nguyên nhân dẫn đến kết quả.",
+    "Các nhận xét này mô tả mối liên hệ trong công việc đã ghi nhận, không xác định nguyên nhân dẫn đến kết quả.",
   "brief.plan.open": "Mở kế hoạch tuần",
   "worklist.source.weekly_commitment": "Cam kết trong tuần",
   "worklist.untitled.weekly_commitment": "Cam kết trong tuần",
@@ -716,7 +716,7 @@ export const vi = {
   "brief.updatedAt": "Lịch trình cập nhật lúc {when}",
   "brief.changes.superseded":
     "Deal này lại vừa thay đổi. Mở deal để xem lại trạng thái hiện tại.",
-  "brief.changes.title": "Thay đổi đã làm cho bạn",
+  "brief.changes.title": "Thay đổi đã làm thay bạn",
   "brief.changes.accept": "Chấp nhận",
   "brief.changes.accepted": "Đã chấp nhận",
   "brief.changes.undone": "Đã hoàn tác",
@@ -801,7 +801,7 @@ export const vi = {
   "history.clearFilter": "Bỏ bộ lọc",
   "history.allFields": "Tất cả trường",
   "history.actorAll": "Tất cả",
-  "history.actorHuman": "Thành viên",
+  "history.actorHuman": "Con người",
   "history.actorAgent": "Agent",
   "history.tabChanges": "Theo thay đổi",
   "history.tabFields": "Theo trường",
@@ -1265,14 +1265,14 @@ export const vi = {
   "commission.decide.withheld": "Không có quyền quyết định",
   "commission.decide.approve": "Duyệt",
   "commission.decide.pay": "Đánh dấu đã thanh toán",
-  "commission.decide.void": "Đảo",
+  "commission.decide.void": "Đảo ngược",
   "commission.decide.approveConfirm":
     "Duyệt là ghi nhận rằng khoản hoa hồng này đã được thống nhất. Duyệt không thanh toán gì: thanh toán trong hệ thống tài chính của bạn, rồi đánh dấu đã thanh toán tại đây.",
   "commission.decide.payConfirm":
     "Chỉ đánh dấu đã thanh toán sau khi hệ thống tài chính của bạn đã thanh toán. Margince ghi nhận khoản thanh toán và không chuyển tiền.",
   "commission.decide.voidConfirm":
     "Đảo sẽ thêm một khoản bù trừ bên cạnh khoản này. Không có gì bị xóa, và bản gốc vẫn đọc được.",
-  "commission.decide.reasonLabel": "Lý do đảo",
+  "commission.decide.reasonLabel": "Lý do đảo ngược",
   "commission.decide.reasonRequired":
     "Nhập lý do. Lý do này giải thích khoản đảo với đối tác sau này.",
   "commission.decide.approved": "Đã duyệt hoa hồng",
@@ -1344,19 +1344,19 @@ export const vi = {
 
   "common.error": "Không tải được màn hình này. Tải lại trang.",
   "common.errorNoCause":
-    "Yêu cầu thất bại. Không có nguyên nhân nào được báo lại.",
+    "Yêu cầu không thành công. Hệ thống không báo nguyên nhân.",
   "common.assistantUnavailable":
     "Trợ lý không phản hồi, nên chưa tạo bản nháp nào. Tự nhập thông tin, hoặc nhờ quản trị viên kiểm tra mô hình trong Cài đặt, mục AI.",
   "common.providerOutOfCredit":
-    "Nhà cung cấp AI đã hết số dư. Liên hệ quản trị viên hệ thống của bạn.",
+    "Nhà cung cấp AI đã hết số dư. Liên hệ quản trị viên hệ thống.",
   "common.providerUnauthorized":
-    "Nhà cung cấp AI từ chối thông tin xác thực đã cấu hình. Liên hệ quản trị viên hệ thống của bạn.",
+    "Nhà cung cấp AI từ chối thông tin xác thực đã cấu hình. Liên hệ quản trị viên hệ thống.",
   "common.providerUnavailable":
-    "Nhà cung cấp AI hiện không phản hồi. Thử lại sau hoặc liên hệ quản trị viên hệ thống của bạn.",
+    "Nhà cung cấp AI hiện không phản hồi. Thử lại sau hoặc liên hệ quản trị viên hệ thống.",
   "common.gatewayUnavailable":
-    "Máy chủ chưa xử lý xong yêu cầu kịp thời và có thể vẫn đang xử lý. Chờ một lúc rồi mới thử lại, nếu không thao tác có thể chạy hai lần.",
+    "Máy chủ không kịp xử lý xong yêu cầu và có thể vẫn đang xử lý. Chờ một lúc rồi hãy thử lại, nếu không thao tác có thể chạy hai lần.",
   "common.permissionDenied":
-    "Bạn không có quyền với thao tác này. Nhờ quản trị viên, hoặc người đã chia sẻ bản ghi này, mở rộng quyền truy cập của bạn.",
+    "Bạn không có quyền thực hiện thao tác này. Nhờ quản trị viên, hoặc người đã chia sẻ bản ghi này, cấp thêm quyền cho bạn.",
   "common.seatReadOnly":
     "Suất này chỉ đọc, nên yêu cầu bị từ chối. Nhờ quản trị viên nâng cấp suất.",
   "common.retry": "Thử lại",
@@ -1517,7 +1517,7 @@ export const vi = {
   "consent.proofEmpty":
     "Chưa ghi nhận quyết định đồng ý nào cho mục đích này. Nhật ký trống nghĩa là chưa có sự kiện đồng ý nào được ghi nhận, không phải có sự kiện bị thiếu.",
   "consent.sourceUnknown": "chưa ghi nhận nguồn",
-  "consent.actorHuman": "Thành viên",
+  "consent.actorHuman": "Con người",
   "consent.actorAgent": "Agent",
   "consent.actorSystem": "Hệ thống",
   "consent.actorConnector": "Trình kết nối",
@@ -1530,7 +1530,7 @@ export const vi = {
     "Thao tác này lưu trữ “{name}” và chặn tạo công ty từ {domain}, nên thư sau này từ tên miền đó không tạo lại công ty này. Quản trị viên có thể bỏ chặn tên miền trong Cài đặt, mục Quy tắc thu thập.",
   "company.rejectReasonLabel": "Lý do đây không phải công ty",
   "company.rejectReasonHint":
-    "Lý do đủ rõ để xử lý khi xem lại tên miền bị chặn. Lệnh chặn vẫn còn sau khi bản ghi không còn.",
+    "Lý do đủ rõ để người xem lại tên miền bị chặn xử lý được. Lệnh chặn vẫn còn hiệu lực cả khi bản ghi đã mất.",
   "company.rejectDone": "Đã lưu trữ “{name}” và chặn tạo công ty từ {domain}",
   "company.name": "Công ty",
   "company.brief.title": "Tóm tắt công ty",
@@ -1563,7 +1563,7 @@ export const vi = {
   // with its evidence — a reader can tell, and hiding it would be worse.
   "co.factSuspect.phoneShapedLocation": "Trông giống số điện thoại",
   "co.factSuspect.notAPhone": "Không giống số điện thoại",
-  "co.factSuspect.notAYear": "Không giống một năm",
+  "co.factSuspect.notAYear": "Không giống số năm",
   "co.factSuspect.notAnEmail": "Không giống địa chỉ email",
   "co.factSuspect.notASize": "Không giống quy mô nhân sự",
   // The three readings the overview leads with, and what performing a
@@ -1587,7 +1587,7 @@ export const vi = {
   "co.strip.fin.syncing": "Đang đồng bộ",
   "co.strip.fin.staleFigure": "Đồng bộ đã cũ",
   "co.strip.fin.notCurrent": "Chưa cập nhật",
-  "co.strip.fin.errorFigure": "Đồng bộ lần cuối thất bại",
+  "co.strip.fin.errorFigure": "Lần đồng bộ gần nhất thất bại",
   "co.strip.fin.error": "Không khả dụng",
   "co.strip.fin.errorWhy": "Không tải được",
   "co.strip.fin.noFigure": "Chưa có số liệu",
@@ -1688,10 +1688,10 @@ export const vi = {
   "co.health.rating.good": "Tốt",
   "co.health.rating.strong": "Mạnh",
   "co.health.payment.overdue": "Có khoản thanh toán quá hạn.",
-  "co.health.payment.late": "Thường thanh toán sau hạn {days} ngày.",
+  "co.health.payment.late": "Thường thanh toán trễ {days} ngày.",
   "co.health.payment.onTime": "Thanh toán đúng hạn.",
   "company.partnerSetUp": "Thiết lập chương trình đối tác",
-  "signal.kind.stalled_deal": "Deal đình trệ",
+  "signal.kind.stalled_deal": "Deal bị đình trệ",
   "signal.kind.champion_left": "Người ủng hộ đã rời đi",
   "signal.kind.reengagement": "Nối lại liên hệ",
   "signal.kind.buying_intent": "Ý định mua",
@@ -1949,7 +1949,7 @@ export const vi = {
     "Thời hạn báo trước khi hủy. Cảnh báo gia hạn hiện trước hạn chót này, không phải trước ngày gia hạn.",
   "contracts.form.paymentTerms": "Thời hạn thanh toán (ngày)",
   "contracts.form.paymentTermsHint":
-    "Số ngày khách hàng có để thanh toán. 0 nghĩa là thanh toán khi nhận; để trống nếu chưa thỏa thuận thời hạn.",
+    "Số ngày khách hàng được phép trả chậm. 0 nghĩa là thanh toán khi nhận; để trống nếu chưa thỏa thuận thời hạn.",
   "contracts.form.signedOn": "Ngày ký",
   "contracts.form.signedOnHint":
     "Chỉ khi có xác nhận chữ ký. Không bao giờ lấy từ ngày chốt của deal.",
@@ -2063,14 +2063,14 @@ export const vi = {
   "co.growthFit.positive": "Yếu tố thuận lợi",
   "co.growthFit.negative": "Yếu tố hạn chế",
   "co.growthFit.whitespace": "Tiềm năng bán hàng",
-  "co.growthFit.objections": "Phản đối có thể gặp",
+  "co.growthFit.objections": "Ý kiến phản đối có thể gặp",
   "co.growthFit.angle": "Hướng tiếp cận đề xuất",
   "co.dossier.title": "Tổng quan công ty",
   "co.dossier.unavailable":
     "Không tải được tổng quan. Bản ghi công ty không thay đổi.",
   "co.dossier.empty":
     "Chưa ghi nhận gì về công ty này. Đọc trang web của công ty, hoặc hoàn thiện hồ sơ bên dưới.",
-  "co.dossier.stale": "Đọc lần cuối hơn một tháng trước",
+  "co.dossier.stale": "Đọc lần cuối cách đây hơn một tháng",
   "co.dossier.rewrite": "Tạo lại",
   "co.dossier.rewriting": "Đang tạo lại…",
   "co.dossier.section.summary": "Tóm tắt",
@@ -2200,7 +2200,7 @@ export const vi = {
   "co.ask.q.meeting_prep": "Chuẩn bị cho cuộc họp",
   "co.ask.q.whats_changed": "Gần đây có gì thay đổi?",
   "co.ask.nothing":
-    "Không có bản ghi nào bạn truy cập được trả lời câu hỏi đó.",
+    "Các bản ghi bạn truy cập được không trả lời được câu hỏi này.",
   "co.ask.failed": "Không trả lời được câu hỏi. Thử lại.",
   "co.suggest.kind.no_reply": "Chưa trả lời",
   "co.suggest.kind.stalled_deal": "Deal đình trệ",
@@ -2233,7 +2233,7 @@ export const vi = {
   "co.rail.deals.title": "Deal đang hoạt động",
   "co.rail.deals.empty": "Công ty này chưa có deal nào.",
   "co.rail.deals.emptyClosedOnly":
-    "Không có deal đang mở, chỉ có deal đã kết thúc.",
+    "Không có deal đang mở, chỉ có deal đã đóng.",
   "co.rail.deals.noCloseDate": "chưa có ngày chốt",
   "co.rail.deals.attentionOverdue": "Quá hạn",
   "co.rail.deals.attentionCommitment": "Cam kết của bên mua đến hạn",
@@ -2347,7 +2347,7 @@ export const vi = {
   "compose.audienceLegend": "Phạm vi hiển thị tin nhắn",
   "email.aMessage": "Một email",
   "email.noSubject": "Không có tiêu đề",
-  "email.withheldSubject": "Chưa chia sẻ với bạn",
+  "email.withheldSubject": "Không chia sẻ với bạn",
   "email.receivedFrom": "Nhận từ {who}",
   "email.received": "Đã nhận",
   "email.sentTo": "Đã gửi tới {who}",
@@ -2358,8 +2358,8 @@ export const vi = {
   "email.sending": "Đang gửi",
   "email.notSentTo": "Chưa gửi tới {who}",
   "email.notSent": "Chưa gửi",
-  "email.bouncedFrom": "Không tới được {who}",
-  "email.bounced": "Không tới nơi",
+  "email.bouncedFrom": "Không gửi tới được {who}",
+  "email.bounced": "Không gửi tới được",
   "email.access.sentence.workspace":
     "Mọi thành viên trong tổ chức đều đọc được email này.",
   "email.access.sentence.team":
@@ -2418,7 +2418,7 @@ export const vi = {
   "co.profileField.customer_pains": "Vấn đề của khách hàng",
   "co.profileField.desired_outcomes": "Kết quả mong muốn",
   "co.profileField.buying_intents": "Yếu tố thúc đẩy mua",
-  "co.profileField.common_objections": "Phản đối thường gặp",
+  "co.profileField.common_objections": "Ý kiến phản đối thường gặp",
   "co.profileField.sales_motion": "Cách bán hàng",
   "co.profileField.legal_name": "Tên pháp lý đã đăng ký",
   "co.profileField.registered_address": "Địa chỉ đăng ký",
@@ -2494,7 +2494,7 @@ export const vi = {
   "co.intro.write": "Soạn tin nhắn",
   "co.intro.writing": "Đang viết…",
   "co.intro.fromTemplate":
-    "Viết từ mẫu. Bản cài đặt này chưa cấu hình mô hình.",
+    "Soạn theo mẫu. Bản cài đặt này chưa cấu hình mô hình.",
   "co.intro.subject": "Tiêu đề",
   "co.intro.body": "Tin nhắn",
   "co.intro.basedOn": "Dựa trên",
@@ -2506,13 +2506,13 @@ export const vi = {
   "co.contacts.board.suggest": "Đề xuất vai trò",
   "co.contacts.board.suggesting": "Đang đọc tin nhắn…",
   "co.contacts.board.suggestNoDeal":
-    "Vai trò gán theo từng deal, và công ty này không có deal nào đang mở.",
+    "Vai trò được gán theo từng deal, mà công ty này không có deal nào đang mở.",
   "co.contacts.board.suggestWrote_one":
     "Đã gán {count} vai trò từ tin nhắn của họ",
   "co.contacts.board.suggestWrote_other":
     "Đã gán {count} vai trò từ tin nhắn của họ",
   "co.contacts.board.suggestUnavailable":
-    "Đề xuất vai trò cần mô hình, và bản cài đặt này chưa cấu hình mô hình nào.",
+    "Đề xuất vai trò cần có mô hình, nhưng bản cài đặt này chưa cấu hình mô hình nào.",
   "co.contacts.board.suggestNothing":
     "Tin nhắn của họ không cho thấy ai quyết định mua.",
   "co.contacts.board.suggestRefused_one":
@@ -2530,12 +2530,12 @@ export const vi = {
   "co.role.champion": "người ủng hộ",
   "co.role.economic_buyer": "người quyết định ngân sách",
   "co.role.blocker": "người cản trở",
-  "co.role.influencer": "người tác động",
+  "co.role.influencer": "người có ảnh hưởng",
   "co.role.user": "người dùng cuối",
   "co.roleLabel.champion": "Người ủng hộ",
   "co.roleLabel.economic_buyer": "Người quyết định ngân sách",
   "co.roleLabel.blocker": "Người cản trở",
-  "co.roleLabel.influencer": "Người tác động",
+  "co.roleLabel.influencer": "Người có ảnh hưởng",
   "co.roleLabel.user": "Người dùng cuối",
   "co.evidence.extractedUnconfirmed": "AI trích xuất · chưa xác nhận",
   "co.evidence.previous": "Thông tin trước",
@@ -2564,7 +2564,7 @@ export const vi = {
   "co.factField.technology": "Công nghệ",
   "co.factField.mail_provider": "Hệ thống thư",
   "co.factField.email_security": "Xác thực thư",
-  "co.factField.hosting_provider": "Máy chủ web",
+  "co.factField.hosting_provider": "Lưu trữ web",
   "co.factField.operated_service": "Dịch vụ vận hành",
   "co.vat.markVerdict": "Mã số VAT: {verdict}",
   "co.vat.markUnchecked": "Mã số VAT: chưa kiểm tra với cơ quan đăng ký",
@@ -2574,7 +2574,7 @@ export const vi = {
     "Mã số trên bản ghi này đã thay đổi sau lần kiểm tra này. Kiểm tra mã số mới với cơ quan đăng ký.",
   "co.vat.verdict": "Kết quả tra cứu",
   "co.vat.number": "Mã số đã kiểm tra",
-  "co.vat.registeredName": "Đăng ký cho",
+  "co.vat.registeredName": "Tên đăng ký",
   "co.vat.registeredAddress": "Địa chỉ đăng ký",
   "co.vat.checkedAt": "Ngày kiểm tra",
   "co.vat.receipt": "Số tra cứu",
@@ -2595,7 +2595,7 @@ export const vi = {
   "co.tech.mail": "Email",
   "co.tech.web": "Công nghệ trang web",
   "co.tech.services": "Dịch vụ",
-  "co.tech.hosting": "Máy chủ web",
+  "co.tech.hosting": "Lưu trữ web",
   "co.tech.empty":
     "Chưa có dữ liệu kỹ thuật. Tự động điền và cập nhật khi đọc trang web của công ty.",
   "co.tech.laneFailed": "{lane} không phản hồi. Kết quả trước vẫn giữ nguyên.",
@@ -2620,7 +2620,7 @@ export const vi = {
   "co.facts.removeAsk":
     "{field} đang ghi là “{value}”. Gỡ đi sẽ đánh dấu đây không phải dữ kiện về công ty. Lần đọc trang web sau có thể thêm lại.",
   "co.facts.showAll": "Hiện tất cả {count}",
-  "co.facts.showLess": "Hiện ít hơn",
+  "co.facts.showLess": "Thu gọn",
   "co.project.new": "Dự án mới",
   "co.deal.new": "Deal mới",
   "co.recent.title": "Hoạt động gần đây",
@@ -2767,7 +2767,7 @@ export const vi = {
   "lead.source.crawl": "Tìm hiểu trên web",
   "lead.source.unknown": "Nguồn không rõ",
   "lead.sourceFromConnector":
-    "Do trình kết nối ghi, và trình kết nối đó giữ nguồn riêng.",
+    "Do trình kết nối ghi; trình kết nối tự giữ nguồn riêng.",
   "leadSources.title": "Nguồn lead",
   "leadSources.sub":
     "Lead đến từ đâu. Dùng trong biểu mẫu Lead mới, trong bộ lọc và khi chấm điểm.",
@@ -2853,7 +2853,7 @@ export const vi = {
     "Đóng với lý do “{reason}”. Mỗi lead vẫn giữ nguyên bản ghi, và không mở lại được tất cả trong một bước.",
   "lead.bulkFailed": "{count} mục không áp dụng được:",
   "lead.bulkFailedRow": "không lưu được",
-  "lead.bulkOutcomeConflict": "đã có thay đổi khác trong lúc đó",
+  "lead.bulkOutcomeConflict": "người khác đã thay đổi trong lúc đó",
   "lead.bulkOutcomeForbidden": "không có quyền giao lại",
   "lead.bulkOutcomeNotFound": "không còn trong danh sách của bạn",
   "lead.bulkSelectRow": "Chọn {name}",
@@ -2864,7 +2864,7 @@ export const vi = {
   "lead.sla.withinTarget": "Đúng hạn",
   "lead.sla.answeredAt": "{at}",
   "lead.sla.dueBy": "Đến hạn {at}",
-  "lead.sla.overdueSince": "Đã đến hạn {at}",
+  "lead.sla.overdueSince": "Quá hạn từ {at}",
   "lead.filterSla": "Phản hồi",
   "lead.filterSlaAll": "Tất cả",
   "list.viewOverdue": "Quá hạn",
@@ -2881,7 +2881,7 @@ export const vi = {
   "lead.rail.project.change": "Đổi dự án",
   "lead.terminalReadOnly": "Lead này đã đóng và không thể thay đổi.",
   "lead.notYoursToChange":
-    "Bạn không thể thay đổi lead này. Đề nghị thành viên phụ trách chia sẻ, hoặc quản trị viên cấp quyền sửa.",
+    "Bạn không thể thay đổi lead này. Nhờ người phụ trách chia sẻ, hoặc nhờ quản trị viên cấp quyền sửa.",
   "lead.boardCountsUnavailable":
     "Không tải được số lượng Đủ điều kiện và Đã loại.",
   "lead.boardTerminalRowsUnavailable":
@@ -3036,7 +3036,7 @@ export const vi = {
   "lead.viewNew": "Mới",
   "lead.viewNewUnassigned": "Mới và chưa giao",
   "lead.viewUnassigned": "Chưa giao",
-  "lead.viewNeedsFollowUp": "Cần xử lý tiếp",
+  "lead.viewNeedsFollowUp": "Cần liên hệ lại",
   "lead.viewEngaged": "Đang trao đổi",
   "lead.ladder": "Trạng thái lead",
   "lead.ladder.new": "Mới: chưa liên hệ.",
@@ -3077,8 +3077,8 @@ export const vi = {
   "lead.disqualify.note": "Ghi chú (không bắt buộc)",
   "lead.disqualify.confirm": "Loại",
 
-  "deals.viewBoard": "Bảng",
-  "deals.viewTable": "Bảng biểu",
+  "deals.viewBoard": "Dạng cột",
+  "deals.viewTable": "Dạng bảng",
   "deals.amount": "Giá trị",
   "deals.lastSignal": "Tín hiệu gần nhất",
   "deals.lastSignalNone": "chưa có tín hiệu",
@@ -3087,7 +3087,7 @@ export const vi = {
   "deals.close": "Ngày chốt dự kiến",
   "deals.confirmAdvance": "Chuyển sang {stage}?",
   "deals.confirmTerminal":
-    "Thao tác này chốt deal với trạng thái {status}. Chưa có gì thay đổi cho đến khi bạn xác nhận.",
+    "Thao tác này kết thúc deal với trạng thái {status}. Chưa có gì thay đổi cho đến khi bạn xác nhận.",
   "deals.lostReason": "Lý do thua",
   "deals.winNoEvidence":
     "Chưa đính kèm hợp đồng đã ký. Ghi lại deal đã thắng bằng cách nào; câu trả lời lưu trên deal và tính vào báo cáo.",
@@ -3117,7 +3117,7 @@ export const vi = {
   "deal.committee.title": "Nhóm quyết định mua",
   "deal.committee.legendEngaged": "Đang tương tác",
   "deal.committee.legendQuiet": "Chưa tương tác",
-  "deal.committee.legendGap": "Thiếu độ bao phủ",
+  "deal.committee.legendGap": "Chưa bao phủ",
   "deal.committee.threads":
     "{engaged} trên {total} thành viên nhóm quyết định mua đang tương tác.",
   "deal.committee.engagement": "Mức tương tác",
@@ -3177,8 +3177,8 @@ export const vi = {
   "outcomeReview.save": "Lưu đánh giá",
   "outcomeReview.empty": "Chưa viết đánh giá nào",
   "outcomeReview.emptyDetail": "Ghi lại lý do của kết quả này khi còn nhớ rõ.",
-  "outcomeReview.earlier": "Từ một lần chốt trước đó",
-  "outcomeReview.earlierMark": "lần chốt trước",
+  "outcomeReview.earlier": "Từ một lần đóng deal trước đó",
+  "outcomeReview.earlierMark": "lần đóng trước",
   "outcomeReview.outcomeWon": "Thắng",
   "outcomeReview.outcomeLost": "Thua",
   "outcomeReview.noAnswer": "Chưa trả lời",
@@ -3186,7 +3186,7 @@ export const vi = {
   "deal.commercialContext": "Bối cảnh thương mại",
 
   "deal.arrFromOffer":
-    "ARR dự kiến lấy từ báo giá đã chấp nhận và không sửa ở đây.",
+    "ARR dự kiến lấy từ báo giá đã chấp nhận và không sửa được ở đây.",
   "deal.brief": "Tóm tắt deal",
   "deal.briefHint": "Nhu cầu khách hàng, phạm vi và kết quả mong muốn.",
   "deal.briefMore": "Xem thêm",
@@ -3263,7 +3263,7 @@ export const vi = {
   "deal.fxBase": "Gốc {value} · tỷ giá {rate} tính đến {date}",
   "deal.archive": "Lưu trữ deal",
   "deal.archiveConfirm":
-    "Lưu trữ sẽ đưa deal này ra khỏi danh sách deal đang mở. Có thể khôi phục deal từ lịch sử của deal.",
+    "Lưu trữ sẽ đưa deal này ra khỏi danh sách deal đang mở. Có thể khôi phục lại từ lịch sử của deal.",
   "deal.archivedReadOnly": "Deal này đã lưu trữ và không nhận thay đổi.",
   "deal.notYoursToChange":
     "Bạn không thể thay đổi deal này. Nhờ người phụ trách chia sẻ deal, hoặc nhờ quản trị viên cấp quyền sửa.",
@@ -3283,7 +3283,7 @@ export const vi = {
   "deals.filterStalled": "Chỉ deal đình trệ",
   "deals.filterOwnerMe": "Deal của tôi",
   "deals.totalsOwnerNotMeasurable":
-    "Chỉ tính deal đã tải. Tổng của người phụ trách này nằm ngoài phạm vi bạn được đo.",
+    "Chỉ tính deal đã tải. Tổng của người phụ trách này nằm ngoài phạm vi số liệu bạn được xem.",
   "deals.totalsNoTagFilter":
     "Chỉ tính deal đã tải. Không có tổng khi đang lọc theo thẻ.",
   "deals.filterPartner": "Đối tác",
@@ -3353,7 +3353,7 @@ export const vi = {
   "bulk.reason.no_previous_owner": "Trước đó không có người phụ trách",
   "bulk.refusal.sole_project_company":
     "Công ty duy nhất của một dự án đang hoạt động",
-  "bulk.refusal.locked": "Đang bị giữ do lưu giữ pháp lý hoặc thời hạn lưu giữ",
+  "bulk.refusal.locked": "Đang bị giữ do lưu giữ pháp lý hoặc nghĩa vụ lưu giữ",
   "bulk.refusal.anchor_protected": "Công ty của chính bạn được bảo vệ",
   "bulk.refusal.required": "Liên hệ riêng tư phải có người phụ trách",
   "bulk.confirmReassign": "Đổi người phụ trách",
@@ -3501,7 +3501,7 @@ export const vi = {
   "brief.weekly.learnings.title": "Nhận xét cần xem lại",
   "brief.weekly.learnings.worked": "Kết quả tích cực",
   "brief.weekly.learnings.didNotWork": "Kết quả không thành công",
-  "brief.weekly.learnings.pattern": "Quy luật",
+  "brief.weekly.learnings.pattern": "Xu hướng",
   "brief.weekly.learnings.experiment": "Thử nghiệm",
   "brief.weekly.learnings.notRun": "Chưa phân tích tuần này.",
   "brief.weekly.learnings.insufficient":
@@ -3716,7 +3716,7 @@ export const vi = {
   "brief.weekly.dealsWon": "Thắng",
   "brief.weekly.dealsLost": "Thua",
   "brief.weekly.dealsMoved": "Đã chuyển",
-  "brief.weekly.decided": "Đề xuất đã quyết định",
+  "brief.weekly.decided": "Đề xuất đã có quyết định",
   "brief.weekly.acceptedRejected":
     "{accepted} đã chấp nhận · {rejected} đã từ chối",
   "brief.weekly.queueWorked": "Mục Bản tin sáng",
@@ -3725,10 +3725,10 @@ export const vi = {
   "brief.weekly.wonVsPrior": "{value} · {delta} so với tuần từ {week}",
   "brief.weekly.leadsAnswered": "Lead đã được phản hồi",
   "brief.weekly.ofRouted": "{answered} trên {routed}",
-  "brief.weekly.planCommitmentsKept": "Cam kết đã giữ",
+  "brief.weekly.planCommitmentsKept": "Cam kết đã giữ đúng",
   "brief.weekly.meetingsHeld": "Cuộc họp có việc tiếp theo",
   "brief.weekly.ofMeetings": "{withStep} trên {held}",
-  "brief.weekly.carriedOver": "Chuyển tiếp",
+  "brief.weekly.carriedOver": "Chuyển sang tuần sau",
   "brief.weekly.outcome.moved": "đã chuyển",
   "brief.weekly.outcome.won": "thắng",
   "brief.weekly.outcome.lost": "thua",
@@ -3760,7 +3760,7 @@ export const vi = {
     "Xem lại kết quả và lên kế hoạch cho bước tiếp theo.",
   "brief.glance.intro": "Tổng quan hôm nay của bạn.",
   "brief.panel.decisions": "Phê duyệt",
-  "brief.panel.overnight": "Qua đêm",
+  "brief.panel.overnight": "Trong đêm",
   "brief.rail.quietSchedule": "Không có lịch hẹn",
   "brief.panel.schedule": "Cuộc họp sắp tới",
   "brief.overnight.connectorsUnhealthy": "Trình kết nối cần xử lý",
@@ -3781,7 +3781,7 @@ export const vi = {
   "brief.readings.meetingsBasis": "Còn lại trong lịch hôm nay",
   "brief.readings.needsPrep_one": "1 cần chuẩn bị",
   "brief.readings.needsPrep_other": "{count} cần chuẩn bị",
-  "brief.readings.prepUnknown": "Chưa kiểm tra chuẩn bị",
+  "brief.readings.prepUnknown": "Chưa kiểm tra khâu chuẩn bị",
   "brief.readings.prepared": "Đã chuẩn bị đủ",
   "brief.readings.leads": "Tìm kiếm khách hàng",
   "brief.readings.leadsBasis": "Việc cần làm đã lên kế hoạch cho lead",
@@ -3799,12 +3799,12 @@ export const vi = {
   "brief.deck.viewDeck": "Xếp chồng",
   "brief.deck.viewList": "Danh sách",
   "brief.deck.keys":
-    "Phím mũi tên xếp một quyết định: → chấp nhận · ← từ chối · ↑ sửa · ↓ để sau · U hoàn tác · Enter gửi các quyết định đã xếp",
+    "Phím mũi tên chọn một quyết định: → chấp nhận · ← từ chối · ↑ sửa · ↓ để sau · U hoàn tác · Enter gửi các quyết định đã chọn",
   "brief.deck.behind_one": "Còn 1 mục phía sau",
   "brief.deck.behind_other": "Còn {count} mục phía sau",
-  "brief.deck.staged_one": "1 quyết định đã xếp",
-  "brief.deck.staged_other": "{count} quyết định đã xếp",
-  "brief.deck.commit": "Gửi quyết định đã xếp",
+  "brief.deck.staged_one": "1 quyết định đã chọn",
+  "brief.deck.staged_other": "{count} quyết định đã chọn",
+  "brief.deck.commit": "Gửi quyết định đã chọn",
   "brief.deck.skipped_one": "1 đã bỏ qua",
   "brief.deck.skipped_other": "{count} đã bỏ qua",
   "brief.deck.edited_one": "1 đang sửa",
@@ -4188,7 +4188,7 @@ export const vi = {
   "log.kindCall": "Cuộc gọi",
   "log.transcriptLabel": "Bản chép lời",
   "log.transcriptHint":
-    "Dán từ công cụ họp, ví dụ Teams, Zoom hoặc Meet. Nhãn người nói, nếu có, được giữ nguyên.",
+    "Dán từ công cụ họp, ví dụ Teams, Zoom hoặc Meet. Nếu có nhãn người nói, nhãn được giữ nguyên.",
   "log.asTranscript": "Văn bản này là bản chép lời",
   "log.transcriptUpload": "Hoặc tải lên tệp",
   "log.transcriptUploadRejected": "Chỉ chấp nhận tệp .txt.",
@@ -4296,7 +4296,7 @@ export const vi = {
   "compose.drafting": "Đang soạn…",
   "compose.discardDraft": "Bỏ bản nháp",
   "compose.discardDraftHint":
-    "Đánh dấu bản nháp này là chưa đạt cho Voice DNA của bạn. Văn bản đã tạo không bao giờ được lưu giữ.",
+    "Đánh dấu bản nháp này là chưa đạt cho Voice DNA của bạn. Văn bản đã tạo không được lưu lại.",
   "compose.saveDraft": "Lưu bản nháp",
   "compose.savedDraftSaved": "Đã lưu bản nháp",
   "compose.savedDraftDelete": "Xóa",
@@ -4325,12 +4325,12 @@ export const vi = {
     "Bản nháp này do AI viết. Xem lại và chỉnh sửa trước khi gửi.",
   "compose.voiceVersion": "Dựng từ văn mẫu của bạn · v{n}",
   "compose.voiceDegraded":
-    "Không tải được hồ sơ giọng văn của bạn, nên bản nháp này không dùng giọng văn của bạn. Soạn lại, hoặc chỉnh sửa trước khi gửi.",
+    "Không tải được hồ sơ giọng văn của bạn, nên bản nháp này không theo giọng văn đó. Soạn lại, hoặc chỉnh sửa trước khi gửi.",
   "compose.voiceDegradedTitle": "Bản nháp này không theo giọng văn của bạn",
   "compose.provisional": "Giọng văn tạm thời",
   "compose.provisionalHint":
-    "Voice DNA của bạn vẫn đang được dựng. Voice DNA định hình bản nháp này giống như khi đã hoàn thiện.",
-  "compose.to": "Tới",
+    "Voice DNA của bạn vẫn đang được xây dựng, nhưng đã định hình bản nháp này như khi hoàn thiện.",
+  "compose.to": "Đến",
   "compose.cc": "Cc",
   "compose.subject": "Tiêu đề",
   "compose.noGroundableRecipient":
@@ -4366,9 +4366,9 @@ export const vi = {
   "compose.threadGone":
     "Không thể trả lời chuỗi thư đó nữa, nên đã mở email mới thay thế. Kiểm tra người nhận trước khi gửi.",
   "compose.colleagueMailbox_one":
-    "Tin nhắn này được gửi đến hộp thư của {names}. Câu trả lời của bạn được gửi từ hộp thư của chính bạn, dưới tên bạn.",
+    "Tin nhắn này được gửi đến hộp thư của {names}. Câu trả lời sẽ gửi từ hộp thư của chính bạn, dưới tên bạn.",
   "compose.colleagueMailbox_other":
-    "Tin nhắn này được gửi đến hộp thư của {names}. Câu trả lời của bạn được gửi từ hộp thư của chính bạn, dưới tên bạn.",
+    "Tin nhắn này được gửi đến hộp thư của {names}. Câu trả lời sẽ gửi từ hộp thư của chính bạn, dưới tên bạn.",
   "compose.colleagueUnnamed": "một đồng nghiệp",
   "compose.threadGoneTitle": "Không thể trả lời chuỗi thư",
   "compose.colleagueMailboxTitle": "Đã gửi tới đồng nghiệp",
@@ -4465,7 +4465,7 @@ export const vi = {
   "sendPermission.reason.other":
     "Không thể gửi tin nhắn này và không thành viên nào ở đây có thể bỏ qua hạn chế đó.",
   "compose.derivedReply":
-    "Đây là trả lời cho tin nhắn của chính người nhận, nên không cần lý do.",
+    "Đây là thư trả lời tin nhắn do chính người nhận gửi, nên không cần lý do.",
   "compose.send": "Gửi",
   "compose.sendConfirmTitle": "Gửi email",
   "compose.threadHeading": "Chuỗi thư này",
@@ -4504,7 +4504,7 @@ export const vi = {
   "directSend.title": "Gửi theo thẩm quyền của bạn",
   "directSend.confirm": "Ghi nhận ngoại lệ và gửi",
   "directSend.failed":
-    "Không gửi được email. Quyết định của bạn có thể đã được ghi nhận; mở phần xem lại trước khi quyết định lại.",
+    "Không gửi được tin nhắn. Quyết định của bạn có thể đã được ghi nhận; mở phần xem lại trước khi quyết định lại.",
   "directSend.noWarningServed":
     "Bản cài đặt này chưa công bố nội dung xác nhận, nên không thể ghi nhận ngoại lệ ở đây.",
   "directSend.needsAcknowledgement": "Chọn ô xác nhận để tiếp tục.",
@@ -4522,12 +4522,12 @@ export const vi = {
   "compose.reviewRequest": "Yêu cầu duyệt",
   "compose.reviewRequesting": "Đang gửi yêu cầu…",
   "compose.reviewRequested":
-    "Đã yêu cầu duyệt. Thành viên có quyền gửi tin nhắn này sẽ quyết định, và tin nhắn chờ đến lúc đó.",
+    "Đã yêu cầu duyệt. Thành viên có quyền gửi tin nhắn này sẽ quyết định, tin nhắn sẽ chờ đến lúc đó.",
   "compose.reviewRequestFailed":
-    "Không gửi được yêu cầu duyệt. Thử lại, hoặc mở yêu cầu duyệt từ thông báo từ chối ở trên.",
+    "Không gửi được yêu cầu xem lại. Thử lại, hoặc mở phần xem lại từ thông báo từ chối ở trên.",
   "compose.consentGoto": "Xem lại sự đồng ý",
   "compose.draftUnavailable":
-    "Soạn nháp bằng AI không khả dụng vì chưa cấu hình mô hình. Vẫn có thể tự viết email.",
+    "Chưa soạn nháp bằng AI được vì chưa cấu hình mô hình. Vẫn có thể tự viết email.",
   "compose.draftUnsupportedHere":
     "Trang này không hỗ trợ soạn nháp bằng AI. Vẫn có thể tự viết email.",
   "compose.sendUnavailable":
@@ -4554,7 +4554,7 @@ export const vi = {
   "compose.missingSubject": "Nhập tiêu đề.",
   "compose.missingBody": "Nhập nội dung trước khi gửi.",
   "compose.missingWhy": "Chọn lý do liên hệ.",
-  "compose.actionFailed": "Yêu cầu thất bại. Thử lại.",
+  "compose.actionFailed": "Không thực hiện được yêu cầu. Thử lại.",
 
   "tasks.complete": "Xong",
   "tasks.snooze": "Tạm hoãn 1 ngày",
@@ -4598,7 +4598,7 @@ export const vi = {
   "analytics.field.company_id": "Công ty",
   "analytics.field.currency": "Tiền tệ",
   "analytics.field.days_in_stage": "Số ngày ở giai đoạn",
-  "analytics.field.days_to_close": "Số ngày để chốt",
+  "analytics.field.days_to_close": "Số ngày đến khi đóng",
   "analytics.field.direction": "Hướng",
   "analytics.field.forecast_category": "Danh mục dự báo",
   "analytics.field.host_user_id": "Chủ trì cuộc họp",
@@ -4950,7 +4950,7 @@ export const vi = {
   "settings.signatureLabel": "Lời kết",
   "settings.signaturePlaceholder": "Nguyễn Minh Anh\nGradion · +84 28 123456",
   "settings.signatureHint":
-    "Văn bản thuần. Nếu để trống, thư kết thúc bằng lời chào và tên bạn. AI không bao giờ thêm lời kết.",
+    "Văn bản thuần. Nếu để trống, thư kết thúc bằng lời chào và tên bạn. AI không bao giờ tự thêm chữ ký.",
   "settings.signatureSaving": "Đang lưu…",
   "settings.signatureEdit": "Sửa chữ ký",
   "settings.signatureNone": "Chưa đặt lời kết",
@@ -4985,7 +4985,7 @@ export const vi = {
     "Cài Margince sau qua menu của trình duyệt hoặc biểu tượng cài đặt trên thanh địa chỉ.",
   "settings.installAppAction": "Cài đặt",
   "role.admin": "Quản trị",
-  "role.management": "Ban lãnh đạo",
+  "role.management": "Quản lý",
   "role.manager": "Trưởng nhóm",
   "role.rep": "Người dùng",
   "role.readOnly": "Chỉ đọc",
@@ -5066,7 +5066,7 @@ export const vi = {
   "agent.activity.accountScan.running": "Đang phân tích lịch sử công ty…",
   "agent.activity.accountScan.stalled":
     "Phân tích công ty đang lâu bất thường. Mở lại công ty để thử lại.",
-  "agent.activity.accountScan.done": "Phân tích công ty đã hoàn tất",
+  "agent.activity.accountScan.done": "Đã phân tích xong công ty",
   "agent.activity.accountScan.degraded":
     "Phân tích công ty đã hoàn tất trong phạm vi bản ghi cho phép",
   "agent.activity.accountScan.failed": "Không phân tích được công ty",
@@ -5079,8 +5079,7 @@ export const vi = {
   "agent.activity.accountScanNamed.degraded":
     "Phân tích {name} đã hoàn tất trong phạm vi bản ghi cho phép",
   "agent.activity.accountScanNamed.failed": "Không phân tích được {name}",
-  "agent.activity.transcriptRead.queued":
-    "Lượt đọc bản chép lời đang chờ xử lý",
+  "agent.activity.transcriptRead.queued": "Bản chép lời đang chờ đọc",
   "agent.activity.transcriptRead.running": "Đang đọc bản chép lời…",
   "agent.activity.transcriptRead.stalled":
     "Lượt đọc bản chép lời đang lâu bất thường",
@@ -5214,7 +5213,7 @@ export const vi = {
   "settings.tierWait":
     "Bổ sung dữ liệu, trường tùy chỉnh, webhook, gộp thẻ: chờ trong Phê duyệt.",
   "settings.tierAdvance":
-    "Chuyển giai đoạn deal: chỉ chờ khi bước chuyển đó chốt deal là thắng hoặc thua.",
+    "Chuyển giai đoạn deal: chỉ chờ khi bước chuyển đó kết thúc deal với kết quả thắng hoặc thua.",
   "settings.locked": "Đã khóa",
   "settings.purposes": "Mục đích xin sự đồng ý",
   "settings.purposesSub":
@@ -5605,7 +5604,7 @@ export const vi = {
   "privacynotice.purposes.title": "Chúng tôi dùng thông tin để làm gì",
   "privacynotice.rights.title": "Quyền của quý khách đối với thông tin này",
   "privacynotice.rights.how":
-    "Để sử dụng bất kỳ quyền nào, vui lòng trả lời tin nhắn đã đưa quý khách đến đây, hoặc liên hệ với chúng tôi qua địa chỉ trên trang web.",
+    "Để sử dụng bất kỳ quyền nào, vui lòng trả lời tin nhắn đã đưa quý khách đến đây, hoặc liên hệ với chúng tôi qua địa chỉ trên trang web của chúng tôi.",
   "privacynotice.right.access":
     "Yêu cầu bản sao những gì chúng tôi lưu giữ về quý khách.",
   "privacynotice.right.rectification":
@@ -5664,7 +5663,7 @@ export const vi = {
   "privacy.erasureConfirm": "Xóa và chặn",
   "privacy.legalHoldTitle": "Bị chặn do lưu giữ pháp lý",
   "privacy.legalHold":
-    "Liên hệ này đang trong thời hạn lưu giữ theo luật định, nên quyền xóa không được ưu tiên ở đây (Điều 17(3)(b) GDPR). Lệnh chặn áp dụng cho mọi vai trò, kể cả quản trị viên, và không thể vượt qua. Lần thử này đã ghi vào nhật ký kiểm tra.",
+    "Liên hệ này đang trong thời hạn lưu giữ theo luật định, nên quyền xóa không được ưu tiên ở đây (Điều 17(3)(b)). Lệnh chặn áp dụng cho mọi vai trò, kể cả quản trị viên, và không thể vượt qua. Lần thử này đã ghi vào nhật ký kiểm tra.",
 
   "restricted.title": "Bản ghi bị hạn chế",
   "restricted.sub":
@@ -6112,7 +6111,7 @@ export const vi = {
   "backfill.title": "Nhập email cũ",
   "backfill.intro":
     "Chọn khoảng thời gian cần lấy lại. Chưa có gì bắt đầu cho đến khi bạn bấm Bắt đầu nhập.",
-  "backfill.windowLabel": "Lấy lại bao xa",
+  "backfill.windowLabel": "Lấy lại từ bao lâu trước",
   "backfill.window36m": "3 năm",
   "backfill.window84m": "7 năm",
   "backfill.window120m": "10 năm",
@@ -6207,7 +6206,7 @@ export const vi = {
     "Mọi thứ khác đã kết nối. Sau khi đăng nhập, thiết lập tùy chọn này trong Cài đặt, mục Kết nối.",
   "overnightGrant.renewTitle": "Quyền qua đêm đã hết hạn",
   "overnightGrant.renew":
-    "Tắt rồi bật lại tùy chọn này để gia hạn. Cho đến lúc đó, Bản tin sáng của bạn sẽ không được chuẩn bị.",
+    "Tắt rồi bật lại tùy chọn này để gia hạn. Cho đến lúc đó, Margince sẽ không chuẩn bị Bản tin sáng cho bạn.",
   "overnightGrant.renewScopeTitle": "Quyền không còn bao quát công việc",
   "overnightGrant.writeFailedTitle": "Không lưu được thay đổi",
   "overnightGrant.renewScope":
@@ -6219,7 +6218,7 @@ export const vi = {
   "aiHealth.callCounts_other": "{count} lượt gọi, {failures} thất bại",
   "heldThreads.title": "Chuỗi thư đang giữ lại",
   "heldThreads.sub":
-    "Chuỗi thư mà hộp thư của bạn đang giữ lại. Chia sẻ một chuỗi thư thì mọi đồng nghiệp đều đọc được; chỉ chính bạn mới chia sẻ được.",
+    "Chuỗi thư mà hộp thư của bạn đang giữ lại. Chia sẻ một chuỗi thư thì mọi đồng nghiệp đều đọc được; chỉ bạn mới chia sẻ được chuỗi thư của mình.",
   "heldThreads.empty": "Hộp thư của bạn không giữ lại chuỗi thư nào.",
   "heldThreads.colThread": "Chuỗi thư",
   "heldThreads.colWhy": "Lý do",
@@ -6270,8 +6269,8 @@ export const vi = {
   "senders.keepOutTitle": "Loại trừ vĩnh viễn người gửi này?",
   "senders.keepOutBody":
     "Không tạo liên hệ nào, và thư người gửi này đã đưa vào hộp thư của bạn sẽ bị hủy. Bản sao do đồng nghiệp nhập vẫn thuộc về họ.",
-  "senders.keepOutConfirm": "Loại trừ và hủy",
-  "senders.kind.contact": "Một người",
+  "senders.keepOutConfirm": "Loại trừ và xóa thư",
+  "senders.kind.contact": "Cá nhân",
   "senders.kind.roleMailbox": "Hộp thư chức năng",
   "senders.kind.companySender": "Công ty",
   "senders.kind.newsletter": "Bản tin",
@@ -6629,7 +6628,7 @@ export const vi = {
   "ob.conv.voice.skipped": "Tạm bỏ qua giọng văn.",
   "ob.conv.voice.uploadAdded": "Đã thêm {name}.",
   "ob.conv.voice.speakerQuestion":
-    "Bản chép lời này có nhiều người nói. Ai là bạn? Chỉ lời của chính bạn được tính.",
+    "Bản chép lời này có nhiều người nói. Bạn là người nào? Chỉ lời của chính bạn được tính.",
   "ob.conv.voice.speakerOptionDetail": "số từ: {words} · lượt nói: {turns}",
   "ob.conv.voice.speakerFoot": "Lựa chọn này chỉ áp dụng cho tệp này.",
   "ob.conv.voice.speakerContinue": "Dùng người nói này",
@@ -6712,7 +6711,7 @@ export const vi = {
   "ob.conv.connect.persistFailed":
     "Tôi không lưu được trạng thái hoàn tất thiết lập. Thử lại.",
   "ob.conv.review.title":
-    "Đây là tất cả những gì tôi tìm thấy. Sửa chỗ nào sai.",
+    "Đây là tất cả những gì tôi tìm thấy. Sửa lại những chỗ chưa đúng.",
   "ob.conv.review.showLess": "Thu gọn",
   "ob.conv.review.continue": "Tiếp tục",
   "ob.conv.review.progressLabel": "Trường bắt buộc đã điền",
@@ -6763,10 +6762,10 @@ export const vi = {
   "ob.conv.scene.continue": "Tiếp tục",
   "ob.conv.connect.sceneTitle": "Kết nối tài khoản của bạn",
   "ob.conv.connect.sceneSub":
-    "Tôi dựng liên hệ, công ty và lịch sử của bạn từ thư đã có trong hộp thư.",
+    "Tôi tạo liên hệ, công ty và lịch sử của bạn từ thư đã có trong hộp thư.",
   "ob.conv.connect.mailboxTitle": "Hộp thư của bạn",
   "ob.conv.connect.mailboxHint":
-    "Chọn một hộp thư. Liên hệ, công ty và lịch sử đến từ hộp thư này.",
+    "Chọn một hộp thư. Liên hệ, công ty và lịch sử được lấy từ hộp thư này.",
   "ob.conv.connect.networkTitle": "Mạng lưới của bạn",
   "ob.conv.connect.networkHint":
     "Lưu hồ sơ để mạng lưới nhập sau này được ghi nhận cho bạn. Mục nhập nằm trong Cài đặt.",
@@ -6796,7 +6795,7 @@ export const vi = {
   "ob.conv.connect.unsupportedCard": "Bản cài đặt này không hỗ trợ {name}.",
   "ob.conv.connect.appSetupLink": "Thiết lập trong Cài đặt",
   "ob.conv.connect.dialogIntro":
-    "{brings}. Tôi đọc một lần để dựng liên hệ và lịch sử của bạn, sau đó giữ đồng bộ.",
+    "{brings}. Tôi đọc một lần để tạo liên hệ và lịch sử của bạn, sau đó giữ đồng bộ.",
   "ob.conv.connect.linkedinName": "LinkedIn",
   "ob.conv.connect.linkedinSaved": "Đã lưu hồ sơ",
   "ob.conv.connect.linkedinSkippedNote": "Đã bỏ qua: bổ sung sau trong Cài đặt",
@@ -6852,11 +6851,11 @@ export const vi = {
   "ob.conv.scene.foundOn": "Tìm thấy tại",
   "ob.conv.showField": "Xem",
   "ob.conv.review.editDirectly": "Sửa trực tiếp từng trường",
-  "ob.conv.review.backToDossier": "Quay lại tập hồ sơ",
+  "ob.conv.review.backToDossier": "Quay lại hồ sơ",
   "ob.conv.review.proposalFallback":
     "Tôi không tải được bảng đối chiếu đã chuẩn bị. Xem lại trực tiếp những gì tôi đã đọc; mỗi trường vẫn giữ nguồn.",
   "ob.conv.review.confirmFailed":
-    "Tôi không lưu được: {detail} Sửa rồi chấp nhận lại.",
+    "Tôi không lưu được thay đổi đó: {detail} Sửa rồi chấp nhận lại.",
   "ob.conv.review.confirmVersionSkew":
     "Phần xem lại vừa nhận thông tin mới hơn. Kiểm tra, rồi chọn Tiếp tục lần nữa.",
   "ob.conv.review.confirmVersionSkewStuck":
@@ -6870,7 +6869,7 @@ export const vi = {
     "Chưa đọc gì. Nhập một trang web để điền khung này bằng các phát hiện có nguồn.",
   "ob.conv.results.continue": "Tiếp tục",
   "ob.conv.recap.back": "Chào mừng trở lại. Đây là tiến độ thiết lập.",
-  "ob.conv.recap.company": "Đã xác nhận hồ sơ tổ chức {name} của bạn.",
+  "ob.conv.recap.company": "Đã xác nhận hồ sơ công ty {name} của bạn.",
   "ob.conv.recap.companyUnsaved":
     "Chưa lưu chi tiết công ty của bạn. Hoàn tất trong Cài đặt.",
   "ob.conv.recap.voiceBuilt":
@@ -6889,7 +6888,7 @@ export const vi = {
   "ob.conv.connect.skip": "Tiếp tục mà không có hộp thư",
   "ob.conv.connect.continue": "Tiếp tục",
   "ob.conv.connect.mailboxNeeded":
-    "Vẫn cần một hộp thư: thư là thứ được đọc và soạn nháp. Kết nối một hộp thư ở trên, hoặc tạm thời tiếp tục mà không có hộp thư.",
+    "Vẫn cần một hộp thư, vì tôi đọc thư và soạn nháp từ đó. Kết nối một hộp thư ở trên, hoặc tạm thời tiếp tục mà không có hộp thư.",
   "ob.conv.linkedin.cardBody":
     "Địa chỉ hồ sơ của bạn, để kết nối được nhập ghi là “Anna quen họ”, không phải “tổ chức quen họ”.",
   "ob.conv.linkedin.dialogHeadline": "Hồ sơ LinkedIn của bạn",
@@ -6914,7 +6913,7 @@ export const vi = {
   "ob.rail.voice": "Giọng văn",
   "ob.rail.connect": "Kết nối",
 
-  "ob.conv.invite.title": "Bạn có tự làm việc trong Margince không?",
+  "ob.conv.invite.title": "Bạn có trực tiếp dùng Margince không?",
   "ob.conv.invite.body":
     "Đã thiết lập xong công ty. 2 bước tiếp theo là về bạn và chỉ áp dụng nếu bạn sẽ dùng Margince.",
   "ob.conv.invite.yes": "Có, tôi sẽ làm việc trong Margince",
@@ -6922,7 +6921,7 @@ export const vi = {
     "Huấn luyện giọng văn và kết nối hộp thư, lịch của bạn: 2 bước ngắn.",
   "ob.conv.invite.no": "Không, tôi chỉ thiết lập thôi",
   "ob.conv.invite.noBody":
-    "Thay vào đó, mời người đầu tiên sẽ làm việc ở đây, và thiết lập hoàn tất.",
+    "Thay vào đó, mời người đầu tiên sẽ làm việc ở đây là hoàn tất thiết lập.",
   "ob.conv.invite.foot":
     "Giọng văn và tài khoản cũng có thể thiết lập sau trong Cài đặt.",
   "ob.conv.invite.continue": "Tiếp tục",
@@ -7181,7 +7180,7 @@ export const vi = {
   "password.doneTitle": "Đã đổi mật khẩu",
   "password.done": "Đã đăng xuất mọi thiết bị khác.",
   "password.changeFailedTitle": "Không đổi được mật khẩu",
-  "password.errorGeneric": "Không có nguyên nhân nào được báo. Thử lại.",
+  "password.errorGeneric": "Hệ thống không báo nguyên nhân. Thử lại.",
   "setup.pageTitle": "Thiết lập Margince",
   "setup.title": "Nhận quyền quản trị bản cài đặt này",
   "setup.body":
@@ -7211,7 +7210,7 @@ export const vi = {
   "setup.claim": "Tạo tổ chức",
   "setup.claiming": "Đang tạo…",
   "setup.errorToken":
-    "Mã thiết lập không hợp lệ cho bản cài đặt này. Kiểm tra tệp mã mà nhật ký máy chủ nêu ở lần khởi động đầu tiên.",
+    "Token thiết lập không hợp lệ cho bản cài đặt này. Kiểm tra tệp token mà nhật ký máy chủ nêu ở lần khởi động đầu tiên.",
   "setup.errorAlready":
     "Bản cài đặt này đã có tổ chức. Đăng nhập, hoặc nhờ quản trị viên đặt lại.",
   "setup.errorFields": "Một số trường không hợp lệ. Sửa lại rồi thử lại.",
@@ -7225,7 +7224,7 @@ export const vi = {
   // en dash anywhere in user-facing copy, and a lowercase opening mid-surface
   // reads as a fragment rather than as a sentence. Same for auth.resetSub.
   "auth.forgotSub":
-    "Nhập địa chỉ email của bạn. Nếu địa chỉ đó có tài khoản, liên kết đặt lại sẽ được gửi đến địa chỉ này.",
+    "Nhập email của bạn. Nếu email này có tài khoản, hệ thống sẽ gửi liên kết đặt lại tới đó.",
   "auth.sendResetLink": "Gửi liên kết đặt lại",
   "auth.forgotSentTitle": "Kiểm tra hộp thư",
   "auth.forgotSentBody":
@@ -7277,7 +7276,7 @@ export const vi = {
 
   "prefs.title": "Chọn email muốn nhận",
   "prefs.sub":
-    "Mỗi mục đích là riêng biệt. Không thể tắt thư giao dịch ở đây vì quý khách cần chúng; quý khách tự quyết định mọi mục đích còn lại.",
+    "Mỗi mục đích là riêng biệt. Không thể tắt thư giao dịch ở đây vì quý khách cần nhận các thư này; quý khách tự quyết định mọi mục đích còn lại.",
   "prefs.unsub.title": "Ngừng nhận những email này?",
   "prefs.unsub.lead":
     "Một cú nhấp sẽ dừng loại thư này gửi đến địa chỉ của quý khách. Không có gì khác thay đổi.",
@@ -7337,10 +7336,10 @@ export const vi = {
     "Quyền truy cập phòng này đã hết hạn. Vui lòng liên hệ {steward} hoặc yêu cầu liên kết mới bên dưới.",
   "buyer.eyebrow": "Deal Room",
   "buyer.contact": "Người liên hệ: {steward}.",
-  "buyer.closed": "Phòng này đã đóng. Nội dung được giữ lại làm bản ghi.",
+  "buyer.closed": "Phòng này đã đóng. Nội dung vẫn được lưu lại làm hồ sơ.",
   "buyer.previewBannerTitle": "Đang xem trước phòng này",
   "buyer.previewBanner":
-    "Đây là giao diện người mua thấy. Có thể đọc mọi nội dung nhưng không thay đổi được gì.",
+    "Đây là giao diện phía người mua. Có thể đọc mọi nội dung nhưng không thay đổi được gì.",
   "buyer.previewReadOnly":
     "Bản xem trước chỉ đọc. Đóng tab này để quay lại trang Deal Room.",
   "buyer.closedNote": "Phòng này hiện chỉ đọc.",
@@ -7372,8 +7371,8 @@ export const vi = {
   "buyer.docs.downloadFailed":
     "Không bắt đầu tải xuống được. Vui lòng thử lại hoặc hỏi người liên hệ.",
   "buyer.docs.downloadShort": "Tải xuống",
-  "buyer.poweredBy": "Powered by",
-  "buyer.poweredByMargince": "Powered by Margince",
+  "buyer.poweredBy": "Chạy trên",
+  "buyer.poweredByMargince": "Chạy trên Margince",
   "threads.roomTitle": "Chủ đề chung",
   "threads.aboutThis_other": "{count} chủ đề về tài liệu này",
   "threads.aboutThis_one": "{count} chủ đề về tài liệu này",
@@ -7807,7 +7806,7 @@ export const vi = {
   "settings.tab.extensions": "Tiện ích mở rộng",
   "settings.tab.integrations": "Tích hợp",
   "settings.tab.capture": "Quy tắc thu thập",
-  "settings.tab.knowledge": "Tri thức",
+  "settings.tab.knowledge": "Kiến thức",
   "corpusAsk.title": "Hỏi tài liệu của bạn",
   "corpusAsk.sub":
     "Hỏi bằng lời của bạn. Câu trả lời chỉ lấy từ một bộ tài liệu, câu hỏi nằm ngoài bộ tài liệu bị từ chối, và mỗi câu đều trích dẫn đoạn nguồn.",
@@ -7858,7 +7857,7 @@ export const vi = {
   "knowledge.hideDocuments": "Ẩn tài liệu",
   "knowledge.documents": "Tài liệu",
   "knowledge.noDocuments": "Chưa có tài liệu nào.",
-  "knowledge.archive": "Lưu trữ bộ",
+  "knowledge.archive": "Lưu trữ bộ tài liệu",
   "knowledge.archiveFailed": "Không lưu trữ được bộ tài liệu",
   "knowledge.archiveConfirm.title": "Lưu trữ bộ tài liệu này?",
   "knowledge.archiveConfirm.body":
@@ -7922,7 +7921,7 @@ export const vi = {
   "captureActivity.outcome.internal": "Bỏ qua vì là nội bộ",
   "captureActivity.outcome.suppressed": "Không tạo liên hệ",
   "captureActivity.outcome.deferred": "Đang chờ kiểm tra người gửi",
-  "captureActivity.outcome.fault": "Suy luận thất bại",
+  "captureActivity.outcome.fault": "Không suy ra được",
   "captureActivity.funnel.captured": "Đã thu thập",
   "captureActivity.funnel.internal": "Nội bộ",
   "captureActivity.funnel.suppressed": "Không có liên hệ",
@@ -8186,7 +8185,7 @@ export const vi = {
   "settings.voice.register.spoken": "văn nói",
   "settings.voice.register.general": "chung",
   "settings.voice.bandDrop":
-    "Gỡ mẫu này sẽ hạ giọng văn từ {from} xuống {to}. Bấm gỡ lần nữa để xác nhận.",
+    "Gỡ mẫu này sẽ hạ mức giọng văn từ {from} xuống {to}. Bấm gỡ lần nữa để xác nhận.",
   "voice.insights.avoidLabel": "Điều giọng văn của bạn tránh",
   "voice.insights.voiceScore": "Độ khớp giọng văn {pct}%",
   "voice.insights.next.addTranscript":
@@ -8561,7 +8560,7 @@ export const vi = {
   "settings.companyMarkIconEmpty": "Thả biểu tượng vào đây, hoặc chọn tệp",
   "settings.companyWebsite": "Trang web công khai của tổ chức",
   "settings.companyWebsiteHint":
-    "Trang web công khai mà các lượt đọc trang web bắt đầu từ đó.",
+    "Trang web công khai làm điểm bắt đầu cho các lượt đọc trang web.",
   "settings.companySourceTitle": "Nguồn",
   "settings.companyRefreshRow": "Đọc lại trang web",
   "settings.companyRefreshHint":
@@ -8597,7 +8596,7 @@ export const vi = {
   "settings.companyClass.human_conflict": "Cần bạn quyết định",
   "settings.companyClass.unchanged": "Không đổi",
   "settings.companyResolution.keep_current": "Giữ hiện tại",
-  "settings.companyResolution.accept_proposal": "Nhận theo trang web",
+  "settings.companyResolution.accept_proposal": "Dùng giá trị từ trang web",
   "settings.companyResolution.useValueFor": "Giá trị giữ lại cho {field}",
   "settings.companyResolution.use_value": "Dùng giá trị đã sửa",
   "settings.companyManualKicker": "Thiết lập thủ công",
@@ -8759,7 +8758,7 @@ export const vi = {
   "aiexport.title": "Xuất lượt chạy thành kịch bản kiểm định",
   "aiexport.nameLabel": "Tên kịch bản",
   "aiexport.checklist":
-    "Đã gỡ khóa bí mật khi ghi lại. Dữ liệu cá nhân thì chưa: xem lại và gỡ dữ liệu cá nhân, rồi thay sanitized_by trước khi commit tệp này vào kho.",
+    "Đã gỡ thông tin bí mật khi ghi lại. Dữ liệu cá nhân thì chưa: xem lại và gỡ dữ liệu cá nhân, rồi thay sanitized_by trước khi commit tệp này vào kho.",
   "aiexport.copy": "Sao chép YAML",
   "aiexport.copied": "Đã sao chép",
   "aiexport.download": "Tải xuống .yaml",
@@ -8824,7 +8823,7 @@ export const vi = {
   "forecast.pipelineAbsent.insufficient_basis":
     "Kỳ này chưa ghi nhận định nào, và chưa đủ 4 kỳ tương đương đã kết thúc. Đo theo chính các deal đang mở này thì lúc nào cũng trông như đủ.",
   "forecast.pipelineAbsent.insufficient_history":
-    "Quá ít deal đã chốt để tính tỷ lệ chuyển đổi. Tỷ lệ tính từ vài deal không đáng tin cậy.",
+    "Quá ít deal đã đóng để tính tỷ lệ chuyển đổi. Tỷ lệ tính từ vài deal không đáng tin cậy.",
   "forecast.coverage": "{percent}% giá trị deal cần có",
   "installationSettings.baseCurrency": "Tiền tệ cơ sở",
   "installationSettings.baseCurrencyHint":
@@ -9034,7 +9033,7 @@ export const vi = {
   "aiRouting.location.group.us": "Mỹ",
   "aiRouting.location.group.other": "Khác",
   "aiRouting.location.group.global": "Toàn cầu",
-  "aiRouting.location.resident": "Lưu trú EU",
+  "aiRouting.location.resident": "Lưu trữ tại EU",
   "aiRouting.location.nonResident": "Không lưu trú",
   "aiRouting.location.notResident": "ngoài EU",
   "aiRouting.probe.checking":
@@ -9205,8 +9204,7 @@ export const vi = {
   "captureSettings.title": "Bổ sung dữ liệu",
   "captureSettings.sub":
     "Cách bổ sung dữ liệu cho công ty và liên hệ đã thu thập sau khi tạo.",
-  "captureSettings.autoEnrich.label":
-    "Tự động bổ sung dữ liệu cho công ty đã thu thập",
+  "captureSettings.autoEnrich.label": "Tự bổ sung dữ liệu công ty đã thu thập",
   "captureSettings.autoEnrich.help":
     "Mỗi công ty mới tạo từ thư đã thu thập sẽ có hồ sơ web tự động, lập từ trang web của công ty. Chạy trong giới hạn hằng ngày.",
   "captureSettings.signatureEnrich.label": "Đọc thông tin liên hệ từ thư",
@@ -9328,9 +9326,9 @@ export const vi = {
   "capturePurge.keptUndetermined_other":
     "{count} thư được giữ lại vì bản cài đặt này không xác định được luật yêu cầu gì đối với thư. Không có gì bị xóa vĩnh viễn dựa trên một quy tắc không ai đọc được.",
   "capturePurge.keptRequest_one":
-    "{count} thư được giữ lại: một yêu cầu bảo vệ dữ liệu cá nhân vẫn đang được trả lời và cần đến thư này.",
+    "{count} thư được giữ lại: một yêu cầu bảo vệ dữ liệu cá nhân vẫn đang được trả lời và cần đến các thư này.",
   "capturePurge.keptRequest_other":
-    "{count} thư được giữ lại: một yêu cầu bảo vệ dữ liệu cá nhân vẫn đang được trả lời và cần đến thư này.",
+    "{count} thư được giữ lại: một yêu cầu bảo vệ dữ liệu cá nhân vẫn đang được trả lời và cần đến các thư này.",
   "captureExclusions.containerLabel": "Thư mục hoặc nhãn",
   "captureExclusions.noContainers":
     "Hộp thư này không báo thư mục nào. Kết nối hộp thư có thư mục, hoặc loại trừ theo địa chỉ hay tên miền.",
@@ -9503,7 +9501,7 @@ export const vi = {
   "contact.confirm.body": "Đã đọc {fields} từ email của họ vào {when}.",
   "contact.confirm.review": "Xem lại",
   "contact.enriched.sub":
-    "Mỗi giá trị kèm đoạn văn bản đã đọc ra giá trị đó. Giá trị đã sửa được giữ nguyên.",
+    "Mỗi giá trị đi kèm đoạn văn bản nguồn. Giá trị đã sửa được giữ nguyên.",
   "contact.enriched.field.title": "Chức danh",
   "contact.enriched.field.phone": "Điện thoại",
   "contact.enriched.field.role": "Vai trò",
@@ -9539,15 +9537,14 @@ export const vi = {
     "Chỉ là số đếm. Tin nhắn vẫn nằm trên dòng thời gian.",
   "contact.intro.routesTitle": "Hướng tiếp cận",
   "contact.graph.droppedNote": "Còn {count} mục không hiển thị.",
-  "contact.graph.withheldDirect": "Một số đồng nghiệp không được hiển thị.",
-  "contact.graph.withheldAccount":
-    "Một số liên hệ tại công ty này không được hiển thị.",
+  "contact.graph.withheldDirect": "Đã ẩn một số đồng nghiệp.",
+  "contact.graph.withheldAccount": "Đã ẩn một số liên hệ tại công ty này.",
   "contact.intro.askFirstName": "Nhờ {name} giới thiệu bạn",
-  "contact.intro.leadRouteBadge": "Hướng mạnh",
-  "contact.intro.heroDirect": "quen họ trực tiếp",
+  "contact.intro.leadRouteBadge": "Hướng tiếp cận mạnh",
+  "contact.intro.heroDirect": "quen trực tiếp với họ",
   "contact.intro.heroIndirect": "tiếp cận họ qua {through}",
   "contact.intro.heroYou": "Bạn",
-  "contact.intro.heroDirectYou": "quen họ trực tiếp",
+  "contact.intro.heroDirectYou": "quen trực tiếp với họ",
   "contact.intro.heroIndirectYou": "tiếp cận họ qua {through}",
   "contact.intro.factReciprocal": "Hai chiều",
   "contact.intro.factOneSided": "Một chiều",
@@ -9644,7 +9641,7 @@ export const vi = {
   "contact.intro.askFailed": "Không ghi nhận được yêu cầu. Thử lại.",
   "contact.intro.reasonLabel": "Lý do yêu cầu",
   "contact.intro.reasonHint":
-    "Đồng nghiệp của bạn đọc phần này, không phải liên hệ. Nêu lý do lời giới thiệu này đáng làm.",
+    "Đồng nghiệp của bạn đọc phần này, liên hệ thì không. Nêu lý do nên có lời giới thiệu này.",
   "contact.intro.valueLabel": "Giá trị cho liên hệ",
   "contact.intro.valueHint": "Lý do liên hệ muốn có lời giới thiệu này.",
   "contact.intro.noteLabel": "Ghi chú chuyển tiếp",
@@ -9655,7 +9652,7 @@ export const vi = {
   "contact.intro.fallbackNone": "Không làm gì thêm",
   "contact.intro.fallbackNoneHelp":
     "Yêu cầu khép lại và bạn quyết định bước tiếp theo.",
-  "contact.intro.fallbackNameDrop": "Xin phép nhắc tên họ thay thế",
+  "contact.intro.fallbackNameDrop": "Thay vào đó, xin phép nhắc tên họ",
   "contact.intro.fallbackNameDropHelp":
     "Bạn tự liên hệ và nhắc đến đồng nghiệp.",
   "contact.intro.fallbackNextRoute": "Thử hướng tiếp theo",
@@ -9760,7 +9757,7 @@ export const vi = {
   "contact.meetings.noneLogged": "Chưa ghi nhận cuộc họp nào.",
   "contact.meetings.untitled": "Cuộc họp chưa có tiêu đề",
   "contact.documents.empty": "Liên hệ này chưa có tệp nào.",
-  "contact.research.empty": "Chưa có tìm hiểu nào về liên hệ này.",
+  "contact.research.empty": "Chưa có thông tin tìm hiểu về liên hệ này.",
   "contact.research.fields": "Bằng chứng bổ sung dữ liệu",
   "contact.research.fieldsEmpty":
     "Chưa có trường đã bổ sung nào có bằng chứng.",
@@ -9813,7 +9810,7 @@ export const vi = {
 
   "contact.matters.title": "Điều {name} quan tâm",
   "contact.matters.priorities": "Ưu tiên",
-  "contact.matters.objections": "Phản đối",
+  "contact.matters.objections": "Ý kiến phản đối",
   "contact.matters.successCriteria": "Tiêu chí thành công",
   "contact.matters.absent": "Chưa ghi nhận điều gì",
 
@@ -9873,7 +9870,7 @@ export const vi = {
   "contact.rail.cooling": "Đang nguội đi",
   "contact.rail.warming": "Đang ấm lên",
   "contact.rail.overall": "Tổng thể",
-  "contact.rail.thin": "Mỏng",
+  "contact.rail.thin": "Ít tương tác",
   "contact.rail.atRisk": "Có rủi ro",
   "contact.rail.strong": "Mạnh",
   "contact.standing.why.strong":
@@ -9887,9 +9884,9 @@ export const vi = {
     "Nguội đi: nhóm của bạn viết sau cùng và đang chờ họ.",
   "contact.standing.direction.twoWay": "Cả hai bên đều đã viết.",
   "contact.standing.direction.inboundOnly":
-    "Đến nay chỉ họ đã viết. Nhóm của bạn chưa gửi gì.",
+    "Đến nay chỉ có họ viết. Nhóm của bạn chưa gửi gì.",
   "contact.standing.direction.outboundOnly":
-    "Đến nay chỉ nhóm của bạn đã viết. Chưa có trả lời.",
+    "Đến nay chỉ có nhóm của bạn viết. Chưa có trả lời.",
   "contact.standing.direction.none": "Chưa có tin nhắn theo chiều nào.",
   "contact.rail.consentTitle": "Quyền liên lạc",
   "contact.rail.email": "Email",
@@ -9915,7 +9912,7 @@ export const vi = {
   // nói thứ hai dành cho dữ liệu liên hệ đã mua (provider.profile.*), vốn hiển
   // thị ngay phía trên câu này.
   "contact.research.notConnected":
-    "Chưa kết nối nhà cung cấp dịch vụ tìm hiểu nên không có nguồn công khai nào được đọc cho liên hệ này. Điều này tách biệt với mọi dữ liệu liên hệ đã mua ở trên. Margince không bao giờ tự ý tìm hiểu một liên hệ, và tìm hiểu sâu cần một nhà cung cấp được cấp phép, có cơ sở pháp lý cho việc đó.",
+    "Chưa kết nối nhà cung cấp dịch vụ tìm hiểu, nên chưa đọc nguồn công khai nào về liên hệ này. Phần này tách biệt với mọi dữ liệu liên hệ đã mua ở trên. Margince không bao giờ tự ý tìm hiểu một liên hệ, và tìm hiểu sâu cần một nhà cung cấp được cấp phép, có cơ sở pháp lý để làm điều đó.",
   "contact.research.staged":
     "Kết quả tìm hiểu đang chờ. Bản ghi của {name} không thay đổi cho đến khi bạn xem lại và lưu.",
   "contact.research.stats":
@@ -9968,7 +9965,7 @@ export const vi = {
   "contact.meeting.likelyAsks": "Câu hỏi có thể gặp",
   "contact.meeting.beReady": "Chuẩn bị cho",
   "contact.meeting.say": "Nói",
-  "contact.meeting.show": "Cho xem",
+  "contact.meeting.show": "Trình bày",
   "contact.meeting.avoid": "Tránh",
   "contact.meeting.scenarios": "Kịch bản khác",
   "contact.meeting.relevance.high": "Nhiều khả năng",
@@ -10418,8 +10415,8 @@ export const vi = {
     "Ai đó đã sửa danh sách này sau khi bạn mở. Mở lại danh sách để xem thay đổi đó, rồi sửa bộ lọc.",
   "lists.history.someone": "Ai đó",
   "lists.changes.since": "Kể từ lần bạn xem ngày {when}:",
-  "lists.changes.joined_one": "{count} vào",
-  "lists.changes.joined_other": "{count} vào",
+  "lists.changes.joined_one": "{count} được thêm vào",
+  "lists.changes.joined_other": "{count} được thêm vào",
   "lists.changes.left_one": "{count} rời đi",
   "lists.changes.left_other": "{count} rời đi",
   "lists.changes.more_one": "+{count} bản ghi khác",
@@ -10755,7 +10752,7 @@ export const vi = {
   "worklist.bandClear.build_pipeline":
     "Không có việc tìm kiếm khách hàng nào đang chờ.",
   "worklist.bandClear.keep_momentum":
-    "Không có việc đã thống nhất nào bị trôi.",
+    "Không có việc đã thống nhất nào đang chững lại.",
   "worklist.bandClear.review": "Không có gì cần xem lại.",
   "worklist.disposition.verb.snooze": "Tạm hoãn",
   "worklist.disposition.snoozeForDays_one": "Tạm hoãn {value} ngày",
@@ -10956,9 +10953,9 @@ export const vi = {
   "worklist.because.closing_soon": "dự kiến chốt trong 2 tuần",
   "worklist.because.expected_revenue": "deal đang mở phụ thuộc vào mục này",
   "worklist.because.expected_revenue.value": "trị giá {value}",
-  "worklist.because.material": "trên giá trị deal mở thông thường",
+  "worklist.because.material": "cao hơn giá trị thông thường của deal đang mở",
   "worklist.because.material.value":
-    "trị giá {value}, trên giá trị deal mở thông thường",
+    "trị giá {value}, cao hơn giá trị thông thường của deal đang mở",
   "worklist.because.below_material":
     "không cao hơn giá trị thông thường của deal có rủi ro",
   "worklist.because.below_material.value":
@@ -11042,7 +11039,7 @@ export const vi = {
   "worklist.untitled.brief_item": "Deal cần xem lại",
   "worklist.untitled.conversation_claim": "Cam kết của bạn",
   "worklist.untitled.customer_waiting": "Khách hàng chờ trả lời",
-  "worklist.untitled.lead_response": "Lead chưa đặt tên",
+  "worklist.untitled.lead_response": "Lead chưa có tên",
   "worklist.untitled.deal_at_risk": "Deal đang chững lại",
   "worklist.untitled.meeting": "Cuộc họp chưa có tiêu đề",
   "worklist.untitled.meeting_outcome": "Kết quả cuộc họp",
@@ -11065,7 +11062,7 @@ export const vi = {
   "worklist.untitled.notice_case": "Thông báo quyền riêng tư cần gửi",
   "worklist.untitled.capture_health": "Kết nối hộp thư cần chú ý",
   "worklist.untitled.ai_work_health": "Công việc AI cần xem lại",
-  "worklist.untitled.bounce": "Email bị trả về",
+  "worklist.untitled.bounce": "Email bị trả lại",
   "worklist.untitled.undelivered": "Email chưa gửi",
   "worklist.untitled.automation_run": "Quy tắc tự động hóa thất bại",
   "worklist.untitled.notice": "Thông báo",
@@ -11108,12 +11105,12 @@ export const vi = {
   "worklist.verb.domainKept": "Đã tạo công ty từ tên miền",
   "worklist.verb.domainKeepFailed": "Không tạo được công ty. Thử lại.",
   "worklist.verb.domainDiscarded":
-    "Thư của bạn từ tên miền này không còn được thu thập nữa.",
+    "Không còn thu thập thư từ tên miền này trong hộp thư của bạn.",
   "worklist.verb.domainDiscardFailed": "Không loại trừ được tên miền. Thử lại.",
   "worklist.verb.retryRefusedNotFailed":
     "Không có gì để chạy lại. Lượt chạy này được dừng có chủ đích, không phải do lỗi.",
   "worklist.verb.retryRefusedRepeats":
-    "Quy tắc này không được phép chạy hai lần, nên chạy lại có thể lặp lại các thao tác của nó.",
+    "Quy tắc này không được phép chạy hai lần, nên chạy lại có thể làm lặp các thao tác của quy tắc.",
   "worklist.verb.retryRefusedEventGone":
     "Không còn sự kiện kích hoạt, nên không chạy lại được. Quy tắc theo lịch sẽ tự kiểm tra lại.",
   "worklist.verb.acknowledgeFailed": "Không đánh dấu được là đã xem. Thử lại.",
@@ -11592,7 +11589,7 @@ export const vi = {
   "magic.action.retention_activity_erase":
     "Đã xóa nội dung bản chép lời quá thời hạn lưu giữ",
   "magic.action.retention_deal_archive":
-    "Đã lưu trữ deal đã chốt quá thời hạn lưu giữ",
+    "Đã lưu trữ deal đã đóng quá thời hạn lưu giữ",
   "magic.action.create_contact": "Đã tạo liên hệ",
   "magic.action.create_company": "Đã tạo công ty",
   "magic.action.create_deal": "Đã tạo deal",

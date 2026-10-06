@@ -143,8 +143,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "deal.forecast.pipeline",
   "contactdealrooms.title",
   "room.create.defaultTitle",
-  "buyer.poweredBy",
-  "buyer.poweredByMargince",
   // TEMPORARY, with the release marker it labels (app/shell.tsx): "Alpha" is
   // the release stage's own name and Vietnamese keeps it, the same way it keeps
   // "Email" and "pipeline". Delete this entry with the marker.

@@ -198,7 +198,7 @@ the reviewer in the sense its row gives.
 | Forecast category (the field) | danh mục dự báo | nhóm dự báo (nhóm is a team) |
 | Manager's forecast number | nhận định (Nhận định của quản lý) | đánh giá or dự báo của quản lý for this number |
 | Something a party said they would do | cam kết | `lời hứa` |
-| The reader's queue | Danh sách công việc | `worklist`, `hàng đợi công việc`; hộp thư đến for the Worklist |
+| The reader's queue | Danh sách công việc; a control inside the Worklist screen itself may say Danh sách | `worklist`, `hàng đợi công việc`; hộp thư đến for the Worklist |
 | Daily digest | Bản tin sáng | `bản tóm tắt buổi sáng`, `briefing` |
 | Approvals surface; approve | Phê duyệt; duyệt, đã duyệt | `chấp thuận` |
 | Review (look again before acting) | xem lại; weekly review tổng kết tuần; outcome review đánh giá | rà soát |
@@ -235,11 +235,12 @@ the reviewer in the sense its row gives.
 | Legal hold | lưu giữ pháp lý | `legal hold`; nghĩa vụ lưu giữ for the hold (a statutory retention obligation keeps it) |
 | Route into a buyer | hướng tiếp cận | |
 | Quiet relationship; drifting deal | im lặng; đang chững lại (going cold = đang nguội dần) | |
+| Stalled deal | đình trệ (Deal bị đình trệ in a sentence) | đang chững lại for stalled (that is drifting) |
 | Buying committee, buying center | nhóm quyết định mua | `buying center`, `nhóm mua hàng` |
 | Audit log | nhật ký kiểm tra | `nhật ký kiểm toán`, `audit log`, `audit trail` |
 | Follow-up | việc tiếp theo; the verb follow up is liên hệ lại | `follow-up`; theo dõi for a follow-up (it is watch) |
 | Priced offer, quote | báo giá | `chào giá` |
-| Close date; close a deal | ngày chốt; chốt | `ngày đóng` |
+| Close date; a closed deal, won or lost; close as an outcome | ngày chốt (ngày chốt dự kiến); đã đóng; kết thúc | `ngày đóng`; chốt for a deal closed won or lost (chốt is won: Doanh số đã chốt, Sắp chốt) |
 | File | tệp | `file` |
 | Website | trang web | `website` |
 | Server | máy chủ | `server` |
