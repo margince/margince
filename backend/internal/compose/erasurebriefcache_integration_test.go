@@ -17,10 +17,12 @@ import (
 	"context"
 	"io"
 	"log/slog"
+	"os"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	openapitypes "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/compose/contactbrief"
@@ -240,4 +242,83 @@ type assembleFunc func(context.Context, ids.ContactID) (crmcontracts.Contact360,
 
 func (f assembleFunc) Assemble(ctx context.Context, id ids.ContactID) (crmcontracts.Contact360, error) {
 	return f(ctx, id)
+}
+
+// A cache the erasure cannot destroy stops the erasure.
+//
+// The purge is one statement inside the Art. 17 transaction, and the whole point
+// of it being there is that a half-erasure never commits: the subject stays
+// named if their cached brief could not be destroyed, rather than being reported
+// erased while a model's prose about them survives.
+//
+// Both acts are driven, because each propagates the failure through its own
+// step — the derived rows on one side, the judgements on the other.
+func TestAnUndestroyableCachedBriefStopsTheWholeErasure(t *testing.T) {
+	e := integration.Setup(t)
+	refuseBriefDeletes(t)
+	subject := e.SeedContact(t, "Briefed Subject", &e.AdminUser)
+	cacheABrief(t, e, subject)
+
+	err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), subject, "subject request")
+	if err == nil {
+		t.Fatal("the erasure reported success though the cached brief could not be destroyed")
+	}
+	if !strings.Contains(err.Error(), "cached relationship brief") {
+		t.Errorf("the failure does not say which step could not finish: %v", err)
+	}
+	if name := contactName(t, e, subject); name != "Briefed Subject" {
+		t.Errorf("the contact reads %q, so the erasure committed a half: the name was destroyed "+
+			"inside a transaction that could not finish its own cache purge", name)
+	}
+
+	service := NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if _, err := service.AnonymiseContacts(e.Admin(), []ids.UUID{subject}, privacy.PurgeOwnerRule); err == nil {
+		t.Error("the anonymise reported success though the cached brief could not be destroyed")
+	}
+	if name := contactName(t, e, subject); name != "Briefed Subject" {
+		t.Errorf("the contact reads %q after the anonymise, so that act committed a half too", name)
+	}
+}
+
+// refuseBriefDeletes makes every DELETE on the cache fail, which is how a
+// statement inside somebody else's transaction can be made to fail without
+// touching the rows the test is about. Dropped on cleanup, which runs on a
+// failing test too: the schema is migrated once per process and a trigger left
+// behind would fail every later test in it.
+func refuseBriefDeletes(t *testing.T) {
+	t.Helper()
+	ctx := context.Background()
+	owner, err := pgx.Connect(ctx, os.Getenv("MARGINCE_TEST_DSN"))
+	if err != nil {
+		t.Fatalf("connecting as the schema owner: %v", err)
+	}
+	t.Cleanup(func() {
+		if _, err := owner.Exec(context.Background(),
+			`DROP TRIGGER IF EXISTS trg_refuse_brief_deletes ON contact_brief`); err != nil {
+			t.Errorf("dropping the refusing trigger: %v", err)
+		}
+		if err := owner.Close(context.Background()); err != nil {
+			t.Errorf("closing the owner connection: %v", err)
+		}
+	})
+	for _, stmt := range []string{
+		`CREATE OR REPLACE FUNCTION refuse_brief_deletes() RETURNS trigger AS $$
+		 BEGIN RAISE EXCEPTION 'the cache refuses deletion'; END $$ LANGUAGE plpgsql`,
+		`CREATE TRIGGER trg_refuse_brief_deletes BEFORE DELETE ON contact_brief
+		 FOR EACH STATEMENT EXECUTE FUNCTION refuse_brief_deletes()`,
+	} {
+		if _, err := owner.Exec(ctx, stmt); err != nil {
+			t.Fatalf("installing the refusing trigger: %v", err)
+		}
+	}
+}
+
+func contactName(t *testing.T, e *integration.Env, contact ids.UUID) string {
+	t.Helper()
+	var name string
+	if err := e.Pool.QueryRow(e.Admin(),
+		`SELECT full_name FROM contact WHERE id = $1`, contact).Scan(&name); err != nil {
+		t.Fatalf("reading the contact's name: %v", err)
+	}
+	return name
 }
