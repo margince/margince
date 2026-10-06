@@ -114,14 +114,8 @@ func (s *Store) Create(ctx context.Context, req NewRequest) (ids.UUID, error) {
 		return ids.UUID{}, err
 	}
 
-	// Unstated is a default; stated and unknown is refused.
-	if req.NoteGeneratedBy == "" {
-		req.NoteGeneratedBy = "human"
-	}
-	if req.FallbackPolicy == "" {
-		req.FallbackPolicy = "none"
-	}
-	if err := validateAsk(req); err != nil {
+	req, err = admitAsk(req)
+	if err != nil {
 		return ids.UUID{}, err
 	}
 
@@ -454,6 +448,18 @@ func nullIfEmpty(s string) *string {
 		return nil
 	}
 	return &s
+}
+
+// admitAsk defaults an unstated enum and refuses a stated one the contract does
+// not admit. Unstated is a contact typing with no fallback.
+func admitAsk(req NewRequest) (NewRequest, error) {
+	if req.NoteGeneratedBy == "" {
+		req.NoteGeneratedBy = "human"
+	}
+	if req.FallbackPolicy == "" {
+		req.FallbackPolicy = "none"
+	}
+	return req, validateAsk(req)
 }
 
 // validateAsk refuses what the contract does not admit. The enums are
