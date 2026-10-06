@@ -124,19 +124,24 @@ export function AddEmploymentModal({
         {t("contact.rail.addEmployment")}
       </Heading>
       <div className="form-stack">
-        <div className="field">
-          <span className="t-label">{t("contact.rail.employer")}</span>
-          <RecordPicker
-            label={t("contact.rail.employer")}
-            searchTargets={searchTargets}
-            selected={company}
-            onPick={setCompany}
-            disabled={create.isPending}
-          />
-          {!company && allConnected && (
-            <p>{t("contact.rail.allCompaniesConnected")}</p>
+        <Field label={t("contact.rail.employer")}>
+          {(control) => (
+            <>
+              <RecordPicker
+                label={t("contact.rail.employer")}
+                id={control.id}
+                aria-describedby={control["aria-describedby"]}
+                searchTargets={searchTargets}
+                selected={company}
+                onPick={setCompany}
+                disabled={create.isPending}
+              />
+              {!company && allConnected && (
+                <p>{t("contact.rail.allCompaniesConnected")}</p>
+              )}
+            </>
           )}
-        </div>
+        </Field>
         <Field label={t("rel.role")}>
           {(control) => (
             <TextInput

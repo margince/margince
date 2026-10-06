@@ -358,7 +358,7 @@ export function ContactResearchDrawer({
         )}
       </DrawerBody>
 
-      <DrawerFoot>
+      <DrawerFoot className="pe-research-foot">
         <span className="pe-disclosure t-caption">
           {t("contact.research.evidenceOrOmit")}
         </span>

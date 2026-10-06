@@ -20,6 +20,11 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import {
+  DrawerBody,
+  DrawerFoot,
+  DrawerHead,
+} from "../design-system/drawerbands";
+import {
   EvidenceMark,
   type EvidenceMarkSource,
 } from "../design-system/evidencemark";
@@ -905,13 +910,8 @@ function derivedSource(
 }
 
 /**
- * The one form every row's Edit verb opens.
- *
- * One dialog rather than one per group, because ONE PUT writes this profile:
- * three dialogs would each be committing the other two groups' unsaved draft
- * without showing it. The groups survive as the dialog's own sections, which is
- * where a form's headings belong — on the page they were three heading levels
- * deep on top of the card's own title.
+ * The one form every row's Edit verb opens. One drawer, because ONE PUT writes
+ * the profile: a dialog per group would commit the others' unsaved drafts.
  */
 function CompanyProfileDialog({
   form,
@@ -934,12 +934,8 @@ function CompanyProfileDialog({
   const t = useT();
   const titleId = useId();
   const formId = useId();
-  // Focus lands on the field whose Edit was pressed — programmatic rather than
-  // the `autoFocus` attribute, so the a11y lint's blanket rule against
-  // autofocus stays intact. A callback rather than a ref handed down: the field
-  // it lands on is an input for some rows and a textarea for others, and one
-  // callback taking the element they have in common beats two refs the caller
-  // would have to pick between.
+  // Not `autoFocus`: the a11y lint refuses it. A callback, because the field
+  // it lands on is an input for some rows and a textarea for others.
   const asked = useRef<HTMLElement | null>(null);
   const capture = (node: HTMLElement | null) => {
     asked.current = node;
@@ -949,44 +945,51 @@ function CompanyProfileDialog({
   }, []);
   return (
     <Modal open onClose={onClose} labelledBy={titleId} intent="drawer">
-      <Heading size="large" id={titleId} className="t-h2 modal-title">
-        {t("settings.companyTitle")}
-      </Heading>
-      <form
-        id={formId}
-        className="form-stack"
-        onSubmit={(event) => {
-          event.preventDefault();
-          onSubmit();
-        }}
-      >
-        {/* The site the read starts from, above the statements a read would
-            propose changes to: it is the precondition for everything below. */}
-        <CompanyFieldInput
-          field="website"
-          form={form}
-          asked={focus === "website" ? capture : undefined}
-          onChange={onChange}
-        />
-        {PROFILE_GROUPS.map((group) => (
-          <div className="form-stack" key={group.title}>
-            <SectionHeader title={t(group.title)} level={3} />
-            {group.fields.map((field) => (
-              <CompanyFieldInput
-                key={field}
-                field={field}
-                form={form}
-                asked={focus === field ? capture : undefined}
-                onChange={onChange}
-              />
-            ))}
-          </div>
-        ))}
-        {error !== null && (
-          <WriteRefused titleKey="settings.companySaveFailed" message={error} />
-        )}
-      </form>
-      <div className="actions">
+      <DrawerHead>
+        <Heading size="large" id={titleId} className="t-h2">
+          {t("settings.companyTitle")}
+        </Heading>
+      </DrawerHead>
+      <DrawerBody>
+        <form
+          id={formId}
+          className="form-stack"
+          onSubmit={(event) => {
+            event.preventDefault();
+            onSubmit();
+          }}
+        >
+          {/* The site the read starts from, above the statements a read would
+              propose changes to: it is the precondition for everything below. */}
+          <CompanyFieldInput
+            field="website"
+            form={form}
+            asked={focus === "website" ? capture : undefined}
+            onChange={onChange}
+          />
+          {PROFILE_GROUPS.map((group) => (
+            <div className="form-stack" key={group.title}>
+              <SectionHeader title={t(group.title)} level={3} />
+              {group.fields.map((field) => (
+                <CompanyFieldInput
+                  key={field}
+                  field={field}
+                  form={form}
+                  asked={focus === field ? capture : undefined}
+                  onChange={onChange}
+                />
+              ))}
+            </div>
+          ))}
+          {error !== null && (
+            <WriteRefused
+              titleKey="settings.companySaveFailed"
+              message={error}
+            />
+          )}
+        </form>
+      </DrawerBody>
+      <DrawerFoot className="actions">
         <Button variant="ghost" type="button" onClick={onClose}>
           {t("create.cancel")}
         </Button>
@@ -1000,16 +1003,12 @@ function CompanyProfileDialog({
         >
           {t("settings.companySave")}
         </Button>
-      </div>
+      </DrawerFoot>
     </Modal>
   );
 }
 
-/**
- * One field of that form. `Field` owns the id and draws a real `<label for>`,
- * so the words above the box are the box's own click target and its accessible
- * name.
- */
+/** One field of that form; `Field` draws the real `<label for>`. */
 function CompanyFieldInput({
   field,
   form,

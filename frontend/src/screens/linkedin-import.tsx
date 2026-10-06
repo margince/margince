@@ -222,11 +222,8 @@ function LinkedInProfileRow() {
           <Button type="button" onClick={close} disabled={save.isPending}>
             {t("create.cancel")}
           </Button>
-          {/* An unchanged URL and a save in flight are two different
-              unavailabilities, and the design system draws them differently:
-              `disabled` for the precondition the reader can fix by typing,
-              `pending` for the write they have already started, which keeps
-              the button focusable so the wait is announced from it. */}
+          {/* `disabled` for an unchanged URL the reader fixes by typing;
+              `pending` keeps a started save focusable so its wait is announced. */}
           <Button
             variant="primary"
             type="submit"

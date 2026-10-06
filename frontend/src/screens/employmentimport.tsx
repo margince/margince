@@ -243,16 +243,19 @@ function EmploymentMatchModal({
         <p>
           {item.company_name} · {item.role}
         </p>
-        <div className="field">
-          <span className="t-label">{t("contact.rail.employer")}</span>
-          <RecordPicker
-            label={t("contact.rail.employer")}
-            searchTargets={searchCompanyCandidates}
-            selected={company}
-            onPick={setCompany}
-            disabled={pending}
-          />
-        </div>
+        <Field label={t("contact.rail.employer")}>
+          {(control) => (
+            <RecordPicker
+              label={t("contact.rail.employer")}
+              id={control.id}
+              aria-describedby={control["aria-describedby"]}
+              searchTargets={searchCompanyCandidates}
+              selected={company}
+              onPick={setCompany}
+              disabled={pending}
+            />
+          )}
+        </Field>
         {!company && (
           <Field
             label={t("employment.website")}
