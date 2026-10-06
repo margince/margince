@@ -92,6 +92,12 @@ async function leaveForTheRow(user: ReturnType<typeof userEvent.setup>) {
   await waitFor(() => expect(window.location.hash).toBe("#/settings/import"));
 }
 
+// Defined on the instance below, so the browser's own answer is put back after.
+const browserLanguages = Object.getOwnPropertyDescriptor(
+  globalThis.navigator,
+  "languages",
+);
+
 beforeEach(() => {
   vi.stubGlobal("localStorage", memoryStorage());
   globalThis.localStorage.setItem("margince.workspaceSlug", "acme");
@@ -106,6 +112,11 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
   window.location.hash = "";
+  if (browserLanguages) {
+    Object.defineProperty(globalThis.navigator, "languages", browserLanguages);
+  } else {
+    Reflect.deleteProperty(globalThis.navigator, "languages");
+  }
 });
 
 describe("the CSV import page in the shell", () => {
@@ -122,6 +133,36 @@ describe("the CSV import page in the shell", () => {
         await screen.findByRole("dialog", { name: "Discard unsaved changes?" }),
       ).toBeInTheDocument();
       expect(screen.getByRole("row", { name: /Email/ })).toBeInTheDocument();
+    },
+    SETTLE_MS * 2,
+  );
+
+  it(
+    "asks before leaving a file that is still uploading",
+    async () => {
+      const user = userEvent.setup();
+      vi.stubGlobal(
+        "fetch",
+        vi.fn((input: Request | string | URL, init?: RequestInit) =>
+          String(input).endsWith("/v1/imports/sources")
+            ? new Promise<Response>(() => {})
+            : importFetch(input, init),
+        ),
+      );
+      await arriveAtRunPage();
+      await user.upload(
+        screen.getByLabelText("CSV file"),
+        new File(["Email\nada@x.test\n"], "estate.csv"),
+      );
+      expect(
+        screen.getByRole("button", { name: "Choose file" }),
+      ).toBeDisabled();
+
+      await leaveForTheRow(user);
+
+      expect(
+        await screen.findByRole("dialog", { name: "Discard unsaved changes?" }),
+      ).toBeInTheDocument();
     },
     SETTLE_MS * 2,
   );

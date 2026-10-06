@@ -5450,6 +5450,8 @@ export const de = {
   "import.fileLabel": "CSV-Datei",
   "import.choose": "Datei auswählen",
   "import.chooseAnother": "Andere Datei auswählen",
+  "import.discardFile":
+    "Wenn du neu beginnst, gehen die gewählte Datei und ihre Spaltenzuordnung verloren.",
   "import.profiled": "Ausgewertete Zeilen ab Dateianfang: {rows}.",
   "import.mappingTable": "Spaltenzuordnung",
   "import.col.column": "Spalte",

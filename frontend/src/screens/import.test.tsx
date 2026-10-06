@@ -425,6 +425,9 @@ describe("the import card", () => {
     await screen.findByText("Import preview");
 
     await upload(new File([""], "broken.csv"));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Discard changes" }),
+    );
 
     expect(
       await screen.findByText("The uploaded file has no content."),

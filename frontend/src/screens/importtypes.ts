@@ -18,6 +18,9 @@ export type ImportUndoReport = components["schemas"]["ImportUndoReport"];
 // nothing else.
 export const DONT_IMPORT = "";
 
+// The row type a flow opens on when nothing names one.
+export const UNNAMED_IMPORT_OBJECT: ImportObject = "lead";
+
 export function isImportObject(value: unknown): value is ImportObject {
   return value === "lead" || value === "company" || value === "contact";
 }

@@ -25,6 +25,12 @@ function requestedUrls(fetchSpy: ReturnType<typeof vi.fn>): string[] {
 
 let fetchSpy: ReturnType<typeof vi.fn>;
 
+// Defined on the instance below, so the browser's own answer is put back after.
+const browserLanguages = Object.getOwnPropertyDescriptor(
+  globalThis.navigator,
+  "languages",
+);
+
 beforeEach(() => {
   vi.stubGlobal("localStorage", memoryStorage());
   globalThis.localStorage.setItem("margince.workspaceSlug", "acme");
@@ -40,6 +46,11 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
   window.location.hash = "";
+  if (browserLanguages) {
+    Object.defineProperty(globalThis.navigator, "languages", browserLanguages);
+  } else {
+    Reflect.deleteProperty(globalThis.navigator, "languages");
+  }
 });
 
 describe("the vCard import address", () => {

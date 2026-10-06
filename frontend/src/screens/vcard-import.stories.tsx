@@ -47,6 +47,13 @@ export const Empty: Story = {
   },
 };
 
+/** The empty page in dark, where its derived tones re-resolve. */
+export const EmptyDark: Story = {
+  globals: { theme: "dark" },
+  render: Empty.render,
+  play: Empty.play,
+};
+
 /** A mixed file, which is the ordinary case: some cards land, some fill gaps
  * in a record that already existed, one resembles somebody and was written
  * nowhere, one carried no name at all. */

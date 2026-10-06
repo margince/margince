@@ -196,7 +196,7 @@ type ValidateInput = Readonly<{
 // Three steps, each of which invalidates the ones after it: a profile from one
 // file beside a report from another is the one way this screen could lie about
 // what is being imported.
-export function useImportFlow(initialObject: ImportObject = "lead") {
+export function useImportFlow(initialObject: ImportObject) {
   const queryClient = useQueryClient();
   // Which flow a response belongs to. A dry run over a whole file is a real
   // multi-second window, and the human can switch object or upload again inside
@@ -277,13 +277,12 @@ export function useImportFlow(initialObject: ImportObject = "lead") {
     }
   }
 
-  // Every step clears what the steps after it said. A profile from one file
-  // beside a report from another is the one way this screen could lie about
-  // what is being imported.
   // clearAnswers drops everything the previous file answered and moves the
   // generation on, so a reply still in flight cannot put any of it back.
   const clearAnswers = () => {
     generation.current += 1;
+    // The reader's newer choice outranks a recovery still in flight.
+    setConsidered(true);
     validate.reset();
     commit.reset();
     undo.reset();

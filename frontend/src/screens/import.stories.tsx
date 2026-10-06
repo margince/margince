@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, userEvent, within } from "storybook/test";
 import { ImportCard } from "./import";
 import {
   installFetchStub,
@@ -14,10 +15,9 @@ import {
 // an import is an ACT, not an answer this installation holds — and the wizard
 // that performs it is the page behind the row's verb, at #/settings/import/run.
 //
-// The flow past the wizard's first step needs a real file drop, which a story
-// cannot perform. What is catalogued here is the row, the two answers the card
-// gives before anybody chooses a file, and the one later state a story CAN
-// reach: the run an earlier visit left parked.
+// What is catalogued here is the row, the two answers the card gives before
+// anybody chooses a file, the run an earlier visit left parked, and the question
+// asked before a profiled file is thrown away.
 function story(allow: Parameters<typeof meRoute>[0], subpage?: string) {
   return () => {
     // A story states its own preconditions, including the absence of one.
@@ -125,3 +125,39 @@ export const PickedUpFromEarlier: Story = { render: parked(RUN) };
 // The row while that run is parked: an operator who does not know their last
 // import stopped half-way cannot finish it, so the verb says there is one.
 export const ParkedRunRow: Story = { render: parked() };
+
+// Another row type starts the flow over, so a profiled file is asked about
+// before it is dropped rather than lost to a misclick.
+export const AskingBeforeStartingOver: Story = {
+  render: () => {
+    globalThis.localStorage.removeItem("margince.import.run");
+    installFetchStub({
+      "GET /me": meRoute(OPERATOR),
+      "POST /imports/sources": () =>
+        jsonResponse({
+          source_ref: "ws/import/abc",
+          object: "lead",
+          rows_profiled: 2,
+          columns: [{ header: "Email", fill_rate: 1, samples: ["ada@x.test"] }],
+          suggested_mapping: { Email: "email" },
+          targets: ["full_name", "email"],
+        }),
+    });
+    return (
+      <StoryProviders>
+        <ImportCard subpage={RUN} />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.upload(
+      await canvas.findByLabelText("CSV file"),
+      new File(["Email\nada@x.test\n"], "estate.csv", { type: "text/csv" }),
+    );
+    await canvas.findByRole("row", { name: /Email/ });
+    await userEvent.click(canvas.getByRole("button", { name: "Companies" }));
+    const page = within(canvasElement.ownerDocument.body);
+    await expect(await page.findByRole("dialog")).toBeVisible();
+  },
+};

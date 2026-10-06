@@ -5,7 +5,6 @@ import { Upload } from "lucide-react";
 import { useRef } from "react";
 import { useCan, useCanWrite } from "../app/capability";
 import { navigate, routeHash } from "../app/router";
-import { useUnsavedGuard } from "../app/unsaved";
 import { useArrivalFocus } from "../design-system/arrivalfocus";
 import {
   Button,
@@ -14,6 +13,7 @@ import {
   SegmentedControl,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { ConfirmModal } from "../design-system/confirmmodal";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { RecordBack } from "../design-system/recordview";
@@ -39,7 +39,7 @@ import type {
   ImportReport,
   ImportRun,
 } from "./importtypes";
-import { identifyingFieldFor } from "./importtypes";
+import { identifyingFieldFor, UNNAMED_IMPORT_OBJECT } from "./importtypes";
 import { IMPORT_RUN_SUBPAGE, settingsHref } from "./settingsrouting";
 import { useTagVocabulary } from "./tags.queries";
 import "./import.css";
@@ -99,7 +99,7 @@ function ImportStart() {
   const t = useT();
   // The flow reads a parked run back on mount, so the row can say one is left
   // to finish: an operator who does not know it stopped cannot finish it.
-  const { resumed } = useImportFlow();
+  const { resumed } = useImportFlow(UNNAMED_IMPORT_OBJECT);
   return (
     <Panel title={t("import.title")}>
       <PanelBody>
@@ -147,7 +147,7 @@ function ImportRunPage() {
 function ImportWizard({
   flow,
 }: Readonly<{
-  flow: ReturnType<typeof useImportFlow>;
+  flow: ReturnType<typeof useAddressedImportFlow>;
 }>) {
   const t = useT();
   const fileInput = useRef<HTMLInputElement>(null);
@@ -161,23 +161,13 @@ function ImportWizard({
     validate,
     commit,
     undo,
+    busy,
+    committed,
   } = flow;
 
-  // The mapping table is on screen while a file is profiled and no report has
-  // been produced for it yet — the one window in which the human is choosing
-  // destinations.
+  // The mapping table shows while a file is profiled and has no report yet —
+  // the one window in which the human is choosing destinations.
   const showMapping = profile !== null && report === null;
-  const busy =
-    upload.isPending ||
-    validate.isPending ||
-    commit.isPending ||
-    undo.isPending;
-  const committed =
-    run?.status === "complete" ||
-    run?.status === "failed" ||
-    run?.status === "undoing" ||
-    run?.status === "undone";
-  useUnsavedGuard(profile !== null && !committed);
 
   return (
     <div className="import">
@@ -217,7 +207,7 @@ function ImportWizard({
           const file = event.target.files?.[0];
           event.target.value = "";
           if (file) {
-            upload.mutate(file);
+            flow.chooseFile(file);
           }
         }}
         // Out of the tab order: it is invisible, so a keyboard user landing
@@ -280,6 +270,16 @@ function ImportWizard({
           contextTagID={flow.contextTagID}
         />
       ) : null}
+      <ConfirmModal
+        open={flow.asking}
+        title={t("unsaved.title")}
+        confirmLabel={t("unsaved.discard")}
+        confirmVariant="danger"
+        onClose={flow.keepWork}
+        onConfirm={flow.discardWork}
+      >
+        <p>{t("import.discardFile")}</p>
+      </ConfirmModal>
     </div>
   );
 }
