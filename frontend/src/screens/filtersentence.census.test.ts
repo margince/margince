@@ -145,7 +145,7 @@ describe("one module says how a filter operator reads", () => {
   });
 
   it("leaves tests, stories, kits and the catalogs out of the census", () => {
-    expect(shipped("frontend/src/screens/filters.test.tsx")).toBe(false);
+    expect(shipped("frontend/src/screens/filterpage.test.tsx")).toBe(false);
     expect(shipped("frontend/src/screens/filters.stories.tsx")).toBe(false);
     expect(shipped("frontend/src/screens/filters.testkit.ts")).toBe(false);
     expect(shipped("frontend/src/i18n/en.ts")).toBe(false);

@@ -35,6 +35,7 @@ const RECORD_TYPE_NAME_KEYS = [
   "filters.library.records.contact_one",
   "filters.library.records.contact_other",
   "filters.library.noTypeHits.contacts",
+  "filters.switch.body.contacts",
   "tab.contacts",
   "tagResult.contacts",
   "import.object.contact",

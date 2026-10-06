@@ -30,11 +30,15 @@ export type FiltersServer = Readonly<{
   meAnswered?: Promise<void>;
   views?: readonly Readonly<Record<string, unknown>>[];
   viewsAnswered?: Promise<void>;
+  /** Held open until it resolves: every `GET /views` after the first. */
+  viewsReread?: Promise<void>;
   /** What `GET /views/{id}` answers; otherwise the row from `views`. */
   view?: unknown;
   lists?: readonly List[];
   /** What `GET /lists/{id}` answers; otherwise the row from `lists`. */
   list?: List;
+  /** Held open until it resolves: one list read by id. */
+  listAnswered?: Promise<void>;
   /** What `POST /lists` answers. */
   created?: Partial<List>;
   listsFail?: boolean;
@@ -45,6 +49,8 @@ export type FiltersServer = Readonly<{
   listsCap?: number;
   /** Held open until it resolves: a `GET /lists` asking for archived lists too. */
   archivedAnswered?: Promise<void>;
+  /** Held open until it resolves: every preview count. */
+  previewAnswered?: Promise<void>;
   preview?: Readonly<{
     match_count: number;
     columns?: readonly string[];
@@ -100,6 +106,12 @@ async function sentOf(input: RequestInfo | URL, init?: RequestInit) {
 
 type Row = Readonly<Record<string, unknown>>;
 
+/** The page size a preview request asked for. */
+function limitOf(sent: Sent): number {
+  const limit = isRow(sent.body) ? sent.body.limit : undefined;
+  return typeof limit === "number" ? limit : Number.POSITIVE_INFINITY;
+}
+
 function isRow(value: unknown): value is Row {
   return typeof value === "object" && value !== null;
 }
@@ -112,6 +124,7 @@ const searchOf = (sent: Sent) =>
 /** The saved views, as a server holding them: writes change what reads see. */
 function viewsServer(server: FiltersServer) {
   let views: Row[] = [...(server.views ?? [])];
+  let reads = 0;
   const write = (sent: Sent, id: string | undefined): Response => {
     const body = isRow(sent.body) ? sent.body : {};
     if (sent.method === "POST") {
@@ -130,6 +143,10 @@ function viewsServer(server: FiltersServer) {
   };
   const read = async (sent: Sent, id: string | undefined) => {
     await server.viewsAnswered;
+    reads += 1;
+    if (reads > 1) {
+      await server.viewsReread;
+    }
     if (server.viewsFail) {
       return refused();
     }
@@ -182,11 +199,15 @@ function listsServer(server: FiltersServer) {
       return refused();
     }
     if (id !== undefined) {
-      const found = server.list ?? lists.find((row) => row.id === id);
-      return found ? json(found) : notFound();
+      return oneList(id);
     }
     return listsCatalog(server, sent);
   };
+  async function oneList(id: string) {
+    await server.listAnswered;
+    const found = server.list ?? lists.find((row) => row.id === id);
+    return found ? json(found) : notFound();
+  }
 }
 
 /** Everything else the pages read, one answer per address. */
@@ -216,14 +237,18 @@ function readsServer(
       );
       return json(held?.[1] ?? { resource, fields: [] });
     },
-    "/filters/preview": () =>
-      json({
+    // At most the page asked for, as the server sends: a case about asking
+    // for more rows hands over more than one page and reads what arrives.
+    "/filters/preview": async (sent) => {
+      await server.previewAnswered;
+      return json({
         resource: "contact",
         match_count: server.preview?.match_count ?? 0,
         columns: server.preview?.columns ?? ["id"],
-        rows: server.preview?.rows ?? [],
+        rows: (server.preview?.rows ?? []).slice(0, limitOf(sent)),
         truncated: false,
-      }),
+      });
+    },
     "/exports": exported,
   };
 }

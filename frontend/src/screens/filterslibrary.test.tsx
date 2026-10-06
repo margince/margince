@@ -72,7 +72,18 @@ describe("before the session answers", () => {
     ).toBeInTheDocument();
     expect(screen.queryByRole("table")).toBeNull();
     expect(screen.queryByText(en["filters.library.firstRunTitle"])).toBeNull();
-    expect(screen.queryByRole("button", { name: "Add clause" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: en["filters.addClause"] }),
+    ).toBeNull();
+  });
+
+  it("heads an opened list as the list page it is about to be", async () => {
+    const { wrapper } = mountFilters({ meAnswered: new Promise(() => {}) });
+    render(<FiltersScreen list={liveList.id} />, { wrapper });
+    expect(
+      await screen.findByRole("heading", { level: 1, name: en["lists.page"] }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(en["lists.loading"])).toBeInTheDocument();
   });
 });
 

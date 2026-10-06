@@ -37,7 +37,7 @@ export type FilterResource = FilterVocabulary["resource"];
  * is established here (`max_messages` on the connector body generates the same
  * way), so this follows the house rather than reshaping the contract to dodge it.
  */
-const PREVIEW_PAGE = 25;
+export const PREVIEW_PAGE = 25;
 
 export function vocabularyQueryKey(resource: FilterResource) {
   return ["filter-vocabulary", resource] as const;

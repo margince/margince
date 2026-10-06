@@ -1987,6 +1987,9 @@ const ADDRESSED_VIEWS = [
   // purpose and everybody lands on.
   "search/brandt",
   "projects/pr-fleet",
+  // A focused filter page names itself, so the shell's heading stands down:
+  // the one-h1 sweep is what holds the two from both printing one.
+  "filters/companies",
 ];
 
 // The SAME sweep under the dark palette, which the suite measured by accident
@@ -2764,10 +2767,12 @@ test.describe("filters and views", () => {
     await page.goto("/#/filters/companies");
     await expectShellRendered(page);
 
-    // Before anything is authored the count says so, rather than showing a zero
-    // that would read as "no companies match".
+    // Before anything is authored the page says what would bring a count,
+    // rather than showing a zero that would read as "no companies match".
     await expect(
-      page.getByText("Bedingung hinzufügen, um Treffer anzuzeigen"),
+      page.getByText(
+        de["filters.hint.start"].replace("{records}", "Unternehmen"),
+      ),
     ).toBeVisible();
 
     await page.getByRole("button", { name: "Bedingung hinzufügen" }).click();
@@ -2843,32 +2848,36 @@ test.describe("filters and views", () => {
     ]);
   });
 
-  test("AC-filters-and-views-4: clauses combine, the group names the join, and a linked field is narrowed", async ({
+  test("AC-filters-and-views-4: conditions combine through the word between them, a group nests the other join, and a linked field is narrowed", async ({
     page,
   }) => {
     await page.goto("/#/filters/companies");
     await expectShellRendered(page);
 
-    // The join control is present before a second clause exists, because it is a
-    // property of the GROUP rather than of having two of anything.
-    const joins = page.getByRole("group", {
-      name: "Verknüpfungsmodus",
-    });
-    await expect(joins).toHaveCount(1);
-    await expect(
-      joins.getByRole("button", { name: "Alle (UND)", pressed: true }),
-    ).toBeVisible();
-    await joins.getByRole("button", { name: "Mindestens eine (ODER)" }).click();
-    await expect(
-      joins.getByRole("button", {
-        name: "Mindestens eine (ODER)",
-        pressed: true,
-      }),
-    ).toBeVisible();
-
     await page.getByRole("button", { name: "Bedingung hinzufügen" }).click();
     await page.getByRole("button", { name: "Bedingung hinzufügen" }).click();
     await expect(page.getByRole("combobox", { name: "Feld" })).toHaveCount(2);
+
+    // The join is the word between two conditions, and it is the switch: one
+    // group has one join, so pressing it flips the group.
+    const matchAll = page.getByRole("button", {
+      name: de["filters.connector.matchAll"].replace(
+        "{word}",
+        de["filters.join.and"],
+      ),
+      exact: true,
+    });
+    await expect(matchAll).toHaveCount(1);
+    await matchAll.click();
+    await expect(
+      page.getByRole("button", {
+        name: de["filters.connector.matchAny"].replace(
+          "{word}",
+          de["filters.join.or"],
+        ),
+        exact: true,
+      }),
+    ).toHaveCount(1);
 
     // A tag leaf is reached through a join, so the engine narrows it to the link
     // operators — `enthält` is gone, and a picker that offered it would produce
@@ -2884,9 +2893,18 @@ test.describe("filters and views", () => {
     ]);
     await page.keyboard.press("Escape");
 
-    // And nesting: a group inside a group is what mixing AND with OR needs.
-    await page.getByRole("button", { name: "Gruppe hinzufügen" }).click();
-    await expect(joins).toHaveCount(2);
+    // And nesting: from two conditions, More offers a group of the other join,
+    // arriving with a condition in it — what mixing AND with OR needs.
+    await page
+      .getByRole("button", { name: de["filters.rowsMore"], exact: true })
+      .click();
+    await page
+      .getByRole("button", { name: de["filters.addGroup"], exact: true })
+      .click();
+    await expect(
+      page.getByText(de["filters.group.all"], { exact: true }),
+    ).toBeVisible();
+    await expect(page.getByRole("combobox", { name: "Feld" })).toHaveCount(3);
   });
 
   test("AC-filters-and-views-5: the preview shows matching records, and says it is a page of them", async ({
@@ -2923,6 +2941,22 @@ test.describe("filters and views", () => {
         "Erste Seite der Treffer, zum Prüfen des Filters. Nicht die vollständige Auswahl.",
       ),
     ).toBeVisible();
+  });
+
+  // The 390px sweep visits the library; a filter page with a condition on it
+  // is a different width problem — a clause row of three controls — and is
+  // measured where it is drawn.
+  test("at 390px a written condition fits without scrolling sideways, under one heading", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/#/filters/companies");
+    await expectShellRendered(page);
+    await authorIndustryIs(page);
+
+    await expect(page.getByText("Passende Unternehmen: 812")).toBeVisible();
+    expect(await pageOverflow(page)).toEqual([]);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
   });
 
   test("AC-filters-and-views-1: the object tab is part of the address", async ({

@@ -45,9 +45,9 @@ import {
 } from "./navlevel";
 import { PageAsideProvider } from "./pageaside";
 import {
+  headsItself,
   PAGE_SUB_KEYS,
   resolveTitle,
-  SELF_HEADED_SCREENS,
   sectionHead,
 } from "./pagemeta";
 import { usePopoverDismiss } from "./popover";
@@ -685,15 +685,15 @@ export function PageTitle({
   // yielding to a surface that will not name itself either.
   const unitNamesPage =
     route.screen === EXTENSION_SCREEN && findExtension(route.id) !== null;
-  // A screen that heads ITSELF. Brief greets the reader by name in its own h1,
+  // A page that heads ITSELF. Brief greets the reader by name in its own h1,
   // so the shell printing the nav label above it named the page twice at heading
   // level — a document outline with two top-level headings, which is exactly
   // what the branches above exist to prevent for records and units.
   //
-  // A set rather than a second boolean: the next screen that grows its own
-  // heading joins a list instead of adding a clause, and the list is the one
-  // place to read which screens do this.
-  const selfHeaded = SELF_HEADED_SCREENS.has(route.screen);
+  // Asked of the route, through pagemeta's one predicate: a focused filter
+  // page heads itself where the library under the same screen does not, and
+  // the predicate is the one place to read which pages do this.
+  const selfHeaded = headsItself(route);
   // Read only on the branch that prints an h1: a surface naming itself gets no
   // subtitle from here either, or the page would carry a description of a
   // heading it is not showing. The ENTRY's own line first: a section is many

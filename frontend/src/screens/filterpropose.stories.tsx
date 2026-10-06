@@ -9,7 +9,7 @@ import {
   type UnusedPhrase,
   UnusedPhrases,
 } from "./filterpropose";
-import { type Node, newGroup, newLeaf } from "./segmentpredicate";
+import { isGroup, type Node, newGroup, newLeaf } from "./segmentpredicate";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // Describing a list in plain words. The states worth seeing are the box at rest,
@@ -79,6 +79,11 @@ function Surface({ start }: Readonly<{ start: Node }>) {
       <PlainWordsFilter
         resource="company"
         tree={tree}
+        // As the editor draws it: its own card on an empty filter, folded
+        // above the rows once there are some.
+        layout={
+          isGroup(tree) && tree.children.length === 0 ? "start" : "folded"
+        }
         onApply={(next, phrases) => {
           if (next !== null) {
             setTree(next);

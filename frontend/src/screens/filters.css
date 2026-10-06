@@ -1,13 +1,12 @@
 /* SPDX-License-Identifier: BUSL-1.1
  * SPDX-FileCopyrightText: 2026 Gradion
  *
- * The Filters & views screen. Layout only — every colour and space is a token. */
+ * The focused Filters and views pages: a new filter, an opened view, a list's
+ * filter. Layout only — every colour and space is a token. */
 
 /* The root wears `.wrap` (app/shell.css): the page gutter is the shell's one
- * spelling of the inset, so the screen starts on the same line as the page head
- * above it, and the arrival stagger comes with it — `.wrap` IS an arrival stack
- * (design-system/enter.css), so a second stack class here would be a second
- * spelling of one fact. */
+ * spelling of the inset, and `.wrap` IS an arrival stack (design-system/enter.css),
+ * so a second stack class here would be a second spelling of one fact. */
 .filters-screen {
   display: flex;
   flex-direction: column;
@@ -24,31 +23,127 @@
   margin-top: 0;
 }
 
-/* The object tabs on a row of their own. The shell's page head names the page
- * above them, so this row carries the one choice everything below it reads. */
-.filters-object-row {
+/* The page's name, with the one control the page reads from beside it. On a
+ * phone the control drops under the name at full width, so four record types
+ * still fit without scrolling sideways. */
+.filters-head {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
+  justify-content: space-between;
   gap: var(--space-3);
   flex-wrap: wrap;
 }
 
-.filters-count-row {
+.filters-head-name {
   display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.filters-head-name > p {
+  margin: 0;
+}
+
+@media (max-width: 700px) {
+  .filters-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+/* The editor's own stack: the folded description, the rows, and what a
+ * description could not use. */
+.filters-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* The calm start: two ways in side by side with "or" between them, and what a
+ * description could not use across the whole width under both. */
+.filters-start {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: stretch;
+}
+
+/* "or" on a rule between the two ways in: down the gap beside them, and
+ * across it once they stack. */
+.filters-start-or {
+  display: flex;
+  flex-direction: column;
   align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.filters-start-or::before,
+.filters-start-or::after {
+  content: "";
+  flex: 1 1 auto;
+  border-inline-start: 1px solid var(--borderSubtle);
+}
+
+.filters-start-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
   gap: var(--space-3);
-  flex-wrap: wrap;
+}
+
+.filters-start-card > p {
+  margin: 0;
+}
+
+.filters-unused {
+  grid-column: 1 / -1;
+}
+
+.filters-unused:empty {
+  display: none;
+}
+
+@media (max-width: 700px) {
+  .filters-start {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .filters-start-or {
+    flex-direction: row;
+  }
+
+  .filters-start-or::before,
+  .filters-start-or::after {
+    border-inline-start: 0;
+    border-top: 1px solid var(--borderSubtle);
+  }
+}
+
+.filters-hint {
+  margin: 0;
+}
+
+/* The rows behind the count, and the one way to ask for more of them. */
+.filters-matches {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.filters-more {
+  margin: 0;
 }
 
 .filters-count {
-  /* Tabular figures so the number does not shift the badge beside it as the
+  /* Tabular figures so the number does not shift the title beside it as the
    * count crosses a digit — a count that recomputes on every keystroke would
    * otherwise nudge the row on each edit. */
   font-variant-numeric: tabular-nums;
 }
 
-/* The plain-words box above the builder: the field, its button and whatever
- * the proposal answers, stacked on the panel's own rhythm. */
+/* The plain-words box: the field, its button and whatever the proposal
+ * answers, stacked on the panel's own rhythm. */
 .filters-propose {
   display: flex;
   flex-direction: column;

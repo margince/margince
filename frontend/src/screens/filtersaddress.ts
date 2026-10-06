@@ -94,6 +94,14 @@ export const NEW_FILTER_LABEL: Record<ObjectTab, MessageKey> = {
   leads: "filters.new.leads",
 };
 
+/** Why switching away from this record type clears the conditions. */
+export const SWITCH_CLEARS_LABEL: Record<ObjectTab, MessageKey> = {
+  contacts: "filters.switch.body.contacts",
+  companies: "filters.switch.body.companies",
+  deals: "filters.switch.body.deals",
+  leads: "filters.switch.body.leads",
+};
+
 /** A count of a list's records, in the noun its record type is counted in. */
 export const RECORDS_COUNT_LABEL: Record<ListRecordType, PluralBase> = {
   contact: "filters.library.records.contact",
@@ -155,6 +163,27 @@ export type FiltersAddress =
   | Readonly<{ kind: "new"; tab: ObjectTab }>
   | Readonly<{ kind: "view"; tab: ObjectTab; viewId: string }>
   | Readonly<{ kind: "listFilter"; listId: string }>;
+
+/** An address that opens a focused page rather than the library. */
+export type FocusedFiltersAddress = Exclude<
+  FiltersAddress,
+  Readonly<{ kind: "library" }>
+>;
+
+/**
+ * The name a focused page wears until it has read its own — a view's or a
+ * list's name — so it is never without a heading while it waits.
+ */
+export function fallbackTitleOf(address: FocusedFiltersAddress): MessageKey {
+  switch (address.kind) {
+    case "new":
+      return NEW_FILTER_LABEL[address.tab];
+    case "view":
+      return "filters.library.kindView";
+    case "listFilter":
+      return "lists.editFilter";
+  }
+}
 
 /**
  * What `#/filters/<id>/<id2>` opens. Anything this does not recognise is the

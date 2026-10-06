@@ -1,6 +1,7 @@
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useEntityName } from "../screens/entityref";
+import { opensAFocusedFiltersPage } from "../screens/filtersaddress";
 import { SCREEN_ENTITY } from "./entity";
 import { EXTENSION_SCREEN, findExtension } from "./extensions";
 import { NAV, type NavLevelEntry, type NavSection } from "./nav";
@@ -53,13 +54,25 @@ export const SELF_HEADED_SCREENS: ReadonlySet<string> = new Set([
   "partners",
 ]);
 
+/**
+ * Whether the page at this route prints its own h1, so the shell prints none.
+ * Asked of the route rather than the screen: a focused Filters and views page
+ * heads itself with what it holds, while the library under the same screen
+ * is named by the shell. `filters` stays out of the set for that reason.
+ */
+export function headsItself(route: Route): boolean {
+  return (
+    SELF_HEADED_SCREENS.has(route.screen) || opensAFocusedFiltersPage(route)
+  );
+}
+
 // Only a subtitle true of the WHOLE page qualifies. Copy that describes the
 // current tab, filter or segment belongs beside that control, where it changes
 // with it; the page heading cannot see those and would go stale.
 export const PAGE_SUB_KEYS: Record<string, MessageKey> = {
-  // What the whole surface is for, not what the current object tab holds: the
-  // sentence is true of a contact filter and a deal filter alike, which is the
-  // test a page-level subtitle has to pass.
+  // The library's line. It shows nowhere else under the screen: a focused
+  // filter page heads itself (headsItself), and the shell's subtitle goes
+  // with the heading it hangs on.
   filters: "filters.subtitle",
   // Whose messages these are is the fact the page most needs to state, and it
   // is true of the whole page: a scheduled send is readable only by the contact

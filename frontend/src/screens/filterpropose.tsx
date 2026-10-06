@@ -13,7 +13,13 @@ import { useMutation } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { Button, Field, Textarea } from "../design-system/atoms";
+import {
+  Button,
+  Card,
+  Disclosure,
+  Field,
+  Textarea,
+} from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ErrorLine } from "../design-system/errorline";
 import { type Locale, useLocale, useT } from "../i18n";
@@ -66,18 +72,29 @@ export type PlainWordsFilterProps = Readonly<{
   tree: Node;
   /** Puts a tree in the builder and the phrases that did not make it beside it. */
   onApply: (tree: Node | null, unused: readonly UnusedPhrase[]) => void;
+  /**
+   * `start`: one of the two ways in, on a page with no conditions yet.
+   * `folded`: behind a disclosure above the reader's own rows. Either way it
+   * is the same component, so a description being read survives the switch.
+   */
+  layout: "start" | "folded";
 }>;
 
 export function PlainWordsFilter({
   resource,
   tree,
   onApply,
+  layout,
 }: PlainWordsFilterProps) {
   const t = useT();
   const { locale } = useLocale();
   const [text, setText] = useState("");
   const [pending, setPending] = useState<Pending | null>(null);
   const [unreadable, setUnreadable] = useState(false);
+  // Whether the folded box is open: opened from here while it holds what the
+  // reader must see, folded when an answer lands. State rather than derived,
+  // so React re-opens a box the reader folded in the meantime.
+  const [open, setOpen] = useState(false);
   // The tree as it stands when the answer ARRIVES. The reader may have added a
   // clause or loaded a view while the model was reading, and replace-or-ask is
   // decided against what is on screen then, not what was there at submit.
@@ -100,13 +117,16 @@ export function PlainWordsFilter({
     const proposed = decode(proposal.filter);
     if (proposed === null) {
       setUnreadable(true);
+      setOpen(true);
       return;
     }
     if (isEmptyTree(current.current)) {
       onApply(proposed, proposal.unsupported);
+      setOpen(false);
       return;
     }
     setPending({ tree: proposed, unused: proposal.unsupported });
+    setOpen(true);
   };
 
   const submit = () => {
@@ -115,13 +135,20 @@ export function PlainWordsFilter({
       return;
     }
     setPending(null);
+    setOpen(true);
     propose.mutate(
       { resource: askable, text: sentence, locale },
-      { onSuccess: received },
+      { onSuccess: received, onError: () => setOpen(true) },
     );
   };
 
-  return (
+  const land = (tree: Node, unused: readonly UnusedPhrase[]) => {
+    onApply(tree, unused);
+    setPending(null);
+    setOpen(false);
+  };
+
+  const body = (
     <div className="filters-propose">
       <Field
         label={t("filters.propose.label")}
@@ -160,18 +187,14 @@ export function PlainWordsFilter({
             <>
               <Button
                 variant="ai"
-                onClick={() => {
-                  onApply(pending.tree, pending.unused);
-                  setPending(null);
-                }}
+                onClick={() => land(pending.tree, pending.unused)}
               >
                 {t("filters.propose.replace")}
               </Button>
               <Button
-                onClick={() => {
-                  onApply(addProposal(tree, pending.tree), pending.unused);
-                  setPending(null);
-                }}
+                onClick={() =>
+                  land(addProposal(tree, pending.tree), pending.unused)
+                }
               >
                 {t("filters.propose.add")}
               </Button>
@@ -185,6 +208,22 @@ export function PlainWordsFilter({
         </Callout>
       )}
     </div>
+  );
+  if (layout === "start") {
+    return (
+      <Card as="div" inset>
+        {body}
+      </Card>
+    );
+  }
+  return (
+    <Disclosure
+      summary={t("filters.describeChanges")}
+      open={open}
+      onToggle={setOpen}
+    >
+      {body}
+    </Disclosure>
   );
 }
 

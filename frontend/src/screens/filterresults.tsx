@@ -109,6 +109,14 @@ export type FilterResultsProps = Readonly<{
   /** Names this table for the column widths it remembers between visits. */
   widthsKey: string;
   pending: boolean;
+  /** How many rows match on the server, when more match than were sent. */
+  total?: number;
+  /**
+   * The page size the caller asked the server for, and how to ask again: the
+   * table's size dial then sets the request rather than slicing what came.
+   */
+  perPage?: number;
+  onPerPage?: (next: number) => void;
 }>;
 
 export function FilterResults({
@@ -118,6 +126,9 @@ export function FilterResults({
   unit,
   widthsKey,
   pending,
+  total,
+  perPage,
+  onPerPage,
 }: FilterResultsProps) {
   const t = useT();
   const rows: readonly PreviewRow[] = preview?.rows ?? [];
@@ -139,9 +150,12 @@ export function FilterResults({
       rowKey={rowKey}
       unit={unit}
       widthsKey={widthsKey}
-      emptyNote={t("filters.noMatches")}
+      emptyNote={t("filters.noMatches", { records: unit })}
       pending={pending}
       caption={t("filters.resultsCaption")}
+      total={total}
+      perPage={perPage}
+      onPerPage={onPerPage}
       // The preview is deliberately a first page, and the reader's next step is
       // to narrow the filter rather than to walk pages of it — so there is no
       // pager to offer. Claiming `hasMore` without an `onLoadMore` would render

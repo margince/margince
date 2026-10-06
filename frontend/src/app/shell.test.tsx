@@ -245,11 +245,16 @@ describe("PageTitle", () => {
     expect(container.querySelector(".pagesub")).toBeNull();
   });
 
-  // Brief greets the reader by name in its own h1, so the shell adds none: two
-  // top-level headings is no document outline at all. Same yield-whole rule as
-  // a record route below, for the same reason.
-  it("renders nothing at all on a screen that heads itself", () => {
-    const { container } = render(<PageTitle route={{ screen: "home" }} />);
+  // Brief greets the reader by name in its own h1, and a focused filter page
+  // names what it holds, so the shell adds none: two top-level headings is no
+  // document outline at all. Same yield-whole rule as a record route below.
+  it.each([
+    "#/home",
+    "#/filters/contacts",
+    "#/filters/contacts/v1",
+    "#/filters/list/L1",
+  ])("renders nothing at all on %s, which heads itself", (hash) => {
+    const { container } = render(<PageTitle route={parseHash(hash)} />);
     expect(container.querySelector(".pagetitle")).toBeNull();
     expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
   });

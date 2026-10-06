@@ -256,8 +256,9 @@ This family splits base from ink the same way a state does; see
 
 **Dashed means proposed; solid means real.** `1.5px dashed var(--aiMed)` marks
 a thing an agent has staged and a human has not yet accepted: `.staging-card`,
-`.deal-card.staged`, the deck's empty and staged slots. The dashes going solid
-is what acceptance looks like. The tint says *who*, and the stroke says
+`.deal-card.staged`, `.filter-clause[data-proposed]` (a filter condition a model
+proposed), the deck's empty and staged slots. The dashes going solid is what
+acceptance looks like. The tint says *who*, and the stroke says
 *whether it counts yet*.
 
 One family, one declaration site. `Panel tone="ai"` and `.staging-card` are

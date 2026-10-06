@@ -74,16 +74,22 @@ function ListState({ children }: Readonly<{ children: ReactNode }>) {
   );
 }
 
+/** The page while its list, or the session that decides lists, is read. */
+export function ListPending() {
+  const t = useT();
+  return (
+    <ListState>
+      <PendingBody label={t("lists.loading")} lines={6} />
+    </ListState>
+  );
+}
+
 function ListBody({ listID }: Readonly<{ listID: string }>) {
   const t = useT();
   const list = useList(listID);
   useVisitOnce(listID, list.isSuccess && list.isFetchedAfterMount);
   if (list.isPending) {
-    return (
-      <ListState>
-        <PendingBody label={t("lists.loading")} lines={6} />
-      </ListState>
-    );
+    return <ListPending />;
   }
   if (list.isError) {
     return (

@@ -109,3 +109,23 @@ export const Recounting: Story = {
   // it — a table that empties on every keystroke is unreadable.
   args: { ...shared, preview: preview(ROWS), pending: true },
 };
+
+const PAGE = Array.from({ length: 25 }, (_, index) => ({
+  id: `p-${index}`,
+  full_name: `Contact ${index + 1}`,
+  city: "Berlin",
+  cf_loyalty_tier: "gold",
+  created_at: "2026-08-01",
+})) satisfies FilterPreview["rows"];
+
+export const FirstPageOfMany: Story = {
+  // 214 match and 25 came: the count line says 214, the page holds the 25,
+  // and the size dial asks the server again rather than paging past them.
+  args: {
+    ...shared,
+    preview: { ...preview(PAGE), match_count: 214 },
+    total: 214,
+    perPage: 25,
+    onPerPage: () => {},
+  },
+};

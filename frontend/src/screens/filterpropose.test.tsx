@@ -9,6 +9,7 @@ import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import { FiltersScreen } from "./filters";
 
 // The proposal is a suggestion the builder shows: these tests are about where it
@@ -109,6 +110,12 @@ function mount(
 afterEach(cleanup);
 
 async function describeList(user: ReturnType<typeof userEvent.setup>) {
+  // Over the reader's own conditions the box is folded above them, and the
+  // reader opens it first.
+  const folded = screen.queryByText(en["filters.describeChanges"]);
+  if (folded) {
+    await user.click(folded);
+  }
   await user.type(
     await screen.findByLabelText("Describe the list in plain words"),
     "contacts named Lee who are likely to buy",
@@ -125,6 +132,10 @@ it("loads a proposal into an empty builder and names what it could not use", asy
 
   const value = await screen.findByLabelText("Value");
   expect((value as HTMLInputElement).value).toBe("Lee");
+  // The card the reader pressed Propose in is gone; they are in its first row.
+  expect(document.activeElement).toBe(
+    screen.getByRole("combobox", { name: "Field" }),
+  );
   expect(asked).toEqual([
     {
       resource: "contact",
@@ -151,7 +162,9 @@ it("asks before a proposal touches a filter the reader already built", async () 
   const user = userEvent.setup();
   render(<FiltersScreen id="contacts" />, { wrapper });
 
-  await user.click(await screen.findByRole("button", { name: "Add clause" }));
+  await user.click(
+    await screen.findByRole("button", { name: "Add condition" }),
+  );
   await user.type(screen.getByLabelText("Value"), "Ann");
   await describeList(user);
 
@@ -182,7 +195,7 @@ it("asks when the reader built a filter while the proposal was being read", asyn
 
   // Asked on an empty builder, and the reader keeps working while it is read.
   await describeList(user);
-  await user.click(screen.getByRole("button", { name: "Add clause" }));
+  await user.click(screen.getByRole("button", { name: "Add condition" }));
   await user.type(screen.getByLabelText("Value"), "Ann");
   answer();
 
@@ -192,12 +205,38 @@ it("asks when the reader built a filter while the proposal was being read", asyn
   ).toEqual(["Ann"]);
 });
 
+it("opens the folded box again when its answer waits for a choice", async () => {
+  let answer = () => {};
+  const { wrapper } = mount(
+    undefined,
+    new Promise<void>((resolve) => {
+      answer = resolve;
+    }),
+  );
+  const user = userEvent.setup();
+  render(<FiltersScreen id="contacts" />, { wrapper });
+
+  await user.click(
+    await screen.findByRole("button", { name: "Add condition" }),
+  );
+  await user.type(screen.getByLabelText("Value"), "Ann");
+  await describeList(user);
+  // The reader folds the box away and carries on while it is read.
+  await user.click(screen.getByText(en["filters.describeChanges"]));
+  answer();
+
+  const ready = await screen.findByText("A filter is ready");
+  expect(ready.closest("details")?.open).toBe(true);
+});
+
 it("replaces the reader's filter only when they choose to", async () => {
   const { wrapper } = mount();
   const user = userEvent.setup();
   render(<FiltersScreen id="contacts" />, { wrapper });
 
-  await user.click(await screen.findByRole("button", { name: "Add clause" }));
+  await user.click(
+    await screen.findByRole("button", { name: "Add condition" }),
+  );
   await user.type(screen.getByLabelText("Value"), "Ann");
   await describeList(user);
 

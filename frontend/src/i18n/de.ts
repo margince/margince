@@ -10450,14 +10450,43 @@ export const de = {
   "provider.category.jobHistory": "frühere Rollen",
 
   // Der Filter-Baukasten (AC-filters-and-views-3/4).
-  "filters.joinAll": "Alle (UND)",
-  "filters.joinAny": "Mindestens eine (ODER)",
-  "filters.joinLabel": "Verknüpfungsmodus",
   "filters.removeGroup": "Gruppe entfernen",
   "filters.addGroup": "Gruppe hinzuf\u00fcgen",
   "filters.addClause": "Bedingung hinzuf\u00fcgen",
-  "filters.emptyGroup":
-    "Noch keine Bedingungen. Eine leere Gruppe trifft auf nichts zu; füge eine Bedingung hinzu.",
+  "filters.addToGroup": "Bedingung zur Gruppe hinzufügen",
+  "filters.find": "{records} finden, bei denen…",
+  "filters.hint.start":
+    "Füge eine Bedingung hinzu, um zu sehen, wie viele {records} passen.",
+  "filters.hint.finish":
+    "Vervollständige die Bedingung, um zu sehen, wie viele {records} passen.",
+  "filters.hint.update":
+    "Vervollständige die Bedingung, um die Anzahl zu aktualisieren.",
+  "filters.startOr": "oder",
+  "filters.start.buildTitle": "Bedingung für Bedingung aufbauen",
+  "filters.start.buildBody":
+    "Wähle ein Feld, wie es verglichen wird, und einen Wert. Füge nach und nach weitere Bedingungen hinzu.",
+  "filters.describeChanges": "Änderungen in eigenen Worten beschreiben",
+  "filters.connector.matchAll":
+    "{word}: Alle davon müssen zutreffen. Drücke, damit eine reicht.",
+  "filters.connector.matchAny":
+    "{word}: Eine davon muss zutreffen. Drücke, damit alle zutreffen müssen.",
+  "filters.group.all": "Alle davon",
+  "filters.group.any": "Mindestens eine davon",
+  "filters.rowsMore": "Mehr zu diesen Bedingungen",
+  "filters.groupMore": "Mehr zu dieser Gruppe",
+  "filters.proposed": "Vorgeschlagen",
+  "filters.switch.title": "Zu {records} wechseln?",
+  "filters.switch.body.contacts":
+    "Die Bedingungen werden gelöscht, weil sie Kontaktfelder nennen.",
+  "filters.switch.body.companies":
+    "Die Bedingungen werden gelöscht, weil sie Unternehmensfelder nennen.",
+  "filters.switch.body.deals":
+    "Die Bedingungen werden gelöscht, weil sie Deal-Felder nennen.",
+  "filters.switch.body.leads":
+    "Die Bedingungen werden gelöscht, weil sie Lead-Felder nennen.",
+  "filters.switch.confirm": "Wechseln und löschen",
+  "filters.showMore": "Bis zu 100 anzeigen",
+  "filters.emptyGroup": "Eine leere Gruppe trifft auf nichts zu.",
   "filters.field": "Feld",
   "filters.field.amount": "Umgerechneter Betrag",
   "filters.field.city": "Stadt",
@@ -10818,21 +10847,20 @@ export const de = {
   "filters.tab.companies": "Unternehmen",
   "filters.tab.deals": "Deals",
   "filters.builderTitle": "Filter",
-  "filters.dynamic": "Dynamisch: wird bei jedem Ereignis aktualisiert",
   "filters.matchContacts_one": "Passender Kontakt: {count}",
   "filters.matchContacts_other": "Passende Kontakte: {count}",
   "filters.matchCompanies_one": "Passendes Unternehmen: {count}",
   "filters.matchCompanies_other": "Passende Unternehmen: {count}",
   "filters.matchDeals_one": "Passender Deal: {count}",
   "filters.matchDeals_other": "Passende Deals: {count}",
-  "filters.noFilterYet": "Bedingung hinzufügen, um Treffer anzuzeigen",
   "filters.countUnavailable": "Anzahl nicht verf\u00fcgbar",
   "filters.loadingVocabulary": "Felder werden geladen…",
   "filters.noFields": "Keine filterbaren Felder f\u00fcr diesen Datensatztyp.",
   "filters.resultsTitle": "Passende Datens\u00e4tze",
   "filters.resultsCaption":
     "Erste Seite der Treffer, zum Prüfen des Filters. Nicht die vollständige Auswahl.",
-  "filters.noMatches": "Keine Datensätze passen zu diesem Filter.",
+  "filters.noMatches":
+    "Keine {records} passen zu diesen Bedingungen. Lockere eine: Stell eine Verknüpfung auf „oder“ um, oder entferne die genaueste Bedingung.",
   "filters.loadView": "Gespeicherten Filter laden",
   "filters.pickRecord": "Datensatz auswählen",
   "filters.searchRecords": "Unternehmen durchsuchen",

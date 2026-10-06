@@ -10326,15 +10326,42 @@ export const vi = {
   "provider.category.jobHistory": "vai trò trước đây",
 
   // Tr\u00ecnh d\u1ee5ng b\u1ed9 l\u1ecdc (AC-filters-and-views-3/4).
-  "filters.joinAll": "T\u1ea4T C\u1ea2 \u00b7 AND",
-  "filters.joinAny": "B\u1ea4T K\u1ef2 \u00b7 OR",
-  "filters.joinLabel":
-    "C\u00e1ch nh\u00f3m n\u00e0y k\u1ebft h\u1ee3p c\u00e1c \u0111i\u1ec1u ki\u1ec7n",
   "filters.removeGroup": "X\u00f3a nh\u00f3m",
   "filters.addGroup": "Th\u00eam nh\u00f3m",
   "filters.addClause": "Th\u00eam \u0111i\u1ec1u ki\u1ec7n",
-  "filters.emptyGroup":
-    "Ch\u01b0a c\u00f3 \u0111i\u1ec1u ki\u1ec7n \u2014 nh\u00f3m tr\u1ed1ng kh\u00f4ng kh\u1edbp v\u1edbi g\u00ec, h\u00e3y th\u00eam m\u1ed9t \u0111i\u1ec1u ki\u1ec7n.",
+  "filters.addToGroup": "Thêm điều kiện vào nhóm",
+  "filters.find": "Tìm {records} thỏa mãn…",
+  "filters.hint.start":
+    "Thêm một điều kiện để xem có bao nhiêu {records} khớp.",
+  "filters.hint.finish":
+    "Hoàn tất điều kiện để xem có bao nhiêu {records} khớp.",
+  "filters.hint.update": "Hoàn tất điều kiện để cập nhật số lượng.",
+  "filters.startOr": "hoặc",
+  "filters.start.buildTitle": "Tạo từng điều kiện một",
+  "filters.start.buildBody":
+    "Chọn một trường, cách so sánh và một giá trị. Thêm điều kiện khác khi cần.",
+  "filters.describeChanges": "Mô tả thay đổi bằng lời thường",
+  "filters.connector.matchAll":
+    "{word}: khớp tất cả điều kiện này. Nhấn để khớp bất kỳ điều kiện nào.",
+  "filters.connector.matchAny":
+    "{word}: khớp bất kỳ điều kiện nào. Nhấn để khớp tất cả.",
+  "filters.group.all": "Tất cả điều kiện này",
+  "filters.group.any": "Bất kỳ điều kiện nào",
+  "filters.rowsMore": "Thêm tùy chọn cho các điều kiện này",
+  "filters.groupMore": "Thêm tùy chọn cho nhóm này",
+  "filters.proposed": "Đề xuất",
+  "filters.switch.title": "Chuyển sang {records}?",
+  "filters.switch.body.contacts":
+    "Các điều kiện sẽ bị xóa vì chúng dùng trường của liên hệ.",
+  "filters.switch.body.companies":
+    "Các điều kiện sẽ bị xóa vì chúng dùng trường của công ty.",
+  "filters.switch.body.deals":
+    "Các điều kiện sẽ bị xóa vì chúng dùng trường của deal.",
+  "filters.switch.body.leads":
+    "Các điều kiện sẽ bị xóa vì chúng dùng trường của khách hàng tiềm năng.",
+  "filters.switch.confirm": "Chuyển và xóa",
+  "filters.showMore": "Hiển thị tối đa 100",
+  "filters.emptyGroup": "Nhóm trống không khớp với bản ghi nào.",
   "filters.field": "Tr\u01b0\u1eddng",
   "filters.field.amount": "Giá trị quy đổi",
   "filters.field.city": "Thành phố",
@@ -10728,16 +10755,12 @@ export const vi = {
   "filters.tab.companies": "C\u00f4ng ty",
   "filters.tab.deals": "Deal",
   "filters.builderTitle": "B\u1ed9 l\u1ecdc",
-  "filters.dynamic":
-    "\u0110\u1ed9ng \u2014 t\u00ednh l\u1ea1i sau m\u1ecdi s\u1ef1 ki\u1ec7n",
   "filters.matchContacts_one": "{count} li\u00ean h\u1ec7 kh\u1edbp",
   "filters.matchContacts_other": "{count} li\u00ean h\u1ec7 kh\u1edbp",
   "filters.matchCompanies_one": "{count} c\u00f4ng ty kh\u1edbp",
   "filters.matchCompanies_other": "{count} c\u00f4ng ty kh\u1edbp",
   "filters.matchDeals_one": "{count} deal kh\u1edbp",
   "filters.matchDeals_other": "{count} deal kh\u1edbp",
-  "filters.noFilterYet":
-    "Th\u00eam \u0111i\u1ec1u ki\u1ec7n \u0111\u1ec3 xem k\u1ebft qu\u1ea3",
   "filters.countUnavailable":
     "Kh\u00f4ng l\u1ea5y \u0111\u01b0\u1ee3c s\u1ed1 l\u01b0\u1ee3ng",
   "filters.loadingVocabulary":
@@ -10748,7 +10771,7 @@ export const vi = {
   "filters.resultsCaption":
     "Trang \u0111\u1ea7u c\u1ee7a k\u1ebft qu\u1ea3 kh\u1edbp \u2014 \u0111\u1ee7 \u0111\u1ec3 ki\u1ec3m tra b\u1ed9 l\u1ecdc, kh\u00f4ng ph\u1ea3i to\u00e0n b\u1ed9.",
   "filters.noMatches":
-    "Kh\u00f4ng c\u00f3 b\u1ea3n ghi n\u00e0o kh\u1edbp b\u1ed9 l\u1ecdc n\u00e0y.",
+    "Không có {records} nào khớp các điều kiện này. Hãy nới lỏng một điều kiện: chuyển một liên kết sang “hoặc”, hoặc xóa điều kiện cụ thể nhất.",
   "filters.loadView": "T\u1ea3i b\u1ed9 l\u1ecdc \u0111\u00e3 l\u01b0u",
   "filters.pickRecord": "Ch\u1ecdn m\u1ed9t",
   "filters.searchRecords": "Tìm kiếm công ty",

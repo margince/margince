@@ -11,81 +11,45 @@
 // field, no operator, and no value type of its own — which is why a clause it
 // builds cannot be one the engine refuses as unknown.
 //
-// Rendering is recursive because the tree is. A group draws its children and its
-// own join toggle; a child is either a clause row or another group, and the same
-// component handles both depths, so nesting is not a special case to maintain.
+// It grows only as the reader builds. A group's join is drawn as the word
+// between its conditions, so it appears once there are two of them; a nested
+// group is offered from two conditions on, behind More, and arrives with a
+// condition already in it.
 
-import { X } from "lucide-react";
-import { Badge, Button, SegmentedControl } from "../design-system/atoms";
-import { Select, type SelectOption } from "../design-system/select";
-import { forReader } from "../format/collate";
-import { type Locale, useLocale, useT } from "../i18n";
-import type { MessageKey } from "../i18n/en";
+import { Fragment, useId } from "react";
+import { Button, OverflowMenu } from "../design-system/atoms";
+import { useT } from "../i18n";
 import "./filterbuilder.css";
-import { fieldLabel, groupFields, type VocabularyField } from "./filterdata";
-import { operatorKey } from "./filtersentence";
-import { ValueControl } from "./filtervalue";
+import { ClauseRow, firstClause } from "./filterclause";
+import type { VocabularyField } from "./filterdata";
 import {
   addToGroup,
-  type FilterOp,
   type Group,
   isGroup,
-  type Leaf,
-  type LeafValue,
   type Node,
   newGroup,
-  newLeaf,
   removeNode,
-  replaceNode,
   toggleJoin,
 } from "./segmentpredicate";
-
-/**
- * The value a clause starts with when its field or operator changes.
- *
- * It is deliberately the EMPTY one for its shape rather than a guess: an operand
- * this screen invented would be a filter the human did not write, and the count
- * would move before they had said anything. `isComplete` then holds the preview
- * back until they fill it in, which is the whole reason an empty value is safe to
- * put in the tree.
- *
- * `exists` is the exception, because its operand is a boolean and every boolean
- * is complete — so it starts at `true` ("has a value"), the reading its label
- * gives.
- */
-function emptyValueFor(op: FilterOp): LeafValue {
-  if (op === "exists") {
-    return true;
-  }
-  return op === "in" ? [] : "";
-}
-
-/**
- * One picker group as options, in the order a reader scans them: by the word
- * they see, not the wire name — `created_at` and `last_activity_at` would
- * otherwise sit far from each other under "Created" and "Last activity".
- */
-function labelledInOrder(
-  fields: readonly VocabularyField[],
-  t: (key: MessageKey) => string,
-  locale: Locale,
-): SelectOption[] {
-  return fields
-    .map((f) => ({ value: f.name, label: fieldLabel(f, t) }))
-    .sort((a, b) => forReader(a.label, b.label, locale));
-}
 
 export type FilterBuilderProps = Readonly<{
   tree: Node;
   onChange: (next: Node) => void;
   fields: readonly VocabularyField[];
+  /** The clause the reader's last edit brought, which takes focus. */
+  arrived?: string | null;
 }>;
 
 /** The builder's root: one group, drawn with the recursive renderer below. */
-export function FilterBuilder({ tree, onChange, fields }: FilterBuilderProps) {
+export function FilterBuilder({
+  tree,
+  onChange,
+  fields,
+  arrived = null,
+}: FilterBuilderProps) {
   if (!isGroup(tree)) {
-    // The root is always a group — a bare leaf has nowhere to put the join
-    // toggle, and every operation in segmentpredicate assumes a group root.
+    // The root is always a group — a bare leaf has no join to draw, and every
+    // operation in segmentpredicate assumes a group root.
     return null;
   }
   return (
@@ -96,6 +60,7 @@ export function FilterBuilder({ tree, onChange, fields }: FilterBuilderProps) {
         depth={1}
         onChange={onChange}
         tree={tree}
+        arrived={arrived}
       />
     </div>
   );
@@ -110,12 +75,9 @@ type NodeProps = Readonly<{
 }>;
 
 /**
- * One group: its join toggle, its children, and the two ways to grow it.
- *
- * Depth is carried only to stop offering "add a group" past the engine's nesting
- * bound — a builder that let a human nest a fifth level would be building a tree
- * the server refuses with `filter_too_deep`, which is a refusal the UI can see
- * coming.
+ * One group: its conditions with the join between them, and the ways to grow
+ * it. The root draws no box; a nested group is an inset box, because a join
+ * word between two rows needs a visible scope to say which rows it joins.
  */
 function GroupNode({
   group,
@@ -123,237 +85,171 @@ function GroupNode({
   depth,
   tree,
   onChange,
-}: NodeProps & Readonly<{ group: Group }>) {
+  arrived,
+}: NodeProps & Readonly<{ group: Group; arrived: string | null }>) {
   const t = useT();
-  const canNest = depth < MAX_GROUP_DEPTH;
-  return (
-    <div className="filter-group" data-depth={depth}>
-      <div className="filter-group-head">
-        <SegmentedControl
-          options={["and", "or"] as const}
-          value={group.join}
-          onChange={() => onChange(toggleJoin(tree, group.id))}
-          labels={{ and: t("filters.joinAll"), or: t("filters.joinAny") }}
-          label={t("filters.joinLabel")}
-        />
-        {depth > 1 && (
-          <Button
-            variant="ghost"
-            onClick={() => onChange(removeNode(tree, group.id))}
-          >
-            {t("filters.removeGroup")}
-          </Button>
-        )}
-      </div>
-
+  const titleID = useId();
+  const nested = depth > 1;
+  const rows = (
+    <>
       <div className="filter-group-children">
-        {group.children.map((child) =>
-          isGroup(child) ? (
-            <GroupNode
-              key={child.id}
-              group={child}
-              fields={fields}
-              depth={depth + 1}
-              tree={tree}
-              onChange={onChange}
-            />
-          ) : (
-            <ClauseRow
-              key={child.id}
-              leafID={child.id}
-              field={child.field}
-              op={child.op}
-              value={child.value}
-              fields={fields}
-              tree={tree}
-              onChange={onChange}
-            />
-          ),
-        )}
-        {group.children.length === 0 && (
+        {group.children.map((child, index) => (
+          <Fragment key={child.id}>
+            {index > 0 && (
+              <Connector group={group} tree={tree} onChange={onChange} />
+            )}
+            {isGroup(child) ? (
+              <GroupNode
+                group={child}
+                fields={fields}
+                depth={depth + 1}
+                tree={tree}
+                onChange={onChange}
+                arrived={arrived}
+              />
+            ) : (
+              <ClauseRow
+                leafID={child.id}
+                field={child.field}
+                op={child.op}
+                value={child.value}
+                proposed={child.proposed}
+                arrived={child.id === arrived}
+                fields={fields}
+                tree={tree}
+                onChange={onChange}
+              />
+            )}
+          </Fragment>
+        ))}
+        {/* Said rather than left blank: an empty group compiles to a shape
+            the engine refuses, so the count stops until it holds a row. */}
+        {nested && group.children.length === 0 && (
           <p className="filter-group-empty t-sub">{t("filters.emptyGroup")}</p>
         )}
       </div>
-
-      <div className="filter-group-actions">
+      <GroupFoot
+        group={group}
+        fields={fields}
+        depth={depth}
+        tree={tree}
+        onChange={onChange}
+      />
+    </>
+  );
+  if (!nested) {
+    return <div className="filter-group">{rows}</div>;
+  }
+  // A fieldset named by its head, so a screen reader hears where the group's
+  // conditions start and end, and whose "Remove group" each control is.
+  return (
+    <fieldset
+      className="filter-group filter-group-box"
+      aria-labelledby={titleID}
+    >
+      <div className="filter-group-head">
+        <span id={titleID} className="filter-group-title">
+          {t(group.join === "and" ? "filters.group.all" : "filters.group.any")}
+        </span>
         <Button
           variant="ghost"
-          onClick={() =>
-            onChange(addToGroup(tree, group.id, firstClause(fields)))
-          }
+          onClick={() => onChange(removeNode(tree, group.id))}
         >
-          {t("filters.addClause")}
+          {t("filters.removeGroup")}
         </Button>
-        {canNest && (
+      </div>
+      {rows}
+    </fieldset>
+  );
+}
+
+/**
+ * The word between two conditions, which is also the switch: a group joins
+ * its children one way, so every connector in it flips together.
+ */
+function Connector({
+  group,
+  tree,
+  onChange,
+}: Readonly<{ group: Group; tree: Node; onChange: (next: Node) => void }>) {
+  const t = useT();
+  const all = group.join === "and";
+  const word = t(all ? "filters.join.and" : "filters.join.or");
+  return (
+    <div className="filter-connector">
+      <Button
+        variant="ghost"
+        // The name opens with the word on the button, so a reader who says
+        // "click or" reaches it (WCAG 2.5.3), and goes on to say what it does.
+        aria-label={t(
+          all ? "filters.connector.matchAll" : "filters.connector.matchAny",
+          { word },
+        )}
+        onClick={() => onChange(toggleJoin(tree, group.id))}
+      >
+        {word}
+      </Button>
+    </div>
+  );
+}
+
+/**
+ * How a group grows: another condition, and from two conditions on a nested
+ * group of the opposite join. The nested group arrives holding a condition,
+ * because an empty one stops the count until it is filled.
+ *
+ * Depth stops the offer at the engine's nesting bound: a fifth level would be
+ * a tree the server refuses with `filter_too_deep`.
+ */
+function GroupFoot({
+  group,
+  fields,
+  depth,
+  tree,
+  onChange,
+}: NodeProps & Readonly<{ group: Group }>) {
+  const t = useT();
+  const nested = depth > 1;
+  const canNest = group.children.length >= 2 && depth < MAX_GROUP_DEPTH;
+  return (
+    <div className="filter-group-foot">
+      <Button
+        variant="link"
+        onClick={() =>
+          onChange(addToGroup(tree, group.id, firstClause(fields)))
+        }
+      >
+        {t(nested ? "filters.addToGroup" : "filters.addClause")}
+      </Button>
+      {canNest && (
+        <OverflowMenu
+          label={t(nested ? "filters.groupMore" : "filters.rowsMore")}
+        >
           <Button
-            variant="ghost"
             onClick={() =>
               onChange(
                 addToGroup(
                   tree,
                   group.id,
-                  newGroup(group.join === "and" ? "or" : "and"),
+                  newGroup(group.join === "and" ? "or" : "and", [
+                    firstClause(fields),
+                  ]),
                 ),
               )
             }
           >
             {t("filters.addGroup")}
           </Button>
-        )}
-      </div>
+        </OverflowMenu>
+      )}
     </div>
   );
 }
 
 /**
- * The engine's own nesting bound. Named here rather than imported because the
- * tree module does not enforce it — the server does, and this is the UI's copy of
- * a number whose authority is `storekit.PredicateMaxDepth`. It exists to stop
- * OFFERING what would be refused; the refusal itself remains the server's.
+ * The engine's nesting bound. The tree module does not enforce it — the server
+ * does, and this is the UI's copy of a number whose authority is
+ * `storekit.PredicateMaxDepth`. It stops OFFERING what would be refused; the
+ * refusal itself stays the server's.
  */
 const MAX_GROUP_DEPTH = 4;
-
-/** A new clause starts on the vocabulary's first field, a reader picks from there. */
-function firstClause(fields: readonly VocabularyField[]): Node {
-  const first = fields[0];
-  if (!first) {
-    // A resource with no filterable field cannot happen through this screen —
-    // the vocabulary read 404s rather than answering an empty set — but the tree
-    // must still be a valid node if it ever did.
-    return newLeaf("", "eq", "");
-  }
-  const op = (first.operators[0] ?? "eq") as FilterOp;
-  return newLeaf(first.name, op, emptyValueFor(op));
-}
-
-// Deliberately NOT NodeProps: a clause has no children, so depth would be a
-// prop it accepts and ignores — and a prop nothing reads is one the next contact
-// has to check before trusting.
-type ClauseRowProps = Readonly<{
-  leafID: string;
-  field: string;
-  op: FilterOp;
-  value: LeafValue;
-  fields: readonly VocabularyField[];
-  tree: Node;
-  onChange: (next: Node) => void;
-}>;
-
-/**
- * One clause: field, operator, value, remove.
- *
- * The three selects are chained by the vocabulary rather than independent. Change
- * the field and the operator list changes with its type; change either and the
- * value control changes shape. Keeping them chained is what stops a reader
- * assembling `created_at contains "x"` and learning from a 422 that dates have no
- * substring.
- */
-function ClauseRow({
-  leafID,
-  field,
-  op,
-  value,
-  fields,
-  tree,
-  onChange,
-}: ClauseRowProps) {
-  const t = useT();
-  const { locale } = useLocale();
-  const chosen = fields.find((f) => f.name === field);
-  const { core, custom } = groupFields(fields);
-  const fieldOptions: SelectOption[] = [
-    ...labelledInOrder(core, t, locale),
-    ...labelledInOrder(custom, t, locale),
-  ];
-  const operatorOptions: SelectOption[] = (chosen?.operators ?? []).map(
-    (candidate) => ({
-      value: candidate,
-      label: t(operatorKey(candidate as FilterOp, chosen?.type ?? "text")),
-    }),
-  );
-
-  // Every edit below rewrites the leaf IN PLACE, keeping its id.
-  //
-  // That is not cosmetic. React keys a clause row on its node's id, so minting a
-  // fresh leaf per keystroke remounts the row and the caret goes with it — a
-  // human typing "gold" would get "g" and lose focus. Spreading the node that
-  // was found keeps the row alive through its own value changing.
-  const edit = (change: (found: Leaf) => Leaf) =>
-    onChange(
-      replaceNode(tree, leafID, (found) =>
-        isGroup(found) ? found : change(found),
-      ) ?? tree,
-    );
-
-  const retype = (nextField: string) => {
-    const next = fields.find((f) => f.name === nextField);
-    // The operator may not survive the move — a date has no `contains` — so it
-    // falls back to the new field's first admitted one rather than staying and
-    // being refused.
-    const keptOp = next?.operators.includes(op)
-      ? op
-      : ((next?.operators[0] ?? "eq") as FilterOp);
-    edit((found) => ({
-      ...found,
-      field: nextField,
-      op: keptOp as FilterOp,
-      value: emptyValueFor(keptOp as FilterOp),
-    }));
-  };
-
-  return (
-    <div className="filter-clause">
-      <Select
-        options={fieldOptions}
-        value={field}
-        onChange={retype}
-        aria-label={t("filters.field")}
-        placeholder={t("filters.choosePlaceholder")}
-      />
-      {chosen?.custom && (
-        <Badge tone="accent">{t("filters.customBadge")}</Badge>
-      )}
-      <Select
-        options={operatorOptions}
-        value={op}
-        onChange={(nextOp) =>
-          edit((found) => ({
-            ...found,
-            op: nextOp as FilterOp,
-            value: emptyValueFor(nextOp as FilterOp),
-          }))
-        }
-        aria-label={t("filters.operator")}
-      />
-      <ValueControl
-        type={chosen?.type ?? "text"}
-        references={chosen?.references}
-        options={chosen?.options}
-        currency={chosen?.currency}
-        op={op}
-        value={value}
-        onChange={(nextValue) =>
-          edit((found) => ({ ...found, value: nextValue }))
-        }
-      />
-      <Button
-        variant="ghost"
-        iconOnly
-        aria-label={t("filters.removeClause", {
-          field: fieldLabel(
-            chosen ?? {
-              name: field,
-              type: "text",
-              operators: [],
-              custom: false,
-            },
-            t,
-          ),
-        })}
-        onClick={() => onChange(removeNode(tree, leafID))}
-      >
-        <X aria-hidden="true" />
-      </Button>
-    </div>
-  );
-}

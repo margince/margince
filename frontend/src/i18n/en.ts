@@ -10593,14 +10593,43 @@ export const en = {
   // per reading rather than per symbol: the same `gte` is "on or after" a date
   // and "at least" a quantity, and one label for both would send a reader
   // looking for a calendar on a score.
-  "filters.joinAll": "All (AND)",
-  "filters.joinAny": "Any (OR)",
-  "filters.joinLabel": "Match mode",
   "filters.removeGroup": "Remove group",
-  "filters.addGroup": "Add group",
-  "filters.addClause": "Add clause",
-  "filters.emptyGroup":
-    "No clauses yet. An empty group matches nothing; add a clause.",
+  "filters.addGroup": "Add a group",
+  "filters.addClause": "Add condition",
+  "filters.addToGroup": "Add condition to group",
+  "filters.find": "Find {records} where…",
+  "filters.hint.start": "Add a condition to see how many {records} match.",
+  "filters.hint.finish":
+    "Finish the condition to see how many {records} match.",
+  "filters.hint.update": "Finish the condition to update the count.",
+  "filters.startOr": "or",
+  "filters.start.buildTitle": "Build it condition by condition",
+  "filters.start.buildBody":
+    "Pick a field, how to compare it, and a value. Add more conditions as you go.",
+  "filters.describeChanges": "Describe changes in plain words",
+  // Named by the word the button shows, then what pressing it does (WCAG
+  // 2.5.3): {word} is filters.join.and or filters.join.or.
+  "filters.connector.matchAll":
+    "{word}: match all of these. Press to match any.",
+  "filters.connector.matchAny":
+    "{word}: match any of these. Press to match all.",
+  "filters.group.all": "All of these",
+  "filters.group.any": "Any of these",
+  "filters.rowsMore": "More for these conditions",
+  "filters.groupMore": "More for this group",
+  "filters.proposed": "Proposed",
+  "filters.switch.title": "Switch to {records}?",
+  "filters.switch.body.contacts":
+    "The conditions are cleared, because they name contact fields.",
+  "filters.switch.body.companies":
+    "The conditions are cleared, because they name company fields.",
+  "filters.switch.body.deals":
+    "The conditions are cleared, because they name deal fields.",
+  "filters.switch.body.leads":
+    "The conditions are cleared, because they name lead fields.",
+  "filters.switch.confirm": "Switch and clear",
+  "filters.showMore": "Show up to 100",
+  "filters.emptyGroup": "An empty group matches nothing.",
   "filters.field": "Field",
   "filters.field.amount": "Converted amount",
   "filters.field.city": "City",
@@ -10627,7 +10656,7 @@ export const en = {
   "filters.value": "Value",
   "filters.values": "Values",
   "filters.addValue": "Add value",
-  "filters.removeClause": "Remove {field} clause",
+  "filters.removeClause": "Remove {field} condition",
   "filters.existsLabel": "Field has value",
   "filters.hasValue": "has a value",
   "filters.isEmpty": "is empty",
@@ -10955,26 +10984,25 @@ export const en = {
   "filters.tab.companies": "Companies",
   "filters.tab.deals": "Deals",
   "filters.builderTitle": "Filter",
-  "filters.dynamic": "Dynamic: updates on every event",
   "filters.matchContacts_one": "{count} contact matches",
   "filters.matchContacts_other": "{count} contacts match",
   "filters.matchCompanies_one": "{count} company matches",
   "filters.matchCompanies_other": "{count} companies match",
   "filters.matchDeals_one": "{count} deal matches",
   "filters.matchDeals_other": "{count} deals match",
-  "filters.noFilterYet": "Add a clause to preview matches",
-  // The count when the server was asked and did not answer. It must not fall
-  // back to noFilterYet: a reader looking at a finished clause would read a
-  // refusal as their own unfinished work. Three words, because this sits in a
-  // header row beside two buttons; the reason and the retry go in the results
-  // card below, which is the only row wide enough for a sentence.
+  // The count when the server was asked and did not answer. It must not read
+  // as the hint to finish a condition: a reader looking at a finished one
+  // would read a refusal as their own unfinished work. Three words, because it
+  // sits beside the results title; the reason and the retry go in the panel
+  // body, which is the only row wide enough for a sentence.
   "filters.countUnavailable": "Count unavailable",
   "filters.loadingVocabulary": "Loading fields…",
   "filters.noFields": "No filterable fields for this record type.",
   "filters.resultsTitle": "Matching records",
   "filters.resultsCaption":
     "First page of matches, for checking the filter. Not the full selection.",
-  "filters.noMatches": "No records match this filter.",
+  "filters.noMatches":
+    "No {records} match these conditions. Loosen one: switch a connector to “or”, or remove the most specific condition.",
   "filters.loadView": "Load saved filter",
   "filters.pickRecord": "Select record",
   "filters.searchRecords": "Search companies",
