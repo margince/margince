@@ -165,7 +165,7 @@ import { RecordReading, RecordReadingPair, TimelineThread } from "./record360";
 import { RecordCustomFields } from "./recordcustomfields";
 import { saveRecordEdit } from "./recordedit";
 import { RecordFields, rawRecord } from "./recordfields";
-import { tagsColumn } from "./recordlist";
+import { ownerColumn, tagsColumn } from "./recordlist";
 import { RecordListsPanel } from "./recordlists";
 import { useRecordOwners } from "./recordreferences";
 import { RecordTeam } from "./recordteam";
@@ -1204,9 +1204,8 @@ function AmountCell({
   );
 }
 
-// The table-view column set. Module-level (not inlined in DealsScreen,
-// which is already at the cognitive-complexity ceiling) — stage_id → name
-// and amount/close formatting are the only per-row logic.
+// The table-view column set, module-level because DealsScreen is already at
+// the cognitive-complexity ceiling.
 function dealColumns(
   t: ReturnType<typeof useT>,
   locale: Locale,
@@ -1279,6 +1278,7 @@ function dealColumns(
             )
           : null,
     },
+    ownerColumn<Deal>(t),
     {
       // How long since anything happened on this deal. It is the figure a
       // forecast argument rests on — an amount with no recent signal behind it
