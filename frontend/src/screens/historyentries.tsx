@@ -31,6 +31,7 @@ import {
 import { HistoryEdgeDetail } from "./historyedge";
 import { HistoryFieldDiff } from "./historyfielddiff";
 import { historyFieldLabel } from "./historyfieldlabels";
+import { LeftBehindNotice } from "./historyleftbehind";
 import { historyRows } from "./historyreversal";
 import { actorName, ReversalPairRow } from "./historyreversalrow";
 import { undoRefusalKey, VERSION_SKEW_CODE } from "./historyundo";
@@ -410,11 +411,8 @@ export function RecordHistory({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const plural = usePlural();
   const query = useRecordHistory(kind, id);
   const entries = query.data?.pages.flatMap((page) => page.data) ?? [];
-  // What an archive's restore could not bring back, said above the list so a
-  // "done" does not read as a whole record when it is not.
   const [leftBehind, setLeftBehind] = useState(0);
   const panelRestore = restore && { ...restore, onLeftBehind: setLeftBehind };
 
@@ -488,13 +486,7 @@ export function RecordHistory({
 
   return (
     <Card className="history-card">
-      {leftBehind > 0 && (
-        <p role="status">
-          {plural("history.undo.leftBehind", leftBehind, {
-            count: formatNumber(leftBehind, locale),
-          })}
-        </p>
-      )}
+      <LeftBehindNotice count={leftBehind} />
       <QueryStates query={query} pendingLabel={t("tab.timeline")}>
         {body}
       </QueryStates>
