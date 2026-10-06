@@ -261,7 +261,7 @@ function LeadsWorkbench({
   // What the last bulk write did to a row the current view then stopped
   // showing — a successful assign out of "Mine" must never look like nothing
   // happened (or like a failure).
-  const assignedAway = useOwnToast();
+  const assignedAway = useOwnToast({ leavesWithCaller: true });
   const showingMine = state.query.filters.owner_id === viewerId;
   // Only ids the list currently holds count as selected: a row that left the
   // result set (refetched away, paged out, filtered out) must not linger as

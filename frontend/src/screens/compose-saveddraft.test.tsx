@@ -317,21 +317,18 @@ describe("a saved draft", () => {
         </>
       );
     }
+    const user = userEvent.setup();
     render(<Page />);
     await waitFor(() =>
       expect(calls(sent, "GET /mail-drafts")).toHaveLength(1),
     );
     writeMessage("Body", "Half written before lunch");
-    await userEvent.click(
-      screen.getByRole("button", { name: "Save as draft" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Save as draft" }));
     expect(await screen.findByText("Draft saved")).toBeTruthy();
-    await userEvent.click(
-      screen.getByRole("button", { name: "Complete a task" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Complete a task" }));
     expect(screen.queryByText("Draft saved")).toBeNull();
 
-    await userEvent.click(screen.getByRole("button", { name: "Write again" }));
+    await user.click(screen.getByRole("button", { name: "Write again" }));
 
     expect(await screen.findByRole("dialog")).toBeTruthy();
     expect(screen.getByText("Task completed")).toBeTruthy();

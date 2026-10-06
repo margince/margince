@@ -93,6 +93,8 @@ type ToastMessage = Readonly<{
   /** Kept until something dismisses it. */
   sticky: boolean;
   action: ToastAction | null;
+  /** It took the place of the message on screen, rather than waiting its turn. */
+  replacedShown: boolean;
 }>;
 
 export type ToastOptions = Readonly<{
@@ -174,6 +176,7 @@ export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
       tone: options?.tone ?? "success",
       sticky: options?.sticky ?? action?.kind === "open",
       action,
+      replacedShown: false,
     };
     setQueue((waiting) => enqueue(waiting, arriving));
     return arriving.id;
@@ -194,26 +197,38 @@ function enqueue(
   arriving: ToastMessage,
 ): readonly ToastMessage[] {
   const isUndo = (message: ToastMessage) => message.action?.kind === "undo";
+  const replacing = { ...arriving, replacedShown: waiting.length > 0 };
   if (isUndo(arriving) && waiting.some(isUndo)) {
-    return waiting.map((message) => (isUndo(message) ? arriving : message));
+    return waiting.map((message, at) =>
+      isUndo(message) ? (at === 0 ? replacing : arriving) : message,
+    );
   }
   const shown = waiting[0];
   if (shown === undefined || shown.action === null) {
-    return [arriving, ...waiting.slice(1)];
+    return [replacing, ...waiting.slice(1)];
   }
   return [...waiting, arriving];
 }
 
-type ToastControl = "act" | "close";
+/** Where focus sat in a message: one of its two controls, or its own body. */
+type ToastControl = "act" | "close" | "body";
 
-/** Which of the toast's own controls holds focus inside `output`, if any. */
 function focusedControl(output: HTMLElement): ToastControl | null {
   const active = document.activeElement;
   if (!(active instanceof HTMLElement) || !output.contains(active)) {
     return null;
   }
   const control = active.dataset.toastControl;
-  return control === "act" || control === "close" ? control : null;
+  return control === "act" || control === "close" ? control : "body";
+}
+
+/** The control matching `control` in the region, else its first focusable. */
+function refocusTarget(region: HTMLElement, control: ToastControl) {
+  const same =
+    control === "body"
+      ? null
+      : region.querySelector<HTMLElement>(`[data-toast-control="${control}"]`);
+  return same ?? region.querySelector<HTMLElement>("a[href], button");
 }
 
 /** What a screen calls to say something landed. */
@@ -223,12 +238,13 @@ export function useToast(): Toast {
 
 /**
  * One caller's own message: `withdraw` takes back the last one it showed, and
- * never a message somebody else put on screen since.
+ * never a message somebody else put on screen since. `leavesWithCaller` also
+ * withdraws it on unmount, for a message whose verb acts on the caller's state.
  */
-export function useOwnToast() {
+export function useOwnToast({ leavesWithCaller = false } = {}) {
   const toast = useToast();
   const own = useRef<ToastId | null>(null);
-  return useMemo(
+  const slot = useMemo(
     () => ({
       show: (message: ReactNode, options?: ToastOptions) => {
         own.current = toast.show(message, options);
@@ -242,6 +258,11 @@ export function useOwnToast() {
     }),
     [toast],
   );
+  useEffect(
+    () => (leavesWithCaller ? slot.withdraw : undefined),
+    [leavesWithCaller, slot],
+  );
+  return slot;
 }
 
 /**
@@ -269,6 +290,7 @@ export function ToastRegion() {
   const { dismiss } = useToast();
   const shown = queue[0] ?? null;
   const shownId = shown?.id ?? null;
+  const replacedShown = shown?.replacedShown ?? false;
   // WCAG 2.2.1 asks for a way to extend a time limit, and for a passive surface
   // the honest one is that reading it stops the clock. The hold belongs to the
   // REGION, so a message replacing another under a resting pointer is held too.
@@ -289,8 +311,8 @@ export function ToastRegion() {
       setFocusInside(false);
     }
   }, []);
-  // The control focused in a message that a replacement is about to remount.
-  // A ref cleanup runs before React removes the node, while focus is still there.
+  // Where focus sat in a message that is about to unmount; a replacement takes
+  // it over. A ref cleanup runs before React removes the node, focus still in it.
   const refocus = useRef<ToastControl | null>(null);
   const watchOutput = useCallback((output: HTMLOutputElement | null) => {
     if (output === null) {
@@ -307,16 +329,12 @@ export function ToastRegion() {
     if (shownId === null || region === null) {
       return;
     }
-    if (control !== null) {
-      const same = region.querySelector<HTMLElement>(
-        `[data-toast-control="${control}"]`,
-      );
-      (
-        same ?? region.querySelector<HTMLElement>("[data-toast-control]")
-      )?.focus();
+    // Only a replacement: a message the reader put down hands focus to nobody.
+    if (control !== null && replacedShown) {
+      refocusTarget(region, control)?.focus();
     }
     setFocusInside(region.contains(document.activeElement));
-  }, [shownId, region]);
+  }, [shownId, replacedShown, region]);
 
   // Escape belongs to the REGION, and it is attached to the node rather than
   // written as a JSX handler on a static element.

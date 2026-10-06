@@ -1,6 +1,7 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import { act, cleanup, render, screen } from "@testing-library/react";
+import { type ReactNode, useEffect } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { steppedClock } from "../testing/steppedclock";
@@ -10,6 +11,7 @@ import {
   type ToastOptions,
   ToastProvider,
   ToastRegion,
+  useOwnToast,
   useToast,
 } from "./toast";
 
@@ -505,11 +507,38 @@ describe("a caller withdrawing its own message", () => {
     const toast = controlled();
     let saved = 0;
     act(() => {
-      saved = toast().show("Draft saved", undo());
-      toast().show("Task completed", undo());
+      toast().show("Moved to Jana.", open());
+      saved = toast().show("Draft saved");
     });
     act(() => toast().dismiss(saved));
-    expect(screen.getByRole("status")).toHaveTextContent("Task completed");
+    expect(screen.getByRole("status")).toHaveTextContent("Moved to Jana.");
+    act(() => toast().dismiss());
+    expect(screen.queryByRole("status")).toBeNull();
+  });
+
+  it("goes with a caller that asked for it to leave with it", () => {
+    steppedClock();
+    function Caller({ leaves }: Readonly<{ leaves: boolean }>) {
+      const own = useOwnToast({ leavesWithCaller: leaves });
+      useEffect(() => own.show("Moved to Jana.", open()), [own]);
+      return null;
+    }
+    const stage = (caller: ReactNode) => (
+      <LocaleProvider initial="en">
+        <ToastProvider>
+          {caller}
+          <ToastRegion />
+        </ToastProvider>
+      </LocaleProvider>
+    );
+    const view = render(stage(<Caller leaves />));
+    expect(screen.getByRole("status")).toBeInTheDocument();
+    view.rerender(stage(null));
+    expect(screen.queryByRole("status")).toBeNull();
+
+    view.rerender(stage(<Caller leaves={false} />));
+    view.rerender(stage(null));
+    expect(screen.getByRole("status")).toBeInTheDocument();
   });
 
   it("leaves the screen alone once its own message has gone", () => {
@@ -543,6 +572,37 @@ describe("a replacement under the reader's hand", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Second done");
     expect(press("Undo")).not.toBe(first);
     expect(press("Undo")).toHaveFocus();
+  });
+
+  it("keeps focus on a link in the message body when the message is replaced", () => {
+    steppedClock();
+    const toast = controlled();
+    act(() => {
+      toast().show(<a href="#/contacts/p-1">Jana Brandt</a>, { sticky: true });
+    });
+    act(() => screen.getByRole("link", { name: "Jana Brandt" }).focus());
+    act(() => {
+      toast().show(<a href="#/contacts/p-2">Jonas Petersen</a>, {
+        sticky: true,
+      });
+    });
+    expect(screen.getByRole("link", { name: "Jonas Petersen" })).toHaveFocus();
+  });
+
+  it("hands focus to nobody when the reader puts the message down", () => {
+    // The next message advancing is not a replacement: the reader closed one
+    // toast and did not ask to be moved into the next.
+    steppedClock();
+    const toast = controlled();
+    act(() => {
+      toast().show("Task completed", undo());
+      toast().show("Moved to Jana.", open());
+    });
+    act(() => press("Close").focus());
+    act(() => toast().dismiss());
+    expect(screen.getByRole("status")).toHaveTextContent("Moved to Jana.");
+    expect(press("Show all")).not.toHaveFocus();
+    expect(press("Close")).not.toHaveFocus();
   });
 
   it("keeps focus on Close when the message is replaced", () => {
