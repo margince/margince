@@ -1384,11 +1384,11 @@ export function ComposeModal({
   // A shut composer asks for nothing it does not share with the page behind it.
   const voiceProfile = useVoiceProfile(open);
   const bodyId = useId();
-  // WHICH WAY THIS IS GOING, when the record offers more than one. The caller's
-  // opening choice stands until the reader turns the dial; an empty selection
-  // resolves to the record's lead rather than being seeded, so reachability that
-  // arrives after the first render is not stuck behind what existed before it.
-  const [transportId, setTransportId] = useState(initialTransportId ?? "");
+  // WHICH WAY THIS IS GOING: each opening starts on the caller's choice, never on
+  // the last opening's dial; an empty one resolves to the record's lead.
+  const [dial, setDial] = useState({ open, id: initialTransportId ?? "" });
+  const transportId = open && !dial.open ? (initialTransportId ?? "") : dial.id;
+  if (dial.open !== open) setDial({ open, id: transportId });
   const transport =
     transports.find((option) => option.id === transportId) ??
     transports.find((option) => option.id === initialTransportId) ??
@@ -1688,7 +1688,7 @@ export function ComposeModal({
   const groundable = !answering && entityType === "company" && !isChannelReply;
   // Shaped by the transport this opening began on; the dial never reshapes it.
   const openedOn = useRef(transport);
-  if (!open || !openedOn.current) openedOn.current = transport;
+  if (!open || !dial.open || !openedOn.current) openedOn.current = transport;
   const asDrawer =
     kind !== "message" && (openedOn.current?.id ?? "email") === "email";
   // The conversation rides beside the form only where there IS one and there is
@@ -1810,7 +1810,7 @@ export function ComposeModal({
   // reader believes they are writing to and the send never uses.
   const changeTransport = (next: string) => {
     draftEpoch.current += 1;
-    setTransportId(next);
+    setDial({ open, id: next });
     setSubject("");
     setBody("");
     setHtml("");

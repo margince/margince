@@ -250,18 +250,34 @@ describe("the composer's transport dial", () => {
     },
   );
 
-  // The contact page keeps its composer mounted between openings, so the caller
-  // can name a different transport than the one the dial still holds.
-  it("shapes each opening by the transport it opens on", async () => {
-    stubRoutes();
+  // The contact page keeps its composer mounted between openings, so the dial
+  // still holds the last channel when the caller opens on mail.
+  it("starts each opening on the transport the caller opens it on", async () => {
+    const user = userEvent.setup();
+    const sent = stubRoutes({
+      "POST /emails": () => jsonResponse(ACTIVITY, 202),
+    });
     const view = render(drawer([MAIL, CHAT], "dispact"));
     await screen.findByLabelText("Send via");
-    view.rerender(drawer([MAIL, CHAT], undefined, false));
+    view.rerender(drawer([MAIL, CHAT], "dispact", false));
     view.rerender(drawer([MAIL, CHAT]));
 
-    await screen.findByLabelText("Send via");
-    expect(screen.queryByLabelText("Subject")).toBeNull();
-    expect(screen.getByRole("dialog").matches(".modal-form")).toBe(true);
+    await user.type(await screen.findByLabelText("Subject"), "Hello");
+    expect(screen.getByRole("dialog").matches(".modal-drawer-wide")).toBe(true);
+    writeMessage("Body", "Body content");
+    await pickOption(
+      user,
+      screen.getByLabelText("Reason for contact"),
+      "Active deal",
+    );
+    await user.click(screen.getByRole("button", { name: "Send" }));
+
+    await waitFor(() =>
+      expect(sent.some((r) => r.key === "POST /emails")).toBe(true),
+    );
+    expect(
+      sent.some((r) => r.key === "POST /activities/a-chat/send-message"),
+    ).toBe(false);
   });
 
   // The named conversation cannot be answered any more — disconnected, removed,
