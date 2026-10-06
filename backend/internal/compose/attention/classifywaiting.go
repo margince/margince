@@ -125,14 +125,19 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 	// to zero for the age comparator, so the explanation a neighbour row
 	// publishes never credits an age the card itself no longer states.
 	rankDays := days
+	// asOf rather than Since for the terminal occurrence tie-break, which the
+	// contract also explains as waiting time: a booked row neither claims an
+	// age there nor outranks live work by one.
+	rankedAt := waiting.Since
 	if demoted.booked {
 		rankDays = 0
+		rankedAt = asOf
 	}
 	return ranked{
 		item:        row,
 		waitingDays: rankDays,
 		waitingRank: orderingAge(rankDays),
-		occurredAt:  waiting.Since,
+		occurredAt:  rankedAt,
 		// Whether this message is in a conversation, which decides what the
 		// reader is offered: two of the three dispositions are keyed on the
 		// thread and a threadless row can perform neither.

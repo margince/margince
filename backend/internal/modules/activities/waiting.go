@@ -88,10 +88,12 @@ type WaitingReply struct {
 	EarlierRequests int
 	FirstAskedAt    time.Time
 	// MeetingBookedAt is when the soonest booked meeting with this message's
-	// sender starts; nil when none is booked. A booked meeting does not settle
-	// the wait — only a held one does — but the caller stops counting waiting
-	// days against work that is already scheduled. bookedMeetingSQL holds the
-	// rule.
+	// sender starts; nil when none is booked OR when none is discoverable to
+	// THIS reader — the column is fenced by the reader's own discover gate, so
+	// it is what this reader may be shown, never a global booking fact. A
+	// booked meeting does not settle the wait — only a held one does — but the
+	// caller stops counting waiting days against work that is already
+	// scheduled. bookedMeetingSQL holds the rule.
 	MeetingBookedAt *time.Time
 	// Engaged reports that this workspace wrote on this thread BEFORE the
 	// message arrived — the evidence that a conversation is one we are already
@@ -309,16 +311,9 @@ func (s *Store) WaitingRepliesBefore(ctx context.Context, asOf time.Time, before
 		if err != nil {
 			return err
 		}
-		// The reader's own discover gate for the booked-meeting date the row
-		// carries. The eligibility clauses above stay reader-independent; this
-		// fences only what is SHOWN, so a meeting the reader may not discover
-		// never prints its date on their card.
-		bookedDiscover, err := auth.ActivityDiscoverClause(ctx, "booked", arg)
+		bookedDiscover, err := bookedDiscoverClause(ctx, arg)
 		if err != nil {
 			return err
-		}
-		if bookedDiscover == "" {
-			bookedDiscover = scopeUnbounded
 		}
 		rows, err := tx.Query(ctx,
 			fmt.Sprintf(waitingRepliesSQL, instant, content, linkVisible, WaitingScanCap,

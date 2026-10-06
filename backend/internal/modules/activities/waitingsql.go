@@ -16,6 +16,7 @@ package activities
 // waiting.go holds what READS it; this holds what it says.
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -418,9 +419,23 @@ func bookedMeetingSQL(asOf, discover string) string {
 	                 WHERE booked_move.entity_type = 'activity'
 	                   AND booked_move.entity_id = booked.id
 	                   AND booked_move.after ? 'occurred_at'
+	                   -- The START moved, not merely a field beside it: the
+	                   -- move writer images occurred_at on every change, a
+	                   -- length-only edit included.
+	                   AND (booked_move.before ->> 'occurred_at')
+	                       IS DISTINCT FROM (booked_move.after ->> 'occurred_at')
 	                   AND booked_move.occurred_at > a.occurred_at
 	                   AND booked_move.occurred_at <= ` + asOf + `))
 	        OFFSET 0) booked
 	  WHERE booked_asker.activity_id = a.id AND booked_asker.role = 'from'
 	    AND booked_asker.contact_id IS NOT NULL)`
+}
+
+// bookedDiscoverClause renders the reader's own discover gate for the booked
+// meeting's alias — the fence on what a waiting row may SHOW, while every
+// eligibility clause beside it stays reader-independent. One helper for the
+// three statements that render waitingRepliesSQL, each of which composes it
+// beside its own argument list.
+func bookedDiscoverClause(ctx context.Context, arg func(any) int) (string, error) {
+	return auth.ActivityDiscoverClause(ctx, "booked", arg)
 }

@@ -16,10 +16,13 @@ import (
 
 func TestABookedMeetingStopsTheWaitingCount(t *testing.T) {
 	start := rankInstant.Add(48 * time.Hour)
+	// Three days old: young enough that nothing but the booking can demote
+	// it, so the band assertion below tests the booked branch and not the
+	// stale rule.
 	waiting := WaitingCustomer{
 		ActivityID:       ids.MustParse("01a05500-0000-7000-8000-0000000000d1"),
 		Subject:          "When can we meet?",
-		Since:            rankInstant.Add(-15 * 24 * time.Hour),
+		Since:            rankInstant.Add(-3 * 24 * time.Hour),
 		ConfirmedRequest: true,
 		Engaged:          true,
 		MeetingBookedAt:  &start,
@@ -53,6 +56,9 @@ func TestABookedMeetingStopsTheWaitingCount(t *testing.T) {
 	// these two fields.
 	if row.waitingDays != 0 || row.waitingRank != 0 {
 		t.Fatalf("a booked row still competes by age: days %d, rank %d", row.waitingDays, row.waitingRank)
+	}
+	if !row.occurredAt.Equal(rankInstant) {
+		t.Fatalf("a booked row still enters the occurrence tie-break at its request's age: %v", row.occurredAt)
 	}
 }
 

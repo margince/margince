@@ -306,14 +306,10 @@ func (s *Store) waitingStatement(
 	if err != nil {
 		return "", err
 	}
-	// The same discover fence the Worklist read renders for the booked date;
-	// relaxations widen eligibility rules, never what a reader may be shown.
-	bookedDiscover, err := auth.ActivityDiscoverClause(ctx, "booked", arg)
+	// Relaxations widen eligibility rules, never what a reader may be shown.
+	bookedDiscover, err := bookedDiscoverClause(ctx, arg)
 	if err != nil {
 		return "", err
-	}
-	if bookedDiscover == "" {
-		bookedDiscover = scopeUnbounded
 	}
 	return fmt.Sprintf(waitingRepliesSQL, instant, content, linkVisible, WaitingScanCap,
 		horizon,

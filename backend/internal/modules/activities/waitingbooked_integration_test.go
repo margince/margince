@@ -28,8 +28,8 @@ func bookedWait(e *loadEnv, t *testing.T, contact ids.UUID) ids.UUID {
 }
 
 // meetingWith seeds a meeting the contact is linked to, inserted with its own
-// updated_at so a test can say whether it was touched before or after the
-// message under test arrived.
+// created_at — the column the booked rule reads a fresh booking from — so a
+// test can say whether it was created before or after the message under test.
 func meetingWith(
 	e *loadEnv, t *testing.T, contact ids.UUID, start time.Time, status string, created time.Time,
 ) ids.UUID {
@@ -99,9 +99,21 @@ func TestARescheduledMeetingCountsAsBooked(t *testing.T) {
 	if got := e.waitFor(t, activity); got.MeetingBookedAt != nil {
 		t.Fatal("an untouched old booking already marked the wait — the move below proves nothing now")
 	}
-	e.exec(t, `INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id, after)
+	// A length-only edit images occurred_at unchanged on both sides, and is
+	// not a move.
+	e.exec(t, `INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id, before, after)
 		VALUES ('system', 'connector:test', 'update', 'activity', $1,
-		        jsonb_build_object('occurred_at', now() + interval '48 hours'))`, meeting)
+		        jsonb_build_object('occurred_at', $2::timestamptz, 'duration_seconds', 3600),
+		        jsonb_build_object('occurred_at', $2::timestamptz, 'duration_seconds', 1800))`,
+		meeting, time.Now().Add(48*time.Hour).UTC())
+	if got := e.waitFor(t, activity); got.MeetingBookedAt != nil {
+		t.Fatal("a length-only edit marked the wait as booked")
+	}
+	e.exec(t, `INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id, before, after)
+		VALUES ('system', 'connector:test', 'update', 'activity', $1,
+		        jsonb_build_object('occurred_at', $2::timestamptz),
+		        jsonb_build_object('occurred_at', $3::timestamptz))`,
+		meeting, time.Now().Add(24*time.Hour).UTC(), time.Now().Add(48*time.Hour).UTC())
 
 	if got := e.waitFor(t, activity); got.MeetingBookedAt == nil {
 		t.Fatal("a meeting moved after the ask left the wait unmarked")
@@ -123,6 +135,7 @@ func TestWhatABookedMeetingIsNot(t *testing.T) {
 		"a meeting already over":                    {start: -2 * time.Hour, status: "booked", touched: 0},
 		"one booked before the ask and never moved": {start: future, status: "booked", touched: -72 * time.Hour},
 		"somebody else's meeting":                   {start: future, status: "booked", touched: 0, someone: "other"},
+		"a no-show":                                 {start: future, status: "no_show", touched: 0},
 		"a participants-only meeting":               {start: future, status: "booked", touched: 0, audience: "participants"},
 	} {
 		t.Run(name, func(t *testing.T) {

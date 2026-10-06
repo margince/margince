@@ -96,13 +96,9 @@ func waitingReplyExistsClause(ctx context.Context, arg func(any) int, asOf time.
 	// for the Worklist: a thread the Worklist would not name as waiting must
 	// not be named by a record page either, and a per-record set-aside must
 	// still be this reader's own.
-	// The same discover fence the Worklist read renders for the booked date.
-	bookedDiscover, err := auth.ActivityDiscoverClause(ctx, "booked", arg)
+	bookedDiscover, err := bookedDiscoverClause(ctx, arg)
 	if err != nil {
 		return "", err
-	}
-	if bookedDiscover == "" {
-		bookedDiscover = scopeUnbounded
 	}
 	reader := arg(readerOrNobody(ctx))
 	return "a.id IN (SELECT id FROM (" +
