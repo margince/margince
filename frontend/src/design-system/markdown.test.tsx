@@ -416,3 +416,23 @@ describe("the highlight has three outcomes and says which", () => {
     expect(scrolled).toEqual([]);
   });
 });
+
+describe("autolink", () => {
+  const SOURCE =
+    "See https://example.com/a, or [the terms](https://example.com/t).\n\n`https://example.com/code`";
+
+  it("leaves a bare address as text unless asked", () => {
+    render(<Markdown source={SOURCE} />);
+    expect(screen.getAllByRole("link").map((a) => a.textContent)).toEqual([
+      "the terms",
+    ]);
+  });
+
+  it("links a bare address in prose and nothing in code or inside a link", () => {
+    render(<Markdown source={SOURCE} autolink />);
+    expect(
+      screen.getAllByRole("link").map((a) => a.getAttribute("href")),
+    ).toEqual(["https://example.com/a", "https://example.com/t"]);
+    expect(screen.getByText("https://example.com/code").tagName).toBe("CODE");
+  });
+});

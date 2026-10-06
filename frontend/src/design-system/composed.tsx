@@ -25,6 +25,8 @@ import { Avatar, Badge, Button, OptionCount } from "./atoms";
 import { type BoardDealMail, DealCard, type DealCardHooks } from "./dealcard";
 import { EmailEntry, EmailWords } from "./emailentry";
 import { Eyebrow } from "./eyebrow";
+import { Markdown } from "./markdown";
+import { URL_PATTERN } from "./markdown-autolink";
 import { type ContactOn, withWhom } from "./participants";
 import { type Provenance, ProvenanceTag } from "./trust";
 import { type Visibility, VisibilityBadge } from "./visibility";
@@ -660,7 +662,6 @@ const TIMELINE_ICON = {
 // URL itself, so the destination a reader checks is the destination they get —
 // a mail we did not write is not a place to render a friendly label over a
 // different address.
-const URL_PATTERN = /https?:\/\/[^\s<>"')\]]+[^\s<>"')\].,;:!?]/g;
 
 function linkify(text: string): ReactNode[] {
   const out: ReactNode[] = [];
@@ -690,10 +691,10 @@ function linkify(text: string): ReactNode[] {
 }
 
 /**
- * TimelineText is the message itself, two lines by default and the whole of it
- * on request.
+ * TimelineText is the message itself, three lines by default and the whole of
+ * it on request.
  *
- * Two lines is enough to recognise a thread; the full text is one click away
+ * Three lines is enough to recognise a thread; the full text is one click away
  * rather than one application away. Collapsed by default because a timeline
  * where every row is a full email is a mailbox, and the point of the row is
  * still the sequence.
@@ -701,22 +702,20 @@ function linkify(text: string): ReactNode[] {
  * On a mail row the reader gets the sentence the sender wrote. The sign-off and
  * the quoted history below it are folded into a second control instead of being
  * dropped, because the split is a heuristic: when it takes too much, the text is
- * one click away rather than gone. `email` gates that, since a note may open
- * with "Viele Grüße" or carry a "> " line as ordinary prose.
+ * one click away rather than gone. Only a mail is split, since a note may say
+ * "Viele Grüße" as prose. Only a note is drawn as markdown; a mail stays text.
  */
 function TimelineText({
   text,
-  email = false,
-}: Readonly<{ text: string; email?: boolean }>) {
+  kind,
+}: Readonly<{ text: string; kind: TimelineEntry["kind"] }>) {
   const t = useT();
+  const email = kind === "email";
   const [open, setOpen] = useState(false);
   const [tailOpen, setTailOpen] = useState(false);
-  // Whether the clamp is actually cutting the text off, measured rather than
-  // guessed. Counting characters was wrong in the one direction that matters:
-  // the clamp is two VISUAL lines at whatever width the column happens to be,
-  // so a message short enough to look safe still wrapped past it in a narrow
-  // column, got clipped by CSS, and — having failed the character test — was
-  // given no way to expand. Text the reader could not reach.
+  // Measured, not guessed from a character count: the clamp is three VISUAL
+  // lines at the column's width, and a guess that comes in short leaves clipped
+  // text with no control to reach it.
   const [clipped, setClipped] = useState(false);
   const bodyRef = useRef<HTMLSpanElement>(null);
   // The tail is what the reader is spared; `trimmed` is what the row shows and
@@ -765,7 +764,11 @@ function TimelineText({
   return (
     <span className="tl-text">
       <span ref={bodyRef} className={open ? "tl-text-full" : "tl-text-clamp"}>
-        {linkify(trimmed)}
+        {kind === "note" ? (
+          <Markdown source={trimmed} autolink />
+        ) : (
+          linkify(trimmed)
+        )}
       </span>
       {(clipped || open) && (
         <button
@@ -1113,7 +1116,7 @@ function MessageWords({
     return <EmailWords summary={entry.emailSummary} />;
   }
   return entry.body ? (
-    <TimelineText text={entry.body} email={entry.kind === "email"} />
+    <TimelineText text={entry.body} kind={entry.kind} />
   ) : null;
 }
 
@@ -1373,10 +1376,7 @@ function BulkGroupRow({
             {/* Never for a withheld entry — a summary row must not show a
                 reader words the row itself refuses. */}
             {newest.body && !newest.withheld && (
-              <TimelineText
-                text={newest.body}
-                email={newest.kind === "email"}
-              />
+              <TimelineText text={newest.body} kind={newest.kind} />
             )}
           </>
         )}
@@ -1568,7 +1568,7 @@ export function TimelineRow({
             here; one without still needs the splitter, because a reader whose
             server has not caught up should not lose the fold. */}
         {entry.body && !entry.withheld && (
-          <TimelineText text={entry.body} email={entry.kind === "email"} />
+          <TimelineText text={entry.body} kind={entry.kind} />
         )}
         {entry.detail}
         <span className="tl-meta">

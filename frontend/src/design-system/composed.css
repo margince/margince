@@ -1327,6 +1327,13 @@
   color: var(--textPrimary);
 }
 
+/* A note's markdown takes the row's type, not the document reader's, so a plain
+   note reads like the rows beside it; its line breaks come from pre-wrap above. */
+.tl-text .md {
+  font: inherit;
+  color: inherit;
+}
+
 .tl-text-toggle {
   background: none;
   border: none;
