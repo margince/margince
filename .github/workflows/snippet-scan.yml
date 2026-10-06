@@ -1,0 +1,105 @@
+# Does this pull request add code copied from a copyleft project?
+#
+# The license gate in ci.yml judges declared dependencies. It cannot see a
+# fragment pasted into one of our own files — by hand, or reproduced by an AI
+# tool from code it was trained on — and a GPL or AGPL fragment in the tree
+# would bind the product to that licence. SCANOSS fingerprints the files this
+# pull request adds or changes and matches them against its public open-source
+# index; a match whose licence is on the OSADL copyleft list fails the check.
+#
+# Plain `pull_request` with a read-only token, so a fork's pull request runs it
+# too: that is where outside code arrives. Only fingerprints leave the runner,
+# never the source.
+name: snippet-scan
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  SCANOSS_IMAGE: ghcr.io/scanoss/scanoss-py:v1.52.1@sha256:38b006ea5ebbc7972d46f1affd066a950b2349246abd1c5ee30fca3e1d8eff94
+
+jobs:
+  copyleft-snippets:
+    name: copyleft snippets
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Copy the files this pull request adds or changes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/delta"
+          gh api --paginate "repos/${{ github.repository }}/pulls/${PR}/files" \
+            -q '.[] | select(.status != "removed") | .filename' > "$RUNNER_TEMP/changed.txt"
+          while IFS= read -r path; do
+            # A submodule pointer or a symlink is not text anybody wrote here.
+            if [ -f "$path" ] && [ ! -L "$path" ]; then
+              cp --parents -- "$path" "$RUNNER_TEMP/delta/"
+            fi
+          done < "$RUNNER_TEMP/changed.txt"
+      - name: Match them against open-source code
+        working-directory: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          scanoss() { docker run --rm -v "$RUNNER_TEMP:/work" -w "/work/$1" "$SCANOSS_IMAGE" "${@:2}"; }
+
+          # SCANOSS skips files that carry no code (Markdown, JSON, YAML, images).
+          scanoss delta fingerprint . -o ../changed.wfp
+          grep '^file=' changed.wfp | cut -d, -f3- | sort > fingerprinted.txt || true
+          if [ ! -s fingerprinted.txt ]; then
+            echo "No source file in this pull request to match." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          # The scanner exits 0 even when the service refuses the request, and then
+          # writes no results file, so the file's presence is the verdict that it ran.
+          if ! scanoss . scan --wfp changed.wfp -o results.json || [ ! -s results.json ]; then
+            echo "::error::the SCANOSS service did not answer, so nothing was judged — this is not a finding; re-run the job"
+            exit 1
+          fi
+          # Every fingerprinted file must come back with a verdict. A partial answer
+          # would otherwise pass as clean.
+          if ! diff <(jq -r 'keys[]' results.json | sort) fingerprinted.txt; then
+            echo "::error::SCANOSS answered for fewer files than were sent, so this scan proves nothing — re-run the job"
+            exit 1
+          fi
+
+          {
+            echo "### Matches against open-source code"
+            echo
+            echo "| File | Match | Component | Licences | Source |"
+            echo "|---|---|---|---|---|"
+            jq -r 'to_entries[] | .key as $f | .value[]
+              | select(.id != "none" and ((.purl // [])[0] // "" | startswith("pkg:github/margince/margince") | not))
+              | "| `\($f)` | \(.id) \(.matched) | \(.component) | \([.licenses[]?.name] | unique | join(", ")) | \(.url) |"' results.json
+            echo
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          status=0
+          scanoss . inspect copyleft -i results.json -f md -o copyleft.md || status=$?
+          cat copyleft.md >> "$GITHUB_STEP_SUMMARY"
+          case "$status" in
+            0) ;;
+            2)
+              echo "::error::this pull request contains code that matches a copyleft project — see the job summary for the file, the project and its licence. Rewrite it, or remove it; see CONTRIBUTING.md"
+              exit 1 ;;
+            *)
+              echo "::error::the copyleft inspection itself failed (exit $status), so nothing was judged"
+              exit 1 ;;
+          esac

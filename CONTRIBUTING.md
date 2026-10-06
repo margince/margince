@@ -138,6 +138,11 @@ loop your PR will run:
 3. **CI must be all green before merge**: the same deterministic gates
    plus automated review and static analysis. Address findings
    instead of dismissing them; squash-merge is the house style.
+   One of those checks, `copyleft snippets`, matches the files you add or
+   change against public open-source code, and fails when a fragment
+   matches a copyleft project such as one under the GPL. That covers code
+   an AI tool reproduced from its training data as much as code pasted
+   by hand: rewrite the fragment in your own words, or remove it.
 
 Write it right the first time: match the surrounding file, comments say
 *why* not *what*, never swallow an error, and tests prove behaviour or
