@@ -690,7 +690,7 @@ function Cited() { const cite = () => <i className="m" />; return <p>{cite()}</p
 function Bare() { const cite = () => <i className="m" />; return cite(); }
 function Refusals() { return <div className="m" />; }
 function Sheet({ children }) { return <Modal>{children}</Modal>; }
-function Side({ children, placement = "right" }) { return <Modal placement={placement}>{children}</Modal>; }
+function Side({ children, intent = "drawer" }) { return <Modal intent={intent}>{children}</Modal>; }
 function Shell({ body }) { return <Modal><div>{body}</div></Modal>; }
 function Framed({ body }) { return <div className="form-stack">{body}</div>; }
 function Outer({ body }) { return <Framed body={body} />; }
@@ -953,10 +953,10 @@ const A = () => <><Drawer /><div role="dialog" /><Trigger /><Typed /></>;`;
     ${"places a render prop called under a condition"}          | ${"<Opened body={(n) => <><p /><Field /></>} />"}                                                           | ${"flush"}                | ${""}
     ${"calls a render prop it cannot place unplaced"}           | ${"<Kept body={(n) => <><p /><Field /></>} />"}                                                             | ${"unplaced"}             | ${""}
     ${"places a prop through a component inside its own prop"}  | ${inModal("<p /><Line control={<Line control={<Field />} />} />")}                                          | ${"flush"}                | ${""}
-    ${"reads the drawer's own box classes"}                     | ${`<Modal placement="right">${PARAGRAPH_STACK}</Modal>`}                                                    | ${"spaced"}               | ${DRAWER_STACK}
-    ${"judges each placement a ternary picks"}                  | ${`<Modal placement={a ? "right" : "center"}>${PARAGRAPH_STACK}</Modal>`}                                   | ${"flush"}                | ${DRAWER_BLOCK}
-    ${"judges every placement an unread value can be"}          | ${`<Modal placement={where}>${PARAGRAPH_STACK}</Modal>`}                                                    | ${"flush"}                | ${DRAWER_BLOCK}
-    ${"reads the placement a wrapper defaults to"}              | ${`<Side>${PARAGRAPH_STACK}</Side>`}                                                                        | ${"spaced"}               | ${DRAWER_STACK}
+    ${"reads the drawer's own box classes"}                     | ${`<Modal intent="drawer">${PARAGRAPH_STACK}</Modal>`}                                                      | ${"spaced"}               | ${DRAWER_STACK}
+    ${"judges each intent a ternary picks"}                     | ${`<Modal intent={a ? "drawer" : "confirm"}>${PARAGRAPH_STACK}</Modal>`}                                    | ${"flush"}                | ${DRAWER_BLOCK}
+    ${"judges every intent an unread value can be"}             | ${`<Modal intent={where}>${PARAGRAPH_STACK}</Modal>`}                                                       | ${"flush"}                | ${DRAWER_BLOCK}
+    ${"reads the intent a wrapper defaults to"}                 | ${`<Side>${PARAGRAPH_STACK}</Side>`}                                                                        | ${"spaced"}               | ${DRAWER_STACK}
     ${"ignores a rule that holds only under a query"}           | ${`<Modal>${PARAGRAPH_STACK}</Modal>`}                                                                      | ${"spaced"}               | ${`${STACK} @media (min-width: 1px) { .s { display: block } }`}
     ${"lets !important outrank a heavier rule"}                 | ${`<Modal>${PARAGRAPH_STACK}</Modal>`}                                                                      | ${"spaced"}               | ${".s { display: flex !important; flex-direction: column; gap: var(--space-3) } .modal .s { display: block }"}
     ${"stacks only if every branch of a class does"}            | ${'<Modal><div className={a ? "s" : "t"}><p /><Field /></div></Modal>'}                                     | ${"flush"}                | ${STACK}

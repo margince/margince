@@ -11,15 +11,6 @@ type DotTier = Parameters<typeof AutonomyDot>[0]["tier"];
 
 // The body and its fields are the caller's; the dialog owns their spacing.
 
-// Modal's own pair, narrowed to the placements a confirm takes.
-type ConfirmBox =
-  | { intent?: Exclude<ModalIntent, "full">; size?: never; placement?: never }
-  | {
-      intent?: never;
-      size?: "default" | "wide" | "split";
-      placement?: "center" | "right";
-    };
-
 export function ConfirmModal({
   open,
   onClose,
@@ -35,8 +26,6 @@ export function ConfirmModal({
   pending,
   error,
   intent = "confirm",
-  size,
-  placement,
   returnFocusTo,
   initialFocusTo,
   children,
@@ -77,6 +66,7 @@ export function ConfirmModal({
   onConfirm: () => void;
   pending?: boolean;
   error?: string | null;
+  intent?: Exclude<ModalIntent, "full">;
   // Passed through to Modal. A confirm whose action destroys its own trigger —
   // deactivating a member, ending a connection, closing a request — names the
   // place focus should land instead, since the trigger will not be there to
@@ -85,17 +75,20 @@ export function ConfirmModal({
   /** The writing field can take focus before supporting context controls. */
   initialFocusTo?: () => HTMLElement | null;
   children: ReactNode;
-}> &
-  ConfirmBox) {
+}>) {
   const t = useT();
   const headingId = useId();
   const body = Children.toArray(children).length > 0 || Boolean(error);
+  // Escape, the backdrop and the corner X all wait for a write in flight.
+  const close = () => {
+    if (!pending) onClose();
+  };
   return (
     <Modal
       open={open}
-      onClose={onClose}
+      onClose={close}
       labelledBy={headingId}
-      {...(size || placement ? { size, placement } : { intent })}
+      intent={intent}
       returnFocusTo={returnFocusTo}
       initialFocusTo={initialFocusTo}
     >

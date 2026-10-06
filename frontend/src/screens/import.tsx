@@ -121,14 +121,12 @@ export function ImportCard() {
             }
           />
         </SettingList>
-        {/* Wide: the mapping table is four columns of a file nobody chose the
-            width of, and squeezing it costs the fill rates that decide the
-            mapping. It keeps its own horizontal scroll inside the dialog. */}
+        {/* The mapping table scrolls sideways in its own TableScroll. */}
         <Modal
           open={open}
           onClose={() => setOpen(false)}
           labelledBy={headingId}
-          size="wide"
+          intent="form"
         >
           <Heading size="large" id={headingId} className="t-h2 modal-title">
             {t("import.title")}
