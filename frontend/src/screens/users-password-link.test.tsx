@@ -7,7 +7,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { type ReactNode, StrictMode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { stubClipboard } from "../design-system/clipboard-testing";
@@ -151,8 +151,8 @@ afterEach(() => {
 // what happens AFTER an invite has to open it first. The header verb names the
 // whole act ("Invite a member") and the dialog's submit the bare one
 // ("Invite"), which is what keeps the two tellable apart.
-async function openInvite() {
-  await userEvent.click(screen.getByRole("button", { name: /invite user/i }));
+async function openInvite(user: UserEvent) {
+  await user.click(screen.getByRole("button", { name: /invite user/i }));
   return screen.findByRole("dialog");
 }
 
@@ -161,7 +161,7 @@ async function openInvite() {
 // opened. So the link action is reached by opening that menu — and its ABSENCE
 // has to be asserted with the menu open too, or the assertion passes on a menu
 // nobody looked in.
-async function rowMenu(name: string) {
+async function rowMenu(user: UserEvent, name: string) {
   const row = screen.getByText(name).closest('[data-testid^="member-"]');
   if (!(row instanceof HTMLElement)) {
     throw new Error(`no member row rendered for ${name}`);
@@ -173,7 +173,7 @@ async function rowMenu(name: string) {
   // previous step left open — and the assertion after it would then be about a
   // panel with `hidden` on it rather than about what the row offers.
   if (trigger.getAttribute("aria-expanded") !== "true") {
-    await userEvent.click(trigger);
+    await user.click(trigger);
   }
   const panelId = trigger.getAttribute("aria-controls");
   const panel = panelId === null ? null : document.getElementById(panelId);
@@ -185,9 +185,9 @@ async function rowMenu(name: string) {
 
 // The one verb every case below reaches for, on the one member who can redeem
 // it.
-async function clickLinkAction(name = "Ada Active") {
-  await userEvent.click(
-    (await rowMenu(name)).getByRole("button", {
+async function clickLinkAction(user: UserEvent, name = "Ada Active") {
+  await user.click(
+    (await rowMenu(user, name)).getByRole("button", {
       name: /get set-password link/i,
     }),
   );
@@ -195,6 +195,7 @@ async function clickLinkAction(name = "Ada Active") {
 
 describe("admin-issued set-password link", () => {
   it("offers no link action where the server says this seat cannot issue one", async () => {
+    const user = userEvent.setup();
     vi.stubGlobal("fetch", backend({ adminPasswordLink: false }));
     render(<UsersAdminCard />);
     await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
@@ -203,7 +204,7 @@ describe("admin-issued set-password link", () => {
     // shown the control at all. Asserted with Ada's menu OPEN: a closed menu
     // renders none of its items, so the same query against a shut one would
     // pass whatever the installation can do.
-    const verbs = await rowMenu("Ada Active");
+    const verbs = await rowMenu(user, "Ada Active");
     expect(
       verbs.queryByRole("button", { name: /set-password link/i }),
     ).toBeNull();
@@ -211,6 +212,7 @@ describe("admin-issued set-password link", () => {
   });
 
   it("offers the action only on active members", async () => {
+    const user = userEvent.setup();
     vi.stubGlobal("fetch", backend({ adminPasswordLink: true }));
     render(<UsersAdminCard />);
     await waitFor(() => expect(screen.getByText("Otto Off")).toBeTruthy());
@@ -218,24 +220,25 @@ describe("admin-issued set-password link", () => {
     // not redeem a link, so offering him one would hand over a link that is
     // dead on arrival.
     expect(
-      (await rowMenu("Ada Active")).getByRole("button", {
+      (await rowMenu(user, "Ada Active")).getByRole("button", {
         name: /get set-password link/i,
       }),
     ).toBeTruthy();
     expect(
-      (await rowMenu("Otto Off")).queryByRole("button", {
+      (await rowMenu(user, "Otto Off")).queryByRole("button", {
         name: /get set-password link/i,
       }),
     ).toBeNull();
   });
 
   it("shows the minted link with its expiry", async () => {
+    const user = userEvent.setup();
     const calls: string[] = [];
     vi.stubGlobal("fetch", backend({ adminPasswordLink: true, calls }));
     render(<UsersAdminCard />);
     await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
 
-    await clickLinkAction();
+    await clickLinkAction(user);
     const link = await screen.findByTestId("password-link-url");
     expect(link.textContent).toBe(LINK_URL);
     expect(
@@ -246,15 +249,16 @@ describe("admin-issued set-password link", () => {
   });
 
   it("hands the admin a link as soon as an invite succeeds", async () => {
+    const user = userEvent.setup();
     const calls: string[] = [];
     vi.stubGlobal("fetch", backend({ adminPasswordLink: true, calls }));
     render(<UsersAdminCard />);
     await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
 
-    await openInvite();
-    await userEvent.type(screen.getByLabelText(/^Email/), "newbie@acme.test");
-    await userEvent.type(screen.getByLabelText(/^Full name/), "New Bie");
-    await userEvent.click(screen.getByRole("button", { name: /^invite$/i }));
+    await openInvite(user);
+    await user.type(screen.getByLabelText(/^Email/), "newbie@acme.test");
+    await user.type(screen.getByLabelText(/^Full name/), "New Bie");
+    await user.click(screen.getByRole("button", { name: /^invite$/i }));
 
     // Without this the admin walks away from a successful invite holding
     // nothing, and the member can never sign in — the whole defect.
@@ -266,6 +270,7 @@ describe("admin-issued set-password link", () => {
   });
 
   it("leaves a post-invite mint failure visible with a retry", async () => {
+    const user = userEvent.setup();
     vi.stubGlobal(
       "fetch",
       backend({ adminPasswordLink: true, mintFails: true }),
@@ -273,10 +278,10 @@ describe("admin-issued set-password link", () => {
     render(<UsersAdminCard />);
     await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
 
-    await openInvite();
-    await userEvent.type(screen.getByLabelText(/^Email/), "newbie@acme.test");
-    await userEvent.type(screen.getByLabelText(/^Full name/), "New Bie");
-    await userEvent.click(screen.getByRole("button", { name: /^invite$/i }));
+    await openInvite(user);
+    await user.type(screen.getByLabelText(/^Email/), "newbie@acme.test");
+    await user.type(screen.getByLabelText(/^Full name/), "New Bie");
+    await user.click(screen.getByRole("button", { name: /^invite$/i }));
 
     // The member exists but has no way in. Reporting a clean success here is
     // the exact silent failure this feature was built to remove.
@@ -285,15 +290,15 @@ describe("admin-issued set-password link", () => {
   });
 
   it("reports a copy failure instead of throwing where the clipboard API is absent", async () => {
+    const user = userEvent.setup();
     vi.stubGlobal("fetch", backend({ adminPasswordLink: true }));
     // An email-less installation served over plain http is the deployment this
     // whole feature serves, and it is exactly the one with no clipboard.
-    const user = userEvent.setup();
     stubClipboard("absent");
     render(<UsersAdminCard />);
     await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
 
-    await clickLinkAction();
+    await clickLinkAction(user);
     await screen.findByTestId("password-link-url");
     await user.click(screen.getByRole("button", { name: /copy link/i }));
     // The admin is told to copy by hand rather than left with a dead button:
@@ -309,6 +314,7 @@ describe("admin-issued set-password link", () => {
   });
 
   it("recovers from a transport failure instead of hanging on pending", async () => {
+    const user = userEvent.setup();
     // An HTTP refusal arrives as `error`; only a network failure rejects. An
     // uncaught rejection leaves the dialog on "Creating link…" forever,
     // with no way to tell a dead connection from a slow server.
@@ -349,7 +355,7 @@ describe("admin-issued set-password link", () => {
     render(<UsersAdminCard />);
     await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
 
-    await clickLinkAction();
+    await clickLinkAction(user);
     expect(
       await screen.findByText(/server could not be reached/i),
     ).toBeTruthy();
@@ -358,6 +364,7 @@ describe("admin-issued set-password link", () => {
   });
 
   it("does not let an earlier request for the same member clobber a later one", async () => {
+    const user = userEvent.setup();
     // Reopening the SAME member makes two requests whose member id is
     // identical, so keying acceptance on the id alone would let the first one's
     // outcome land on the second's dialog — clearing a valid link, or reporting
@@ -413,9 +420,9 @@ describe("admin-issued set-password link", () => {
     render(<UsersAdminCard />);
     await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
 
-    const open = () => clickLinkAction();
+    const open = () => clickLinkAction(user);
     await open();
-    await userEvent.click(screen.getByRole("button", { name: /done/i }));
+    await user.click(screen.getByRole("button", { name: /done/i }));
     await open();
     const link = await screen.findByTestId("password-link-url");
     expect(link.textContent).toBe(LINK_URL);
@@ -428,6 +435,7 @@ describe("admin-issued set-password link", () => {
   });
 
   it("keeps a failed mint visible with a retry rather than reporting success", async () => {
+    const user = userEvent.setup();
     vi.stubGlobal(
       "fetch",
       backend({ adminPasswordLink: true, mintFails: true }),
@@ -435,7 +443,7 @@ describe("admin-issued set-password link", () => {
     render(<UsersAdminCard />);
     await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
 
-    await clickLinkAction();
+    await clickLinkAction(user);
     // The failure is announced, and the way out is offered. Silently closing
     // here would leave an account nobody can sign into and no visible sign of it.
     expect(await screen.findByRole("alert")).toBeTruthy();

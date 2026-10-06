@@ -5,7 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, within } from "storybook/test";
 import { StoryProviders } from "../screens/story-utils";
 import { Button } from "./atoms";
-import { stubClipboard } from "./clipboard-testing";
+import { holdClipboard, stubClipboard } from "./clipboard-testing";
 import { CopyableText, useClipboardCopy } from "./clipboardcopy";
 
 // The three states one copy control has, drawn by the hook that owns all three.
@@ -78,7 +78,7 @@ export const Refused: Story = {
     // Put back whatever this browser had: the catalog renders many stories on
     // one page, and a clipboard taken away for good would make the next surface
     // that copies fail for a reason nobody could find here.
-    // Set up first: user-event installs a clipboard of its own.
+    const browserClipboard = holdClipboard();
     const user = userEvent.setup();
     const clipboard = stubClipboard("absent");
     try {
@@ -92,6 +92,7 @@ export const Refused: Story = {
       await expect(document.getSelection()?.toString()).toBe(LINK);
     } finally {
       clipboard.restore();
+      browserClipboard();
     }
   },
 };
