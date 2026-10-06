@@ -301,8 +301,7 @@ export function ContactResearchDrawer({
       open={open}
       onClose={onClose}
       labelledBy="contact-research-title"
-      size="wide"
-      placement="right"
+      intent="drawer-reading"
     >
       <DrawerHead>
         <div className="pe-drawer-title">

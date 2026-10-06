@@ -109,7 +109,12 @@ export function IntroRequestModal({
   });
 
   return (
-    <Modal open={target !== null} onClose={onClose} labelledBy={titleId}>
+    <Modal
+      open={target !== null}
+      onClose={onClose}
+      labelledBy={titleId}
+      intent="form"
+    >
       <Heading size="large" id={titleId} className="modal-title">
         {t("co.intro.title")}
       </Heading>

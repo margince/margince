@@ -933,6 +933,7 @@ function CompanyProfileDialog({
 }>) {
   const t = useT();
   const titleId = useId();
+  const formId = useId();
   // Focus lands on the field whose Edit was pressed — programmatic rather than
   // the `autoFocus` attribute, so the a11y lint's blanket rule against
   // autofocus stays intact. A callback rather than a ref handed down: the field
@@ -947,11 +948,12 @@ function CompanyProfileDialog({
     asked.current?.focus();
   }, []);
   return (
-    <Modal open onClose={onClose} labelledBy={titleId} size="wide">
+    <Modal open onClose={onClose} labelledBy={titleId} intent="drawer">
       <Heading size="large" id={titleId} className="t-h2 modal-title">
         {t("settings.companyTitle")}
       </Heading>
       <form
+        id={formId}
         className="form-stack"
         onSubmit={(event) => {
           event.preventDefault();
@@ -983,24 +985,22 @@ function CompanyProfileDialog({
         {error !== null && (
           <WriteRefused titleKey="settings.companySaveFailed" message={error} />
         )}
-        <div className="form-actions">
-          <Button variant="ghost" type="button" onClick={onClose}>
-            {t("create.cancel")}
-          </Button>
-          {/* The three the server demands are the three the button waits for —
-              the same condition the page's Save carried, now beside the fields
-              that satisfy it. */}
-          <Button
-            type="submit"
-            variant="primary"
-            disabled={!pending && !requiredComplete(form)}
-            pending={pending}
-            busyLabel={t("common.saving")}
-          >
-            {t("settings.companySave")}
-          </Button>
-        </div>
       </form>
+      <div className="actions">
+        <Button variant="ghost" type="button" onClick={onClose}>
+          {t("create.cancel")}
+        </Button>
+        <Button
+          type="submit"
+          form={formId}
+          variant="primary"
+          disabled={!pending && !requiredComplete(form)}
+          pending={pending}
+          busyLabel={t("common.saving")}
+        >
+          {t("settings.companySave")}
+        </Button>
+      </div>
     </Modal>
   );
 }

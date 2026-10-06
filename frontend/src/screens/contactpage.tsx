@@ -611,7 +611,7 @@ export function ContactPageV2({
           // than answering the press with nothing.
           closeReason={detailsDirty ? t("record.finishFieldEdit") : undefined}
           labelledBy={detailsTitle}
-          placement="right"
+          intent="drawer"
         >
           <div className="pe-drawer-title">
             <Heading size="large" id={detailsTitle}>

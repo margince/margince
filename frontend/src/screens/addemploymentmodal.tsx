@@ -119,7 +119,7 @@ export function AddEmploymentModal({
   }
 
   return (
-    <Modal open={open} onClose={close} labelledBy={headingId}>
+    <Modal open={open} onClose={close} labelledBy={headingId} intent="form">
       <Heading size="large" id={headingId} className="t-h2 modal-title">
         {t("contact.rail.addEmployment")}
       </Heading>
@@ -163,8 +163,8 @@ export function AddEmploymentModal({
           disabled={create.isPending}
           onChange={(event) => setIsCurrent(event.target.checked)}
         />
+        <ErrorLine error={create.error} />
       </div>
-      <ErrorLine error={create.error} />
       <div className="actions">
         <Button onClick={close} disabled={create.isPending}>
           {t("create.cancel")}
