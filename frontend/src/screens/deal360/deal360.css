@@ -45,9 +45,8 @@
 /* The stages a closed deal can be reopened into, one button each. */
 .d360-reopen-stages {
   display: flex;
-  gap: var(--space-2);
+  gap: var(--gapActions);
   flex-wrap: wrap;
-  margin: var(--space-3) 0;
 }
 
 /* The collapsed brief. The line count stays with the render, which also
