@@ -18,17 +18,16 @@ import (
 const worklistAgeOutDays = 30
 
 // worklistAgeOutClause keeps a row unless it is a task due more than
-// worklistAgeOutDays before asOf. A row pinned by the user that pinner names
-// stays regardless, because a pin is a person keeping the task on purpose.
+// worklistAgeOutDays before asOf. A row still pinned in effect by the user that
+// pinner names stays regardless, because a pin is a person keeping it on purpose.
 //
 // pinner is a SQL expression, not a value: the reader's own placeholder for the
 // day's page, the assignee column for the team board that counts their day.
 func worklistAgeOutClause(asOf time.Time, pinner string, arg func(any) int) string {
 	floor := arg(asOf.AddDate(0, 0, -worklistAgeOutDays))
 	return sprintf(`(a.kind <> 'task' OR a.due_at IS NULL OR a.due_at >= $%d
-		OR EXISTS (SELECT 1 FROM worklist_pin wp
-		            WHERE wp.reader_id = %s AND wp.source = $%d AND wp.row_id = a.id::text))`,
-		floor, pinner, arg(string(crmcontracts.WorklistItemSourceTask)))
+		OR EXISTS (SELECT 1 FROM %s wp WHERE wp.source = $%d AND wp.row_id = a.id::text))`,
+		floor, effectivePinsSQL(pinner, arg), arg(string(crmcontracts.WorklistItemSourceTask)))
 }
 
 // worklistClauses are the narrowings that make a read the Worklist's.

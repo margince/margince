@@ -151,10 +151,11 @@ func (s *Store) PinnedRows(ctx context.Context, tx pgx.Tx) (map[WorklistRowRef]b
 	// so a reader who pinned steadily for a year would have every one of them
 	// read on every page assembly. The newest win, which is the honest cut —
 	// the pin a rep set most recently is the one they still mean.
-	rows, err := tx.Query(ctx, `
-		SELECT source, row_id FROM worklist_pin
-		 WHERE reader_id = $1 ORDER BY pinned_at DESC LIMIT $2`,
-		reader, maxPinsPerReader)
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	rows, err := tx.Query(ctx,
+		"SELECT source, row_id FROM "+effectivePinsSQL(sprintf("$%d", arg(reader)), arg)+" pins",
+		args...)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading worklist pins: %w", err)
 	}
@@ -171,6 +172,16 @@ func (s *Store) PinnedRows(ctx context.Context, tx pgx.Tx) (map[WorklistRowRef]b
 		return nil, fmt.Errorf("activities: reading worklist pins: %w", err)
 	}
 	return out, nil
+}
+
+// effectivePinsSQL is the pins that hold for one reader: their newest
+// maxPinsPerReader. The page's pin pass and the Worklist age-out both read it, so
+// a pin pushed out of effect stops keeping an overdue task on the Worklist too.
+// reader is a SQL expression, so a correlated read can name a column.
+func effectivePinsSQL(reader string, arg func(any) int) string {
+	return sprintf(`(SELECT source, row_id FROM worklist_pin
+		WHERE reader_id = %s ORDER BY pinned_at DESC, source, row_id LIMIT $%d)`,
+		reader, arg(maxPinsPerReader))
 }
 
 // maxPinnedRowIDLen bounds a pinned row's id. A uuid is 36 characters and a

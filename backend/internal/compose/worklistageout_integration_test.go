@@ -19,8 +19,8 @@ import (
 )
 
 // An open task more than a month overdue leaves the Worklist, its count and
-// the team board's overdue figure, unless the reader pinned it. The task stays
-// open on its contact.
+// the team board's overdue figure, unless a pin the reader holds in effect keeps
+// it. The task stays open on its contact.
 func TestATaskMoreThanAMonthOverdueLeavesTheWorklistUnlessPinned(t *testing.T) {
 	e := integration.Setup(t)
 	now := time.Now().UTC()
@@ -43,11 +43,22 @@ func TestATaskMoreThanAMonthOverdueLeavesTheWorklistUnlessPinned(t *testing.T) {
 	agedOut := logOn("Send the revised quote", 31)
 	recent := logOn("Confirm the workshop date", 29)
 	pinned := logOn("Chase the signed contract", 31)
-	if err := e.Activities.PinWorklistRow(e.Admin(), activities.WorklistRowRef{
-		Source: string(crmcontracts.WorklistItemSourceTask), RowID: pinned,
-	}); err != nil {
-		t.Fatalf("pinning the task: %v", err)
+	pushedOut := logOn("Return the signed NDA", 31)
+	pin := func(rowID string) {
+		if err := e.Activities.PinWorklistRow(e.Admin(), activities.WorklistRowRef{
+			Source: string(crmcontracts.WorklistItemSourceTask), RowID: rowID,
+		}); err != nil {
+			t.Fatalf("pinning %s: %v", rowID, err)
+		}
 	}
+	// The oldest pin, then 49 newer ones and the kept task's: a reader keeps
+	// their 50 newest pins in effect, so pushedOut's pin is the 51st and holds
+	// nothing on the Worklist.
+	pin(pushedOut)
+	for range 49 {
+		pin(ids.NewV7().String())
+	}
+	pin(pinned)
 
 	day := assembleFeed(e.Admin(), t, e, now)
 	if got := taskIDsOn(day.Planned); !slices.Equal(got, sorted(recent, pinned)) {
