@@ -9,9 +9,7 @@ import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
-import { addProposal } from "./filterpropose";
 import { FiltersScreen } from "./filters";
-import { decode, type Node, newGroup, newLeaf } from "./segmentpredicate";
 
 // The proposal is a suggestion the builder shows: these tests are about where it
 // lands, what it may not overwrite without asking, and that every phrase it could
@@ -228,35 +226,4 @@ it("says a model is needed when the installation has none", async () => {
     ),
   ).toBeTruthy();
   await waitFor(() => expect(screen.queryByLabelText("Value")).toBeNull());
-});
-
-function encodedOf(node: Node): unknown {
-  return JSON.parse(
-    JSON.stringify(node, (key, v) => (key === "id" ? undefined : v)),
-  );
-}
-
-it("adds a proposal joined the same way into the root, and any other as one group", () => {
-  const current = newGroup("and", [newLeaf("full_name", "eq", "Ann")]);
-  const sameJoin = decode({
-    and: [{ field: "city", op: "eq", value: "Berlin" }],
-  });
-  const otherJoin = decode({
-    or: [
-      { field: "city", op: "eq", value: "Berlin" },
-      { field: "city", op: "eq", value: "Wien" },
-    ],
-  });
-  if (sameJoin === null || otherJoin === null) {
-    throw new Error("fixture trees did not decode");
-  }
-  expect(encodedOf(addProposal(current, sameJoin))).toMatchObject({
-    join: "and",
-    children: [{ field: "full_name" }, { field: "city" }],
-  });
-  const grouped = encodedOf(addProposal(current, otherJoin));
-  expect(grouped).toMatchObject({
-    join: "and",
-    children: [{ field: "full_name" }, { join: "or" }],
-  });
 });

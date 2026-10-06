@@ -14,6 +14,7 @@ import {
   LIVE_ID,
   listsMe,
   liveList,
+  liveVocabulary,
   MEMBER_ID,
   notOnLiveWhy,
   SHORTLIST_ID,
@@ -92,6 +93,7 @@ describe("a record page's lists", () => {
     stub({
       [`GET /lists/${LIVE_ID}/members/${MEMBER_ID}/why`]: () =>
         jsonResponse(notOnLiveWhy),
+      "GET /filters/vocabulary": () => jsonResponse(liveVocabulary),
     });
     const user = userEvent.setup();
     await user.click(
@@ -108,6 +110,11 @@ describe("a record page's lists", () => {
       within(failing as HTMLElement).getByLabelText(en["lists.why.unmet"]),
     ).toBeInTheDocument();
     expect(screen.getByText(en["lists.why.hidden"])).toBeInTheDocument();
+    // The clause reads as the list's own Filter line reads it, operand marked.
+    const ago = await screen.findByText("45 days ago", { selector: "strong" });
+    expect(ago.parentElement).toHaveTextContent(
+      /^last touch is more than 45 days ago$/,
+    );
   });
 
   it("names a referenced record in a clause rather than showing its id", async () => {
@@ -125,6 +132,19 @@ describe("a record page's lists", () => {
             value_label: "Acme Holding",
           },
         }),
+      "GET /filters/vocabulary": () =>
+        jsonResponse({
+          resource: "company",
+          fields: [
+            {
+              name: "parent_company_id",
+              type: "id",
+              operators: ["exists"],
+              custom: false,
+              references: "company",
+            },
+          ],
+        }),
     });
     const user = userEvent.setup();
     await user.click(
@@ -133,8 +153,12 @@ describe("a record page's lists", () => {
     await user.click(
       await screen.findByRole("option", { name: liveList.name }),
     );
-    expect(await screen.findByText("Now: Acme Holding")).toBeInTheDocument();
+    const value = await screen.findByText("Now: Acme Holding");
     expect(screen.queryByText(`Now: ${parent}`)).toBeNull();
+    // An exists clause says it all in its operator, so no operand is marked.
+    const clause = value.closest("p") as HTMLElement;
+    expect(await within(clause).findByText(/has a value$/)).toBeInTheDocument();
+    expect(clause.querySelector("strong")).toBeNull();
   });
 
   it("takes the record off a Shortlist with a note", async () => {

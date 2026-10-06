@@ -3,7 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { LiveExplanation } from "./listexplain";
-import { listsMe, liveWhy, notOnLiveWhy } from "./lists.fixtures";
+import {
+  listsMe,
+  liveVocabulary,
+  liveWhy,
+  notOnLiveWhy,
+} from "./lists.fixtures";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // A Live List's filter judged for one record, clause by clause, with the
@@ -19,8 +24,7 @@ type Story = StoryObj;
 function stub() {
   installFetchStub({
     "GET /me": listsMe(true),
-    "GET /filters/vocabulary": () =>
-      jsonResponse({ resource: "company", fields: [] }),
+    "GET /filters/vocabulary": () => jsonResponse(liveVocabulary),
   });
 }
 

@@ -7,26 +7,21 @@
 // same way in a member table's filter columns, so the two never disagree.
 
 import { Check, CircleHelp, X } from "lucide-react";
-import {
-  calendarDaysBetween,
-  formatMoney,
-  formatNumber,
-} from "../format/format";
+import { calendarDaysBetween, formatNumber } from "../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
-import { operatorKey } from "./filterbuilder";
 import {
   type FilterVocabulary,
-  fieldLabel,
   useFilterVocabulary,
   type VocabularyField,
 } from "./filterdata";
+import { clauseWords, moneyText, useSentenceWords } from "./filtersentence";
 import type {
   ListClauseVerdict,
   ListExplanation,
   ListRecordType,
 } from "./lists.queries";
 import { useRosterNames } from "./roster";
-import { type FilterOp, isRelativeDate } from "./segmentpredicate";
+import type { FilterOp } from "./segmentpredicate";
 
 /** Whether a Live List selects the record, and each clause's verdict. */
 export function LiveExplanation({
@@ -70,8 +65,7 @@ function Verdict({
   entityType,
 }: Readonly<{ node: ListClauseVerdict; entityType: ListRecordType }>) {
   const t = useT();
-  const plural = usePlural();
-  const { locale } = useLocale();
+  const words = useSentenceWords();
   const vocabulary = useFilterVocabulary(entityType);
   const valueText = useFieldValueText(entityType);
   if (node.join) {
@@ -93,19 +87,27 @@ function Verdict({
       </div>
     );
   }
-  const field = vocabularyField(vocabulary.data, node.field);
-  const label = field ? fieldLabel(field, t) : (node.field ?? "");
-  const op = t(
-    operatorKey((node.op ?? "eq") as FilterOp, field?.type ?? "text"),
+  const clause = clauseWords(
+    {
+      field: node.field ?? "",
+      op: (node.op ?? "eq") as FilterOp,
+      operand: node.operand,
+    },
+    vocabulary.data?.fields,
+    words,
   );
-  const operand =
-    (field && moneyOf(field, node.operand, locale)) ??
-    operandText(node.operand, t, plural, locale);
   return (
     <p className="lists-why-clause">
       <VerdictMark result={node.result} />
       <span>
-        {label} {op} <strong>{operand}</strong>
+        {clause.field}
+        {clause.op !== undefined && ` ${clause.op}`}
+        {clause.operand !== undefined && (
+          <>
+            {" "}
+            <strong>{clause.operand}</strong>
+          </>
+        )}
       </span>
       <span className="t-caption">
         {node.hidden
@@ -126,13 +128,14 @@ function Verdict({
  * How a filter field's value on a record reads, as the server states it in a
  * why or a member's `values`: money in the field's currency, a day as how long
  * ago it was, a yes/no as words, a user by name, anything else as given.
+ * Disabled, it reads nothing and every value reads as given.
  */
-export function useFieldValueText(entityType: ListRecordType) {
+export function useFieldValueText(entityType: ListRecordType, enabled = true) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const vocabulary = useFilterVocabulary(entityType);
-  const users = useRosterNames("user", true);
+  const vocabulary = useFilterVocabulary(entityType, enabled);
+  const users = useRosterNames("user", enabled);
   return (name: string, raw: string): string => {
     const field = vocabularyField(vocabulary.data, name);
     switch (field?.type) {
@@ -192,49 +195,4 @@ function dayText(
   return plural(key, Math.abs(days), {
     count: formatNumber(Math.abs(days), locale),
   });
-}
-
-/**
- * A money operand or value — minor units of the field's currency — as the
- * reader reads money, or undefined for anything that is not an amount.
- */
-export function moneyText(
-  raw: unknown,
-  currency: string,
-  locale: Locale,
-): string | undefined {
-  const one = (v: unknown) =>
-    typeof v === "number" || (typeof v === "string" && /^-?\d+$/.test(v))
-      ? formatMoney(Number(v), currency, locale)
-      : undefined;
-  if (Array.isArray(raw)) {
-    const each = raw.map(one);
-    return each.every((v) => v !== undefined) ? each.join(", ") : undefined;
-  }
-  return one(raw);
-}
-
-/** A clause's operand as the filter states it. */
-function operandText(
-  operand: unknown,
-  t: ReturnType<typeof useT>,
-  plural: ReturnType<typeof usePlural>,
-  locale: Locale,
-): string {
-  if (operand === true) {
-    return t("filters.yes");
-  }
-  if (operand === false) {
-    return t("filters.no");
-  }
-  if (Array.isArray(operand)) {
-    return operand.join(", ");
-  }
-  if (isRelativeDate(operand)) {
-    const days = operand.days_ago;
-    return plural("lists.why.daysAgo", days, {
-      count: formatNumber(days, locale),
-    });
-  }
-  return String(operand ?? "");
 }

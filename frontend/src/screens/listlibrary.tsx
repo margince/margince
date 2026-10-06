@@ -59,15 +59,22 @@ export const RECORD_TYPE_LABEL: Record<ListRecordType, MessageKey> = {
 const KIND_FILTERS = ["all", "dynamic", "static"] as const;
 type KindFilter = (typeof KIND_FILTERS)[number];
 
-/** What a list is, in the reader's words rather than the wire's. */
+/**
+ * What a list is, in the reader's words rather than the wire's. Neutral: a
+ * kind is a fact, and the accent belongs to the page's one primary action.
+ */
 export function ListKindBadge({
   list,
 }: Readonly<{ list: Pick<List, "list_type"> }>) {
   const t = useT();
-  return list.list_type === "dynamic" ? (
-    <Badge tone="accent">{t("lists.kind.live")}</Badge>
-  ) : (
-    <Badge tone="info">{t("lists.kind.shortlist")}</Badge>
+  return (
+    <Badge>
+      {t(
+        list.list_type === "dynamic"
+          ? "lists.kind.live"
+          : "lists.kind.shortlist",
+      )}
+    </Badge>
   );
 }
 
@@ -173,7 +180,7 @@ export function ListPulseBadge({
   }
   const counts = { entered: String(pulse.entered), left: String(pulse.left) };
   return (
-    <Badge tone="accent">
+    <Badge>
       <span aria-hidden="true">{t("lists.pulse.chip", counts)}</span>
       <span className="sr-only">{t("lists.pulse.label", counts)}</span>
     </Badge>

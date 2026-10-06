@@ -152,6 +152,11 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // carries its own.
   // Pure punctuation layouts: every word in them is a placeholder, so there is
   // nothing to translate and a "translation" could only reorder the slots.
+  // A filter clause's slots, a group's brackets, a value not given yet.
+  "filters.sentence.clause",
+  "filters.sentence.clauseBare",
+  "filters.sentence.group",
+  "filters.sentence.pendingValue",
   // Two phase names and an arrow.
   "project.history.moved",
   "brief.digestPhaseChange",
@@ -202,6 +207,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "deals.pipeline",
   "deal.fcPipeline",
   "filters.field.pipeline_id",
+  "filters.sentence.ref.pipeline_one",
   "cf.obj.deal",
   "cf.obj.lead",
   "co.brief.cite.deal",

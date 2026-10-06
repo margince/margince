@@ -16,8 +16,9 @@ import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
 import { useMe } from "./common";
-import { customColumnLabel } from "./filterdata";
+import { customColumnLabel, useFilterVocabulary } from "./filterdata";
 import { EditFilterAction, mayEditFilter } from "./filterlistedit";
+import { filterSentence, useSentenceWords } from "./filtersentence";
 import { ListChangeSummary } from "./listchanges";
 import { ListHistoryPanel } from "./listhistory";
 import {
@@ -40,6 +41,7 @@ import {
 import { ListSettingsAction } from "./listsettings";
 import { useListAudienceLabel } from "./listsharing";
 import "./lists.css";
+import { decode, rootGroup } from "./segmentpredicate";
 
 function isMemberSource(type: ListRecordType): type is MemberSource {
   return type in MEMBER_SOURCES;
@@ -111,6 +113,7 @@ function ListHead({ list }: Readonly<{ list: List }>) {
         <ListHealthBadge list={list} />
       </div>
       {list.purpose && <p className="lists-note">{list.purpose}</p>}
+      <ListFilterLine list={list} />
       <p className="t-caption">
         {t("lists.head.facts", {
           type: t(RECORD_TYPE_LABEL[list.entity_type]),
@@ -139,6 +142,31 @@ function ListHead({ list }: Readonly<{ list: List }>) {
         </div>
       )}
     </header>
+  );
+}
+
+/**
+ * What a Live List selects, as one sentence, once the vocabulary names its
+ * fields: a bare count cannot finish "where …". A Shortlist has no filter, and
+ * a definition this page cannot read says nothing rather than something wrong.
+ */
+function ListFilterLine({ list }: Readonly<{ list: List }>) {
+  const t = useT();
+  const words = useSentenceWords();
+  const live = list.list_type === "dynamic";
+  const vocabulary = useFilterVocabulary(list.entity_type, live);
+  const tree = live ? decode(list.definition) : null;
+  const fields = vocabulary.data?.fields;
+  if (tree === null || fields === undefined) {
+    return null;
+  }
+  return (
+    <p className="t-caption">
+      {t("lists.filterLine", {
+        records: t(RECORD_TYPE_LABEL[list.entity_type]),
+        sentence: filterSentence(rootGroup(tree), fields, words),
+      })}
+    </p>
   );
 }
 

@@ -25,6 +25,7 @@ import {
   liveHistory,
   liveList,
   liveListing,
+  liveVocabulary,
   MEMBER_ID,
   members,
   SHORTLIST_ID,
@@ -263,6 +264,65 @@ describe("an opened list", () => {
     expect(
       screen.getByText("Since your last visit: 3 joined, 1 left"),
     ).toBeInTheDocument();
+  });
+
+  it("reads a Live List's filter as one sentence under its purpose", async () => {
+    installFetchStub({
+      "GET /me": listsMe(true),
+      [`GET /lists/${LIVE_ID}`]: () => jsonResponse(liveList),
+      [`POST /lists/${LIVE_ID}/visit`]: visitAnswer(LIVE_ID),
+      [`GET /lists/${LIVE_ID}/history`]: () =>
+        jsonResponse({ data: [], page: { has_more: false } }),
+      "GET /companies": () =>
+        jsonResponse({ data: members, page: { has_more: false } }),
+      "GET /filters/vocabulary": () => jsonResponse(liveVocabulary),
+    });
+    page(LIVE_ID);
+    const line = await screen.findByText(
+      "Filter: Companies where Industry is Manufacturing and last touch is more than 45 days ago",
+    );
+    expect(line.previousElementSibling).toHaveTextContent(
+      liveList.purpose ?? "",
+    );
+  });
+
+  it("says nothing of a Live List's filter until the vocabulary can name its fields", async () => {
+    installFetchStub({
+      "GET /me": listsMe(true),
+      [`GET /lists/${LIVE_ID}`]: () => jsonResponse(liveList),
+      [`POST /lists/${LIVE_ID}/visit`]: visitAnswer(LIVE_ID),
+      [`GET /lists/${LIVE_ID}/history`]: () =>
+        jsonResponse({ data: [], page: { has_more: false } }),
+      "GET /companies": () =>
+        jsonResponse({ data: members, page: { has_more: false } }),
+      "GET /filters/vocabulary": () => new Promise<Response>(() => {}),
+    });
+    page(LIVE_ID);
+    expect(await screen.findByText(liveList.purpose ?? "")).toBeInTheDocument();
+    expect(screen.queryByText(/^Filter: /)).toBeNull();
+  });
+
+  it("gives a Shortlist no Filter line and reads no vocabulary for one", async () => {
+    let vocabularyReads = 0;
+    installFetchStub({
+      "GET /me": listsMe(true),
+      [`GET /lists/${SHORTLIST_ID}`]: () => jsonResponse(shortlist),
+      [`POST /lists/${SHORTLIST_ID}/visit`]: visitAnswer(SHORTLIST_ID),
+      [`GET /lists/${SHORTLIST_ID}/history`]: () =>
+        jsonResponse({ data: history, page: { has_more: false } }),
+      "GET /companies": () =>
+        jsonResponse({ data: members, page: { has_more: false } }),
+      [`GET /lists/${SHORTLIST_ID}/members`]: listingAnswer(chosenListing),
+      "GET /filters/vocabulary": () => {
+        vocabularyReads++;
+        return jsonResponse(vocabulary);
+      },
+    });
+    page(SHORTLIST_ID);
+    expect(await screen.findByText("MiTek")).toBeInTheDocument();
+    expect(screen.getByText(shortlist.purpose ?? "")).toBeInTheDocument();
+    expect(screen.queryByText(/^Filter: /)).toBeNull();
+    expect(vocabularyReads).toBe(0);
   });
 
   it("says a Live List not checked yet records changes from its first check", async () => {

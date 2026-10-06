@@ -71,7 +71,11 @@ describe("the shared views", () => {
     const live = (await screen.findByText(liveList.name)).closest(
       "tr",
     ) as HTMLElement;
-    expect(within(live).getByText(en["lists.kind.live"])).toBeInTheDocument();
+    // A kind is a fact, so its badge is neutral: the accent is for a press.
+    expect(
+      within(live).getByText(en["lists.kind.live"]).closest(".badge")
+        ?.className,
+    ).toBe("badge");
     expect(within(live).getByText("42")).toBeInTheDocument();
     expect(within(live).getByText("Lena Vogt")).toBeInTheDocument();
     const chosen = screen
@@ -81,6 +85,10 @@ describe("the shared views", () => {
       within(chosen).getByText(en["lists.health.ownerless"]),
     ).toBeInTheDocument();
     expect(within(chosen).getByText(en["lists.noSteward"])).toBeInTheDocument();
+    expect(
+      within(chosen).getByText(en["lists.kind.shortlist"]).closest(".badge")
+        ?.className,
+    ).toBe("badge");
   });
 
   it("shows what a Live List gained and lost since the last visit, and nothing on a quiet or first-visited list", async () => {
@@ -109,7 +117,9 @@ describe("the shared views", () => {
     const live = (await screen.findByText(liveList.name)).closest(
       "tr",
     ) as HTMLElement;
-    expect(within(live).getByText("+3 / −1")).toBeInTheDocument();
+    expect(within(live).getByText("+3 / −1").closest(".badge")?.className).toBe(
+      "badge",
+    );
     expect(
       within(live).getByText("3 joined and 1 left since your last visit"),
     ).toBeInTheDocument();

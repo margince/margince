@@ -23,6 +23,7 @@ import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import "./filterbuilder.css";
 import { fieldLabel, groupFields, type VocabularyField } from "./filterdata";
+import { operatorKey } from "./filtersentence";
 import { ValueControl } from "./filtervalue";
 import {
   addToGroup,
@@ -38,43 +39,6 @@ import {
   replaceNode,
   toggleJoin,
 } from "./segmentpredicate";
-
-/**
- * Which message names each operator, for a field whose comparisons read as dates.
- *
- * Keyed by reading rather than by symbol: `gte` is "on or after" a date and "at
- * least" a quantity, and one label serving both would send a reader looking for a
- * calendar on a score.
- */
-const OPERATOR_KEY: Record<FilterOp, MessageKey> = {
-  eq: "filters.op.eq",
-  neq: "filters.op.neq",
-  gt: "filters.op.afterDate",
-  gte: "filters.op.onOrAfterDate",
-  lt: "filters.op.beforeDate",
-  lte: "filters.op.onOrBeforeDate",
-  in: "filters.op.in",
-  contains: "filters.op.contains",
-  exists: "filters.op.exists",
-};
-
-/** The four whose reading changes on a quantity. */
-const NUMERIC_OPERATOR_KEY: Partial<Record<FilterOp, MessageKey>> = {
-  gt: "filters.op.moreThan",
-  gte: "filters.op.atLeast",
-  lt: "filters.op.lessThan",
-  lte: "filters.op.atMost",
-};
-
-export function operatorKey(
-  op: FilterOp,
-  type: VocabularyField["type"],
-): MessageKey {
-  if (type === "number" || type === "currency") {
-    return NUMERIC_OPERATOR_KEY[op] ?? OPERATOR_KEY[op];
-  }
-  return OPERATOR_KEY[op];
-}
 
 /**
  * The value a clause starts with when its field or operator changes.

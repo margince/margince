@@ -7,9 +7,8 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, describe, expect, it } from "vitest";
-
+import { moneyText } from "./filtersentence";
 import { ValueControl } from "./filtervalue";
-import { moneyText } from "./listexplain";
 import type { FilterOp, LeafValue } from "./segmentpredicate";
 import { StoryProviders } from "./story-utils";
 

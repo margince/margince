@@ -24,6 +24,7 @@ import {
   fieldLabel,
   type VocabularyField,
 } from "./filterdata";
+import { addProposal } from "./filterproposal";
 import { decode, isGroup, type Node } from "./segmentpredicate";
 
 export type FilterProposal = components["schemas"]["FilterProposal"];
@@ -52,21 +53,6 @@ export function useFilterProposal() {
       return data;
     },
   });
-}
-
-/**
- * The proposed tree added to the one on screen: its clauses join the root when
- * both combine the same way, and arrive as one group of their own otherwise.
- */
-export function addProposal(current: Node, proposed: Node): Node {
-  if (!isGroup(current)) {
-    return current;
-  }
-  const added =
-    isGroup(proposed) && proposed.join === current.join
-      ? proposed.children
-      : [proposed];
-  return { ...current, children: [...current.children, ...added] };
 }
 
 function isEmptyTree(tree: Node): boolean {
