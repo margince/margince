@@ -47,6 +47,7 @@ import {
   type ChosenFile,
   useCarriageBlocks,
 } from "./composeattachments";
+import { ConversationFold } from "./composeconversation";
 import { DraftBand, RewriteRow } from "./composedraftband";
 import {
   AccountDraftContext,
@@ -2320,20 +2321,9 @@ export function ComposeModal({
               : "compose.sendConfirmTitle",
         )}
         tier="confirm"
-        // The rep is about to send irreversibly, so the body they are
-        // confirming has to be readable at a glance rather than through a
-        // five-line porthole — and the Send button has to sit above the fold,
-        // not below a scroll. A reply takes the split width because it carries
-        // a second column: the conversation it is answering.
-        size={splitColumns ? "split" : "wide"}
-        // A DRAWER for every mail on an account, whether it starts a
-        // conversation or answers one, so the record it is about stays on
-        // screen beside it. It used to turn on `groundable`, which is false as
-        // soon as the account has earlier mail — so the same button gave a
-        // drawer on a quiet account and a centred box on a busy one, and an
-        // account whose first message was still loading changed shape under
-        // the reader mid-open.
-        placement={asDrawer ? "right" : "center"}
+        // A reading drawer for every mail: the record stays in view beside it,
+        // and the body reads at a glance before an irreversible send.
+        intent={asDrawer ? "drawer-reading" : "form"}
         confirmLabel={t(scheduling ? "compose.schedule" : "compose.send")}
         // The button stays live with fields outstanding. Grey, it refused
         // without saying what for, and the reader was left comparing the form
@@ -2432,31 +2422,35 @@ export function ComposeModal({
           ref={fields}
           className={splitColumns ? "compose-split" : undefined}
         >
-          {showChoices && (
-            <ConversationChoices
-              conversations={recent.conversations}
-              pending={recent.pending}
-              failed={recent.failed}
-              onRetry={recent.retry}
-              onChoose={selectMessage}
-            />
-          )}
-          {showConversation && (
-            <ThreadPane
-              messages={conversation.messages}
-              pending={conversation.pending || anchorUnresolved}
-              failed={conversation.failed || anchorRead.failed}
-              onRetry={
-                anchorRead.failed ? anchorRead.retry : conversation.retry
-              }
-              viewerUserId={viewerId}
-              nameOf={nameOf}
-              named
-              onLeave={() => selectMessage(null)}
-              selectedId={answering}
-              onSelect={selectMessage}
-              disabled={send.isPending || rejectionInFlight}
-            />
+          {splitColumns && (
+            <ConversationFold choosing={showChoices}>
+              {showChoices && (
+                <ConversationChoices
+                  conversations={recent.conversations}
+                  pending={recent.pending}
+                  failed={recent.failed}
+                  onRetry={recent.retry}
+                  onChoose={selectMessage}
+                />
+              )}
+              {showConversation && (
+                <ThreadPane
+                  messages={conversation.messages}
+                  pending={conversation.pending || anchorUnresolved}
+                  failed={conversation.failed || anchorRead.failed}
+                  onRetry={
+                    anchorRead.failed ? anchorRead.retry : conversation.retry
+                  }
+                  viewerUserId={viewerId}
+                  nameOf={nameOf}
+                  named
+                  onLeave={() => selectMessage(null)}
+                  selectedId={answering}
+                  onSelect={selectMessage}
+                  disabled={send.isPending || rejectionInFlight}
+                />
+              )}
+            </ConversationFold>
           )}
           <div className="compose-fields">
             <SavedDraftNotices draft={savedDraft} />

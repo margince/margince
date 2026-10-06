@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import { OwnDomainsCard } from "./own-domains";
 import {
   installFetchStub,
@@ -102,4 +103,15 @@ export const PopulatedPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
   render: story([ADMIN_ENTERED, OBSERVED], MANAGER),
+};
+
+export const Adding: Story = {
+  render: story([ADMIN_ENTERED, OBSERVED], MANAGER),
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(
+      await body.findByRole("button", { name: "Add domain" }),
+    );
+    await body.findByRole("dialog");
+  },
 };

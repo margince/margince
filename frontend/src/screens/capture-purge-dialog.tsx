@@ -43,8 +43,10 @@ export function PurgeDialog({
   // then asks for the real thing.
   const previewed = outcome?.preview === true;
 
+  // Not ConfirmModal: its pair always offers a confirm, and the receipt after
+  // the purge has nothing left to confirm.
   return (
-    <Modal open onClose={onClose} labelledBy={headingId}>
+    <Modal open onClose={onClose} labelledBy={headingId} intent="confirm">
       <Heading size="large" id={headingId} className="t-h2 modal-title">
         {t("capturePurge.title", { value: ruleValue })}
       </Heading>
@@ -60,7 +62,9 @@ export function PurgeDialog({
             {problemMessageOf(purge.error, t)}
           </Callout>
         )}
-        <div className="form-actions">
+      </div>
+      <div className="actions">
+        <span className="actions-pair">
           <Button type="button" onClick={onClose}>
             {previewed || !outcome
               ? t("create.cancel")
@@ -86,7 +90,7 @@ export function PurgeDialog({
               {t("capturePurge.confirm")}
             </Button>
           )}
-        </div>
+        </span>
       </div>
     </Modal>
   );

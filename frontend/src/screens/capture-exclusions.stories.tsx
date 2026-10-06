@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import { CaptureExclusionsCard } from "./capture-exclusions";
 import {
   installFetchStub,
@@ -84,4 +85,15 @@ export const PopulatedPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
   render: story([MINE, EVERYONE], OPS),
+};
+
+export const Excluding: Story = {
+  render: story([MINE, EVERYONE], OPS),
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(
+      await body.findByRole("button", { name: "New exclusion" }),
+    );
+    await body.findByRole("dialog");
+  },
 };
