@@ -9,7 +9,10 @@ package integration
 // engines: a create's duplicate pair and tag offer, and the verbs a click sends.
 
 import (
+	"encoding/json"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/modules/agents"
 )
 
 type createdWithFollowups struct {
@@ -83,10 +86,16 @@ func TestACardsNotTheSameDismissesThePairAndItsUndoReopensIt(t *testing.T) {
 	_, second := seedAFiledPair(t, invoke, "+4930900000843")
 	candidate := second.DuplicateCandidates[0].CandidateID
 
+	dismissedOut := mustInvoke(t, invoke, "decide_duplicate",
+		`{"candidate_id":"`+candidate+`","decision":"not_the_same"}`)
+	if spec, ok := q.registry.Spec("decide_duplicate"); !ok {
+		t.Fatal("decide_duplicate is not registered")
+	} else if defect := agents.ResultDefect(spec.OutputSchema, json.RawMessage(dismissedOut)); defect != "" {
+		t.Fatalf("decide_duplicate answered %s, which does not keep its own schema: %s", dismissedOut, defect)
+	}
 	dismissed := answered[struct {
 		Disposition string `json:"disposition"`
-	}](t, mustInvoke(t, invoke, "decide_duplicate",
-		`{"candidate_id":"`+candidate+`","decision":"not_the_same"}`))
+	}](t, dismissedOut)
 	if dismissed.Disposition != "not_a_duplicate" {
 		t.Fatalf("after not_the_same the pair is %q, want not_a_duplicate", dismissed.Disposition)
 	}
