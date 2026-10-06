@@ -19,7 +19,7 @@ const worklistAgeOutDays = 30
 
 // worklistAgeOutClause keeps a row unless it is a task due more than
 // worklistAgeOutDays before asOf. A row still pinned in effect by the user that
-// pinner names stays regardless, because a pin is a person keeping it on purpose.
+// pinner names stays regardless, because a pin is someone keeping it on purpose.
 //
 // pinner is a SQL expression, not a value: the reader's own placeholder for the
 // day's page, the assignee column for the team board that counts their day.
