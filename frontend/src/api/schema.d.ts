@@ -11236,12 +11236,13 @@ export interface paths {
          * @description The locations a `gemini_vertex` binding may name, asked of Google with the stored
          *     service-account key's project, plus the `eu` and `us` multi-regions and `global` when
          *     Google's list omits them. A metadata call on Google's global host; it carries no customer
-         *     data, so it is answered under every profile.
+         *     data, so it is asked under every profile except `sovereign`.
          *
          *     `resident` and `jurisdiction` are this build's residency policy, never Google's words: a
          *     location Google adds tomorrow appears as an option and is not resident until this build
-         *     says so. Every location is listed and selectable under every profile; `resident` is
-         *     information, not a gate.
+         *     says so. Under `eu_hosted` and `cloud_frontier` every location is listed and selectable;
+         *     `resident` is information, not a gate. Under `sovereign` no list is served at all
+         *     (`profile_forbids`), because asking Google is cloud egress.
          *
          *     A vendor that cannot be asked is NOT an error — the response is 200 with `unavailable`.
          *     Every vendor but `gemini_vertex` answers `not_published`: it has no location to choose.
