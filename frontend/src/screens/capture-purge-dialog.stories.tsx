@@ -18,7 +18,7 @@ const PREVIEW = {
     held: 1,
     under_statute: 4,
     under_request: 1,
-    under_undetermined_floor: 0,
+    under_undetermined_floor: 1,
     statutory_years: 6,
     statutory_from_year_end: true,
   },

@@ -89,6 +89,7 @@ export const Beside: Story = {
 export const Folded: Story = {
   render: () => <Reply />,
   globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
   play: async () => {
     const dialog = within(await screen.findByRole("dialog"));
     await userEvent.click(

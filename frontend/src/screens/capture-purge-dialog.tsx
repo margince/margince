@@ -65,7 +65,7 @@ export function PurgeDialog({
       </div>
       <div className="actions">
         <span className="actions-pair">
-          <Button type="button" onClick={onClose}>
+          <Button type="button" onClick={onClose} disabled={purge.isPending}>
             {previewed || !outcome
               ? t("create.cancel")
               : t("capturePurge.done")}
@@ -74,7 +74,7 @@ export function PurgeDialog({
             <Button
               type="button"
               variant="primary"
-              disabled={purge.isPending}
+              pending={purge.isPending}
               onClick={() => purge.mutate({ id: ruleId, preview: true })}
             >
               {t("capturePurge.preview")}
@@ -84,7 +84,7 @@ export function PurgeDialog({
             <Button
               type="button"
               variant="danger"
-              disabled={purge.isPending}
+              pending={purge.isPending}
               onClick={() => purge.mutate({ id: ruleId, preview: false })}
             >
               {t("capturePurge.confirm")}
