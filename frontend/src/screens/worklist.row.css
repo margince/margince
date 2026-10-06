@@ -122,7 +122,7 @@
 .worklist-row-lead > :first-child,
 .worklist-row-pick-slot {
   flex: none;
-  inline-size: var(--space-5);
+  inline-size: var(--space-6);
 }
 
 /* WHAT KIND of work, as the catalog's soft badge: a tint of the tone with its

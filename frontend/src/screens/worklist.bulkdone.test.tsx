@@ -272,6 +272,9 @@ describe("marking the ticked rows done", () => {
     expect(
       (selectBox("Send the retrofit quote") as HTMLInputElement).checked,
     ).toBe(false);
+    expect(
+      (selectBox("Confirm the meeting by Friday") as HTMLInputElement).checked,
+    ).toBe(false);
   });
 });
 
