@@ -9533,15 +9533,17 @@ export const en = {
   "aiTasks.whatItDoes": "{task}: what it does",
   "aiTasks.decisionFirst": "Decision model first",
   "aiTasks.viewCalls": "View calls",
+  "aiTasks.deferral.nowEmbedding":
+    "Refused now: search indexing tries again on its own schedule.",
   "aiTasks.deferral.embedding":
-    "If its provider is down, out of credit or refusing its key, search indexing is refused and tries again on its own schedule.",
+    "When its provider is down, out of credit or refusing its key, search indexing is refused and tries again on its own schedule.",
   "aiTasks.dot.ok": "Answering",
   "aiTasks.dot.bad": "Needs attention",
   "aiTasks.dot.idle": "No recent calls",
   "aiTasks.deferral.background":
-    "If its provider is down, out of credit or refusing its key, this task’s work waits and tries again at the provider’s next check, without using up its attempts.",
+    "When every model this task can use is down, out of credit or refusing its key, its work waits and tries again at the provider’s next check, without using up its attempts.",
   "aiTasks.deferral.interactive":
-    "If its provider is down, out of credit or refusing its key, a request fails at once and asks the user to contact their administrator.",
+    "When every model this task can use is down, out of credit or refusing its key, a request fails at once and asks the user to contact their administrator.",
   "aiTasks.deferral.nowBackground":
     "Waiting now: every model this task can use is blocked.",
   "aiTasks.deferral.nowInteractive":

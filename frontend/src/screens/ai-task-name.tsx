@@ -21,7 +21,7 @@ export function TaskName({
   details?: ReactNode;
 }>) {
   const t = useT();
-  if (!summary && !details) return <span>{name}</span>;
+  if (!summary && details == null) return <span>{name}</span>;
   return (
     <Popover
       className="evmark-trigger"

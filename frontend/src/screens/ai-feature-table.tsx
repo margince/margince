@@ -67,7 +67,9 @@ export function AiFeatureTable({
               const dot = taskDot(row, health, providers);
               return (
                 <span className="ai-task-name" title={row.task}>
-                  {health || providers ? (
+                  {/* Without the lane read an idle dot would claim "no
+                      calls"; a task known to be blocked still says so. */}
+                  {health || dot === "bad" ? (
                     <span
                       className={`ai-health-dot ai-health-dot-${dot}`}
                       title={t(TASK_DOT_LABEL[dot])}

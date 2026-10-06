@@ -78,6 +78,35 @@ describe("taskDot", () => {
     expect(taskDot(feature, rungs(false), undefined)).toBe("bad");
   });
 
+  it("reads the ladder's lane once the decision model's provider is blocked", () => {
+    const deciding: Feature = {
+      ...feature,
+      decision_first: true,
+      decision_candidate: { ...lead, tier: "decide", provider: "jev" },
+    };
+    const lanes = {
+      window_hours: 1,
+      rungs: [
+        {
+          tier: "decide",
+          healthy: false,
+          calls: 3,
+          failures: 3,
+          median_latency_ms: 0,
+        },
+        {
+          tier: "cheap_cloud",
+          healthy: true,
+          calls: 3,
+          failures: 0,
+          median_latency_ms: 800,
+        },
+      ],
+    };
+    expect(taskDot(deciding, lanes, undefined)).toBe("bad");
+    expect(taskDot(deciding, lanes, blocked("jev"))).toBe("ok");
+  });
+
   it("is red for a task waiting on the allowance or bound to nothing", () => {
     expect(
       taskDot({ ...feature, impact: "budget_blocked" }, undefined, undefined),
@@ -118,6 +147,28 @@ describe("a task's details", () => {
     show(ladder, blocked("gemini"));
     const details = await openTaskDetails(user, ladder.display_name);
     expect(details).toHaveTextContent("A blocked provider is skipped");
+    expect(details).not.toHaveTextContent("Waiting now");
+  });
+
+  it("says a blocked decision model is skipped", async () => {
+    const user = userEvent.setup({ delay: null });
+    const deciding: Feature = {
+      ...ladder,
+      decision_first: true,
+      decision_candidate: { ...lead, tier: "decide", provider: "jev" },
+    };
+    show(deciding, blocked("jev"));
+    expect(
+      await openTaskDetails(user, deciding.display_name),
+    ).toHaveTextContent("A blocked provider is skipped");
+  });
+
+  it("says search indexing is refused rather than waiting", async () => {
+    const user = userEvent.setup({ delay: null });
+    const embed = { ...feature, execution_mode: "embedding" };
+    show(embed, blocked("gemini"));
+    const details = await openTaskDetails(user, embed.display_name);
+    expect(details).toHaveTextContent("Refused now");
     expect(details).not.toHaveTextContent("Waiting now");
   });
 

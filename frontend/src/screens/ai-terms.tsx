@@ -39,6 +39,7 @@ export function ModelRef({
   const t = useT();
   return (
     <Popover
+      onHover
       label={
         <>
           <TermChip term="provider">{provider}</TermChip>

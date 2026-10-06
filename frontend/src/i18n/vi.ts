@@ -9305,15 +9305,17 @@ export const vi = {
   "aiTasks.whatItDoes": "{task}: tác vụ này làm gì",
   "aiTasks.decisionFirst": "Mô hình quyết định trước",
   "aiTasks.viewCalls": "Xem lượt gọi",
+  "aiTasks.deferral.nowEmbedding":
+    "Đang bị từ chối: việc lập chỉ mục tìm kiếm sẽ tự thử lại theo lịch riêng.",
   "aiTasks.deferral.embedding":
-    "Nếu nhà cung cấp ngừng hoạt động, hết tín dụng hoặc từ chối khóa, việc lập chỉ mục tìm kiếm bị từ chối và tự thử lại theo lịch riêng.",
+    "Khi nhà cung cấp ngừng hoạt động, hết tín dụng hoặc từ chối khóa, việc lập chỉ mục tìm kiếm bị từ chối và tự thử lại theo lịch riêng.",
   "aiTasks.dot.ok": "Đang trả lời",
   "aiTasks.dot.bad": "Cần chú ý",
   "aiTasks.dot.idle": "Không có lượt gọi gần đây",
   "aiTasks.deferral.background":
-    "Nếu nhà cung cấp ngừng hoạt động, hết tín dụng hoặc từ chối khóa, công việc của tác vụ này sẽ chờ và thử lại ở lần kiểm tra tiếp theo của nhà cung cấp, không tốn lượt thử.",
+    "Khi mọi mô hình tác vụ này dùng được đều ngừng hoạt động, hết tín dụng hoặc từ chối khóa, công việc của nó sẽ chờ và thử lại ở lần kiểm tra tiếp theo của nhà cung cấp, không tốn lượt thử.",
   "aiTasks.deferral.interactive":
-    "Nếu nhà cung cấp ngừng hoạt động, hết tín dụng hoặc từ chối khóa, yêu cầu sẽ lỗi ngay kèm lời nhắc liên hệ quản trị viên.",
+    "Khi mọi mô hình tác vụ này dùng được đều ngừng hoạt động, hết tín dụng hoặc từ chối khóa, yêu cầu sẽ lỗi ngay kèm lời nhắc liên hệ quản trị viên.",
   "aiTasks.deferral.nowBackground":
     "Đang chờ: mọi mô hình tác vụ này dùng được đều bị chặn.",
   "aiTasks.deferral.nowInteractive":
@@ -9321,7 +9323,7 @@ export const vi = {
   "aiTasks.deferral.skipping":
     "Nhà cung cấp bị chặn sẽ được bỏ qua, và mô hình kế tiếp sẽ trả lời.",
   "aiTasks.embeddingsEdit":
-    "Tìm kiếm và truy xuất không có mức suy luận hay thời gian chờ để đặt. Đổi nhà cung cấp và mô hình ở dòng embeddings trong Các tầng mô hình.",
+    "Tìm kiếm và truy xuất không có mức suy nghĩ hay thời gian chờ để đặt. Đổi nhà cung cấp và mô hình ở dòng embeddings trong Các tầng mô hình.",
   "workingHours.title": "Khi nào bạn nhận lịch hẹn",
   "workingHours.sub":
     "Chỉ của riêng bạn. Không ai đặt giúp bạn, và bạn cũng không đặt cho ai.",

@@ -55,21 +55,30 @@ function deferredNow(row: Feature, blocked: readonly HealthEntry[]): boolean {
   );
 }
 
+function decisionBlocked(row: Feature, blocked: readonly HealthEntry[]) {
+  const provider = row.decision_candidate?.provider;
+  return blocked.some((entry) => entry.provider === provider);
+}
+
 /** The row's one-glance state, drawn as the Model tiers card draws a lane's. */
 export function taskDot(
   row: Feature,
   health: Health | undefined,
   providers: ProviderHealth | undefined,
 ): TaskDot {
+  const blocked = blockedOnChain(row, providers);
   if (
     row.impact === "budget_blocked" ||
     row.impact === "unconfigured" ||
-    deferredNow(row, blockedOnChain(row, providers))
+    deferredNow(row, blocked)
   ) {
     return "bad";
   }
+  // A blocked decision model is skipped, so the ladder is what answers.
+  const startsOnDecision =
+    row.decision_first === true && !decisionBlocked(row, blocked);
   const rung = health
-    ? laneRung(health, row.leading_tier, row.decision_first === true)
+    ? laneRung(health, row.leading_tier, startsOnDecision)
     : undefined;
   if (!rung) return "idle";
   return rung.healthy ? "ok" : "bad";
@@ -144,7 +153,7 @@ const OUTAGE_RULE = {
   },
   embedding: {
     rule: "aiTasks.deferral.embedding",
-    now: "aiTasks.deferral.nowBackground",
+    now: "aiTasks.deferral.nowEmbedding",
   },
 } as const satisfies Record<string, { rule: MessageKey; now: MessageKey }>;
 
@@ -163,7 +172,10 @@ function OutageNote({
   const lead = row.effective_candidates[0]?.provider;
   let now: string | null = null;
   if (deferredNow(row, blocked)) now = t(rule.now);
-  else if (blocked.some((entry) => entry.provider === lead))
+  else if (
+    blocked.some((entry) => entry.provider === lead) ||
+    (row.decision_first === true && decisionBlocked(row, blocked))
+  )
     now = t("aiTasks.deferral.skipping");
   return (
     <>

@@ -22,9 +22,15 @@ Three rules decide every row:
 - **A decision model is tried first and never waited on.** If its call fails,
   the task's own ladder answers.
 
+Each process blocks a provider on what its own calls saw: the API and the
+worker each learn an outage from their own failures. The status they share is
+for display, so Settings → System health lists a provider either one found
+blocked.
+
 Settings → AI models shows it per row: the dot before a task's name turns red
-when every model it can use is blocked, and the name opens what the task does
-in this state. Settings → System health lists the blocked providers.
+when every model on its ladder is blocked — and also while the task waits on the
+allowance or has no model bound — and the name opens what the task does in this
+state.
 
 | Task | Name | Mode | Ladder | Every rung blocked | Decision model |
 | --- | --- | --- | --- | --- | --- |

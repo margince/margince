@@ -9400,15 +9400,17 @@ export const de = {
   "aiTasks.whatItDoes": "{task}: was es tut",
   "aiTasks.decisionFirst": "Zuerst Entscheidungsmodell",
   "aiTasks.viewCalls": "Aufrufe ansehen",
+  "aiTasks.deferral.nowEmbedding":
+    "Gerade abgelehnt: Die Suchindexierung versucht es nach eigenem Zeitplan erneut.",
   "aiTasks.deferral.embedding":
-    "Ist der Anbieter ausgefallen, ohne Guthaben oder lehnt er den Schlüssel ab, wird die Suchindexierung abgelehnt und später nach eigenem Zeitplan erneut versucht.",
+    "Wenn der Anbieter ausgefallen ist, kein Guthaben mehr hat oder den Schlüssel ablehnt, wird die Suchindexierung abgelehnt und nach eigenem Zeitplan erneut versucht.",
   "aiTasks.dot.ok": "Antwortet",
   "aiTasks.dot.bad": "Braucht Aufmerksamkeit",
-  "aiTasks.dot.idle": "Keine Aufrufe zuletzt",
+  "aiTasks.dot.idle": "Keine Aufrufe in letzter Zeit",
   "aiTasks.deferral.background":
-    "Ist der Anbieter ausgefallen, ohne Guthaben oder lehnt er den Schlüssel ab, wartet die Arbeit dieser Aufgabe und versucht es bei der nächsten Prüfung des Anbieters erneut, ohne Versuche zu verbrauchen.",
+    "Wenn jedes Modell, das diese Aufgabe nutzen kann, ausgefallen ist, kein Guthaben mehr hat oder den Schlüssel ablehnt, wartet ihre Arbeit und versucht es bei der nächsten Prüfung des Anbieters erneut, ohne Versuche zu verbrauchen.",
   "aiTasks.deferral.interactive":
-    "Ist der Anbieter ausgefallen, ohne Guthaben oder lehnt er den Schlüssel ab, schlägt eine Anfrage sofort fehl und bittet, die Administration zu kontaktieren.",
+    "Wenn jedes Modell, das diese Aufgabe nutzen kann, ausgefallen ist, kein Guthaben mehr hat oder den Schlüssel ablehnt, schlägt eine Anfrage sofort fehl, und du wirst gebeten, dich an deine Admins zu wenden.",
   "aiTasks.deferral.nowBackground":
     "Wartet gerade: Jedes Modell, das diese Aufgabe nutzen kann, ist gesperrt.",
   "aiTasks.deferral.nowInteractive":
@@ -9416,7 +9418,7 @@ export const de = {
   "aiTasks.deferral.skipping":
     "Ein gesperrter Anbieter wird übersprungen, und das nächste Modell antwortet.",
   "aiTasks.embeddingsEdit":
-    "Suche und Abruf hat keine Denkstufe und keine Zeitlimits. Anbieter und Modell änderst du in der Zeile „embeddings“ unter Modellstufen.",
+    "Suche und Abruf haben keine Denkstufe und keine Zeitlimits. Anbieter und Modell änderst du in der Zeile „embeddings“ unter Modellstufen.",
   "workingHours.title": "Buchbare Zeiten",
   "workingHours.sub":
     "Persönliche Einstellung. Nur du legst deine Zeiten fest.",
