@@ -199,7 +199,14 @@ for (const view of VIEWS) {
 test("the duplicate card asks its host for exactly the tools it declares and reaches no network", async ({
   browser,
 }) => {
-  const html = await readFile("dist/mcp-apps/create-followups.html", "utf8");
+  const html = await readFile(
+    "dist/mcp-apps/create-followups.html",
+    "utf8",
+  ).catch(() => {
+    throw new Error(
+      "dist/mcp-apps/create-followups.html is missing — this lane runs after `pnpm build`",
+    );
+  });
   const context = await browser.newContext({ serviceWorkers: "block" });
   const requests: string[] = [];
   context.on("request", (r) => requests.push(r.url()));

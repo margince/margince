@@ -12,11 +12,13 @@
 // `go:embed` directive binds to a directory layout.
 //
 // WHAT A VIEW IS, in this tree's terms: a second RENDERER for an answer a tool
-// already gives in text. It owns no data path, holds no credential, and calls
-// nothing. Every fact it displays arrived in the tool result the host pushed
-// into it, which is why this package has no dependency on a store, a seam, or a
-// principal — it composes documents, and the documents are the same for every
-// caller.
+// already gives in text, and for a choice card the place its answer is clicked.
+// It owns no data path and holds no credential. Every fact it displays arrived in
+// the tool result the host pushed into it, and a click asks the HOST to run one
+// of the tools the view declares in actions.json, under the connected
+// assistant's own passport. That is why this package has no dependency on a
+// store, a seam, or a principal: it composes documents, and the documents are the
+// same for every caller.
 //
 // WHY THE DOCUMENTS ARE SELF-CONTAINED. Each is built with its stylesheet and
 // its scripts INLINE, and declares an empty origin allowlist. A host builds its

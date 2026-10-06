@@ -306,3 +306,23 @@ describe("a host call that never answered", () => {
     expect(root.textContent).toContain("may have gone through");
   });
 });
+
+describe("a create that filed more than one pair", () => {
+  it("settles every pair once the created record is merged", async () => {
+    const data = createFollowupsFixture.data as {
+      duplicate_candidates: Array<Record<string, unknown>>;
+    };
+    const second = {
+      ...data.duplicate_candidates[0],
+      candidate_id: "0195c3a0-0000-7000-8000-0000000000ab",
+      other_record_id: "0195c3a0-0000-7000-8000-000000000009",
+    };
+    const root = mount({
+      ...data,
+      duplicate_candidates: [...data.duplicate_candidates, second],
+    });
+    await press(root, "Merge into the existing record");
+    expect(labels(root)).toEqual([]);
+    expect(calls.filter((c) => c.tool === "merge_records")).toHaveLength(1);
+  });
+});

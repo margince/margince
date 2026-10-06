@@ -144,7 +144,7 @@ function draw(root: HTMLElement, data: unknown, warnings: Warning[]): void {
           : `${name} looks like a record already on file.`,
       ),
       evidenceTable(candidate),
-      choices(candidate, recordType, createdID, outcomes, again),
+      choices(candidate, candidates, recordType, createdID, outcomes, again),
     );
     card.appendChild(body);
   }
@@ -154,6 +154,7 @@ function draw(root: HTMLElement, data: unknown, warnings: Warning[]): void {
 
 function choices(
   candidate: Candidate,
+  all: Candidate[],
   recordType: string,
   createdID: string,
   outcomes: Map<string, Outcome>,
@@ -162,7 +163,10 @@ function choices(
   const outcome = outcomes.get(candidate.id);
   const settle = (next: Outcome | undefined) => {
     if (next === undefined) outcomes.delete(candidate.id);
-    else outcomes.set(candidate.id, next);
+    else if (next.kind === "merged") {
+      // The created record is gone once merged, so no sibling pair can act on it.
+      for (const each of all) outcomes.set(each.id, next);
+    } else outcomes.set(candidate.id, next);
     again();
   };
   // A call the host never answered may have landed, so no retry is offered:

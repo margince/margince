@@ -378,6 +378,9 @@ func TestSiblingVerbsAgreeOnTheIDTheyName(t *testing.T) {
 //   - from, to — forecast_movement's two periods.
 //   - approval_id — the staged call being redeemed, not the record it touches.
 //
+// candidate_id is the one entry that is no record at all: it names the
+// review-queue pair a dedupe verb settles.
+//
 // A DECLARED FIXTURE rather than a waiver, and the distinction is the one
 // gatekit draws. A waiver is a ratified COST asked about an offender, so it
 // decays when the offence goes; this map is asked BEFORE the subject is known —

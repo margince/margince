@@ -10,9 +10,11 @@ package integration
 
 import (
 	"encoding/json"
+	"errors"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
 type createdWithFollowups struct {
@@ -86,11 +88,13 @@ func TestACardsNotTheSameDismissesThePairAndItsUndoReopensIt(t *testing.T) {
 	_, second := seedAFiledPair(t, invoke, "+4930900000843")
 	candidate := second.DuplicateCandidates[0].CandidateID
 
+	spec, registered := q.registry.Spec("decide_duplicate")
+	if !registered {
+		t.Fatal("decide_duplicate is not registered")
+	}
 	dismissedOut := mustInvoke(t, invoke, "decide_duplicate",
 		`{"candidate_id":"`+candidate+`","decision":"not_the_same"}`)
-	if spec, ok := q.registry.Spec("decide_duplicate"); !ok {
-		t.Fatal("decide_duplicate is not registered")
-	} else if defect := agents.ResultDefect(spec.OutputSchema, json.RawMessage(dismissedOut)); defect != "" {
+	if defect := agents.ResultDefect(spec.OutputSchema, json.RawMessage(dismissedOut)); defect != "" {
 		t.Fatalf("decide_duplicate answered %s, which does not keep its own schema: %s", dismissedOut, defect)
 	}
 	dismissed := answered[struct {
@@ -99,8 +103,8 @@ func TestACardsNotTheSameDismissesThePairAndItsUndoReopensIt(t *testing.T) {
 	if dismissed.Disposition != "not_a_duplicate" {
 		t.Fatalf("after not_the_same the pair is %q, want not_a_duplicate", dismissed.Disposition)
 	}
-	if _, err := invoke("decide_duplicate", `{"candidate_id":"`+candidate+`","decision":"not_the_same"}`); err == nil {
-		t.Fatal("a second dismissal of a settled pair succeeded; it must be a conflict")
+	if _, err := invoke("decide_duplicate", `{"candidate_id":"`+candidate+`","decision":"not_the_same"}`); !errors.Is(err, apperrors.ErrConflict) {
+		t.Fatalf("a second dismissal of a settled pair answered %v, want a conflict", err)
 	}
 
 	reopened := answered[struct {

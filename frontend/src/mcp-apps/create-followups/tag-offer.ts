@@ -150,8 +150,8 @@ async function accept(
       return;
     }
     tagID = asText(asRecord(made.data).tag_id);
-    state = { ...state, tagID };
   }
+  const held = { ...state, tagID };
   const applied = await callServerTool("apply_tag", {
     ...record,
     tag_id: tagID,
@@ -160,7 +160,7 @@ async function accept(
     applied.ok
       ? { phase: "applied", tagID }
       : {
-          ...failure(state, applied),
+          ...failure(held, applied),
           phase: applied.unknown === true ? "unknown" : "coined",
         },
   );

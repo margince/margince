@@ -193,13 +193,16 @@ var restCommands = map[string]func(pol agentPolicy, deps restCommandDeps, r *htt
 	opApplyTag: applyTagCommand,
 	// removeTag binds to the same subject applyTag does — the tag — so it
 	// resolves the same command rather than a near-copy of it.
-	opRemoveTag:              applyTagCommand,
-	opAddOfferLineItem:       addOfferLineItemCommand,
+	opRemoveTag:           applyTagCommand,
+	opAddOfferLineItem:    addOfferLineItemCommand,
+	opUpdateOfferLineItem: updateOfferLineItemCommand,
+	opRemoveOfferLineItem: removeOfferLineItemCommand,
+	"createOffer":         createOfferCommand,
+
+	// The two review-queue verbs (commanddedupe.go): auto-execute, and filed
+	// here for the reason the group above is.
 	"disposeDedupeCandidate": dismissDuplicateCommand,
 	"undoDedupeDisposition":  reopenDuplicateCommand,
-	opUpdateOfferLineItem:    updateOfferLineItemCommand,
-	opRemoveOfferLineItem:    removeOfferLineItemCommand,
-	"createOffer":            createOfferCommand,
 
 	// The fourteen single-purpose commands over sixteen routes
 	// (agentcommandsend.go, agentcommandlifecycle.go, agentcommandrecord.go,

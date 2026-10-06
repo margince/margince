@@ -16,8 +16,8 @@ package agents
 import (
 	"context"
 	"fmt"
-	"github.com/margince/margince/backend/internal/modules/agents/apps"
 
+	"github.com/margince/margince/backend/internal/modules/agents/apps"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )

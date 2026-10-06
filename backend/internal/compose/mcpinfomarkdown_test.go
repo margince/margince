@@ -157,7 +157,7 @@ func writeMCPInfoIndex(page *strings.Builder, tools []mcpToolEntry, resources []
 			mark = "yes"
 		}
 		view := ""
-		if tool.Meta.UI != nil {
+		if tool.Meta.UI != nil && tool.Meta.UI.ResourceURI != "" {
 			view = "[`" + tool.Meta.UI.ResourceURI + "`](#" + anchor(viewNameOf(tool.Meta.UI.ResourceURI)) + ")"
 		}
 		fmt.Fprintf(page, "| [`%s`](#%s) | %s | %s | %s | %s |\n",
@@ -193,7 +193,7 @@ func writeMCPInfoTools(page *strings.Builder, tools []mcpToolEntry) {
 			fmt.Fprintf(page, "**%s**\n\n", tool.Title)
 		}
 		page.WriteString(verbatimBlock(tool.Description) + "\n")
-		if tool.Meta.UI != nil {
+		if tool.Meta.UI != nil && tool.Meta.UI.ResourceURI != "" {
 			fmt.Fprintf(page, "Renders its result in [`%s`](#%s), visible to %s.\n\n",
 				tool.Meta.UI.ResourceURI, anchor(viewNameOf(tool.Meta.UI.ResourceURI)),
 				"`"+strings.Join(tool.Meta.UI.Visibility, "`, `")+"`")

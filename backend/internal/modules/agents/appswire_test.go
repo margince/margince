@@ -590,13 +590,19 @@ func TestAToolNoViewActsThroughIsListedModelOnly(t *testing.T) {
 	registry.Register(plainTool{})
 
 	offered := d.toolList(agentHolding(principal.ScopeRead), framing{modern: true, apps: true})
-	plain, _ := listedNamed(offered, "read_plain")
+	plain, offeredAtAll := listedNamed(offered, "read_plain")
+	if !offeredAtAll {
+		t.Fatal("the tool was not listed for a client offered views")
+	}
 	if ui := uiMeta(t, plain); ui == nil || len(ui.Visibility) != 1 || ui.Visibility[0] != mcp.VisibilityModel || ui.ResourceURI != "" {
 		t.Errorf("a tool no view acts through is not model-only: %#v", ui)
 	}
 
 	declined := d.toolList(agentHolding(principal.ScopeRead), framing{modern: true, apps: false})
-	plain, _ = listedNamed(declined, "read_plain")
+	plain, declinedListed := listedNamed(declined, "read_plain")
+	if !declinedListed {
+		t.Fatal("the tool was not listed for a client that declined views")
+	}
 	if _, carried := plain[fieldMeta]; carried {
 		t.Error("a client that declined views was sent audience metadata")
 	}

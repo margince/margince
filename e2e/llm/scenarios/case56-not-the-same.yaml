@@ -8,8 +8,9 @@
 #
 # WHAT IS HELD: the dismissal is made with the pair the create reported, by
 # candidate_id, and the answer does not claim the two were merged. merge_records
-# is not in may_call, so a run that folded them together fails by calling a tool
-# the case never permits.
+# is not in may_call and the answer may not report a merge, which
+# must_not_mention below holds; the lane does not fail a run for an extra call
+# by itself.
 name: case56_not_the_same
 criteria: [1]
 

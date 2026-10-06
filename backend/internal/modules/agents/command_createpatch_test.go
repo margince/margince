@@ -72,8 +72,7 @@ func TestCreateRecordStageInfoRefusesARecordTypeItCannotWrite(t *testing.T) {
 func TestCreateRecordStageInfoAcceptsAnOfferedTag(t *testing.T) {
 	_, err := createRecord{}.StageInfo(context.Background(),
 		json.RawMessage(`{"record_type":"contact","offer_tag":"K5 Conference 2026","fields":{"full_name":"Ada"}}`))
-	var badArgs *BadArgsError
-	if errors.As(err, &badArgs) {
+	if err != nil {
 		t.Fatalf("staging a create that carries offer_tag answered %v, want the same arguments Handle accepts", err)
 	}
 }

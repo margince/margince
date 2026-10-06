@@ -356,7 +356,8 @@ func (t createRecord) StageInfo(ctx context.Context, in json.RawMessage) (StageI
 	// archiveRecord.StageInfo, command.go), so it converts rather than
 	// restating the fields: a field CreateCommand grows fails to compile here
 	// instead of quietly leaving it unset. offer_tag is accepted here and left
-	// out of the command: an offer is not part of what an approval binds.
+	// out of the command, yet the staging path still stores the full arguments
+	// and hashes every member, so an approval binds the offer too.
 	return StageSubject(ctx, NewCreateCall(t.language, CreateCommand(struct {
 		RecordType string          `json:"record_type"`
 		Fields     json.RawMessage `json:"fields"`

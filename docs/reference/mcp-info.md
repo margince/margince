@@ -56,88 +56,88 @@ descriptions and input schemas are what each step pays for.
 
 | Tool | What it is for | Read-only | View | Size |
 |---|---|:-:|---|---:|
-| [`advance_deal`](#advance_deal) | Advance a deal to a stage |  | [``](#_view) | 3.1 KB |
-| [`advance_project_phase`](#advance_project_phase) | Move a project to a phase |  | [``](#_view) | 2.8 KB |
-| [`annotate_brief`](#annotate_brief) | Write findings onto the morning brief |  | [``](#_view) | 2.9 KB |
+| [`advance_deal`](#advance_deal) | Advance a deal to a stage |  |  | 3.1 KB |
+| [`advance_project_phase`](#advance_project_phase) | Move a project to a phase |  |  | 2.8 KB |
+| [`annotate_brief`](#annotate_brief) | Write findings onto the morning brief |  |  | 2.9 KB |
 | [`apply_tag`](#apply_tag) | Apply a tag to a record |  |  | 2.2 KB |
-| [`archive_record`](#archive_record) | Archive a record |  | [``](#_view) | 2.4 KB |
-| [`at_risk_relationships`](#at_risk_relationships) | Relationships going cold | yes | [``](#_view) | 2.7 KB |
-| [`book_meeting`](#book_meeting) | Book a meeting |  | [``](#_view) | 2.5 KB |
-| [`bulk_update_records`](#bulk_update_records) | Change many records at once |  | [``](#_view) | 5.6 KB |
-| [`catch_me_up_on`](#catch_me_up_on) | Catch me up on a record | yes | [``](#_view) | 3.1 KB |
-| [`change_lists`](#change_lists) | Make and change lists |  | [``](#_view) | 3.5 KB |
-| [`check_availability`](#check_availability) | Check calendar availability | yes | [``](#_view) | 2.6 KB |
-| [`commit_import`](#commit_import) | Commit an import |  | [``](#_view) | 2.2 KB |
-| [`company_coverage`](#company_coverage) | Relationship coverage on a deal | yes | [``](#_view) | 3.2 KB |
-| [`compose_analytics_report`](#compose_analytics_report) | Compose an analytics report | yes | [``](#_view) | 4.2 KB |
+| [`archive_record`](#archive_record) | Archive a record |  |  | 2.4 KB |
+| [`at_risk_relationships`](#at_risk_relationships) | Relationships going cold | yes |  | 2.7 KB |
+| [`book_meeting`](#book_meeting) | Book a meeting |  |  | 2.5 KB |
+| [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 5.6 KB |
+| [`catch_me_up_on`](#catch_me_up_on) | Catch me up on a record | yes |  | 3.1 KB |
+| [`change_lists`](#change_lists) | Make and change lists |  |  | 3.5 KB |
+| [`check_availability`](#check_availability) | Check calendar availability | yes |  | 2.6 KB |
+| [`commit_import`](#commit_import) | Commit an import |  |  | 2.2 KB |
+| [`company_coverage`](#company_coverage) | Relationship coverage on a deal | yes |  | 3.2 KB |
+| [`compose_analytics_report`](#compose_analytics_report) | Compose an analytics report | yes |  | 4.2 KB |
 | [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 4.6 KB |
 | [`create_tag`](#create_tag) | Create a tag |  |  | 1.9 KB |
-| [`create_task`](#create_task) | Create a task |  | [``](#_view) | 2.2 KB |
-| [`data_coverage`](#data_coverage) | How current the sources are | yes | [``](#_view) | 2.1 KB |
+| [`create_task`](#create_task) | Create a task |  |  | 2.2 KB |
+| [`data_coverage`](#data_coverage) | How current the sources are | yes |  | 2.1 KB |
 | [`decide_approval`](#decide_approval) | Approve or reject one staged action |  |  | 3.2 KB |
-| [`decide_approval_bundle`](#decide_approval_bundle) | Approve or reject one act's proposals together |  | [``](#_view) | 3.0 KB |
+| [`decide_approval_bundle`](#decide_approval_bundle) | Approve or reject one act's proposals together |  |  | 3.0 KB |
 | [`decide_duplicate`](#decide_duplicate) | Decide a flagged duplicate pair |  |  | 2.0 KB |
-| [`demote_lead`](#demote_lead) | Reverse a lead promotion |  | [``](#_view) | 2.4 KB |
-| [`describe_analytics_vocabulary`](#describe_analytics_vocabulary) | Describe the analytics vocabulary | yes | [``](#_view) | 2.2 KB |
-| [`describe_query_vocabulary`](#describe_query_vocabulary) | Describe the query vocabulary | yes | [``](#_view) | 2.1 KB |
-| [`describe_record_fields`](#describe_record_fields) | Describe the record write vocabulary | yes | [``](#_view) | 2.4 KB |
-| [`describe_report_blocks`](#describe_report_blocks) | Describe the report block grammar | yes | [``](#_view) | 2.0 KB |
-| [`describe_report_vocabulary`](#describe_report_vocabulary) | Describe the report vocabulary | yes | [``](#_view) | 2.5 KB |
-| [`disqualify_lead`](#disqualify_lead) | Disqualify a lead |  | [``](#_view) | 2.0 KB |
-| [`draft_email`](#draft_email) | Draft an email |  | [``](#_view) | 3.2 KB |
-| [`draft_follow_ups_for`](#draft_follow_ups_for) | Draft follow-ups |  | [``](#_view) | 2.6 KB |
-| [`enrich`](#enrich) | Enrich a company from its website |  | [``](#_view) | 2.7 KB |
-| [`forecast_input_checks`](#forecast_input_checks) | What the forecast's inputs were checked against | yes | [``](#_view) | 2.7 KB |
-| [`forecast_movement`](#forecast_movement) | What moved the forecast | yes | [``](#_view) | 3.4 KB |
-| [`forecast_readings`](#forecast_readings) | Read the forecast | yes | [``](#_view) | 4.2 KB |
-| [`get_record_tags`](#get_record_tags) | Get a record's tags | yes | [``](#_view) | 1.9 KB |
-| [`get_tag`](#get_tag) | Get a tag | yes | [``](#_view) | 1.6 KB |
-| [`intro_path_to`](#intro_path_to) | Find a warm introduction path | yes | [``](#_view) | 2.3 KB |
-| [`invite_meeting`](#invite_meeting) | Send a calendar invitation |  | [``](#_view) | 2.6 KB |
-| [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes | [``](#_view) | 3.0 KB |
-| [`list_channel_providers`](#list_channel_providers) | List messaging transports | yes | [``](#_view) | 2.0 KB |
-| [`list_colleagues`](#list_colleagues) | List colleagues | yes | [``](#_view) | 2.5 KB |
-| [`list_input_checks`](#list_input_checks) | What the forecast's inputs still need | yes | [``](#_view) | 2.4 KB |
-| [`list_pipelines`](#list_pipelines) | List pipelines and their stages | yes | [``](#_view) | 2.3 KB |
-| [`list_records`](#list_records) | List records | yes | [``](#_view) | 4.6 KB |
-| [`list_tags`](#list_tags) | List tags | yes | [``](#_view) | 1.6 KB |
-| [`log_activity`](#log_activity) | Log an activity |  | [``](#_view) | 4.0 KB |
+| [`demote_lead`](#demote_lead) | Reverse a lead promotion |  |  | 2.4 KB |
+| [`describe_analytics_vocabulary`](#describe_analytics_vocabulary) | Describe the analytics vocabulary | yes |  | 2.2 KB |
+| [`describe_query_vocabulary`](#describe_query_vocabulary) | Describe the query vocabulary | yes |  | 2.1 KB |
+| [`describe_record_fields`](#describe_record_fields) | Describe the record write vocabulary | yes |  | 2.4 KB |
+| [`describe_report_blocks`](#describe_report_blocks) | Describe the report block grammar | yes |  | 2.0 KB |
+| [`describe_report_vocabulary`](#describe_report_vocabulary) | Describe the report vocabulary | yes |  | 2.5 KB |
+| [`disqualify_lead`](#disqualify_lead) | Disqualify a lead |  |  | 2.0 KB |
+| [`draft_email`](#draft_email) | Draft an email |  |  | 3.2 KB |
+| [`draft_follow_ups_for`](#draft_follow_ups_for) | Draft follow-ups |  |  | 2.6 KB |
+| [`enrich`](#enrich) | Enrich a company from its website |  |  | 2.7 KB |
+| [`forecast_input_checks`](#forecast_input_checks) | What the forecast's inputs were checked against | yes |  | 2.7 KB |
+| [`forecast_movement`](#forecast_movement) | What moved the forecast | yes |  | 3.4 KB |
+| [`forecast_readings`](#forecast_readings) | Read the forecast | yes |  | 4.2 KB |
+| [`get_record_tags`](#get_record_tags) | Get a record's tags | yes |  | 1.9 KB |
+| [`get_tag`](#get_tag) | Get a tag | yes |  | 1.6 KB |
+| [`intro_path_to`](#intro_path_to) | Find a warm introduction path | yes |  | 2.3 KB |
+| [`invite_meeting`](#invite_meeting) | Send a calendar invitation |  |  | 2.6 KB |
+| [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 3.0 KB |
+| [`list_channel_providers`](#list_channel_providers) | List messaging transports | yes |  | 2.0 KB |
+| [`list_colleagues`](#list_colleagues) | List colleagues | yes |  | 2.5 KB |
+| [`list_input_checks`](#list_input_checks) | What the forecast's inputs still need | yes |  | 2.4 KB |
+| [`list_pipelines`](#list_pipelines) | List pipelines and their stages | yes |  | 2.3 KB |
+| [`list_records`](#list_records) | List records | yes |  | 4.6 KB |
+| [`list_tags`](#list_tags) | List tags | yes |  | 1.6 KB |
+| [`log_activity`](#log_activity) | Log an activity |  |  | 4.0 KB |
 | [`merge_records`](#merge_records) | Merge two records |  |  | 2.4 KB |
-| [`merge_tags`](#merge_tags) | Fold one tag into another |  | [``](#_view) | 2.0 KB |
-| [`prep_for_meeting`](#prep_for_meeting) | Prepare for a meeting | yes | [``](#_view) | 9.0 KB |
-| [`prepare_handoff`](#prepare_handoff) | Prepare a delivery handoff | yes | [``](#_view) | 3.9 KB |
-| [`preview_import`](#preview_import) | Preview an import |  | [``](#_view) | 4.4 KB |
-| [`progress_deal`](#progress_deal) | Progress a deal with a note |  | [``](#_view) | 3.5 KB |
-| [`promote_lead`](#promote_lead) | Promote a lead to a contact |  | [``](#_view) | 2.6 KB |
-| [`qualify_lead`](#qualify_lead) | Qualify a lead |  | [``](#_view) | 2.4 KB |
-| [`query_workspace`](#query_workspace) | Query the workspace | yes | [``](#_view) | 4.2 KB |
+| [`merge_tags`](#merge_tags) | Fold one tag into another |  |  | 2.0 KB |
+| [`prep_for_meeting`](#prep_for_meeting) | Prepare for a meeting | yes |  | 9.0 KB |
+| [`prepare_handoff`](#prepare_handoff) | Prepare a delivery handoff | yes |  | 3.9 KB |
+| [`preview_import`](#preview_import) | Preview an import |  |  | 4.4 KB |
+| [`progress_deal`](#progress_deal) | Progress a deal with a note |  |  | 3.5 KB |
+| [`promote_lead`](#promote_lead) | Promote a lead to a contact |  |  | 2.6 KB |
+| [`qualify_lead`](#qualify_lead) | Qualify a lead |  |  | 2.4 KB |
+| [`query_workspace`](#query_workspace) | Query the workspace | yes |  | 4.2 KB |
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 2.4 KB |
-| [`read_brief`](#read_brief) | Read the morning brief | yes | [``](#_view) | 3.2 KB |
-| [`read_import_report`](#read_import_report) | Read an import report | yes | [``](#_view) | 3.0 KB |
-| [`read_import_run`](#read_import_run) | Read an import run | yes | [``](#_view) | 1.5 KB |
-| [`read_lists`](#read_lists) | Find and read lists | yes | [``](#_view) | 3.8 KB |
-| [`read_project_360`](#read_project_360) | Read a project's page | yes | [``](#_view) | 6.4 KB |
-| [`read_record`](#read_record) | Read a record | yes | [``](#_view) | 2.5 KB |
-| [`read_reporting`](#read_reporting) | Read sales reporting | yes | [``](#_view) | 3.2 KB |
-| [`relink_activities`](#relink_activities) | Re-associate a set of activities to a record |  | [``](#_view) | 2.3 KB |
-| [`relink_activity`](#relink_activity) | Re-associate an activity to a record |  | [``](#_view) | 2.5 KB |
-| [`relink_thread`](#relink_thread) | Re-associate a whole conversation to a record |  | [``](#_view) | 2.2 KB |
+| [`read_brief`](#read_brief) | Read the morning brief | yes |  | 3.2 KB |
+| [`read_import_report`](#read_import_report) | Read an import report | yes |  | 3.0 KB |
+| [`read_import_run`](#read_import_run) | Read an import run | yes |  | 1.5 KB |
+| [`read_lists`](#read_lists) | Find and read lists | yes |  | 3.8 KB |
+| [`read_project_360`](#read_project_360) | Read a project's page | yes |  | 6.4 KB |
+| [`read_record`](#read_record) | Read a record | yes |  | 2.5 KB |
+| [`read_reporting`](#read_reporting) | Read sales reporting | yes |  | 3.2 KB |
+| [`relink_activities`](#relink_activities) | Re-associate a set of activities to a record |  |  | 2.3 KB |
+| [`relink_activity`](#relink_activity) | Re-associate an activity to a record |  |  | 2.5 KB |
+| [`relink_thread`](#relink_thread) | Re-associate a whole conversation to a record |  |  | 2.2 KB |
 | [`remove_tag`](#remove_tag) | Take a tag off a record |  |  | 1.9 KB |
-| [`resolve_entities`](#resolve_entities) | Resolve contacts and companies | yes | [``](#_view) | 3.6 KB |
-| [`review_commitments`](#review_commitments) | Review open commitments | yes | [``](#_view) | 3.4 KB |
-| [`run_analytics_query`](#run_analytics_query) | Run an analytics query | yes | [``](#_view) | 3.4 KB |
-| [`run_report`](#run_report) | Run a report | yes | [``](#_view) | 5.4 KB |
-| [`search_context`](#search_context) | Search for relevant material | yes | [``](#_view) | 3.1 KB |
-| [`search_records`](#search_records) | Search records | yes | [``](#_view) | 3.3 KB |
-| [`search_report_evidence`](#search_report_evidence) | Search the evidence behind a saved run | yes | [``](#_view) | 3.9 KB |
-| [`send_company_email`](#send_company_email) | Start an email conversation from a record |  | [``](#_view) | 4.6 KB |
-| [`send_email`](#send_email) | Send an email |  | [``](#_view) | 4.3 KB |
-| [`send_message`](#send_message) | Reply on a channel conversation |  | [``](#_view) | 3.6 KB |
+| [`resolve_entities`](#resolve_entities) | Resolve contacts and companies | yes |  | 3.6 KB |
+| [`review_commitments`](#review_commitments) | Review open commitments | yes |  | 3.4 KB |
+| [`run_analytics_query`](#run_analytics_query) | Run an analytics query | yes |  | 3.4 KB |
+| [`run_report`](#run_report) | Run a report | yes |  | 5.4 KB |
+| [`search_context`](#search_context) | Search for relevant material | yes |  | 3.1 KB |
+| [`search_records`](#search_records) | Search records | yes |  | 3.3 KB |
+| [`search_report_evidence`](#search_report_evidence) | Search the evidence behind a saved run | yes |  | 3.9 KB |
+| [`send_company_email`](#send_company_email) | Start an email conversation from a record |  |  | 4.6 KB |
+| [`send_email`](#send_email) | Send an email |  |  | 4.3 KB |
+| [`send_message`](#send_message) | Reply on a channel conversation |  |  | 3.6 KB |
 | [`update_record`](#update_record) | Update a record |  | [`ui://margince/field-conflict.html`](#field_conflict_view) | 3.9 KB |
-| [`update_tag`](#update_tag) | Rename or recolour a tag |  | [``](#_view) | 2.1 KB |
-| [`whats_slipping_this_week`](#whats_slipping_this_week) | What's slipping this week | yes | [``](#_view) | 2.3 KB |
-| [`who_knows`](#who_knows) | Who knows this contact | yes | [``](#_view) | 2.2 KB |
-| [`whoami`](#whoami) | Who this passport acts for | yes | [``](#_view) | 1.8 KB |
+| [`update_tag`](#update_tag) | Rename or recolour a tag |  |  | 2.1 KB |
+| [`whats_slipping_this_week`](#whats_slipping_this_week) | What's slipping this week | yes |  | 2.3 KB |
+| [`who_knows`](#who_knows) | Who knows this contact | yes |  | 2.2 KB |
+| [`whoami`](#whoami) | Who this passport acts for | yes |  | 1.8 KB |
 
 ## Resources
 
@@ -317,8 +317,6 @@ if_version with the version you read of the deal, and keep the staged approval i
 move comes back for approval. (Governance: some calls run immediately and others a human approves
 first, decided per call from its arguments; requires passport scope "write".)
 ```
-
-Renders its result in [``](#_view), visible to `model`.
 
 <details><summary>Input schema</summary>
 
@@ -511,8 +509,6 @@ the retry that carries the approval has answered. (Governance: runs immediately;
 scope "write".)
 ```
 
-Renders its result in [``](#_view), visible to `model`.
-
 <details><summary>Input schema</summary>
 
 ```json
@@ -676,8 +672,6 @@ itself and outlives today's brief. Calling it again replaces what you wrote befo
 is a correction rather than an addition. (Governance: runs immediately; requires passport scope
 "write".)
 ```
-
-Renders its result in [``](#_view), visible to `model`.
 
 <details><summary>Input schema</summary>
 
@@ -1020,8 +1014,6 @@ report the record as archived until the retry that carries their approval has an
 runs immediately; requires passport scope "write".)
 ```
 
-Renders its result in [``](#_view), visible to `model`.
-
 <details><summary>Input schema</summary>
 
 ```json
@@ -1186,8 +1178,6 @@ the question is about one deal rather than the whole book. Each finding names it
 contacts it is about; those are what intro_path_to and who_knows take next. (Governance: runs
 immediately; requires passport scope "read".)
 ```
-
-Renders its result in [``](#_view), visible to `model`.
 
 <details><summary>Input schema</summary>
 
@@ -1394,8 +1384,6 @@ meeting. Keep the recorded activity id. Do not describe a record-only booking as
 (Governance: runs immediately; requires passport scope "send".)
 ```
 
-Renders its result in [``](#_view), visible to `model`.
-
 <details><summary>Input schema</summary>
 
 ```json
@@ -1586,8 +1574,6 @@ and records changed since are left alone. update_record and archive_record chang
 batch_id from the answer: undo names the change by it. (Governance: runs immediately; requires
 passport scope "write".)
 ```
-
-Renders its result in [``](#_view), visible to `model`.
 
 <details><summary>Input schema</summary>
 
@@ -2022,8 +2008,6 @@ happened, in UTC — prefer it over a date the prose recalls, and convert before
 (Governance: runs immediately; requires passport scope "read".)
 ```
 
-Renders its result in [``](#_view), visible to `model`.
-
 <details><summary>Input schema</summary>
 
 ```json
@@ -2256,8 +2240,6 @@ it. bulk_update_records adds or removes many records at once, with a confirmatio
 and its new version from the answer. (Governance: runs immediately; requires passport scope
 "write".)
 ```
-
-Renders its result in [``](#_view), visible to `model`.
 
 <details><summary>Input schema</summary>
 
@@ -2536,8 +2518,6 @@ calendar_backing value, and the truncated flag. Availability is checked again wh
 time. (Governance: runs immediately; requires passport scope "read".)
 ```
 
-Renders its result in [``](#_view), visible to `model`.
-
 <details><summary>Input schema</summary>
 
 ```json
@@ -2716,8 +2696,6 @@ numbers nobody read are not a check. Report what landed from read_import_report 
 immediately; requires passport scope "write".)
 ```
 
-Renders its result in [``](#_view), visible to `model`.
-
 <details><summary>Input schema</summary>
 
 ```json
@@ -2876,8 +2854,6 @@ uncovered seat is rather than reporting the role alone, because the answer a rep
 contact to bring into the room. A seat with no name is one this caller may not read: report the gap,
 and do not guess who fills it. (Governance: runs immediately; requires passport scope "read".)
 ```
-
-Renders its result in [``](#_view), visible to `model`.
 
 <details><summary>Input schema</summary>
 
@@ -3142,8 +3118,6 @@ holds it. A block kind outside the grammar is refused BY NAME with the whole set
 costs one refusal rather than a lookup. (Governance: runs immediately; requires passport scope
 "read".)
 ```
-
-Renders its result in [``](#_view), visible to `model`.
 
 <details><summary>Input schema</summary>
 
@@ -3834,8 +3808,6 @@ reminder, no deal move; unlinked, it sits on no timeline. log_activity is for wh
 (Governance: runs immediately; requires passport scope "write".)
 ```
 
-Renders its result in [``](#_view), visible to `model`.
-
 <details><summary>Input schema</summary>
 
 ```json
@@ -4027,8 +3999,6 @@ check FOUND, and both are silent on whether it could look — a clean set of fin
 nobody opened reads as good news and is not. Ask this one when the question is whether to trust the
 other two. (Governance: runs immediately; requires passport scope "read".)
 ```
-
-Renders its result in [``](#_view), visible to `model`.
 
 <details><summary>Input schema</summary>
 
@@ -4400,8 +4370,6 @@ decide_approval answers a single item; list_approvals is where a bundle_id comes
 carries its own outcome — decided here, already decided, or expired. (Governance: runs
 immediately; requires passport scope "write".)
 ```
-
-Renders its result in [``](#_view), visible to `model`.
 
 <details><summary>Input schema</summary>
 
@@ -4786,8 +4754,6 @@ demotion until the retry carrying it has answered. (Governance: runs immediately
 scope "write".)
 ```
 
-Renders its result in [``](#_view), visible to `model`.
-
 <details><summary>Input schema</summary>
 
 ```json
@@ -4946,8 +4912,6 @@ than approximated. The version line is the schema_version a saved run answers wi
 runs immediately; requires passport scope "read".)
 ```
 
-Renders its result in [``](#_view), visible to `model`.
-
 <details><summary>Input schema</summary>
 
 ```json
@@ -5075,8 +5039,6 @@ outside them is refused rather than approximated, so guessing at a spelling cost
 `grammar` says how the clauses are assembled, and `version` is the value a plan's own `version`
 member must carry. (Governance: runs immediately; requires passport scope "read".)
 ```
-
-Renders its result in [``](#_view), visible to `model`.
 
 <details><summary>Input schema</summary>
 
@@ -5209,8 +5171,6 @@ mind the notation: a key with no `?` is REQUIRED. An extra key must be spelled c
 not a custom field at all. (Governance: runs immediately; requires passport scope "read".)
 ```
 
-Renders its result in [``](#_view), visible to `model`.
-
 <details><summary>Input schema</summary>
 
 ```json
@@ -5337,8 +5297,6 @@ that reads tools rather than resources. A figure is never written into a block, 
 number names a saved run and a cell inside it. A block carrying a literal number is refused even
 beside a valid citation. (Governance: runs immediately; requires passport scope "read".)
 ```
-
-Renders its result in [``](#_view), visible to `model`.
 
 <details><summary>Input schema</summary>
 
@@ -5472,8 +5430,6 @@ goes there and not in a slot of its own. (Governance: runs immediately; requires
 "read".)
 ```
 
-Renders its result in [``](#_view), visible to `model`.
-
 <details><summary>Input schema</summary>
 
 ```json
@@ -5596,8 +5552,6 @@ information. By default the lead is disqualified when this call answers; where a
 raised this verb to confirm first, do not report the lead as disqualified until the retry carrying
 their approval has answered. (Governance: runs immediately; requires passport scope "write".)
 ```
-
-Renders its result in [``](#_view), visible to `model`.
 
 <details><summary>Input schema</summary>
 
@@ -5746,8 +5700,6 @@ send_company_email a first message. Keep what comes back — subject, body, to, 
 or links echoed with it; the send takes them. Re-writing the text in between means a human approves
 one message and another goes out. (Governance: runs immediately; requires passport scope "draft".)
 ```
-
-Renders its result in [``](#_view), visible to `model`.
 
 <details><summary>Input schema</summary>
 
@@ -5962,8 +5914,6 @@ comes back with its deal_id and draft_activity_id — those are how a human find
 review. (Governance: runs immediately; requires passport scope "draft".)
 ```
 
-Renders its result in [``](#_view), visible to `model`.
-
 <details><summary>Input schema</summary>
 
 ```json
@@ -6157,8 +6107,6 @@ collected against it later. (Governance: a human approves every call before it r
 passport scope "enrich".)
 ```
 
-Renders its result in [``](#_view), visible to `model`.
-
 <details><summary>Input schema</summary>
 
 ```json
@@ -6314,8 +6262,6 @@ reached, and only a `checked` source has a date — an absent or unread source m
 not confirm anything from it, which is different from finding nothing there. `eligible_deals` is how
 much there was to check. (Governance: runs immediately; requires passport scope "read".)
 ```
-
-Renders its result in [``](#_view), visible to `model`.
 
 <details><summary>Input schema</summary>
 
@@ -6487,8 +6433,6 @@ as one: the difference between two reads is a number with no account of where it
 visible to this caller — with its whole prior contribution, so no money disappears without a row
 that says where it went. (Governance: runs immediately; requires passport scope "read".)
 ```
-
-Renders its result in [``](#_view), visible to `model`.
 
 <details><summary>Input schema</summary>
 
@@ -6713,8 +6657,6 @@ frozen for this population, which includes managed teams. Quote `as_of`, `timezo
 and `eligible_count`, `priced_count` and `fx_missing_count` are the counts `coverage_note` is
 written from. (Governance: runs immediately; requires passport scope "read".)
 ```
-
-Renders its result in [``](#_view), visible to `model`.
 
 <details><summary>Input schema</summary>
 
@@ -6958,8 +6900,6 @@ archived tag stays on whatever carries it. (Governance: runs immediately; requir
 "read".)
 ```
 
-Renders its result in [``](#_view), visible to `model`.
-
 <details><summary>Input schema</summary>
 
 ```json
@@ -7130,8 +7070,6 @@ record types only. They say how much retiring or merging the word would touch; t
 themselves come from list_records. (Governance: runs immediately; requires passport scope "read".)
 ```
 
-Renders its result in [``](#_view), visible to `model`.
-
 <details><summary>Input schema</summary>
 
 ```json
@@ -7286,8 +7224,6 @@ when you are still looking for the company itself. The path names the colleague 
 id; both are needed to ask anyone for the introduction. (Governance: runs immediately; requires
 passport scope "read".)
 ```
-
-Renders its result in [``](#_view), visible to `model`.
 
 <details><summary>Input schema</summary>
 
@@ -7467,8 +7403,6 @@ inspect its status before claiming it is booked. Retrying an uncertain delivery 
 existing invitation. (Governance: a human approves every call before it runs; requires passport
 scope "send".)
 ```
-
-Renders its result in [``](#_view), visible to `model`.
 
 <details><summary>Input schema</summary>
 
@@ -7676,8 +7610,6 @@ shows what it holds; decide_approval answers it. Keep the staged_action_id you m
 bundle_id when one act staged several, and next_cursor. (Governance: runs immediately; requires
 passport scope "read".)
 ```
-
-Renders its result in [``](#_view), visible to `model`.
 
 <details><summary>Input schema</summary>
 
@@ -7909,8 +7841,6 @@ foreign key. Use `label` only for display. (Governance: runs immediately; requir
 "read".)
 ```
 
-Renders its result in [``](#_view), visible to `model`.
-
 <details><summary>Input schema</summary>
 
 ```json
@@ -8057,8 +7987,6 @@ read the warning before concluding a colleague has no seat. search_records/conta
 contact; this finds a colleague. user_id is what assignee_id and owner_id take. Never assign to an
 is_agent seat. (Governance: runs immediately; requires passport scope "read".)
 ```
-
-Renders its result in [``](#_view), visible to `model`.
 
 <details><summary>Input schema</summary>
 
@@ -8256,8 +8184,6 @@ means the money at stake cannot be said, not that nothing is at stake. (Governan
 immediately; requires passport scope "read".)
 ```
 
-Renders its result in [``](#_view), visible to `model`.
-
 <details><summary>Input schema</summary>
 
 ```json
@@ -8431,8 +8357,6 @@ that, not its name, is what decides whether moving onto it needs a human's appro
 for a deal requires both, and advance_deal and progress_deal take that stage_id as their
 to_stage_id. (Governance: runs immediately; requires passport scope "read".)
 ```
-
-Renders its result in [``](#_view), visible to `model`.
 
 <details><summary>Input schema</summary>
 
@@ -8617,8 +8541,6 @@ named, when `owner.name` is absent), and treat contacting it as theirs to decide
 advising an approach as though the record were unowned. (Governance: runs immediately; requires
 passport scope "read".)
 ```
-
-Renders its result in [``](#_view), visible to `model`.
 
 <details><summary>Input schema</summary>
 
@@ -8884,8 +8806,6 @@ only on request and cannot be applied. `truncated` means the list was cut, so a 
 may still exist. (Governance: runs immediately; requires passport scope "read".)
 ```
 
-Renders its result in [``](#_view), visible to `model`.
-
 <details><summary>Input schema</summary>
 
 ```json
@@ -9040,8 +8960,6 @@ Use progress_deal when the same event also moves a deal, so move and note are on
 for something still owed. Keep the activity id — draft_email, send_email and send_message identify
 a conversation by it. (Governance: runs immediately; requires passport scope "write".)
 ```
-
-Renders its result in [``](#_view), visible to `model`.
 
 <details><summary>Input schema</summary>
 
@@ -9429,8 +9347,6 @@ TARGET is the word that survives; read both with get_tag first. Needs the tag.up
 (Governance: a human approves every call before it runs; requires passport scope "write".)
 ```
 
-Renders its result in [``](#_view), visible to `model`.
-
 <details><summary>Input schema</summary>
 
 ```json
@@ -9586,8 +9502,6 @@ act on after the meeting. prepared_for names the record the prep was built aroun
 when an item happened, in UTC — prefer it over a date the prose recalls. (Governance: runs
 immediately; requires passport scope "read".)
 ```
-
-Renders its result in [``](#_view), visible to `model`.
 
 <details><summary>Input schema</summary>
 
@@ -10462,8 +10376,6 @@ The project_id, and each gap's source field — the gaps are what a follow-up fi
 runs immediately; requires passport scope "read".)
 ```
 
-Renders its result in [``](#_view), visible to `model`.
-
 <details><summary>Input schema</summary>
 
 ```json
@@ -10791,8 +10703,6 @@ so report both: a column this placed by a name they did not write is a decision 
 (Governance: runs immediately; requires passport scope "write".)
 ```
 
-Renders its result in [``](#_view), visible to `model`.
-
 <details><summary>Input schema</summary>
 
 ```json
@@ -11000,8 +10910,6 @@ and others a human approves first, decided per call from its arguments; requires
 "write".)
 ```
 
-Renders its result in [``](#_view), visible to `model`.
-
 <details><summary>Input schema</summary>
 
 ```json
@@ -11205,8 +11113,6 @@ first, the answer is a staged approval instead and the id arrives only from the 
 it. (Governance: runs immediately; requires passport scope "write".)
 ```
 
-Renders its result in [``](#_view), visible to `model`.
-
 <details><summary>Input schema</summary>
 
 ```json
@@ -11390,8 +11296,6 @@ promote_lead once a real engagement means the lead should become a contact. The 
 are what a human still has to supply; they are the honest answer to "is this lead ready", not a
 failure of the call. (Governance: runs immediately; requires passport scope "write".)
 ```
-
-Renders its result in [``](#_view), visible to `model`.
 
 <details><summary>Input schema</summary>
 
@@ -11584,8 +11488,6 @@ the record (or that its owner could not be named, when `owner.name` is absent), 
 it as theirs to decide rather than advising an approach as though the record were unowned.
 (Governance: runs immediately; requires passport scope "read".)
 ```
-
-Renders its result in [``](#_view), visible to `model`.
 
 <details><summary>Input schema</summary>
 
@@ -12046,8 +11948,6 @@ rested on rather than restating the item's own summary. (Governance: runs immedi
 passport scope "read".)
 ```
 
-Renders its result in [``](#_view), visible to `model`.
-
 <details><summary>Input schema</summary>
 
 ```json
@@ -12294,8 +12194,6 @@ What an import will do, or did: rows created, updated, failed, unusable, duplica
 are what the user weighs before committing. Same shape before and after. (Governance: runs
 immediately; requires passport scope "read".)
 ```
-
-Renders its result in [``](#_view), visible to `model`.
 
 <details><summary>Input schema</summary>
 
@@ -12604,8 +12502,6 @@ Where one import got to: awaiting approval, running, done, or stopped. A stopped
 it stopped at and can resume there. (Governance: runs immediately; requires passport scope "read".)
 ```
 
-Renders its result in [``](#_view), visible to `model`.
-
 <details><summary>Input schema</summary>
 
 ```json
@@ -12758,8 +12654,6 @@ that clause. search_records finds records by name; tags are applied with apply_t
 list_id, the version for a later change, and next_cursor to read the next page. (Governance: runs
 immediately; requires passport scope "read".)
 ```
-
-Renders its result in [``](#_view), visible to `model`.
 
 <details><summary>Input schema</summary>
 
@@ -13016,8 +12910,6 @@ for the delivery gaps, read_record for the project's stored fields alone. The pr
 deal, contact and task ids a follow-up acts on. (Governance: runs immediately; requires passport
 scope "read".)
 ```
-
-Renders its result in [``](#_view), visible to `model`.
 
 <details><summary>Input schema</summary>
 
@@ -13642,8 +13534,6 @@ and treat contacting it as theirs to decide rather than advising an approach as 
 were unowned. (Governance: runs immediately; requires passport scope "read".)
 ```
 
-Renders its result in [``](#_view), visible to `model`.
-
 <details><summary>Input schema</summary>
 
 ```json
@@ -13824,8 +13714,6 @@ numbers. Use list_pipelines to discover pipeline and stage IDs. Use run_analytic
 groupings and compose_analytics_report for a document. Configure targets, report sharing and
 schedules in Analytics. (Governance: runs immediately; requires passport scope "read".)
 ```
-
-Renders its result in [``](#_view), visible to `model`.
 
 <details><summary>Input schema</summary>
 
@@ -14095,8 +13983,6 @@ immediately and others a human approves first, decided per call from its argumen
 passport scope "write".)
 ```
 
-Renders its result in [``](#_view), visible to `model`.
-
 <details><summary>Input schema</summary>
 
 ```json
@@ -14265,8 +14151,6 @@ associate. (Governance: some calls run immediately and others a human approves f
 call from its arguments; requires passport scope "write".)
 ```
 
-Renders its result in [``](#_view), visible to `model`.
-
 <details><summary>Input schema</summary>
 
 ```json
@@ -14431,8 +14315,6 @@ with exactly those ids. relink_activities moves a named set; relink_activity mov
 (Governance: some calls run immediately and others a human approves first, decided per call from its
 arguments; requires passport scope "write".)
 ```
-
-Renders its result in [``](#_view), visible to `model`.
 
 <details><summary>Input schema</summary>
 
@@ -14765,8 +14647,6 @@ meant; on `unresolved` say what you will create — a miss is not proof nothing 
 runs immediately; requires passport scope "read".)
 ```
 
-Renders its result in [``](#_view), visible to `model`.
-
 <details><summary>Input schema</summary>
 
 ```json
@@ -15019,8 +14899,6 @@ where a task has one. Every state is judged against as_of, so carry that too if 
 answer later. (Governance: runs immediately; requires passport scope "read".)
 ```
 
-Renders its result in [``](#_view), visible to `model`.
-
 <details><summary>Input schema</summary>
 
 ```json
@@ -15239,8 +15117,6 @@ compose_analytics_report document will cite as a query cell: only a saved run ca
 to get a run_id whose cells compose_analytics_report can cite; without it the answer is served once
 and not stored. (Governance: runs immediately; requires passport scope "read".)
 ```
-
-Renders its result in [``](#_view), visible to `model`.
 
 <details><summary>Input schema</summary>
 
@@ -15489,8 +15365,6 @@ plan first for its default answer, then narrow with the names describe_report_vo
 (Governance: runs immediately; requires passport scope "read".)
 ```
 
-Renders its result in [``](#_view), visible to `model`.
-
 <details><summary>Input schema</summary>
 
 ```json
@@ -15735,8 +15609,6 @@ you have the exact name or phrase. Read `coverage`: `partial_degraded` means `no
 hit's record_type and id. (Governance: runs immediately; requires passport scope "read".)
 ```
 
-Renders its result in [``](#_view), visible to `model`.
-
 <details><summary>Input schema</summary>
 
 ```json
@@ -15977,8 +15849,6 @@ approach as though the record were unowned. (Governance: runs immediately; requi
 "read".)
 ```
 
-Renders its result in [``](#_view), visible to `model`.
-
 <details><summary>Input schema</summary>
 
 ```json
@@ -16178,8 +16048,6 @@ counts. This one answers how much of a counted set supports a claim. Cite record
 share only from prevalence, never by dividing the lists. (Governance: runs immediately; requires
 passport scope "read".)
 ```
-
-Renders its result in [``](#_view), visible to `model`.
 
 <details><summary>Input schema</summary>
 
@@ -16505,8 +16373,6 @@ links: the approval is bound to that exact message. The activity_id that comes b
 conversation. (Governance: runs immediately; requires passport scope "send".)
 ```
 
-Renders its result in [``](#_view), visible to `model`.
-
 <details><summary>Input schema</summary>
 
 ```json
@@ -16769,8 +16635,6 @@ exact message, so changed text needs a new approval. (Governance: runs immediate
 passport scope "send".)
 ```
 
-Renders its result in [``](#_view), visible to `model`.
-
 <details><summary>Input schema</summary>
 
 ```json
@@ -17005,8 +16869,6 @@ to say it. Keep the activity_id of the conversation and the staged approval id; 
 the exact text, so changed text needs a new approval. (Governance: runs immediately; requires
 passport scope "send".)
 ```
-
-Renders its result in [``](#_view), visible to `model`.
 
 <details><summary>Input schema</summary>
 
@@ -17419,8 +17281,6 @@ editing. A name another word already holds is a conflict. (Governance: runs imme
 passport scope "write".)
 ```
 
-Renders its result in [``](#_view), visible to `model`.
-
 <details><summary>Input schema</summary>
 
 ```json
@@ -17591,8 +17451,6 @@ rather than whether it is moving. Keep each deal_id if you intend to act; draft_
 over this same ranked set without you re-deriving it. (Governance: runs immediately; requires
 passport scope "read".)
 ```
-
-Renders its result in [``](#_view), visible to `model`.
 
 <details><summary>Input schema</summary>
 
@@ -17770,8 +17628,6 @@ Each colleague comes back with a user_id; the strength bucket, not the raw score
 colleague should be asked about. (Governance: runs immediately; requires passport scope "read".)
 ```
 
-Renders its result in [``](#_view), visible to `model`.
-
 <details><summary>Input schema</summary>
 
 ```json
@@ -17938,8 +17794,6 @@ note, a description, a summary — whatever language the conversation itself is 
 answered, where locale is absent until this contact chooses one. (Governance: runs immediately;
 requires passport scope "read".)
 ```
-
-Renders its result in [``](#_view), visible to `model`.
 
 <details><summary>Input schema</summary>
 
