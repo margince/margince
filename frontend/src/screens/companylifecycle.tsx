@@ -8,12 +8,12 @@ import { Badge, Field } from "../design-system/atoms";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import { problemMessageOf } from "./common";
-import { LIFECYCLE_LABELS, LIFECYCLE_OPTIONS } from "./companies";
 import {
   useCompanyFieldPatch,
   useCompanyReadOnlyReason,
 } from "./companyheader";
 import { CompanySubtitle } from "./companyheaderfacts";
+import { LIFECYCLE_LABELS, LIFECYCLE_OPTIONS } from "./companylookups";
 
 type Company = components["schemas"]["Company"];
 type Lifecycle = NonNullable<Company["lifecycle"]>;
