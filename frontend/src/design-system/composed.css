@@ -528,6 +528,12 @@
    and a full step under it on a company. `.record-head` is drawn by
    `RecordHead` and nothing else, so this rule reaches every record page and no
    other surface. */
+/* The way back over the head: one line of its own, a small step above the
+   identity it leads into. */
+.record-back {
+  margin-bottom: var(--space-3);
+}
+
 .record-head {
   display: flex;
   align-items: center;

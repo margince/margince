@@ -46,10 +46,10 @@
 1534 frontend/src/design-system/atoms.tsx
 1780 frontend/src/screens/company360.tsx
 1581 frontend/src/design-system/composed.tsx
-1558 frontend/src/screens/leads.tsx
+1541 frontend/src/screens/leads.tsx
 2215 frontend/src/screens/company360.test.tsx
 2235 frontend/src/screens/companies.test.tsx
-2336 frontend/src/screens/companies.tsx
+2311 frontend/src/screens/companies.tsx
 2420 frontend/src/screens/deals.test.tsx
 2703 frontend/src/screens/compose.tsx
 2179 frontend/src/screens/settings.tsx

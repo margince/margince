@@ -2,13 +2,17 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useEffect, useId, useRef } from "react";
-import { navigateReplacing } from "../app/router";
+import { navigateReplacing, useHash } from "../app/router";
+import { useScrollMemory } from "../app/scrollmemory";
 import { useUrlParams } from "../app/urlstate";
 import { Modal } from "../design-system/atoms";
 import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import { WorklistScreen } from "./worklist";
+import { drawerScope } from "./worklist.address";
+import { worklistFilterFrom } from "./worklist.header";
+import { WorklistReturnScope } from "./worklist.return";
 import "./brief.css";
 
 /** Older shared links open the same queue, including its owner and narrowing. */
@@ -30,8 +34,18 @@ export function WorklistRedirect({ opensOn }: Readonly<{ opensOn?: string }>) {
 export function BriefQueue() {
   const t = useT();
   const titleId = useId();
-  const scroll = useRef(0);
+  const body = useRef<HTMLDivElement>(null);
   const [params, setParams] = useUrlParams();
+  // Kept per narrowing for the whole load rather than per history entry: a
+  // record's "Back to Worklist" reopens the drawer on a NEW entry, and the
+  // reader expects the place they left in this same list.
+  const owner = params.get("owner");
+  useScrollMemory(
+    body,
+    useHash(),
+    `worklist-drawer:${drawerScope(params)}:${worklistFilterFrom(params)}:${owner ?? ""}`,
+    "load",
+  );
   const close = () => {
     const next = new Map(params);
     next.delete("queue");
@@ -55,16 +69,10 @@ export function BriefQueue() {
           {t("brief.queue.title")}
         </Heading>
       </DrawerHead>
-      <DrawerBody
-        className="brief-queue-body"
-        ref={(element) => {
-          if (element) element.scrollTop = scroll.current;
-        }}
-        onScroll={(event) => {
-          scroll.current = event.currentTarget.scrollTop;
-        }}
-      >
-        <WorklistScreen opensOn={params.get("owner")} embedded />
+      <DrawerBody className="brief-queue-body" ref={body}>
+        <WorklistReturnScope>
+          <WorklistScreen opensOn={owner} embedded />
+        </WorklistReturnScope>
       </DrawerBody>
     </Modal>
   );
