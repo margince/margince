@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import {
+  type QueryKey,
   skipToken,
   useMutation,
   useQuery,
@@ -255,8 +256,14 @@ export function BulkChangeDialog({
     }
     // A list page reads its members from the record list, and a task lands
     // on the task lists: both go stale with the change.
+    const lists: QueryKey[] = [
+      [kind.list],
+      [LISTS_KEY],
+      ["tasks"],
+      ["activities"],
+    ];
     await Promise.all(
-      [[kind.list], [LISTS_KEY], ["tasks"], ["activities"]].map((queryKey) =>
+      [...lists, ...(kind.stale ?? [])].map((queryKey) =>
         queryClient.invalidateQueries({ queryKey }),
       ),
     );

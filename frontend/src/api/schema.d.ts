@@ -3307,7 +3307,8 @@ export interface paths {
          *     leads, each with the `version` it was shown, and one verb: `reassign_owner` (with
          *     `owner_id`), `archive`, `add_to_list` / `remove_from_list` (with the Shortlist's `list_id`,
          *     while lists are switched on), `add_tag` / `remove_tag` (with `tag_id`), or `create_task`
-         *     (with `task`). The answer says which records the change would alter (`affected`), which it
+         *     (with `task`). Or it names up to 500 Worklist tasks and promises (`worklist_item`) and the
+         *     verb `complete`. The answer says which records the change would alter (`affected`), which it
          *     would leave alone and why (`excluded`), and up to three before/after rows to show the user.
          *
          *     Nothing is written. Every record is tried exactly as `executeBulkChange` would change it,
@@ -3343,7 +3344,8 @@ export interface paths {
          * @description The second half of a bulk change. Each record is changed exactly as the single-record
          *     operation would change it (`updateContact`, `updateCompany`, `updateDeal`, `updateLead` for
          *     an owner; `archiveContact`, `archiveCompany`, `archiveDeal` for an archive; `applyTag` and
-         *     `removeTag` for a tag; `createTask` for a task), with its own `audit_log` row and its own
+         *     `removeTag` for a tag; `createTask` for a task; `updateActivity` or `settleConversationClaim`
+         *     for a Worklist item marked done), with its own `audit_log` row and its own
          *     event. Every audit row the change writes carries the same `batch_id`, which
          *     the answer returns.
          *
@@ -28221,10 +28223,13 @@ export interface components {
         };
         /**
          * @description The kind of record a bulk change acts on. One change acts on one kind. A lead takes every
-         *     verb but `archive`: a lead leaves the queue by being disqualified, which has no bulk verb.
+         *     verb but `archive` and `complete`: a lead leaves the queue by being disqualified, which has
+         *     no bulk verb.
+         *     A `worklist_item` is a task or a promise (a conversation claim) as the Worklist lists it,
+         *     named by the id its row carries; `complete` is its only verb, and no other kind takes it.
          * @enum {string}
          */
-        BulkRecordType: "contact" | "company" | "deal" | "lead";
+        BulkRecordType: "contact" | "company" | "deal" | "lead" | "worklist_item";
         /**
          * @description What a bulk change does to each record. `reassign_owner` hands the record to `owner_id`;
          *     `archive` retires it exactly as the single-record archive does. `add_to_list` and
@@ -28232,10 +28237,12 @@ export interface components {
          *     `addListMember` and `removeListMember` do, and change nothing on the record itself.
          *     `add_tag` and `remove_tag` put the tag `tag_id` names on the record or take it off, exactly
          *     as `applyTag` and `removeTag` do. `create_task` files one new task, described by `task`,
-         *     under each record, exactly as `createTask` does.
+         *     under each record, exactly as `createTask` does. `complete` marks a `worklist_item` done:
+         *     a task exactly as `updateActivity` with `is_done: true` does, a promise exactly as
+         *     `settleConversationClaim` with `outcome: done` does.
          * @enum {string}
          */
-        BulkVerb: "reassign_owner" | "archive" | "add_to_list" | "remove_from_list" | "add_tag" | "remove_tag" | "create_task";
+        BulkVerb: "reassign_owner" | "archive" | "add_to_list" | "remove_from_list" | "add_tag" | "remove_tag" | "create_task" | "complete";
         /** @description The task `create_task` files under every record of the selection. */
         BulkTask: {
             /** @description What has to be done, as one line. */
@@ -28323,6 +28330,7 @@ export interface components {
          *     purged. `value_taken`: another live record now holds its email or domain.
          *     `no_previous_owner`: it had no owner before the reassignment. Undoing `create_task` archives
          *     each task the change created, and skips one completed or edited since as `changed_since_batch`.
+         *     Undoing `complete` opens each task or promise again, and skips one changed since the same way.
          * @enum {string}
          */
         BulkSkipReason: "not_found" | "not_writable" | "changed_since_preview" | "no_change" | "anchor_company" | "not_previewed" | "refused" | "changed_since_batch" | "merged" | "erased" | "value_taken" | "no_previous_owner";
@@ -28356,6 +28364,8 @@ export interface components {
              * @description For `create_task`, the task filed under the record, once the change ran.
              */
             task_id?: string;
+            /** @description For `complete`, whether the task or promise is done. */
+            done?: boolean;
         };
         /** @description One record the change would alter, as it is and as it would be. */
         BulkSampleRow: {
@@ -40419,7 +40429,7 @@ export interface components {
             due_group?: "overdue" | "today" | "tomorrow" | "this_week" | "later";
             /**
              * @description The version of the row this item's own verbs write to, present where it names one — a
-             *     task today. Carried for the reason `email_summary` carries one: a lane that offers
+             *     task or a promise today. Carried for the reason `email_summary` carries one: a lane that offers
              *     `complete` and `snooze` has to name the row those presses condition on, or two contacts
              *     acting on one task each overwrite the other and neither is told.
              */

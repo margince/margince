@@ -3084,10 +3084,11 @@ func (e BulkLeftBehindKind) Valid() bool {
 
 // Defines values for BulkRecordType.
 const (
-	BulkRecordTypeCompany BulkRecordType = "company"
-	BulkRecordTypeContact BulkRecordType = "contact"
-	BulkRecordTypeDeal    BulkRecordType = "deal"
-	BulkRecordTypeLead    BulkRecordType = "lead"
+	BulkRecordTypeCompany      BulkRecordType = "company"
+	BulkRecordTypeContact      BulkRecordType = "contact"
+	BulkRecordTypeDeal         BulkRecordType = "deal"
+	BulkRecordTypeLead         BulkRecordType = "lead"
+	BulkRecordTypeWorklistItem BulkRecordType = "worklist_item"
 )
 
 // Valid indicates whether the value is a known member of the BulkRecordType enum.
@@ -3100,6 +3101,8 @@ func (e BulkRecordType) Valid() bool {
 	case BulkRecordTypeDeal:
 		return true
 	case BulkRecordTypeLead:
+		return true
+	case BulkRecordTypeWorklistItem:
 		return true
 	default:
 		return false
@@ -3159,6 +3162,7 @@ const (
 	BulkVerbAddTag         BulkVerb = "add_tag"
 	BulkVerbAddToList      BulkVerb = "add_to_list"
 	BulkVerbArchive        BulkVerb = "archive"
+	BulkVerbComplete       BulkVerb = "complete"
 	BulkVerbCreateTask     BulkVerb = "create_task"
 	BulkVerbReassignOwner  BulkVerb = "reassign_owner"
 	BulkVerbRemoveFromList BulkVerb = "remove_from_list"
@@ -3173,6 +3177,8 @@ func (e BulkVerb) Valid() bool {
 	case BulkVerbAddToList:
 		return true
 	case BulkVerbArchive:
+		return true
+	case BulkVerbComplete:
 		return true
 	case BulkVerbCreateTask:
 		return true
@@ -24409,7 +24415,7 @@ type AttentionItem struct {
 	Undo *AppliedUndo `json:"undo,omitempty"`
 
 	// Version The version of the row this item's own verbs write to, present where it names one — a
-	// task today. Carried for the reason `email_summary` carries one: a lane that offers
+	// task or a promise today. Carried for the reason `email_summary` carries one: a lane that offers
 	// `complete` and `snooze` has to name the row those presses condition on, or two contacts
 	// acting on one task each overwrite the other and neither is told.
 	Version *RowVersion `json:"version,omitempty"`
@@ -25275,7 +25281,10 @@ type BulkChangeExecuteRequest struct {
 	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
 
 	// RecordType The kind of record a bulk change acts on. One change acts on one kind. A lead takes every
-	// verb but `archive`: a lead leaves the queue by being disqualified, which has no bulk verb.
+	// verb but `archive` and `complete`: a lead leaves the queue by being disqualified, which has
+	// no bulk verb.
+	// A `worklist_item` is a task or a promise (a conversation claim) as the Worklist lists it,
+	// named by the id its row carries; `complete` is its only verb, and no other kind takes it.
 	RecordType BulkRecordType `json:"record_type"`
 
 	// TagId The tag. Required for `add_tag` and `remove_tag` and refused for every other verb.
@@ -25290,7 +25299,9 @@ type BulkChangeExecuteRequest struct {
 	// `addListMember` and `removeListMember` do, and change nothing on the record itself.
 	// `add_tag` and `remove_tag` put the tag `tag_id` names on the record or take it off, exactly
 	// as `applyTag` and `removeTag` do. `create_task` files one new task, described by `task`,
-	// under each record, exactly as `createTask` does.
+	// under each record, exactly as `createTask` does. `complete` marks a `worklist_item` done:
+	// a task exactly as `updateActivity` with `is_done: true` does, a promise exactly as
+	// `settleConversationClaim` with `outcome: done` does.
 	Verb BulkVerb `json:"verb"`
 }
 
@@ -25312,7 +25323,10 @@ type BulkChangePreview struct {
 	ExpiresAt *time.Time `json:"expires_at,omitempty"`
 
 	// RecordType The kind of record a bulk change acts on. One change acts on one kind. A lead takes every
-	// verb but `archive`: a lead leaves the queue by being disqualified, which has no bulk verb.
+	// verb but `archive` and `complete`: a lead leaves the queue by being disqualified, which has
+	// no bulk verb.
+	// A `worklist_item` is a task or a promise (a conversation claim) as the Worklist lists it,
+	// named by the id its row carries; `complete` is its only verb, and no other kind takes it.
 	RecordType BulkRecordType `json:"record_type"`
 
 	// RequiresConfirmation True above 10 records: executing needs `confirm_token`.
@@ -25325,7 +25339,9 @@ type BulkChangePreview struct {
 	// `addListMember` and `removeListMember` do, and change nothing on the record itself.
 	// `add_tag` and `remove_tag` put the tag `tag_id` names on the record or take it off, exactly
 	// as `applyTag` and `removeTag` do. `create_task` files one new task, described by `task`,
-	// under each record, exactly as `createTask` does.
+	// under each record, exactly as `createTask` does. `complete` marks a `worklist_item` done:
+	// a task exactly as `updateActivity` with `is_done: true` does, a promise exactly as
+	// `settleConversationClaim` with `outcome: done` does.
 	Verb BulkVerb `json:"verb"`
 }
 
@@ -25343,7 +25359,10 @@ type BulkChangePreviewRequest struct {
 	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
 
 	// RecordType The kind of record a bulk change acts on. One change acts on one kind. A lead takes every
-	// verb but `archive`: a lead leaves the queue by being disqualified, which has no bulk verb.
+	// verb but `archive` and `complete`: a lead leaves the queue by being disqualified, which has
+	// no bulk verb.
+	// A `worklist_item` is a task or a promise (a conversation claim) as the Worklist lists it,
+	// named by the id its row carries; `complete` is its only verb, and no other kind takes it.
 	RecordType BulkRecordType `json:"record_type"`
 
 	// TagId The tag. Required for `add_tag` and `remove_tag` and refused for every other verb.
@@ -25358,7 +25377,9 @@ type BulkChangePreviewRequest struct {
 	// `addListMember` and `removeListMember` do, and change nothing on the record itself.
 	// `add_tag` and `remove_tag` put the tag `tag_id` names on the record or take it off, exactly
 	// as `applyTag` and `removeTag` do. `create_task` files one new task, described by `task`,
-	// under each record, exactly as `createTask` does.
+	// under each record, exactly as `createTask` does. `complete` marks a `worklist_item` done:
+	// a task exactly as `updateActivity` with `is_done: true` does, a promise exactly as
+	// `settleConversationClaim` with `outcome: done` does.
 	Verb BulkVerb `json:"verb"`
 }
 
@@ -25416,7 +25437,10 @@ type BulkOperation struct {
 	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
 
 	// RecordType The kind of record a bulk change acts on. One change acts on one kind. A lead takes every
-	// verb but `archive`: a lead leaves the queue by being disqualified, which has no bulk verb.
+	// verb but `archive` and `complete`: a lead leaves the queue by being disqualified, which has
+	// no bulk verb.
+	// A `worklist_item` is a task or a promise (a conversation claim) as the Worklist lists it,
+	// named by the id its row carries; `complete` is its only verb, and no other kind takes it.
 	RecordType BulkRecordType `json:"record_type"`
 	Skipped    []BulkSkip     `json:"skipped"`
 
@@ -25438,13 +25462,18 @@ type BulkOperation struct {
 	// `addListMember` and `removeListMember` do, and change nothing on the record itself.
 	// `add_tag` and `remove_tag` put the tag `tag_id` names on the record or take it off, exactly
 	// as `applyTag` and `removeTag` do. `create_task` files one new task, described by `task`,
-	// under each record, exactly as `createTask` does.
+	// under each record, exactly as `createTask` does. `complete` marks a `worklist_item` done:
+	// a task exactly as `updateActivity` with `is_done: true` does, a promise exactly as
+	// `settleConversationClaim` with `outcome: done` does.
 	Verb BulkVerb `json:"verb"`
 }
 
 // BulkRecordState The facts a bulk change can move on a record.
 type BulkRecordState struct {
 	Archived bool `json:"archived"`
+
+	// Done For `complete`, whether the task or promise is done.
+	Done *bool `json:"done,omitempty"`
 
 	// Listed For a list verb, whether the record is on the Shortlist.
 	Listed  *bool               `json:"listed,omitempty"`
@@ -25458,7 +25487,10 @@ type BulkRecordState struct {
 }
 
 // BulkRecordType The kind of record a bulk change acts on. One change acts on one kind. A lead takes every
-// verb but `archive`: a lead leaves the queue by being disqualified, which has no bulk verb.
+// verb but `archive` and `complete`: a lead leaves the queue by being disqualified, which has
+// no bulk verb.
+// A `worklist_item` is a task or a promise (a conversation claim) as the Worklist lists it,
+// named by the id its row carries; `complete` is its only verb, and no other kind takes it.
 type BulkRecordType string
 
 // BulkSampleRow One record the change would alter, as it is and as it would be.
@@ -25500,6 +25532,7 @@ type BulkSkip struct {
 	// purged. `value_taken`: another live record now holds its email or domain.
 	// `no_previous_owner`: it had no owner before the reassignment. Undoing `create_task` archives
 	// each task the change created, and skips one completed or edited since as `changed_since_batch`.
+	// Undoing `complete` opens each task or promise again, and skips one changed since the same way.
 	Reason BulkSkipReason `json:"reason"`
 }
 
@@ -25516,6 +25549,7 @@ type BulkSkip struct {
 // purged. `value_taken`: another live record now holds its email or domain.
 // `no_previous_owner`: it had no owner before the reassignment. Undoing `create_task` archives
 // each task the change created, and skips one completed or edited since as `changed_since_batch`.
+// Undoing `complete` opens each task or promise again, and skips one changed since the same way.
 type BulkSkipReason string
 
 // BulkTask The task `create_task` files under every record of the selection.
@@ -25542,7 +25576,9 @@ type BulkUndoRequest struct {
 // `addListMember` and `removeListMember` do, and change nothing on the record itself.
 // `add_tag` and `remove_tag` put the tag `tag_id` names on the record or take it off, exactly
 // as `applyTag` and `removeTag` do. `create_task` files one new task, described by `task`,
-// under each record, exactly as `createTask` does.
+// under each record, exactly as `createTask` does. `complete` marks a `worklist_item` done:
+// a task exactly as `updateActivity` with `is_done: true` does, a promise exactly as
+// `settleConversationClaim` with `outcome: done` does.
 type BulkVerb string
 
 // BuyerRoomAccess Whether the session admits the caller to content right now. `live` — the room

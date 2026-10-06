@@ -2101,6 +2101,27 @@
       }
     },
     {
+      "name": "bulk_update_records",
+      "tokens": 809,
+      "agents": [],
+      "required_by_cases": [
+        "case47_tidy_the_fair_list"
+      ],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [],
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {
+        "claude-sonnet-5-5@claude-cli": {
+          "runs": 3,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
+          "cases_below_their_bar": []
+        }
+      }
+    },
+    {
       "name": "compose_analytics_report",
       "tokens": 772,
       "agents": [],
@@ -2151,27 +2172,6 @@
           "runs": 6,
           "passed": 6,
           "reliability": 1,
-          "cases_below_their_bar": []
-        }
-      }
-    },
-    {
-      "name": "bulk_update_records",
-      "tokens": 720,
-      "agents": [],
-      "required_by_cases": [
-        "case47_tidy_the_fair_list"
-      ],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [],
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {
-        "claude-sonnet-5-5@claude-cli": {
-          "runs": 3,
-          "passed": 2,
-          "reliability": 0.6666666666666666,
           "cases_below_their_bar": []
         }
       }
