@@ -74,6 +74,9 @@ func (h Handlers) WithBlobstore(blob blobstore.Store) Handlers {
 
 // WithEmbedIdentity binds the embedding identity corpus floors resolve against.
 func (h Handlers) WithEmbedIdentity(identity func() string) Handlers {
+	if h.store == nil {
+		return h
+	}
 	h.store = h.store.WithEmbedIdentity(identity)
 	return h
 }

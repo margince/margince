@@ -369,7 +369,7 @@ func WithCorpusAsk(embedder vectorkit.Embedder, lane completer, log *slog.Logger
 			identity, _ := embedder.EmbedIdentity()
 			knowledge.WarnIfUngated(log, identity)
 		}
-		s.knowledgeHandlers.module = s.knowledgeHandlers.module.WithEmbedIdentity(func() string {
+		s.module = s.module.WithEmbedIdentity(func() string {
 			identity, _ := embedder.EmbedIdentity()
 			return identity
 		})

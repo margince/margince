@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-//gate:kind parity H3
-
-package gates
+package compose
 
 // Every embedding model a shipped preset binds has a measured grounding floor, or
 // is named as not yet measured (issue 6911).
@@ -14,10 +12,16 @@ package gates
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/knowledge"
 )
+
+const presetDir = "../../../config/presets"
 
 // unmeasuredPresetModels are bound by a shipped preset and not yet measured;
 // startup warns for each. Entries leave this set when the registry gains the
@@ -28,9 +32,26 @@ var unmeasuredPresetModels = map[string]bool{
 }
 
 func TestEveryPresetEmbeddingModelHasAMeasuredFloor(t *testing.T) {
+	t.Parallel()
+	entries, err := os.ReadDir(presetDir)
+	if err != nil {
+		t.Fatalf("reading %s: %v", presetDir, err)
+	}
 	bound := 0
-	for _, path := range presetFiles(t) {
-		emb := routingFromPreset(t, path).Embeddings
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".yaml") {
+			continue
+		}
+		path := filepath.Join(presetDir, e.Name())
+		raw, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("%s: %v", path, err)
+		}
+		cfg, err := ai.ParsePreset(raw)
+		if err != nil {
+			t.Fatalf("%s: %v", path, err)
+		}
+		emb := cfg.Embeddings
 		if emb.Model == "" {
 			continue
 		}
