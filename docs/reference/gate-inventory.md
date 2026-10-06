@@ -215,7 +215,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `consumersubscribed_test.go` | H3 | Every event consumer is actually subscribed. |
 | `contactattachlock_test.go` | H2 | A relationship carrying a contact is written under that contact's row lock. |
 | `contactprofilefieldwriter_test.go` | H2 | contacts.writeContactProfileField is the one writer of contact\_profile\_field, and the one place the precedence rule lives: a machine fill claims an unanswered field, a human's acceptance replaces what is there. |
-| `contactprosecoverage_test.go` | H3 | Every table that names a contact and holds prose is accounted for. |
+| `contactprosecoverage_test.go` | H3 | Every table with a foreign key to contact and a column prose fits in is registered or carries a reason. |
 | `contactreaders_test.go` | H2 | `contact` is an RBAC object, and until this gate nothing held the object half of that anywhere outside the module that owns it. |
 | `contractlistpaging_test.go` | H2 | A list that can be cut says where it was cut. |
 | `contractproducers_test.go` | H2 | A field the contract promises and nobody writes is invisible. |

@@ -14,13 +14,18 @@ package compose
 // thing about findability as one told they were erased.
 
 import (
+	"context"
 	"io"
 	"log/slog"
 	"strings"
 	"testing"
 	"time"
 
+	openapitypes "github.com/oapi-codegen/runtime/types"
+
+	"github.com/margince/margince/backend/internal/compose/contactbrief"
 	"github.com/margince/margince/backend/internal/compose/integration"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -188,4 +193,51 @@ func saveABriefWaitingAtMost(t *testing.T, e *integration.Env, contact ids.UUID,
 		e.AdminUser, contact, "fp-racing", time.Now(), "deterministic",
 		`{"headline":"composed while the erasure ran"}`)
 	return err
+}
+
+// The real writer refuses after an erasure, driven through contactbrief.Service
+// rather than the statement: what the service runs is what production runs, and
+// a guard proven only about the test's own copy of the SQL proves nothing about
+// the writer.
+//
+// The model lane is nil, which Write answers with its deterministic floor — so
+// this needs no stubbed model, only the page the brief is written from.
+func TestTheBriefWriterItselfDeclinesToCacheAnErasedSubject(t *testing.T) {
+	e := integration.Setup(t)
+	subject := e.SeedContact(t, "Briefed Subject", &e.AdminUser)
+	svc := contactbrief.NewService(e.Pool, briefPageOf(subject), nil, "test-routing", time.Now)
+
+	if _, err := svc.Get(e.Admin(), ids.From[ids.ContactKind](subject), false); err != nil {
+		t.Fatalf("writing the brief of a live contact: %v", err)
+	}
+	if n := cachedBriefs(t, e, subject); n != 1 {
+		t.Fatalf("the writer cached %d briefs for a live contact, want 1 — the assertion below "+
+			"would pass on a writer that never writes", n)
+	}
+
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), subject, "subject request"); err != nil {
+		t.Fatalf("EraseContact → %v", err)
+	}
+	if _, err := svc.Get(e.Admin(), ids.From[ids.ContactKind](subject), true); err != nil {
+		t.Fatalf("the writer errored for an erased subject rather than writing nothing: %v", err)
+	}
+	if n := cachedBriefs(t, e, subject); n != 0 {
+		t.Errorf("the writer cached %d brief(s) for an erased subject", n)
+	}
+}
+
+// pageOf assembles the contact page the brief is written from, which is the
+// service's one injected collaborator.
+func briefPageOf(contact ids.UUID) contactbrief.Assembler {
+	return assembleFunc(func(ctx context.Context, id ids.ContactID) (crmcontracts.Contact360, error) {
+		return crmcontracts.Contact360{
+			Contact: crmcontracts.Contact{Id: openapitypes.UUID(contact), FullName: "Briefed Subject"},
+		}, nil
+	})
+}
+
+type assembleFunc func(context.Context, ids.ContactID) (crmcontracts.Contact360, error)
+
+func (f assembleFunc) Assemble(ctx context.Context, id ids.ContactID) (crmcontracts.Contact360, error) {
+	return f(ctx, id)
 }

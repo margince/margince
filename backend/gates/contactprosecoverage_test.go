@@ -15,7 +15,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// Every table that names a contact and holds prose is accounted for.
+// Every table with a foreign key to contact and a column prose fits in is
+// registered or carries a reason.
 //
 // piiTables (piicoverage_test.go) is the registry that makes a table PII-bearing,
 // and the censuses then prove erasure and SAR reach it. What nothing asked was
