@@ -184,30 +184,36 @@ the reviewer in the sense its row gives.
 | Concept | Vietnamese | Never |
 |---|---|---|
 | The tenant: the reader's own company, its settings, its allowance | tổ chức | không gian làm việc and workspace (i18n.test.ts holds both) |
+| Company profile (Settings) | hồ sơ tổ chức; onboarding questions about the reader's business keep công ty | |
 | A company record: customer, prospect, partner | công ty | tổ chức or tài khoản for a company record; the retired company nouns in [record-vocabulary.md](record-vocabulary.md) |
 | The legal entity behind an installation | pháp nhân | `thực thể pháp lý`; tổ chức for the legal entity |
 | A human record | liên hệ | `đầu mối`; người for the record, and the retired record nouns in [record-vocabulary.md](record-vocabulary.md) |
 | Sales object | deal | `thương vụ`; giao dịch or cơ hội for a deal (email giao dịch, tên giao dịch and the company lifecycle stage keep theirs) |
 | Lead | lead | khách hàng tiềm năng or khách tiềm năng for a lead (the Prospect lifecycle stage keeps it) |
 | Ordered stages | pipeline | `phễu`; quy trình bán hàng for the pipeline |
+| Commercial motion; sales motion | hình thức bán hàng (deal field); cách bán hàng (company profile) | |
 | A pipeline step | giai đoạn | chặng for a step (chặng đường is ordinary Vietnamese) |
 | Forecast object | dự báo | `dự phóng`, `forecast` |
 | Forecast categories | Commit, Best case | `trường hợp tốt nhất`, `khả quan nhất`; Cam kết for the category |
+| Forecast category (the field) | danh mục dự báo | nhóm dự báo (nhóm is a team) |
 | Manager's forecast number | nhận định (Nhận định của quản lý) | đánh giá or dự báo của quản lý for this number |
 | Something a party said they would do | cam kết | `lời hứa` |
 | The reader's queue | Danh sách công việc | `worklist`, `hàng đợi công việc`; hộp thư đến for the Worklist |
 | Daily digest | Bản tin sáng | `bản tóm tắt buổi sáng`, `briefing` |
 | Approvals surface; approve | Phê duyệt; duyệt, đã duyệt | `chấp thuận` |
+| Review (look again before acting) | xem lại; weekly review tổng kết tuần; outcome review đánh giá | rà soát |
+| Snooze | tạm hoãn (Not now / set aside = gác lại, Để sau) | |
 | A classifier's result | kết quả, lần kiểm tra | `phán quyết`, `verdict` |
 | Capture intake step | kiểm tra đầu vào | `admission check` |
-| Ownership of a deal | phụ trách (label Phụ trách) | người sở hữu for ownership |
+| Ownership of a deal | phụ trách (label Phụ trách; the human người phụ trách; Assign owner = Giao người phụ trách) | người sở hữu for ownership |
 | Tabs of a record | the tab labels themselves | `phần của bản ghi` |
 | The running Margince system | bản cài đặt | |
 | Administrator; member; users; staff | quản trị viên; thành viên; người dùng; nhân viên, nhân viên kinh doanh | |
+| Operations role holder | thành viên Vận hành (role.ops = Vận hành) | |
 | Agent credential | passport | `hộ chiếu`; token or khóa for a passport (khóa API and khóa ký name other credentials) |
 | Mail or calendar link | trình kết nối | `bộ kết nối`, `connector`; kết nối alone or tích hợp for a connector |
 | Buyer-facing deal page | Deal Room | `phòng deal`; cổng thông tin for the Deal Room |
-| The mail thread of a record | chuỗi thư | `spine` |
+| The mail thread of a record | chuỗi thư; a record spine's mixed-channel thread is chuỗi trao đổi; a Deal Room discussion thread is chủ đề | `spine` |
 | Import of mailbox history | nhập lịch sử hộp thư | `backread`; đọc ngược for the import |
 | Full read of a web page | đọc toàn trang | `đọc sâu`, `deep read` |
 | The AI agent | agent | `tác tử`; trợ lý (that is assistant) |
@@ -216,17 +222,22 @@ the reviewer in the sense its row gives.
 | Retry | Thử lại | `thử lần nữa` |
 | Upload, download | tải lên, tải xuống | `upload`, `download` |
 | Email | email | `thư điện tử`, `e-mail` |
+| Message | tin nhắn; mail inside a mailbox thư; one email message email | |
 | Mailbox | hộp thư | `mailbox` |
 | Meeting | cuộc họp | `buổi họp`, `meeting` |
-| Task | việc cần làm; a background job is tác vụ | `task`; nhiệm vụ or công việc for a task |
+| Task | việc cần làm; a background job or a kind of AI work (Tác vụ AI) is tác vụ | `task`; nhiệm vụ or công việc for a task |
 | Tag | thẻ | `tag`; nhãn for a tag |
+| Shortlist; Live List | danh sách chọn; danh sách động, lowercase mid-sentence (Picklist field type = Danh sách lựa chọn) | |
 | Report | báo cáo | `report` |
 | AI quota | hạn mức | `định mức` |
-| Licensed seat | suất (suất đầy đủ, suất chỉ đọc) | `chỗ ngồi`, `ghế` |
+| Credit | credit (enrichment units); số dư (an AI provider's prepaid balance) | |
+| Licensed seat | suất (suất đầy đủ, suất chỉ đọc); a seat holder is thành viên | `chỗ ngồi`, `ghế` |
 | Legal hold | lưu giữ pháp lý | `legal hold`; nghĩa vụ lưu giữ for the hold (a statutory retention obligation keeps it) |
+| Route into a buyer | hướng tiếp cận | |
+| Quiet relationship; drifting deal | im lặng; đang chững lại (going cold = đang nguội dần) | |
 | Buying committee, buying center | nhóm quyết định mua | `buying center`, `nhóm mua hàng` |
 | Audit log | nhật ký kiểm tra | `nhật ký kiểm toán`, `audit log`, `audit trail` |
-| Follow-up | việc tiếp theo | `follow-up`; theo dõi for a follow-up (it is watch) |
+| Follow-up | việc tiếp theo; the verb follow up is liên hệ lại | `follow-up`; theo dõi for a follow-up (it is watch) |
 | Priced offer, quote | báo giá | `chào giá` |
 | Close date; close a deal | ngày chốt; chốt | `ngày đóng` |
 | File | tệp | `file` |

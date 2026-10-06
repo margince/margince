@@ -32,13 +32,15 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // Quoted words between quotation marks, which Vietnamese writes as English
   // does; only the words inside change, and they are the speaker's own.
   "commitment.quote",
+  "filters.propose.unusedItem",
   // The product name of the buyer surface, on the card that names it and on
   // the tab that opens it.
   "room.card.title",
   "tab.dealRoom",
+  "buyer.eyebrow",
   // Two sales nouns Vietnamese borrows rather than translates, on the
   // drill-through's column headers. The vi catalog already carries both
-  // untranslated where they appear as words in a sentence — "Thuộc deal" on
+  // untranslated where they appear as words in a sentence — "Tên deal" on
   // the partner and commission columns, "Pipeline" on the deal's own field —
   // so translating them only here would give one screen a vocabulary the
   // rest of the product does not use.
@@ -152,6 +154,9 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // carries its own.
   // Pure punctuation layouts: every word in them is a placeholder, so there is
   // nothing to translate and a "translation" could only reorder the slots.
+  "dealSuggestion.name",
+  "lead.sla.answeredAt",
+  "projectFiling.decision",
   // Two phase names and an arrow.
   "project.history.moved",
   "brief.digestPhaseChange",
@@ -174,6 +179,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "ob.s4.provGoogle",
   "ob.s4.provMicrosoft",
   "ob.conv.connect.linkedinName",
+  "magic.by.system",
   // "Email" is the loanword vi uses for the field, as en spells it.
   // Employee-count bands: digits and an en dash, the same in every locale.
   "lead.signal.employees.1-10",
@@ -202,6 +208,12 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "deals.pipeline",
   "deal.fcPipeline",
   "filters.field.pipeline_id",
+  "analytics.field.pipeline_id",
+  "reporting.pipeline",
+  "lead.qualify.pipeline",
+  "stageAutomation.pipeline",
+  "review.colDeal",
+  "worklist.category.leads",
   "cf.obj.deal",
   "cf.obj.lead",
   "co.brief.cite.deal",
@@ -216,6 +228,11 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "contracts.deal",
   "history.actorAgent",
 
+  // The forecast categories Commit and Best case keep their English names.
+  "deal.fcCommit",
+  "deal.fcBestCase",
+  "brief.weekly.outlook.bestCase",
+
   // Endonyms: a locale's own name for itself, identical in every catalog.
   "locale.name.en",
   "locale.name.de",
@@ -223,6 +240,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
 
   // Field labels where the English word is also the Vietnamese usage.
   "contacts.email",
+  "users.emailLabel",
   "create.email",
   "restricted.kind.email",
   "timeline.filters.kind.email",
@@ -315,6 +333,8 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "ob.fieldEg.legal_form",
   "ob.fieldEg.register_court",
   "ob.fieldEg.register_number",
+  // A fixture company name, which a locale would rename into a different company.
+  "ob.fieldEg.display_name",
 
   // Brand names, a protocol's acronym, and the console Google itself names
   // in English.

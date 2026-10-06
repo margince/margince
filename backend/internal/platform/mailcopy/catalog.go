@@ -128,7 +128,7 @@ func weeklyFigureLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.WeeklyTasksDelivered },
 		"Tasks delivered",
 		"Aufgaben erledigt",
-		"Công việc đã hoàn thành")
+		"Việc cần làm đã hoàn tất")
 	line(func(c *Copy) *string { return &c.WeeklyOfDue },
 		"%d of %d",
 		"%d von %d",
@@ -148,7 +148,7 @@ func weeklyFigureLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.WeeklyDecided },
 		"Proposals decided",
 		"Entschiedene Vorschläge",
-		"Bạn đã quyết")
+		"Đề xuất đã quyết định")
 	weeklyDecisionLines(line)
 }
 
@@ -178,7 +178,7 @@ func weeklyQueueLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.WeeklyQueue },
 		"Morning brief items",
 		"Einträge im Morgenbericht",
-		"Danh sách buổi sáng")
+		"Mục Bản tin sáng")
 	line(func(c *Copy) *string { return &c.WeeklyActed },
 		"acted",
 		"bearbeitet",
@@ -340,10 +340,10 @@ func digestLines(line writeLine) {
 // a translation. The order these are registered in is part of that — the
 // sections below run in sequence for the same reason.
 //
-// The German and Vietnamese use the formal address (Sie / quý vị), unlike the
-// reset and invite copy above. Those speak to a colleague who works here; these
-// speak to a stranger the installation holds a record about, and about their
-// own rights.
+// The German and Vietnamese use the formal address (Sie; quý khách or quý vị),
+// unlike the reset and invite copy above. Those speak to a colleague who works
+// here; these speak to a stranger the installation holds a record about, and
+// about their own rights.
 func confirmLines(line writeLine) {
 	confirmAskLines(line)
 	recordNoticeLines(line)
@@ -361,26 +361,26 @@ func confirmAskLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.ConfirmMarketingAsk },
 		"News from time to time, roughly once a month. Your choice is respected.",
 		"Neuigkeiten von Zeit zu Zeit, etwa einmal im Monat. Ihre Entscheidung wird respektiert.",
-		"Tin tức thỉnh thoảng, khoảng mỗi tháng một lần. Bạn quyết định, và tôi sẽ tuân theo.")
+		"Thỉnh thoảng gửi tin tức, khoảng mỗi tháng một lần. Lựa chọn của quý khách được tôn trọng.")
 	line(func(c *Copy) *string { return &c.ConfirmMarketingYes },
 		"Subscribe to news",
 		"Neuigkeiten abonnieren",
-		"Có, hãy gửi tin cho tôi")
+		"Đăng ký nhận tin")
 	line(func(c *Copy) *string { return &c.ConfirmMarketingNo },
 		"Do not send news",
 		"Keine Neuigkeiten senden",
-		"Không, chỉ cần giữ thông tin của tôi chính xác")
+		"Không gửi tin")
 	// THE DEDICATED SUBSCRIPTION LINK'S OWN QUESTION, which names the purpose
 	// rather than describing a frequency. A grant through that door binds this;
 	// one through the record-confirmation door binds the pair above.
 	line(func(c *Copy) *string { return &c.ConfirmSubscriptionAsk },
 		"Confirm that you want to receive {purpose}.",
 		"Bestätigen Sie, dass Sie {purpose} erhalten möchten.",
-		"Xác nhận rằng bạn muốn nhận {purpose}.")
+		"Xác nhận quý khách muốn nhận {purpose}.")
 	line(func(c *Copy) *string { return &c.ConfirmSubscriptionConfirm },
 		"Confirm subscription",
 		"Abonnement bestätigen",
-		"Có, đăng ký cho tôi")
+		"Xác nhận đăng ký")
 }
 
 // recordNoticeLines is the copy for the messages the installation sends about a

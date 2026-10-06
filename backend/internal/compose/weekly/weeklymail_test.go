@@ -194,7 +194,7 @@ func TestTheMessageIsWrittenInTheInstallationsLanguage(t *testing.T) {
 		{
 			language: "vi",
 			subject:  "Tuần của bạn",
-			labels:   []string{"Công việc đã hoàn thành", "7 trên 9", "Bạn đã quyết", "Danh sách buổi sáng", "Chuyển tiếp", "thắng"},
+			labels:   []string{"Việc cần làm đã hoàn tất", "7 trên 9", "Đề xuất đã quyết định", "Mục Bản tin sáng", "Chuyển tiếp", "thắng"},
 		},
 		{
 			// A language this build has no copy for is written in the fallback
