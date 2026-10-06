@@ -16724,7 +16724,7 @@ paths:
         The locations a `gemini_vertex` binding may name, asked of Google with the stored
         service-account key's project, plus the `eu` and `us` multi-regions and `global` when
         Google's list omits them. A metadata call on Google's global host; it carries no customer
-        data, so it is answered under every profile.
+        data, so it is asked under every profile except `sovereign`.
 
         `resident` and `jurisdiction` are this build's residency policy, never Google's words: a
         location Google adds tomorrow appears as an option and is not resident until this build
