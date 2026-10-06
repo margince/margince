@@ -1716,7 +1716,7 @@ export const vi = {
   "co.health.dim.commercial": "Thương mại",
   "co.health.dim.payment": "Thanh toán",
   "co.health.means.relationship":
-    "Hai bên còn liên lạc hay không — ai đã viết, lần gặp gần nhất hoặc cuộc họp đã đặt, và bên nào chủ động trước.",
+    "Hai bên còn liên lạc hay không — ai đã viết, lần gặp gần nhất diễn ra khi nào hoặc cuộc họp tiếp theo được đặt vào lúc nào, và bên nào chủ động trước.",
   "co.health.means.commercial":
     "Công việc đang chạy có tiến triển không — các deal đang mở, giai đoạn của chúng và đã đứng yên bao lâu.",
   "co.health.means.payment":

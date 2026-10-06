@@ -1800,7 +1800,7 @@ export const en = {
   // "Commercial · Good" was read from, and a rating a reader cannot interpret
   // is one they have to take on trust.
   "co.health.means.relationship":
-    "Whether contacts at this company are still in touch: who wrote, the last meeting or the next one booked, and which side started.",
+    "Whether contacts at this company are still in touch: who wrote, when the last meeting took place or the next one is booked, and which side started.",
   "co.health.means.commercial":
     "Whether open deals are moving: their stages and how long each has been idle.",
   "co.health.means.payment":
