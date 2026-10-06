@@ -86,7 +86,9 @@ func parseAITaskRetrieveFlags(args []string) (aiTaskRetrieveFlags, error) {
 	if err := fs.Parse(args); err != nil {
 		return aiTaskRetrieveFlags{}, err
 	}
-	env.Apply(fs, config.FromOS)
+	if err := env.Apply(fs, config.FromOS); err != nil {
+		return aiTaskRetrieveFlags{}, err
+	}
 	cfg := *parsed
 	if rest := fs.Args(); len(rest) > 0 {
 		return aiTaskRetrieveFlags{}, fmt.Errorf(

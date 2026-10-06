@@ -501,5 +501,16 @@ const (
 	// seat to narrow to, and the ids go straight into the reopen of each
 	// company's own backoff cursor; nothing returns one to a reader, and the
 	// sweep that then re-reads them applies its own eligibility.
-	modulesTierUnscopedCeiling = 115
+	//
+	// 116: consent.revokeOverrideAdmittedTx asks whether the vouch being revoked
+	// belongs to the contact named or to the survivor a merge folded it into. A
+	// vouch chain spans records by construction (a merge copies the vouch
+	// onto the survivor and leaves the original on the predecessor, linked by
+	// carried_from), so the lookup reaches
+	// contact_id across several rows and no single row scope can bound it.
+	// auth.EnsureRetractable has already been taken on both the named contact
+	// and its survivor in the same transaction, so the caller was shown to reach
+	// every record the question can resolve to. The read hands back no
+	// reference: the only row returned is the FOR UPDATE row's decided_by_level.
+	modulesTierUnscopedCeiling = 116
 )

@@ -119,6 +119,23 @@ func (l *Ledger) Record(ctx context.Context, kind Kind, key string) error {
 	})
 }
 
+// RecordTx declares a key provisional on the CALLER's transaction: for a writer
+// that is about to drop the last row naming an object it means to delete. The
+// declaration commits with that drop or not at all, and the reaper deletes the
+// object once no row names it — so a rolled-back drop deletes nothing.
+func RecordTx(ctx context.Context, tx pgx.Tx, kind Kind, key string) error {
+	if !declared(kind) {
+		return fmt.Errorf("record a provisional object: %q is not a declared kind", kind)
+	}
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO stored_object_intent (storage_key, kind) VALUES ($1, $2)
+		ON CONFLICT (storage_key) DO UPDATE SET kind = excluded.kind, recorded_at = now()`,
+		key, string(kind)); err != nil {
+		return fmt.Errorf("record a provisional object: %w", err)
+	}
+	return nil
+}
+
 // Clear retires a key, on the CALLER's transaction.
 //
 // ON THE CALLER'S, so the clear and the owning row commit together: a clear that

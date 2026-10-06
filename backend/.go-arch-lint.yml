@@ -363,8 +363,16 @@ deps:
     # because the test drives the handler and only the middleware decides what arrives
     # there — and identity must not gain a YAML dependency to check a document it does
     # not own.
+    # openintrostatuses_test.go reads introductions.Open and
+    # privacy.OpenIntroStatuses: the Art. 17 erasure closes an introduction
+    # naming an erased contact, and WHICH statuses are still open belongs to
+    # the lifecycle that owns them. privacy may not import a sibling to ask,
+    # so it carries a declared mirror and only gates can see both halves —
+    # the same shape as aitaskparity_test.go above, and failing in both
+    # directions because fewer lets the prose return and more rewrites a
+    # completed outcome into "cancelled".
     # gates carries test files only, so this grants no production edge.
-    mayDependOn: [contracts, compose, ai, collections, platform, activities, aiactivity, agents, approvals, contacts, customfields, deals, forecasting, comms, identity]
+    mayDependOn: [contracts, compose, ai, collections, platform, activities, aiactivity, agents, approvals, contacts, customfields, deals, forecasting, comms, identity, introductions, privacy]
     canUse: [yaml, jsonschema]
   cmd:
     mayDependOn: [compose, identity, contacts, privacy, continuity, deals, activities, aiactivity, approvals, agents, automation, ai, search, capture, consent, collections, signals, customfields, migration, webhooks, comms, notices, introductions, weeklyplan, forecasting, reporting, assurance, finance, integrations, agreements, commissions, contracts, dealrooms, assignments, platform, migrations, projects]

@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useT } from "../i18n";
-import { emailDetailKey } from "./emaildetail";
+import { EmailEnvelope, emailDetailKey } from "./emaildetail";
 import { EmailText } from "./emailtext";
 import { Heading } from "./heading";
 import { SurfaceState } from "./surfacestate";
@@ -145,9 +145,7 @@ function SourceEmailBody({
           {t("tasks.sourceEmail")}
         </Heading>
         <p className="sourceemail__subject">{subject}</p>
-        <p className="sourceemail__when">
-          {formatWhen(presentation.occurred_at)}
-        </p>
+        <EmailEnvelope presentation={presentation} formatWhen={formatWhen} />
       </div>
       <EmailText body={presentation.body ?? ""} />
     </section>

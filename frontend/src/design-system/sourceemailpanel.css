@@ -28,10 +28,6 @@
   overflow-wrap: anywhere;
 }
 
-.sourceemail__when {
-  margin: 0;
-}
-
 /* The envelope facts sit tight together, a stack step above the words. */
 .sourceemail__envelope {
   display: flex;

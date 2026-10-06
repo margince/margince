@@ -182,3 +182,22 @@
 .mw-answering {
   margin: 0;
 }
+
+/* The sign-off a send appends, under the body: the server's text, kept to its
+ * own line breaks and spacing, in the muted ink of something the reader does not edit. */
+.compose-signoff {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.compose-signoff-text {
+  margin: 0;
+  white-space: pre-wrap;
+  color: var(--textSecondary);
+}
+
+/* Drawn as updating while the words have moved on and the answer has not. */
+.compose-signoff.is-stale .compose-signoff-text {
+  opacity: 0.5;
+}

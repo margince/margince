@@ -51,8 +51,8 @@
 2235 frontend/src/screens/companies.test.tsx
 2336 frontend/src/screens/companies.tsx
 2420 frontend/src/screens/deals.test.tsx
-2737 frontend/src/screens/compose.tsx
-2193 frontend/src/screens/settings.tsx
+2703 frontend/src/screens/compose.tsx
+2179 frontend/src/screens/settings.tsx
 2727 frontend/src/screens/leads.test.tsx
 3331 frontend/src/screens/compose.test.tsx
 3195 frontend/src/screens/deals.tsx

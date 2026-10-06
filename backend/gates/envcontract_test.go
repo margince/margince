@@ -73,8 +73,8 @@ var envVarName = regexp.MustCompile(`MARGINCE_[A-Z0-9_]+`)
 
 // quotedEnvVarName matches one MARGINCE_* name as a Go string literal. Keying
 // on the literal rather than on os.Getenv is what makes the Go sweep complete:
-// the vars are also read through four wrapper helpers in cmd/api and cmd/worker
-// (envOr, envIntOr, envDuration, envDurationOr). Keying on unquoted text
+// most vars reach the process through cliflags bindings and config.Lookup, not
+// a direct os.Getenv. Keying on unquoted text
 // instead would harvest globs out of comments and invent vars that do not exist.
 var quotedEnvVarName = regexp.MustCompile(`"(MARGINCE_[A-Z0-9_]+)"`)
 

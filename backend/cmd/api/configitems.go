@@ -37,6 +37,7 @@ import (
 // authenticates something.
 var apiPublic = map[string]bool{
 	"MARGINCE_CONFIG":            true,
+	"MARGINCE_ADDR":              true,
 	"MARGINCE_AI_ROUTING":        true,
 	"MARGINCE_LOG_LEVEL":         true,
 	"MARGINCE_LOG_FORMAT":        true,
