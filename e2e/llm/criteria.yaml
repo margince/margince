@@ -464,3 +464,17 @@ cases:
       statement: >-
         The price claim is tested against the logged mail: the answer says how
         many mails support it and cites the one that does, not memory.
+  case54_a_word_from_the_fair:
+    1:
+      name: A tag is offered and not claimed
+      statement: >-
+        The word the user named is passed to the create as an offer and the answer
+        says the workspace has it, but never reports it as applied: the user said
+        they would decide that themselves.
+  case56_not_the_same:
+    1:
+      name: Two different people are told apart
+      statement: >-
+        The user says the flagged record is a different person, so the pair is
+        dismissed with decide_duplicate rather than merged, and the answer says
+        they were kept apart.
