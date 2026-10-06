@@ -623,7 +623,6 @@ export const vi = {
   "worklist.bandCount_one": "{count} mục",
   "worklist.bandCount_other": "{count} mục",
   "brief.focus.context": "Mở ngữ cảnh",
-  "brief.focus.back": "Quay lại ưu tiên",
   "brief.queue.back": "Quay lại danh sách",
   "brief.queue.title": "Danh sách công việc",
   "brief.queue.show": "Hiện danh sách công việc",
