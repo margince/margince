@@ -1,6 +1,7 @@
 import { type ReactNode, useId, useState } from "react";
 import type { components } from "../api/schema";
 import { Button, Checkbox, Field, TextInput } from "../design-system/atoms";
+import { RecordFormDialog } from "../design-system/recordformdialog";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import { DateFieldSelect } from "./automations.datefield";
@@ -11,7 +12,6 @@ import {
   paramsFromValues,
   scalarText,
 } from "./automations.params";
-import { RecordFormDialog } from "./create.dialog";
 
 type CatalogEntry = components["schemas"]["AutomationCatalogEntry"];
 type Automation = components["schemas"]["Automation"];

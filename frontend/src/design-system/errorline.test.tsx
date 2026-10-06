@@ -152,6 +152,26 @@ describe("ErrorLine in a dialog", () => {
     expect(scroll).toHaveBeenCalledTimes(2);
   });
 
+  it("stops above a sticky action row by the height the row is drawn at", () => {
+    watchScrolls();
+    vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(844);
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
+      function (this: HTMLElement) {
+        const top = this.classList.contains("actions") ? 744 : 0;
+        return DOMRect.fromRect({ y: top, height: 844 - top });
+      },
+    );
+    inEnglish(
+      <div className="modal" style={{ overflowY: "auto" }}>
+        <div className="form-stack">
+          <ErrorLine>The save was refused.</ErrorLine>
+        </div>
+        <div className="actions" style={{ position: "sticky" }} />
+      </div>,
+    );
+    expect(screen.getByRole("alert").style.scrollMarginBlockEnd).toBe("100px");
+  });
+
   it("leaves the page where it is outside a dialog, and for a standing state", () => {
     const scroll = watchScrolls();
     inEnglish(

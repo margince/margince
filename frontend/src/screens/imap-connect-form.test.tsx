@@ -8,7 +8,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import userEvent, { type UserEvent } from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
@@ -31,16 +31,10 @@ function render(ui: ReactNode) {
   );
 }
 
-async function fillValidForm() {
-  await userEvent.type(
-    screen.getByLabelText("IMAP server *"),
-    "mail.example.org",
-  );
-  await userEvent.type(
-    screen.getByLabelText("Email address *"),
-    "lars@example.org",
-  );
-  await userEvent.type(screen.getByLabelText("App password *"), "app-password");
+async function fillValidForm(user: UserEvent) {
+  await user.type(screen.getByLabelText("IMAP server *"), "mail.example.org");
+  await user.type(screen.getByLabelText("Email address *"), "lars@example.org");
+  await user.type(screen.getByLabelText("App password *"), "app-password");
 }
 
 afterEach(() => {
@@ -50,6 +44,7 @@ afterEach(() => {
 
 describe("ImapConnectForm", () => {
   it("posts the imap block through the typed client, not a raw fetch", async () => {
+    const user = userEvent.setup();
     const calls: { url: string; body: unknown }[] = [];
     installFetchStub({
       "POST /connectors/imap/connect": (body) => {
@@ -68,8 +63,8 @@ describe("ImapConnectForm", () => {
     render(
       <ImapConnectForm open onClose={() => {}} onConnected={onConnected} />,
     );
-    await fillValidForm();
-    await userEvent.click(screen.getByRole("button", { name: "Connect" }));
+    await fillValidForm(user);
+    await user.click(screen.getByRole("button", { name: "Connect" }));
     await waitFor(() => expect(calls.length).toBe(1));
     expect(calls[0].body).toMatchObject({
       imap: {
@@ -85,6 +80,7 @@ describe("ImapConnectForm", () => {
   });
 
   it("surfaces a rejected login without echoing the host back", async () => {
+    const user = userEvent.setup();
     installFetchStub({
       "POST /connectors/imap/connect": () =>
         jsonResponse(
@@ -96,8 +92,8 @@ describe("ImapConnectForm", () => {
         ),
     });
     render(<ImapConnectForm open onClose={() => {}} />);
-    await fillValidForm();
-    await userEvent.click(screen.getByRole("button", { name: "Connect" }));
+    await fillValidForm(user);
+    await user.click(screen.getByRole("button", { name: "Connect" }));
     expect(
       await screen.findByText(/rejected these credentials/i),
     ).toBeInTheDocument();
@@ -105,6 +101,7 @@ describe("ImapConnectForm", () => {
   });
 
   it("surfaces an unreachable server as a host/port problem", async () => {
+    const user = userEvent.setup();
     installFetchStub({
       "POST /connectors/imap/connect": () =>
         jsonResponse(
@@ -117,8 +114,8 @@ describe("ImapConnectForm", () => {
         ),
     });
     render(<ImapConnectForm open onClose={() => {}} />);
-    await fillValidForm();
-    await userEvent.click(screen.getByRole("button", { name: "Connect" }));
+    await fillValidForm(user);
+    await user.click(screen.getByRole("button", { name: "Connect" }));
     expect(
       await screen.findByText(/could not be reached/i),
     ).toBeInTheDocument();
@@ -128,6 +125,7 @@ describe("ImapConnectForm", () => {
   // at the fields and beside the button rather than leaving a grey button to
   // explain itself. Nothing is posted until the form can be dialled.
   it("names what is still needed when Connect is pressed early", async () => {
+    const user = userEvent.setup();
     const calls: unknown[] = [];
     installFetchStub({
       "POST /connectors/imap/connect": (body) => {
@@ -136,7 +134,7 @@ describe("ImapConnectForm", () => {
       },
     });
     render(<ImapConnectForm open onClose={() => {}} />);
-    await userEvent.click(screen.getByRole("button", { name: "Connect" }));
+    await user.click(screen.getByRole("button", { name: "Connect" }));
     expect(
       screen.getByText("Required: IMAP server, Email address, App password"),
     ).toBeInTheDocument();
@@ -145,6 +143,7 @@ describe("ImapConnectForm", () => {
   });
 
   it("names an out-of-range port instead of ignoring the press", async () => {
+    const user = userEvent.setup();
     const calls: unknown[] = [];
     installFetchStub({
       "POST /connectors/imap/connect": (body) => {
@@ -153,24 +152,25 @@ describe("ImapConnectForm", () => {
       },
     });
     render(<ImapConnectForm open onClose={() => {}} />);
-    await fillValidForm();
+    await fillValidForm(user);
     const port = screen.getByLabelText("Port");
-    await userEvent.clear(port);
-    await userEvent.type(port, "70000");
-    await userEvent.click(screen.getByRole("button", { name: "Connect" }));
+    await user.clear(port);
+    await user.type(port, "70000");
+    await user.click(screen.getByRole("button", { name: "Connect" }));
     expect(screen.getByText("Out of range: Port")).toBeInTheDocument();
     expect(screen.getByText("From 1 to 65535")).toBeInTheDocument();
     expect(calls).toHaveLength(0);
   });
 
   it("never retains the secret after a failed submit", async () => {
+    const user = userEvent.setup();
     installFetchStub({
       "POST /connectors/imap/connect": () =>
         jsonResponse({ code: "imap_unreachable", detail: "unreachable" }, 502),
     });
     render(<ImapConnectForm open onClose={() => {}} />);
-    await fillValidForm();
-    await userEvent.click(screen.getByRole("button", { name: "Connect" }));
+    await fillValidForm(user);
+    await user.click(screen.getByRole("button", { name: "Connect" }));
     await screen.findByText(/could not be reached/i);
     expect(screen.getByLabelText("App password *")).toHaveValue("");
   });
