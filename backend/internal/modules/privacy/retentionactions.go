@@ -204,6 +204,11 @@ func anonymizeContactRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, payload
 	if err := eraseContactMeetingCapabilities(ctx, tx, id, payloads); err != nil {
 		return err
 	}
+	// Both acts have to reach this one: the prose is keyed by contact id, so unlike
+	// the deal-room seats there is nothing the anonymize cannot see.
+	if err := redactIntroductionRequests(ctx, tx, ids.From[ids.ContactKind](id)); err != nil {
+		return err
+	}
 	// The identifiers the graph holds the subject by, read BEFORE the deletes
 	// below destroy the rows they come from. subjectGraphIdentifiers says which
 	// they are and why the order matters.

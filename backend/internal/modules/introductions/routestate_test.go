@@ -7,7 +7,7 @@ import "testing"
 
 // The tab is told about every status that holds a route, and about refusals.
 //
-// The census comes from everyStatus(), which is itself held against the type's
+// The census comes from EveryStatus(), which is itself held against the type's
 // own constants — so a status added to the const block and forgotten here
 // fails there rather than silently narrowing this check.
 //
@@ -22,7 +22,7 @@ func TestRouteStatesReportsEveryOpenStatus(t *testing.T) {
 		reported[s] = true
 	}
 
-	for _, s := range everyStatus() {
+	for _, s := range EveryStatus() {
 		if Open(s) && !reported[string(s)] {
 			t.Errorf("%q holds a route and is not reported, so the tab would "+
 				"offer a route the duplicate guard refuses", s)

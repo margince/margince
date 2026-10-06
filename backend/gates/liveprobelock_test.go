@@ -68,6 +68,9 @@ const (
 // says why at length — routing it through the mutation door would answer a
 // product question as a side effect of a concurrency fix).
 var unlockedLiveWrites = gatekit.Waive(map[string]string{
+	"internal/modules/dealrooms:Store.OpenThread": "the SELLER side of a deal-room thread: it builds threadAuthor{userID: &userID}, so every comment it writes carries author_user_id and a NULL author_participant_id. The erasure's delete is keyed on author_participant_id, so no row this function writes is one an erasure clears, and there is no row for a racing erasure to restore. The buyer's own reply path writes the participant author instead, and reaches this census through a different probe helper than the one it walks, so its own race is not answered by this declaration",
+	"internal/modules/dealrooms:Store.Reply":      "the same seller-side author on the reply rather than the opening comment, threadAuthor{userID: &userID} at thread_write.go:382, so the same reasoning holds: author_participant_id is NULL and the erasure's delete cannot name the row",
+
 	"internal/modules/contacts:Store.applyEmploymentEpisode":  "private import helper reached only after ApplyEmploymentImport holds the live contact row for this transaction; the contact lock covers the applied-field support and its relationship. The census reads callees rather than callers, so this declaration relies on the parent's held lock",
 	"internal/modules/contacts:Store.applyEmploymentEvidence": "private iteration inside ApplyEmploymentImport's transaction, after HoldWritableLive; every evidence item has the same locked contact. The census cannot propagate a caller's held lock down into this helper",
 

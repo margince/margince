@@ -52,14 +52,14 @@ const (
 	StatusCancelled Status = "cancelled"
 )
 
-// everyStatus is the census an exhaustive check iterates.
+// EveryStatus is the census an exhaustive check iterates.
 //
 // A test that hand-lists the statuses proves nothing about a status added
 // after it was written: the new one is simply absent, every case passes, and
 // the check that was supposed to be exhaustive silently is not. Callers ask
 // this instead, and the census is held against the type's own constants.
 // Held by: TestEveryStatusIsCensused (lifecycle_test.go)
-func everyStatus() []Status {
+func EveryStatus() []Status {
 	return []Status{
 		StatusRequested, StatusAccepted, StatusNameDropApproved, StatusSuggestOther,
 		StatusDeclined, StatusIntroduced, StatusNameDropped, StatusReplied,
