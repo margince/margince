@@ -11,7 +11,8 @@ import {
   useState,
 } from "react";
 import { useFoldedViewport } from "../app/viewport";
-import { usePlural, useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { useLocale, usePlural, useT } from "../i18n";
 import { problemMessageOf } from "../screens/common";
 import { useActiveOptionVisible } from "./anchoredpopup";
 import { Button, type ButtonVariant, SearchField } from "./atoms";
@@ -178,6 +179,7 @@ function ListSearch({
 }>) {
   const t = useT();
   const plural = usePlural();
+  const { locale } = useLocale();
   const listboxId = useId();
   const [term, setTerm] = useState("");
   const [active, setActive] = useState(-1);
@@ -255,7 +257,7 @@ function ListSearch({
         {status ??
           (rows.length > 0 &&
             plural("picker.results", rows.length, {
-              count: String(rows.length),
+              count: formatNumber(rows.length, locale),
             }))}
       </p>
       <div className="listpopover-list">
