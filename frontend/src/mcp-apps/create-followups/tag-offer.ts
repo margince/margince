@@ -3,7 +3,7 @@
 // the workspace has none and the seat may; declining makes no call. A word
 // applied can be taken off again, because that is what makes it safe to offer.
 
-import { callServerTool, canCallTools } from "../actions";
+import { askAssistant, callServerTool, canCallTools } from "../actions";
 import { el } from "../bridge";
 import { button, panel, panelBody } from "../parts";
 import { asRecord, asText } from "../types";
@@ -89,7 +89,16 @@ function choices(
     );
     return row;
   }
-  if (!canCallTools()) return row;
+  if (!canCallTools()) {
+    row.appendChild(
+      button("Ask the assistant to tag it", "primary", () =>
+        askAssistant(
+          `Tag the ${record.record_type} ${record.record_id} “${offer.name}”${offer.exists ? "" : ", adding the tag first"}.`,
+        ),
+      ),
+    );
+    return row;
+  }
   const busy = outcome?.kind === "busy";
   row.append(
     button(

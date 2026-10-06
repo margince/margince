@@ -66,6 +66,17 @@ describe("the approval card", () => {
     ).toEqual(["stageNegotiation", "amount minor1200000"]);
   });
 
+  it("shows a nested change as text rather than hiding it", () => {
+    const root = mount({
+      ...(approvalFixture.data as object),
+      proposed_change: { body: { text: "Hello Anna" }, to: ["a@b.test"] },
+    });
+    const cells = [...root.querySelectorAll("tbody td")].map(
+      (n) => n.textContent,
+    );
+    expect(cells).toEqual(['{"text":"Hello Anna"}', '["a@b.test"]']);
+  });
+
   it("approves through decide_approval and says the assistant still has to run it", async () => {
     const root = mount();
     await press(root, "Approve");

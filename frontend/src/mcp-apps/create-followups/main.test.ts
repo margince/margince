@@ -234,3 +234,24 @@ describe("the tag offer", () => {
     expect(mount(withOffer(existing, "activity")).childElementCount).toBe(0);
   });
 });
+
+describe("the tag offer without host tool calls", () => {
+  it("asks the assistant in chat rather than drawing a dead panel", async () => {
+    proxies = false;
+    const root = mount({
+      record_type: "contact",
+      id: "0195c3a0-0000-7000-8000-000000000002",
+      fields: {},
+      tag_offer: {
+        name: "Fair",
+        exists: true,
+        tag_id: "t1",
+        may_create: false,
+      },
+    });
+    expect(labels(root)).toEqual(["Ask the assistant to tag it"]);
+    await press(root, "Ask the assistant to tag it");
+    expect(calls).toHaveLength(0);
+    expect(asked[0]).toContain("Fair");
+  });
+});

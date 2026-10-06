@@ -49,20 +49,27 @@ function outcomesOf(root: HTMLElement): Map<string, Outcome> {
   return found;
 }
 
-/** The scalar members of the staged change, which is what a reader checks
- *  before deciding. Nested values are summarised rather than dumped. */
+/** Longest text shown for one nested value; the full change stays one
+ *  read_approval away, and a card must not be a wall of text. */
+const NESTED_LIMIT = 600;
+
+function shown(value: unknown): string {
+  if (typeof value === "string" || typeof value === "number")
+    return String(value);
+  if (typeof value === "boolean") return value ? "yes" : "no";
+  if (value === null || value === undefined) return "—";
+  const text = JSON.stringify(value);
+  return text.length > NESTED_LIMIT ? `${text.slice(0, NESTED_LIMIT)}…` : text;
+}
+
+/** The members of the staged change, which is what a reader checks before
+ *  deciding. A nested value is shown as compact JSON, never hidden: an
+ *  email body or a field patch is the thing being released. */
 function rowsOf(change: unknown): [string, string][] {
-  return Object.entries(asRecord(change)).map(([name, value]) => {
-    const text =
-      typeof value === "string" || typeof value === "number"
-        ? String(value)
-        : typeof value === "boolean"
-          ? value
-            ? "yes"
-            : "no"
-          : "—";
-    return [name.replaceAll("_", " "), text];
-  });
+  return Object.entries(asRecord(change)).map(([name, value]) => [
+    name.replaceAll("_", " "),
+    shown(value),
+  ]);
 }
 
 function itemOf(raw: unknown): Item | null {
