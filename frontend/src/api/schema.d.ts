@@ -19745,8 +19745,8 @@ export interface components {
             /**
              * @description The location ladder (§4). `sovereign` means zero egress by construction: a cloud
              *     provider on any tier is refused, and so is a local provider pointed at another host.
-             *     `eu_hosted` promises EU inference: a broker lane must pin EU-region hosts, and a
-             *     `gemini_vertex` lane must name an EU location.
+             *     `eu_hosted` and `cloud_frontier` refuse nothing: where a lane is served is the
+             *     connection's and the location's to say.
              * @enum {string}
              */
             profile: "eu_hosted" | "sovereign" | "cloud_frontier";
