@@ -172,6 +172,7 @@ import { RecordTeam } from "./recordteam";
 import { SaveViewAction, useSavedViewTabs } from "./savedviews";
 import { parseTagIDs, parseTagMode, tagQueryParams } from "./tagfilter";
 import { TagsPanel } from "./tagspanel";
+import { WorklistReturnLink } from "./worklist.return";
 
 // Kanban, table and deal detail share the fetched records and approval flow.
 // Mixed-currency columns never sum native minor units; weighting stays server-side.
@@ -2981,6 +2982,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
           return (
             <div className="record-sheet">
               <RecordView
+                back={<WorklistReturnLink />}
                 // Context first: who these contacts are, before the verbs that act
                 // on them. The seats moved out of the main column when the
                 // readings band started counting them — the same two facts were

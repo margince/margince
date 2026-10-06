@@ -167,6 +167,7 @@ import { groupChronology } from "./timelinegroups";
 import "./company360.css";
 import { useAccountScan } from "./accountscan";
 import { invalidateRecord } from "./recordwritekeys";
+import { keptWorklistReturn, WorklistReturnLink } from "./worklist.return";
 
 // Companies list + company 360 (B-EP09.10a/b). Firmographics render
 // evidence-or-omit: a field with no stored value is absent, never guessed.
@@ -689,7 +690,8 @@ function useCompanyTab(
     // does. The per-record reset this used to hold is now the address's: a tab
     // belongs to the account it names, so moving to another account cannot
     // carry one along.
-    (next: CompanyTab) => navigate(companyTabRoute(recordId, next)),
+    (next: CompanyTab) =>
+      navigate(companyTabRoute(recordId, next), keptWorklistReturn()),
   ];
 }
 
@@ -1262,6 +1264,7 @@ function CompanyPage({
   return (
     <div className="record-sheet">
       <RecordView
+        back={<WorklistReturnLink />}
         name={company.display_name}
         identity={company.id}
         avatarSrc={company.logo_url}

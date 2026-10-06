@@ -65,6 +65,7 @@ import {
 } from "./writeto";
 import "./contact360.css";
 import { buyingRoleLabel } from "./companycontacts/summary";
+import { keptWorklistReturn, WorklistReturnLink } from "./worklist.return";
 
 type Contact360 = components["schemas"]["Contact360"];
 type ContactMomentAction = components["schemas"]["ContactMomentAction"];
@@ -444,6 +445,7 @@ export function ContactPageV2({
       <ContactWriteTo contactId={id} onWrite={() => openComposer("")}>
         <div className="record-sheet">
           <RecordView
+            back={<WorklistReturnLink />}
             // The contact's context, in the details pane beside the work: what is
             // true of the CONTACT does not belong to whichever part of them is open,
             // so it does not move when a tab changes. The same pane, fold and
@@ -491,7 +493,7 @@ export function ContactPageV2({
                 options={CONTACT_TABS}
                 value={tab}
                 onChange={(next) => {
-                  navigate(contactTabRoute(id, next));
+                  navigate(contactTabRoute(id, next), keptWorklistReturn());
                   scrollPageToTop();
                 }}
                 // The switch for the details pane, at the end of the tab row: it

@@ -51,6 +51,7 @@ import {
 } from "./worklist.queries";
 import { noticeDetail, readerTask } from "./worklist.reader";
 import { replyTarget, WaitingReply } from "./worklist.reply";
+import { useDrawerDials, withWorklistReturn } from "./worklist.return";
 import {
   aboutRecord,
   REASONS_BEFORE_THE_FOLD,
@@ -155,7 +156,10 @@ export function WorklistRow({
   // A task's deadline is the record's day; everything else on this row is a
   // moment the reader is racing on their own clock.
   const recordZone = useRecordZone();
-  const href = rowHref(item);
+  // Inside the drawer a row's record links carry the way back to it.
+  const drawer = useDrawerDials();
+  const target = rowHref(item);
+  const href = target && withWorklistReturn(target, drawer);
   const viewer = useMe(false).data?.user;
   const title = itemTitle(readerTask(item, viewer, t), t, locale);
   const facts =
@@ -201,7 +205,7 @@ export function WorklistRow({
   // its rows and this line is the only place those facts are said there.
   const about = framed
     ? undefined
-    : aboutRecord(item, emailOpener !== undefined);
+    : aboutRecord(item, emailOpener !== undefined, drawer);
   const touch = lastTouch(touchOf(item, framed), t, locale, zone);
   const host = hostText(item, viewer?.id, t);
   // Whether the day put a state on this row — overdue, or a meeting with

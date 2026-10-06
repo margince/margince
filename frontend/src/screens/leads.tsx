@@ -96,6 +96,7 @@ export { terminalBadge } from "./leadstanding";
 import { AddToShortlistAction } from "./addtoshortlist";
 import { leadKey, leadScoreKey, leadWriteKeys } from "./leadkeys";
 import { RecordListsPanel } from "./recordlists";
+import { keptWorklistReturn, WorklistReturnLink } from "./worklist.return";
 
 export { LeadsScreen } from "./leads.list";
 
@@ -962,7 +963,11 @@ function useLeadTab(recordId: string): [LeadTab, (next: LeadTab) => void] {
     route.screen === "leads" && route.id === recordId ? route.id2 : undefined;
   return [
     isLeadTab(addressed) ? addressed : "overview",
-    (next: LeadTab) => navigate({ screen: "leads", id: recordId, id2: next }),
+    (next: LeadTab) =>
+      navigate(
+        { screen: "leads", id: recordId, id2: next },
+        keptWorklistReturn(),
+      ),
   ];
 }
 
@@ -1363,6 +1368,7 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
   return (
     <div className="record-sheet">
       <RecordView
+        back={<WorklistReturnLink />}
         // One rung under the record scale: the name is still the largest thing
         // on the page, but beside a work column that opens on the agent's ask
         // it no longer needs to be the size of a masthead, the same rung the

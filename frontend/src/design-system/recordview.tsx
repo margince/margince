@@ -147,6 +147,7 @@ function RecordHead({
 }
 
 export function RecordView({
+  back,
   name,
   avatarSrc,
   nameBadge,
@@ -176,6 +177,9 @@ export function RecordView({
   zone,
   children,
 }: Readonly<{
+  // The way back to where the reader opened this record from, over the head.
+  // Absent when they arrived any other way.
+  back?: ReactNode;
   name: string;
   // The record's own image for the header chip — a company's resolved logo.
   // Null or absent renders the deterministic monogram, which is the floor for
@@ -340,6 +344,7 @@ export function RecordView({
        itself an arriving block (design-system/enter.css), which is what keeps
        the two fades from multiplying. */
     <div className="arrive-stack">
+      {back && <div className="record-back">{back}</div>}
       {head}
       {actionsAt === "below" && <div className="record-actions">{actions}</div>}
       {strip}
