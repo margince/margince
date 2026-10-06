@@ -87,9 +87,8 @@ type ToastMessage = Readonly<{
 export type ToastOptions = Readonly<{
   /**
    * Keep it until something dismisses it. Worth asking for only where the
-   * message is a REFUSAL: a reader who has been
-   * told a write did not land should not have that sentence taken away from
-   * them three and a half seconds later.
+   * message is a REFUSAL: a reader who has been told a write did not land
+   * should not have that sentence taken away from them seconds later.
    */
   sticky?: boolean;
   /**
