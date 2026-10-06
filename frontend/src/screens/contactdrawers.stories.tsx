@@ -58,7 +58,7 @@ const readyRun = {
 };
 
 // The record the drawer opens OVER, drawn behind it. Two things ride on it:
-// `intent="drawer"` exists so the record stays legible beside the drawer, and
+// the drawer opens at the side so the record stays legible beside it, and
 // a story with nothing behind shows the one thing the drawer is for as an
 // empty canvas — and the drawer PORTALS out of the story root, so without a
 // stage the root is empty and fe-uat reads the render as a failure.
