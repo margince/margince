@@ -140,45 +140,41 @@ export function ConfirmAdvanceModal({
     <Modal open={pending !== null} onClose={dismiss} labelledBy="advance-title">
       {pending && (
         <>
-          <p className="t-sub" id="advance-title">
-            <AutonomyDot tier={verbTier("progress_deal", tierMap)} />{" "}
-            {t("deals.confirmAdvance", { stage: pending.toStage.name })}
-          </p>
-          <p className="t-caption advance-terminal">
-            {t("deals.confirmTerminal", { status: pending.toStage.semantic })}
-          </p>
-          {(needsLostReason || needsWonReason) && (
-            <div className="advance-reasons">
-              {needsLostReason && (
-                <Field label={t("deals.lostReason")}>
-                  {(control) => (
-                    <TextInput
-                      {...control}
-                      value={lostReason}
-                      onChange={(event) => setLostReason(event.target.value)}
-                    />
-                  )}
-                </Field>
-              )}
-              {needsWonReason && (
-                <WonReasonFields
-                  reason={wonReason}
-                  detail={wonDetail}
-                  onReason={(next) => {
-                    setWonReason(next);
-                    // The detail belongs to "Something else" alone. Kept across
-                    // a change of reason it would sit invisibly behind a field
-                    // the reader can no longer see, which is not a state they
-                    // can correct.
-                    if (next !== WON_REASON_NEEDING_DETAIL) {
-                      setWonDetail("");
-                    }
-                  }}
-                  onDetail={setWonDetail}
-                />
-              )}
-            </div>
-          )}
+          <div className="form-stack">
+            <p className="t-sub" id="advance-title">
+              <AutonomyDot tier={verbTier("progress_deal", tierMap)} />{" "}
+              {t("deals.confirmAdvance", { stage: pending.toStage.name })}
+            </p>
+            <p className="t-caption">
+              {t("deals.confirmTerminal", { status: pending.toStage.semantic })}
+            </p>
+            {needsLostReason && (
+              <Field label={t("deals.lostReason")}>
+                {(control) => (
+                  <TextInput
+                    {...control}
+                    value={lostReason}
+                    onChange={(event) => setLostReason(event.target.value)}
+                  />
+                )}
+              </Field>
+            )}
+            {needsWonReason && (
+              <WonReasonFields
+                reason={wonReason}
+                detail={wonDetail}
+                onReason={(next) => {
+                  setWonReason(next);
+                  // A detail kept behind a hidden field is one the reader
+                  // cannot correct.
+                  if (next !== WON_REASON_NEEDING_DETAIL) {
+                    setWonDetail("");
+                  }
+                }}
+                onDetail={setWonDetail}
+              />
+            )}
+          </div>
           <div className="actions">
             <Button onClick={dismiss}>{t("deals.cancel")}</Button>
             <Button

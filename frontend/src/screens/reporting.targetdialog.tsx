@@ -109,8 +109,10 @@ export function ReportingTargetDialog({
   });
   return (
     <Modal open onClose={onClose} labelledBy={title}>
+      <Heading size="large" id={title} className="t-h2 modal-title">
+        {actionLabel}
+      </Heading>
       <form
-        className="reporting-dialog"
         onSubmit={(event) => {
           event.preventDefault();
           write.mutate({
@@ -128,192 +130,191 @@ export function ReportingTargetDialog({
           });
         }}
       >
-        <Heading id={title} as="h2" size="medium">
-          {actionLabel}
-        </Heading>
-        <QueryGate query={catalog} pendingLabel={t("reporting.metrics")}>
-          {(catalog) => (
-            <Field label={t("reporting.metrics")}>
+        <div className="form-stack">
+          <QueryGate query={catalog} pendingLabel={t("reporting.metrics")}>
+            {(catalog) => (
+              <Field label={t("reporting.metrics")}>
+                {(field) => (
+                  <Select
+                    {...field}
+                    disabled={!!target}
+                    value={metric}
+                    options={catalog.metrics
+                      .filter((metric) => metric.supports_target)
+                      .map((metric) => ({
+                        value: metric.id,
+                        label: metricLabel(metric.id, t),
+                      }))}
+                    onChange={(value) => {
+                      const selected = catalog.metrics.find(
+                        (metric) => metric.id === value,
+                      );
+                      if (selected) setMetric(selected.id);
+                    }}
+                  />
+                )}
+              </Field>
+            )}
+          </QueryGate>
+          {target ? (
+            <p>{scope.label}</p>
+          ) : (
+            <AnalyticsScopePicker
+              scopes={context.allowed_scopes.filter(
+                (scope) => scope.kind !== "managed_teams",
+              )}
+              selected={{ ...scope, label: scope.label ?? "" }}
+              onSelect={(scope) =>
+                setScope({ ...scope, id: scope.id ?? undefined })
+              }
+            />
+          )}
+          <Field label={t("reporting.pipeline")}>
+            {(field) => (
+              <Select
+                {...field}
+                disabled={!!target}
+                value={pipeline}
+                options={[
+                  { value: "", label: t("reporting.allPipelines") },
+                  ...(pipelines.data?.data ?? []).map((pipeline) => ({
+                    value: pipeline.id,
+                    label: pipeline.name,
+                  })),
+                ]}
+                onChange={setPipeline}
+              />
+            )}
+          </Field>
+          <Field label={t("reporting.targetBasis")}>
+            {(field) => (
+              <Select
+                {...field}
+                disabled={!!target}
+                value={periodKind}
+                options={[
+                  { value: "month", label: t("reporting.month") },
+                  {
+                    value: "fiscal_quarter",
+                    label: t("reporting.fiscal_quarter"),
+                  },
+                ]}
+                onChange={(value) => {
+                  if (value === "month" || value === "fiscal_quarter") {
+                    setPeriodKind(value);
+                    if (
+                      value === "fiscal_quarter" &&
+                      fiscalStart != null &&
+                      periodStart
+                    ) {
+                      setPeriodStart(
+                        fiscalQuarterStart(periodStart, fiscalStart),
+                      );
+                    }
+                  }
+                }}
+              />
+            )}
+          </Field>
+          <div className="reporting-period-controls">
+            <Field label={t("reporting.periodYear")} required>
               {(field) => (
-                <Select
+                <TextInput
                   {...field}
+                  type="number"
+                  min="1900"
+                  max="9999"
                   disabled={!!target}
-                  value={metric}
-                  options={catalog.metrics
-                    .filter((metric) => metric.supports_target)
-                    .map((metric) => ({
-                      value: metric.id,
-                      label: metricLabel(metric.id, t),
-                    }))}
-                  onChange={(value) => {
-                    const selected = catalog.metrics.find(
-                      (metric) => metric.id === value,
-                    );
-                    if (selected) setMetric(selected.id);
-                  }}
+                  value={periodStart.split("-")[0]}
+                  onChange={(event) =>
+                    setPeriodStart(
+                      `${event.target.value}-${periodStart.split("-")[1] || "01"}-01`,
+                    )
+                  }
                 />
               )}
             </Field>
-          )}
-        </QueryGate>
-        {target ? (
-          <p>{scope.label}</p>
-        ) : (
-          <AnalyticsScopePicker
-            scopes={context.allowed_scopes.filter(
-              (scope) => scope.kind !== "managed_teams",
-            )}
-            selected={{ ...scope, label: scope.label ?? "" }}
-            onSelect={(scope) =>
-              setScope({ ...scope, id: scope.id ?? undefined })
-            }
-          />
-        )}
-        <Field label={t("reporting.pipeline")}>
-          {(field) => (
-            <Select
-              {...field}
-              disabled={!!target}
-              value={pipeline}
-              options={[
-                { value: "", label: t("reporting.allPipelines") },
-                ...(pipelines.data?.data ?? []).map((pipeline) => ({
-                  value: pipeline.id,
-                  label: pipeline.name,
-                })),
-              ]}
-              onChange={setPipeline}
-            />
-          )}
-        </Field>
-        <Field label={t("reporting.targetBasis")}>
-          {(field) => (
-            <Select
-              {...field}
-              disabled={!!target}
-              value={periodKind}
-              options={[
-                { value: "month", label: t("reporting.month") },
-                {
-                  value: "fiscal_quarter",
-                  label: t("reporting.fiscal_quarter"),
-                },
-              ]}
-              onChange={(value) => {
-                if (value === "month" || value === "fiscal_quarter") {
-                  setPeriodKind(value);
-                  if (
-                    value === "fiscal_quarter" &&
-                    fiscalStart != null &&
-                    periodStart
-                  ) {
-                    setPeriodStart(
-                      fiscalQuarterStart(periodStart, fiscalStart),
-                    );
+            <Field label={t("reporting.periodMonth")} required>
+              {(field) => (
+                <Select
+                  {...field}
+                  disabled={
+                    !!target ||
+                    (periodKind === "fiscal_quarter" && fiscalStart == null)
                   }
-                }
-              }}
-            />
+                  value={periodStart.split("-")[1] ?? "01"}
+                  options={Array.from({ length: 12 }, (_, index) => index + 1)
+                    .filter(
+                      (month) =>
+                        periodKind === "month" ||
+                        (fiscalStart != null &&
+                          (month - fiscalStart + 12) % 3 === 0),
+                    )
+                    .map((month) => ({
+                      value: String(month).padStart(2, "0"),
+                      label: monthName(month, locale),
+                    }))}
+                  onChange={(month) =>
+                    setPeriodStart(`${periodStart.split("-")[0]}-${month}-01`)
+                  }
+                />
+              )}
+            </Field>
+          </div>
+          {isISODate(periodStart) && (
+            <p className="t-caption">
+              {formatDateAbbrev(periodStart, locale, context.timezone)} –{" "}
+              {formatDateAbbrev(
+                targetPeriodEnd(periodStart, periodKind),
+                locale,
+                context.timezone,
+              )}
+            </p>
           )}
-        </Field>
-        <div className="reporting-period-controls">
-          <Field label={t("reporting.periodYear")} required>
+          <ErrorLine error={installation.error} />
+          <Field
+            label={t("reporting.value")}
+            hint={
+              definition?.unit === "money"
+                ? context.base_currency
+                : t("reporting.wholeCount")
+            }
+            required
+          >
             {(field) => (
               <TextInput
                 {...field}
                 type="number"
-                min="1900"
-                max="9999"
-                disabled={!!target}
-                value={periodStart.split("-")[0]}
-                onChange={(event) =>
-                  setPeriodStart(
-                    `${event.target.value}-${periodStart.split("-")[1] || "01"}-01`,
-                  )
-                }
+                min="0"
+                step={definition?.unit === "money" ? "any" : "1"}
+                value={amount}
+                onChange={(event) => setAmount(event.target.value)}
               />
             )}
           </Field>
-          <Field label={t("reporting.periodMonth")} required>
+          <Field label={t("reporting.reason")} required>
             {(field) => (
-              <Select
+              <TextInput
                 {...field}
-                disabled={
-                  !!target ||
-                  (periodKind === "fiscal_quarter" && fiscalStart == null)
-                }
-                value={periodStart.split("-")[1] ?? "01"}
-                options={Array.from({ length: 12 }, (_, index) => index + 1)
-                  .filter(
-                    (month) =>
-                      periodKind === "month" ||
-                      (fiscalStart != null &&
-                        (month - fiscalStart + 12) % 3 === 0),
-                  )
-                  .map((month) => ({
-                    value: String(month).padStart(2, "0"),
-                    label: monthName(month, locale),
-                  }))}
-                onChange={(month) =>
-                  setPeriodStart(`${periodStart.split("-")[0]}-${month}-01`)
-                }
+                value={reason}
+                onChange={(event) => setReason(event.target.value)}
               />
             )}
           </Field>
+          {target && (
+            <>
+              <Checkbox
+                label={t("reporting.retired")}
+                checked={retired}
+                onChange={(event) => setRetired(event.target.checked)}
+              />
+              <p className="t-caption">{t("reporting.retiredHelp")}</p>
+              <TargetHistory target={target} />
+            </>
+          )}
+          <ErrorLine error={write.error} />
         </div>
-        {isISODate(periodStart) && (
-          <p className="t-caption">
-            {formatDateAbbrev(periodStart, locale, context.timezone)} –{" "}
-            {formatDateAbbrev(
-              targetPeriodEnd(periodStart, periodKind),
-              locale,
-              context.timezone,
-            )}
-          </p>
-        )}
-        <ErrorLine error={installation.error} />
-        <Field
-          label={t("reporting.value")}
-          hint={
-            definition?.unit === "money"
-              ? context.base_currency
-              : t("reporting.wholeCount")
-          }
-          required
-        >
-          {(field) => (
-            <TextInput
-              {...field}
-              type="number"
-              min="0"
-              step={definition?.unit === "money" ? "any" : "1"}
-              value={amount}
-              onChange={(event) => setAmount(event.target.value)}
-            />
-          )}
-        </Field>
-        <Field label={t("reporting.reason")} required>
-          {(field) => (
-            <TextInput
-              {...field}
-              value={reason}
-              onChange={(event) => setReason(event.target.value)}
-            />
-          )}
-        </Field>
-        {target && (
-          <>
-            <Checkbox
-              label={t("reporting.retired")}
-              checked={retired}
-              onChange={(event) => setRetired(event.target.checked)}
-            />
-            <p className="t-caption">{t("reporting.retiredHelp")}</p>
-            <TargetHistory target={target} />
-          </>
-        )}
-        <ErrorLine error={write.error} />
-        <div className="reporting-dialog-actions">
+        <div className="actions">
           <Button variant="ghost" onClick={onClose}>
             {t("reporting.cancel")}
           </Button>

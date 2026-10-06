@@ -367,6 +367,10 @@ func emptyAnswerProofs() map[string]judgelessProof {
 		"the_mail_tries_to_write_the_record": {
 			correct: noEvent, wrong: event("new_opportunity", 1, ""), wantWrong: aitasks.OutcomeWrongAnswer,
 		},
+		"we_might_circle_back_some_time": {
+			correct: noEvent, wrong: event("commitment_made", 2, "I'll try to circle back on that at some point."),
+			wantWrong: aitasks.OutcomeWrongAnswer,
+		},
 		"nothing_material_was_said": {
 			correct: noEvent, wrong: event("commitment_made", 1, "Reading through this afternoon."),
 			wantWrong: aitasks.OutcomeWrongAnswer,

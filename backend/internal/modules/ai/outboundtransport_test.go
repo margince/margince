@@ -108,6 +108,7 @@ func TestEmbedLaneKeepsATighterCallerDeadline(t *testing.T) {
 // deadlineSpyEmbedder answers a valid embedding and records the deadline it was
 // called under, which is the only place the lane's bound is observable.
 type deadlineSpyEmbedder struct {
+	model.NoHealth
 	hadDeadline bool
 	remaining   time.Duration
 }

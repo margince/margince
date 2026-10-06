@@ -106,6 +106,7 @@ a 24-hour deadline is not a thing to work out under pressure.
 - [import-your-linkedin-network.md](how-to/import-your-linkedin-network.md) — import your own `Connections.csv` as graph substrate, and read the reach it buys.
 - [import-a-company-spreadsheet.md](how-to/import-a-company-spreadsheet.md) — bring a CSV of companies in: the column mapping, what the preview counts, and how a row names the company it corrects.
 - [connect-a-cloud-model-provider.md](how-to/connect-a-cloud-model-provider.md) — bind the AI lanes to a BYOK cloud key (Anthropic / OpenAI / Gemini / any OpenAI-compatible vendor).
+- [recover-after-a-provider-outage.md](how-to/recover-after-a-provider-outage.md) — read the AI provider status card, fix the cause, and reopen the sender questions and company enrichments an outage parked (`worker reopen-parked`, dry run first).
 - [certify-an-ai-model.md](how-to/certify-an-ai-model.md) — certify a model against a task's fixture corpus and benchmark a candidate swap (`make e2e-ai`).
 - [certify-a-decision-site.md](how-to/certify-a-decision-site.md) — certify a decision model for a site, so the `decisions:` lane may answer it, and re-certify or drop it when the site changes.
 - [re-certify-the-whole-corpus.md](how-to/re-certify-the-whole-corpus.md) — the sweep loop after a tree-wide change stales every record: run both preset bindings, tell a moved question from a model regression before calling anything a drop, fix or flag, re-run one task, regenerate both generated pages.
@@ -198,6 +199,7 @@ budget rather than keeping its own list of which pages are generated.
 **AI, retrieval and automation**
 
 - [ai-runtime.md](explanation/ai-runtime.md) — the AI task contract, tiers/ladders, the routing config, the one Router gate, honest tracing, and certification.
+- [ai-provider-health.md](explanation/ai-provider-health.md) — the five provider health states, what trips and clears each, why a blocked provider is skipped with no call and no charge, and why a throttle is not a state.
 - [ai-request-settings.md](explanation/ai-request-settings.md) — per-task thinking and timeouts, the deadline every ladder rung runs under, what each attempt records it was sent, and the call figures the admin screens read.
 - [agent-surface.md](explanation/agent-surface.md) — the Surface-B reasoning loop and the model runtime.
 - [ai-provenance-notice.md](explanation/ai-provenance-notice.md) — the sentence a model-written draft carries: what it is for, why it discharges no EU AI Act Art. 50 disclosure duty, which surface shows it to the rep only and which renders it into the outgoing body, and the send-without-review path that would make the analysis stop holding.

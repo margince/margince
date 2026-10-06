@@ -27,14 +27,34 @@ import (
 // the only things here that reach the database. Everything else the resolver
 // does is pure.
 //
-// The base language is the tier under the correspondence: a thread too short to
-// detect, and a FIRST message which has no correspondence at all, both land on
-// what the team said they work in rather than on English by default.
+// Under the correspondence and the rep's typed purpose come the rep's own app
+// language and then the installation's: a contact who has never written gets
+// the language the sender reads, before the one the team configured.
 func draftEnvelope(pool *pgxpool.Pool, log *slog.Logger) *draftfloor.Resolver {
+	seats := identity.NewService(pool)
 	return draftfloor.NewResolver().
-		WithSender(identity.NewService(pool)).
+		WithSender(seats).
+		WithUserLanguage(func(ctx context.Context) string {
+			return actorLocale(ctx, seats, log)
+		}).
 		WithBaseLanguage(func(ctx context.Context) string {
 			return identity.BaseLanguageForPrompt(ctx, pool)
 		}).
 		WithLogger(log)
+}
+
+// actorLocale is the acting rep's chosen app language, or "" when they never
+// chose one. A failed read degrades to the next tier rather than failing the
+// draft, and says so in the log.
+func actorLocale(ctx context.Context, seats *identity.Service, log *slog.Logger) string {
+	profile, err := seats.ActorProfile(ctx)
+	if err != nil {
+		if log == nil {
+			log = slog.Default()
+		}
+		log.WarnContext(ctx, "the rep's app language could not be read; the installation's is used instead",
+			"reason", err)
+		return ""
+	}
+	return profile.Locale
 }

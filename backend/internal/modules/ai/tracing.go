@@ -187,7 +187,7 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 			boundRungs = append(boundRungs, t)
 		}
 	}
-	var lastErr error
+	var lastErr, skipped error
 	var lastTier Tier
 	for i, t := range boundRungs {
 		// The rail's lease covers one model call, and this is the next one.
@@ -198,6 +198,19 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 		out, callErr := b.clients[t].Complete(callCtx, req)
 		cancel()
 		if callErr != nil {
+			// A rung whose provider is blocked made no call: it is skipped, not
+			// traced or metered as a failure of this request, and it never
+			// replaces what a rung that WAS called answered.
+			if refusedUncalled(callErr) {
+				// An account refused for lack of credit ends the walk, as the
+				// refusal itself does: skipping on would bill a premium rung
+				// for every call while the configured one is empty.
+				if lastErr == nil && blockedForCredit(callErr) {
+					return model.Response{}, t, false, callErr
+				}
+				skipped = earlier(skipped, callErr)
+				continue
+			}
 			lastErr, lastTier = callErr, t
 			// A refused account is the operator's to fix, and only the rung
 			// that hit it knows so. The walk keeps just `lastErr`, so an
@@ -255,6 +268,9 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 		}
 		return out, t, true, nil
 	}
+	if lastErr == nil && skipped != nil {
+		return model.Response{}, "", false, skipped
+	}
 	if lastErr != nil {
 		// lastTier names the rung whose failure the caller sees, so the
 		// trace records where the walk died instead of an empty tier.
@@ -267,6 +283,13 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 		// and decided, so the walk ended on an outcome, and ErrAllTiersFailed
 		// would send a caller to re-drive it as an outage.
 		if errors.Is(lastErr, model.ErrOutputWithheld) || errors.Is(lastErr, model.ErrRequestRejected) {
+			return model.Response{}, lastTier, false, lastErr
+		}
+		// A walk that ends on the failure that blocked its provider (or kept
+		// it blocked, when the call was the probe) is a deferral already: the
+		// tracked client dressed it as one, and the item did nothing wrong.
+		var down *ProviderDownError
+		if errors.As(lastErr, &down) {
 			return model.Response{}, lastTier, false, lastErr
 		}
 		return model.Response{}, lastTier, false, fmt.Errorf("%w for %s: %w", ErrAllTiersFailed, task, lastErr)

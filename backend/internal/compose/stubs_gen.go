@@ -239,6 +239,10 @@ func (stubs) GetAiProfile(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetAiProfile")
 }
 
+func (stubs) GetAiProviderHealth(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetAiProviderHealth")
+}
+
 func (stubs) ListAiProviderKeys(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ListAiProviderKeys")
 }
@@ -1239,6 +1243,14 @@ func (stubs) RecordConsent(w nethttp.ResponseWriter, r *nethttp.Request, id crmc
 	httperr.NotImplemented(w, r, "RecordConsent")
 }
 
+func (stubs) AllowContact(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "AllowContact")
+}
+
+func (stubs) RevokeOverride(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, overrideId openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "RevokeOverride")
+}
+
 func (stubs) RequestDetailsConfirmation(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "RequestDetailsConfirmation")
 }
@@ -1633,6 +1645,10 @@ func (stubs) SendCompanyEmail(w nethttp.ResponseWriter, r *nethttp.Request, para
 
 func (stubs) PreviewAccountSendAuthorization(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "PreviewAccountSendAuthorization")
+}
+
+func (stubs) PreviewEmailSignOff(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "PreviewEmailSignOff")
 }
 
 func (stubs) EmbedReindexStart(w nethttp.ResponseWriter, r *nethttp.Request) {

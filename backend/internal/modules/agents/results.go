@@ -260,6 +260,28 @@ type DraftEmailResult struct {
 	// them, and a caller re-deriving them can file a conversation under the
 	// wrong record. Empty on a reply, which inherits its filing.
 	Links []RecordLink `json:"links,omitempty"`
+	// To is who a first message is addressed to, read from the recipient's
+	// record. send_company_email takes it.
+	To []string `json:"to,omitempty"`
+	// AIGenerated and AIDisclosure mark a first message a model wrote, so the
+	// text is shown to a human as model-written.
+	AIGenerated  bool   `json:"ai_generated,omitempty"`
+	AIDisclosure string `json:"ai_disclosure,omitempty"`
+	// SavedDraftID is the draft left waiting on the recipient's page for the
+	// human this agent acts for. NotSaved says why there is none.
+	SavedDraftID *ids.UUID `json:"saved_draft_id,omitempty"`
+	NotSaved     string    `json:"not_saved,omitempty"`
+}
+
+// FirstDraft is a first message drafted for a record, and where it waits.
+type FirstDraft struct {
+	Subject      string
+	Body         string
+	To           []string
+	AIGenerated  bool
+	AIDisclosure string
+	SavedDraftID *ids.UUID
+	NotSaved     string
 }
 
 // ContextAnchor names the record an assembled picture was built around.

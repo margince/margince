@@ -26,6 +26,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/storedobjects"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -277,6 +278,14 @@ func (s *Store) SetPdfAssetRef(ctx context.Context, id ids.OfferID, ref string, 
 			p.Before(), p.After()); err != nil {
 			return fmt.Errorf("audit offer render: %w", err)
 		}
+		// Retired on THIS transaction, so the clear and the ref that now names the
+		// key commit together. The handler already reclaims the bytes when the
+		// store REFUSES; what the ledger covers is the error it deliberately does
+		// not act on — an acknowledgement lost after a commit, where deleting
+		// would strip a live ref — and this process dying before either.
+		if err := storedobjects.Clear(ctx, tx, ref); err != nil {
+			return err
+		}
 		var err2 error
 		if out, err2 = readOfferWithLines(ctx, tx, id, storekit.LiveOnly); err2 != nil {
 			return fmt.Errorf("read offer after render: %w", err2)
@@ -304,4 +313,44 @@ func retireRenderingOnBuyerChange(p *storekit.Patch, current crmcontracts.Offer,
 	}
 	p.Set("pdf_asset_ref", current.PdfAssetRef, nil)
 	return current.PdfAssetRef
+}
+
+// RecordOfferPdfIntent declares a rendered PDF's key provisional before its put.
+func (s *Store) RecordOfferPdfIntent(ctx context.Context, key string) error {
+	return storedobjects.NewLedger(s.db).Record(ctx, storedobjects.KindOffer, key)
+}
+
+// UnreferencedOfferKeys answers which of these keys no offer's pdf_asset_ref carries.
+//
+// Answered here because offer is this module's table. The sweep holds the ledger and
+// asks each kind's owner, since no module may read another's rows.
+func (s *Store) UnreferencedOfferKeys(ctx context.Context, keys []string) ([]string, error) {
+	if err := auth.RequireSystem(ctx); err != nil {
+		return nil, err
+	}
+	if len(keys) == 0 {
+		return nil, nil
+	}
+	var out []string
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `
+			SELECT k FROM unnest($1::text[]) AS k
+			 WHERE NOT EXISTS (SELECT 1 FROM offer o WHERE o.pdf_asset_ref = k)`, keys)
+		if err != nil {
+			return fmt.Errorf("check which offer PDF keys are unreferenced: %w", err)
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var key string
+			if err := rows.Scan(&key); err != nil {
+				return fmt.Errorf("read an unreferenced offer PDF key: %w", err)
+			}
+			out = append(out, key)
+		}
+		return rows.Err()
+	})
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }

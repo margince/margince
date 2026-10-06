@@ -10,6 +10,9 @@ package ai
 // different lifetimes now that the second can change under the first.
 
 import (
+	"maps"
+	"slices"
+
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -134,8 +137,14 @@ func (r *Router) Rebind(cfg RoutingConfig) error {
 		clients: clients, embedder: embedder,
 		profile: cfg.Profile, routeMeta: embedInclusiveMeta(cfg),
 	}.withConfig(cfg, decisions)
+	replaced := r.binding().providers()
 	r.install(next)
 	r.cache.clear()
+	// The providers being left count too: one removed from routing while
+	// blocked would otherwise stay reported until the process restarts.
+	for _, provider := range append(cfg.providers(), replaced...) {
+		sharedProviderHealth.forget(provider)
+	}
 	return nil
 }
 
@@ -172,3 +181,12 @@ func (r *Router) CredentialVersion() string { return r.binding().credentialVersi
 // hash never matches — so a caller polling for change would rebind on every
 // tick and drop every cached completion each time.
 func (r *Router) RoutingVersion() string { return r.binding().configSnapshot.RoutingConfigHash }
+
+// providers names every provider this binding's tiers are bound to.
+func (b *binding) providers() []string {
+	seen := map[string]bool{}
+	for _, meta := range b.routeMeta {
+		seen[meta.provider] = true
+	}
+	return slices.Sorted(maps.Keys(seen))
+}

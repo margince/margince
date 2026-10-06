@@ -209,17 +209,17 @@ export function RecordTeamAssign({
         </Field>
         <p className="t-caption">{t("assignments.noAccessNote")}</p>
         <ErrorLine error={write.error} />
-        <div className="actions">
-          <Button variant="ghost" onClick={close} disabled={write.isPending}>
-            {t("deals.cancel")}
-          </Button>
-          <Button
-            onClick={() => void submit()}
-            disabled={write.isPending || !subject || roleId === ""}
-          >
-            {existing ? t("assignments.saveChange") : t("assignments.saveAdd")}
-          </Button>
-        </div>
+      </div>
+      <div className="actions">
+        <Button variant="ghost" onClick={close} disabled={write.isPending}>
+          {t("deals.cancel")}
+        </Button>
+        <Button
+          onClick={() => void submit()}
+          disabled={write.isPending || !subject || roleId === ""}
+        >
+          {existing ? t("assignments.saveChange") : t("assignments.saveAdd")}
+        </Button>
       </div>
     </Modal>
   );

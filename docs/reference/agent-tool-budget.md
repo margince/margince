@@ -55,7 +55,7 @@ spends it on every run of every agent.
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 5 | 5 of 81 | 1890 | 1288 | 3765 | 11% | 19445 | 0 | 5 |
 | `overnight_at_risk_sweep` | 7 | 7 of 81 | 2737 | 1814 | 5138 | 15% | 18072 | 7 | 6 |
-| _whole served catalog's listing, for scale — no run is offered it_ | 81 | — | 28578 | — | — | 87% | — | — | — |
+| _whole served catalog's listing, for scale — no run is offered it_ | 81 | — | 28684 | — | — | 87% | — | — | — |
 
 ### `morning_brief`
 
@@ -129,7 +129,7 @@ Every scenario in the corpus was read; none was skipped.
 
 ## What each tool costs, largest first
 
-Median 292 tokens, mean 352, across 81 served tools.
+Median 293 tokens, mean 353, across 81 served tools.
 
 **These do not sum to the catalog total.** Each row is one tool rendered alone and
 divided by four, so every row carries its own rounding; the catalog figure divides
@@ -165,6 +165,7 @@ a term in an addition.
 | `review_commitments` | 401 | — |
 | `prep_for_meeting` | 394 | — |
 | `enrich` | 390 | — |
+| `draft_email` | 385 | — |
 | `describe_report_vocabulary` | 349 | — |
 | `catch_me_up_on` | 348 | 2 scenarios |
 | `describe_record_fields` | 345 | — |
@@ -181,7 +182,6 @@ a term in an addition.
 | `read_record` | 292 | 2 scenarios |
 | `archive_record` | 289 | — |
 | `describe_analytics_vocabulary` | 286 | — |
-| `draft_email` | 278 | — |
 | `draft_follow_ups_for` | 273 | — |
 | `list_approvals` | 268 | — |
 | `prepare_handoff` | 267 | — |

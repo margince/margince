@@ -17,12 +17,9 @@ package capture
 // of the object store and out of raw_capture, because a copy in the stored
 // original is the same file kept somewhere else.
 //
-// The cost, stated rather than glossed: the owner loses the file LIST too. A
-// row naming the attachment without its bytes would need the keeper contract
-// to carry a withheld file, and that shape belongs to the module that owns the
-// attachment table. Until then the breadcrumb is what says the files were kept
-// out deliberately rather than never seen — which is the distinction somebody
-// asking "where are my attachments" actually needs.
+// The owner keeps the file LIST: each withheld file is recorded by name, size
+// and type on a row with no bytes behind it (FileKeeper.RecordWithheld), so
+// "where are my attachments" has an answer on the message itself.
 
 import (
 	"context"
@@ -169,22 +166,18 @@ func withholdRawParts(rec connector.NormalizedRecord) connector.NormalizedRecord
 // reading, or the seat's own hand.
 const fieldVerdict = "verdict"
 
-// stripPersonalParts takes a private thread's files out of the record before
-// anything stores them, and reports how many it withheld.
+// stripPersonalParts takes a private message's files out of the record before
+// anything stores them, and returns the parts it took so the caller can name
+// them on rows without bytes.
 //
 // The parts are REMOVED rather than emptied. Staging writes each body to the
 // object store unconditionally, so an emptied part would put a zero-length
 // object there — storing something, under a key the message then points at,
 // which is worse than either keeping the file or keeping nothing.
-//
-// The count is what makes this answerable afterwards. A message that arrives
-// with no parts and one whose parts were withheld look identical on the row;
-// the breadcrumb is the only thing that separates "this had none" from "this
-// had three and we deliberately kept none".
-func stripPersonalParts(rec connector.NormalizedRecord) (connector.NormalizedRecord, int) {
-	withheld := len(rec.Parts)
+func stripPersonalParts(rec connector.NormalizedRecord) (connector.NormalizedRecord, []connector.Part) {
+	taken := rec.Parts
 	rec.Parts = nil
-	return rec, withheld
+	return rec, taken
 }
 
 // personalPartsWithheld records that a thread's files were kept out, once per

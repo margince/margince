@@ -18,6 +18,7 @@ import {
   useAiModelCatalogue,
   withBorrowedRows,
 } from "./ai-models";
+import { invalidateProviderHealth } from "./ai-provider-health";
 import { useProviderKeys } from "./ai-provider-key-hooks";
 import { DECISION_PROVIDERS } from "./ai-routing-fields";
 import { type Lane, TiersTable } from "./ai-routing-lane";
@@ -313,6 +314,7 @@ function FirstBinding({
     onSuccess: async (saved) => {
       queryClient.setQueryData(ROUTING_KEY, saved);
       await queryClient.invalidateQueries({ queryKey: ["ai-status"] });
+      await invalidateProviderHealth(queryClient);
     },
   });
   const startable = startableProviders(providers);

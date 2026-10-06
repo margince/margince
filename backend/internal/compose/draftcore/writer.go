@@ -219,7 +219,13 @@ func writeChecked(
 	if err != nil {
 		return Draft{}, err
 	}
-	return applyVoiceFloor(ctx, lane, surface, in, voice, draft)
+	served, err := applyVoiceFloor(ctx, lane, surface, in, voice, draft)
+	if err != nil {
+		return Draft{}, err
+	}
+	first, last := in.GreetingNames()
+	served.Body = draftcheck.EnsureGreeting(served.Body, envelope, first, last)
+	return served, nil
 }
 
 func writeWithModel(
@@ -382,7 +388,11 @@ func keepGroundedReasons(surface Surface, reasons []modelReason) []Reason {
 
 // groundsOf is what the caller's record and intent let a draft claim.
 func groundsOf(in Input) draftcheck.Grounds {
-	return draftcheck.Grounds{Booked: in.Booked(), Met: draftcheck.IntentNamesMeeting(in.Steering())}
+	first, last := in.GreetingNames()
+	return draftcheck.Grounds{
+		Booked: in.Booked(), Met: draftcheck.IntentNamesMeeting(in.Steering()),
+		FirstName: first, LastName: last,
+	}
 }
 
 // DraftText is the prose a phrasing check judges: the body, and the reason

@@ -4858,6 +4858,15 @@ export interface paths {
          * @description Drafting is 🟢 (never auto-sends). The draft is returned, not sent. Keeping the rep's
          *     unsent message is a separate, explicit act at `PUT /mail-drafts`, which this route
          *     never performs.
+         *
+         *     The `draft_email` verb has a second shape this route does not serve: given `links`
+         *     instead of an activity, it drafts the FIRST message to a contact or lead through the
+         *     same engine as `POST /contacts/{id}/draft-email`, `POST /companies/{id}/draft-email` or
+         *     `POST /leads/{id}/draft-email`. It saves the draft in the saved drafts of the human the
+         *     agent acts for, marked `agent_drafted`, only when that human keeps no unsent draft of
+         *     their own for the recipient. Otherwise it returns the draft unsaved. The tool result
+         *     says which: `saved_draft_id` names the saved draft, and `not_saved` says why there is
+         *     none.
          */
         post: operations["draftEmail"];
         delete?: never;
@@ -4979,6 +4988,35 @@ export interface paths {
          *     code, authorizes nothing and records nothing.
          */
         post: operations["previewAccountSendAuthorization"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/emails:sign-off": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * The sign-off a send of this message would append beneath it.
+         * @description What the composer shows under the body, read-only. It runs the code the send
+         *     runs, so the block shown is the block sent.
+         *
+         *     The caller's own signature when they have written one. Otherwise a plain
+         *     closing in the message's language — detected from `body`, then `subject`, then
+         *     the installation's language, then English — above the caller's display name
+         *     when one is on file.
+         *
+         *     Writes nothing. The send asks again, so a signature changed in between goes out
+         *     as changed.
+         */
+        post: operations["previewEmailSignOff"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5153,8 +5191,12 @@ export interface paths {
          *     is not an activity, not a scheduled send and never on a timeline, and only the seat
          *     that wrote it can read it. There is at most one per author and anchor.
          *
-         *     The AI drafting routes still persist nothing: a draft exists only because the rep's
-         *     composer saved one here.
+         *     The AI drafting routes still persist nothing. A draft exists because the rep's composer
+         *     saved one here, or because an agent acting for the rep drafted a first message to a
+         *     contact or lead through `draft_email` (`agent_drafted`). The agent's draft is kept here
+         *     only when the rep has no draft of their own for that anchor; otherwise the tool returns
+         *     it unsaved with `not_saved` and this store is unchanged. That second writer is the tool
+         *     surface, not this route.
          */
         get: operations["getMailDraft"];
         /**
@@ -10820,6 +10862,35 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ai/provider-health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Which AI providers are not answering, and why.
+         * @description Every provider this process currently treats as degraded, down, out of credit or refusing
+         *     its credential, in name order. A provider that is answering normally is not listed, so an
+         *     empty list is the healthy answer.
+         *
+         *     The API and the worker each publish their status changes to Redis and this reads the merged
+         *     view, where the worst or blocking status wins, so an outage only the worker saw still shows.
+         *     Without Redis a process shows only its own view. Shared entries expire after 30
+         *     minutes unless refreshed every 10 while the provider is unhealthy. It is learned from real
+         *     calls, not a probe. The list never contains a key, a host or the
+         *     provider's own message text. It is admitted through the same grant as `/ai/health`.
+         */
+        get: operations["getAiProviderHealth"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ai/budget": {
         parameters: {
             query?: never;
@@ -12994,6 +13065,83 @@ export interface paths {
          *     touch either way.
          */
         post: operations["liftSuppression"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/contacts/{id}/consent/allow": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record a standing vouch that a machine-level refusal for one category may be overruled.
+         * @description Writes a `communication_override`: a rep's standing statement that a future send in the
+         *     named category may go out even though the engine, on its own, would refuse it for lack of
+         *     evidence. **It is not consent and not a lawful basis** — it sits beside the refusal and
+         *     outranks only a MACHINE-level, non-absolute one. A subject-level stop (a suppression, an
+         *     Art. 21 objection) still wins at the gate; this door cannot touch one.
+         *
+         *     **The authority is the seat's own, always.** There is no field for it: the level recorded
+         *     is read from the authenticated session (`user` for a rep, `admin` for an admin), never
+         *     from the body — a caller naming its own level would let any seat write a row that outranks
+         *     every future refusal in that category.
+         *
+         *     **The reason is required**, unlike `suppress`: a vouch that flips a refusal is the write
+         *     most worth being able to explain later, and there is no phone call it merely relays.
+         *
+         *     The override is a standing fact for the contact and category named, not a one-time
+         *     instruction for a single message: it remains live, and is read by every future send
+         *     evaluation for that pair, until it is revoked.
+         */
+        post: operations["allowContact"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/contacts/{id}/consent/allow/{overrideId}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                /**
+                 * @description The override to take back. The row and not the contact: a subject may carry more
+                 *     than one vouch — one per category — and revoking "the override" would take back
+                 *     whichever came first.
+                 */
+                overrideId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Take back a standing override, if your level may revoke the one that recorded it.
+         * @description Revokes one `communication_override`. **You may revoke a vouch recorded below your
+         *     level; a rep cannot revoke another rep's, but an admin may revoke another admin's** —
+         *     admin is the top human authority, so an admin vouch has no higher seat to take it back
+         *     and would otherwise be unrevocable. This is the one place the rule differs from
+         *     `liftSuppression`, which keeps the stricter below-your-level test because a stop erring
+         *     toward not-sending is the safe direction.
+         *
+         *     A row already revoked, belonging to another subject, or never in existence all answer
+         *     `404` alike: a caller learns nothing about rows they would not have been allowed to
+         *     touch either way.
+         */
+        post: operations["revokeOverride"];
         delete?: never;
         options?: never;
         head?: never;
@@ -17076,14 +17224,14 @@ export interface paths {
          *     edits another member's through this API.
          *
          *     A member who has never written one has no row, and that is not an error:
-         *     `body` is empty and mail goes out unsigned, which is what happens today
-         *     for everyone.
+         *     `body` is empty, and their mail closes with a plain greeting and their
+         *     display name, when one is on file, instead (`POST /emails:sign-off` shows it).
          */
         get: operations["getMyEmailSignature"];
         /**
          * Write or clear your own sign-off.
          * @description An empty `body` CLEARS the signature — a member emptying the field means
-         *     "send my mail unsigned", not "leave what was there".
+         *     "sign off with the plain closing", not "leave what was there".
          *
          *     Plain text only. The transport sends `text/plain` and the drafting
          *     prompts forbid the model from writing a sign-off of its own, so what is
@@ -18071,9 +18219,10 @@ export interface paths {
         put?: never;
         /**
          * Set an FX rate effective today or later (append-forward).
-         * @description Admin/ops-only. Appends one effective-dated rate; same UTC day corrects in
-         *     place, a past date is refused (422). `to` is resolved to the workspace base
-         *     currency server-side; `from == base` is refused. Human session only
+         * @description Admin/ops-only. Appends one effective-dated rate; the same day in the
+         *     installation's zone corrects in place, a past date is refused (422). `to`
+         *     is resolved to the workspace base currency server-side; `from == base` is
+         *     refused. Human session only
          *     (x-agent-access: human-only) — an agent never sets a rate directly.
          */
         post: operations["setFxRate"];
@@ -20493,6 +20642,8 @@ export interface components {
             filename: string;
             byte_size?: number | null;
             content_type?: string | null;
+            /** @description True when the message is private to its owner and the file was recorded by name, size and type only. There are no bytes to fetch. */
+            readonly bytes_withheld?: boolean;
         };
         /**
          * @description Who reads this message, and what this caller may do about that. `can_change` and
@@ -21315,6 +21466,30 @@ export interface components {
             window_hours: number;
             rungs: components["schemas"]["AiRungHealth"][];
         };
+        AiProviderHealth: {
+            /** @description Providers that are not answering normally, in name order. Empty when all are. */
+            providers: components["schemas"]["AiProviderHealthEntry"][];
+        };
+        AiProviderHealthEntry: {
+            /** @description The provider's name as the routing binds it, never a key or host. */
+            provider: string;
+            /**
+             * @description `degraded` still takes calls; the other three refuse them until `retry_after`, when one
+             *     probe is allowed. `out_of_credit` and `unauthorized` are the administrator's to fix.
+             * @enum {string}
+             */
+            health: "degraded" | "down" | "out_of_credit" | "unauthorized";
+            /**
+             * Format: date-time
+             * @description When the provider first stopped answering normally, kept across failed probes.
+             */
+            since: string;
+            /**
+             * Format: date-time
+             * @description When one probe call is next allowed. Absent for `degraded`, which is not blocked.
+             */
+            retry_after?: string;
+        };
         /** @description One model tier and what it has been doing. */
         AiRungHealth: {
             /** @description The rung's name — `local_small`, `cloud_large` and the rest. */
@@ -21525,6 +21700,11 @@ export interface components {
             available: boolean;
             /** Format: int64 */
             count?: number;
+            /**
+             * Format: int64
+             * @description Work waiting for the AI provider to answer, not for the budget. It resumes by itself at the provider's next probe, and a budget raise does not change it; `count` holds only what a raise would resume.
+             */
+            waiting_on_provider?: number;
         };
         AiStatus: {
             /** Format: date-time */
@@ -26195,12 +26375,32 @@ export interface components {
         EmailSignature: {
             /**
              * @description The sign-off appended below every message this member sends, plain text.
-             *     Empty means unsigned, which is the state of every member who has not
-             *     written one.
+             *     Empty means none written; a send then closes with a plain greeting and
+             *     the member's display name when one is on file.
              */
             body: string;
             /** Format: date-time */
             updated_at?: string | null;
+        };
+        EmailSignOffRequest: {
+            /** @description The message as written so far, plain text. Read only for its language. */
+            body: string;
+            /** @description The subject, read for its language when the body is too short to tell. */
+            subject?: string;
+        };
+        EmailSignOff: {
+            /**
+             * @description The block appended below the message, plain text, exactly as sent. Empty when
+             *     `kind` is `none`.
+             */
+            text: string;
+            /**
+             * @description `signature`: the caller's own, from Settings. `closing`: the caller has written
+             *     none, so the send closes with a plain greeting and their name when available. `none`: this
+             *     send appends nothing.
+             * @enum {string}
+             */
+            kind: "signature" | "closing" | "none";
         };
         SaveEmailSignatureRequest: {
             /**
@@ -29457,6 +29657,8 @@ export interface components {
              * @description The agreement this document is about (CONTRACT-DDL-5) — the same kind of roll-up as company_id above, and just as deliberately not a second parent. Set at upload by the contact filing the paper; never inferred from a filename or a date, which is the guess the document state exists to refuse.
              */
             readonly contract_id?: string | null;
+            /** @description True for a file a private message carried that was recorded by name, size and type only: no bytes were kept, so there is nothing to download (404) or read. */
+            readonly bytes_withheld?: boolean;
             source: string;
             /** @description Server-stamped from the authenticated principal; never client-supplied. */
             readonly captured_by: string;
@@ -30051,6 +30253,8 @@ export interface components {
             html_body?: string | null;
             /** Format: int64 */
             version: number;
+            /** @description An agent wrote these words for the author through `draft_email`, and the author has not saved over them yet. The screen says so before the message is sent. A save from the composer clears it. */
+            agent_drafted: boolean;
             /** Format: date-time */
             created_at: string;
             /** Format: date-time */
@@ -38636,6 +38840,14 @@ export interface components {
             on_behalf_of: string;
             /** Format: date-time */
             expires_at: string;
+        };
+        /** @description The standing override just recorded, by id. The category and reason are what the caller sent and the authority is their own session's, so the id is the one fact the caller could not have known — and the handle a later revoke takes. */
+        RecordedOverride: {
+            /**
+             * Format: uuid
+             * @description The standing override that now stands. A contact can hold several at once — one per category, and more than one for a single category after a merge — so this names which of them this call created.
+             */
+            override_id: string;
         };
         /**
          * @description What the consent screen renders. The client name is resolved from the database, never
@@ -50120,6 +50332,32 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    previewEmailSignOff: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmailSignOffRequest"];
+            };
+        };
+        responses: {
+            /** @description The block a send would append. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailSignOff"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     sendEmail: {
         parameters: {
             query?: never;
@@ -59339,6 +59577,28 @@ export interface operations {
             403: components["responses"]["PermissionDenied"];
         };
     };
+    getAiProviderHealth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The providers that are not answering normally. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiProviderHealth"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+        };
+    };
     getAiBudget: {
         parameters: {
             query?: never;
@@ -62202,6 +62462,95 @@ export interface operations {
         };
         responses: {
             /** @description Lifted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    allowContact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * @description Which category of send this vouch covers. The engine resolves every send to
+                     *     exactly one category, and the override applies to that one only — a vouch for
+                     *     `marketing` says nothing about `customer_service`. The five categories that
+                     *     serve the subject are absent on purpose: they are never refused for lack of
+                     *     evidence, so a vouch for one would be a row nothing could ever read.
+                     * @enum {string}
+                     */
+                    category: "reply_to_inbound" | "requested_followup" | "precontract_quote" | "active_deal_followup" | "customer_service" | "account_notice" | "contract_notice" | "invoice_or_payment" | "marketing";
+                    /**
+                     * @description Why the rep is vouching for this send, in their own words. Required: unlike a
+                     *     suppression, which may only relay what the subject said, this write is the
+                     *     rep's own judgement call and the record must say why it was made.
+                     */
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Recorded. The body names the row, which is what the revoke door takes. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordedOverride"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    revokeOverride: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                /**
+                 * @description The override to take back. The row and not the contact: a subject may carry more
+                 *     than one vouch — one per category — and revoking "the override" would take back
+                 *     whichever came first.
+                 */
+                overrideId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * @description Why the override is being revoked. Required, the same asymmetry
+                     *     `liftSuppression`'s reason states: a vouch that gets taken back is the
+                     *     write most worth being able to explain later.
+                     */
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Revoked. */
             204: {
                 headers: {
                     [name: string]: unknown;

@@ -140,7 +140,8 @@ const siteReadColumns = `id, company_id, target_kind, seed_url, status, status_c
 // a different concept, deliberately not shared.
 const siteReadCompanyKey = "company_id"
 
-const siteReadBudgetDetail = "AI budget reached its current limit. This website read will resume automatically."
+// SiteReadBudgetDetail is the status_detail of a read deferred for the budget.
+const SiteReadBudgetDetail = "AI budget reached its current limit. This website read will resume automatically."
 
 // finishedSiteReadStatuses are the terminal states a worker may report;
 // anything else is a programming error caught before the row's CHECK.
@@ -393,8 +394,9 @@ func (s *Store) BeginSiteRead(ctx context.Context, readID ids.UUID, reclaimAfter
 
 // DeferSiteRead returns a running dossier to its durable carrier without
 // discarding progress. The guarded transition prevents a late budget result
-// from overwriting a terminal write by another worker.
-func (s *Store) DeferSiteRead(ctx context.Context, readID ids.UUID, nextAttemptAt time.Time) error {
+// from overwriting a terminal write by another worker. The detail says which
+// wait it is: SiteReadBudgetDetail or providerwait.Detail.
+func (s *Store) DeferSiteRead(ctx context.Context, readID ids.UUID, nextAttemptAt time.Time, detail string) error {
 	if nextAttemptAt.IsZero() {
 		return errors.New("contacts: site-read deferral requires a retry time")
 	}
@@ -403,7 +405,7 @@ func (s *Store) DeferSiteRead(ctx context.Context, readID ids.UUID, nextAttemptA
 			SET status = 'deferred', status_code = 'budget_deferred', status_detail = $2,
 				next_attempt_at = $3, phase = NULL, updated_at = now()
 			WHERE id = $1 AND status = 'running'
-			RETURNING `+siteReadColumns, readID, siteReadBudgetDetail, nextAttemptAt.UTC()))
+			RETURNING `+siteReadColumns, readID, detail, nextAttemptAt.UTC()))
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}

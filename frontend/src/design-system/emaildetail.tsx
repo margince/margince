@@ -267,11 +267,9 @@ function EmailBody({
   }
   return (
     <div className="emaildetail__body">
-      <Parties
-        presentation={presentation}
-        formatWhen={formatWhen}
-        renderRecords={renderRecords}
-      />
+      <EmailEnvelope presentation={presentation} formatWhen={formatWhen}>
+        <FiledUnder presentation={presentation} render={renderRecords} />
+      </EmailEnvelope>
       <EmailText body={presentation.body ?? ""} />
       <Attachments files={presentation.attachments} />
     </div>
@@ -293,6 +291,7 @@ function EmailBody({
  */
 function Attachments({ files }: Readonly<{ files: EmailAttachmentSummary[] }>) {
   const { locale } = useLocale();
+  const t = useT();
   if (files.length === 0) {
     // No empty region: a heading over nothing says the message had files and
     // they are missing, which is a different claim from having had none.
@@ -309,7 +308,11 @@ function Attachments({ files }: Readonly<{ files: EmailAttachmentSummary[] }>) {
         {files.map((file) => (
           <li key={file.id}>
             <FileChip
-              href={`/v1/attachments/${file.id}`}
+              // A private message's file was named but not kept, so it is
+              // listed without a link to bytes that do not exist.
+              {...(file.bytes_withheld
+                ? { withheld: t("email.detail.attachmentWithheld") }
+                : { href: `/v1/attachments/${file.id}` })}
               filename={file.filename}
               // Absent rather than zero when the server sent no size: a size
               // it could not record is not a file of no bytes.
@@ -412,21 +415,22 @@ function PartyLine({
 }
 
 /**
- * The envelope: who the message was with, when it was sent, and what it is
- * filed against — everything a reader wants BEFORE the words.
+ * The envelope: who the message was with and when it was sent — everything a
+ * reader wants BEFORE the words, as one block above them.
  *
- * These facts used to be scattered under the body, so on a message longer than
- * a screen the date arrived after the reader had finished reading. They are
- * one block above it because they are one kind of thing.
+ * Exported because every reading of a message draws it: `EmailDetail` adds its
+ * filing line as `children`, and `SourceEmailPanel` draws it bare, so a task's
+ * source mail names its sender rather than leaving the quoted history's header
+ * lines as the only ones on screen.
  */
-function Parties({
+export function EmailEnvelope({
   presentation,
   formatWhen,
-  renderRecords,
+  children,
 }: Readonly<{
   presentation: EmailPresentation;
   formatWhen: (iso: string) => string;
-  renderRecords?: (presentation: EmailPresentation) => ReactNode;
+  children?: ReactNode;
 }>) {
   const t = useT();
   return (
@@ -453,7 +457,7 @@ function Parties({
           {t("email.detail.bccWithheld")}
         </p>
       )}
-      <FiledUnder presentation={presentation} render={renderRecords} />
+      {children}
     </div>
   );
 }

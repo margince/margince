@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/storedobjects"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/pkg/extension"
@@ -80,7 +81,7 @@ func (e *EmptyUploadError) FieldFault() (field, code, message string) {
 // declaration is what a later pass finds instead, and it has to exist before
 // the bytes do. See storedobjectintent.go.
 func (s *Store) storeAttachmentBytes(ctx context.Context, key string, in AttachmentInput, size int64) error {
-	if err := s.recordStoredObjectIntent(ctx, key); err != nil {
+	if err := s.recordAttachmentIntent(ctx, key); err != nil {
 		return err
 	}
 	return s.blob.Put(ctx, key, in.Content, size, in.ContentType)
@@ -107,7 +108,7 @@ func (s *Store) UploadAttachment(ctx context.Context, in AttachmentInput) (crmco
 	}
 
 	id := ids.NewV7()
-	key := blobstore.WorkspaceKey(workspaceID(ctx), attachmentKind, id.String())
+	key := blobstore.WorkspaceKey(workspaceID(ctx), string(storedobjects.KindAttachment), id.String())
 	// The name a stranger or a rep TYPED, made safe before it reaches the column
 	// — the same function the capture path runs every sender-supplied name
 	// through, for the same reasons: a name is presentational only (nothing opens
@@ -185,7 +186,7 @@ func (s *Store) UploadAttachment(ctx context.Context, in AttachmentInput) (crmco
 		// a row. A clear that committed separately could land while this
 		// transaction then failed, which is the orphan the ledger exists to
 		// catch, re-created one step along.
-		if err := clearStoredObjectIntent(ctx, tx, key); err != nil {
+		if err := storedobjects.Clear(ctx, tx, key); err != nil {
 			return err
 		}
 		att, err := readAttachment(ctx, tx, id)

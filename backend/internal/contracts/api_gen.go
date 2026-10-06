@@ -1105,6 +1105,30 @@ func (e AiProfileState) Valid() bool {
 	}
 }
 
+// Defines values for AiProviderHealthEntryHealth.
+const (
+	AiProviderHealthEntryHealthDegraded     AiProviderHealthEntryHealth = "degraded"
+	AiProviderHealthEntryHealthDown         AiProviderHealthEntryHealth = "down"
+	AiProviderHealthEntryHealthOutOfCredit  AiProviderHealthEntryHealth = "out_of_credit"
+	AiProviderHealthEntryHealthUnauthorized AiProviderHealthEntryHealth = "unauthorized"
+)
+
+// Valid indicates whether the value is a known member of the AiProviderHealthEntryHealth enum.
+func (e AiProviderHealthEntryHealth) Valid() bool {
+	switch e {
+	case AiProviderHealthEntryHealthDegraded:
+		return true
+	case AiProviderHealthEntryHealthDown:
+		return true
+	case AiProviderHealthEntryHealthOutOfCredit:
+		return true
+	case AiProviderHealthEntryHealthUnauthorized:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AiProviderKeyStatusCredentialKind.
 const (
 	AiProviderKeyStatusCredentialKindApiKey         AiProviderKeyStatusCredentialKind = "api_key"
@@ -8734,6 +8758,27 @@ const (
 func (e EmailPresentationLifecycle) Valid() bool {
 	switch e {
 	case EmailPresentationLifecycleDelivered:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EmailSignOffKind.
+const (
+	EmailSignOffKindClosing   EmailSignOffKind = "closing"
+	EmailSignOffKindNone      EmailSignOffKind = "none"
+	EmailSignOffKindSignature EmailSignOffKind = "signature"
+)
+
+// Valid indicates whether the value is a known member of the EmailSignOffKind enum.
+func (e EmailSignOffKind) Valid() bool {
+	switch e {
+	case EmailSignOffKindClosing:
+		return true
+	case EmailSignOffKindNone:
+		return true
+	case EmailSignOffKindSignature:
 		return true
 	default:
 		return false
@@ -19765,6 +19810,45 @@ func (e ListContactsParamsTagMode) Valid() bool {
 	}
 }
 
+// Defines values for AllowContactJSONBodyCategory.
+const (
+	AllowContactJSONBodyCategoryAccountNotice      AllowContactJSONBodyCategory = "account_notice"
+	AllowContactJSONBodyCategoryActiveDealFollowup AllowContactJSONBodyCategory = "active_deal_followup"
+	AllowContactJSONBodyCategoryContractNotice     AllowContactJSONBodyCategory = "contract_notice"
+	AllowContactJSONBodyCategoryCustomerService    AllowContactJSONBodyCategory = "customer_service"
+	AllowContactJSONBodyCategoryInvoiceOrPayment   AllowContactJSONBodyCategory = "invoice_or_payment"
+	AllowContactJSONBodyCategoryMarketing          AllowContactJSONBodyCategory = "marketing"
+	AllowContactJSONBodyCategoryPrecontractQuote   AllowContactJSONBodyCategory = "precontract_quote"
+	AllowContactJSONBodyCategoryReplyToInbound     AllowContactJSONBodyCategory = "reply_to_inbound"
+	AllowContactJSONBodyCategoryRequestedFollowup  AllowContactJSONBodyCategory = "requested_followup"
+)
+
+// Valid indicates whether the value is a known member of the AllowContactJSONBodyCategory enum.
+func (e AllowContactJSONBodyCategory) Valid() bool {
+	switch e {
+	case AllowContactJSONBodyCategoryAccountNotice:
+		return true
+	case AllowContactJSONBodyCategoryActiveDealFollowup:
+		return true
+	case AllowContactJSONBodyCategoryContractNotice:
+		return true
+	case AllowContactJSONBodyCategoryCustomerService:
+		return true
+	case AllowContactJSONBodyCategoryInvoiceOrPayment:
+		return true
+	case AllowContactJSONBodyCategoryMarketing:
+		return true
+	case AllowContactJSONBodyCategoryPrecontractQuote:
+		return true
+	case AllowContactJSONBodyCategoryReplyToInbound:
+		return true
+	case AllowContactJSONBodyCategoryRequestedFollowup:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SuppressContactJSONBodyKind.
 const (
 	SuppressContactJSONBodyKindMarketingObjection SuppressContactJSONBodyKind = "marketing_objection"
@@ -22052,6 +22136,9 @@ type AiDeferredWork struct {
 	Carrier   string `json:"carrier"`
 	Count     *int64 `json:"count,omitempty"`
 	Unit      string `json:"unit"`
+
+	// WaitingOnProvider Work waiting for the AI provider to answer, not for the budget. It resumes by itself at the provider's next probe, and a budget raise does not change it; `count` holds only what a raise would resume.
+	WaitingOnProvider *int64 `json:"waiting_on_provider,omitempty"`
 }
 
 // AiEmbeddingsBinding defines model for AiEmbeddingsBinding.
@@ -22506,6 +22593,32 @@ type AiProfileProviders string
 
 // AiProfileState defines model for AiProfile.State.
 type AiProfileState string
+
+// AiProviderHealth defines model for AiProviderHealth.
+type AiProviderHealth struct {
+	// Providers Providers that are not answering normally, in name order. Empty when all are.
+	Providers []AiProviderHealthEntry `json:"providers"`
+}
+
+// AiProviderHealthEntry defines model for AiProviderHealthEntry.
+type AiProviderHealthEntry struct {
+	// Health `degraded` still takes calls; the other three refuse them until `retry_after`, when one
+	// probe is allowed. `out_of_credit` and `unauthorized` are the administrator's to fix.
+	Health AiProviderHealthEntryHealth `json:"health"`
+
+	// Provider The provider's name as the routing binds it, never a key or host.
+	Provider string `json:"provider"`
+
+	// RetryAfter When one probe call is next allowed. Absent for `degraded`, which is not blocked.
+	RetryAfter *time.Time `json:"retry_after,omitempty"`
+
+	// Since When the provider first stopped answering normally, kept across failed probes.
+	Since time.Time `json:"since"`
+}
+
+// AiProviderHealthEntryHealth `degraded` still takes calls; the other three refuse them until `retry_after`, when one
+// probe is allowed. `out_of_credit` and `unauthorized` are the administrator's to fix.
+type AiProviderHealthEntryHealth string
 
 // AiProviderKeyInput Exactly one of the two fields, the one the vendor's `credential_kind` names. The server refuses neither, both, or the other one with a 422.
 type AiProviderKeyInput struct {
@@ -23481,6 +23594,9 @@ type AssuranceRunAcceptedStatus string
 // addressed by an internal object key that is never exposed on the wire.
 type Attachment struct {
 	ByteSize *int64 `json:"byte_size,omitempty"`
+
+	// BytesWithheld True for a file a private message carried that was recorded by name, size and type only: no bytes were kept, so there is nothing to download (404) or read.
+	BytesWithheld *bool `json:"bytes_withheld,omitempty"`
 
 	// CapturedBy Server-stamped from the authenticated principal; never client-supplied.
 	CapturedBy *string `json:"captured_by,omitempty"`
@@ -32976,10 +33092,13 @@ type EmailAccessStatus string
 
 // EmailAttachmentSummary One file that came with the message. Metadata only; bytes are fetched separately.
 type EmailAttachmentSummary struct {
-	ByteSize    *int               `json:"byte_size,omitempty"`
-	ContentType *string            `json:"content_type,omitempty"`
-	Filename    string             `json:"filename"`
-	Id          openapi_types.UUID `json:"id"`
+	ByteSize *int `json:"byte_size,omitempty"`
+
+	// BytesWithheld True when the message is private to its owner and the file was recorded by name, size and type only. There are no bytes to fetch.
+	BytesWithheld *bool              `json:"bytes_withheld,omitempty"`
+	ContentType   *string            `json:"content_type,omitempty"`
+	Filename      string             `json:"filename"`
+	Id            openapi_types.UUID `json:"id"`
 }
 
 // EmailDelivery Whether an outbound message actually left, and why not when it did not.
@@ -33130,11 +33249,37 @@ type EmailPresentation struct {
 // frame when the reads that serve them land, and they are not listed until then.
 type EmailPresentationLifecycle string
 
+// EmailSignOff defines model for EmailSignOff.
+type EmailSignOff struct {
+	// Kind `signature`: the caller's own, from Settings. `closing`: the caller has written
+	// none, so the send closes with a plain greeting and their name when available. `none`: this
+	// send appends nothing.
+	Kind EmailSignOffKind `json:"kind"`
+
+	// Text The block appended below the message, plain text, exactly as sent. Empty when
+	// `kind` is `none`.
+	Text string `json:"text"`
+}
+
+// EmailSignOffKind `signature`: the caller's own, from Settings. `closing`: the caller has written
+// none, so the send closes with a plain greeting and their name when available. `none`: this
+// send appends nothing.
+type EmailSignOffKind string
+
+// EmailSignOffRequest defines model for EmailSignOffRequest.
+type EmailSignOffRequest struct {
+	// Body The message as written so far, plain text. Read only for its language.
+	Body string `json:"body"`
+
+	// Subject The subject, read for its language when the body is too short to tell.
+	Subject *string `json:"subject,omitempty"`
+}
+
 // EmailSignature defines model for EmailSignature.
 type EmailSignature struct {
 	// Body The sign-off appended below every message this member sends, plain text.
-	// Empty means unsigned, which is the state of every member who has not
-	// written one.
+	// Empty means none written; a send then closes with a plain greeting and
+	// the member's display name when one is on file.
 	Body      string     `json:"body"`
 	UpdatedAt *time.Time `json:"updated_at,omitempty"`
 }
@@ -36580,7 +36725,9 @@ type MagicUndo struct {
 
 // MailDraft One rep's unsent message, readable by its author and nobody else. Not an activity.
 type MailDraft struct {
-	AnchorId openapi_types.UUID `json:"anchor_id"`
+	// AgentDrafted An agent wrote these words for the author through `draft_email`, and the author has not saved over them yet. The screen says so before the message is sent. A save from the composer clears it.
+	AgentDrafted bool               `json:"agent_drafted"`
+	AnchorId     openapi_types.UUID `json:"anchor_id"`
 
 	// AnchorType What the composer opened against: `activity` for a reply to that message, or the
 	// record a new conversation starts from.
@@ -40077,6 +40224,12 @@ type RecordViewAck struct {
 
 // RecordViewAckEntityType defines model for RecordViewAck.EntityType.
 type RecordViewAckEntityType string
+
+// RecordedOverride The standing override just recorded, by id. The category and reason are what the caller sent and the authority is their own session's, so the id is the one fact the caller could not have known — and the handle a later revoke takes.
+type RecordedOverride struct {
+	// OverrideId The standing override that now stands. A contact can hold several at once — one per category, and more than one for a single category after a merge — so this names which of them this call created.
+	OverrideId openapi_types.UUID `json:"override_id"`
+}
 
 // RecoveryCodes One-time recovery codes, shown exactly once at confirmation.
 type RecoveryCodes struct {
@@ -49319,6 +49472,32 @@ type RecordConsentParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// AllowContactJSONBody defines parameters for AllowContact.
+type AllowContactJSONBody struct {
+	// Category Which category of send this vouch covers. The engine resolves every send to
+	// exactly one category, and the override applies to that one only — a vouch for
+	// `marketing` says nothing about `customer_service`. The five categories that
+	// serve the subject are absent on purpose: they are never refused for lack of
+	// evidence, so a vouch for one would be a row nothing could ever read.
+	Category AllowContactJSONBodyCategory `json:"category"`
+
+	// Reason Why the rep is vouching for this send, in their own words. Required: unlike a
+	// suppression, which may only relay what the subject said, this write is the
+	// rep's own judgement call and the record must say why it was made.
+	Reason string `json:"reason"`
+}
+
+// AllowContactJSONBodyCategory defines parameters for AllowContact.
+type AllowContactJSONBodyCategory string
+
+// RevokeOverrideJSONBody defines parameters for RevokeOverride.
+type RevokeOverrideJSONBody struct {
+	// Reason Why the override is being revoked. Required, the same asymmetry
+	// `liftSuppression`'s reason states: a vouch that gets taken back is the
+	// write most worth being able to explain later.
+	Reason string `json:"reason"`
+}
+
 // IssueDoubleOptInJSONBody defines parameters for IssueDoubleOptIn.
 type IssueDoubleOptInJSONBody struct {
 	PurposeId openapi_types.UUID `json:"purpose_id"`
@@ -53462,6 +53641,12 @@ type RecordConversationClaimJSONRequestBody = RecordConversationClaimRequest
 // RecordConsentJSONRequestBody defines body for RecordConsent for application/json ContentType.
 type RecordConsentJSONRequestBody = RecordConsentRequest
 
+// AllowContactJSONRequestBody defines body for AllowContact for application/json ContentType.
+type AllowContactJSONRequestBody AllowContactJSONBody
+
+// RevokeOverrideJSONRequestBody defines body for RevokeOverride for application/json ContentType.
+type RevokeOverrideJSONRequestBody RevokeOverrideJSONBody
+
 // IssueDoubleOptInJSONRequestBody defines body for IssueDoubleOptIn for application/json ContentType.
 type IssueDoubleOptInJSONRequestBody IssueDoubleOptInJSONBody
 
@@ -53584,6 +53769,9 @@ type SendCompanyEmailJSONRequestBody = SendCompanyEmailRequest
 
 // PreviewAccountSendAuthorizationJSONRequestBody defines body for PreviewAccountSendAuthorization for application/json ContentType.
 type PreviewAccountSendAuthorizationJSONRequestBody = PreviewAccountSendRequest
+
+// PreviewEmailSignOffJSONRequestBody defines body for PreviewEmailSignOff for application/json ContentType.
+type PreviewEmailSignOffJSONRequestBody = EmailSignOffRequest
 
 // EmbedReindexStartJSONRequestBody defines body for EmbedReindexStart for application/json ContentType.
 type EmbedReindexStartJSONRequestBody = EmbedReindexStartRequest
@@ -64640,6 +64828,9 @@ type ServerInterface interface {
 	// Authenticated AI configuration posture for transparent human-facing workspaces.
 	// (GET /ai/profile)
 	GetAiProfile(w http.ResponseWriter, r *http.Request)
+	// Which AI providers are not answering, and why.
+	// (GET /ai/provider-health)
+	GetAiProviderHealth(w http.ResponseWriter, r *http.Request)
 	// Which model vendors hold a credential (admin/ops).
 	// (GET /ai/provider-keys)
 	ListAiProviderKeys(w http.ResponseWriter, r *http.Request)
@@ -65390,6 +65581,12 @@ type ServerInterface interface {
 	// Grant or withdraw consent for one purpose — writes an append-only proof row.
 	// (POST /contacts/{id}/consent)
 	RecordConsent(w http.ResponseWriter, r *http.Request, id Id, params RecordConsentParams)
+	// Record a standing vouch that a machine-level refusal for one category may be overruled.
+	// (POST /contacts/{id}/consent/allow)
+	AllowContact(w http.ResponseWriter, r *http.Request, id Id)
+	// Take back a standing override, if your level may revoke the one that recorded it.
+	// (POST /contacts/{id}/consent/allow/{overrideId}/revoke)
+	RevokeOverride(w http.ResponseWriter, r *http.Request, id Id, overrideId openapi_types.UUID)
 	// Mail this contact a single-use link to see what is held about them, correct it, and answer on marketing.
 	// (POST /contacts/{id}/consent/confirm-request)
 	RequestDetailsConfirmation(w http.ResponseWriter, r *http.Request, id Id)
@@ -65687,6 +65884,9 @@ type ServerInterface interface {
 	// Would this account-started message be allowed, and on what ground.
 	// (POST /emails:preview)
 	PreviewAccountSendAuthorization(w http.ResponseWriter, r *http.Request)
+	// The sign-off a send of this message would append beneath it.
+	// (POST /emails:sign-off)
+	PreviewEmailSignOff(w http.ResponseWriter, r *http.Request)
 	// Confirm and start a fleet-wide reindex.
 	// (POST /embeddings/reindex)
 	EmbedReindexStart(w http.ResponseWriter, r *http.Request)
@@ -67142,6 +67342,12 @@ func (_ Unimplemented) ReplaceAiPriceSync(w http.ResponseWriter, r *http.Request
 // Authenticated AI configuration posture for transparent human-facing workspaces.
 // (GET /ai/profile)
 func (_ Unimplemented) GetAiProfile(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Which AI providers are not answering, and why.
+// (GET /ai/provider-health)
+func (_ Unimplemented) GetAiProviderHealth(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -68645,6 +68851,18 @@ func (_ Unimplemented) RecordConsent(w http.ResponseWriter, r *http.Request, id 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Record a standing vouch that a machine-level refusal for one category may be overruled.
+// (POST /contacts/{id}/consent/allow)
+func (_ Unimplemented) AllowContact(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Take back a standing override, if your level may revoke the one that recorded it.
+// (POST /contacts/{id}/consent/allow/{overrideId}/revoke)
+func (_ Unimplemented) RevokeOverride(w http.ResponseWriter, r *http.Request, id Id, overrideId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Mail this contact a single-use link to see what is held about them, correct it, and answer on marketing.
 // (POST /contacts/{id}/consent/confirm-request)
 func (_ Unimplemented) RequestDetailsConfirmation(w http.ResponseWriter, r *http.Request, id Id) {
@@ -69236,6 +69454,12 @@ func (_ Unimplemented) SendCompanyEmail(w http.ResponseWriter, r *http.Request, 
 // Would this account-started message be allowed, and on what ground.
 // (POST /emails:preview)
 func (_ Unimplemented) PreviewAccountSendAuthorization(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The sign-off a send of this message would append beneath it.
+// (POST /emails:sign-off)
+func (_ Unimplemented) PreviewEmailSignOff(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -73866,6 +74090,26 @@ func (siw *ServerInterfaceWrapper) GetAiProfile(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetAiProfile(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAiProviderHealth operation middleware
+func (siw *ServerInterfaceWrapper) GetAiProviderHealth(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAiProviderHealth(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -84418,6 +84662,79 @@ func (siw *ServerInterfaceWrapper) RecordConsent(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
+// AllowContact operation middleware
+func (siw *ServerInterfaceWrapper) AllowContact(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AllowContact(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RevokeOverride operation middleware
+func (siw *ServerInterfaceWrapper) RevokeOverride(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "overrideId" -------------
+	var overrideId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "overrideId", chi.URLParam(r, "overrideId"), &overrideId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "overrideId", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RevokeOverride(w, r, id, overrideId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // RequestDetailsConfirmation operation middleware
 func (siw *ServerInterfaceWrapper) RequestDetailsConfirmation(w http.ResponseWriter, r *http.Request) {
 
@@ -89282,6 +89599,26 @@ func (siw *ServerInterfaceWrapper) PreviewAccountSendAuthorization(w http.Respon
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PreviewAccountSendAuthorization(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PreviewEmailSignOff operation middleware
+func (siw *ServerInterfaceWrapper) PreviewEmailSignOff(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewEmailSignOff(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -105132,6 +105469,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/ai/profile", wrapper.GetAiProfile)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/ai/provider-health", wrapper.GetAiProviderHealth)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/provider-keys", wrapper.ListAiProviderKeys)
 	})
 	r.Group(func(r chi.Router) {
@@ -105882,6 +106222,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/contacts/{id}/consent", wrapper.RecordConsent)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/contacts/{id}/consent/allow", wrapper.AllowContact)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/contacts/{id}/consent/allow/{overrideId}/revoke", wrapper.RevokeOverride)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/contacts/{id}/consent/confirm-request", wrapper.RequestDetailsConfirmation)
 	})
 	r.Group(func(r chi.Router) {
@@ -106177,6 +106523,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/emails:preview", wrapper.PreviewAccountSendAuthorization)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/emails:sign-off", wrapper.PreviewEmailSignOff)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/embeddings/reindex", wrapper.EmbedReindexStart)

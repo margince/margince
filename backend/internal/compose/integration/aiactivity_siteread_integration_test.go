@@ -300,7 +300,7 @@ func TestADeferredWebsiteReadSettlesAndReopensOnTheNextClaim(t *testing.T) {
 	// Due already, so the next claim's deferred-and-due arm admits it without
 	// this test waiting on a clock.
 	due := time.Now().Add(-time.Second)
-	if err := f.env.Contacts.DeferSiteRead(f.worker, f.readID, due); err != nil {
+	if err := f.env.Contacts.DeferSiteRead(f.worker, f.readID, due, contacts.SiteReadBudgetDetail); err != nil {
 		t.Fatalf("DeferSiteRead: %v", err)
 	}
 	f.drain(t)

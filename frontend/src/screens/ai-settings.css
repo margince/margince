@@ -533,16 +533,6 @@
 }
 
 /* A task's outcome: the headline, the bar, then one card per step. */
-.ai-outcome {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-.ai-outcome-headline {
-  margin: 0;
-}
-
 .ai-outcome-steps {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
@@ -629,4 +619,12 @@
 
 .ai-task-facts dd {
   margin: 0;
+}
+
+/* A provider's health: the badge above the two lines that explain it. */
+.ai-provider-health {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
 }

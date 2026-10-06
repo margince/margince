@@ -24,6 +24,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/storedobjects"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -164,7 +165,9 @@ func (s *Store) RecordSiteReadLogo(ctx context.Context, readID ids.UUID, claimed
 		if errors.Is(err, pgx.ErrNoRows) {
 			// Bound, confirmed, no longer running, or running for somebody else:
 			// the read has answered for its marks without this one, and recording
-			// it now would name bytes no record adopts and no collection reaches.
+			// it now would name bytes no record adopts. The intent is left
+			// STANDING for exactly that reason — nothing names the key, so the
+			// stored-object sweep collects the bytes a grace period later.
 			return nil
 		}
 		if err != nil {
@@ -172,7 +175,8 @@ func (s *Store) RecordSiteReadLogo(ctx context.Context, readID ids.UUID, claimed
 		}
 		recorded = true
 		supersededKey = supersededObject(previous, objectKey)
-		return nil
+		// Retired on THIS transaction, now that a column names the key.
+		return storedobjects.Clear(ctx, tx, objectKey)
 	})
 	if err != nil {
 		return false, nil, err

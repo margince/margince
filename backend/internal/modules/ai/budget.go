@@ -65,13 +65,18 @@ var errProviderRefused = errors.New("ai: the configured AI provider turned the c
 // naming a reason invented here. Guessing "out of budget" from a bare 429 is
 // what told an operator with unspent credit to go raise a spending limit.
 //
+// Statuses that say the provider itself is failing — 402, 401/403, 5xx — carry
+// the sentinel the health tracker reads (providerFaultOf); any other status is
+// returned as it came.
+//
 // Every 429 carries errProviderRefused, so "did we reach the model?" is one
-// question with one answer whatever the cause turned out to be; any other status
-// is returned as it came. A caller that needs the cause asks for the specific
-// sentinel on top.
+// question with one answer whatever the cause turned out to be. A caller that needs the cause asks for the specific sentinel on top.
 func providerRefusal(resp *http.Response, limitSource string, err error) error {
-	if resp == nil || resp.StatusCode != http.StatusTooManyRequests {
+	if resp == nil {
 		return err
+	}
+	if resp.StatusCode != http.StatusTooManyRequests {
+		return providerFaultOf(resp.StatusCode, err)
 	}
 	refused := fmt.Errorf("%w: %w", errProviderRefused, err)
 	switch refusalKind(limitSource, err.Error(), retryafter.Of(resp)) {
@@ -185,3 +190,41 @@ const (
 // the trailing window gets flagged for a routing fix (§1.3) — the L2 analogue
 // of "manual entry is a smell".
 const premiumShareAlarmThreshold = 0.20
+
+// providerFaultOf tags the statuses that mean the provider is failing for
+// every caller, so the health tracker reads a sentinel rather than a message.
+//
+// A 400 or 403 is only the provider's own fault when its text says so: an empty
+// balance and a rejected key arrive under those statuses at some vendors, while
+// the same statuses also answer one message's moderation flag or one model the
+// project may not use, and blocking the whole provider for those would turn one
+// poisoned message into an outage every retry cycle.
+func providerFaultOf(status int, err error) error {
+	text := strings.ToLower(err.Error())
+	switch {
+	case status == http.StatusPaymentRequired, status >= 400 && status < 500 && mentionsAny(text, emptyBalancePhrases):
+		return fmt.Errorf("%w: %w", ErrProviderQuota, err)
+	case status == http.StatusUnauthorized,
+		(status == http.StatusBadRequest || status == http.StatusForbidden) && mentionsAny(text, rejectedKeyPhrases):
+		return fmt.Errorf("%w: %w", ErrProviderUnauthorized, err)
+	case status >= http.StatusInternalServerError:
+		return fmt.Errorf("%w: %w", ErrProviderUnavailable, err)
+	}
+	return err
+}
+
+var (
+	emptyBalancePhrases = []string{"credit balance is too low", "insufficient credit", "insufficient_quota", "billing hard limit"}
+	// "api key" alone is not here: a vendor's permission refusal says "your API key
+	// does not have permission", which is one model or feature, not a bad key.
+	rejectedKeyPhrases = []string{"api key not valid", "api_key_invalid", "invalid api key", "incorrect api key", "invalid x-api-key", "api key expired", "reported as leaked"}
+)
+
+func mentionsAny(text string, phrases []string) bool {
+	for _, phrase := range phrases {
+		if strings.Contains(text, phrase) {
+			return true
+		}
+	}
+	return false
+}

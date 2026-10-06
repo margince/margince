@@ -2,13 +2,20 @@ import { useMutation } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { Button, Field, Modal } from "../../design-system/atoms";
+import {
+  Button,
+  Field,
+  Modal,
+  Textarea,
+  TextInput,
+} from "../../design-system/atoms";
 import { useClipboardCopy } from "../../design-system/clipboardcopy";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { ProvenanceTag } from "../../design-system/trust";
 import { useT } from "../../i18n";
 import { throwProblem } from "../common";
+import "./companycontacts.css";
 
 // Asking a colleague for the introduction.
 //
@@ -129,41 +136,43 @@ export function IntroRequestModal({
       <ErrorLine error={draft.error} />
       {written && (
         <>
-          <p className="cp-intro-mark">
-            <ProvenanceTag
-              provenance={
-                rewritten
-                  ? { kind: "human", self: true }
-                  : { kind: "agent", agent: "draft_reply" }
-              }
-            />
-            {written.generated_by === "deterministic" && !rewritten && (
-              <span className="t-caption"> {t("co.intro.fromTemplate")}</span>
-            )}
-          </p>
-          <Field className="cp-intro-field" label={t("co.intro.subject")}>
-            {(control) => (
-              <input
-                {...control}
-                value={subject}
-                onChange={(event) =>
-                  setEdited({ subject: event.target.value, body })
+          <div className="form-stack">
+            <p>
+              <ProvenanceTag
+                provenance={
+                  rewritten
+                    ? { kind: "human", self: true }
+                    : { kind: "agent", agent: "draft_reply" }
                 }
               />
-            )}
-          </Field>
-          <Field className="cp-intro-field" label={t("co.intro.body")}>
-            {(control) => (
-              <textarea
-                {...control}
-                rows={10}
-                value={body}
-                onChange={(event) =>
-                  setEdited({ subject, body: event.target.value })
-                }
-              />
-            )}
-          </Field>
+              {written.generated_by === "deterministic" && !rewritten && (
+                <span className="t-caption"> {t("co.intro.fromTemplate")}</span>
+              )}
+            </p>
+            <Field label={t("co.intro.subject")}>
+              {(control) => (
+                <TextInput
+                  {...control}
+                  value={subject}
+                  onChange={(event) =>
+                    setEdited({ subject: event.target.value, body })
+                  }
+                />
+              )}
+            </Field>
+            <Field label={t("co.intro.body")}>
+              {(control) => (
+                <Textarea
+                  {...control}
+                  rows={10}
+                  value={body}
+                  onChange={(event) =>
+                    setEdited({ subject, body: event.target.value })
+                  }
+                />
+              )}
+            </Field>
+          </div>
           {written.reasoning && written.reasoning.length > 0 && (
             <>
               <p className="cp-intro-why">{t("co.intro.basedOn")}</p>
