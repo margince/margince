@@ -135,11 +135,11 @@ func TestEveryWorkflowJobCarriesATimeoutCeiling(t *testing.T) {
 // Two entries because the install is SPLIT: one step that hangs is one fault a
 // reader can name, where the combined `--with-deps` form could only report that
 // something in it did (#6972).
-var unpinnedInstalls = []string{
-	"playwright install --with-deps",
-	"playwright install-deps",
-	"playwright install chromium",
-}
+// One prefix rather than the spellings: `playwright install`, `install-deps`,
+// `install --with-deps` and `install chromium` all begin this way, and a list of
+// variants would miss the next one somebody writes — a bare `playwright install`
+// fetches every browser and would have escaped a list naming chromium.
+var unpinnedInstalls = []string{"playwright install"}
 
 // isUnpinnedInstall is the predicate the scan applies. The table below calls it
 // rather than re-deriving the match, so a change to the list is judged by those
@@ -156,6 +156,30 @@ func isUnpinnedInstall(run string) bool {
 // "the job was cancelled" — which reads as the lane being slow, and sends the
 // next contact to the change under review. The change under review is never the
 // cause, because this step runs before a single test does.
+// A composite action's steps cannot carry timeout-minutes, so the bound they
+// use is the command. Both spellings satisfy the scan, and an install with
+// neither does not.
+func TestEitherSpellingOfTheBoundSatisfiesTheScan(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name  string
+		step  workflowStep
+		bound bool
+	}{
+		{"the step key", workflowStep{Run: "pnpm exec playwright install chromium", TimeoutMinutes: 6}, true},
+		{"the command", workflowStep{Run: "timeout 6m pnpm exec playwright install chromium"}, true},
+		{"neither", workflowStep{Run: "pnpm exec playwright install chromium"}, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			probe := &testing.T{}
+			boundedInstalls(probe, "action.yml", "(composite)", []workflowStep{tc.step})
+			if probe.Failed() == tc.bound {
+				t.Errorf("step %+v: failed=%v, want bounded=%v", tc.step, probe.Failed(), tc.bound)
+			}
+		})
+	}
+}
+
 func TestTheUnpinnedInstallIsBoundedWhereverItRuns(t *testing.T) {
 	t.Parallel()
 
@@ -189,10 +213,12 @@ func boundedInstalls(t *testing.T, path, job string, steps []workflowStep) int {
 			continue
 		}
 		found++
-		if step.TimeoutMinutes == 0 {
-			t.Errorf("%s: job %q, step %q installs from an unpinned package repository with no "+
-				"timeout-minutes of its own, so a stalled mirror spends the job's whole budget and "+
-				"reports as the lane timing out rather than as the install hanging",
+		if step.TimeoutMinutes == 0 && !strings.Contains(step.Run, "timeout ") {
+			t.Errorf("%s: job %q, step %q installs from an unpinned package repository with no bound "+
+				"of its own, so a stalled mirror spends the job's whole budget and reports as the lane "+
+				"timing out rather than as the install hanging. Either timeout-minutes on the step, or "+
+				"a `timeout` command in the run — which is what a composite action's steps must use, "+
+				"GitHub refusing timeout-minutes there",
 				filepath.Base(path), job, step.Name)
 		}
 	}
@@ -202,9 +228,16 @@ func boundedInstalls(t *testing.T, path, job string, steps []workflowStep) int {
 // compositeActionFiles lists this repository's own composite actions.
 func compositeActionFiles(t *testing.T) []string {
 	t.Helper()
-	found, err := filepath.Glob(filepath.Join(actionDir, "*", "action.yml"))
-	if err != nil {
-		t.Fatalf("listing composite actions: %v", err)
+	var found []string
+	// Both spellings, as the workflow glob takes both and for the same reason:
+	// GitHub honours either, so reading one would leave a whole class of action
+	// unscanned.
+	for _, name := range []string{"action.yml", "action.yaml"} {
+		matched, err := filepath.Glob(filepath.Join(actionDir, "*", name))
+		if err != nil {
+			t.Fatalf("listing composite actions: %v", err)
+		}
+		found = append(found, matched...)
 	}
 	if len(found) == 0 {
 		t.Fatalf("no composite actions found under %s; a gate reading them would pass vacuously", actionDir)
@@ -245,6 +278,9 @@ func TestTheInstallScanMatchesTheCommandAndNotItsNeighbours(t *testing.T) {
 		// The split spellings, each an unpinned install in its own right.
 		{"pnpm exec playwright install-deps chromium", true},
 		{"pnpm exec playwright install chromium", true},
+		// A bare install fetches every browser, and is the spelling a list of
+		// variants would have missed.
+		{"pnpm exec playwright install", true},
 		{"pnpm install --frozen-lockfile --ignore-scripts", false},
 		{"make frontend-e2e", false},
 	} {

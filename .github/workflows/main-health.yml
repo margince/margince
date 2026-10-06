@@ -189,7 +189,7 @@ jobs:
         run: pnpm install --frozen-lockfile --ignore-scripts
       # Retried and split in the action, because `--with-deps` shells out to
       # apt inside the runner and an unresponsive mirror hangs with no output
-      # (#6972). It also says which half hung, which one folded step could not.
+      #. It also says which half hung, which one folded step could not.
       - name: Install the Playwright Chromium browser
         uses: ./.github/actions/install-playwright-chromium
       - name: Screen-acceptance UAT (build → preview → AC + axe)

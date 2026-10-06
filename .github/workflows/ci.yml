@@ -283,7 +283,7 @@ jobs:
               # And the action that installs the browser the UAT leg runs in.
               # It decides whether that leg can run AT ALL — a change to it is
               # unreviewable without the lane it governs, and the one that
-              # introduced it would have merged never once executed (#6972).
+              # introduced it would have merged never once executed.
               - '.github/actions/install-playwright-chromium/**'
             e2e:
               - 'backend/**'
@@ -1166,7 +1166,7 @@ jobs:
         run: pnpm install --frozen-lockfile --ignore-scripts
       # Retried and split in the action, because `--with-deps` shells out to
       # apt inside the runner and an unresponsive mirror hangs with no output
-      # (#6972). It also says which half hung, which one folded step could not.
+      #. It also says which half hung, which one folded step could not.
       - name: Install the Playwright Chromium browser
         uses: ./.github/actions/install-playwright-chromium
       - name: Screen-acceptance UAT (build → preview → AC + axe)

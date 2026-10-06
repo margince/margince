@@ -6,10 +6,9 @@ description: >-
 
 # Why this exists: `playwright install --with-deps chromium` shells out to apt
 # inside the runner, and an unresponsive mirror hangs with no output until the
-# step's own timeout fires. That reds `main` — and the two-hourly health check
-# then files a "main is red" issue naming every commit since the last green,
-# none of which is the cause. It cost #6972, where the lane never reached a
-# screen and the 35 commits it listed were all innocent.
+# step's own timeout fires. That reds `main`, and the health check then
+# files an issue naming every commit since the last green — none of which is the
+# cause, because this step runs before a single test does.
 #
 # The two halves are SEPARATE steps, which is what the callers' own comment
 # asked for before this action existed: a hang in apt and a hang in the browser
@@ -20,10 +19,17 @@ description: >-
 # down, or a browser that genuinely cannot be fetched, still fails loudly and in
 # the step that names it. A fresh step is what gets a fresh connection.
 #
+# Each run is bounded by `timeout` rather than a step's `timeout-minutes`:
+# GitHub refuses that key on a composite action's steps, and an install moved in
+# here without a bound of its own would be held only by the calling job's whole
+# budget — which is the reporting failure this split exists to end, arriving as
+# "the lane timed out". The command exits 124 on expiry, so the step fails where
+# it hung.
+#
 # The download half is also cached, keyed on the resolved Playwright version, so
 # the usual run does not reach the network for it at all. The apt half cannot be
 # cached — system libraries live outside the cached path — which is why the
-# retry is what actually answers #6972's failure rather than the cache.
+# retry is what answers a hung mirror; the cache only shortens the exposure.
 
 inputs:
   working-directory:
@@ -40,7 +46,15 @@ runs:
       # The RESOLVED version, not package.json's range: a caret range matches
       # several browser builds, so keying the cache on it would serve one
       # version's binaries to another and the run would fail far from here.
-      run: echo "v=$(pnpm exec playwright --version | tr -cd '0-9.')" >> "$GITHUB_OUTPUT"
+      run: |
+        v=$(pnpm exec playwright --version | tr -cd '0-9.')
+        # An empty or partial read would key every release the same and serve
+        # one version's binaries to another, which fails far from here.
+        case "$v" in
+          [0-9]*.[0-9]*) ;;
+          *) echo "playwright --version did not yield a version: '$v'" >&2; exit 1 ;;
+        esac
+        echo "v=$v" >> "$GITHUB_OUTPUT"
 
     - name: Restore the browser cache
       id: cache
@@ -54,15 +68,13 @@ runs:
       continue-on-error: true
       working-directory: ${{ inputs.working-directory }}
       shell: bash
-      timeout-minutes: 6
-      run: pnpm exec playwright install-deps chromium
+      run: timeout 3m pnpm exec playwright install-deps chromium
 
     - name: Install the system libraries Chromium needs (retry)
       if: steps.deps.outcome == 'failure'
       working-directory: ${{ inputs.working-directory }}
       shell: bash
-      timeout-minutes: 6
-      run: pnpm exec playwright install-deps chromium
+      run: timeout 3m pnpm exec playwright install-deps chromium
 
     - name: Download the Chromium build
       id: browser
@@ -70,12 +82,10 @@ runs:
       continue-on-error: true
       working-directory: ${{ inputs.working-directory }}
       shell: bash
-      timeout-minutes: 6
-      run: pnpm exec playwright install chromium
+      run: timeout 3m pnpm exec playwright install chromium
 
     - name: Download the Chromium build (retry)
       if: steps.browser.outcome == 'failure'
       working-directory: ${{ inputs.working-directory }}
       shell: bash
-      timeout-minutes: 6
-      run: pnpm exec playwright install chromium
+      run: timeout 3m pnpm exec playwright install chromium
