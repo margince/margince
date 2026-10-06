@@ -81,7 +81,7 @@ func TestRelationshipReadsWhetherWeAreInTouch(t *testing.T) {
 		{
 			name: "no message and no meeting, ever", activeContacts: 2,
 			want: crmcontracts.HealthDimensionRatingAtRisk, code: crmcontracts.HealthDimensionReasonCodeNeverWritten,
-			reasonHas: "never written",
+			reasonHas: "No message from them",
 		},
 		{
 			name: "old message and no meeting", activeContacts: 2, lastInbound: healthDaysAgo(77),

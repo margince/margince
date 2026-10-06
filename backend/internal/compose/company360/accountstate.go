@@ -256,7 +256,7 @@ func (a *assembly) readHealth() error {
 		health.OpenCommitments = &open
 	}
 
-	lastMeeting, nextMeeting, err := a.meetingsAround()
+	lastMeeting, nextMeeting, err := a.readableMeetings()
 	if err != nil {
 		return err
 	}

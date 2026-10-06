@@ -1800,7 +1800,7 @@ export const en = {
   // "Commercial · Good" was read from, and a rating a reader cannot interpret
   // is one they have to take on trust.
   "co.health.means.relationship":
-    "Whether contacts at this company are still in touch: who wrote, when you last met or have a meeting booked, and which side started.",
+    "Whether contacts at this company are still in touch: who wrote, the last meeting or the next one booked, and which side started.",
   "co.health.means.commercial":
     "Whether open deals are moving: their stages and how long each has been idle.",
   "co.health.means.payment":
@@ -1812,8 +1812,7 @@ export const en = {
   "co.health.payment.late": "Typically pays {days} days after due.",
   "co.health.payment.onTime": "Pays on time.",
   // The server's reason codes for the relationship and commercial ratings.
-  "co.health.reason.neverWritten":
-    "They have never written to you, and you have never met them.",
+  "co.health.reason.neverWritten": "No message from them and no meeting yet.",
   "co.health.reason.quiet_one": "No reply and no meeting for {days} day.",
   "co.health.reason.quiet_other": "No reply and no meeting for {days} days.",
   "co.health.reason.meetingBooked": "A meeting is booked for {at}.",
@@ -1821,10 +1820,9 @@ export const en = {
   "co.health.reason.lastMet_other": "Last met them {days} days ago.",
   "co.health.reason.singleThreaded":
     "In contact, but one contact carries the whole account.",
-  "co.health.reason.severalContacts_one":
-    "{count} contact here is in touch with you.",
+  "co.health.reason.severalContacts_one": "{count} contact here is in touch.",
   "co.health.reason.severalContacts_other":
-    "{count} contacts here are in touch with you.",
+    "{count} contacts here are in touch.",
   "co.health.reason.dealsAllStalled_one": "The one open deal has stalled.",
   "co.health.reason.dealsAllStalled_other":
     "All {count} open deals have stalled.",

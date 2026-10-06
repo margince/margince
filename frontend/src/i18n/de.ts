@@ -1744,7 +1744,7 @@ export const de = {
   "co.health.dim.commercial": "Geschäftlich",
   "co.health.dim.payment": "Zahlung",
   "co.health.means.relationship":
-    "Ob Kontakte bei diesem Unternehmen noch in Verbindung stehen: wer geschrieben hat, wann das letzte Treffen war oder ob eines ansteht, und welche Seite den Anfang gemacht hat.",
+    "Ob Kontakte bei diesem Unternehmen noch in Verbindung stehen: wer geschrieben hat, wann das letzte Treffen war oder ob eines ansteht und welche Seite den Anfang gemacht hat.",
   "co.health.means.commercial":
     "Ob offene Deals vorankommen: ihre Phasen und wie lange jeder schon ruht.",
   "co.health.means.payment":
@@ -1767,9 +1767,9 @@ export const de = {
   "co.health.reason.singleThreaded":
     "In Kontakt, aber ein einziger Kontakt trägt das ganze Unternehmen.",
   "co.health.reason.severalContacts_one":
-    "{count} Kontakt hier steht mit dir in Verbindung.",
+    "{count} Kontakt hier steht in Verbindung.",
   "co.health.reason.severalContacts_other":
-    "{count} Kontakte hier stehen mit dir in Verbindung.",
+    "{count} Kontakte hier stehen in Verbindung.",
   "co.health.reason.dealsAllStalled_one": "Der eine offene Deal stockt.",
   "co.health.reason.dealsAllStalled_other":
     "Alle {count} offenen Deals stocken.",

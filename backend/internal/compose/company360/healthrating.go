@@ -4,12 +4,15 @@
 package company360
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
@@ -50,7 +53,7 @@ func rateRelationship(touch relstrength.InTouch, active int, single bool) *crmco
 	switch {
 	case touch.Basis == relstrength.InTouchNever:
 		return dimension(crmcontracts.HealthDimensionRatingAtRisk, crmcontracts.HealthDimensionReasonCodeNeverWritten,
-			crmcontracts.HealthDimensionReasonParams{}, "They have never written to you, and you have never met them.")
+			crmcontracts.HealthDimensionReasonParams{}, "No message from them and no meeting yet.")
 	case touch.Basis == relstrength.InTouchQuiet:
 		return dimension(crmcontracts.HealthDimensionRatingAtRisk, crmcontracts.HealthDimensionReasonCodeQuiet,
 			crmcontracts.HealthDimensionReasonParams{Days: &touch.Days},
@@ -76,7 +79,7 @@ func rateRelationship(touch relstrength.InTouch, active int, single bool) *crmco
 	default:
 		return dimension(crmcontracts.HealthDimensionRatingStrong, crmcontracts.HealthDimensionReasonCodeSeveralContacts,
 			crmcontracts.HealthDimensionReasonParams{Count: &active},
-			fmt.Sprintf("%d contacts here are in touch with you.", active))
+			fmt.Sprintf("%d contacts here are in touch.", active))
 	}
 }
 
@@ -114,6 +117,19 @@ func dimension(
 	params crmcontracts.HealthDimensionReasonParams, reason string,
 ) *crmcontracts.HealthDimension {
 	return &crmcontracts.HealthDimension{Rating: rating, Reason: reason, ReasonCode: &code, ReasonParams: &params}
+}
+
+// readableMeetings is meetingsAround behind the activity grant readNextMeeting
+// asks. A reader without it gets no meeting dates and a rating made from what
+// they may see, so the rating cannot tell them a meeting exists.
+func (a *assembly) readableMeetings() (last, next *time.Time, err error) {
+	if err := auth.Require(a.ctx, "activity", principal.ActionRead); err != nil {
+		if errors.Is(err, apperrors.ErrPermissionDenied) {
+			return nil, nil, nil
+		}
+		return nil, nil, err
+	}
+	return a.meetingsAround()
 }
 
 // meetingsAround reads the account's last meeting already held and its next

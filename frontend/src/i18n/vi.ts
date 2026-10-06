@@ -1728,7 +1728,7 @@ export const vi = {
   "co.health.payment.late": "Thường thanh toán trễ {days} ngày.",
   "co.health.payment.onTime": "Thanh toán đúng hạn.",
   "co.health.reason.neverWritten":
-    "Họ chưa từng viết cho bạn và hai bên chưa từng gặp nhau.",
+    "Chưa có tin nhắn nào từ họ và chưa có cuộc gặp nào.",
   "co.health.reason.quiet_one":
     "Không có phản hồi và không có cuộc gặp nào trong {days} ngày.",
   "co.health.reason.quiet_other":
@@ -1739,9 +1739,9 @@ export const vi = {
   "co.health.reason.singleThreaded":
     "Vẫn liên lạc, nhưng chỉ một liên hệ gánh cả công ty.",
   "co.health.reason.severalContacts_one":
-    "{count} liên hệ ở đây đang liên lạc với bạn.",
+    "{count} liên hệ ở đây đang liên lạc.",
   "co.health.reason.severalContacts_other":
-    "{count} liên hệ ở đây đang liên lạc với bạn.",
+    "{count} liên hệ ở đây đang liên lạc.",
   "co.health.reason.dealsAllStalled_one":
     "Deal đang mở duy nhất đã bị đình trệ.",
   "co.health.reason.dealsAllStalled_other":

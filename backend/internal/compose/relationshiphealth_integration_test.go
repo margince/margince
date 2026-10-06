@@ -11,6 +11,7 @@ package compose
 // it, with no direction and no status.
 
 import (
+	"maps"
 	"testing"
 	"time"
 
@@ -147,7 +148,11 @@ func TestAnOldOrCanceledMeetingLeavesTheRelationshipAtRisk(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading the contact's strength: %v", err)
 	}
-	if strength.LastInteraction == nil || acct.now.Sub(*strength.LastInteraction) < 39*24*time.Hour {
+	age := time.Duration(0)
+	if strength.LastInteraction != nil {
+		age = acct.now.Sub(*strength.LastInteraction)
+	}
+	if age < 39*24*time.Hour || age > 41*24*time.Hour {
 		t.Fatalf("the contact's last interaction = %v, want the meeting 40 days ago — a canceled meeting is not contact",
 			strength.LastInteraction)
 	}
@@ -186,5 +191,35 @@ func TestAMeetingCountsOnlyAsWhatItsStatusAndTimeSay(t *testing.T) {
 				t.Fatalf("reason code = %v (%q), want %q", got.ReasonCode, got.Reason, tc.want)
 			}
 		})
+	}
+}
+
+// A reader who may see the account's contacts but not its activity gets no
+// meeting dates, and a rating that cannot reveal a meeting through its reason.
+func TestHealthWithoutTheActivityGrantNamesNoMeeting(t *testing.T) {
+	e := integration.Setup(t)
+	acct := seedQuietAccount(t, e)
+	captureMeetingWith(t, e, acct.contact, "evt-hidden-review", acct.now.AddDate(0, 0, -21))
+	perms := integration.AdminPerms
+	perms.Objects = maps.Clone(perms.Objects)
+	delete(perms.Objects, "activity")
+
+	page, err := company360.NewService(e.Pool, e.Contacts, e.Deals, e.Projects,
+		approvals.NewService(InstallationDB(e.Pool)), func() time.Time { return acct.now }).
+		Assemble(e.As(e.AdminUser, nil, perms), acct.company)
+	if err != nil {
+		t.Fatalf("assembling the account page without the activity grant: %v", err)
+	}
+	if page.Health == nil || page.Health.Relationship == nil {
+		t.Fatalf("health = %+v, want a relationship rating from what the reader may see", page.Health)
+	}
+	if page.Health.LastMeetingAt != nil {
+		t.Errorf("last meeting = %v, want none for a reader who may not read activity", page.Health.LastMeetingAt)
+	}
+	code := page.Health.Relationship.ReasonCode
+	if code != nil && (*code == crmcontracts.HealthDimensionReasonCodeLastMet ||
+		*code == crmcontracts.HealthDimensionReasonCodeMeetingBooked) {
+		t.Errorf("reason = %q (%q), which tells a reader without the activity grant that a meeting exists",
+			*code, page.Health.Relationship.Reason)
 	}
 }

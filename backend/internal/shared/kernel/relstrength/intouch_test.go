@@ -45,6 +45,16 @@ func TestReadInTouchCountsMeetingsAsContact(t *testing.T) {
 	}
 }
 
+// A message dated ahead of now, scheduled or mis-stamped, has not reached
+// anybody yet and must not keep a quiet account off "at risk".
+func TestAMessageDatedAheadIsNotContact(t *testing.T) {
+	t.Parallel()
+	got := ReadInTouch(optionalDaysAhead(3), nil, nil, now)
+	if got.Basis != InTouchNever || got.Current() {
+		t.Fatalf("reading = %s (current %v), want never — the message has not been sent yet", got.Basis, got.Current())
+	}
+}
+
 // A meeting passed as the last one but dated ahead has not been held, and
 // counts only as the booking the caller passes separately.
 func TestAMeetingAheadIsNotOneHeld(t *testing.T) {

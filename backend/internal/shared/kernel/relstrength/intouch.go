@@ -70,10 +70,13 @@ func (r InTouch) Current() bool {
 }
 
 // ReadInTouch folds the three dates every in-touch question rests on. A
-// meeting at or before now has been held; one after it is booked ahead and
-// counts only as nextMeeting, so a caller passes each to its own argument.
+// message or meeting dated after now has not happened, so it never counts as
+// contact we had; a meeting ahead counts only as nextMeeting.
 func ReadInTouch(lastInbound, lastMeeting, nextMeeting *time.Time, now time.Time) InTouch {
 	latest, basis := lastInbound, InTouchWrote
+	if latest != nil && latest.After(now) {
+		latest = nil
+	}
 	if lastMeeting != nil && !lastMeeting.After(now) && (latest == nil || lastMeeting.After(*latest)) {
 		latest, basis = lastMeeting, InTouchMet
 	}
