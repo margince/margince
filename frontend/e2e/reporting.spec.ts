@@ -17,7 +17,9 @@ for (const colorScheme of ["light", "dark"] satisfies ("light" | "dark")[]) {
       page,
     }) => {
       await page.setViewportSize({ width, height: 1000 });
-      await page.emulateMedia({ colorScheme });
+      // Reduced motion before the page loads: `.analytics-body` is still fading in
+      // when the evidence drawer has closed, and axe would read the blend.
+      await page.emulateMedia({ colorScheme, reducedMotion: "reduce" });
       await mockApi(page);
       await page.route("**/v1/me", (route) =>
         route.fulfill({
@@ -113,6 +115,7 @@ for (const colorScheme of ["light", "dark"] satisfies ("light" | "dark")[]) {
         page.getByText("Frozen booking receipt", { exact: true }),
       ).toHaveCount(0);
       await page.keyboard.press("Escape");
+      await expect(page.getByRole("dialog")).toBeHidden();
       await expect(lastPoint).toBeFocused();
       const accessibility = await new AxeBuilder({ page })
         .include(".reporting-grid")

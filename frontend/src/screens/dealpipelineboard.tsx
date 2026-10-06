@@ -96,7 +96,7 @@ function DealSummaryDrawer({
       open={summary?.open ?? false}
       onClose={onClose}
       labelledBy={titleId}
-      placement="right"
+      intent="drawer"
     >
       <Heading size="large" id={titleId} className="modal-title">
         {summary?.deal.name}

@@ -12,6 +12,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { Button, Modal } from "./atoms";
 import { Heading } from "./heading";
 import { armHoverIntent } from "./hoverintent-testing";
+import { MODAL_INTENTS, type ModalBox, type ModalIntent } from "./modal";
 import { Popover } from "./popover";
 
 // A dialog covers the page. `aria-modal` says so to a screen reader and does
@@ -565,5 +566,74 @@ describe("a drawer is a dialog anchored to the right edge", () => {
     const dialog = screen.getByRole("dialog", { name: "Evidence" });
     expect(dialog.classList.contains("modal-drawer")).toBe(true);
     expect(dialog.classList.contains("modal-wide")).toBe(false);
+  });
+});
+
+// The box classes are what the stylesheet sizes and places, so they are the
+// contract each intent and each legacy pair is held to.
+function boxOf(box: ModalBox) {
+  render(
+    <Modal open onClose={() => {}} labelledBy="b" {...box}>
+      <Heading size="large" id="b">
+        Box
+      </Heading>
+    </Modal>,
+  );
+  const dialog = screen.getByRole("dialog", { name: "Box" });
+  expect(dialog.getAttribute("aria-modal")).toBe("true");
+  return { box: dialog.className, overlay: dialog.parentElement?.className };
+}
+
+describe("an intent decides the box on its own", () => {
+  it.each<[ModalIntent, string, string]>([
+    ["confirm", "modal modal-confirm", "overlay"],
+    ["form", "modal modal-form", "overlay"],
+    ["drawer", "modal modal-drawer", "overlay overlay-right"],
+    [
+      "drawer-reading",
+      "modal modal-drawer modal-drawer-wide",
+      "overlay overlay-right",
+    ],
+    ["full", "modal modal-full", "overlay"],
+  ])("%s draws %s", (intent, box, overlay) => {
+    expect(boxOf({ intent })).toEqual({ box, overlay });
+  });
+
+  it("names every intent it takes", () => {
+    expect([...MODAL_INTENTS].sort()).toEqual(
+      ["confirm", "drawer", "drawer-reading", "form", "full"].sort(),
+    );
+  });
+
+  it.each<[ModalBox, string]>([
+    [{}, "modal"],
+    [{ size: "wide" }, "modal modal-wide"],
+    [{ size: "split" }, "modal modal-wide"],
+    [{ placement: "right" }, "modal modal-drawer"],
+    [
+      { placement: "right", size: "wide" },
+      "modal modal-drawer modal-drawer-wide",
+    ],
+    [
+      { placement: "right", size: "split" },
+      "modal modal-drawer modal-drawer-wide modal-drawer-split",
+    ],
+    [{ placement: "full" }, "modal modal-full"],
+  ])("maps the legacy pair %o onto %s", (legacy, box) => {
+    expect(boxOf(legacy).box).toBe(box);
+  });
+
+  it("refuses an intent and a legacy prop at one call, and the intent wins", () => {
+    render(
+      // @ts-expect-error an intent alone decides the box
+      <Modal open onClose={() => {}} labelledBy="x" intent="form" size="wide">
+        <Heading size="large" id="x">
+          Both
+        </Heading>
+      </Modal>,
+    );
+    expect(screen.getByRole("dialog", { name: "Both" }).className).toBe(
+      "modal modal-form",
+    );
   });
 });

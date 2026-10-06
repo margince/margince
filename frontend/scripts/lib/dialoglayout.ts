@@ -310,6 +310,66 @@ export const attrs = (n: ts.Node) => {
 };
 export const attr = (n: ts.Node, name: string) =>
   attrs(n).find((a) => a.name.getText() === name);
+// The object literals a spread can hand, through parentheses and conditions.
+const spreadArms = (x: ts.Expression): ts.ObjectLiteralExpression[] => {
+  if (ts.isParenthesizedExpression(x)) return spreadArms(x.expression);
+  if (ts.isObjectLiteralExpression(x)) return [x];
+  if (!ts.isConditionalExpression(x)) return [];
+  const [a, b] = [spreadArms(x.whenTrue), spreadArms(x.whenFalse)];
+  return a.length > 0 && b.length > 0 ? [...a, ...b] : [];
+};
+type Member = ts.JsxAttributeLike | ts.ObjectLiteralElementLike;
+const memberKey = (m: Member) => {
+  const key = m.name;
+  if (!key || ts.isComputedPropertyName(key)) return undefined;
+  return ts.isJsxNamespacedName(key) ? key.getText() : key.text;
+};
+const initOf = (m: Member) => {
+  if (ts.isShorthandPropertyAssignment(m)) return m.name;
+  if (ts.isPropertyAssignment(m)) return m.initializer;
+  const init = ts.isJsxAttribute(m) ? m.initializer : undefined;
+  return init && ts.isJsxExpression(init) ? init.expression : init;
+};
+type Reading = { values: ts.Expression[]; open: boolean } | "any";
+// What one member hands `name`; `open` when it may leave the prop unset.
+function memberReading(m: Member, name: string): Reading {
+  if (ts.isJsxSpreadAttribute(m) || ts.isSpreadAssignment(m)) {
+    const arms = spreadArms(m.expression).map((o) =>
+      lastNamed(o.properties, name),
+    );
+    const read = arms.filter((r) => r !== "any");
+    if (arms.length === 0 || read.length < arms.length) return "any";
+    const values = read.flatMap((r) => r.values);
+    return { values, open: read.some((r) => r.open) };
+  }
+  const key = memberKey(m);
+  if (key === undefined) return "any";
+  if (key !== name) return { values: [], open: true };
+  const x = initOf(m);
+  return x ? { values: [x], open: false } : "any";
+}
+// The last member naming `name` wins, as JSX and object spreads apply in
+// source order.
+function lastNamed(members: readonly Member[], name: string): Reading {
+  const values: ts.Expression[] = [];
+  for (const m of [...members].reverse()) {
+    const read = memberReading(m, name);
+    if (read === "any") return "any";
+    values.push(...read.values);
+    if (!read.open) return { values, open: false };
+  }
+  return { values, open: true };
+}
+/** Every value a call may hand prop `name`, `undefined` for a path that hands
+ * none; "any" when a bare attribute or an unreadable spread hides the value. */
+export function handedTo(
+  e: ts.Node,
+  name: string,
+): (ts.Expression | undefined)[] | "any" {
+  const read = lastNamed(opening(e)?.attributes.properties ?? [], name);
+  if (read === "any") return "any";
+  return read.open ? [...read.values, undefined] : read.values;
+}
 const below = new WeakMap<ts.Node, readonly ts.Node[]>();
 const elementsBelow = new WeakMap<ts.Node, readonly ts.Node[]>();
 export function descendants(root: ts.Node): readonly ts.Node[] {
@@ -631,6 +691,21 @@ export const callOf = (a: ts.JsxAttribute) => {
   return ts.isJsxOpeningElement(on) ? on.parent : on;
 };
 
+/** The element a component renders the `{children}` it is handed into, where
+ * the classes it draws around a caller's content land. */
+export function childrenSlot(component: ts.Node): ts.Node | undefined {
+  const def = defOf(component);
+  const given = def && givenTo(def);
+  const slot =
+    def &&
+    descendants(def).find(
+      (x) =>
+        ts.isJsxExpression(x) &&
+        !!x.expression &&
+        !!given?.(x.expression, "children"),
+    );
+  return slot && enclosing(slot);
+}
 /** The components in `def` that enclose the `{children}` it is handed. */
 export function childrenHosts(def: ts.Node): ts.Node[] {
   const given = givenTo(def);
@@ -828,16 +903,19 @@ function execute(
   return undefined;
 }
 // Each of modalClass's parameters, the Modal prop the call site hands it, the
-// values its type admits and the prop's default.
-type Param = { name: string; prop: string; domain: string[]; preset?: string };
+// values its type admits (`undefined` for an optional prop) and its default.
+type Param = {
+  name: string;
+  prop: string;
+  domain: (string | undefined)[];
+  preset?: string;
+};
 const literalsOf = (type: ts.TypeNode | undefined) => {
   const members = type && ts.isUnionTypeNode(type) ? type.types : [type];
-  const texts = members.flatMap((m) =>
-    m && ts.isLiteralTypeNode(m) && ts.isStringLiteral(m.literal)
-      ? [m.literal.text]
-      : [],
+  const each = members.map((m) =>
+    m?.kind === ts.SyntaxKind.UndefinedKeyword ? [undefined] : literalTypes(m),
   );
-  return texts.length === members.length ? texts : [];
+  return each.every((m) => m) ? each.flatMap((m) => m ?? []) : [];
 };
 type Shape = { fn: ts.FunctionDeclaration; params: Param[] };
 const shapes = new Map<string, Shape>();
@@ -893,12 +971,15 @@ export function modalBoxes(
     (all, values) => all.flatMap((a) => values.map((v) => [...a, v])),
     [[]],
   );
-  return combos.map((combo) => {
+  const boxes = combos.map((combo) => {
     const args = new Map(params.map((p, i) => [p.name, combo[i]]));
     const out = execute(fn.body?.statements ?? [], args);
     if (!out) throw unread(fn, `returns no class for ${combo.join("/")} in`);
-    return out.split(/\s+/);
+    return out;
   });
+  // An intent leaves the legacy pair nothing to vary, so most combinations
+  // draw one box; it is judged once.
+  return [...new Set(boxes)].map((out) => out.split(/\s+/));
 }
 
 const CAP = 64;
