@@ -64,8 +64,7 @@ function impactLabel(
 }
 
 // dialogTitle/dialogConfirmLabel factor the mode-dependent copy out of the
-// render body below — the ONLY difference between the reindex and rebuild
-// flows is which strings the shared ConfirmModal shows.
+// render body below.
 function dialogTitle(
   mode: "reindex" | "rebuild",
   t: ReturnType<typeof useT>,
@@ -421,6 +420,8 @@ export function EmbedReindexCard() {
                   onClose={closeDialog}
                   title={dialogTitle(mode ?? "reindex", t)}
                   confirmLabel={dialogConfirmLabel(mode ?? "reindex", t)}
+                  // A rebuild re-embeds every record and cannot be undone.
+                  confirmVariant={mode === "rebuild" ? "danger" : "primary"}
                   // Gate on a fully-loaded, non-errored, non-refetching
                   // estimate — a cached preview that is refetching
                   // (isFetching) or has errored must not leave Confirm live

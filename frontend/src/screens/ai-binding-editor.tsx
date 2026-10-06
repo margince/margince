@@ -132,8 +132,7 @@ export function BindingEditor({
       open
       onClose={onClose}
       labelledBy={headingId}
-      placement="right"
-      size="wide"
+      intent="drawer-reading"
     >
       <DrawerHead>
         <Heading size="large" id={headingId} className="t-h2 modal-title">

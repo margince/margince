@@ -1,7 +1,6 @@
-import { useState } from "react";
+import { type ReactNode, useId, useState } from "react";
 import type { components } from "../api/schema";
 import { Button, Checkbox, Field, TextInput } from "../design-system/atoms";
-import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import { DateFieldSelect } from "./automations.datefield";
@@ -12,14 +11,14 @@ import {
   paramsFromValues,
   scalarText,
 } from "./automations.params";
+import { RecordFormDialog } from "./create.dialog";
 
 type CatalogEntry = components["schemas"]["AutomationCatalogEntry"];
 type Automation = components["schemas"]["Automation"];
 
-// The form an automation is named and parameterised through, and the one
-// control that draws a single declared parameter. Both dialogs on this surface
-// submit it — the create dialog in the admin panel and the edit dialog on a
-// row — so it lives beside them rather than inside either.
+// The dialog an automation is named and parameterised through, and the one
+// control that draws a single declared parameter. Create in the admin panel and
+// edit on a row both open it.
 
 function ParamFieldControl({
   field,
@@ -97,33 +96,83 @@ function ParamFieldControl({
   );
 }
 
-// Pick-a-template + fill-parameters (B-E15.7b1). Also serves the edit flow:
-// initial values arrive from the instance instead of the schema defaults.
-//
-// It is the BODY of a dialog in both cases, never a panel that unfolds under a
-// row: a name plus every parameter the schema declares is a form submitted
-// together, and the settings page keeps a row an ANSWER by putting the form
-// behind the verb. So it draws the dialog's own heading — the caller owns the
-// id, since `Modal` needs it before this renders.
-export function AutomationForm({
+// A name plus every parameter the schema declares is one form submitted
+// together; an edit seeds it from the instance instead of the schema defaults.
+export function AutomationDialog({
+  open,
   entry,
-  titleId,
   initialName,
   initialParams,
   submitLabel,
   pending,
+  refusal,
   onSubmit,
-  onCancel,
+  onClose,
 }: Readonly<{
+  open: boolean;
   entry: CatalogEntry;
-  /** The id `Modal`'s `labelledBy` points at; this form's heading carries it. */
-  titleId: string;
   initialName: string;
   initialParams?: Automation["params"];
   submitLabel: string;
   pending: boolean;
+  /** Printed inside the dialog: it covers the row that would report it. */
+  refusal?: ReactNode;
   onSubmit: (name: string, params: Record<string, unknown>) => void;
-  onCancel: () => void;
+  onClose: () => void;
+}>) {
+  const t = useT();
+  const formId = useId();
+  return (
+    <RecordFormDialog
+      open={open}
+      title={initialName}
+      onClose={onClose}
+      fieldCount={1 + paramFields(entry.params_schema).length}
+      form={
+        <AutomationForm
+          formId={formId}
+          entry={entry}
+          initialName={initialName}
+          initialParams={initialParams}
+          refusal={refusal}
+          onSubmit={onSubmit}
+        />
+      }
+      actions={
+        <>
+          {/* Save started the write and goes busy; Cancel started nothing and
+              is not offered while the write is out. */}
+          <Button disabled={pending} onClick={onClose}>
+            {t("deals.cancel")}
+          </Button>
+          <Button
+            type="submit"
+            form={formId}
+            variant="primary"
+            pending={pending}
+          >
+            {submitLabel}
+          </Button>
+        </>
+      }
+    />
+  );
+}
+
+export function AutomationForm({
+  formId,
+  entry,
+  initialName,
+  initialParams,
+  refusal,
+  onSubmit,
+}: Readonly<{
+  formId: string;
+  entry: CatalogEntry;
+  initialName: string;
+  initialParams?: Automation["params"];
+  refusal?: ReactNode;
+  onSubmit: (name: string, params: Record<string, unknown>) => void;
 }>) {
   const t = useT();
   const fields = paramFields(entry.params_schema);
@@ -142,17 +191,13 @@ export function AutomationForm({
 
   return (
     <form
+      id={formId}
       className="form-stack"
       onSubmit={(event) => {
         event.preventDefault();
         onSubmit(name.trim() || entry.name, paramsFromValues(fields, values));
       }}
     >
-      {/* The dialog covers the row that would otherwise have said which
-          automation is open, so the heading says it instead. */}
-      <Heading size="large" className="t-h3" id={titleId}>
-        {initialName}
-      </Heading>
       <p className="t-caption">
         {entry.trigger} {"->"} {entry.action}
       </p>
@@ -177,20 +222,7 @@ export function AutomationForm({
           }
         />
       ))}
-      <div className="form-actions">
-        {/* Cancel first, submit last: the house submit row reads left to right
-            towards the primary action. Save STARTED the write, so it goes busy
-            and keeps the focus the reader is standing on; Cancel started
-            nothing and is simply not available while the write is out, since
-            backing out of something already on its way to the server would say
-            it was stopped. */}
-        <Button disabled={pending} onClick={onCancel}>
-          {t("deals.cancel")}
-        </Button>
-        <Button type="submit" variant="primary" pending={pending}>
-          {submitLabel}
-        </Button>
-      </div>
+      {refusal}
     </form>
   );
 }

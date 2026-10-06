@@ -5,6 +5,7 @@ import { useId, useState } from "react";
 import { Button, Field, Modal, TextInput } from "./atoms";
 import { ChoiceList } from "./choicelist";
 import { DateInput, type ISODate, isISODate } from "./dateinput";
+import { DrawerBody, DrawerFoot, DrawerHead } from "./drawerbands";
 import { ErrorLine } from "./errorline";
 import { Heading } from "./heading";
 
@@ -62,64 +63,67 @@ export function ResolveSheet({
       open={open}
       labelledBy={titleID}
       onClose={onClose}
-      placement="right"
+      intent="drawer"
       returnFocusTo={returnFocusTo}
     >
-      <Heading size="large" id={titleID} className="modal-title">
-        {labels.title}
-      </Heading>
-      <div className="form-stack">
-        <ChoiceList
-          legend={labels.outcomeLegend}
-          value={outcome}
-          choices={labels.outcomes}
-          onChange={setOutcome}
-        />
+      <DrawerHead>
+        <Heading size="large" id={titleID} className="modal-title">
+          {labels.title}
+        </Heading>
+      </DrawerHead>
+      <DrawerBody>
+        <div className="form-stack">
+          <ChoiceList
+            legend={labels.outcomeLegend}
+            value={outcome}
+            choices={labels.outcomes}
+            onChange={setOutcome}
+          />
 
-        {/* A hidden finding owes the next reader the reason it is not flagged. */}
-        {needsReason && (
-          <Field label={labels.reason} hint={labels.reasonHelp}>
-            {(control) => (
-              <TextInput
-                {...control}
-                value={reason}
-                onChange={(event) => setReason(event.target.value)}
-              />
-            )}
-          </Field>
-        )}
+          {/* A hidden finding owes the next reader the reason it is not flagged. */}
+          {needsReason && (
+            <Field label={labels.reason} hint={labels.reasonHelp}>
+              {(control) => (
+                <TextInput
+                  {...control}
+                  value={reason}
+                  onChange={(event) => setReason(event.target.value)}
+                />
+              )}
+            </Field>
+          )}
 
-        {/* A deferral without a date is a dismissal. */}
-        {needsRemind && (
-          <Field label={labels.remindAt}>
-            {(control) => (
-              <DateInput
-                {...control}
-                value={remindAt}
-                onChange={(event) => setRemindAt(asDate(event.target.value))}
-              />
-            )}
-          </Field>
-        )}
+          {/* A deferral without a date is a dismissal. */}
+          {needsRemind && (
+            <Field label={labels.remindAt}>
+              {(control) => (
+                <DateInput
+                  {...control}
+                  value={remindAt}
+                  onChange={(event) => setRemindAt(asDate(event.target.value))}
+                />
+              )}
+            </Field>
+          )}
 
-        {/* Past the server's ceiling the date is refused, not shortened, so the
+          {/* Past the server's ceiling the date is refused, not shortened, so the
             hint states the limit. */}
-        {needsReason && (
-          <Field label={labels.expiresAt} hint={labels.expiresHelp}>
-            {(control) => (
-              <DateInput
-                {...control}
-                value={expiresAt}
-                onChange={(event) => setExpiresAt(asDate(event.target.value))}
-              />
-            )}
-          </Field>
-        )}
+          {needsReason && (
+            <Field label={labels.expiresAt} hint={labels.expiresHelp}>
+              {(control) => (
+                <DateInput
+                  {...control}
+                  value={expiresAt}
+                  onChange={(event) => setExpiresAt(asDate(event.target.value))}
+                />
+              )}
+            </Field>
+          )}
 
-        <ErrorLine error={error} />
-      </div>
-
-      <div className="card-actions">
+          <ErrorLine error={error} />
+        </div>
+      </DrawerBody>
+      <DrawerFoot className="actions">
         <Button onClick={onClose}>{labels.cancel}</Button>
         <Button
           variant="primary"
@@ -141,7 +145,7 @@ export function ResolveSheet({
         >
           {labels.submit}
         </Button>
-      </div>
+      </DrawerFoot>
     </Modal>
   );
 }

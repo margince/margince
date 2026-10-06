@@ -39,7 +39,7 @@ export function ConnectDialog({
 }>) {
   const headingId = useId();
   return (
-    <Modal open={open} onClose={onClose} labelledBy={headingId}>
+    <Modal open={open} onClose={onClose} labelledBy={headingId} intent="form">
       <div className="ob-connect-dialog-mark" aria-hidden="true">
         <ProviderMark providerKey={providerMarkKey} />
       </div>

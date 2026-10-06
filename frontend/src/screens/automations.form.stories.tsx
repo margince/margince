@@ -1,31 +1,22 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
-import { AutomationForm } from "./automations.form";
+import { AutomationDialog } from "./automations.form";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
-// The form both automation dialogs submit, drawn on its own.
-//
-// It is the BODY of a dialog in either case and never a panel, so the frames
-// here are the form and nothing around it: the create dialog and the edit
-// dialog differ only in what they seed it with and what their submit verb is
-// called, which is exactly what these stories vary.
-//
-// There is no refusal story, because the form draws no refusal: a rejected
-// save is reported by whichever dialog is holding the form — `AutomationEditor`
-// takes the server's words as `refusal`, and the create dialog prints them
-// under the form — so a story of one here would be documenting a surface this
-// component does not have.
+// The dialog both automation verbs open, drawn open. Create and edit differ only
+// in what they seed it with and what their submit verb is called; the count of
+// fields decides whether it is a form dialog or a drawer.
 
 type CatalogEntry = components["schemas"]["AutomationCatalogEntry"];
 
-const meta: Meta<typeof AutomationForm> = {
+const meta: Meta<typeof AutomationDialog> = {
   title: "Settings/AI/Automations/Automation form",
-  component: AutomationForm,
+  component: AutomationDialog,
   parameters: { layout: "padded" },
 };
 export default meta;
 
-type Story = StoryObj<typeof AutomationForm>;
+type Story = StoryObj<typeof AutomationDialog>;
 
 // The commonest shape: one integer parameter with a default and a range.
 const nudge: CatalogEntry = {
@@ -93,18 +84,18 @@ const DATE_COLUMNS = {
   page: { next_cursor: null },
 };
 
-function form(props: Partial<Parameters<typeof AutomationForm>[0]> = {}) {
+function form(props: Partial<Parameters<typeof AutomationDialog>[0]> = {}) {
   installFetchStub({ "GET /custom-fields": () => jsonResponse(DATE_COLUMNS) });
   return (
     <StoryProviders>
-      <AutomationForm
+      <AutomationDialog
+        open
         entry={nudge}
-        titleId="automation-form-title"
         initialName={nudge.name}
         submitLabel="Create"
         pending={false}
         onSubmit={() => undefined}
-        onCancel={() => undefined}
+        onClose={() => undefined}
         {...props}
       />
     </StoryProviders>
@@ -143,4 +134,28 @@ export const EveryParameterKind: Story = {
  *  send the same definition twice. */
 export const Saving: Story = {
   render: () => form({ pending: true, submitLabel: "Save" }),
+};
+
+// Past six fields the definition is worked through in a drawer.
+const sequence: CatalogEntry = {
+  ...renewal,
+  key: "follow_up_sequence",
+  name: "Follow-up sequence",
+  params_schema: {
+    type: "object",
+    properties: {
+      date_field: { type: "string" },
+      days_before: { type: "integer", minimum: 1, maximum: 365, default: 30 },
+      object: { type: "string", enum: ["contact", "company", "deal"] },
+      recurs_yearly: { type: "boolean", default: false },
+      note: { type: "string" },
+      first_after_days: { type: "integer", minimum: 1, default: 2 },
+      second_after_days: { type: "integer", minimum: 1, default: 7 },
+    },
+  },
+};
+
+/** Eight fields: the same form in the drawer. */
+export const LongDefinitionInADrawer: Story = {
+  render: () => form({ entry: sequence, initialName: sequence.name }),
 };
