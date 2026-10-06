@@ -24,34 +24,30 @@ func emitOutageDoc(c contract) []byte {
 		def := c.Tasks[name]
 		fmt.Fprintf(&b, "| `%s` | %s | %s | %s | %s | %s |\n",
 			name,
-			displayCell(def),
+			def.DisplayName,
 			def.ExecutionMode,
 			ladderCell(def.Ladder),
 			outageCell(def),
 			decisionOutageCell(def))
 	}
-	fmt.Fprintf(&b, "| embeddings (`%s` lane) | Search and retrieval | background | `%s` | %s | — |\n",
+	fmt.Fprintf(&b, "| embeddings (`%s` lane) | Search and retrieval | embedding | `%s` | %s | — |\n",
 		c.Embed.Tier, c.Embed.Tier, embedOutage)
 	b.WriteString(outageReading)
 	return b.Bytes()
 }
 
-func displayCell(def taskDef) string {
-	if def.DisplayName == "" {
-		return "—"
-	}
-	return def.DisplayName
-}
-
 // outageCell is what happens once EVERY rung's provider refuses calls. It keys
-// on the execution mode, as the AI tasks table does (outageRule in
-// frontend/src/screens/ai-task-details.tsx): the mode reaches the browser on
-// /ai/status, and validate.go holds each mode to its one budget posture.
+// on the execution mode, which validate.go holds to exactly one budget
+// posture. A planned task makes no calls, so it has no outage to describe.
 func outageCell(def taskDef) string {
-	if def.ExecutionMode == "background" {
+	switch {
+	case def.Status == statusPlanned:
+		return "not in use yet"
+	case def.ExecutionMode == "background":
 		return "waits for the provider's next check; the attempt is not spent"
+	default:
+		return "fails at once with a 503 naming the cause"
 	}
-	return "fails at once with a 503 naming the cause"
 }
 
 func decisionOutageCell(def taskDef) string {

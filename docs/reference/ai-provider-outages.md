@@ -60,12 +60,12 @@ state.
 | `site_triage` | Website triage | background | `cheap_cloud` → `premium` | waits for the provider's next check; the attempt is not spent | a failed decision call hands the task to its ladder |
 | `stage_evidence_extract` | Stage evidence extraction | background | `cheap_cloud` → `premium` | waits for the provider's next check; the attempt is not spent | — |
 | `summarize` | Record summary | interactive | `cheap_cloud` → `premium` | fails at once with a 503 naming the cause | — |
-| `transcript` | Transcript reading | interactive | `cheap_cloud` → `premium` | fails at once with a 503 naming the cause | — |
+| `transcript` | Transcript reading | interactive | `cheap_cloud` → `premium` | not in use yet | — |
 | `transcript_propose` | Meeting follow-up extraction | background | `cheap_cloud` → `premium` | waits for the provider's next check; the attempt is not spent | — |
 | `voice_build` | Voice DNA build | background | `cheap_cloud` → `premium` | waits for the provider's next check; the attempt is not spent | — |
 | `weekly_learnings` | What last week taught | background | `cheap_cloud` → `premium` | waits for the provider's next check; the attempt is not spent | — |
 | `weekly_review` | Weekly review narrative | background | `cheap_cloud` → `premium` | waits for the provider's next check; the attempt is not spent | — |
-| embeddings (`embed` lane) | Search and retrieval | background | `embed` | refused untraced; search reindex retries on its own schedule | — |
+| embeddings (`embed` lane) | Search and retrieval | embedding | `embed` | refused untraced; search reindex retries on its own schedule | — |
 
 ## After the outage
 

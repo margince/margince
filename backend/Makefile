@@ -682,10 +682,8 @@ drift: gen perfdoc ## Fail when a committed generated file drifted from what its
 	# Same blind spot, same guard: a handbook page copied in by handbook-embed
 	# and never `git add`ed is untracked, so the diff above sees nothing while
 	# the binary would ship a page no reviewer read.
-	@u="$$(git ls-files --others --exclude-standard -- 'internal/modules/knowledge/handbook/*.md')"; \
-		[ -z "$$u" ] || { echo "drift: uncommitted embedded handbook page(s):" >&2; echo "$$u" >&2; exit 1; }
-	@u="$$(git ls-files --others --exclude-standard -- ../docs/reference/ai-provider-outages.md)"; \
-		[ -z "$$u" ] || { echo "drift: uncommitted generated page:" >&2; echo "$$u" >&2; exit 1; }
+	@u="$$(git ls-files --others --exclude-standard -- 'internal/modules/knowledge/handbook/*.md' ../docs/reference/ai-provider-outages.md)"; \
+		[ -z "$$u" ] || { echo "drift: uncommitted generated page(s):" >&2; echo "$$u" >&2; exit 1; }
 
 # The MCP App admission vocabulary is AUTHORED in frontend/src/mcp-apps, where
 # the build-time validator imports it, and copied here because go:embed cannot

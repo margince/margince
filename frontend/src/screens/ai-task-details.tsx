@@ -138,10 +138,8 @@ export function TaskDetails({
 }
 
 // What the task does once a provider it needs refuses calls, and whether one
-// does now. tools/gen-aitasks/emitoutage.go writes the same rule per task into
-// docs/reference/ai-provider-outages.md; both key on the execution mode the
-// server sends, because one side is TypeScript reading /ai/status and the
-// other Go reading the contract, and no helper reaches both.
+// does now, keyed on the execution mode /ai/status sends. The generated
+// docs/reference/ai-provider-outages.md states the same rule per task.
 const OUTAGE_RULE = {
   background: {
     rule: "aiTasks.deferral.background",
