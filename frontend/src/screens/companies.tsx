@@ -89,7 +89,8 @@ import {
   type ActivityDrawer,
   CompanyHeaderActions,
 } from "./companyheaderactions";
-import { CompanyIdentityFacts, CompanySubtitle } from "./companyheaderfacts";
+import { CompanyIdentityFacts } from "./companyheaderfacts";
+import { CompanyNameLine } from "./companylifecycle";
 import {
   LIFECYCLE_LABELS,
   LIFECYCLE_OPTIONS,
@@ -1268,10 +1269,11 @@ function CompanyPage({
         // on the page, but beside a work column that opens on the reader's ask
         // it no longer needs to be the size of a masthead.
         scale="compact"
-        // What the account is, and the one way in every reader already knows,
-        // on the name's own line, the contact record's own shape.
-        nameBadge={<CompanySubtitle company={company} />}
-        // The account's standing, as the pills row under the name.
+        // Where the account stands, what it is, and the one way in, on the
+        // name's own line, the contact record's own shape.
+        nameBadge={<CompanyNameLine company={company} />}
+        // What the account is to us and who may read it, as the pills row
+        // under the name.
         pulse={<CompanyMarks company={company} />}
         zone={recordZone}
         // The way in, who holds the account and when its own row was written,
