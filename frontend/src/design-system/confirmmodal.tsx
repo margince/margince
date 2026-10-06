@@ -89,6 +89,7 @@ export function ConfirmModal({
       onClose={close}
       labelledBy={headingId}
       intent={intent}
+      closeDisabled={pending}
       returnFocusTo={returnFocusTo}
       initialFocusTo={initialFocusTo}
     >

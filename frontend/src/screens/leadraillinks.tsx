@@ -269,11 +269,7 @@ function LeadProjectAttachButton({
       </div>
       <ConfirmModal
         open={open}
-        onClose={() => {
-          if (!writer.patch.isPending) {
-            setOpen(false);
-          }
-        }}
+        onClose={() => setOpen(false)}
         intent="form"
         title={label}
         confirmLabel={label}

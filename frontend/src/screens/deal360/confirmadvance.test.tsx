@@ -102,3 +102,37 @@ it("holds the dialog through a write and closes it on the answer", async () => {
   expect(onClosed).toHaveBeenCalledTimes(1);
   expect(onClose).toHaveBeenCalledTimes(1);
 });
+
+it("lets go of the dialog when the write rejects instead of holding it busy", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => Response.json({ data: [] })),
+  );
+  const user = userEvent.setup();
+  const client = new QueryClient();
+  const onClose = vi.fn();
+  let refuse: (error: Error) => void = () => {};
+  const write = new Promise((_, reject) => {
+    refuse = reject;
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">
+        <ConfirmAdvanceModal
+          pending={{ dealId: "deal-a", version: 3, toStage: WON }}
+          onClose={onClose}
+          onConfirm={() => write}
+        />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  await user.click(screen.getByRole("button", { name: "Confirm" }));
+  await act(async () => {
+    refuse(new Error("network down"));
+    await write.catch(() => undefined);
+  });
+  expect(onClose).toHaveBeenCalledTimes(1);
+  expect(
+    screen.getByRole("button", { name: "Confirm" }).getAttribute("aria-busy"),
+  ).toBeNull();
+});

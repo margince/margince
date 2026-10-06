@@ -43,6 +43,7 @@ export function Modal({
   returnFocusTo,
   initialFocusTo,
   closeReason,
+  closeDisabled,
   children,
 }: Readonly<{
   open: boolean;
@@ -66,6 +67,8 @@ export function Modal({
    * of a surface covering their page.
    */
   closeReason?: string;
+  /** Holds the corner X while a write the dialog started is still out. */
+  closeDisabled?: boolean;
   children: ReactNode;
 }>) {
   const t = useT();
@@ -105,7 +108,7 @@ export function Modal({
     // path, and it is `useDialogFocus`'s, not this element's.
     <div // NOSONAR: backdrop dismiss only; keyboard path (Esc) handled by the effect above
       className={
-        box.split(" ").includes("modal-drawer")
+        box?.split(" ").includes("modal-drawer")
           ? "overlay overlay-right"
           : "overlay"
       }
@@ -160,6 +163,7 @@ export function Modal({
             label={t("common.close")}
             icon={<X aria-hidden="true" />}
             reason={closeReason}
+            disabled={closeDisabled}
             onClick={onClose}
           />
         </div>
@@ -177,5 +181,5 @@ function modalClass(intent: ModalIntent) {
   if (intent === "drawer-reading") {
     return "modal modal-drawer modal-drawer-wide";
   }
-  return "modal modal-full";
+  if (intent === "full") return "modal modal-full";
 }

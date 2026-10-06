@@ -89,12 +89,10 @@ export function ConfirmAdvanceModal({
   // deal the server handed back and the reason this dialog required, and only
   // on a terminal move that actually succeeded.
   onClosed?: (deal: Deal, reason: string) => void;
-  // Resolves when the advance settles, so this dialog acts on the outcome of
-  // THIS attempt. It returns the SAVED DEAL on success and the error on
-  // failure rather than throwing: the caller's own error surface still reports
-  // the failure, and a rejection here would be an unhandled one in an event
-  // handler.
-  onConfirm: (input: AdvanceInput) => Promise<Deal | unknown>;
+  // Settles with the SAVED DEAL, which the review offered next needs. A
+  // rejection is read as the outcome, not thrown: the caller's own error surface
+  // reports it, and thrown from a click handler it would be unhandled.
+  onConfirm: (input: AdvanceInput) => Promise<unknown>;
 }>) {
   const t = useT();
   const tierMap = useAgentTierMap();
@@ -160,7 +158,7 @@ export function ConfirmAdvanceModal({
       toStage: asked.toStage,
       lostReason: lostReason.trim() || undefined,
       ...wonAnswer(needsWonReason, wonReason, wonDetail),
-    });
+    }).catch((error: unknown) => error);
     setSubmitting(false);
     // Only the missing-evidence refusal stays open: the reader can answer it
     // here, and any other error renders on the screen behind this dialog.

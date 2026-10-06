@@ -225,10 +225,13 @@ describe("ConfirmModal", () => {
     if (!backdrop) throw new Error("the dialog drew no backdrop");
     await user.keyboard("{Escape}");
     await user.click(backdrop);
-    await user.click(screen.getByRole("button", { name: "Close" }));
+    const corner = screen.getByRole("button", { name: "Close" });
+    expect(corner).toBeDisabled();
+    await user.click(corner);
     expect(screen.getByRole("dialog")).toBeInTheDocument();
 
     rerender(<Archiving pending={false} />);
+    expect(screen.getByRole("button", { name: "Close" })).toBeEnabled();
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("dialog")).toBeNull();
   });

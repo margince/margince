@@ -610,6 +610,38 @@ describe("an intent decides the box on its own", () => {
     expect(boxOf(intent)).toEqual({ box, overlay });
   });
 
+  it("draws no box for a dialog that names none, rather than the lightbox", () => {
+    render(
+      // @ts-expect-error a dialog that names no shape does not compile
+      <Modal open onClose={() => {}} labelledBy="n">
+        <Heading size="large" id="n">
+          Unnamed
+        </Heading>
+      </Modal>,
+    );
+    expect(screen.getByRole("dialog", { name: "Unnamed" }).className).toBe("");
+  });
+
+  it("takes no width but the intent's", () => {
+    render(
+      <Modal
+        open
+        onClose={() => {}}
+        labelledBy="w"
+        intent="form"
+        // @ts-expect-error the legacy width props are gone
+        size="wide"
+      >
+        <Heading size="large" id="w">
+          Wide
+        </Heading>
+      </Modal>,
+    );
+    expect(screen.getByRole("dialog", { name: "Wide" }).className).toBe(
+      "modal modal-form",
+    );
+  });
+
   it("names every intent it takes", () => {
     expect([...MODAL_INTENTS].sort()).toEqual(
       ["confirm", "drawer", "drawer-reading", "form", "full"].sort(),
