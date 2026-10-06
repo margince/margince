@@ -1442,9 +1442,9 @@
   text-align: center;
 }
 
-.ob-connect-dialog-title + .form-stack,
-.ob-connect-dialog-intro + .form-stack {
-  margin-top: var(--space-4);
+.ob-connect-dialog-title:has(+ .form-stack),
+.ob-connect-dialog-intro:has(+ .form-stack) {
+  margin-bottom: var(--space-4);
 }
 
 /* The authorization form itself keeps left-aligned labels — a form reads
