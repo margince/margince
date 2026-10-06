@@ -1,26 +1,24 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// The Filters & views screen (AC-filters-and-views-1/3/4): the surface a
-// human authors a dynamic filter on, which until now existed only through the API.
+// The Filters & views destination. An address opens the library, one list,
+// or the builder a human authors a dynamic filter on (AC-filters-and-views-1/3/4).
 //
-// It hosts three things and owns none of them. The object control picks which
+// The builder hosts three things and owns none of them. The object control picks which
 // record type's vocabulary to read; the builder draws the tree; the count comes
 // back from the preview. What this file adds is the wiring and one judgement — how
 // to report a count that is one edit behind, which is the honest state of any live
 // recount over a moving table.
 
-import { useState } from "react";
-import { navigate } from "../app/router";
-import { Badge, SegmentedControl } from "../design-system/atoms";
+import { useEffect, useState } from "react";
+import { navigate, navigateReplacing } from "../app/router";
+import { Badge, PendingBody, SegmentedControl } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
-import { type PluralBase, useT } from "../i18n";
-import type { MessageKey } from "../i18n/en";
-import { QueryStates } from "./common";
+import { useT } from "../i18n";
+import { QueryStates, useMe } from "./common";
 import { FilterBuilder } from "./filterbuilder";
 import {
-  type FilterResource,
   useFilterPreview,
   useFilterVocabulary,
   type VocabularyField,
@@ -28,8 +26,6 @@ import {
 import { canExportFilter, ExportFilterMenu } from "./filterexport";
 import { SaveFilterListAction } from "./filterlist";
 import {
-  buildTabOf,
-  EDIT_LIST_SEGMENT,
   EditingListNotice,
   SaveToListAction,
   useOpenListFromAddress,
@@ -41,92 +37,25 @@ import {
   UnusedPhrases,
 } from "./filterpropose";
 import { FilterResults } from "./filterresults";
-import { ListLibrary } from "./listlibrary";
-import { ListScreen } from "./listpage";
-import { useList, useListsAvailable } from "./lists.queries";
-import { MyViews } from "./myviews";
-import "./filters.css";
 import {
-  filterTreeOf,
-  LoadFilterViewMenu,
-  SaveFilterViewAction,
-  useSavedViews,
+  filtersAddressOf,
+  MATCH_LABEL,
+  OBJECT_TABS,
+  type ObjectTab,
+  RESOURCE_OF,
+  TAB_LABEL,
+  tabOfListType,
+  UNIT_LABEL,
+  VIEW_OF,
   type ViewResource,
-} from "./savedviews";
+} from "./filtersaddress";
+import { FiltersLibrary } from "./filterslibrary";
+import { ListScreen } from "./listpage";
+import { useList } from "./lists.queries";
+import "./filters.css";
+import { LoadFilterViewMenu, SaveFilterViewAction } from "./savedviews";
+import { filterTreeOf, useSavedViews } from "./savedviews.queries";
 import { fieldsNamed, type Node, newGroup } from "./segmentpredicate";
-
-/**
- * The object tabs, and the record type each reads.
- *
- * The tab says "Contacts" and the vocabulary says "contact": the wire's word and
- * the product's word differ, and this is the one place that correspondence is
- * written down rather than assumed at each call site.
- */
-const OBJECT_TABS = ["contacts", "companies", "deals", "leads"] as const;
-type ObjectTab = (typeof OBJECT_TABS)[number];
-
-const RESOURCE_OF: Record<ObjectTab, FilterResource> = {
-  contacts: "contact",
-  companies: "company",
-  deals: "deal",
-  leads: "lead",
-};
-
-const TAB_LABEL: Record<ObjectTab, MessageKey> = {
-  contacts: "filters.tab.contacts",
-  companies: "filters.tab.companies",
-  deals: "filters.tab.deals",
-  leads: "filters.tab.leads",
-};
-
-const MATCH_LABEL: Record<ObjectTab, PluralBase> = {
-  contacts: "filters.matchContacts",
-  companies: "filters.matchCompanies",
-  deals: "filters.matchDeals",
-  leads: "filters.matchLeads",
-};
-
-/** The plural noun the results table counts and names its empty state by. */
-const UNIT_LABEL: Record<ObjectTab, MessageKey> = {
-  contacts: "unit.contacts",
-  companies: "unit.companies",
-  deals: "unit.deals",
-  leads: "unit.leads",
-};
-
-/**
- * The same three objects again, as `/views` spells them.
- *
- * A third spelling, and it is not a mistake to fix here: `/filters/*` takes
- * `contact` and `/views` takes `contacts`, both enumerated in the contract. So this
- * screen is where the two vocabularies meet, and the correspondence is written
- * down once — beside `RESOURCE_OF`, so a reader sees both mappings together —
- * rather than derived at each call site by adding an "s".
- */
-const VIEW_OF: Record<ObjectTab, ViewResource> = {
-  contacts: "contacts",
-  companies: "companies",
-  deals: "deals",
-  leads: "leads",
-};
-
-/** A resource this screen can address, or the default when the route names none. */
-function tabFromRoute(id: string | undefined): ObjectTab {
-  return OBJECT_TABS.find((tab) => tab === id) ?? "contacts";
-}
-
-/**
- * The library's three sections, while lists are switched on: the reader's own
- * views, the shared views, and the builder a Live List is made in. Each is an
- * address — `#/filters/lists`, `#/filters/views`, or an object tab for Build —
- * so Back returns to the section the reader left.
- */
-const SECTIONS = ["views", "lists", "build"] as const;
-type Section = (typeof SECTIONS)[number];
-
-function sectionFromRoute(id: string | undefined): Section {
-  return id === "lists" || id === "views" ? id : "build";
-}
 
 export function FiltersScreen({
   id,
@@ -134,49 +63,53 @@ export function FiltersScreen({
   view,
 }: Readonly<{ id?: string; list?: string; view?: string }>) {
   const t = useT();
-  const listsOn = useListsAvailable();
+  const me = useMe();
+  // `#/lists` names no list, and the lists a reader can find live in the
+  // library's Shared group. A redirect, so Back never lands here again.
+  useEffect(() => {
+    if (list === "") {
+      navigateReplacing({ screen: "filters", id: "lists" });
+    }
+  }, [list]);
+  if (list === "") {
+    return null;
+  }
+  // Nothing draws until the session says whether lists are on: the lists-off
+  // library and the builder would each flash before the page they are not.
+  if (me.isPending) {
+    return (
+      <div className="wrap">
+        <PendingBody label={t("filters.library.loading")} lines={6} />
+      </div>
+    );
+  }
   // One opened list. It loads with the library that opens it, as one chunk.
   if (list !== undefined) {
     return <ListScreen listID={list} />;
   }
-  if (!listsOn) {
-    return (
-      <div className="wrap">
-        <FilterBuildScreen id={id} view={view} />
-      </div>
-    );
+  const address = filtersAddressOf({ id, id2: view });
+  switch (address.kind) {
+    case "library":
+      return <FiltersLibrary anchor={address.anchor} />;
+    case "listFilter":
+      return (
+        <div className="wrap">
+          <ListFilterBuild listID={address.listId} />
+        </div>
+      );
+    case "view":
+      return (
+        <div className="wrap">
+          <FilterBuildScreen tab={address.tab} view={address.viewId} />
+        </div>
+      );
+    default:
+      return (
+        <div className="wrap">
+          <FilterBuildScreen tab={address.tab} />
+        </div>
+      );
   }
-  const section = sectionFromRoute(id);
-  return (
-    <div className="wrap filters-screen">
-      <div className="filters-object-row">
-        <SegmentedControl
-          options={SECTIONS}
-          value={section}
-          onChange={(next) =>
-            navigate({
-              screen: "filters",
-              id: next === "build" ? undefined : next,
-            })
-          }
-          labels={{
-            views: t("lists.section.views"),
-            lists: t("lists.section.lists"),
-            build: t("lists.section.build"),
-          }}
-          label={t("lists.section.label")}
-        />
-      </div>
-      {section === "lists" && <ListLibrary />}
-      {section === "views" && <MyViews />}
-      {section === "build" &&
-        (id === EDIT_LIST_SEGMENT && view ? (
-          <ListFilterBuild listID={view} />
-        ) : (
-          <FilterBuildScreen id={id} view={view} />
-        ))}
-    </div>
-  );
 }
 
 /**
@@ -188,21 +121,21 @@ function ListFilterBuild({ listID }: Readonly<{ listID: string }>) {
   if (list.isPending) {
     return null;
   }
-  const tab = list.data ? buildTabOf(list.data.entity_type) : undefined;
-  return <FilterBuildScreen id={tab} editList={tab ? listID : undefined} />;
+  const tab = list.data ? tabOfListType(list.data.entity_type) : undefined;
+  return (
+    <FilterBuildScreen
+      tab={tab ?? "contacts"}
+      editList={tab ? listID : undefined}
+    />
+  );
 }
 
 function FilterBuildScreen({
-  id,
+  tab,
   view,
   editList,
-}: Readonly<{ id?: string; view?: string; editList?: string }>) {
+}: Readonly<{ tab: ObjectTab; view?: string; editList?: string }>) {
   const t = useT();
-  // The ADDRESS is which object is being filtered. It was read once, on mount,
-  // and never written back — so pressing a tab moved the screen and left the
-  // URL naming the object the reader had left, which a reload or a Back press
-  // then restored over them.
-  const tab = tabFromRoute(id);
   // A fresh tree per object, because a clause naming a contact's field means
   // nothing on a deal — carrying the tree across would offer the human a filter
   // the new vocabulary refuses.

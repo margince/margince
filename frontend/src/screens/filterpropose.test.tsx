@@ -119,7 +119,7 @@ async function describeList(user: ReturnType<typeof userEvent.setup>) {
 it("loads a proposal into an empty builder and names what it could not use", async () => {
   const { previews, asked, wrapper } = mount();
   const user = userEvent.setup();
-  render(<FiltersScreen />, { wrapper });
+  render(<FiltersScreen id="contacts" />, { wrapper });
 
   await describeList(user);
 
@@ -149,7 +149,7 @@ it("loads a proposal into an empty builder and names what it could not use", asy
 it("asks before a proposal touches a filter the reader already built", async () => {
   const { wrapper } = mount();
   const user = userEvent.setup();
-  render(<FiltersScreen />, { wrapper });
+  render(<FiltersScreen id="contacts" />, { wrapper });
 
   await user.click(await screen.findByRole("button", { name: "Add clause" }));
   await user.type(screen.getByLabelText("Value"), "Ann");
@@ -178,7 +178,7 @@ it("asks when the reader built a filter while the proposal was being read", asyn
     }),
   );
   const user = userEvent.setup();
-  render(<FiltersScreen />, { wrapper });
+  render(<FiltersScreen id="contacts" />, { wrapper });
 
   // Asked on an empty builder, and the reader keeps working while it is read.
   await describeList(user);
@@ -195,7 +195,7 @@ it("asks when the reader built a filter while the proposal was being read", asyn
 it("replaces the reader's filter only when they choose to", async () => {
   const { wrapper } = mount();
   const user = userEvent.setup();
-  render(<FiltersScreen />, { wrapper });
+  render(<FiltersScreen id="contacts" />, { wrapper });
 
   await user.click(await screen.findByRole("button", { name: "Add clause" }));
   await user.type(screen.getByLabelText("Value"), "Ann");
@@ -216,7 +216,7 @@ it("says a model is needed when the installation has none", async () => {
     body: { code: "ai_not_configured", detail: "server words", status: 409 },
   });
   const user = userEvent.setup();
-  render(<FiltersScreen />, { wrapper });
+  render(<FiltersScreen id="contacts" />, { wrapper });
 
   await describeList(user);
 

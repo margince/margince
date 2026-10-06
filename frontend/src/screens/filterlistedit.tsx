@@ -12,33 +12,10 @@ import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { useT } from "../i18n";
 import { problemCodeOf, problemMessageOf } from "./common";
+import { EDIT_LIST_SEGMENT, tabOfListType } from "./filtersaddress";
 import { ListRuleUses, ruleUsesOf } from "./listrules";
-import {
-  type List,
-  type ListRecordType,
-  useList,
-  useUpdateList,
-} from "./lists.queries";
+import { type List, useList, useUpdateList } from "./lists.queries";
 import { decode, encode, isComplete, type Node } from "./segmentpredicate";
-
-/** The address segment below `filters` that opens a Live List's filter. */
-export const EDIT_LIST_SEGMENT = "list";
-
-/** The builder tab a record type's Live List opens on; projects have none. */
-export function buildTabOf(type: ListRecordType): string | undefined {
-  switch (type) {
-    case "contact":
-      return "contacts";
-    case "company":
-      return "companies";
-    case "deal":
-      return "deals";
-    case "lead":
-      return "leads";
-    default:
-      return undefined;
-  }
-}
 
 /** Whether this reader may change this list's filter here. */
 export function mayEditFilter(list: List): boolean {
@@ -46,14 +23,14 @@ export function mayEditFilter(list: List): boolean {
     list.list_type === "dynamic" &&
     list.can_edit &&
     !list.archived_at &&
-    buildTabOf(list.entity_type) !== undefined
+    tabOfListType(list.entity_type) !== undefined
   );
 }
 
 /** "Edit filter": the builder, opened on this Live List's filter. */
 export function EditFilterAction({ list }: Readonly<{ list: List }>) {
   const t = useT();
-  const tab = buildTabOf(list.entity_type);
+  const tab = tabOfListType(list.entity_type);
   if (!mayEditFilter(list) || tab === undefined) {
     return null;
   }
@@ -92,7 +69,7 @@ export function useOpenListFromAddress(
   if (!settled && list.data) {
     const tree = decode(list.data.definition);
     setSettled(true);
-    if (tree && buildTabOf(list.data.entity_type) === tab) {
+    if (tree && tabOfListType(list.data.entity_type) === tab) {
       load(tree);
       if (mayEditFilter(list.data)) {
         setEdited({ list: list.data, version: list.data.version });

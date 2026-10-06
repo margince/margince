@@ -2035,6 +2035,41 @@ export async function mockApi(
       return json(page([]));
     }
     if (path === "/views" && method === "GET") {
+      // Every view, as the Filters and views library reads them: two saved
+      // filters over fields the vocabularies above hold, so the library's
+      // sweeps draw real rows and their captions name real fields.
+      if (!url.searchParams.has("resource")) {
+        return json(
+          page([
+            {
+              id: "v-owned",
+              workspace_id: "w",
+              resource: "contacts",
+              name: "Contacts I own",
+              owner_id: "u1",
+              shared_scope: "private",
+              query: {
+                filter: { and: [{ field: "owner_id", op: "eq", value: "u1" }] },
+              },
+              version: 1,
+            },
+            {
+              id: "v-fleet",
+              workspace_id: "w",
+              resource: "companies",
+              name: "Fleet companies",
+              owner_id: "u1",
+              shared_scope: "private",
+              query: {
+                filter: {
+                  and: [{ field: "industry", op: "eq", value: "automotive" }],
+                },
+              },
+              version: 1,
+            },
+          ]),
+        );
+      }
       // One saved deals view, and it names the NON-default pipeline. A view is
       // stored as the reader's whole list state, so the pipeline it was saved
       // on is part of what pressing its tab has to restore.

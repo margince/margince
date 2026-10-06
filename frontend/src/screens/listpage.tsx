@@ -6,9 +6,9 @@
 // there, and what changed. The members are the record list's own rows, narrowed by
 // list_id, so the page is never one request per member (listmembers.tsx).
 
-import { useEffect, useMemo, useRef } from "react";
+import { type ReactNode, useEffect, useMemo, useRef } from "react";
 import { navigate } from "../app/router";
-import { Button } from "../design-system/atoms";
+import { Button, PendingBody } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
@@ -47,13 +47,31 @@ function isMemberSource(type: ListRecordType): type is MemberSource {
   return type in MEMBER_SOURCES;
 }
 
-export function ListScreen({ listID }: Readonly<{ listID?: string }>) {
+export function ListScreen({ listID }: Readonly<{ listID: string }>) {
   const t = useT();
   const available = useListsAvailable();
-  if (!available || !listID) {
-    return <p className="wrap lists-note">{t("lists.unavailable")}</p>;
+  if (!available) {
+    return (
+      <ListState>
+        <p className="lists-note">{t("lists.unavailable")}</p>
+      </ListState>
+    );
   }
   return <ListBody listID={listID} />;
+}
+
+/**
+ * The page before it has a list to name. It heads itself, so it still prints
+ * the one heading a page owes a reader navigating by heading.
+ */
+function ListState({ children }: Readonly<{ children: ReactNode }>) {
+  const t = useT();
+  return (
+    <div className="wrap lists-page">
+      <Heading size="xlarge">{t("lists.page")}</Heading>
+      {children}
+    </div>
+  );
 }
 
 function ListBody({ listID }: Readonly<{ listID: string }>) {
@@ -61,10 +79,18 @@ function ListBody({ listID }: Readonly<{ listID: string }>) {
   const list = useList(listID);
   useVisitOnce(listID, list.isSuccess && list.isFetchedAfterMount);
   if (list.isPending) {
-    return null;
+    return (
+      <ListState>
+        <PendingBody label={t("lists.loading")} lines={6} />
+      </ListState>
+    );
   }
   if (list.isError) {
-    return <p className="wrap lists-note">{t("lists.gone")}</p>;
+    return (
+      <ListState>
+        <p className="lists-note">{t("lists.gone")}</p>
+      </ListState>
+    );
   }
   return (
     <div className="wrap lists-page">

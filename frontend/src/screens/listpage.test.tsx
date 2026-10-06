@@ -64,6 +64,41 @@ describe("an opened list", () => {
       await screen.findByText(en["lists.unavailable"]),
     ).toBeInTheDocument();
     expect(fetched).toEqual([]);
+    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+    expect(
+      screen.getByRole("heading", { level: 1, name: en["lists.page"] }),
+    ).toBeInTheDocument();
+  });
+
+  // The page heads itself, so every state before it has a list to name still
+  // prints the one heading a reader navigating by heading lands on.
+  it("prints one heading while the list is being read", async () => {
+    installFetchStub({
+      "GET /me": listsMe(true),
+      [`GET /lists/${LIVE_ID}`]: () => new Promise<Response>(() => {}),
+    });
+    page(LIVE_ID);
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      en["lists.loading"],
+    );
+    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+    expect(
+      screen.getByRole("heading", { level: 1, name: en["lists.page"] }),
+    ).toBeInTheDocument();
+  });
+
+  it("prints one heading when the list is gone", async () => {
+    installFetchStub({
+      "GET /me": listsMe(true),
+      [`GET /lists/${LIVE_ID}`]: () =>
+        jsonResponse({ title: "Not found", status: 404 }, 404),
+    });
+    page(LIVE_ID);
+    expect(await screen.findByText(en["lists.gone"])).toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+    expect(
+      screen.getByRole("heading", { level: 1, name: en["lists.page"] }),
+    ).toBeInTheDocument();
   });
 
   it("shows each Live List member's filter fields as columns, a hidden value named hidden, and no Why", async () => {

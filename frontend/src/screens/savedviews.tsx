@@ -1,22 +1,23 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useQuery } from "@tanstack/react-query";
 import { Bookmark } from "lucide-react";
-import { api } from "../api/client";
-import type { components } from "../api/schema";
 import { Button, OverflowMenu } from "../design-system/atoms";
 import { NamePrompt } from "../design-system/nameprompt";
 import { SurfaceState } from "../design-system/surfacestate";
 import { useT } from "../i18n";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf } from "./common";
+import type { ViewResource } from "./filtersaddress";
 import type { ListQuery, SavedViewTab } from "./listquery";
+import { ManageViewsButton } from "./savedviews.manage";
 import {
-  ManageViewsButton,
-  savedViewsKey,
+  filterStateFrom,
+  filterTreeOf,
+  type SavedView,
+  useSavedViews,
   useSaveView,
-} from "./savedviews.manage";
-import { decode, encode, isComplete, type Node } from "./segmentpredicate";
+} from "./savedviews.queries";
+import { isComplete, type Node } from "./segmentpredicate";
 
 // A saved view is the reader's own list state, by name: the search, the sort,
 // the filters, the archived toggle and the page size they were looking at.
@@ -30,23 +31,6 @@ import { decode, encode, isComplete, type Node } from "./segmentpredicate";
 // writes shared_scope 'private'), so nothing here asks who may see it — the
 // answer is always "only you", and a picker that implied otherwise would be
 // promising a sharing model V1 does not have.
-
-type SavedView = components["schemas"]["SavedView"];
-
-/**
- * The resources whose lists offer saved views, as the contract spells them.
- *
- * Plural here and singular on `/filters/*` — `contacts` against `contact` — because
- * the two endpoint families spell their enums differently. That correspondence
- * is written down once, where the two meet (the filters screen's `VIEW_OF`), and
- * nowhere else.
- */
-export type ViewResource =
-  | "contacts"
-  | "companies"
-  | "deals"
-  | "leads"
-  | "projects";
 
 /**
  * The list state a view restores.
@@ -126,58 +110,6 @@ function listStateFrom(query: ListQuery): Record<string, unknown> {
 }
 
 /**
- * The key the segment builder's tree lives under — the one `LIST_STATE_KEY`
- * above deliberately leaves free.
- *
- * The server validates this one as a filter TREE and compiles it against the
- * resource's engine, which is exactly what it holds: the same predicate the
- * builder sends to `/filters/preview` and the same one `/exports` takes. One
- * filter dialect, whichever surface reads it.
- */
-const FILTER_KEY = "filter";
-
-/**
- * The filter tree a view restores, or null when it holds none this editor can
- * read.
- *
- * Same contract as `listStateOf` and for the same reason: `query` is an open
- * JSON object, so a row can carry a shape this build has never seen, and a
- * builder that threw while reading its own view menu would take the screen with
- * it. `decode` does the checking and answers null rather than guessing.
- */
-export function filterTreeOf(view: SavedView): Node | null {
-  const stored = view.query as Record<string, unknown> | undefined;
-  return decode(stored?.[FILTER_KEY]);
-}
-
-/** What a view saves, given the filter the reader has just built. */
-function filterStateFrom(tree: Node): Record<string, unknown> {
-  return { [FILTER_KEY]: encode(tree) };
-}
-
-/**
- * The caller's saved views for one resource, newest last. `fresh` reads them
- * again on mount even when the cache holds a recent answer, for a caller that
- * must not decide from a list that predates a view it was just sent to.
- */
-export function useSavedViews(resource: ViewResource, fresh = false) {
-  return useQuery({
-    queryKey: savedViewsKey(resource),
-    queryFn: async (): Promise<SavedView[]> => {
-      const { data, error } = await api.GET("/views", {
-        params: { query: { resource, limit: 50 } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data.data;
-    },
-    staleTime: 60_000,
-    refetchOnMount: fresh ? "always" : true,
-  });
-}
-
-/**
  * The saved views of one resource, as view tabs the list can render beside its
  * built-in presets.
  *
@@ -234,7 +166,7 @@ function SaveViewButton({
   blob: () => Record<string, unknown>;
 }>) {
   const t = useT();
-  const { create } = useSaveView(resource);
+  const { create } = useSaveView();
 
   return (
     <NamePrompt
@@ -249,7 +181,7 @@ function SaveViewButton({
       // generic "request failed" instead of the reason the server gave.
       problem={create.isError ? problemMessageOf(create.error, t) : undefined}
       onSave={(name, done) =>
-        create.mutate({ name, query: blob() }, { onSuccess: done })
+        create.mutate({ resource, name, query: blob() }, { onSuccess: done })
       }
     />
   );
@@ -307,9 +239,7 @@ export function SaveViewAction({
       {/* Beside Save, because it is the same set of the reader's own views:
           a tab can be pressed but not named or removed, so this is the only
           place a view that has served its purpose can go. */}
-      {views.data && (
-        <ManageViewsButton resource={resource} views={views.data} />
-      )}
+      {views.data && <ManageViewsButton views={views.data} />}
     </>
   );
 }

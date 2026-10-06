@@ -4,12 +4,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { FiltersScreen } from "./filters";
-import { listsMe, liveList, shortlist } from "./lists.fixtures";
+import { listsMe, liveList } from "./lists.fixtures";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
-// The screen reads four routes and no session probe: the vocabulary for the
-// object being filtered, a preview once a clause is complete, the reader's saved
-// views, and the export.
+// The screen reads the session first, then the vocabulary for the object being
+// filtered, a preview once a clause is complete, the reader's saved views, and
+// the export.
 //
 // The states worth capturing are the ones a reader can actually be in, and the
 // differences between them are the judgements this screen carries: nothing asked
@@ -17,7 +17,7 @@ import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 // from a saved view, and an export that was refused. A screenshot of the first is
 // what proves the others are not the only states the surface knows how to draw.
 const meta: Meta<typeof FiltersScreen> = {
-  title: "Patterns/Filters and views",
+  title: "Patterns/Filters and views/Filter page",
   component: FiltersScreen,
   parameters: { layout: "padded" },
   decorators: [
@@ -116,8 +116,7 @@ const SAVED_VIEWS = {
   page: { next_cursor: null, has_more: false },
 };
 
-// The builder stories draw the screen as it is with lists switched off: the
-// builder alone, without the library's section control above it.
+// The builder stories draw the screen as it is with lists switched off.
 function routes(): void {
   installFetchStub({
     "GET /me": listsMe(false),
@@ -147,7 +146,7 @@ export const NothingAskedYet: Story = {
   // report that nothing matches a filter nobody has written.
   render: () => {
     routes();
-    return <FiltersScreen />;
+    return <FiltersScreen id="contacts" />;
   },
 };
 
@@ -157,7 +156,7 @@ export const LoadedFromASavedView: Story = {
   // and offers one — the unreadable view is not on it.
   render: () => {
     routes();
-    return <FiltersScreen />;
+    return <FiltersScreen id="contacts" />;
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -181,7 +180,7 @@ export const ExportRefused: Story = {
   // waits for a file that is never coming.
   render: () => {
     routes();
-    return <FiltersScreen />;
+    return <FiltersScreen id="contacts" />;
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -218,7 +217,7 @@ export const PreviewRefusedToAReadSeat: Story = {
           403,
         ),
     });
-    return <FiltersScreen />;
+    return <FiltersScreen id="contacts" />;
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -236,7 +235,7 @@ export const WithAClause: Story = {
   // interaction to settle before it screenshots.
   render: () => {
     routes();
-    return <FiltersScreen />;
+    return <FiltersScreen id="contacts" />;
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -247,23 +246,6 @@ export const WithAClause: Story = {
     );
     await userEvent.type(canvas.getByLabelText("Value"), "Berlin");
     await canvas.findByText("3 contacts match");
-  },
-};
-
-// With lists switched on the destination becomes the library: the reader's
-// views, the shared views, and the builder a Live List is saved from. This is
-// the Shared views section.
-export const SharedViewsLibrary: Story = {
-  render: () => {
-    installFetchStub({
-      "GET /me": listsMe(true),
-      "GET /lists": () =>
-        jsonResponse({
-          data: [liveList, shortlist],
-          page: { has_more: false },
-        }),
-    });
-    return <FiltersScreen id="lists" />;
   },
 };
 

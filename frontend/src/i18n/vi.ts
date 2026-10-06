@@ -1515,6 +1515,12 @@ export const vi = {
   "views.deleteAsk":
     "Xóa {name} sẽ gỡ thẻ của nó. Các bản ghi trong đó không thay đổi.",
   "views.deleteConfirm": "Xóa bộ lọc",
+  "views.renameTitle": "Đổi tên chế độ xem",
+  "views.renamed": "Đã đổi tên chế độ xem",
+  "views.deleteTitle": "Xóa chế độ xem này?",
+  "views.deleteBody":
+    "“{name}” sẽ rời khỏi Bộ lọc & chủ đề. Không bản ghi nào thay đổi.",
+  "views.deleted": "Đã xóa chế độ xem: “{name}”",
   "list.viewMine": "Của tôi",
   "list.viewCustomers": "Khách hàng",
   "list.viewProspects": "Khách tiềm năng",
@@ -10455,11 +10461,7 @@ export const vi = {
   "filters.propose.reason.tooMany":
     "B\u1ed9 l\u1ecdc \u0111\u00e3 ch\u1ee9a nhi\u1ec1u \u0111i\u1ec1u ki\u1ec7n nh\u1ea5t c\u00f3 th\u1ec3.",
   "lists.page": "Danh s\u00e1ch",
-  "lists.section.label": "Hi\u1ec3n th\u1ecb",
-  "lists.section.views": "Ch\u1ebf \u0111\u1ed9 xem c\u1ee7a t\u00f4i",
-  "lists.section.lists":
-    "Ch\u1ebf \u0111\u1ed9 xem \u0111\u01b0\u1ee3c chia s\u1ebb",
-  "lists.section.build": "T\u1ea1o b\u1ed9 l\u1ecdc",
+  "lists.loading": "Đang tải danh sách",
   "lists.kind.live": "Danh s\u00e1ch \u0111\u1ed9ng",
   "lists.kind.shortlist": "Danh s\u00e1ch ch\u1ecdn",
   "lists.type.contact": "Li\u00ean h\u1ec7",
@@ -10487,20 +10489,9 @@ export const vi = {
     "B\u1ed9 l\u1ecdc kh\u00f4ng c\u00f2n d\u00f9ng \u0111\u01b0\u1ee3c",
   "lists.health.retiredField":
     "D\u00f9ng tr\u01b0\u1eddng \u0111\u00e3 ng\u1eebng s\u1eed d\u1ee5ng",
-  "lists.library.title":
-    "Ch\u1ebf \u0111\u1ed9 xem \u0111\u01b0\u1ee3c chia s\u1ebb",
-  "lists.library.search": "T\u00ecm danh s\u00e1ch",
-  "lists.library.all": "T\u1ea5t c\u1ea3",
-  "lists.library.kind": "Lo\u1ea1i danh s\u00e1ch",
-  "lists.library.empty":
-    "Ch\u01b0a c\u00f3 danh s\u00e1ch \u0111\u01b0\u1ee3c chia s\u1ebb n\u00e0o. H\u00e3y l\u01b0u m\u1ed9t b\u1ed9 l\u1ecdc th\u00e0nh danh s\u00e1ch \u0111\u1ed9ng ho\u1eb7c t\u1ea1o danh s\u00e1ch ch\u1ecdn.",
-  "lists.library.loading": "\u0110ang t\u1ea3i danh s\u00e1ch",
   "lists.col.name": "T\u00ean",
   "lists.col.kind": "Lo\u1ea1i",
   "lists.col.recordType": "B\u1ea3n ghi",
-  "lists.col.count": "B\u1ea1n th\u1ea5y \u0111\u01b0\u1ee3c",
-  "lists.col.steward": "Ph\u1ee5 tr\u00e1ch",
-  "lists.col.sharing": "Chia s\u1ebb v\u1edbi",
   "lists.noSteward": "Ch\u01b0a c\u00f3 ai",
   "lists.newShortlist": "Danh s\u00e1ch ch\u1ecdn m\u1edbi",
   "lists.newShortlistTitle": "T\u1ea1o danh s\u00e1ch ch\u1ecdn",
@@ -10621,13 +10612,6 @@ export const vi = {
   "lists.add": "Th\u00eam",
   "lists.shortlist": "Danh s\u00e1ch ch\u1ecdn",
   "lists.pickShortlist": "Ch\u1ecdn danh s\u00e1ch",
-  "lists.views.empty":
-    "Ch\u01b0a c\u00f3 ch\u1ebf \u0111\u1ed9 xem n\u00e0o. H\u00e3y t\u1ea1o b\u1ed9 l\u1ecdc r\u1ed3i b\u1ea5m L\u01b0u b\u1ed9 l\u1ecdc.",
-  "lists.views.loading":
-    "\u0110ang t\u1ea3i b\u1ed9 l\u1ecdc \u0111\u00e3 l\u01b0u",
-  "lists.myLists.title": "Danh s\u00e1ch c\u1ee7a t\u00f4i",
-  "lists.myLists.empty":
-    "Ch\u01b0a c\u00f3 danh s\u00e1ch ri\u00eang t\u01b0 n\u00e0o. Danh s\u00e1ch ch\u1ec9 b\u1ea1n t\u00ecm th\u1ea5y s\u1ebd hi\u1ec7n \u1edf \u0111\u00e2y. Khi chia s\u1ebb, danh s\u00e1ch s\u1ebd chuy\u1ec3n sang ch\u1ebf \u0111\u1ed9 xem \u0111\u01b0\u1ee3c chia s\u1ebb.",
   "lists.pulse.chip": "+{entered} / −{left}",
   "lists.pulse.label":
     "{entered} bản ghi vào và {left} bản ghi rời đi kể từ lần bạn xem trước",
@@ -10685,7 +10669,60 @@ export const vi = {
   // Giao di\u1ec7n B\u1ed9 l\u1ecdc & Ch\u1ee7 \u0111\u1ec1.
   "filters.title": "B\u1ed9 l\u1ecdc & ch\u1ee7 \u0111\u1ec1",
   "filters.subtitle":
-    "T\u1ea1o b\u1ed9 l\u1ecdc, xem n\u00f3 ch\u1ecdn nh\u1eefng g\u00ec, r\u1ed3i l\u01b0u th\u00e0nh ch\u1ee7 \u0111\u1ec1.",
+    "Mọi chế độ xem đã lưu và danh sách bạn có thể dùng, và nơi bắt đầu một bộ lọc mới.",
+  "filters.library.loading": "Đang tải chế độ xem và danh sách",
+  "filters.library.search": "Tìm chế độ xem và danh sách",
+  "filters.library.all": "Tất cả",
+  "filters.library.newFilter": "Bộ lọc mới",
+  "filters.new.contacts": "Bộ lọc liên hệ mới",
+  "filters.new.companies": "Bộ lọc công ty mới",
+  "filters.new.deals": "Bộ lọc deal mới",
+  "filters.new.leads": "Bộ lọc khách tiềm năng mới",
+  "filters.library.whichRecords": "Lọc loại bản ghi nào?",
+  "filters.library.mine": "Chỉ mình tôi",
+  "filters.library.shared": "Được chia sẻ",
+  "filters.library.views": "Chế độ xem đã lưu",
+  "filters.library.kindView": "Chế độ xem đã lưu",
+  "filters.library.rowMore": "Thêm cho {name}",
+  "filters.library.records.contact_one": "{count} liên hệ",
+  "filters.library.records.contact_other": "{count} liên hệ",
+  "filters.library.records.company_one": "{count} công ty",
+  "filters.library.records.company_other": "{count} công ty",
+  "filters.library.records.deal_one": "{count} giao dịch",
+  "filters.library.records.deal_other": "{count} giao dịch",
+  "filters.library.records.lead_one": "{count} khách tiềm năng",
+  "filters.library.records.lead_other": "{count} khách tiềm năng",
+  "filters.library.records.project_one": "{count} dự án",
+  "filters.library.records.project_other": "{count} dự án",
+  "filters.library.recordsSeen": "{records} bạn có thể xem",
+  "filters.library.mineEmpty": "Chế độ xem bạn lưu sẽ hiện ở đây.",
+  "filters.library.sharedEmpty":
+    "Chưa có danh sách được chia sẻ. Danh sách chia sẻ với một nhóm hoặc toàn công ty sẽ hiện ở đây.",
+  "filters.library.noHits":
+    "Không có chế độ xem hay danh sách nào khớp với “{q}”.",
+  "filters.library.clearSearch": "Xóa tìm kiếm",
+  "filters.library.noTypeHits.contacts":
+    "Không có chế độ xem hay danh sách liên hệ nào.",
+  "filters.library.noTypeHits.companies":
+    "Không có chế độ xem hay danh sách công ty nào.",
+  "filters.library.noTypeHits.deals":
+    "Không có chế độ xem hay danh sách giao dịch nào.",
+  "filters.library.noTypeHits.leads":
+    "Không có chế độ xem hay danh sách khách tiềm năng nào.",
+  "filters.library.noTypeHits.projects": "Không có danh sách dự án nào.",
+  "filters.library.truncated":
+    "Đang hiện {limit} mục đầu tiên. Hãy tìm kiếm để thu hẹp danh sách.",
+  "filters.library.listsFailed": "Không tải được danh sách.",
+  "filters.library.viewsFailed": "Không tải được chế độ xem đã lưu.",
+  "filters.library.showArchived": "Hiện danh sách đã lưu trữ",
+  "filters.library.hideArchived": "Ẩn danh sách đã lưu trữ",
+  "filters.library.firstRunTitle":
+    "Chưa có chế độ xem hay danh sách nào được lưu",
+  "filters.library.firstRunBody":
+    "Bộ lọc tìm bản ghi theo các trường của chúng. Hãy lưu nó thành chế độ xem cho riêng bạn, hoặc thành danh sách động để đồng nghiệp tìm thấy.",
+  "filters.library.viewsEmptyTitle": "Chưa có chế độ xem đã lưu",
+  "filters.library.viewsEmptyBody":
+    "Bộ lọc tìm bản ghi theo các trường của chúng. Hãy lưu nó thành chế độ xem để mở lại sau.",
   "filters.objectLabel": "L\u1ecdc lo\u1ea1i b\u1ea3n ghi n\u00e0o",
   "filters.tab.contacts": "Liên hệ",
   "filters.tab.companies": "C\u00f4ng ty",

@@ -1,98 +1,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
-import { api } from "../api/client";
-import type { components } from "../api/schema";
-import { ifMatch } from "../api/version";
 import { Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
-import { problemMessageOf, throwProblem } from "./common";
-import type { ViewResource } from "./savedviews";
+import { problemMessageOf } from "./common";
+import { type SavedView, useSaveView } from "./savedviews.queries";
 import "./savedviews.css";
-
-// The writes a saved view takes, and the dialog that manages the reader's own.
-// Beside savedviews.tsx rather than in it, which reads and restores them.
-
-type SavedView = components["schemas"]["SavedView"];
-
-/** The cache key every read of a resource's saved views shares. */
-export function savedViewsKey(
-  resource: ViewResource,
-): readonly ["views", ViewResource] {
-  return ["views", resource];
-}
-
-/**
- * Save the current list as a named view, rename one, and remove one that has
- * served its purpose.
- *
- * All three invalidate the resource's view list, so the tab rail is whatever
- * the server holds rather than a local copy that drifts from it.
- */
-export function useSaveView(resource: ViewResource) {
-  const client = useQueryClient();
-  const invalidate = () =>
-    client.invalidateQueries({ queryKey: savedViewsKey(resource) });
-
-  // The blob is the caller's, not this hook's: a list saves its dials under one
-  // key and the segment builder saves a tree under another, and both go through
-  // ONE write so there is one place that stamps the resource and invalidates the
-  // rail. A second mutation per shape is how the two would drift.
-  const create = useMutation({
-    mutationFn: async (
-      input: Readonly<{ name: string; query: Record<string, unknown> }>,
-    ) => {
-      const { data, error } = await api.POST("/views", {
-        body: {
-          resource,
-          name: input.name,
-          query: input.query,
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-    onSuccess: invalidate,
-  });
-
-  // The version the row was read at rides as If-Match, so a rename made in
-  // another tab since this list was read is refused rather than overwritten.
-  const rename = useMutation({
-    mutationFn: async (
-      input: Readonly<{ id: string; name: string; version: number }>,
-    ) => {
-      const { data, error } = await api.PATCH("/views/{id}", {
-        params: { path: { id: input.id }, ...ifMatch(input.version) },
-        body: { name: input.name },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-    onSuccess: invalidate,
-  });
-
-  const remove = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await api.DELETE("/views/{id}", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-    },
-    onSuccess: invalidate,
-  });
-
-  return { create, rename, remove };
-}
 
 // Renaming and deleting the reader's own saved views. One dialog listing every
 // view of the resource, each row opening in place into the one question it is
@@ -107,9 +23,8 @@ type RowMode =
   | null;
 
 export function ManageViewsButton({
-  resource,
   views,
-}: Readonly<{ resource: ViewResource; views: readonly SavedView[] }>) {
+}: Readonly<{ views: readonly SavedView[] }>) {
   const t = useT();
   const [open, setOpen] = useState(false);
   const headingId = useId();
@@ -125,18 +40,15 @@ export function ManageViewsButton({
         <Heading size="large" id={headingId} className="t-h2 modal-title">
           {t("views.rail")}
         </Heading>
-        {open && <ManageViewsList resource={resource} views={views} />}
+        {open && <ManageViewsList views={views} />}
       </Modal>
     </>
   );
 }
 
-function ManageViewsList({
-  resource,
-  views,
-}: Readonly<{ resource: ViewResource; views: readonly SavedView[] }>) {
+function ManageViewsList({ views }: Readonly<{ views: readonly SavedView[] }>) {
   const t = useT();
-  const { rename, remove } = useSaveView(resource);
+  const { rename, remove } = useSaveView();
   const [mode, setMode] = useState<RowMode>(null);
   // The failure belongs to the row that asked, and is cleared by the next
   // question: a refusal left under another row would name the wrong view.

@@ -21,31 +21,8 @@
   margin: 0;
 }
 
-/* The library's search and its type switch share one row, wrapping on a
-   phone rather than scrolling. */
-.lists-library-dials {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  flex-wrap: wrap;
-}
-
-.lists-library-name,
-.lists-library-steward {
-  display: inline-flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.lists-library-count,
 .lists-member-name {
   display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.lists-library-steward {
-  flex-direction: row;
   align-items: center;
   gap: var(--space-2);
 }

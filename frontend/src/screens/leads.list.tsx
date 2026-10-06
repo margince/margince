@@ -7,7 +7,7 @@ import type { components } from "../api/schema";
 import { usePageName } from "../app/pagemeta";
 import { useRecordZone } from "../app/recordzone";
 import { readStored, STORAGE_KEYS, writeStored } from "../app/storage";
-import { currentParams, useUrlParams } from "../app/urlstate";
+import { replaceDial, useUrlParams } from "../app/urlstate";
 import { Badge, SegmentedControl } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { CellStrip } from "../design-system/listtable";
@@ -273,18 +273,11 @@ function LeadsWorkbench({
   // is the screen's OWN name rather than a wire one, because which of the two
   // is drawn changes nothing about which leads exist — the same split the deals
   // screen makes.
-  const [params, setParams] = useUrlParams();
+  const [params] = useUrlParams();
   const view: "table" | "board" =
     params.get(LEAD_VIEW_PARAM) === "board" ? "board" : "table";
-  const setView = (next: "table" | "board") => {
-    const dials = new Map(currentParams());
-    if (next === "board") {
-      dials.set(LEAD_VIEW_PARAM, next);
-    } else {
-      dials.delete(LEAD_VIEW_PARAM);
-    }
-    setParams(dials);
-  };
+  const setView = (next: "table" | "board") =>
+    replaceDial(LEAD_VIEW_PARAM, next === "board" ? next : undefined);
   const sources = useLeadSources();
   const ownerOptions = [
     { value: viewerId, label: t("lead.assignToMe") },

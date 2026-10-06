@@ -2,24 +2,22 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { meFixture } from "../app/mefixture";
-import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
-import { vocabularyQueryKey } from "./filterdata";
+import { type FilterVocabulary, vocabularyQueryKey } from "./filterdata";
 import { FiltersScreen } from "./filters";
-import { savedViewsKey } from "./savedviews.manage";
+import { mountFilters } from "./filters.testkit";
+import { savedViewsKey } from "./savedviews.queries";
 
 // What this screen owns is the WIRING and one judgement: how a count that is a
 // moment behind should read. So these tests are about which request went out for
 // which object, and about the three readings of the count — answered, stale, and
 // not-yet-asked, which are three different things and must not collapse into one.
 
-const CONTACT_VOCAB = {
+const CONTACT_VOCAB: FilterVocabulary = {
   resource: "contact",
   fields: [
     {
@@ -31,7 +29,7 @@ const CONTACT_VOCAB = {
   ],
 };
 
-const DEAL_VOCAB = {
+const DEAL_VOCAB: FilterVocabulary = {
   resource: "deal",
   fields: [
     {
@@ -54,92 +52,12 @@ function mount(
   views: readonly Record<string, unknown>[] = [],
   viewsAnswered: Promise<void> = Promise.resolve(),
 ) {
-  const seen: string[] = [];
-  const written: unknown[] = [];
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const request = input instanceof Request ? input : null;
-      const url = String(request ? request.url : input);
-      const method = request?.method ?? init?.method ?? "GET";
-      seen.push(url);
-      const json = (body: unknown) =>
-        new Response(JSON.stringify(body), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        });
-      if (url.endsWith("/v1/me")) {
-        return json(meFixture({}));
-      }
-      if (url.includes("/filters/vocabulary")) {
-        return json(url.includes("resource=deal") ? DEAL_VOCAB : CONTACT_VOCAB);
-      }
-      if (url.includes("/filters/preview")) {
-        return json({
-          resource: "contact",
-          match_count: preview?.match_count ?? 0,
-          columns: preview?.columns ?? ["id"],
-          rows: preview?.rows ?? [],
-          truncated: false,
-        });
-      }
-      if (url.includes("/exports")) {
-        written.push(
-          request ? await request.json() : JSON.parse(String(init?.body)),
-        );
-        // A rendered file, not a document: served as text with the name the
-        // client is supposed to take its filename from.
-        //
-        // Deliberately NOT the name the client would compose for itself
-        // (`contact-export.csv`): identical strings would make the assertion pass
-        // whether the header was read or ignored.
-        return new Response("id,full_name\np1,Ann Lee\n", {
-          status: 200,
-          headers: {
-            "Content-Type": "text/csv",
-            "Content-Disposition": 'attachment; filename="contacts-slice.csv"',
-          },
-        });
-      }
-      if (url.includes("/lists")) {
-        written.push(
-          request ? await request.json() : JSON.parse(String(init?.body)),
-        );
-        return json({
-          id: "l-new",
-          name: "Anns",
-          entity_type: "contact",
-          list_type: "dynamic",
-        });
-      }
-      if (url.includes("/views")) {
-        // A save is recorded rather than answered with a fixture: what the
-        // screen STORES is the thing worth asserting, and a canned view row
-        // would prove nothing about the blob that produced it.
-        if (method === "POST") {
-          written.push(
-            request ? await request.json() : JSON.parse(String(init?.body)),
-          );
-          return json({ id: "v-new", ...(views[0] ?? {}) });
-        }
-        await viewsAnswered;
-        return json({
-          data: views,
-          page: { next_cursor: null, has_more: false },
-        });
-      }
-      return json({});
-    }),
-  );
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
+  return mountFilters({
+    preview,
+    views,
+    viewsAnswered,
+    vocabularies: { contact: CONTACT_VOCAB, deal: DEAL_VOCAB },
   });
-  const wrapper = ({ children }: { children: ReactNode }) => (
-    <QueryClientProvider client={client}>
-      <LocaleProvider>{children}</LocaleProvider>
-    </QueryClientProvider>
-  );
-  return { seen, written, wrapper, client };
 }
 
 /** A stored view row, with whatever `query` blob the test is about. */
@@ -161,32 +79,29 @@ it("reads the vocabulary for the object the route names", async () => {
   render(<FiltersScreen id="deals" />, { wrapper });
 
   await waitFor(() => {
-    expect(seen.some((url) => url.includes("resource=deal"))).toBe(true);
+    expect(seen.some((sent) => sent.url.includes("resource=deal"))).toBe(true);
   });
   // And not the default: a route naming deals must not read the contact
   // vocabulary, or the picker offers fields the deal engine refuses.
-  expect(seen.some((url) => url.includes("resource=contact"))).toBe(false);
-});
-
-it("falls back to contacts when the route names something unknown", async () => {
-  const { seen, wrapper } = mount();
-  render(<FiltersScreen id="widgets" />, { wrapper });
-
-  await waitFor(() => {
-    expect(seen.some((url) => url.includes("resource=contact"))).toBe(true);
-  });
+  expect(seen.some((sent) => sent.url.includes("resource=contact"))).toBe(
+    false,
+  );
 });
 
 it("asks for no preview until a clause is complete", async () => {
   const { seen, wrapper } = mount();
-  render(<FiltersScreen />, { wrapper });
+  render(<FiltersScreen id="contacts" />, { wrapper });
 
   await waitFor(() => {
-    expect(seen.some((url) => url.includes("/filters/vocabulary"))).toBe(true);
+    expect(seen.some((sent) => sent.url.includes("/filters/vocabulary"))).toBe(
+      true,
+    );
   });
   // The tree starts as an empty group, which the engine refuses as
   // filter_shape_invalid — asking would spend a request to be told so.
-  expect(seen.some((url) => url.includes("/filters/preview"))).toBe(false);
+  expect(seen.some((sent) => sent.url.includes("/filters/preview"))).toBe(
+    false,
+  );
   // And the count says nothing has been asked, which is NOT the same as zero.
   expect(screen.getByText("Add a clause to preview matches")).toBeTruthy();
   // Nor is there a results table: an empty one would say "no records match this
@@ -211,7 +126,7 @@ it("shows the rows behind the count", async () => {
     ],
   });
   const user = userEvent.setup();
-  render(<FiltersScreen />, { wrapper });
+  render(<FiltersScreen id="contacts" />, { wrapper });
 
   await screen.findByRole("button", { name: "Add clause" });
   await user.click(screen.getByRole("button", { name: "Add clause" }));
@@ -226,7 +141,7 @@ it("shows the rows behind the count", async () => {
 it("says how many match once a clause is complete", async () => {
   const { wrapper } = mount({ match_count: 12 });
   const user = userEvent.setup();
-  render(<FiltersScreen />, { wrapper });
+  render(<FiltersScreen id="contacts" />, { wrapper });
 
   await screen.findByRole("button", { name: "Add clause" });
   await user.click(screen.getByRole("button", { name: "Add clause" }));
@@ -258,7 +173,7 @@ it("restores a saved filter, count and all, without a clause being retyped", asy
     }),
   ]);
   const user = userEvent.setup();
-  render(<FiltersScreen />, { wrapper });
+  render(<FiltersScreen id="contacts" />, { wrapper });
 
   await user.click(
     await screen.findByRole("button", { name: "Load saved filter" }),
@@ -345,7 +260,7 @@ it("does not offer a view whose stored filter it cannot read", async () => {
     }),
     viewRow("List state", { list: { q: "ann", sort: "", filters: {} } }),
   ]);
-  render(<FiltersScreen />, { wrapper });
+  render(<FiltersScreen id="contacts" />, { wrapper });
 
   await screen.findByRole("button", { name: "Add clause" });
   expect(
@@ -356,7 +271,7 @@ it("does not offer a view whose stored filter it cannot read", async () => {
 it("offers no save until the filter is one the engine would accept", async () => {
   const { wrapper } = mount({ match_count: 2 });
   const user = userEvent.setup();
-  render(<FiltersScreen />, { wrapper });
+  render(<FiltersScreen id="contacts" />, { wrapper });
 
   await user.click(await screen.findByRole("button", { name: "Add clause" }));
   // A clause with an empty value is refused per-leaf as filter_value_invalid, so
@@ -371,7 +286,7 @@ it("offers no save until the filter is one the engine would accept", async () =>
 it("saves the tree under the key the server validates as a filter", async () => {
   const { written, wrapper } = mount({ match_count: 2 });
   const user = userEvent.setup();
-  render(<FiltersScreen />, { wrapper });
+  render(<FiltersScreen id="contacts" />, { wrapper });
 
   await user.click(await screen.findByRole("button", { name: "Add clause" }));
   await user.type(screen.getByLabelText("Value"), "ann");
@@ -385,7 +300,7 @@ it("saves the tree under the key the server validates as a filter", async () => 
   // `contacts`, not `contact` — the two endpoint families spell the same object
   // differently, and sending the filter vocabulary's word here would 422.
   // And the tree goes under `filter`, carrying no editor ids.
-  expect(written[0]).toEqual({
+  expect(written[0]?.body).toEqual({
     resource: "contacts",
     name: "Anns",
     query: {
@@ -397,7 +312,7 @@ it("saves the tree under the key the server validates as a filter", async () => 
 it("draws the export band only once there is something to export", async () => {
   const { wrapper } = mount({ match_count: 2 });
   const user = userEvent.setup();
-  render(<FiltersScreen />, { wrapper });
+  render(<FiltersScreen id="contacts" />, { wrapper });
   const builder = () =>
     screen
       .getByRole("heading", { name: en["filters.builderTitle"] })
@@ -431,7 +346,7 @@ it("exports the filter on screen, under the name the server gave it", async () =
   });
   const { written, wrapper } = mount({ match_count: 2 });
   const user = userEvent.setup();
-  render(<FiltersScreen />, { wrapper });
+  render(<FiltersScreen id="contacts" />, { wrapper });
 
   await user.click(await screen.findByRole("button", { name: "Add clause" }));
   await user.type(screen.getByLabelText("Value"), "ann");
@@ -442,7 +357,7 @@ it("exports the filter on screen, under the name the server gave it", async () =
   });
   // The tree on screen, not a saved view's id: what gets exported is what the
   // count above the button just said, through the one filter engine.
-  expect(written[0]).toEqual({
+  expect(written[0]?.body).toEqual({
     object: "contact",
     filter: { and: [{ field: "full_name", op: "eq", value: "ann" }] },
     format: "csv",
@@ -453,7 +368,7 @@ it("exports the filter on screen, under the name the server gave it", async () =
 it("says so when an export is refused, instead of leaving the reader waiting", async () => {
   const { wrapper } = mount({ match_count: 2 });
   const user = userEvent.setup();
-  render(<FiltersScreen />, { wrapper });
+  render(<FiltersScreen id="contacts" />, { wrapper });
 
   await user.click(await screen.findByRole("button", { name: "Add clause" }));
   await user.type(screen.getByLabelText("Value"), "ann");
@@ -533,7 +448,7 @@ async function addSecondClause(user: ReturnType<typeof userEvent.setup>) {
 it("reads a refused preview as a failure, not as an unwritten filter", async () => {
   const { wrapper } = mount({ match_count: 2 });
   const user = userEvent.setup();
-  render(<FiltersScreen />, { wrapper });
+  render(<FiltersScreen id="contacts" />, { wrapper });
 
   await user.click(await screen.findByRole("button", { name: "Add clause" }));
   await user.type(screen.getByLabelText("Value"), "ann");
@@ -568,7 +483,7 @@ it("reads a refused preview as a failure, not as an unwritten filter", async () 
 it("names the seat when a read seat is refused a preview", async () => {
   const { wrapper } = mount({ match_count: 2 });
   const user = userEvent.setup();
-  render(<FiltersScreen />, { wrapper });
+  render(<FiltersScreen id="contacts" />, { wrapper });
 
   await user.click(await screen.findByRole("button", { name: "Add clause" }));
   await user.type(screen.getByLabelText("Value"), "ann");
@@ -601,7 +516,7 @@ it("names the seat when a read seat is refused a preview", async () => {
 it("starts a fresh tree when the object changes", async () => {
   const { wrapper } = mount({ match_count: 4 });
   const user = userEvent.setup();
-  render(<FiltersScreen />, { wrapper });
+  render(<FiltersScreen id="contacts" />, { wrapper });
 
   await screen.findByRole("button", { name: "Add clause" });
   await user.click(screen.getByRole("button", { name: "Add clause" }));
@@ -620,15 +535,11 @@ it("starts a fresh tree when the object changes", async () => {
 // document, and a reader navigating by heading could not tell which was the page.
 it("leaves the page's own name to the shell", async () => {
   const { wrapper } = mount({ match_count: 4 });
-  render(<FiltersScreen />, { wrapper });
+  render(<FiltersScreen id="contacts" />, { wrapper });
 
   await screen.findByRole("button", { name: "Add clause" });
   expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
-  expect(
-    screen.queryByText(
-      "Build a filter, preview its matches and save it as a view.",
-    ),
-  ).toBeNull();
+  expect(screen.queryByText(en["filters.subtitle"])).toBeNull();
   // The object choice stays, because it is the screen's own state rather than
   // the page's name: everything below it reads from it.
   expect(

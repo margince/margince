@@ -57,7 +57,9 @@ function stubServer(
     vi.fn(async (request: Request) => {
       const { pathname } = new URL(request.url);
       const body =
-        request.method === "PATCH" ? await request.clone().json() : undefined;
+        request.method === "PATCH" || request.method === "POST"
+          ? await request.clone().json()
+          : undefined;
       seen.push({
         method: request.method,
         path: pathname,
@@ -86,14 +88,14 @@ function stubServer(
   return seen;
 }
 
-function draw() {
+function draw(query: ListQuery = UNNARROWED) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <SaveViewAction resource="companies" query={UNNARROWED} />
+        <SaveViewAction resource="companies" query={query} />
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -174,6 +176,35 @@ describe("managing saved views", () => {
     expect(seen.find((call) => call.method === "DELETE")?.path).toBe(
       "/v1/views/v-1",
     );
+  });
+
+  // One write serves every resource, so the resource travels with the save
+  // rather than being fixed when the write was set up.
+  it("saves a narrowed list as a view of the resource it lists", async () => {
+    const seen = stubServer([]);
+    const user = userEvent.setup();
+    draw({ ...UNNARROWED, q: "berlin" });
+
+    await user.click(await screen.findByRole("button", { name: "Save view" }));
+    await user.type(screen.getByLabelText("Name"), "Berlin customers");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() =>
+      expect(seen.some((call) => call.method === "POST")).toBe(true),
+    );
+    expect(seen.find((call) => call.method === "POST")?.body).toEqual({
+      resource: "companies",
+      name: "Berlin customers",
+      query: {
+        list: {
+          q: "berlin",
+          sort: "",
+          includeArchived: false,
+          filters: {},
+          perPage: 25,
+        },
+      },
+    });
   });
 
   it("keeps the row open with the server's reason when a rename is refused", async () => {

@@ -223,7 +223,7 @@ describe("PageTitle", () => {
     });
     const sub = container.querySelector(".pagesub");
     expect(sub?.textContent).toBe(
-      "Build a filter, preview its matches and save it as a view.",
+      "Every saved view and list you can use, and where a new filter starts.",
     );
     // Directly under the name it explains, inside the title's own text column —
     // not beside the actions, where it would read as product chrome. The
@@ -676,7 +676,7 @@ describe("Shell", () => {
     expect(headings).toHaveLength(1);
     expect(headings[0].textContent).toBe("Filters and views");
     expect(container.querySelector(".pagesub")?.textContent).toBe(
-      "Build a filter, preview its matches and save it as a view.",
+      "Every saved view and list you can use, and where a new filter starts.",
     );
   });
 

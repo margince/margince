@@ -22,7 +22,6 @@ import {
   teamsPage,
 } from "./lists.fixtures";
 import { ListSettingsAction } from "./listsettings";
-import { MyViews } from "./myviews";
 import { newGroup, newLeaf } from "./segmentpredicate";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
@@ -323,50 +322,5 @@ describe("saving a filter as a Live List", () => {
     await vi.waitFor(() => expect(posted).toHaveLength(1));
     expect(posted[0]).toMatchObject({ sharing: "private" });
     expect(posted[0]).not.toHaveProperty("team_id");
-  });
-});
-
-describe("my views", () => {
-  it("names the reader's saved filters per record type", async () => {
-    installFetchStub({
-      "GET /me": listsMe(true),
-      "GET /views": () =>
-        jsonResponse({
-          data: [
-            {
-              id: "v1",
-              name: "Berlin gold",
-              resource: "contacts",
-              query: { filter: { field: "city", op: "eq", value: "Berlin" } },
-              version: 1,
-            },
-          ],
-          page: { has_more: false },
-        }),
-    });
-    const user = userEvent.setup();
-    render(
-      <StoryProviders>
-        <MyViews />
-      </StoryProviders>,
-    );
-    const row = await screen.findAllByText("Berlin gold");
-    await user.click(row[0]);
-    expect(window.location.hash).toBe("#/filters/contacts/v1");
-  });
-
-  it("says how to make one when there are none", async () => {
-    installFetchStub({
-      "GET /me": listsMe(true),
-      "GET /views": () => jsonResponse(empty),
-    });
-    render(
-      <StoryProviders>
-        <MyViews />
-      </StoryProviders>,
-    );
-    expect(
-      (await screen.findAllByText(en["lists.views.empty"])).length,
-    ).toBeGreaterThan(0);
   });
 });
