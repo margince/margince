@@ -99,7 +99,7 @@ describe("operation settings cards", () => {
       "43200",
       "3599",
     ],
-    [BackgroundSchedulesCard, "geocode_backfill_interval_seconds", "0", "-1"],
+    [BackgroundSchedulesCard, "geocode_backfill_interval_seconds", "0", "299"],
     [
       BackgroundSchedulesCard,
       "technical_backfill_interval_seconds",
@@ -116,7 +116,7 @@ describe("operation settings cards", () => {
       BackgroundSchedulesCard,
       "graph_watch_scan_interval_seconds",
       "3600",
-      "86401",
+      "43201",
     ],
     [BackgroundSchedulesCard, "gmail_watch_renew_within_hours", "72", "145"],
     [BackgroundSchedulesCard, "graph_watch_renew_within_hours", "36", "23"],

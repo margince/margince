@@ -116,6 +116,39 @@ describe("NumberSetting", () => {
     expect(screen.getByText(REFUSAL)).toBeInTheDocument();
   });
 
+  // A sweep whose 0 means off: 0 and lowestOn..max are the choices, and the
+  // gap between them is refused like any other value out of range.
+  it("refuses the gap between off and the lowest value that switches it on", async () => {
+    const user = userEvent.setup();
+    const onCommit = vi.fn();
+    render(
+      <SettingList>
+        <SettingRow
+          label="Sweep"
+          description="Seconds, or 0 for off."
+          control={(control) => (
+            <NumberSetting
+              control={control}
+              value={3600}
+              min={0}
+              max={604_800}
+              lowestOn={300}
+              refusal={REFUSAL}
+              onCommit={onCommit}
+            />
+          )}
+        />
+      </SettingList>,
+    );
+    const box = screen.getByRole("textbox", { name: "Sweep" });
+    await user.clear(box);
+    await user.type(box, "299{Enter}");
+    expect(onCommit).not.toHaveBeenCalled();
+    await user.clear(box);
+    await user.type(box, "0{Enter}");
+    expect(onCommit).toHaveBeenCalledWith(0);
+  });
+
   // The blur after an Enter lands while the first save is still in flight, so
   // the stored value has not moved yet and only the draft can tell it was sent.
   it("sends one save for an Enter followed by leaving the box", async () => {

@@ -15,15 +15,18 @@ import (
 // bound, not a quota: Gmail enforces its own daily cap and throttles an account
 // that bursts past it, so this keeps a legitimate run of sends from costing a
 // user their mailbox's standing.
-var SendRateLimit = boundedInt("installation.send_rate_limit", "messages", 30, 1, 1000)
+var SendRateLimit = settings.Define[int]("installation.send_rate_limit", installationSettingsObject, "update", 30,
+	settings.Between("messages", 1, 1000)).MachineryApplied()
 
 // SendRateWindowSeconds is the window the send rate is counted over.
-var SendRateWindowSeconds = boundedInt("installation.send_rate_window_seconds", "seconds", 60, 10, 3600)
+var SendRateWindowSeconds = settings.Define[int]("installation.send_rate_window_seconds", installationSettingsObject, "update", 60,
+	settings.Between("seconds", 10, 3600)).MachineryApplied()
 
 // SendMaxAgeHours is how long a held-back delivery may wait before it parks
 // with a reason. A day by default: past that a message nobody could send has
 // stopped being news, and somebody should see why it did not go.
-var SendMaxAgeHours = boundedInt("installation.send_max_age_hours", "hours", 24, 1, 168)
+var SendMaxAgeHours = settings.Define[int]("installation.send_max_age_hours", installationSettingsObject, "update", 24,
+	settings.Between("hours", 1, 168)).MachineryApplied()
 
 func sendPacingDefinitions() []settings.Definition {
 	return []settings.Definition{SendRateLimit, SendRateWindowSeconds, SendMaxAgeHours}

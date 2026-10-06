@@ -67,7 +67,7 @@ func jobRunnerBanner(cfg workerConfig, watchCfg compose.GmailWatchConfig, graphW
 	if runnerSvc != nil {
 		schedulerNote = "agent scheduler on"
 	}
-	return fmt.Sprintf("worker running River jobs (%s, %s, %s, %s, %s)",
+	return fmt.Sprintf("worker running River jobs (close-date, follow-up, time-scan, retention, %s, %s, %s, %s, %s)",
 		captureNote, channelNote, deepReadNote, webhookNote, schedulerNote)
 }
 

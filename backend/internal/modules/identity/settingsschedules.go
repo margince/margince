@@ -63,15 +63,16 @@ var (
 	RetentionSweepIntervalSeconds    = scheduleSeconds("installation.retention_sweep_interval_seconds", day, time.Hour, week, false)
 	GeocodeBackfillIntervalSeconds   = scheduleSeconds("installation.geocode_backfill_interval_seconds", time.Hour, 5*time.Minute, week, true)
 	TechnicalBackfillIntervalSeconds = scheduleSeconds("installation.technical_backfill_interval_seconds", 6*time.Hour, 5*time.Minute, week, true)
-	// The watch scans may not run less than daily: a renewal window is at
-	// least a day (below), so a scan always lands inside it.
-	GmailWatchScanIntervalSeconds = scheduleSeconds("installation.gmail_watch_scan_interval_seconds", 6*time.Hour, 10*time.Minute, day, false)
-	GraphWatchScanIntervalSeconds = scheduleSeconds("installation.graph_watch_scan_interval_seconds", 6*time.Hour, 10*time.Minute, day, false)
+	// The watch scans run at least twice a day: a renewal window is at least
+	// a day (below), so two scans always land inside it, with room for one
+	// that runs late or fails.
+	GmailWatchScanIntervalSeconds = scheduleSeconds("installation.gmail_watch_scan_interval_seconds", 6*time.Hour, 10*time.Minute, day/2, false)
+	GraphWatchScanIntervalSeconds = scheduleSeconds("installation.graph_watch_scan_interval_seconds", 6*time.Hour, 10*time.Minute, day/2, false)
 )
 
 // How far ahead of a subscription's expiry it is renewed: at least a day, so
-// the daily-at-most watch scan always meets it, and below the provider's own
-// lifetime, or every scan would renew everything.
+// the twice-daily-at-least watch scan always meets it, and below the
+// provider's own lifetime, or every scan would renew everything.
 var (
 	// A Gmail watch lasts seven days.
 	GmailWatchRenewWithinHours = boundedInt("installation.gmail_watch_renew_within_hours", "hours", 48, 24, 144)

@@ -111,9 +111,12 @@ func startJobRunner(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vaul
 	// attachment store rather than two that drift.
 	compose.BindExtensionCapture(pool, cfg.captureConfig)
 
+	// A failed read starts the worker on the defaults rather than not at all:
+	// the watch below reads again every minute and moves what differs.
 	schedules, err := compose.ReadSchedules(ctx, pool)
 	if err != nil {
-		return nil, err
+		logger.WarnContext(ctx, "schedules: could not read the schedule settings at boot; starting on the defaults until the next check", "err", err)
+		schedules = compose.DefaultSchedules()
 	}
 	runner, err := newJobRunner(pool, logger, cfg, schedules, captureReg, watchCfg, vault, lanes, modelPath, weeklyMail)
 	if err != nil {

@@ -9418,7 +9418,7 @@ export const vi = {
     "Tần suất chạy của từng tác vụ nền. Worker đang chạy nhận thay đổi trong vòng một phút: tác vụ chạy một lần ngay rồi tiếp tục theo khoảng mới.",
   "operations.pacing.title": "Nhịp gửi thư",
   "operations.pacing.sub":
-    "Tốc độ gửi tối đa của một hộp thư. Thay đổi áp dụng từ lần gửi tiếp theo và đặt lại bộ đếm của mọi hộp thư.",
+    "Tốc độ gửi tối đa của một hộp thư. Thay đổi áp dụng từ lần gửi tiếp theo.",
   "operations.adminOnly":
     "Chỉ quản trị viên hoặc vận hành mới đổi được mục này.",
   "operations.updateFailed": "Chưa thay đổi cài đặt",
@@ -9449,10 +9449,10 @@ export const vi = {
     "Tần suất tra cứu các tên miền công ty chưa có thông tin kỹ thuật, 300 đến 604.800, hoặc 0 để tắt.",
   "operations.gmailWatchScan.label": "Kiểm tra push Gmail (giây)",
   "operations.gmailWatchScan.help":
-    "Tần suất kiểm tra các đăng ký push Gmail cần gia hạn, 600 đến 86.400.",
+    "Tần suất kiểm tra các đăng ký push Gmail cần gia hạn, 600 đến 43.200.",
   "operations.graphWatchScan.label": "Kiểm tra push Microsoft 365 (giây)",
   "operations.graphWatchScan.help":
-    "Tần suất kiểm tra các đăng ký thư Microsoft 365 cần gia hạn, 600 đến 86.400.",
+    "Tần suất kiểm tra các đăng ký thư Microsoft 365 cần gia hạn, 600 đến 43.200.",
   "operations.gmailWatchRenew.label": "Gia hạn Gmail trước (giờ)",
   "operations.gmailWatchRenew.help":
     "Gia hạn đăng ký Gmail bao lâu trước khi hết hạn sau 7 ngày, 24 đến 144.",

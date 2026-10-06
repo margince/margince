@@ -17,12 +17,14 @@ import {
 // why they are fixed for it.
 function story(Card: ComponentType, allow: Parameters<typeof meRoute>[0]) {
   return () => {
+    let operations = { ...defaultOperations };
     installFetchStub({
       "GET /me": meRoute(allow),
-      "GET /installation/settings": () =>
-        jsonResponse({ operations: defaultOperations }),
-      "PATCH /installation/settings": () =>
-        jsonResponse({ operations: defaultOperations }),
+      "GET /installation/settings": () => jsonResponse({ operations }),
+      "PATCH /installation/settings": (body) => {
+        operations = { ...operations, ...(body as object) };
+        return jsonResponse({ operations });
+      },
     });
     return (
       <StoryProviders>

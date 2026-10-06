@@ -8,6 +8,7 @@ package compose
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -29,26 +30,26 @@ type sendPace struct {
 	maxAge time.Duration
 }
 
-// readSendPace reads the pace under the delivery's own scope: the worker's
-// system principal on the job's workspace. One transaction, so an admin's save
-// that moves the rate and its window together is never read half applied —
-// every new pace rebuilds the dispatcher and starts every mailbox's count again.
+// readSendPace reads the pace in one statement, so an admin's save that moves
+// the rate and its window together is never read half applied.
 func readSendPace(ctx context.Context, store *settings.Store) (sendPace, error) {
 	var limit, windowSeconds, maxAgeHours int
 	err := store.WriteTx(ctx, func(tx pgx.Tx) error {
+		raw, err := settings.ApplyManyTx(ctx, tx, identity.SendRateLimit, identity.SendRateWindowSeconds, identity.SendMaxAgeHours)
+		if err != nil {
+			return err
+		}
 		for _, f := range []struct {
-			into  *int
-			entry *settings.Entry[int]
+			into *int
+			key  string
 		}{
-			{&limit, identity.SendRateLimit},
-			{&windowSeconds, identity.SendRateWindowSeconds},
-			{&maxAgeHours, identity.SendMaxAgeHours},
+			{&limit, identity.SendRateLimit.Key()},
+			{&windowSeconds, identity.SendRateWindowSeconds.Key()},
+			{&maxAgeHours, identity.SendMaxAgeHours.Key()},
 		} {
-			value, err := settings.GetTx(ctx, tx, f.entry)
-			if err != nil {
-				return err
+			if err := json.Unmarshal(raw[f.key], f.into); err != nil {
+				return fmt.Errorf("%s does not hold a whole number: %w", f.key, err)
 			}
-			*f.into = value
 		}
 		return nil
 	})
@@ -63,9 +64,9 @@ func readSendPace(ctx context.Context, store *settings.Store) (sendPace, error) 
 }
 
 // pacedDispatcher keeps one dispatcher for as long as the pace it was built
-// with stands. The mailbox rate counts live inside that dispatcher, so it is
-// rebuilt only when the pace changes, and that change starts every mailbox's
-// count afresh.
+// with stands. A worker without the shared rate store counts each mailbox
+// inside that dispatcher's limiter, so rebuilding it on every send would let
+// every mailbox send without limit; it is rebuilt only when the pace changes.
 type pacedDispatcher struct {
 	settings *settings.Store
 	build    func(sendPace) deliveryDispatcher

@@ -97,7 +97,11 @@ describe("the split lost no card", () => {
     // surviving cards lost. Found by name rather than listed, so the next
     // companion is read without anybody remembering to add it here.
     const source = readdirSync(here)
-      .filter((file) => /^settings(\.[a-z]+)?\.tsx$/.test(file))
+      .filter(
+        (file) =>
+          /^settings(\.[a-z]+)?\.tsx$/.test(file) &&
+          !/\.(stories|test|testkit)\.tsx$/.test(file),
+      )
       .map((file) => readFileSync(join(here, file), "utf8"))
       .join("\n");
     // The WHOLE file, not just `tabContent`. Several pages dispatch to a tab

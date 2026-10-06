@@ -9505,18 +9505,18 @@ export const de = {
   "agentConnections.ttl.refusal":
     "Gib eine ganze Zahl von 5 bis 129.600 Minuten ein.",
   "agentConnections.updateFailed": "Einstellung nicht geändert",
-  "operations.schedules.title": "Hintergrund-Zeitpläne",
+  "operations.schedules.title": "Hintergrundzeitpläne",
   "operations.schedules.sub":
     "Wie oft jeder Hintergrundlauf startet. Ein laufender Worker übernimmt eine Änderung innerhalb einer Minute: Der Lauf startet einmal und läuft dann im neuen Abstand weiter.",
   "operations.pacing.title": "Versandtempo",
   "operations.pacing.sub":
-    "Wie schnell ein Postfach senden darf. Eine Änderung gilt ab dem nächsten Versand und setzt die Zählung jedes Postfachs zurück.",
+    "Wie schnell ein Postfach senden darf. Eine Änderung gilt ab dem nächsten Versand.",
   "operations.adminOnly": "Nur Admins und Operations können das ändern.",
   "operations.updateFailed": "Einstellung nicht geändert",
   "operations.refusal": "Gib eine ganze Zahl im angegebenen Bereich ein.",
-  "operations.agentRunner.label": "Agent-Läufe (Sekunden)",
+  "operations.agentRunner.label": "Agentenläufe (Sekunden)",
   "operations.agentRunner.help":
-    "Wie oft geplante Agents auf einen fälligen Lauf geprüft werden, 10 bis 3.600.",
+    "Wie oft geplante Agenten auf einen fälligen Lauf geprüft werden, 10 bis 3.600.",
   "operations.webhookRetry.label": "Webhook-Wiederholungen (Sekunden)",
   "operations.webhookRetry.help":
     "Wie oft fehlgeschlagene Webhook-Zustellungen wiederholt werden, 10 bis 3.600.",
@@ -9534,16 +9534,16 @@ export const de = {
     "Wie oft Daten nach Ablauf ihrer Aufbewahrungsfrist gelöscht werden, 3.600 bis 604.800. Lässt sich nicht ausschalten.",
   "operations.geocode.label": "Adressabgleich (Sekunden)",
   "operations.geocode.help":
-    "Wie oft Adressen ohne Koordinaten nachgeschlagen werden, 300 bis 604.800, oder 0 für aus.",
-  "operations.technical.label": "Technik-Abgleich (Sekunden)",
+    "Wie oft Adressen ohne Koordinaten nachgeschlagen werden, 300 bis 604.800, oder 0 zum Ausschalten.",
+  "operations.technical.label": "Technische Abfragen (Sekunden)",
   "operations.technical.help":
-    "Wie oft Unternehmensdomains ohne technische Angaben nachgeschlagen werden, 300 bis 604.800, oder 0 für aus.",
+    "Wie oft Unternehmensdomains ohne technische Angaben nachgeschlagen werden, 300 bis 604.800, oder 0 zum Ausschalten.",
   "operations.gmailWatchScan.label": "Gmail-Push-Prüfung (Sekunden)",
   "operations.gmailWatchScan.help":
-    "Wie oft Gmail-Push-Abos auf Erneuerung geprüft werden, 600 bis 86.400.",
+    "Wie oft Gmail-Push-Abos auf Erneuerung geprüft werden, 600 bis 43.200.",
   "operations.graphWatchScan.label": "Microsoft-365-Push-Prüfung (Sekunden)",
   "operations.graphWatchScan.help":
-    "Wie oft Microsoft-365-Mail-Abos auf Erneuerung geprüft werden, 600 bis 86.400.",
+    "Wie oft Microsoft-365-Mail-Abos auf Erneuerung geprüft werden, 600 bis 43.200.",
   "operations.gmailWatchRenew.label": "Gmail-Erneuerungsvorlauf (Stunden)",
   "operations.gmailWatchRenew.help":
     "Wie lange vor dem Ablauf nach 7 Tagen ein Gmail-Abo erneuert wird, 24 bis 144.",
@@ -9559,7 +9559,7 @@ export const de = {
     "Das Zeitfenster, über das Nachrichten gezählt werden, 10 bis 3.600.",
   "operations.sendMaxAge.label": "Längste Wartezeit (Stunden)",
   "operations.sendMaxAge.help":
-    "Wie lange eine zurückgehaltene Nachricht warten darf, bevor sie mit einem Grund anhält, 1 bis 168.",
+    "Wie lange eine zurückgehaltene Nachricht warten darf, bevor sie mit einer Begründung gestoppt wird, 1 bis 168.",
   "captureMailSync.title": "E-Mail-Abgleich",
   "captureMailSync.sub":
     "Wie oft jedes verbundene Postfach auf neue E-Mails geprüft wird.",

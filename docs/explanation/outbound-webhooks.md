@@ -374,7 +374,7 @@ Delivery is a background capability, gated on the deployment signing key:
   deliverer that serves **replay only** needs no resolver: replay re-sends an already-authorized
   delivery and never fans out.
 
-The retry dispatcher's cadence is the **Webhook retries** setting on Settings → System health
+The retry dispatcher's cadence is the **Webhook retries (seconds)** setting on Settings → System health
 (default 30 seconds). Each tick
 enqueues one `webhook_retry_workspace` job per live workspace. It paces the fleet fan-out, not one
 delivery's backoff. The per-delivery schedule is the exponential ladder above, and the dial only decides

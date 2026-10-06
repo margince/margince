@@ -269,7 +269,7 @@ describe("what each page lets a reader change", () => {
     // The reindex takes the seat; watching the queue beside it is a read, and
     // watching a stalled queue is an operator acting.
     "system-health":
-      "any(all(full-seat, any(any(embedding_reindex:update))), job_health:read)",
+      "any(all(full-seat, any(any(embedding_reindex:update))), all(full-seat, any(any(installation_settings:update))), job_health:read)",
     extensions: "all(full-seat, any(any(role_admin:update)))",
     reset: "all(full-seat, system_reset:delete, flag:data_reset_available)",
   };
@@ -701,9 +701,10 @@ describe("a page and its cards ask the same question", () => {
     expect(opens("extensions", { roles: ["rep"], allow: {} })).toBe(false);
   });
 
-  it("opens system-health on either of its two cards' grants", () => {
-    // A union that is really a union: the job report and the reindex are
-    // different reads, and a holder of one finds the other card withheld.
+  it("opens system-health on any of its cards' grants", () => {
+    // A union that is really a union: the job report, the reindex and the
+    // schedules answer to different grants, and a holder of one finds the
+    // others' cards withheld.
     expect(
       opens("system-health", {
         roles: ["ops"],
@@ -716,6 +717,18 @@ describe("a page and its cards ask the same question", () => {
         allow: { embedding_reindex: ["read"] },
       }),
     ).toBe(true);
+    expect(
+      opens("system-health", {
+        roles: ["ops"],
+        allow: { installation_settings: ["read", "update"] },
+      }),
+    ).toBe(true);
+    expect(
+      opens("system-health", {
+        roles: ["rep"],
+        allow: { installation_settings: ["read"] },
+      }),
+    ).toBe(false);
     expect(opens("system-health", { roles: ["rep"], allow: {} })).toBe(false);
   });
 

@@ -54,11 +54,14 @@ type ScheduleBook struct {
 	mu        sync.Mutex
 	intervals map[string]*liveInterval
 	kinds     map[string]tracked
+	// pending holds the settings whose kinds River refused to take back, so
+	// each check re-registers them until it succeeds, whatever the value.
+	pending map[string]bool
 }
 
 // newScheduleBook seeds the book from the values read, one per setting key.
 func newScheduleBook(values map[string]time.Duration) *ScheduleBook {
-	book := &ScheduleBook{intervals: map[string]*liveInterval{}, kinds: map[string]tracked{}}
+	book := &ScheduleBook{intervals: map[string]*liveInterval{}, kinds: map[string]tracked{}, pending: map[string]bool{}}
 	for key, value := range values {
 		live := &liveInterval{}
 		live.nanos.Store(int64(value))
@@ -205,24 +208,25 @@ var _ periodicRegistry = (*jobs.Runner)(nil)
 // apply moves every schedule whose setting changed to its new value. A kind is
 // taken off River's list and put back, so it runs once now and then on the new
 // interval, rather than waiting out the run the old one had already planned;
-// one switched to zero is only taken off. A setting whose kinds could not be
-// put back keeps its old value in the book, so the next check sees the change
-// again and retries it.
+// one switched to zero is only taken off. A setting whose kinds River refused
+// to take back stays pending and is re-registered on every check until River
+// takes them, even if an admin has meanwhile moved the value back.
 func (b *ScheduleBook) apply(values map[string]time.Duration, runner periodicRegistry) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	var failed []error
 	for _, key := range slices.Sorted(maps.Keys(values)) {
 		live, known := b.intervals[key]
-		if !known || live.get() == values[key] {
+		if !known || (live.get() == values[key] && !b.pending[key]) {
 			continue
 		}
-		old := live.get()
 		live.nanos.Store(int64(values[key]))
 		if err := b.reregister(key, runner); err != nil {
-			live.nanos.Store(int64(old))
+			b.pending[key] = true
 			failed = append(failed, err)
+			continue
 		}
+		delete(b.pending, key)
 	}
 	return errors.Join(failed...)
 }

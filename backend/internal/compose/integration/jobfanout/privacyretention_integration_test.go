@@ -215,8 +215,8 @@ func TestPrivacyRetentionRecordsAFailedPassAsAFailedRow(t *testing.T) {
 
 // TestPrivacyRetentionDispatchRepeatsOnItsConfiguredInterval pins the half of
 // the schedule a boot pass hides. RunOnStart fires once whatever the cadence
-// is, so a dispatcher wired to a constant instead of the operator's
-// the retention setting looks identical at boot and then never runs again — a
+// is, so a dispatcher wired to a constant instead of the admin's retention
+// setting looks identical at boot and then never runs again — a
 // dead storage-limitation obligation with every gate green. Two dispatches less
 // than jobtest.DispatchGapBound apart can only happen if a cadence far shorter
 // than any constant in reach is what River is scheduling on.

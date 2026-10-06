@@ -28190,8 +28190,8 @@ components:
         retention_sweep_interval_seconds: { type: integer, minimum: 3600, maximum: 604800, description: 'Set the value `OperationSettings.retention_sweep_interval_seconds` describes.' }
         geocode_backfill_interval_seconds: { type: integer, minimum: 0, maximum: 604800, description: 'Set the value `OperationSettings.geocode_backfill_interval_seconds` describes.' }
         technical_backfill_interval_seconds: { type: integer, minimum: 0, maximum: 604800, description: 'Set the value `OperationSettings.technical_backfill_interval_seconds` describes.' }
-        gmail_watch_scan_interval_seconds: { type: integer, minimum: 600, maximum: 86400, description: 'Set the value `OperationSettings.gmail_watch_scan_interval_seconds` describes.' }
-        graph_watch_scan_interval_seconds: { type: integer, minimum: 600, maximum: 86400, description: 'Set the value `OperationSettings.graph_watch_scan_interval_seconds` describes.' }
+        gmail_watch_scan_interval_seconds: { type: integer, minimum: 600, maximum: 43200, description: 'Set the value `OperationSettings.gmail_watch_scan_interval_seconds` describes.' }
+        graph_watch_scan_interval_seconds: { type: integer, minimum: 600, maximum: 43200, description: 'Set the value `OperationSettings.graph_watch_scan_interval_seconds` describes.' }
         gmail_watch_renew_within_hours: { type: integer, minimum: 24, maximum: 144, description: 'Set the value `OperationSettings.gmail_watch_renew_within_hours` describes.' }
         graph_watch_renew_within_hours: { type: integer, minimum: 24, maximum: 60, description: 'Set the value `OperationSettings.graph_watch_renew_within_hours` describes.' }
         send_rate_limit: { type: integer, minimum: 1, maximum: 1000, description: 'Set the value `OperationSettings.send_rate_limit` describes.' }
@@ -29609,8 +29609,8 @@ components:
         retention_sweep_interval_seconds: { type: integer, minimum: 3600, maximum: 604800, description: 'How often data past its retention period is removed, in seconds. Default 86400. It cannot be switched off.' }
         geocode_backfill_interval_seconds: { type: integer, minimum: 0, maximum: 604800, description: 'How often addresses without coordinates are looked up, in seconds, from 300; 0 switches the sweep off. Default 3600.' }
         technical_backfill_interval_seconds: { type: integer, minimum: 0, maximum: 604800, description: 'How often company domains without technical facts are looked up, in seconds, from 300; 0 switches the sweep off. Default 21600.' }
-        gmail_watch_scan_interval_seconds: { type: integer, minimum: 600, maximum: 86400, description: 'How often Gmail push subscriptions are checked for renewal, in seconds. Default 21600.' }
-        graph_watch_scan_interval_seconds: { type: integer, minimum: 600, maximum: 86400, description: 'How often Microsoft 365 mail subscriptions are checked for renewal, in seconds. Default 21600.' }
+        gmail_watch_scan_interval_seconds: { type: integer, minimum: 600, maximum: 43200, description: 'How often Gmail push subscriptions are checked for renewal, in seconds. Default 21600.' }
+        graph_watch_scan_interval_seconds: { type: integer, minimum: 600, maximum: 43200, description: 'How often Microsoft 365 mail subscriptions are checked for renewal, in seconds. Default 21600.' }
         gmail_watch_renew_within_hours: { type: integer, minimum: 24, maximum: 144, description: 'How far ahead of expiry a Gmail push subscription is renewed, in hours. A watch lasts seven days. Default 48.' }
         graph_watch_renew_within_hours: { type: integer, minimum: 24, maximum: 60, description: 'How far ahead of expiry a Microsoft 365 mail subscription is renewed, in hours. A subscription lasts just under three days. Default 24.' }
         send_rate_limit: { type: integer, minimum: 1, maximum: 1000, description: 'How many messages one mailbox may send per window. A burst bound, not a quota. Default 30.' }

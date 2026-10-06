@@ -1422,7 +1422,7 @@ up)
     exit 1
   fi
   if [[ "$gmail_enabled" == "1" ]]; then
-    echo "  worker   background relay + Surface-B runner + time-scan + Gmail sync (poll every 30s)"
+    echo "  worker   background relay + Surface-B runner + time-scan + Gmail sync"
   else
     echo "  worker   background relay + Surface-B runner + automation time-scan running"
   fi

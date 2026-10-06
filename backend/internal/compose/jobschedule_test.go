@@ -37,8 +37,15 @@ func specFor(t *testing.T, kind string) jobs.Spec {
 func TestASettingCadenceRunsAtTheSettingsValue(t *testing.T) {
 	spec := specFor(t, CloseDateSweepArgs{}.Kind())
 	book := newScheduleBook(map[string]time.Duration{spec.Cadence.Setting: 7 * time.Minute})
-	if got := periodicFor(JobRunnerConfig{Schedules: book}, CloseDateSweepArgs{}); len(got) != 1 {
+	got := periodicFor(JobRunnerConfig{Schedules: book}, CloseDateSweepArgs{})
+	if len(got) != 1 {
 		t.Fatalf("got %d periodic jobs, want 1", len(got))
+	}
+	// River keeps a job's schedule to itself, so the claim is held through
+	// the book: the job handed out is the one the book built over its live
+	// interval, and that interval is asked below.
+	if got[0] != book.kinds[spec.Kind].job {
+		t.Fatal("the job handed to River is not the one the book scheduled, so the book's interval says nothing about it")
 	}
 	start := time.Date(2026, 1, 1, 9, 0, 0, 0, time.UTC)
 	if next := book.intervals[spec.Cadence.Setting].Next(start); next != start.Add(7*time.Minute) {

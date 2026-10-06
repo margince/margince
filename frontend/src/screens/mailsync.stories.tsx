@@ -13,10 +13,14 @@ import {
 // How often a mailbox syncs, editable and refused.
 function story(allow: Parameters<typeof meRoute>[0]) {
   return () => {
+    let settings = { mail_sync_interval_seconds: 120 };
     installFetchStub({
       "GET /me": meRoute(allow),
-      "GET /capture/settings": () =>
-        jsonResponse({ mail_sync_interval_seconds: 120 }),
+      "GET /capture/settings": () => jsonResponse(settings),
+      "PATCH /capture/settings": (body) => {
+        settings = { ...settings, ...(body as object) };
+        return jsonResponse(settings);
+      },
     });
     return (
       <StoryProviders>
@@ -38,5 +42,10 @@ export const Editable: Story = {
 };
 
 export const CannotChange: Story = {
+  render: story({ capture_settings: ["read"] }),
+};
+
+export const CannotChangeDark: Story = {
+  globals: { theme: "dark" },
   render: story({ capture_settings: ["read"] }),
 };

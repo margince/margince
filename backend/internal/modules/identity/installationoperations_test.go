@@ -53,8 +53,14 @@ func TestEveryOperationValueIsReadFromItsOwnSetting(t *testing.T) {
 	if len(fields) != len(fieldNames) {
 		t.Fatalf("fields() pairs %d values, OperationSettings has %d; an unpaired one always reads zero", len(fields), len(fieldNames))
 	}
+	seen := map[uintptr]bool{}
 	for _, field := range fields {
-		name := fieldNames[reflect.ValueOf(field.into).Pointer()]
+		pointer := reflect.ValueOf(field.into).Pointer()
+		if seen[pointer] {
+			t.Errorf("OperationSettings.%s is read twice, so another value is never read", fieldNames[pointer])
+		}
+		seen[pointer] = true
+		name := fieldNames[pointer]
 		if want := settingKeyFor(name); field.entry.Key() != want {
 			t.Errorf("OperationSettings.%s reads %s, want %s", name, field.entry.Key(), want)
 		}

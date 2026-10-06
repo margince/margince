@@ -17,7 +17,8 @@ type Operations = components["schemas"]["OperationSettings"];
 // The bounds the API refuses past, mirrored so a value out of range is refused
 // in the box before the request. Keyed by the wire property, which is how
 // backend/gates/settingbounds_test.go holds each to the contract. The two
-// sweeps that may be switched off start at 0; the server refuses 1 to 299.
+// sweeps that may be switched off start at 0, and their rows refuse 1 to 299
+// as the server does.
 const OPERATION_BOUNDS = {
   agent_runner_interval_seconds: { min: 10, max: 3_600 },
   webhook_retry_interval_seconds: { min: 10, max: 3_600 },
@@ -27,8 +28,8 @@ const OPERATION_BOUNDS = {
   retention_sweep_interval_seconds: { min: 3_600, max: 604_800 },
   geocode_backfill_interval_seconds: { min: 0, max: 604_800 },
   technical_backfill_interval_seconds: { min: 0, max: 604_800 },
-  gmail_watch_scan_interval_seconds: { min: 600, max: 86_400 },
-  graph_watch_scan_interval_seconds: { min: 600, max: 86_400 },
+  gmail_watch_scan_interval_seconds: { min: 600, max: 43_200 },
+  graph_watch_scan_interval_seconds: { min: 600, max: 43_200 },
   gmail_watch_renew_within_hours: { min: 24, max: 144 },
   graph_watch_renew_within_hours: { min: 24, max: 60 },
   send_rate_limit: { min: 1, max: 1_000 },
@@ -38,6 +39,8 @@ const OPERATION_BOUNDS = {
 
 type OperationRow = Readonly<{
   property: keyof Operations;
+  // The lowest value that switches on a sweep whose 0 means off.
+  lowestOn?: number;
   copy:
     | "agentRunner"
     | "webhookRetry"
@@ -65,8 +68,16 @@ const SCHEDULE_ROWS: readonly OperationRow[] = [
   { property: "close_date_sweep_interval_seconds", copy: "closeDate" },
   { property: "follow_up_reconcile_interval_seconds", copy: "followUp" },
   { property: "retention_sweep_interval_seconds", copy: "retention" },
-  { property: "geocode_backfill_interval_seconds", copy: "geocode" },
-  { property: "technical_backfill_interval_seconds", copy: "technical" },
+  {
+    property: "geocode_backfill_interval_seconds",
+    copy: "geocode",
+    lowestOn: 300,
+  },
+  {
+    property: "technical_backfill_interval_seconds",
+    copy: "technical",
+    lowestOn: 300,
+  },
   { property: "gmail_watch_scan_interval_seconds", copy: "gmailWatchScan" },
   { property: "gmail_watch_renew_within_hours", copy: "gmailWatchRenew" },
   { property: "graph_watch_scan_interval_seconds", copy: "graphWatchScan" },
@@ -112,6 +123,7 @@ function OperationsCard({
                   testId={`operation-${row.property}`}
                   value={settings.operations[row.property]}
                   {...OPERATION_BOUNDS[row.property]}
+                  lowestOn={row.lowestOn}
                   refusal={t("operations.refusal")}
                   disabled={!canManage || update.isPending}
                   onCommit={(next) => update.mutate({ [row.property]: next })}

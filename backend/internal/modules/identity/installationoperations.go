@@ -10,6 +10,9 @@ package identity
 
 import (
 	"context"
+	"fmt"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/settings"
 )
@@ -114,14 +117,22 @@ func (p OperationPatch) writes() ([]pendingWrite, error) {
 	return out, nil
 }
 
+// readOperations reads every value in one transaction, as one view rather than
+// fifteen.
 func (s *InstallationSettingsStore) readOperations(ctx context.Context) (OperationSettings, error) {
 	var out OperationSettings
-	for _, field := range out.fields() {
-		value, err := settings.Get(ctx, s.settings, field.entry)
-		if err != nil {
-			return OperationSettings{}, err
+	err := s.settings.WriteTx(ctx, func(tx pgx.Tx) error {
+		for _, field := range out.fields() {
+			value, err := settings.GetTx(ctx, tx, field.entry)
+			if err != nil {
+				return err
+			}
+			*field.into = value
 		}
-		*field.into = value
+		return nil
+	})
+	if err != nil {
+		return OperationSettings{}, fmt.Errorf("identity: reading the operating values: %w", err)
 	}
 	return out, nil
 }

@@ -13,7 +13,7 @@ often a mailbox syncs are on Settings → Capture rules; the connector
 access-token lifetime is on Settings → Sign-in and apps. How often each
 background pass runs, how far ahead a mail subscription is renewed and how fast
 one mailbox sends are on Settings → System health. Each takes effect on its
-next use, or within a minute for a schedule, with no restart.
+next use with no restart; a running worker rechecks the schedules every minute.
 
 **One installation serves one organization.** No request selects a tenant: the
 server resolves its singleton organization itself, so a call carries only the

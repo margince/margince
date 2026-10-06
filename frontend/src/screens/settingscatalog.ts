@@ -730,11 +730,17 @@ export const SETTINGS_PAGES = [
     id: "system-health",
     group: "governance",
     scope: "installation",
-    // Either card's grant. `JobHealthCard` asks `job_health:read` and the
-    // reindex card asks its own, so a reader holding one finds that card and
-    // the other withheld — which is the union being a union rather than one
-    // object with a decorative term.
-    requires: anyOf(reads("job_health"), reads("embedding_reindex")),
+    // Any card's grant. `JobHealthCard` asks `job_health:read`, the reindex
+    // card asks its own, and the schedule cards are an installation-settings
+    // editor's, so a reader holding one finds that card and the others
+    // withheld — which is the union being a union rather than one object with
+    // a decorative term. Every role reads installation settings, so it is the
+    // editor's grant that opens the page, not the read.
+    requires: anyOf(
+      reads("job_health"),
+      reads("embedding_reindex"),
+      writes("installation_settings", ["update"]),
+    ),
     // EmbedReindexCard spends tokens to rebuild the embed store. Watching the
     // queue beside it is a read, and watching a stalled queue is an operator
     // acting, so the job-health read is the second arm.
@@ -743,6 +749,7 @@ export const SETTINGS_PAGES = [
     // stands outside the ceiling.
     changes: anyOf(
       acts(writes("embedding_reindex", ["update"])),
+      acts(writes("installation_settings", ["update"])),
       reads("job_health"),
     ),
   },

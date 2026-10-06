@@ -104,3 +104,27 @@ func TestApplyRetriesAScheduleTheRunnerRefusedToTakeBack(t *testing.T) {
 		t.Errorf("the next check asked the runner %v, want the refused schedule put back: %v", runner.calls, want)
 	}
 }
+
+// The same, when an admin moves the value back before the next check: the
+// book and the database then agree, and the refused kind must still return.
+func TestApplyRetriesARefusedScheduleEvenOnceTheValueIsBack(t *testing.T) {
+	book, closeDate, timeScan := bookWith(t)
+	runner := &periodicLog{failAdds: 1}
+	if err := book.apply(map[string]time.Duration{closeDate: 2 * time.Hour, timeScan: time.Hour}, runner); err == nil {
+		t.Fatal("a refused re-add reported success")
+	}
+	runner.calls = nil
+	if err := book.apply(map[string]time.Duration{closeDate: time.Hour, timeScan: time.Hour}, runner); err != nil {
+		t.Fatal(err)
+	}
+	if want := []string{"remove close_date_sweep", "add"}; !slices.Equal(runner.calls, want) {
+		t.Errorf("the next check asked the runner %v, want the refused schedule put back: %v", runner.calls, want)
+	}
+	runner.calls = nil
+	if err := book.apply(map[string]time.Duration{closeDate: time.Hour, timeScan: time.Hour}, runner); err != nil {
+		t.Fatal(err)
+	}
+	if len(runner.calls) != 0 {
+		t.Errorf("a schedule already back on the runner was moved again: %v", runner.calls)
+	}
+}
