@@ -1,7 +1,12 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render as rtlRender, screen } from "@testing-library/react";
+import {
+  cleanup,
+  render as rtlRender,
+  screen,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
@@ -52,7 +57,11 @@ describe("ArchiveAction", () => {
       />,
     );
     await userEvent.click(screen.getByTestId("archive-record"));
-    await userEvent.click(screen.getByTestId("archive-confirm"));
+    await userEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: /^Archive/,
+      }),
+    );
 
     const announced = await screen.findByRole("alert");
     expect(announced.textContent).toBe("the record is under retention");
@@ -82,7 +91,11 @@ describe("ArchiveAction", () => {
       />,
     );
     await userEvent.click(screen.getByTestId("archive-record"));
-    await userEvent.click(screen.getByTestId("archive-confirm"));
+    await userEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: /^Archive/,
+      }),
+    );
 
     expect(await screen.findByRole("status")).toHaveTextContent(
       "“Jana Brandt” archived",

@@ -241,6 +241,7 @@ export function AudienceAction({
         open={open}
         onClose={() => setOpen(false)}
         title={t("compose.audienceTitle")}
+        intent="form"
         confirmLabel={t("compose.audienceConfirm")}
         confirmDisabled={
           choice === current || (choice === "selected" && members.length === 0)

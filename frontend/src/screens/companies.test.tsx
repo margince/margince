@@ -746,7 +746,11 @@ describe("CompanyScreen — archive (P-3)", () => {
     render(<CompanyScreen id="o-1" />);
 
     await userEvent.click(await openRecordMenu("archive-record"));
-    await userEvent.click(screen.getByTestId("archive-confirm"));
+    await userEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: /^Archive/,
+      }),
+    );
 
     await waitFor(() => expect(deleted).toBe(true));
     expect(window.location.hash).toBe("#/companies");
@@ -1622,13 +1626,8 @@ describe("CompanyScreen — Ask Margince", () => {
   });
 });
 
-// ONE column beside the left rail (mockup State D). The page had a work
-// column and a context column beside it; the context column moved to the
-// RIGHT aside so the story leads in reading order and keeps the wider share,
-// and the composer opens as its own overlay drawer rather than into a column.
-// Tags and lists live in that column's own panel too — the business grid that
-// used to hold them is gone,
-// which is the obligation these cases keep: a layout change must not become
+// ONE column beside the left rail, the account's context in the RIGHT aside,
+// tags and lists in that column's own panel: a layout change must not become
 // an availability change.
 describe("CompanyScreen — State D's one column and its card grid", () => {
   it("puts the account's context on the right, beside the work", async () => {

@@ -1,9 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { PenLine } from "lucide-react";
-import { useId, useState } from "react";
+import { useState } from "react";
 import type { Route } from "../app/router";
-import { Button, Modal } from "../design-system/atoms";
-import { Heading } from "../design-system/heading";
+import { Button } from "../design-system/atoms";
 import { IconAction } from "../design-system/iconaction";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
@@ -167,7 +166,6 @@ export function EditRecordModal({
   // function of the values. See usePublishedValues (create.tsx).
   onValuesChange?: (values: Record<string, string>) => void;
 }>) {
-  const headingId = useId();
   const [values, setValues] = useState<Record<string, string>>({});
   usePublishedValues(values, onValuesChange);
   // Repeatable-row fields prefill from the record's current rows (e.g. a
@@ -237,27 +235,23 @@ export function EditRecordModal({
   }
 
   return (
-    <Modal open={open} onClose={onClose} labelledBy={headingId}>
-      <Heading size="large" id={headingId} className="t-h2 modal-title">
-        {title}
-      </Heading>
-      <RecordFormBody
-        fields={fields}
-        values={values}
-        setValues={setValues}
-        rows={rows}
-        setRows={setRows}
-        pending={pending}
-        error={error}
-        existing={existing}
-        resolveExisting={resolveExisting}
-        onSubmit={(submitted, submittedRows) =>
-          onSubmit(submitted, submittedRows, opened)
-        }
-        onClose={onClose}
-        intent="save"
-      />
-    </Modal>
+    <RecordFormBody
+      dialog={{ open, title }}
+      fields={fields}
+      values={values}
+      setValues={setValues}
+      rows={rows}
+      setRows={setRows}
+      pending={pending}
+      error={error}
+      existing={existing}
+      resolveExisting={resolveExisting}
+      onSubmit={(submitted, submittedRows) =>
+        onSubmit(submitted, submittedRows, opened)
+      }
+      onClose={onClose}
+      intent="save"
+    />
   );
 }
 

@@ -12,7 +12,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { Button, Modal } from "./atoms";
 import { Heading } from "./heading";
 import { armHoverIntent } from "./hoverintent-testing";
-import { MODAL_INTENTS, type ModalBox, type ModalIntent } from "./modal";
+import {
+  FORM_DIALOG_MAX_FIELDS,
+  intentForFieldCount,
+  MODAL_INTENTS,
+  type ModalBox,
+  type ModalIntent,
+} from "./modal";
 import { Popover } from "./popover";
 
 // A dialog covers the page. `aria-modal` says so to a screen reader and does
@@ -635,5 +641,18 @@ describe("an intent decides the box on its own", () => {
     expect(screen.getByRole("dialog", { name: "Both" }).className).toBe(
       "modal modal-form",
     );
+  });
+});
+
+describe("a form's field count picks its shape", () => {
+  it("keeps six fields or fewer in the centred form", () => {
+    expect(FORM_DIALOG_MAX_FIELDS).toBe(6);
+    expect(intentForFieldCount(1)).toBe("form");
+    expect(intentForFieldCount(6)).toBe("form");
+  });
+
+  it("moves the seventh field and beyond into the drawer", () => {
+    expect(intentForFieldCount(7)).toBe("drawer");
+    expect(intentForFieldCount(30)).toBe("drawer");
   });
 });

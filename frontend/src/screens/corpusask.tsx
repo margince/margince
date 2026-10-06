@@ -171,16 +171,11 @@ export function AskMarginceModal({
   const cited = openCite === null ? undefined : claims[openCite];
 
   return (
-    // The house two-column dialog, and it is a RIGHT-SIDE drawer: `split`
-    // centred has no second column to hold and falls back to the roomy box,
-    // which this content overflowed. The drawer is what the design system
-    // offers for an answer beside the document it came from.
     <Modal
       open={open}
       onClose={onClose}
       labelledBy={titleId}
-      size="split"
-      placement="right"
+      intent="drawer-reading"
     >
       <div className="ask-modal">
         <header className="ask-modal-head">
@@ -278,7 +273,12 @@ export function AskMarginceModal({
             ) : null}
           </section>
           {cited ? (
-            <section className="ask-modal-doc">
+            <section
+              key={cited.chunk_id}
+              className="ask-modal-doc"
+              // Stacked on a narrow drawer, the document opens below the answer.
+              ref={(node) => node?.scrollIntoView?.({ block: "nearest" })}
+            >
               <CitedDocument key={cited.chunk_id} claim={cited} />
             </section>
           ) : null}

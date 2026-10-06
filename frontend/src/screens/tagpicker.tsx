@@ -62,11 +62,11 @@ export function AddTagDialog({
   }, [vocabulary.data, normalized]);
 
   return (
-    <Modal open onClose={onClose} labelledBy={titleID}>
-      <div className="tagpicker">
-        <Heading size="large" id={titleID}>
-          {t("tags.add")}
-        </Heading>
+    <Modal open onClose={onClose} labelledBy={titleID} intent="form">
+      <Heading size="large" id={titleID} className="t-h2 modal-title">
+        {t("tags.add")}
+      </Heading>
+      <div className="form-stack">
         <SearchField
           aria-label={t("tags.pickerLabel")}
           value={query}

@@ -228,12 +228,8 @@ function stubDealBackend(
   });
 }
 
-// AC-F1: column totals come from the server's per-stage
-// aggregate (Σround(amount×p/100), never round(Σamount×p/100)) — not from
-// summing whatever page of cards happened to load. buildStageTotals shapes
-// the report's rows (grouped by stage_id + currency); buildColumns reads
-// from that, and keeps building the CARD list from the loaded deals as
-// before — the cap on cards is unrelated to the correctness of the totals.
+// Column totals come from the server's per-stage aggregate, not from summing
+// the page of cards that happened to load.
 describe("buildStageTotals", () => {
   it("carries one currency's totals straight through", () => {
     const totals = buildStageTotals([
@@ -1890,7 +1886,11 @@ describe("DealScreen — edit, archive (A3)", () => {
     render(<DealScreen id="x" />);
     await openHeaderMenu();
     await userEvent.click(screen.getByTestId("archive-record"));
-    await userEvent.click(screen.getByTestId("archive-confirm"));
+    await userEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: /^Archive/,
+      }),
+    );
     await waitFor(() => expect(deleted).toBe(true));
   });
 });
