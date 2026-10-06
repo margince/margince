@@ -68,13 +68,24 @@ runs:
       continue-on-error: true
       working-directory: ${{ inputs.working-directory }}
       shell: bash
-      run: timeout 3m pnpm exec playwright install-deps chromium
+      # The exit code is recorded because the retry below is conditional on it.
+      run: |
+        set +e
+        timeout 5m pnpm exec playwright install-deps chromium
+        code=$?
+        echo "code=$code" >> "$GITHUB_OUTPUT"
+        exit $code
 
+    # Retried only when apt FAILED, never when it was killed. Expiry kills it
+    # mid-transaction and dpkg's frontend lock stays held, so a second attempt
+    # straight after one reports "could not get lock" — a different fault from
+    # the one that stopped the install, in place of it. A fast failure releases
+    # the lock and is worth another connection.
     - name: Install the system libraries Chromium needs (retry)
-      if: steps.deps.outcome == 'failure'
+      if: steps.deps.outcome == 'failure' && steps.deps.outputs.code != '124'
       working-directory: ${{ inputs.working-directory }}
       shell: bash
-      run: timeout 3m pnpm exec playwright install-deps chromium
+      run: timeout 5m pnpm exec playwright install-deps chromium
 
     - name: Download the Chromium build
       id: browser
@@ -82,10 +93,11 @@ runs:
       continue-on-error: true
       working-directory: ${{ inputs.working-directory }}
       shell: bash
-      run: timeout 3m pnpm exec playwright install chromium
+      run: timeout 2m pnpm exec playwright install chromium
 
+    # The download takes no lock, so its retry is unconditional.
     - name: Download the Chromium build (retry)
       if: steps.browser.outcome == 'failure'
       working-directory: ${{ inputs.working-directory }}
       shell: bash
-      run: timeout 3m pnpm exec playwright install chromium
+      run: timeout 2m pnpm exec playwright install chromium
