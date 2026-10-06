@@ -343,7 +343,7 @@ func (s *Store) MarkSettleable(ctx context.Context, promises []CommitmentDue) er
 			return err
 		}
 		if clause == "" {
-			clause = "true"
+			clause = sqlAlwaysVisible
 		}
 		rows, err := tx.Query(ctx, fmt.Sprintf(
 			`SELECT pr.id FROM contact pr WHERE pr.id = ANY($%d) AND (%s)`, idsPos, clause), args...)
