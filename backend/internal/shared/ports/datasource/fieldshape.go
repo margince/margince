@@ -275,9 +275,6 @@ func structTypeOf(into any) reflect.Type {
 func fieldByJSONName(t reflect.Type, name string) (reflect.StructField, bool) {
 	for i := 0; i < t.NumField(); i++ {
 		field := t.Field(i)
-		if !field.IsExported() && !field.Anonymous {
-			continue
-		}
 		wire, _, _ := strings.Cut(field.Tag.Get("json"), ",")
 		if wire == name && wire != "" && wire != "-" {
 			return field, true

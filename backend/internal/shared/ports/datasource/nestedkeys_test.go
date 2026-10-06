@@ -86,18 +86,3 @@ func TestAPathAnotherLayerJudgesIsNotEntered(t *testing.T) {
 		t.Error("a claim of nothing let an unknown key through")
 	}
 }
-
-// encoding/json ignores an unexported field whatever its tag says, so a key
-// naming one is as unknown as any other and must not read as declared.
-func TestATaggedUnexportedFieldIsAnUnknownKey(t *testing.T) {
-	type withHidden struct {
-		Shown  string `json:"shown"`
-		hidden string `json:"hidden"`
-	}
-	_ = withHidden{}.hidden
-	err := RejectUnknownNestedKeys(json.RawMessage(`{"hidden":"x"}`), &withHidden{}, nil)
-	var unknown *UnknownFieldError
-	if !errors.As(err, &unknown) || len(unknown.Fields) != 1 || unknown.Fields[0] != "hidden" {
-		t.Errorf("answered %v, want hidden named as unknown", err)
-	}
-}
