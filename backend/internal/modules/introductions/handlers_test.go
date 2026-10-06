@@ -135,12 +135,12 @@ func TestAnOptionalEnumReachesTheStoreAsWritten(t *testing.T) {
 		t.Errorf("an unstated origin went on as %q, %v; want empty", got, err)
 	}
 	model := crmcontracts.IntroNoteOriginIntroNoteOriginModel
-	if got, _ := enumOf(&model, "note_generated_by", "x"); got != "model" {
-		t.Errorf("a stated origin became %q", got)
+	if got, err := enumOf(&model, "note_generated_by", "x"); got != "model" || err != nil {
+		t.Errorf("a stated origin became %q, %v", got, err)
 	}
 	unknown := crmcontracts.IntroFallbackPolicy("zzz")
-	if got, _ := enumOf(&unknown, "fallback_policy", "x"); got != "zzz" {
-		t.Errorf("an unknown fallback became %q instead of reaching the store to be refused", got)
+	if got, err := enumOf(&unknown, "fallback_policy", "x"); got != "zzz" || err != nil {
+		t.Errorf("an unknown fallback became %q, %v instead of reaching the store to be refused", got, err)
 	}
 }
 
