@@ -60,6 +60,11 @@ function decisionBlocked(row: Feature, blocked: readonly HealthEntry[]) {
   return blocked.some((entry) => entry.provider === provider);
 }
 
+/** A blocked decision model is skipped, so the ladder is what answers. */
+function startsOnDecision(row: Feature, blocked: readonly HealthEntry[]) {
+  return row.decision_first === true && !decisionBlocked(row, blocked);
+}
+
 /** The row's one-glance state, drawn as the Model tiers card draws a lane's. */
 export function taskDot(
   row: Feature,
@@ -74,11 +79,8 @@ export function taskDot(
   ) {
     return "bad";
   }
-  // A blocked decision model is skipped, so the ladder is what answers.
-  const startsOnDecision =
-    row.decision_first === true && !decisionBlocked(row, blocked);
   const rung = health
-    ? laneRung(health, row.leading_tier, startsOnDecision)
+    ? laneRung(health, row.leading_tier, startsOnDecision(row, blocked))
     : undefined;
   if (!rung) return "idle";
   return rung.healthy ? "ok" : "bad";
@@ -115,7 +117,7 @@ export function TaskDetails({
         <TaskState
           health={health}
           tier={row.leading_tier}
-          decisionFirst={row.decision_first === true}
+          decisionFirst={startsOnDecision(row, blockedOnChain(row, providers))}
         />
         <ImpactBadge row={row} />
       </span>

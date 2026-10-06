@@ -240,7 +240,7 @@ actually ran. Shared bindings sit under Advanced, and changing one can move
 several activities at once. Prices show input and output cost per million
 tokens, and a tier name proves nothing about where data is processed or what it
 costs — read the binding. Each row in **AI tasks** names its tier; its name opens its state, outage behaviour and
-**View calls**, and **Edit** sets its thinking level and timeouts.
+**View calls**, and **Edit** sets its thinking level and timeouts (Search and retrieval has neither: set its model under **Model tiers**).
 
 Changes take effect within about a minute; a call in flight keeps its binding.
 
