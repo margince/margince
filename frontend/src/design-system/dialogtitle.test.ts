@@ -2,24 +2,27 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { readFileSync } from "node:fs";
-import { relative } from "node:path";
+import { join, relative } from "node:path";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import {
   attr,
   attrs,
   classes,
-  componentSource,
+  defOf,
+  dialogSet,
   elementsIn,
   enclosing,
-  keys,
-  localNames,
+  idParts,
+  keyOf,
   markupFiles,
   type Owners,
   ownersIn,
+  primitiveKey,
   sheetTexts,
   srcDir,
   tag,
+  textCensus,
 } from "../../scripts/lib/dialoglayout";
 import { parseSource } from "../../scripts/lib/source-tree";
 
@@ -73,33 +76,34 @@ function titlesIn(path: string, text: string, owners: Owners) {
       owner = own.includes("modal-title") ? "modal-title" : "own margin";
     titles.push({ where: at(heading), classes: classes(heading), owner });
   };
-  const MODAL = localNames(source, "Modal");
-  const HEADING = localNames(source, "Heading");
+  const is = (key: string) => (n: ts.Node) => {
+    const def = defOf(n);
+    return !!def && keyOf(def) === key;
+  };
+  const isHeading = is(HEADING);
   const modals = elementsIn(source).filter(
-    (n) => ts.isJsxElement(n) && MODAL.has(tag(n)),
+    (n) => ts.isJsxElement(n) && is(dialogSet().modal)(n),
   );
   for (const modal of modals) {
-    const ids = keys(attr(modal, "labelledBy"));
+    const ids = idParts(attr(modal, "labelledBy"));
     const labels = (a?: ts.JsxAttribute) =>
-      keys(a).some((k) => ids.includes(k));
+      idParts(a).some((k) => ids.includes(k));
     const byId = (n: ts.Node) => labels(attr(n, "id"));
     const inside = elementsIn(modal);
     const first = inside.find((n) => enclosing(n) === modal);
     const found = inside.filter(
-      (n) => HEADING.has(tag(n)) && (n === first || byId(n)),
+      (n) => isHeading(n) && (n === first || byId(n)),
     );
     const hop = (n: ts.Node) =>
       attrs(n)
         .filter((a) => a.name.getText() !== "id" && labels(a))
         .flatMap((a) => {
           const prop = a.name.getText();
-          const target = componentSource(source, tag(n));
-          if (!target) return [];
-          const named = localNames(target, "Heading");
-          return elementsIn(target).filter(
+          const def = defOf(n);
+          return (def ? elementsIn(def) : []).filter(
             (h) =>
-              named.has(tag(h)) &&
-              keys(attr(h, "id")).some(
+              isHeading(h) &&
+              idParts(attr(h, "id")).some(
                 (k) => k === prop || k.endsWith(`.${prop}`),
               ),
           );
@@ -113,32 +117,25 @@ function titlesIn(path: string, text: string, owners: Owners) {
   return { modals: modals.length, titles, unresolved };
 }
 
+const HEADING = primitiveKey("heading", "Heading");
 const owners = ownersIn(sheetTexts());
 const texts = markupFiles().map((f) => ({ f, text: readFileSync(f, "utf8") }));
 const corpus = texts.map(({ f, text }) => titlesIn(f, text, owners));
 const titles = corpus.flatMap((c) => c.titles);
-const tagCensus = texts.reduce((n, { text }) => {
-  const names = [
-    "Modal",
-    ...[...text.matchAll(/\bModal as (\w+)/g)].map((m) => m[1]),
-  ];
-  return (
-    n + (text.match(new RegExp(`<(${names.join("|")})\\b`, "g"))?.length ?? 0)
-  );
-}, 0);
 const matches = (e: (typeof EXCEPTIONS)[number], t: Title) =>
   t.where.startsWith(`${e.file}:`) && t.classes.join(" ") === e.classes;
 const exempt = (t: Title) => EXCEPTIONS.some((e) => matches(e, t));
 
-const PRELUDE =
-  'import { Modal as Dialog } from "./modal";\nimport { Heading as H } from "./heading";';
+const AT = join(srcDir, "design-system", "planted.tsx");
+const PRELUDE = `import { Modal, Modal as Dialog } from "./modal";
+import { Heading, Heading as H } from "./heading";`;
 const BODY = `function Body({ titleId }) { return <div>${h("id={titleId}")}</div>; }`;
 function h(attributes: string) {
   return `<Heading size="large" ${attributes}>A</Heading>`;
 }
 const planted = (jsx: string, own = owners) => {
   const text = `${PRELUDE}\nconst A = () => (${jsx});\n${BODY}`;
-  const { titles: found, unresolved } = titlesIn("planted.tsx", text, own);
+  const { titles: found, unresolved } = titlesIn(AT, text, own);
   if (unresolved.length > 0) return "unresolved";
   return found.map((t) => t.owner ?? "orphan").join(" ") || "no title";
 };
@@ -156,8 +153,9 @@ const COLUMN =
 describe("a dialog's Heading title has an owner for the space under it (a <p> title is out of scope)", () => {
   it("walks every Modal in the tree and resolves each to its title", () => {
     const modals = corpus.reduce((n, c) => n + c.modals, 0);
-    expect(tagCensus).toBeGreaterThan(0);
-    expect(modals).toBe(tagCensus);
+    const { modals: spelled } = textCensus(texts.map((t) => t.text));
+    expect(spelled).toBeGreaterThan(0);
+    expect(modals).toBe(spelled);
     expect(corpus.flatMap((c) => c.unresolved)).toEqual([]);
   });
 

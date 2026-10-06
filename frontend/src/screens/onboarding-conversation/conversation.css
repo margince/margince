@@ -1454,6 +1454,11 @@
   margin-top: var(--space-4);
 }
 
+/* In a dialog's stack the gap already pays --space-3 of that --space-4. */
+.modal .form-stack > .ob-connect-dialog-actions {
+  margin-top: calc(var(--space-4) - var(--space-3));
+}
+
 .ob-connect-dialog-actions .btn {
   width: 100%;
 }
