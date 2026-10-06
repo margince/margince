@@ -13,7 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/privacy"
 )
 
-// TestTheErasureClosesExactlyTheOpenIntroductions fails in BOTH directions when the
+// TestTheErasureClosesExactlyTheOpenIntroductions fails in both directions when the
 // erasure's idea of an open ask stops matching the lifecycle's.
 //
 // The erasure closes an introduction naming an erased contact, because Decide and

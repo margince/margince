@@ -165,15 +165,15 @@ The 18 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
-| `id` | `uuid` | yes | Primary key. |
-| `carried_from` | `uuid` |  | Points at `communication_override.id` — deleting the parent keeps this row and clears the link. |
+| `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
+| `carried_from` | `uuid` |  | Points at `communication_override.id`. |
 | `category` | `text` | yes | One of `reply_to_inbound`, `requested_followup`, `precontract_quote`, `active_deal_followup`, `customer_service`, `account_notice` and 8 more. |
-| `contact_id` | `uuid` |  | Points at `contact.id` — deleting the parent deletes this row. |
+| `contact_id` | `uuid` |  | Points at `contact.id`. |
 | `decided_by_level` | `text` | yes | One of `user`, `admin`. |
-| `lead_id` | `uuid` |  | Points at `lead.id` — deleting the parent deletes this row. |
-| `reason` | `text` | yes | Required `text`. |
-| `recorded_at` | `timestamp with time zone` | yes | Required `timestamp with time zone`, defaulting to `now()`. |
-| `revoked_at` | `timestamp with time zone` |  | Optional `timestamp with time zone`. |
+| `lead_id` | `uuid` |  | Points at `lead.id`. |
+| `reason` | `text` | yes |  |
+| `recorded_at` | `timestamp with time zone`, default `now()` | yes |  |
+| `revoked_at` | `timestamp with time zone` |  |  |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 
 **Points at**
@@ -186,18 +186,18 @@ The 18 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 **Rules**
 
-- `communication_override_category` — `CHECK ((category = ANY (ARRAY['reply_to_inbound', 'requested_followup', 'precontract_quote', 'active_deal_followup', 'customer_service', 'account_notice', 'contract_notice', 'invoice_or_payment', 'security_notice', 'privacy_notice', 'record_confirmation', 'consent_confirmation', 'optout_confirmation', 'marketing'])))`
-- `communication_override_decided_by_level` — `CHECK ((decided_by_level = ANY (ARRAY['user', 'admin'])))`
-- `communication_override_names_a_target` — `CHECK (((contact_id IS NULL) <> (lead_id IS NULL)))`
+- `communication_override_category`: `CHECK ((category = ANY (ARRAY['reply_to_inbound', 'requested_followup', 'precontract_quote', 'active_deal_followup', 'customer_service', 'account_notice', 'contract_notice', 'invoice_or_payment', 'security_notice', 'privacy_notice', 'record_confirmation', 'consent_confirmation', 'optout_confirmation', 'marketing'])))`
+- `communication_override_decided_by_level`: `CHECK ((decided_by_level = ANY (ARRAY['user', 'admin'])))`
+- `communication_override_names_a_target`: `CHECK (((contact_id IS NULL) <> (lead_id IS NULL)))`
 
 **Indexes**
 
-- `communication_override_carried_from` — `btree (carried_from) WHERE (carried_from IS NOT NULL)`
-- `communication_override_contact_cascade` — `btree (contact_id) WHERE (contact_id IS NOT NULL)`
-- `communication_override_lead_cascade` — `btree (lead_id) WHERE (lead_id IS NOT NULL)`
-- `communication_override_live_contact` — `btree (contact_id, category) WHERE (revoked_at IS NULL)`
-- `communication_override_live_lead` — `btree (lead_id, category) WHERE (revoked_at IS NULL)`
-- `communication_override_pkey` — `unique, btree (id)`
+- `communication_override_carried_from`: `btree (carried_from) WHERE (carried_from IS NOT NULL)`
+- `communication_override_contact_cascade`: `btree (contact_id) WHERE (contact_id IS NOT NULL)`
+- `communication_override_lead_cascade`: `btree (lead_id) WHERE (lead_id IS NOT NULL)`
+- `communication_override_live_contact`: `btree (contact_id, category) WHERE (revoked_at IS NULL)`
+- `communication_override_live_lead`: `btree (lead_id, category) WHERE (revoked_at IS NULL)`
+- `communication_override_pkey`: `unique, btree (id)`
 
 ## communication_review
 
