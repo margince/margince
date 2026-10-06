@@ -254,6 +254,11 @@ func (s *Service) worklistFrom(
 	if waiting.read {
 		bounded[sourceWaiting] = waiting.cut
 	}
+	// A team's promises are read beside the day too, and a roster cut at its
+	// cap leaves teammates past it never asked.
+	if s.planCoverage != nil {
+		bounded[sourceWeeklyCommitment] = s.planCoverage.Truncated
+	}
 	// Held before the category narrowing, so a filtered-out source still
 	// reports what it had. Counting after it erased those sources from reach
 	// entirely — a rep narrowing to meetings would read "no tasks" rather than

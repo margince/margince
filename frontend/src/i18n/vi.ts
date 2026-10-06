@@ -11066,11 +11066,11 @@ export const vi = {
   "worklist.board.nobody": "Công việc chưa phân công",
   "worklist.board.notMeasured": "Chưa đo",
   "worklist.planCoverage.all_one":
-    "Đã đọc kế hoạch tuần của {count} thành viên nhóm.",
+    "Đã đọc kế hoạch tuần của một thành viên nhóm.",
   "worklist.planCoverage.all_other":
     "Đã đọc kế hoạch tuần của cả {count} thành viên nhóm.",
   "worklist.planCoverage.some_one":
-    "Đã đọc kế hoạch tuần của {read} trên {count} thành viên nhóm.",
+    "Đã đọc kế hoạch tuần của {read} trên một thành viên nhóm.",
   "worklist.planCoverage.some_other":
     "Đã đọc kế hoạch tuần của {read} trên {count} thành viên nhóm.",
   "worklist.planCoverage.unread": "Chưa đọc: {names}.",

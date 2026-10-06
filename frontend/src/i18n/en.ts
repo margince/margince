@@ -11298,11 +11298,11 @@ export const en = {
   "worklist.board.overdue": "Overdue",
   "worklist.board.nobody": "Unassigned work",
   "worklist.board.notMeasured": "Not measured",
-  "worklist.planCoverage.all_one": "Weekly plan read for {count} teammate.",
+  "worklist.planCoverage.all_one": "Weekly plan read for your one teammate.",
   "worklist.planCoverage.all_other":
     "Weekly plans read for all {count} teammates.",
   "worklist.planCoverage.some_one":
-    "Weekly plans read for {read} of {count} teammate.",
+    "Weekly plan read for {read} of your one teammate.",
   "worklist.planCoverage.some_other":
     "Weekly plans read for {read} of {count} teammates.",
   "worklist.planCoverage.unread": "Not read: {names}.",

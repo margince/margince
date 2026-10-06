@@ -73,11 +73,13 @@ func (s *Service) readingTeamPlans(ctx context.Context, now time.Time) (*Service
 	coverage := crmcontracts.WorklistPlanCoverage{
 		Members: make([]crmcontracts.WorklistPlanCoverageMember, 0, len(roster)), Truncated: cut,
 	}
-	var lastRefusal *crmcontracts.WorklistSourceUnavailable
+	var refused *crmcontracts.WorklistSourceUnavailable
 	for _, member := range roster {
 		entries, refusal := s.duePlan(ctx, member.UserID, now)
-		if refusal != nil {
-			lastRefusal = refusal
+		// Withheld only when every refusal was one: a read that failed outright
+		// is the louder answer, whatever roster order put it.
+		if refused == nil || (refusal != nil && refusal.Reason == crmcontracts.WorklistSourceUnavailableReasonFailed) {
+			refused = refusal
 		}
 		coverage.Members = append(coverage.Members, crmcontracts.WorklistPlanCoverageMember{
 			UserId: openapi_types.UUID(member.UserID), DisplayName: member.DisplayName, Read: refusal == nil,
@@ -88,7 +90,7 @@ func (s *Service) readingTeamPlans(ctx context.Context, now time.Time) (*Service
 	if anyPlanRead(coverage.Members) {
 		return &scoped, nil
 	}
-	return &scoped, lastRefusal
+	return &scoped, refused
 }
 
 // duePlan is one owner's due commitments, read so a failure is named by the page

@@ -165,6 +165,33 @@ func TestACappedRosterSaysThePlanCoverageIsTruncated(t *testing.T) {
 	if day.PlanCoverage == nil || !day.PlanCoverage.Truncated {
 		t.Fatalf("teammates past the cap were never asked, and coverage must say so: %+v", day.PlanCoverage)
 	}
+	for _, reach := range day.Reach {
+		if string(reach.Source) == sourceWeeklyCommitment {
+			if !reach.MoreAvailable {
+				t.Fatal("reach reported the promise lane fully seen past a capped roster")
+			}
+			return
+		}
+	}
+	t.Fatal("a team read that asked for plans left the promise lane out of reach")
+}
+
+func TestATeamWithMixedRefusalsNamesThePlansFailedWhateverTheRosterOrder(t *testing.T) {
+	t.Parallel()
+	denied, broken := apperrors.ErrPermissionDenied, errors.New("plan read failed")
+	for _, failed := range []map[ids.UUID]error{
+		{theReader: denied, theColleague: broken},
+		{theReader: broken, theColleague: denied},
+	} {
+		day, err := teamPlanService(theTeam, plansByOwner{failed: failed}).
+			Worklist(meetingPrepReader(), scopeTeam, "", ids.UUID{}, 25, "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if reason, _ := planSourceMissing(day); reason != crmcontracts.WorklistSourceUnavailableReasonFailed {
+			t.Errorf("withheld is for a team that refused every read; a failed one must win, got %q", reason)
+		}
+	}
 }
 
 func TestTheAllScopeStillWithholdsWeeklyPlans(t *testing.T) {

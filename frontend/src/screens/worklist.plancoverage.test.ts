@@ -70,6 +70,6 @@ describe("whose weekly plans a team read covered", () => {
         "de",
         (key, params) => translate("de", key, params),
       ),
-    ).toBe("Wochenplan von 1 Teammitglied gelesen.");
+    ).toBe("Wochenplan von einem Teammitglied gelesen.");
   });
 });
