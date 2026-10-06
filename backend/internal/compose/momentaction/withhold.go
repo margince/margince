@@ -58,12 +58,20 @@ var writesAnActivity = map[crmcontracts.ContactMomentActionKind]bool{
 // goes with the state: a blocked verb that still names a surface is a button
 // the client can still route on.
 func Withhold(ctx context.Context, moment *crmcontracts.ContactMoment) {
+	if moment.MayBeDone != nil {
+		withholdDone(ctx, moment)
+	}
 	if auth.Require(ctx, "activity", principal.ActionCreate) == nil {
 		return
 	}
 	reason := "You do not have permission to log activities"
 	block := func(action *crmcontracts.ContactMomentAction) {
 		if !writesAnActivity[action.Kind] {
+			return
+		}
+		// Done on a may-be-done card writes the promise, not a new activity;
+		// withholdDone asked that promise's own grant.
+		if moment.MayBeDone != nil && action == &moment.RecommendedAction {
 			return
 		}
 		// An action the ladder already blocked was blocked for its own reason,
@@ -86,4 +94,21 @@ func Withhold(ctx context.Context, moment *crmcontracts.ContactMoment) {
 	for i := range *moment.SecondaryActions {
 		block(&(*moment.SecondaryActions)[i])
 	}
+}
+
+// withholdDone blocks Done on a may-be-done card for a reader who may not
+// write the promise it completes: a task is an activity update, a claim
+// settles under contact update. The endpoint still asks the row's own scope.
+func withholdDone(ctx context.Context, moment *crmcontracts.ContactMoment) {
+	object, reason := "activity", "You do not have permission to complete tasks"
+	if moment.MayBeDone.PromiseType == crmcontracts.ContactMomentMayBeDonePromiseTypeClaim {
+		object, reason = "contact", "You do not have permission to settle commitments"
+	}
+	if auth.Require(ctx, object, principal.ActionUpdate) == nil {
+		return
+	}
+	done := &moment.RecommendedAction
+	done.State = crmcontracts.ContactMomentActionStateBlocked
+	done.BlockedReason = &reason
+	done.Destination = nil
 }

@@ -19,10 +19,19 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// AlreadyDecidedError maps to 409.
+// AlreadyDecidedError answers 409 already_decided on every surface: it
+// unwraps to ErrConflict for the status and carries the code through the
+// shared taxonomy, so the REST and MCP doors cannot word it differently.
 type AlreadyDecidedError struct{ Status string }
 
 func (e *AlreadyDecidedError) Error() string { return "approval is already " + e.Status }
+
+// MessageFault names the standing verdict so a caller can branch on the code.
+func (e *AlreadyDecidedError) MessageFault() (code, message string) {
+	return "already_decided", e.Error()
+}
+
+func (e *AlreadyDecidedError) Unwrap() error { return apperrors.ErrConflict }
 
 // InvalidEditError maps to 422: an edited payload that is not a JSON
 // object cannot be canonicalized, so it cannot become an authority.

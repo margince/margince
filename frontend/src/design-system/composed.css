@@ -1327,6 +1327,13 @@
   color: var(--textPrimary);
 }
 
+/* A note's markdown wrapper inherits the row's font and colour instead of the
+   document reader's body font; headings and code keep the reader's own. */
+.tl-text .md {
+  font: inherit;
+  color: inherit;
+}
+
 .tl-text-toggle {
   background: none;
   border: none;

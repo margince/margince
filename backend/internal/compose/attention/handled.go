@@ -73,8 +73,16 @@ func (s *Service) HandledForYou(ctx context.Context) (crmcontracts.HandledForYou
 	if out.Truncated {
 		recent = recent[:handledCap]
 	}
+	subjects := make([]*crmcontracts.AttentionSubject, 0, len(recent))
 	for _, receipt := range recent {
-		out.Receipts = append(out.Receipts, handledReceipt(receipt))
+		row := handledReceipt(receipt)
+		out.Receipts = append(out.Receipts, row)
+		subjects = append(subjects, row.Subject)
+	}
+	// The same label pass the feed runs, so a receipt names its record here
+	// exactly as it does in the feed's done lane.
+	if err := s.labelSubjects(ctx, subjects); err != nil {
+		return crmcontracts.HandledForYou{}, err
 	}
 	return out, nil
 }

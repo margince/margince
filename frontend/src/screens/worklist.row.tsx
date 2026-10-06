@@ -632,6 +632,7 @@ function NudgeDismiss({ contactId }: Readonly<{ contactId: string }>) {
             onSuccess: () =>
               toast.show(t("worklist.verb.dismissed"), {
                 action: {
+                  kind: "undo",
                   label: t("worklist.verb.dismissUndo"),
                   // The toast dismisses itself the moment the action is
                   // pressed, so a failed undo leaves the contact set aside
@@ -836,6 +837,7 @@ function TaskComplete({
             onSuccess: (completedAt) =>
               toast.show(t("worklist.verb.completed"), {
                 action: {
+                  kind: "undo",
                   label: t("worklist.verb.completeUndo"),
                   // The toast dismisses itself the moment the action is
                   // pressed, so a failed undo leaves the task done with the

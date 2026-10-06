@@ -10278,6 +10278,7 @@ export const en = {
   "contact.memory.replied": "Replied",
   "contact.memory.unanswered": "Unanswered",
 
+  "contact.mayBeDone.notYet": "Not yet",
   "contact.rail.blocked": "Blocked",
   "contact.rail.direction": "Direction",
   "contact.rail.lastReply": "Last reply",
@@ -11294,6 +11295,7 @@ export const en = {
   "worklist.handled.about": "Record",
   "worklist.handled.when": "When",
   "worklist.handled.noRecord": "No record",
+  "worklist.handled.hiddenRecord": "Record not available",
   "worklist.handled.wayBack": "Undo",
   "worklist.handled.putBackDone": "Already undone",
   "worklist.handled.truncated": "List truncated. More items exist.",
