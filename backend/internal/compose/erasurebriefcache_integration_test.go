@@ -51,8 +51,8 @@ func TestErasureDestroysTheCachedBriefEveryReaderHeld(t *testing.T) {
 	e := integration.Setup(t)
 	subject := e.SeedContact(t, "Briefed Subject", &e.AdminUser)
 	bystander := e.SeedContact(t, "Unrelated Contact", &e.AdminUser)
-	cacheABrief(t, e, subject)
-	cacheABrief(t, e, bystander)
+	cacheABrief(t, e, subject, "fp-1")
+	cacheABrief(t, e, bystander, "fp-1")
 
 	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), subject, "subject request"); err != nil {
 		t.Fatalf("EraseContact → %v", err)
@@ -72,8 +72,8 @@ func TestAnonymisingAContactDestroysTheCachedBriefToo(t *testing.T) {
 	e := integration.Setup(t)
 	subject := e.SeedContact(t, "Briefed Subject", &e.AdminUser)
 	bystander := e.SeedContact(t, "Unrelated Contact", &e.AdminUser)
-	cacheABrief(t, e, subject)
-	cacheABrief(t, e, bystander)
+	cacheABrief(t, e, subject, "fp-1")
+	cacheABrief(t, e, bystander, "fp-1")
 
 	service := NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	if _, err := service.AnonymiseContacts(e.Admin(), []ids.UUID{subject}, privacy.PurgeOwnerRule); err != nil {
@@ -95,13 +95,13 @@ func TestAnonymisingAContactDestroysTheCachedBriefToo(t *testing.T) {
 // The shape is the catalog's — payload NOT NULL, generated_by one of two
 // values — and cachedBriefs is read once BEFORE each act, so a column this
 // fixture stops matching fails the insert rather than quietly testing nothing.
-func cacheABrief(t *testing.T, e *integration.Env, subject ids.UUID) {
+func cacheABrief(t *testing.T, e *integration.Env, subject ids.UUID, fingerprint string) {
 	t.Helper()
 	if _, err := e.Pool.Exec(e.Admin(), `
 		INSERT INTO contact_brief (user_id, contact_id, fingerprint, generated_by, payload)
-		VALUES ($1, $2, 'fp-1', 'deterministic', $3::jsonb)`,
+		VALUES ($1, $2, $4, 'deterministic', $3::jsonb)`,
 		e.AdminUser, subject,
-		`{"headline":"Briefed Subject asked about the retrofit timeline"}`); err != nil {
+		`{"headline":"Briefed Subject asked about the retrofit timeline"}`, fingerprint); err != nil {
 		t.Fatalf("caching a brief for the subject: %v", err)
 	}
 	if n := cachedBriefs(t, e, subject); n != 1 {
@@ -228,8 +228,8 @@ func TestTheBriefWriterItselfDeclinesToCacheAnErasedSubject(t *testing.T) {
 	}
 }
 
-// pageOf assembles the contact page the brief is written from, which is the
-// service's one injected collaborator.
+// briefPageOf assembles the contact page the brief is written from, which is
+// the service's one injected collaborator.
 func briefPageOf(contact ids.UUID) contactbrief.Assembler {
 	return assembleFunc(func(ctx context.Context, id ids.ContactID) (crmcontracts.Contact360, error) {
 		return crmcontracts.Contact360{
@@ -257,7 +257,7 @@ func TestAnUndestroyableCachedBriefStopsTheWholeErasure(t *testing.T) {
 	e := integration.Setup(t)
 	refuseBriefDeletes(t)
 	subject := e.SeedContact(t, "Briefed Subject", &e.AdminUser)
-	cacheABrief(t, e, subject)
+	cacheABrief(t, e, subject, refusedFingerprint)
 
 	err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), subject, "subject request")
 	if err == nil {
@@ -280,11 +280,20 @@ func TestAnUndestroyableCachedBriefStopsTheWholeErasure(t *testing.T) {
 	}
 }
 
-// refuseBriefDeletes makes every DELETE on the cache fail, which is how a
+// refusedFingerprint marks the one cached brief the trigger below refuses to
+// let go. No other fixture writes it.
+const refusedFingerprint = "refuse-this-delete"
+
+// refuseBriefDeletes makes the DELETE of one cached brief fail, which is how a
 // statement inside somebody else's transaction can be made to fail without
-// touching the rows the test is about. Dropped on cleanup, which runs on a
-// failing test too: the schema is migrated once per process and a trigger left
-// behind would fail every later test in it.
+// touching the rows the test is about.
+//
+// Cleanup drops the trigger AND its function, and runs on a failing test too.
+// What cleanup cannot cover is the process dying between the CREATE and it — a
+// timeout, an interrupt, an OOM — and the serial lane's database persists, so a
+// trigger left behind would be inherited. Hence the row condition: it fires only
+// for a fingerprint this test writes, which the next Setup's data reset clears,
+// so what survives a crash fires for nothing.
 func refuseBriefDeletes(t *testing.T) {
 	t.Helper()
 	ctx := context.Background()
@@ -293,9 +302,13 @@ func refuseBriefDeletes(t *testing.T) {
 		t.Fatalf("connecting as the schema owner: %v", err)
 	}
 	t.Cleanup(func() {
-		if _, err := owner.Exec(context.Background(),
-			`DROP TRIGGER IF EXISTS trg_refuse_brief_deletes ON contact_brief`); err != nil {
-			t.Errorf("dropping the refusing trigger: %v", err)
+		for _, stmt := range []string{
+			`DROP TRIGGER IF EXISTS trg_refuse_brief_deletes ON contact_brief`,
+			`DROP FUNCTION IF EXISTS refuse_brief_deletes()`,
+		} {
+			if _, err := owner.Exec(context.Background(), stmt); err != nil {
+				t.Errorf("dropping the refusing trigger: %v", err)
+			}
 		}
 		if err := owner.Close(context.Background()); err != nil {
 			t.Errorf("closing the owner connection: %v", err)
@@ -305,7 +318,8 @@ func refuseBriefDeletes(t *testing.T) {
 		`CREATE OR REPLACE FUNCTION refuse_brief_deletes() RETURNS trigger AS $$
 		 BEGIN RAISE EXCEPTION 'the cache refuses deletion'; END $$ LANGUAGE plpgsql`,
 		`CREATE TRIGGER trg_refuse_brief_deletes BEFORE DELETE ON contact_brief
-		 FOR EACH STATEMENT EXECUTE FUNCTION refuse_brief_deletes()`,
+		 FOR EACH ROW WHEN (OLD.fingerprint = '` + refusedFingerprint + `')
+		 EXECUTE FUNCTION refuse_brief_deletes()`,
 	} {
 		if _, err := owner.Exec(ctx, stmt); err != nil {
 			t.Fatalf("installing the refusing trigger: %v", err)
