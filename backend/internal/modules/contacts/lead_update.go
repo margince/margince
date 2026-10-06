@@ -213,8 +213,8 @@ func (s *Store) FillEmptyLeadFieldsTx(ctx context.Context, tx pgx.Tx, id ids.Lea
 // question rather than a blank to fill.
 func emptyFieldPatch(current crmcontracts.Lead, in CapturedLeadFields) UpdateLeadInput {
 	var patch UpdateLeadInput
-	if in.FullName != "" && blank(current.FullName) {
-		patch.FullName = &in.FullName
+	if name := strings.TrimSpace(in.FullName); name != "" && blank(current.FullName) {
+		patch.FullName = &name
 	}
 	if in.CompanyName != "" && blank(current.CompanyName) {
 		patch.CompanyName = &in.CompanyName

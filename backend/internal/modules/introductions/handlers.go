@@ -73,6 +73,16 @@ func (h Handlers) CreateIntroRequest(w http.ResponseWriter, r *http.Request, id 
 		return
 	}
 
+	origin, err := enumOf(body.NoteGeneratedBy, "note_generated_by", "human, model or deterministic")
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	fallback, err := enumOf(body.FallbackPolicy, "fallback_policy", "none, name_drop or next_route")
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	newID, err := h.store.Create(r.Context(), NewRequest{
 		ContactID:        ids.UUID(id),
 		IntroducerUser:   ids.UUID(body.IntroducerUserId),
@@ -81,9 +91,9 @@ func (h Handlers) CreateIntroRequest(w http.ResponseWriter, r *http.Request, id 
 		InternalReason:   body.InternalReason,
 		ValueForTarget:   deref(body.ValueForTarget),
 		ForwardableNote:  deref(body.ForwardableNote),
-		NoteGeneratedBy:  enumOf(body.NoteGeneratedBy),
+		NoteGeneratedBy:  origin,
 		NoteAIGenerated:  body.NoteAiGenerated != nil && *body.NoteAiGenerated,
-		FallbackPolicy:   enumOf(body.FallbackPolicy),
+		FallbackPolicy:   fallback,
 		NameDropAllowed:  body.NameDropAllowed != nil && *body.NameDropAllowed,
 		DueAt:            h.now().Add(askWindow),
 	})
@@ -209,11 +219,14 @@ func deref(s *string) string {
 	return *s
 }
 
-// enumOf spells an optional enum as the string the store judges; unstated is
-// empty, which the store defaults.
-func enumOf[T ~string](v *T) string {
+// enumOf spells an optional enum as the string the store judges: unstated is
+// empty, which the store defaults, and one stated empty is not unstated.
+func enumOf[T ~string](v *T, field, allowed string) (string, error) {
 	if v == nil {
-		return ""
+		return "", nil
 	}
-	return string(*v)
+	if *v == "" {
+		return "", notAllowed(field, allowed)
+	}
+	return string(*v), nil
 }

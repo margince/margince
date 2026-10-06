@@ -122,16 +122,24 @@ func TestANameDroppedAskCarriesNoIntroducedAt(t *testing.T) {
 
 // An unstated enum reaches the store as empty, which the store defaults, and a
 // stated one reaches it as written so an unknown value can be refused.
+func TestAnExplicitlyEmptyEnumIsRefusedNotDefaulted(t *testing.T) {
+	empty := crmcontracts.IntroNoteOrigin("")
+	if _, err := enumOf(&empty, "note_generated_by", "human, model or deterministic"); err == nil {
+		t.Error("a stated empty origin was read as unstated")
+	}
+}
+
 func TestAnOptionalEnumReachesTheStoreAsWritten(t *testing.T) {
-	if got := enumOf[crmcontracts.IntroNoteOrigin](nil); got != "" {
-		t.Errorf("an unstated origin went on as %q, want empty", got)
+	got, err := enumOf[crmcontracts.IntroNoteOrigin](nil, "note_generated_by", "x")
+	if got != "" || err != nil {
+		t.Errorf("an unstated origin went on as %q, %v; want empty", got, err)
 	}
 	model := crmcontracts.IntroNoteOriginIntroNoteOriginModel
-	if got := enumOf(&model); got != "model" {
+	if got, _ := enumOf(&model, "note_generated_by", "x"); got != "model" {
 		t.Errorf("a stated origin became %q", got)
 	}
 	unknown := crmcontracts.IntroFallbackPolicy("zzz")
-	if got := enumOf(&unknown); got != "zzz" {
+	if got, _ := enumOf(&unknown, "fallback_policy", "x"); got != "zzz" {
 		t.Errorf("an unknown fallback became %q instead of reaching the store to be refused", got)
 	}
 }
