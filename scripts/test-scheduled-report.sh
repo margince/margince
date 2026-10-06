@@ -51,7 +51,10 @@ case "$1 ${2:-}" in
 		}' <<<"$OPEN_TITLES"
 	;;
 "issue comment") echo "comment $3" >>"$ACTION_LOG" ;;
-"issue close") echo "close $3" >>"$ACTION_LOG" ;;
+"issue close")
+	[[ "$3" == "${CLOSE_FAILS:-}" ]] && exit 1
+	echo "close $3" >>"$ACTION_LOG"
+	;;
 "issue create")
 	for i in $(seq 1 $#); do
 		if [ "${!i}" = "--title" ]; then j=$((i + 1)); echo "create ${!j}" >>"$ACTION_LOG"; fi
@@ -321,6 +324,25 @@ expect_actions "renovate/a stop retracts 'stalled' and files under its own title
 expect_actions "renovate/a live bot retracts all three" \
 	"close 10,close 20,close 30" "$renovate_open" \
 	RENOVATE_RESULT=success
+
+# A tracker that refuses one close must not cost the report after it. Under
+# `set -e` a failed retraction ahead of the STALLED filing ended the run, so the
+# stall went unreported; the run still exits red because the close did not land.
+: >"$stub_dir/actions"
+set +e
+ACTION_LOG="$stub_dir/actions" OPEN_TITLES="$renovate_open" CLOSE_FAILS=20 GH_TOKEN=stub \
+	REPO=owner/repo RUN_URL=https://example.test/run/1 RENOVATE_RESULT=failure \
+	RENOVATE_OUTCOME=quiet RENOVATE_STATUS=STALLED "$root/scripts/scheduled-report.sh" >/dev/null 2>&1
+close_failed_status=$?
+set -e
+if [[ "$close_failed_status" -ne 1 ]] || [[ "$(paste -sd, - <"$stub_dir/actions")" != "close 10,comment 30" ]]; then
+	echo "FAIL: renovate/a failed close still lets the stall be filed, and fails the run"
+	echo "  want exit 1 actions 'close 10,comment 30'"
+	echo "  got  exit $close_failed_status actions '$(paste -sd, - <"$stub_dir/actions")'"
+	failures=$((failures + 1))
+else
+	echo "ok: renovate/a failed close still lets the stall be filed, and fails the run"
+fi
 
 expect_split mobile MOBILE_RESULT MOBILE_OUTCOME breach \
 	"the weekly MOBILE-AC-2 run could not complete" \

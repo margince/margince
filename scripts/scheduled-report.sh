@@ -105,12 +105,15 @@ resolve() {
     return
   fi
   echo "green again — closing #$existing"
+  # A failed close is counted, not raised: under `set -e` a bare failure here
+  # would end the run before the arms below it file what they measured.
   gh issue close "$existing" --repo "$REPO" --reason completed \
     --comment "Green on the $(date -u +%Y-%m-%d) run: $RUN_URL
 
 Closed by the lane that filed it, which re-ran and passed. If this issue was
 about something the run does not measure, reopen it — the close means the check
-is green, not that every question on the thread was answered."
+is green, not that every question on the thread was answered." ||
+    unreported=1
 }
 
 # Each report is attempted independently. Under `set -e` a bare call would abort
@@ -686,6 +689,6 @@ close it; the record is the point."\
 fi
 
 if [[ "$unreported" -ne 0 ]]; then
-  echo "FAIL: at least one finding could not be filed — the run above names what was broken, but an issue for it does not exist" >&2
+  echo "FAIL: at least one finding could not be filed or retracted — the run above names which, and the tracker does not yet say so" >&2
   exit 1
 fi
