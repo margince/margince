@@ -64,27 +64,44 @@ jobs:
             exit 1
           fi
           echo "logins=${members},renovate[bot],coderabbitai[bot],github-actions[bot],dependabot[bot]" >> "$GITHUB_OUTPUT"
+      # The link a contributor reads is the commit that last changed CLA.md, never
+      # `main`: an acceptance covers the text it was shown, and main moves.
+      - name: The CLA text in force
+        id: document
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          sha=$(gh api "repos/${{ github.repository }}/commits?path=CLA.md&sha=${{ github.event.repository.default_branch }}&per_page=1" -q '.[0].sha')
+          if [ -z "$sha" ]; then
+            echo "::error::no commit on the default branch carries CLA.md, so there is no text to accept"
+            exit 1
+          fi
+          echo "url=https://github.com/${{ github.repository }}/blob/${sha}/CLA.md" >> "$GITHUB_OUTPUT"
       - uses: contributor-assistant/github-action@ca4a40a7d1004f18d9960b404b97e5f30a505a08 # v2.6.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PERSONAL_ACCESS_TOKEN: ${{ secrets.CLA_SIGNATURES_TOKEN }}
         with:
-          path-to-document: https://github.com/margince/margince/blob/main/CLA.md
+          path-to-document: ${{ steps.document.outputs.url }}
           # One file per CLA version, so the record shows which text was accepted.
-          path-to-signatures: signatures/v1.json
+          # backend/gates/cla_test.go holds this, the sentence and CLA.md to one version.
+          path-to-signatures: signatures/v1.0.json
           remote-organization-name: margince
           remote-repository-name: cla-signatures
           branch: main
           allowlist: ${{ steps.allowlist.outputs.logins }}
-          custom-pr-sign-comment: I have read the Margince Contributor License Agreement, version 1.0, and I accept it.
+          custom-pr-sign-comment: I have read the Margince Contributor License Agreement version 1.0 and I accept its terms.
           custom-notsigned-prcomment: >-
             Thank you for your contribution. Before we can merge it, every author
             of a commit in this pull request needs to accept the
-            [Margince Contributor License Agreement, version 1.0](https://github.com/margince/margince/blob/main/CLA.md).
-            You keep the copyright in your work; the licensing section of
+            [Margince Contributor License Agreement, version 1.0](${{ steps.document.outputs.url }}).
+            Please read it first. You keep the copyright in your work; the licensing section of
             [CONTRIBUTING.md](https://github.com/margince/margince/blob/main/CONTRIBUTING.md)
             explains why we ask. To accept, post the sentence below as a comment
-            on this pull request. One acceptance covers every later contribution.
+            on this pull request, exactly as written. One acceptance covers every later contribution.
+            If you contribute on behalf of your employer, your acceptance does not bind
+            them: your employer accepts the agreement separately, by writing to legal@gradion.com.
           custom-allsigned-prcomment: Every author of this pull request has accepted the Margince Contributor License Agreement.
           create-file-commit-message: "chore: start the acceptance record for CLA version 1.0"
           signed-commit-message: "chore: $contributorName accepted CLA version 1.0 on margince/margince#$pullRequestNo"
