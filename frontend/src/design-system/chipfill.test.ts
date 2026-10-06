@@ -16,6 +16,7 @@ import {
   subjectOf,
 } from "../../scripts/lib/css-rules";
 import {
+  type DrawnElement,
   drawnElements,
   landsOn,
   overriddenInside,
@@ -222,22 +223,27 @@ describe("the chip fill's call sites", () => {
     expect(chips.length).toBeGreaterThan(0);
     expect(drawn.length).toBeGreaterThan(0);
 
+    // A type in the selector must be the element's own: `button.foo` inks no
+    // `<span className="foo">`, and an element whose tag is unknown takes only
+    // a rule that names no type.
+    const tagOf = (compound: string) => /^[a-z][\w-]*/.exec(compound)?.[0];
     const stateOf = (compound: string) =>
-      compound.replace(/\.[\w-]+/g, "").replace(/^[a-z]+/, "");
+      compound.replace(/\.[\w-]+/g, "").replace(/^[a-z][\w-]*/, "");
     const inked = allRules.filter((rule) => inks(rule.body).length > 0);
-    const names = (chipSelector: string, element: Set<string>) =>
+    const names = (chipSelector: string, element: DrawnElement) =>
       inked.some((rule) =>
         alternativesOf(rule.selector).some((selector) => {
           if (selector === chipSelector) return true;
           const parts = compounds(selector);
-          const own = classesOf(parts[0] ?? "");
+          const compound = parts[0] ?? "";
+          const own = classesOf(compound);
+          const tag = tagOf(compound);
           return (
             parts.length === 1 &&
             own.size > 0 &&
-            [...own].every((name) => element.has(name)) &&
-            ["", stateOf(subjectOf(chipSelector))].includes(
-              stateOf(parts[0] ?? ""),
-            )
+            [...own].every((name) => element.classes.has(name)) &&
+            (tag === undefined || tag === element.tag) &&
+            ["", stateOf(subjectOf(chipSelector))].includes(stateOf(compound))
           );
         }),
       );
@@ -251,15 +257,15 @@ describe("the chip fill's call sites", () => {
       );
       // A class only ever computed is drawn nowhere this can read, so it is
       // held to its own name rather than waved through.
-      const read =
+      const read: DrawnElement[] =
         carriers.length > 0
-          ? carriers.filter(({ textless }) => !textless).map((e) => e.classes)
-          : [wanted];
+          ? carriers.filter(({ textless }) => !textless)
+          : [{ classes: wanted, tag: undefined, textless: false }];
       for (const element of read) {
         if (names(selector, element)) continue;
         offenders.push(
           `${relative(join(here, ".."), chip.file)}: ${selector} paints ` +
-            `--bgChip under [${[...element].join(" ")}], which names no ink ` +
+            `--bgChip under [${[...element.classes].join(" ")}], which names no ink ` +
             `and reads in whatever its row is drawn in`,
         );
       }
@@ -287,6 +293,12 @@ describe("the chip fill's call sites", () => {
     expect(
       carrying("token-standalone").every(({ classes }) => classes.has("token")),
     ).toBe(true);
+    // An icon draws in the ink it inherits, so an `<svg>` is never textless,
+    // and every element read off a lowercase tag knows which tag it is.
+    const svgs = drawn.filter(({ tag }) => tag === "svg");
+    expect(svgs.length).toBeGreaterThan(0);
+    expect(svgs.every(({ textless }) => !textless)).toBe(true);
+    expect(carrying("token").every(({ tag }) => tag !== undefined)).toBe(true);
   });
 
   // The other way the fill goes wrong, and the one that broke the segmented

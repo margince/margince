@@ -77,11 +77,17 @@ export function renderedInside(root: string): Map<string, Set<string>[]> {
 // `.token` — and a meter's track, which holds only its fill, is told
 // apart from a chip that holds a label.
 //
-// Content is conservative. A component counts, because an icon draws in
-// `currentColor`; so does any expression this cannot follow to JSX. A class
-// that is only ever computed appears in no element at all, and the caller
-// must read that as unknown rather than as textless.
-export type DrawnElement = { classes: Set<string>; textless: boolean };
+// Content is conservative. A component or an `<svg>` counts, because an icon
+// draws in `currentColor`; so does any expression this cannot follow to JSX. A
+// class that is only ever computed appears in no element at all, and the
+// caller must read that as unknown rather than as textless. `tag` is the
+// element's own name, and unknown on a component, whose class lands on
+// whatever it renders.
+export type DrawnElement = {
+  classes: Set<string>;
+  tag: string | undefined;
+  textless: boolean;
+};
 
 export function drawnElements(root: string): DrawnElement[] {
   const drawn: DrawnElement[] = [];
@@ -92,6 +98,7 @@ export function drawnElements(root: string): DrawnElement[] {
       if (classes.length > 0) {
         drawn.push({
           classes: new Set(classes),
+          tag: intrinsicTagOf(node),
           textless: !drawsContent(node),
         });
       }
@@ -102,10 +109,24 @@ export function drawnElements(root: string): DrawnElement[] {
   return drawn;
 }
 
+function intrinsicTagOf(node: ts.Node): string | undefined {
+  const tag = ts.isJsxElement(node)
+    ? node.openingElement.tagName
+    : ts.isJsxSelfClosingElement(node)
+      ? node.tagName
+      : undefined;
+  return tag === undefined || isComponentTag(tag) ? undefined : tag.text;
+}
+
 function drawsContent(node: ts.Node): boolean {
-  if (ts.isJsxSelfClosingElement(node)) return isComponentTag(node.tagName);
-  if (!ts.isJsxElement(node)) return true;
-  if (isComponentTag(node.openingElement.tagName)) return true;
+  const tag = ts.isJsxElement(node)
+    ? node.openingElement.tagName
+    : ts.isJsxSelfClosingElement(node)
+      ? node.tagName
+      : undefined;
+  if (tag === undefined) return true;
+  if (isComponentTag(tag) || tag.text === "svg") return true;
+  if (!ts.isJsxElement(node)) return false;
   return node.children.some((child) =>
     ts.isJsxText(child)
       ? !child.containsOnlyTriviaWhiteSpaces
