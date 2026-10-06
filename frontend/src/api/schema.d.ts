@@ -25255,6 +25255,12 @@ export interface components {
             /** Format: uuid */
             contact_id: string;
             full_name: string;
+            /**
+             * @description The stakeholder's recorded buying role, EMPTY where the seat records
+             *     none: a deal_stakeholder may be seated without one, since the schema
+             *     requires a role only for billing_contact. A client that treats this as
+             *     a label to show should check it before showing it.
+             */
             role: string;
             /** @description Where to stream their portrait, or null — the client draws the deterministic monogram. */
             photo_url?: string | null;

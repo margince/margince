@@ -35726,7 +35726,13 @@ components:
       properties:
         contact_id: { type: string, format: uuid }
         full_name: { type: string }
-        role: { type: string }
+        role:
+          type: string
+          description: |
+            The stakeholder's recorded buying role, EMPTY where the seat records
+            none: a deal_stakeholder may be seated without one, since the schema
+            requires a role only for billing_contact. A client that treats this as
+            a label to show should check it before showing it.
         photo_url:
           type: [string, 'null']
           description: Where to stream their portrait, or null — the client draws the deterministic monogram.
