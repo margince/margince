@@ -163,9 +163,7 @@ describe("putting one change back", () => {
       }),
     );
 
-    expect(
-      await screen.findByText(/2 items could not/i),
-    ).toBeTruthy();
+    expect(await screen.findByText(/2 items could not/i)).toBeTruthy();
     await waitFor(() => expect(restored).toBe(true));
     expect(screen.getByText(/2 items could not/i)).toBeTruthy();
   });
