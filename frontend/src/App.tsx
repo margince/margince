@@ -19,7 +19,7 @@ import {
   EXTENSION_SCREEN,
   findExtension,
 } from "./app/extensions";
-import { CREATE_ID, IMPORT_ID } from "./app/nav";
+import { opensReservedPage } from "./app/nav";
 import {
   CommandPalette,
   useBuiltinCommands,
@@ -302,11 +302,11 @@ function ScreenPending() {
 }
 
 // Split out of the dispatch table purely to keep the deals list/detail split in
-// one place: `#/deals/new` carries CREATE_ID and is the LIST with its form open,
-// which is the same reading the shell's layout policy takes from that segment.
+// one place: `#/deals/new` is the reserved segment that is the LIST with its form
+// open, which is the same reading the shell's layout policy takes from it.
 function DealsRoute({ id, id2 }: Readonly<{ id?: string; id2?: string }>) {
-  if (!id || id === CREATE_ID) {
-    return <DealsScreen startCreating={id === CREATE_ID} />;
+  if (!id || opensReservedPage({ screen: "deals", id })) {
+    return <DealsScreen startCreating={id !== undefined} />;
   }
   return id2 === "room" ? <DealRoomPage dealId={id} /> : <DealScreen id={id} />;
 }
@@ -446,10 +446,10 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
     // An unknown segment falls back to overview rather than rendering an
     // empty page: a mistyped link should land somewhere, not nowhere.
     contacts: ({ id, id2 }) =>
-      id && id !== IMPORT_ID ? (
-        <ContactPageV2 id={id} tab={isContactTab(id2) ? id2 : "overview"} />
+      !id || opensReservedPage({ screen: "contacts", id }) ? (
+        <ContactsScreen importing={id !== undefined} />
       ) : (
-        <ContactsScreen importing={id === IMPORT_ID} />
+        <ContactPageV2 id={id} tab={isContactTab(id2) ? id2 : "overview"} />
       ),
     companies: ({ id }) =>
       id ? <CompanyScreen id={id} /> : <CompaniesScreen />,

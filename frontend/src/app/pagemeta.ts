@@ -2,7 +2,13 @@ import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useEntityName } from "../screens/entityref";
 import { EXTENSION_SCREEN, findExtension } from "./extensions";
-import { NAV, type NavLevelEntry, type NavSection, recordKindOf } from "./nav";
+import {
+  NAV,
+  type NavLevelEntry,
+  type NavSection,
+  recordKindOf,
+  reservedPageTitle,
+} from "./nav";
 import type { Route, Screen } from "./router";
 
 // What the chrome knows about a page before the page renders: its name, its
@@ -192,5 +198,8 @@ export function useRouteSubject(route: Route): string {
   if (unit) {
     return unit.name;
   }
-  return resolveTitle(route.screen, navItem?.labelKey, t);
+  const reserved = reservedPageTitle(route);
+  return reserved
+    ? t(reserved)
+    : resolveTitle(route.screen, navItem?.labelKey, t);
 }

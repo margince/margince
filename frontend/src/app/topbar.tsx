@@ -5,7 +5,13 @@ import { useLocale, useT } from "../i18n";
 import { SETTINGS_SCREEN } from "../screens/settingsnav";
 import { AccountMenu } from "./account";
 import { EXTENSION_SCREEN, findExtension } from "./extensions";
-import { entryLabel, NAV, type NavSection, recordKindOf } from "./nav";
+import {
+  entryLabel,
+  NAV,
+  type NavSection,
+  recordKindOf,
+  reservedPageTitle,
+} from "./nav";
 import { NotificationBell } from "./notificationbell";
 import {
   OFF_RAIL_TITLE_KEYS,
@@ -58,7 +64,7 @@ function useCrumbs(route: Route, section?: NavSection): readonly Crumb[] {
   const unit =
     route.screen === EXTENSION_SCREEN ? findExtension(route.id) : null;
 
-  if (recordKind && route.id) {
+  if ((recordKind && route.id) || reservedPageTitle(route)) {
     // A record's trail leads back to the list it was opened from, which is the
     // one place the reader can go that is not "somewhere else entirely".
     return [

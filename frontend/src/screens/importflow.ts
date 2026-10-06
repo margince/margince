@@ -270,6 +270,7 @@ export function useImportFlow(initialObject: ImportObject = "lead") {
       forgetRememberedRun();
     }
     if (recovery.data.kind === "run" && run === null && profile === null) {
+      setObject(recovery.data.value.run.object);
       setRun(recovery.data.value.run);
       setReport(recovery.data.value.report);
       setResumed(true);

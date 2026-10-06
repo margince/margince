@@ -16,8 +16,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { meFixture } from "../app/mefixture";
-import { parseHash, useHash, useRoute } from "../app/router";
-import { UnsavedGuard } from "../app/unsaved";
+import { parseHash, useRoute } from "../app/router";
 import { LocaleProvider } from "../i18n";
 import { ImportCard } from "./import";
 import { tabContent } from "./settings";
@@ -142,20 +141,6 @@ function stubRoutes(overrides: Record<string, () => Response> = {}) {
 // The settings screen hands the card the segment the shell is showing.
 function RoutedImport() {
   return <ImportCard subpage={useRoute().id2} />;
-}
-
-// The shell's guard holds the address it was showing while it asks.
-function GuardedImport() {
-  return (
-    <UnsavedGuard
-      address={useHash()}
-      onKeep={(held) => {
-        globalThis.location.hash = held;
-      }}
-    >
-      {(held) => <ImportCard subpage={parseHash(held).id2} />}
-    </UnsavedGuard>
-  );
 }
 
 const RUN_PAGE = "#/settings/import/run";
@@ -728,6 +713,20 @@ describe("the import card", () => {
       expect(screen.getByText(/This import ran on/)).toBeInTheDocument();
     });
 
+    it("shows the row type of the run it picked up, whatever the address asked", async () => {
+      localStorage.setItem(REMEMBERED_RUN_KEY, run.id);
+      globalThis.location.hash = `${RUN_PAGE}?object=company`;
+      stubRoutes(completedRunRoutes());
+      render(<RoutedImport />);
+
+      await screen.findByText("Import result");
+      expect(screen.getByRole("button", { name: "Prospects" })).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
+      expect(globalThis.location.hash).toBe(`${RUN_PAGE}?object=lead`);
+    });
+
     // Behind a verb that reads "Start", a recovered run is only as visible as
     // the reader's guess that there is something to finish.
     it("turns the settings row's verb into continuing the run it picked up", async () => {
@@ -911,22 +910,39 @@ describe("the import page", () => {
     expect(globalThis.location.hash).toBe(`${RUN_PAGE}?object=contact`);
   });
 
-  it("asks before leaving a profiled file that was never imported", async () => {
-    globalThis.location.hash = RUN_PAGE;
+  // Pressing the verb unmounts it, so focus would otherwise fall to the body.
+  it("hands focus to the page's title when the row's verb opens it", async () => {
+    globalThis.location.hash = "#/settings/import";
     stubRoutes();
-    render(<GuardedImport />);
-    await upload();
-    await screen.findByRole("row", { name: /Notes/ });
+    render(<RoutedImport />);
+    await openWizard();
+
+    const title = screen.getByRole("heading", { name: "Import file" });
+    expect(within(title).getByText("Import file")).toHaveFocus();
+  });
+
+  it("keeps the address's other parameters on the choice", async () => {
+    globalThis.location.hash = `${RUN_PAGE}?ask=1&object=company`;
+    stubRoutes();
+    render(<RoutedImport />);
 
     await userEvent.click(
-      screen.getByRole("link", { name: "Back to Data import" }),
+      await screen.findByRole("button", { name: "Contacts" }),
     );
 
+    expect(globalThis.location.hash).toBe(`${RUN_PAGE}?ask=1&object=contact`);
+  });
+
+  it("corrects a row type the address cannot name", async () => {
+    globalThis.location.hash = `${RUN_PAGE}?object=widgets`;
+    stubRoutes();
+    render(<RoutedImport />);
+
     expect(
-      await screen.findByRole("dialog", { name: "Discard unsaved changes?" }),
-    ).toBeInTheDocument();
-    // The guard holds the page it was showing, so the mapping is still there
-    // to keep.
-    expect(screen.getByRole("row", { name: /Notes/ })).toBeInTheDocument();
+      await screen.findByRole("button", { name: "Prospects" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    await waitFor(() =>
+      expect(globalThis.location.hash).toBe(`${RUN_PAGE}?object=lead`),
+    );
   });
 });

@@ -5,9 +5,9 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import type { components } from "../api/schema";
 import { IMPORT_ID } from "../app/nav";
-import { navigate, routeHash } from "../app/router";
+import { routeHash } from "../app/router";
 import { useUnsavedGuard } from "../app/unsaved";
-import { Button } from "../design-system/atoms";
+import { useArrivalFocus } from "../design-system/arrivalfocus";
 import { Callout } from "../design-system/callout";
 import { FileDropzone } from "../design-system/filedropzone";
 import { Heading } from "../design-system/heading";
@@ -83,7 +83,7 @@ function useImportVCards() {
 }
 
 /**
- * The button a contact presses to import address cards. A handed-over card is
+ * The link a contact follows to import address cards. A handed-over card is
  * first-party data — the contact gave it — which is what justifies storing their
  * details, and a human pressing this is what makes the import WRITE rather than
  * stage. So the verb lives on the contact list beside the other ways a contact
@@ -92,12 +92,13 @@ function useImportVCards() {
 export function VCardImportAction() {
   const t = useT();
   return (
-    <Button
+    <a
+      className="btn btn-ghost"
       data-testid="vcard-import"
-      onClick={() => navigate({ screen: "contacts", id: IMPORT_ID })}
+      href={routeHash({ screen: "contacts", id: IMPORT_ID })}
     >
       {t("vcardImport.action")}
-    </Button>
+    </a>
   );
 }
 
@@ -107,6 +108,7 @@ export function VCardImportPage() {
   const t = useT();
   const importer = useImportVCards();
   const [picked, setPicked] = useState<File | undefined>(undefined);
+  const title = useArrivalFocus<HTMLHeadingElement>();
   // Leaving mid-flight does not stop the write, it only loses the report that
   // says what the write did.
   useUnsavedGuard(importer.isPending);
@@ -117,7 +119,12 @@ export function VCardImportPage() {
         href={routeHash({ screen: "contacts" })}
         label={t("vcardImport.back")}
       />
-      <Heading size="xlarge" className="t-display vcard-import-title">
+      <Heading
+        size="xlarge"
+        className="t-display vcard-import-title"
+        ref={title}
+        tabIndex={-1}
+      >
         {t("vcardImport.title")}
       </Heading>
       <Panel>

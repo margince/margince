@@ -2,7 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { describe, expect, it } from "vitest";
-import { NAV, RAIL_LESS_SCREENS, railTrail, recordKindOf } from "./nav";
+import {
+  NAV,
+  RAIL_LESS_SCREENS,
+  railTrail,
+  recordKindOf,
+  reservedPageTitle,
+} from "./nav";
 import { parseHash, routeHash } from "./router";
 
 describe("the rail and a composed unit", () => {
@@ -132,9 +138,15 @@ describe("a row that leads to a record instead of being one", () => {
     expect(primary.ancestor).toBe(false);
   });
 
-  it("is the page on the import page, which is no record", () => {
+  it("steps back on the import page, which is a page below the list", () => {
     const [primary] = railTrail(parseHash("#/contacts/import"));
     expect(primary.activeId).toBe("contacts");
+    expect(primary.ancestor).toBe(true);
+  });
+
+  it("is the page on the deal list with its create form open", () => {
+    const [primary] = railTrail(parseHash("#/deals/new"));
+    expect(primary.activeId).toBe("deals");
     expect(primary.ancestor).toBe(false);
   });
 });
@@ -155,6 +167,15 @@ describe("the segments a screen reserves", () => {
     ["#/deals/import", "deal"],
   ])("reads %s as record kind %s", (hash, kind) => {
     expect(recordKindOf(parseHash(hash))).toBe(kind);
+  });
+
+  it.each([
+    ["#/contacts/import", "vcardImport.title"],
+    ["#/deals/new", undefined],
+    ["#/contacts/c-1", undefined],
+    ["#/leads/import", undefined],
+  ])("names %s's own page as %s", (hash, key) => {
+    expect(reservedPageTitle(parseHash(hash))).toBe(key);
   });
 });
 

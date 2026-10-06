@@ -218,13 +218,26 @@ export const GRIDDED_RECORD_SCREENS: ReadonlySet<Screen> = new Set([
 export const CREATE_ID = "new";
 export const IMPORT_ID = "import";
 
-const RESERVED_SEGMENTS: Readonly<Partial<Record<Screen, string>>> = {
-  deals: CREATE_ID,
-  contacts: IMPORT_ID,
+// A `titleKey` marks a page of its own below the list; without one the segment
+// is a state of the list itself (`#/deals/new` is the list with its form open).
+const RESERVED_SEGMENTS: Readonly<
+  Partial<Record<Screen, { id: string; titleKey?: MessageKey }>>
+> = {
+  deals: { id: CREATE_ID },
+  contacts: { id: IMPORT_ID, titleKey: "vcardImport.title" },
 };
 
 export function opensReservedPage(route: Route): boolean {
-  return route.id !== undefined && RESERVED_SEGMENTS[route.screen] === route.id;
+  return (
+    route.id !== undefined && RESERVED_SEGMENTS[route.screen]?.id === route.id
+  );
+}
+
+// The trail, the agent's subject and the rail read a reserved page's name here.
+export function reservedPageTitle(route: Route): MessageKey | undefined {
+  return opensReservedPage(route)
+    ? RESERVED_SEGMENTS[route.screen]?.titleKey
+    : undefined;
 }
 
 // The trail, the page heading, the agent's subject and the rail all ask this.
@@ -347,7 +360,7 @@ function primaryLevel(route: Route): NavTrailLevel {
         ...forkItems(group.headingKey),
       ],
     })),
-    ancestor: opensARecord(route),
+    ancestor: opensAPageBelow(route),
     path: [],
     badgeIds: BADGE_SCREENS,
     barIds: MOBILE_PRIMARY,
@@ -355,17 +368,19 @@ function primaryLevel(route: Route): NavTrailLevel {
 }
 
 // Whether the active row is only the SECTION the page sits in rather than the
-// page itself — which is true exactly when the route opens a RECORD, because a
-// record is the one thing a segment under a screen reaches that is a page of its
-// own. The test is the top bar's own: `recordKindOf` is what decides whether
-// the trail up there ends in a record and claims to be the page, so deriving the
-// row's answer from the same function is what keeps exactly one element claiming
-// `aria-current="page"`. Asking `route.id !== undefined` instead read every
-// segment as a page: `#/filters/companies` picks the object tab OF the filters
-// page, and the row that leads there was demoted to an ancestor of a page that
-// does not exist.
-function opensARecord(route: Route): boolean {
-  return recordKindOf(route) !== undefined;
+// page itself — which is true exactly when the route opens a page of its own
+// below the screen: a RECORD, or a reserved segment that names its own page
+// (`#/contacts/import`). The test is the top bar's own: `recordKindOf` and
+// `reservedPageTitle` decide whether the trail up there ends in a page below the
+// list and claims it, so deriving the row's answer from the same functions is
+// what keeps exactly one element claiming `aria-current="page"`. Asking
+// `route.id !== undefined` instead read every segment as a page:
+// `#/filters/companies` picks the object tab OF the filters page, and the row
+// that leads there was demoted to an ancestor of a page that does not exist.
+function opensAPageBelow(route: Route): boolean {
+  return (
+    recordKindOf(route) !== undefined || reservedPageTitle(route) !== undefined
+  );
 }
 
 // Which primary row a route makes current. It is the route's screen for every

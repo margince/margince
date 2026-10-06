@@ -69,19 +69,21 @@ describe("VCardImport", () => {
     window.location.hash = "";
   });
 
-  it("opens the import as a page of its own under contacts", async () => {
-    const user = userEvent.setup();
-    window.location.hash = "#/contacts";
+  // A link, so it opens in a new tab and folds into the narrow header menu as one.
+  it("opens the import as a page of its own under contacts", () => {
     render(<VCardImportAction />);
-    await user.click(screen.getByTestId("vcard-import"));
-    expect(window.location.hash).toBe("#/contacts/import");
+    expect(screen.getByRole("link", { name: "Import vCards" })).toHaveAttribute(
+      "href",
+      "#/contacts/import",
+    );
   });
 
   it("leads back to the contact list", () => {
     render(<VCardImportPage />);
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
-      "Import vCards",
-    );
+    const title = screen.getByRole("heading", { level: 1 });
+    expect(title).toHaveTextContent("Import vCards");
+    // The link that opened the page is gone, so the title holds focus.
+    expect(title).toHaveFocus();
     expect(
       screen.getByRole("link", { name: "Back to Contacts" }),
     ).toHaveAttribute("href", "#/contacts");

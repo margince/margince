@@ -6,7 +6,7 @@ import { useRef } from "react";
 import { useCan, useCanWrite } from "../app/capability";
 import { navigate, routeHash } from "../app/router";
 import { useUnsavedGuard } from "../app/unsaved";
-import { useUrlParams } from "../app/urlstate";
+import { useArrivalFocus } from "../design-system/arrivalfocus";
 import {
   Button,
   EmptyState,
@@ -30,6 +30,7 @@ import {
 } from "../i18n";
 import { problemMessageOf, useMe } from "./common";
 import { UndoErrors, UndoInterruptedNotice } from "./import.notices";
+import { useAddressedImportFlow } from "./importaddress";
 import { useImportFlow } from "./importflow";
 import { ImportMappingTable } from "./importmapping";
 import type {
@@ -38,8 +39,8 @@ import type {
   ImportReport,
   ImportRun,
 } from "./importtypes";
-import { identifyingFieldFor, isImportObject } from "./importtypes";
-import { settingsHref } from "./settingsrouting";
+import { identifyingFieldFor } from "./importtypes";
+import { IMPORT_RUN_SUBPAGE, settingsHref } from "./settingsrouting";
 import { useTagVocabulary } from "./tags.queries";
 import "./import.css";
 
@@ -55,9 +56,7 @@ import "./import.css";
 // an answer this installation holds: the row carries the verb, and the steps
 // that make up the act belong to the page that verb opens.
 const IMPORT_HOME = settingsHref("import");
-const IMPORT_RUN_ROUTE = { ...IMPORT_HOME, id2: "run" };
-const OBJECT_PARAM = "object";
-const openRun = () => navigate(IMPORT_RUN_ROUTE);
+const openRun = () => navigate({ ...IMPORT_HOME, id2: IMPORT_RUN_SUBPAGE });
 
 export function ImportCard({ subpage }: Readonly<{ subpage?: string }>) {
   const t = useT();
@@ -93,7 +92,7 @@ export function ImportCard({ subpage }: Readonly<{ subpage?: string }>) {
   if (!mayImport) {
     return null;
   }
-  return subpage === IMPORT_RUN_ROUTE.id2 ? <ImportRunPage /> : <ImportStart />;
+  return subpage === IMPORT_RUN_SUBPAGE ? <ImportRunPage /> : <ImportStart />;
 }
 
 function ImportStart() {
@@ -122,19 +121,20 @@ function ImportStart() {
 
 function ImportRunPage() {
   const t = useT();
-  const [params, setParams] = useUrlParams();
-  const asked = params.get(OBJECT_PARAM);
-  const flow = useImportFlow(isImportObject(asked) ? asked : undefined);
-  const chooseObject = (next: ImportObject) => {
-    flow.chooseObject(next);
-    setParams(new Map([[OBJECT_PARAM, next]]));
-  };
+  const flow = useAddressedImportFlow();
+  const title = useArrivalFocus<HTMLSpanElement>();
   return (
     <div>
       <RecordBack href={routeHash(IMPORT_HOME)} label={t("import.back")} />
-      <Panel title={t("import.title")}>
+      <Panel
+        title={
+          <span ref={title} tabIndex={-1}>
+            {t("import.title")}
+          </span>
+        }
+      >
         <PanelBody>
-          <ImportWizard flow={{ ...flow, chooseObject }} />
+          <ImportWizard flow={flow} />
         </PanelBody>
       </Panel>
     </div>
