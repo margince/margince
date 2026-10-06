@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { screen } from "storybook/test";
 import { Modal } from "../design-system/atoms";
+import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
 import type { ContractDraft } from "./contractform";
 import { ContractTermsFields } from "./contracttermsfields";
@@ -40,15 +41,24 @@ function Terms() {
   const [draft, setDraft] = useState(DRAFT);
   return (
     <StoryProviders>
-      <Modal open onClose={() => setDraft(DRAFT)} labelledBy="terms-title">
-        <Heading size="large" id="terms-title" className="modal-title">
-          {DRAFT.title}
-        </Heading>
-        <ContractTermsFields
-          draft={draft}
-          setDraft={setDraft}
-          currency={draft.currency}
-        />
+      <Modal
+        open
+        onClose={() => setDraft(DRAFT)}
+        labelledBy="terms-title"
+        intent="drawer"
+      >
+        <DrawerHead>
+          <Heading size="large" id="terms-title">
+            {DRAFT.title}
+          </Heading>
+        </DrawerHead>
+        <DrawerBody>
+          <ContractTermsFields
+            draft={draft}
+            setDraft={setDraft}
+            currency={draft.currency}
+          />
+        </DrawerBody>
       </Modal>
     </StoryProviders>
   );
