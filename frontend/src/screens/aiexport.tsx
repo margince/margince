@@ -146,12 +146,7 @@ export function ExportScenarioDialog({
               />
             )}
           </Field>
-          {/* The PII gate before copy or download. It stands as the CONTROL it
-            is: a Callout around it was the primitive doing a fieldset's job —
-            a notice says something about the surface, and a tick the reader
-            must set is not that. The tick is the design system's own, so the
-            words are half the click target rather than a label threaded to a
-            hand-written id, and they carry the consequence themselves. */}
+          {/* The PII gate before copy or download: a control to set, not a notice. */}
           <Checkbox
             label={t("aiexport.checklist")}
             checked={acknowledged}

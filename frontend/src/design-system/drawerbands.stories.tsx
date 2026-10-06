@@ -63,16 +63,16 @@ function BandedDrawer({ wide }: Readonly<{ wide: boolean }>) {
   );
 }
 
-// A form drawer: its body is the field stack and its foot the action row, the
-// shape the dialog footer pin also reads.
-function FormBandedDrawer({ wide }: Readonly<{ wide: boolean }>) {
+// A form drawer: its body is the field stack and its foot the action row. The
+// dialog footer pin leaves a band-body stack alone; the bands pin themselves.
+function FormBandedDrawer() {
   const titleId = useId();
   return (
     <Modal
       open
       onClose={() => undefined}
       labelledBy={titleId}
-      intent={wide ? "drawer-reading" : "drawer"}
+      intent="drawer-reading"
     >
       <DrawerHead>
         <Heading size="large" id={titleId} className="t-h2 modal-title">
@@ -153,12 +153,6 @@ const holdsItsWidth = async () => {
 /** A form in the reading drawer: the body band is the field stack and the
  *  foot band the action row, and the drawer never scrolls sideways. */
 export const FormBands: Story = {
-  render: () => <FormBandedDrawer wide />,
-  play: holdsItsWidth,
-};
-
-/** The same form in the standard drawer. */
-export const FormBandsStandard: Story = {
-  render: () => <FormBandedDrawer wide={false} />,
+  render: () => <FormBandedDrawer />,
   play: holdsItsWidth,
 };

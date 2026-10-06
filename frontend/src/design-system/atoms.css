@@ -444,6 +444,14 @@
     margin: calc(var(--space-1) * -1);
     padding: var(--space-1);
   }
+  /* The stack scrolls when it overflows, so no row may shrink to fit it. */
+  :where(.modal-form, .modal-drawer:not(.modal-drawer-split)):where(
+      :has(> .form-stack:not(.drawer-body) + .actions)
+    )
+    > .form-stack:where(:not(.drawer-body))
+    > * {
+    flex-shrink: 0;
+  }
 }
 /* On a phone a dialog is a full-screen sheet (plan §10.3). The 40px inset that
  * frames it on a desktop wastes the only two dimensions a phone is short of,
