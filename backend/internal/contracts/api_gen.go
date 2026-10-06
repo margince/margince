@@ -29895,7 +29895,12 @@ type Contact360CommitteeMember struct {
 
 	// PhotoUrl Where to stream their portrait, or null — the client draws the deterministic monogram.
 	PhotoUrl *string `json:"photo_url,omitempty"`
-	Role     string  `json:"role"`
+
+	// Role The stakeholder's recorded buying role, EMPTY where the seat records
+	// none: a deal_stakeholder may be seated without one, since the schema
+	// requires a role only for billing_contact. A client that treats this as
+	// a label to show should check it before showing it.
+	Role string `json:"role"`
 }
 
 // Contact360DealRole One stakeholder seat this contact holds on a deal.

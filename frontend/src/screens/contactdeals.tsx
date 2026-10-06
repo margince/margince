@@ -139,7 +139,9 @@ function DealCard({
                 src={member.photo_url}
               />
               <span>{member.full_name}</span>
-              <span className="t-caption">{readableRole(member.role)}</span>
+              {member.role && (
+                <span className="t-caption">{readableRole(member.role)}</span>
+              )}
             </div>
           ))}
         </div>
