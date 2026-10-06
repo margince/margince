@@ -16,6 +16,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
@@ -65,9 +66,11 @@ func contactCreateInputFromImporter(req crmcontracts.CreateContactRequest) (Crea
 }
 
 func contactCreateInputAdmitting(req crmcontracts.CreateContactRequest, importer bool) (CreateContactInput, error) {
-	if req.FullName == "" {
-		return CreateContactInput{}, &RequiredFieldError{Field: "full_name"}
+	fullName, err := httperr.RequireNonBlank("full_name", req.FullName)
+	if err != nil {
+		return CreateContactInput{}, err
 	}
+	req.FullName = fullName
 	if err := provenance.RefuseWireAdmitting(req.Source, req.SourceSystem, importer); err != nil {
 		return CreateContactInput{}, err
 	}
@@ -220,9 +223,11 @@ func companyCreateInputFromImporter(req crmcontracts.CreateCompanyRequest) (Crea
 }
 
 func companyCreateInputAdmitting(req crmcontracts.CreateCompanyRequest, importer bool) (CreateCompanyInput, error) {
-	if req.DisplayName == "" {
-		return CreateCompanyInput{}, &RequiredFieldError{Field: "display_name"}
+	displayName, err := httperr.RequireNonBlank("display_name", req.DisplayName)
+	if err != nil {
+		return CreateCompanyInput{}, err
 	}
+	req.DisplayName = displayName
 	if err := provenance.RefuseWireAdmitting(req.Source, req.SourceSystem, importer); err != nil {
 		return CreateCompanyInput{}, err
 	}

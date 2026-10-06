@@ -19808,7 +19808,7 @@ export interface components {
          *     host can be set before anything is bound to it.
          */
         AiProviderSettings: {
-            /** @description Where the provider is reached. Required on `openai_compatible` while a lane binds it, and on `jev_compatible` while the decisions lane binds it (the FULL decision endpoint, posted to as written). Optional elsewhere; empty means the adapter's compiled default. */
+            /** @description Where the provider is reached. Required on `openai_compatible` while a lane binds it, and on `jev_compatible` while the decisions lane binds it (the FULL decision endpoint, posted to as written). Optional elsewhere; empty means the adapter's compiled default. Refused on `gemini_vertex`, whose host follows from `location`. */
             base_url?: string;
             upstream?: components["schemas"]["AiOpenRouterUpstream"];
             /**

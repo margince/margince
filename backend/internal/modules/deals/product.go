@@ -22,6 +22,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -158,7 +159,11 @@ func (s *Store) UpdateProduct(ctx context.Context, id ids.ProductID, in UpdatePr
 func buildProductPatch(current crmcontracts.Product, in UpdateProductInput) (*storekit.Patch, error) {
 	p := storekit.NewPatch()
 	if in.Name != nil {
-		p.Set("name", current.Name, *in.Name)
+		name, err := httperr.RequireNonBlank("name", *in.Name)
+		if err != nil {
+			return nil, err
+		}
+		p.Set("name", current.Name, name)
 	}
 	if in.SKU != nil {
 		p.Set("sku", current.Sku, *in.SKU)

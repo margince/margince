@@ -29344,6 +29344,7 @@ components:
             Where the provider is reached. Required on `openai_compatible` while a lane binds it,
             and on `jev_compatible` while the decisions lane binds it (the FULL decision endpoint,
             posted to as written). Optional elsewhere; empty means the adapter's compiled default.
+            Refused on `gemini_vertex`, whose host follows from `location`.
         upstream:
           $ref: '#/components/schemas/AiOpenRouterUpstream'
         location:

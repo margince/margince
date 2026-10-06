@@ -13,6 +13,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -333,7 +334,11 @@ func buildLeadPatch(current crmcontracts.Lead, in UpdateLeadInput) (*storekit.Pa
 		return nil, false, err
 	}
 	if in.FullName != nil {
-		p.Set("full_name", current.FullName, *in.FullName)
+		name, err := httperr.RequireNonBlank("full_name", *in.FullName)
+		if err != nil {
+			return nil, false, err
+		}
+		p.Set("full_name", current.FullName, name)
 	}
 	if in.Email != nil {
 		parsed, err := values.ParseEmail(*in.Email)

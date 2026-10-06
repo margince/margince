@@ -52,7 +52,22 @@ const MaxBodyBytes = 1 << 20
 //
 //craft:ignore naked-any the JSON deserialization seam: the decode target is whichever contract request struct the handler owns
 func Decode(w http.ResponseWriter, r *http.Request, into any) bool {
-	err := DecodeOrRefusal(w, r, into)
+	return decodeWrite(w, r, into, false)
+}
+
+// DecodeClosed is Decode for a body whose contract closes its nested objects
+// (additionalProperties: false): a key no object on the way down declares is a
+// 422 naming its path rather than a value encoding/json drops. Endpoints opt in,
+// because other bodies carry nested keys their handlers have always ignored.
+//
+//craft:ignore naked-any the JSON deserialization seam: the decode target is whichever contract request struct the handler owns
+func DecodeClosed(w http.ResponseWriter, r *http.Request, into any) bool {
+	return decodeWrite(w, r, into, true)
+}
+
+//craft:ignore naked-any the JSON deserialization seam: the decode target is whichever contract request struct the handler owns
+func decodeWrite(w http.ResponseWriter, r *http.Request, into any, closed bool) bool {
+	err := decodeRefusal(w, r, into, closed)
 	if err == nil {
 		return true
 	}
@@ -86,6 +101,11 @@ func Decode(w http.ResponseWriter, r *http.Request, into any) bool {
 //
 //craft:ignore naked-any the JSON deserialization seam: the decode target is whichever contract request struct the handler owns
 func DecodeOrRefusal(w http.ResponseWriter, r *http.Request, into any) error {
+	return decodeRefusal(w, r, into, false)
+}
+
+//craft:ignore naked-any the JSON deserialization seam: the decode target is whichever contract request struct the handler owns
+func decodeRefusal(w http.ResponseWriter, r *http.Request, into any, closed bool) error {
 	raw, err := io.ReadAll(http.MaxBytesReader(w, r.Body, MaxBodyBytes))
 	if err != nil {
 		var tooLarge *http.MaxBytesError
@@ -109,6 +129,11 @@ func DecodeOrRefusal(w http.ResponseWriter, r *http.Request, into any) error {
 	// so REST and MCP agree on which keys are a field patch.
 	if kErr := datasource.RejectNonCanonicalKeys(raw, into); kErr != nil {
 		return Validation("body", "unknown_field", kErr.Error())
+	}
+	if closed {
+		if kErr := datasource.RejectUnknownNestedKeys(raw, into); kErr != nil {
+			return Validation("body", "unknown_field", kErr.Error())
+		}
 	}
 	dec := json.NewDecoder(bytes.NewReader(raw))
 	if err := dec.Decode(into); err != nil {

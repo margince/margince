@@ -16,6 +16,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
@@ -183,7 +184,11 @@ func contactChangeImages(
 func buildContactPatch(current crmcontracts.Contact, in UpdateContactInput) (*storekit.Patch, error) {
 	p := storekit.NewPatch()
 	if in.FullName != nil {
-		p.Set("full_name", current.FullName, *in.FullName)
+		name, err := httperr.RequireNonBlank("full_name", *in.FullName)
+		if err != nil {
+			return nil, err
+		}
+		p.Set("full_name", current.FullName, name)
 	}
 	if in.FirstName != nil {
 		p.Set("first_name", current.FirstName, *in.FirstName)

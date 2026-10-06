@@ -15,6 +15,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -109,7 +110,11 @@ func (s *Store) dealUpdatePatch(ctx context.Context, tx pgx.Tx, current crmcontr
 		return nil, err
 	}
 	if in.Name != nil {
-		p.Set(dealNameColumn, current.Name, *in.Name)
+		name, err := httperr.RequireNonBlank("name", *in.Name)
+		if err != nil {
+			return nil, err
+		}
+		p.Set(dealNameColumn, current.Name, name)
 	}
 	// The forecast fields are assigned only where the request actually moves
 	// them. Every other column may be re-set freely — the audit diff records a

@@ -79,7 +79,7 @@ func (h aiAdminHandlers) PreviewAiRouting(w http.ResponseWriter, r *http.Request
 		return
 	}
 	var next crmcontracts.AiRouting
-	if !httperr.Decode(w, r, &next) {
+	if !httperr.DecodeClosed(w, r, &next) {
 		return
 	}
 	draft, refused := fromContractAiRouting(next, sentRouting(r))
