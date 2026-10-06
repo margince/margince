@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { ListPlus, Mail, MailPlus, Send, Sparkles } from "lucide-react";
-import type { ReactNode } from "react";
+import { type ReactNode, type RefObject, useRef } from "react";
 import { calendarDay, middayInstant } from "../format/calendarday";
 import {
   formatDayMonth,
@@ -136,15 +136,34 @@ function DealCardCompany({
  */
 function DealOwner({
   owner: { id, name },
-}: Readonly<{ owner: Readonly<{ id: string; name: string }> }>) {
+  dealLink,
+}: Readonly<{
+  owner: Readonly<{ id: string; name: string }>;
+  dealLink: RefObject<HTMLAnchorElement | null>;
+}>) {
   const tip = useTooltip<HTMLSpanElement>(name);
   return (
-    <span
+    // biome-ignore lint/a11y/useKeyWithClickEvents: the keyboard path to the deal is the card's own link, which holds the card's one tab stop
+    <span // NOSONAR: forwards a pointer press to the deal's link; the mark itself is not a control
       className="deal-owner"
       role="img"
       aria-label={name}
       ref={tip.ref}
       {...tip.trigger}
+      // The mark sits above the deal's stretched link so its tip can open, so
+      // it hands a press on, modifier keys included, to keep the card one door.
+      onClick={(event) =>
+        dealLink.current?.dispatchEvent(
+          new MouseEvent("click", {
+            bubbles: true,
+            cancelable: true,
+            ctrlKey: event.ctrlKey,
+            metaKey: event.metaKey,
+            shiftKey: event.shiftKey,
+            altKey: event.altKey,
+          }),
+        )
+      }
     >
       <Avatar name={name} identity={id} />
       {tip.tip}
@@ -395,6 +414,7 @@ export function DealCard({
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const dealLink = useRef<HTMLAnchorElement>(null);
   // No `stalled` class: the warning Badge in the foot says it in words, and an
   // edge stripe saying the same thing is one statement drawn twice — the reader
   // who cannot see colour reads the badge, and the reader who can read both.
@@ -427,13 +447,14 @@ export function DealCard({
       )}
       <span className="deal-head t-caption">
         <DealCardCompany deal={deal} onOpen={onOpen} />
-        {deal.owner && <DealOwner owner={deal.owner} />}
+        {deal.owner && <DealOwner owner={deal.owner} dealLink={dealLink} />}
       </span>
       {/* The deal's own door, stretched over the card by CSS. It carries the
           NAME rather than sitting empty, so the accessible name of the link is
           the deal a reader is opening — an empty stretched anchor reads to a
           screen reader as a link with no text. */}
       <a
+        ref={dealLink}
         className="deal-name deal-open"
         href={href}
         // The press handler rides the ANCHOR, not the div around it: the div

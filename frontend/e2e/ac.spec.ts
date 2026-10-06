@@ -944,11 +944,17 @@ test("AC-pipeline-10: the bar under the pointer is the one that lights", async (
 // owner on hover, and the table gives the owner a column of its own.
 test("AC-pipeline-11: both views name a deal's owner", async ({ page }) => {
   await page.goto("/#/deals");
-  const card = page.locator('[data-deal="d-fleet"]');
+  const mark = page
+    .locator('[data-deal="d-fleet"]')
+    .getByRole("img", { name: "Lena Fischer" });
   // Playwright refuses to hover an element another one covers, so this also
   // holds the mark above the deal's link, which is stretched over the card.
-  await card.getByRole("img", { name: "Lena Fischer" }).hover();
+  await mark.hover();
   await expect(page.getByRole("tooltip")).toHaveText("Lena Fischer");
+  // Raised above the link, the mark still opens the deal like the rest of the card.
+  await mark.click();
+  await expect(page).toHaveURL(/#\/deals\/d-fleet$/);
+  await page.goto("/#/deals");
   await page.getByRole("button", { name: "Tabelle" }).click();
   const row = page.getByRole("row", { name: /Fleet retrofit/ });
   await expect(row.getByRole("cell", { name: "Lena Fischer" })).toBeVisible();

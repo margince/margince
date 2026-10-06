@@ -218,6 +218,23 @@ describe("DealCard + PipelineBoard", () => {
     expect(container.querySelector(".deal-owner")).toBeNull();
   });
 
+  // The mark sits above the deal's stretched link so its name tip can open,
+  // and a press on it still opens the deal like every other part of the card.
+  it("opens the deal from a press on the owner's mark", async () => {
+    const user = userEvent.setup();
+    const opened: string[] = [];
+    render(
+      <DealCard
+        deal={{ ...deal, owner: { id: "u-1", name: "Ada Lindqvist" } }}
+        href="#/deals/d1"
+        zone="Europe/Berlin"
+        onOpen={(d) => opened.push(d.id)}
+      />,
+    );
+    await user.click(screen.getByRole("img", { name: "Ada Lindqvist" }));
+    expect(opened).toEqual(["d1"]);
+  });
+
   it("draws no company slot at all for a deal that names none", () => {
     const { container } = render(
       <DealCard
