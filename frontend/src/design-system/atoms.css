@@ -368,9 +368,8 @@
   flex-direction: column;
   padding: 0;
 }
-/* The legacy SPLIT drawer: a reply beside the conversation it answers. Below
-   the fold width the conversation folds into a disclosure (composethread.css)
-   and the width follows it down. */
+/* The legacy SPLIT drawer: two columns side by side, its width following the
+   window down. */
 .modal-drawer-split {
   width: clamp(360px, 62vw, 1040px);
 }

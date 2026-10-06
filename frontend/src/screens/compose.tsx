@@ -1389,10 +1389,11 @@ export function ComposeModal({
   // resolves to the record's lead rather than being seeded, so reachability that
   // arrives after the first render is not stuck behind what existed before it.
   const [transportId, setTransportId] = useState(initialTransportId ?? "");
-  const transport =
-    transports.find((option) => option.id === transportId) ??
+  const openedOn =
     transports.find((option) => option.id === initialTransportId) ??
     transports[0];
+  const transport =
+    transports.find((option) => option.id === transportId) ?? openedOn;
   // A channel the reader picked, with the conversation a reply to it continues.
   // Mail is the only transport that can OPEN a conversation, so every other one
   // is anchored by nature.
@@ -1635,8 +1636,8 @@ export function ComposeModal({
   const anchorRead = useThreadProject(answering, open);
   const anchorActivity = anchorRead.activity;
   const conversation = useThreadMessages(open ? anchorActivity : undefined);
-  // An anchor named but not yet read. The pane holds its place on this, so
-  // the drawer does not open narrow and snap wide when the read answers. A
+  // An anchor named but not yet read. The column holds its place on this
+  // rather than arriving under the reader when the read answers. A
   // read that FAILED is not one still arriving: the pane lets go, and the
   // composer keeps answering the anchor it was given without drawing it.
   const anchorUnresolved =
@@ -1686,13 +1687,10 @@ export function ComposeModal({
   // composer there means — the account path asked them to name a recipient the
   // thread already knows, in front of a To field the draft would have filled.
   const groundable = !answering && entityType === "company" && !isChannelReply;
-  // What SHAPE the composer takes, split from what it GROUNDS. One flag used to
-  // answer both, so a reply inherited the account path's box — and an account
-  // that had mail lost the drawer that path was given. The shape is every
-  // record's, not the account's: a mail written from a contact, lead or deal
-  // keeps that record on screen beside it just as an account's does, so the
-  // same verb cannot change shape with the page it was pressed on.
-  const asDrawer = !isChannelReply;
+  // The box is what the composer opened as, on any record: a reading drawer for
+  // mail, a form for a channel reply. The dial never reshapes it mid-draft.
+  const asDrawer =
+    kind !== "message" && (openedOn === undefined || openedOn.id === "email");
   // The conversation rides beside the form only where there IS one and there is
   // room for a second column. A channel reply answers a live conversation the
   // provider owns, and has no thread of its own to draw.
@@ -1709,7 +1707,7 @@ export function ComposeModal({
   // resolves to a filed note collapses the column then — the one case that
   // still changes shape, and the honest one.
   const showConversation =
-    asDrawer &&
+    !isChannelReply &&
     ((answeringCorrespondence &&
       (conversation.messages.length > 0 ||
         conversation.pending ||
@@ -1719,9 +1717,7 @@ export function ComposeModal({
   // The ways in, when the reader has not taken one. Nothing to offer is not a
   // column: an account with no mail gets the plain drawer it had before.
   // While the lookup is still out, the column holds its place with the
-  // pending body — decided by the answer, the drawer opened narrow and
-  // snapped wide a beat later, a shape change under a reader already aiming
-  // at a field.
+  // pending body rather than arriving under a reader aiming at a field.
   // A read that failed keeps the column too, with the failure and a retry in
   // it: collapsed, the composer would offer a fresh mail as though the record
   // had no history, which is the surprise the choices exist to prevent.

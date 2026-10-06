@@ -85,6 +85,13 @@
   overflow-y: auto;
 }
 
+/* Each scroller here is the containing block for what it holds: a `.sr-only`
+   resolved against `.modal` instead escapes this clip and scrolls the drawer. */
+.compose-split > .compose-fields,
+.compose-thread-scroll {
+  position: relative;
+}
+
 /* The thread is one conversation rather than a record's whole chronology, so
    the date gutter that keeps an account's timeline in a straight column buys
    nothing here and costs a third of the measure. */

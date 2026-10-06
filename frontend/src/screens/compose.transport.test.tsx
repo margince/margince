@@ -215,6 +215,35 @@ describe("the composer's transport dial", () => {
     expect(sent.some((r) => r.key === "POST /emails")).toBe(false);
   });
 
+  // The box is what the composer opened as: the dial changes how the draft
+  // travels, never the dialog around a writer mid-draft.
+  it.each([
+    ["a channel reply as a form", "dispact", "Email", ".modal-form", true],
+    [
+      "mail as a reading drawer",
+      undefined,
+      "Dispact",
+      ".modal-drawer-wide",
+      false,
+    ],
+  ] as const)(
+    "opens %s and keeps it when the dial moves",
+    async (_, opened, next, box, mailAfter) => {
+      const user = userEvent.setup();
+      stubRoutes();
+      render(drawer([MAIL, CHAT], opened));
+
+      const dial = await screen.findByLabelText("Send via");
+      expect(screen.getByRole("dialog").matches(box)).toBe(true);
+      await pickOption(user, dial, next);
+
+      await waitFor(() =>
+        expect(screen.queryByLabelText("Subject") !== null).toBe(mailAfter),
+      );
+      expect(screen.getByRole("dialog").matches(box)).toBe(true);
+    },
+  );
+
   // The named conversation cannot be answered any more — disconnected, removed,
   // or off the end of the record's own window. Falling back silently is the
   // reader writing into a conversation they did not choose.

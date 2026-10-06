@@ -9,6 +9,7 @@ import "./composethread.css";
 
 // The column the draft answers from. composethread.css draws it beside the
 // draft where the drawer holds both columns, and behind this toggle where not.
+// Not Disclosure: a closed <details> hides the column where it must stand open.
 export function ConversationFold({
   choosing,
   children,
@@ -16,8 +17,8 @@ export function ConversationFold({
   const t = useT();
   const columnId = useId();
   const [open, setOpen] = useState(false);
-  const shown = choosing ? "compose.choicesHide" : "compose.conversationHide";
-  const hidden = choosing ? "compose.choicesShow" : "compose.conversationShow";
+  const shown = choosing ? "compose.choicesHide" : "compose.threadHide";
+  const hidden = choosing ? "compose.choicesShow" : "compose.threadShow";
   return (
     <div className="compose-fold" data-open={open}>
       <Button
