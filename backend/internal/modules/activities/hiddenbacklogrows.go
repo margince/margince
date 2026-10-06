@@ -50,10 +50,7 @@ const (
 func relaxationFor(rule HiddenRule, reader ids.UUID) (waitingRelaxation, bool) {
 	switch rule {
 	case HiddenRuleSetAside:
-		// The zero reader matches no reader_state row, which is how the
-		// set-aside figure is taken — the rule is relaxed by forgetting whose
-		// set-asides they were.
-		return waitingRelaxation{reader: ids.UUID{}}, true
+		return waitingRelaxation{reader: reader, keepSetAside: true}, true
 	case HiddenRuleNotSales:
 		return waitingRelaxation{reader: reader, keepNotSales: true}, true
 	case HiddenRulePastHorizon:

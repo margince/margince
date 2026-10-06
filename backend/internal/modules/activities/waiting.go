@@ -316,7 +316,8 @@ func (s *Store) WaitingRepliesBefore(ctx context.Context, asOf time.Time, before
 				messageSnoozeLiftedSQL(fmt.Sprintf("$%d", instant), backContent),
 				fmt.Sprintf("$%d", arg(readerAddresses)),
 				neverRelaxed,
-				olderThan(before, arg)), args...)
+				olderThan(before, arg),
+				neverRelaxed), args...)
 		if err != nil {
 			return err
 		}

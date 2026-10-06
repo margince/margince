@@ -288,12 +288,12 @@ var waitingRepliesSQL = `
 	   -- ownership events rather than a clause here. Until that exists the
 	   -- judgement stands until its reader withdraws it, and the contract says
 	   -- so rather than promising the re-arm.
-	   AND NOT EXISTS (
+	   AND (%[19]s OR NOT EXISTS (
 	         SELECT 1 FROM activity_reader_state mine
 	          WHERE mine.activity_id = a.id
 	            AND mine.reader_id = $%[9]d
 	            AND (mine.state = 'not_mine'
-	              OR (mine.state = 'snoozed' AND NOT %[15]s)))
+	              OR (mine.state = 'snoozed' AND NOT %[15]s))))
 	 GROUP BY a.id, a.kind, a.subject, a.occurred_at
 	 -- NEWEST first, which is the opposite of how the rows are then shown.
 	 --
