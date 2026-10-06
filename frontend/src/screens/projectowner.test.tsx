@@ -16,6 +16,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import { AssignProjectOwnerAction } from "./projectowner";
 import type { Project } from "./projects.form";
@@ -140,6 +141,39 @@ describe("AssignProjectOwnerAction", () => {
     expect(invalidateSpy).toHaveBeenCalledWith(
       expect.objectContaining({ queryKey: ["project", "proj-1"] }),
     );
+  });
+
+  it("names the picked colleague in the toast when the roster is gone by then", async () => {
+    let release: () => void = () => {};
+    stubApi(
+      {
+        body: { ...project, owner_id: "u-42", version: 6 },
+        held: new Promise<void>((resolve) => {
+          release = resolve;
+        }),
+      },
+      [],
+    );
+    const user = userEvent.setup();
+    const { client } = render(
+      <ToastProvider>
+        <AssignProjectOwnerAction project={project} />
+        <ToastRegion />
+      </ToastProvider>,
+    );
+
+    const panel = await openPicker(user);
+    await user.click(await panel.findByRole("option", { name: "Jane Doe" }));
+    act(() =>
+      client
+        .getQueryCache()
+        .find({ queryKey: ["users"] })
+        ?.reset(),
+    );
+    await waitFor(() => expect(panel.queryAllByRole("option")).toHaveLength(0));
+    release();
+
+    expect(await screen.findByText("Assigned to Jane Doe")).toBeInTheDocument();
   });
 
   it("marks the current owner, and picking them again writes nothing", async () => {

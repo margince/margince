@@ -192,10 +192,21 @@ export function walkedTo(
   if (key === "End") {
     return stepEnabled(rows, last, -1);
   }
+  // An index past the rows names no row, so the walk starts from the edge.
+  const at = current > last ? -1 : current;
   const step = key === "ArrowDown" ? 1 : -1;
-  const from = current === -1 ? (step === 1 ? 0 : last) : current + step;
+  const from = at === -1 ? (step === 1 ? 0 : last) : at + step;
   const next = stepEnabled(rows, from, step);
-  return next === -1 ? current : next;
+  return next === -1 ? at : next;
+}
+
+/** The row the arrows are on, back to none when the rows shrink under it. */
+export function useActiveRow(rowCount: number) {
+  const [active, setActive] = useState(-1);
+  if (active >= rowCount && active !== -1) {
+    setActive(-1);
+  }
+  return [active < rowCount ? active : -1, setActive] as const;
 }
 
 export function useSuggestList({
@@ -217,9 +228,9 @@ export function useSuggestList({
 }>): SuggestList & { frame: ReturnType<typeof useAnchoredPopup> } {
   const listboxId = useId();
   const [open, setOpen] = useState(false);
-  const [active, setActive] = useState(-1);
 
   const matches = matchingSuggestions(suggestions, typed, taken);
+  const [active, setActive] = useActiveRow(matches.length);
   // Nothing to offer is not a broken list, it is a field with no help — and a
   // control that renders an empty popup, or a chevron over nothing, tells a
   // reader there is something to open. The whole apparatus stands down.
@@ -229,7 +240,7 @@ export function useSuggestList({
   const close = useCallback(() => {
     setOpen(false);
     setActive(-1);
-  }, []);
+  }, [setActive]);
 
   const frame = useAnchoredPopup(anchorRef, popupRef, listOpen, close);
   useDismissOnOutsidePress(listOpen, close, anchorRef, popupRef);

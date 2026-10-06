@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { api } from "../api/client";
 import { ifMatch, requireVersion } from "../api/version";
 import {
@@ -40,6 +40,8 @@ export function AssignProjectOwnerAction({
   // The shared roster rather than a search, so the list opens with names.
   const roster = useRoster("user", open);
   const partial = useRosterPartial("user", open);
+  // The toast lands after the popover closes, when the roster may be gone.
+  const pickedName = useRef("");
 
   const mutation = useUpdateRecord<Project>({
     update: async (values) => {
@@ -60,7 +62,8 @@ export function AssignProjectOwnerAction({
     recordId: project.id,
     savedMessage: (updated) =>
       t("project.assignOwnerDone", {
-        name: memberName(roster.data, updated.owner_id ?? "") ?? "",
+        name:
+          memberName(roster.data, updated.owner_id ?? "") ?? pickedName.current,
       }),
     onDone: () => setOpen(false),
   });
@@ -103,6 +106,7 @@ export function AssignProjectOwnerAction({
           done();
           return;
         }
+        pickedName.current = option.name;
         mutation.mutate({ values: { owner_id: option.id }, rows: {} });
       }}
       pending={mutation.isPending}

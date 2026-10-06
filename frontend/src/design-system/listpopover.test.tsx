@@ -114,6 +114,31 @@ describe("ListPopover on a desktop", () => {
     ).toEqual(["Otto Fischer"]);
   });
 
+  it("lets go of the active row when the options shrink under it", async () => {
+    const user = userEvent.setup();
+    const onPick = vi.fn();
+    const popover = (options: readonly ListPopoverOption[]) => (
+      <ListPopover
+        label="Assign owner"
+        title="Colleagues"
+        searchLabel="Search colleagues"
+        options={options}
+        onPick={onPick}
+      />
+    );
+    const { rerender } = render(popover(OWNERS));
+    await user.click(screen.getByRole("button", { name: "Assign owner" }));
+    await user.keyboard("{End}");
+    expect(activeName()).toBe("Lena Brandt");
+
+    rerender(popover(OWNERS.slice(0, 2)));
+    expect(activeName()).toBeNull();
+    await user.keyboard("{Enter}");
+    expect(onPick).not.toHaveBeenCalled();
+    await user.keyboard("{ArrowDown}");
+    expect(activeName()).toBe("Anna Weber");
+  });
+
   it("picks the active row on Enter, closes on done and hands focus back", async () => {
     const user = userEvent.setup();
     const onPick = vi.fn((_: ListPopoverOption, done: () => void) => done());

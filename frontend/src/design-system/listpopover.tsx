@@ -21,7 +21,12 @@ import { Heading } from "./heading";
 import { Modal } from "./modal";
 import { Popover } from "./popover";
 import { type CandidateSearch, useCandidateSearch } from "./recordpicker";
-import { type ListKey, SuggestOption, walkedTo } from "./suggestlist";
+import {
+  type ListKey,
+  SuggestOption,
+  useActiveRow,
+  walkedTo,
+} from "./suggestlist";
 import "./listpopover.css";
 
 export type ListPopoverOption = Readonly<{
@@ -184,11 +189,11 @@ function ListSearch({
   const { locale } = useLocale();
   const listboxId = useId();
   const [term, setTerm] = useState("");
-  const [active, setActive] = useState(-1);
   const found = useCandidateSearch(list.search, term);
   const rows = list.search
     ? found.candidates
     : matchingTerm(list.options ?? [], term);
+  const [active, setActive] = useActiveRow(rows.length);
   const optionId = (index: number) => `${listboxId}-option-${index}`;
   useActiveOptionVisible(true, active, listboxId);
 
