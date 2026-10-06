@@ -161,8 +161,9 @@ function readerFor(
     return ts.isBinaryExpression(n) ? binaryTexts(n) : listTexts(n);
   };
   // An empty list may be a call that computes a string (`look(state)`): unread.
+  // Not a raw array: it renders comma-joined, which is no class list.
   const listTexts = (n: ts.Node): string[] =>
-    ts.isCallExpression(n) || ts.isArrayLiteralExpression(n)
+    ts.isCallExpression(n)
       ? lists(n).map((l) => l.join(" ").replaceAll("*", CUT) || CUT)
       : [CUT];
   const binaryTexts = (n: ts.BinaryExpression): string[] => {

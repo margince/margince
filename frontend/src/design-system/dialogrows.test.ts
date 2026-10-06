@@ -872,6 +872,8 @@ const A = () => <><Drawer /><div role="dialog" /><Trigger /><Typed /></>;`;
     ${'"m" + (a ? "x y" : "z")'}                  | ${[["mx", "y"], ["mz"]]}
     ${'cx("a") + " b"'}                           | ${[["a", "b"]]}
     ${'"x-" + look(s)'}                           | ${[["x-*"]]}
+    ${'`x #{["form-stack", "y"]}`'}               | ${[["x"]]}
+    ${'`#{["a", "b"].join(" ")} c`'}              | ${[["a", "b", "c"]]}
   `("reads $expression as its branches", ({ expression, variants }) => {
     expect(classCall(expression)()).toEqual(variants);
   });
