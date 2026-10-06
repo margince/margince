@@ -54,6 +54,11 @@ describe("what was handled for the reader", () => {
     expect(
       table.querySelectorAll("button, input, [role='button']").length,
     ).toBe(0);
+    // The record link is the only anchor, so a verb drawn as a link still fails.
+    const links = Array.from(table.querySelectorAll("a"), (a) =>
+      a.getAttribute("href"),
+    );
+    expect(links).toEqual(["#/contacts/p1"]);
   });
 
   // The one row on this panel that carries a verb, and why it must.
