@@ -11443,6 +11443,8 @@ export const en = {
   "worklist.because.opened_overdue":
     "recorded after its deadline, from imported history",
   "worklist.because.meeting_soon": "starting soon",
+  "worklist.because.meeting_booked": "meeting booked",
+  "worklist.because.meeting_booked.value": "meeting booked for {value}",
   "worklist.because.meeting_unprepared": "nothing prepared",
   "worklist.because.outcome_unrecorded": "no outcome recorded",
   "worklist.because.response_overdue": "reply overdue",
