@@ -27,6 +27,7 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 	"testing"
@@ -141,16 +142,26 @@ func TestEveryWorkflowJobCarriesATimeoutCeiling(t *testing.T) {
 // fetches every browser and would have escaped a list naming chromium.
 var unpinnedInstalls = []string{"playwright install"}
 
-// boundedByCommand asks whether every line that installs carries the bound
-// ITSELF, rather than the run merely containing the word somewhere: a run whose
-// first line is `timeout 3m true` and whose second installs unbounded would
-// otherwise read as bounded.
+// shellSeparators cut a run into the commands it actually executes. A line is
+// not a command: `timeout 1m true; pnpm exec playwright install` bounds `true`
+// and installs unbounded, and the same holds for an unbounded fallback after
+// `||`.
+var shellSeparators = regexp.MustCompile(`[;&|]+|\n`)
+
+// boundedByCommand asks whether every command that installs carries the bound
+// itself.
+//
+// `--kill-after` is required, not decoration: plain `timeout` sends TERM at the
+// deadline and then waits, so a child that ignores it runs until the job's own
+// ceiling and the failure reports as the lane rather than as the install. A
+// bound that can be ignored is a request.
 func boundedByCommand(run string) bool {
-	for _, line := range strings.Split(run, "\n") {
-		if !isUnpinnedInstall(line) {
+	for _, cmd := range shellSeparators.Split(run, -1) {
+		if !isUnpinnedInstall(cmd) {
 			continue
 		}
-		if !strings.HasPrefix(strings.TrimSpace(line), "timeout ") {
+		cmd = strings.TrimSpace(cmd)
+		if !strings.HasPrefix(cmd, "timeout ") || !strings.Contains(cmd, "--kill-after") {
 			return false
 		}
 	}
@@ -185,14 +196,20 @@ func TestTheBoundThatCountsDependsOnWhereTheStepRuns(t *testing.T) {
 		bound     bool
 	}{
 		{"workflow, step key", workflowStep{Run: "pnpm exec playwright install chromium", TimeoutMinutes: 6}, false, true},
-		{"workflow, command", workflowStep{Run: "timeout 5m pnpm exec playwright install chromium"}, false, true},
+		{"workflow, command", workflowStep{Run: "timeout --kill-after=30s 5m pnpm exec playwright install chromium"}, false, true},
+		// TERM with no escalation: a child ignoring it runs to the job's ceiling.
+		{"a bound that can be ignored", workflowStep{Run: "timeout 5m pnpm exec playwright install chromium"}, false, false},
 		{"workflow, neither", workflowStep{Run: "pnpm exec playwright install chromium"}, false, false},
 		// The key GitHub refuses on a composite step: a file carrying it fails
 		// to load, so the scan must not read it as a bound.
 		{"composite, step key", workflowStep{Run: "pnpm exec playwright install chromium", TimeoutMinutes: 6}, true, false},
-		{"composite, command", workflowStep{Run: "timeout 5m pnpm exec playwright install chromium"}, true, true},
+		{"composite, command", workflowStep{Run: "timeout --kill-after=30s 5m pnpm exec playwright install chromium"}, true, true},
 		// The word is in the run, but not on the line that installs.
-		{"the bound is elsewhere", workflowStep{Run: "timeout 3m true\npnpm exec playwright install chromium"}, true, false},
+		{"the bound is on another line", workflowStep{Run: "timeout --kill-after=30s 3m true\npnpm exec playwright install chromium"}, true, false},
+		// Same line, different command: the bound belongs to `true`.
+		{"the bound is on another command", workflowStep{Run: "timeout --kill-after=30s 1m true; pnpm exec playwright install chromium"}, true, false},
+		// An unbounded fallback after a bounded attempt.
+		{"the fallback is unbounded", workflowStep{Run: "timeout --kill-after=30s 1m pnpm exec playwright install chromium || pnpm exec playwright install chromium"}, true, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			probe := &testing.T{}

@@ -71,28 +71,29 @@ runs:
       # The exit code is recorded because the retry below is conditional on it.
       run: |
         set +e
-        timeout 5m pnpm exec playwright install-deps chromium
+        timeout --kill-after=30s 5m pnpm exec playwright install-deps chromium
         code=$?
         echo "code=$code" >> "$GITHUB_OUTPUT"
         exit $code
 
-    # Retried only when apt FAILED, never when it was killed. Expiry kills it
-    # mid-transaction and dpkg's frontend lock stays held, so a second attempt
-    # straight after one reports "could not get lock" — a different fault from
-    # the one that stopped the install, in place of it. A fast failure releases
-    # the lock and is worth another connection.
+    # Retried only when apt FAILED, never when it was killed — 124 on expiry,
+    # 137 when the escalation had to force it. A kill lands mid-transaction and
+    # dpkg's frontend lock stays held, so a second attempt straight after one
+    # reports "could not get lock": a different fault in place of the one that
+    # stopped the install. A fast failure releases the lock and is worth another
+    # connection.
     - name: Install the system libraries Chromium needs (retry)
-      if: steps.deps.outcome == 'failure' && steps.deps.outputs.code != '124'
+      if: steps.deps.outcome == 'failure' && steps.deps.outputs.code != '124' && steps.deps.outputs.code != '137'
       working-directory: ${{ inputs.working-directory }}
       shell: bash
-      run: timeout 5m pnpm exec playwright install-deps chromium
+      run: timeout --kill-after=30s 5m pnpm exec playwright install-deps chromium
 
     # The step above is continue-on-error so a failure can be retried, which
     # means nothing has failed yet when the retry is the step that got skipped.
     # Without this the action would finish GREEN with the libraries missing and
     # the screens would fail later, or render wrong and pass.
     - name: Refuse to continue without the libraries
-      if: steps.deps.outcome == 'failure' && steps.deps.outputs.code == '124'
+      if: steps.deps.outcome == 'failure' && (steps.deps.outputs.code == '124' || steps.deps.outputs.code == '137')
       shell: bash
       run: |
         echo "::error::the system libraries did not install inside their bound, and a retry would \
@@ -105,11 +106,11 @@ runs:
       continue-on-error: true
       working-directory: ${{ inputs.working-directory }}
       shell: bash
-      run: timeout 2m pnpm exec playwright install chromium
+      run: timeout --kill-after=30s 2m pnpm exec playwright install chromium
 
     # The download takes no lock, so its retry is unconditional.
     - name: Download the Chromium build (retry)
       if: steps.browser.outcome == 'failure'
       working-directory: ${{ inputs.working-directory }}
       shell: bash
-      run: timeout 2m pnpm exec playwright install chromium
+      run: timeout --kill-after=30s 2m pnpm exec playwright install chromium
