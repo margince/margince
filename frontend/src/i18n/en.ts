@@ -738,7 +738,6 @@ export const en = {
   "brief.readings.unavailable.leads": "Tasks unavailable",
   "brief.readings.unavailable.decisions": "Source unavailable",
   "brief.feed.incomplete": "No items loaded. Some work could not be checked.",
-  "brief.feed.fullWorklist": "Open full Worklist",
   "brief.week.workRecorded": "Work completed this week.",
   "brief.week.leads_one": "{count} lead assigned.",
   "brief.week.leads_other": "{count} leads assigned.",

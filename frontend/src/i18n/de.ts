@@ -763,7 +763,6 @@ export const de = {
   "brief.readings.unavailable.decisions": "Quelle nicht verfügbar",
   "brief.feed.incomplete":
     "Keine Einträge geladen. Ein Teil der Arbeit konnte nicht geprüft werden.",
-  "brief.feed.fullWorklist": "Vollständige Worklist öffnen",
   "brief.week.workRecorded": "Diese Woche wurde Arbeit erledigt.",
   "brief.week.leads_one": "{count} Lead zugewiesen.",
   "brief.week.leads_other": "{count} Leads zugewiesen.",
