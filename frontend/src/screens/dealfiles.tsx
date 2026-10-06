@@ -8,7 +8,7 @@ import { Badge, Button, OverflowMenu } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelRow } from "../design-system/panel";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
-import { useToast } from "../design-system/toast";
+import { undoAction, useToast } from "../design-system/toast";
 import { formatDateAbbrev } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -290,7 +290,7 @@ function useFileVerbs(dealId: string, attachmentId: string) {
       // Undo is the whole of the way back rather than a second write that
       // approximates one.
       toast.show(t("dealfiles.hidden"), {
-        action: { kind: "undo", label: t("common.undo"), onAct: () => unhide.mutate() },
+        action: undoAction(t("common.undo"), () => unhide.mutate()),
       });
     },
   });

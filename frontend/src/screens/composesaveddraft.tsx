@@ -14,7 +14,7 @@ import { ifMatch } from "../api/version";
 import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { paragraphsFrom } from "../design-system/richtext";
-import { type Toast, type ToastId, useToast } from "../design-system/toast";
+import { type Toast, useOwnToast, useToast } from "../design-system/toast";
 import { replySubject } from "../format/replysubject";
 import { useT } from "../i18n";
 import { problemCodeOf, problemMessageOf, throwProblem } from "./common";
@@ -250,13 +250,11 @@ export function useSavedDraft(input: {
   const decided = useRef(new Set<string>());
   // Reopening the composer puts the draft back on screen with its own Delete,
   // so the "Draft saved" toast, if it is still up, has said its piece.
-  const savedToast = useRef<ToastId | null>(null);
+  const savedToast = useOwnToast();
   const sends = useRef(0);
   useEffect(() => {
-    if (!open || savedToast.current === null) return;
-    toast.dismiss(savedToast.current);
-    savedToast.current = null;
-  }, [open, toast]);
+    if (open) savedToast.withdraw();
+  }, [open, savedToast]);
   const onRestore = input.onRestore;
   const typed = wroteSomething(fields, defaults);
   useEffect(() => {
@@ -306,12 +304,11 @@ export function useSavedDraft(input: {
       if (ask.sends !== sends.current) return;
       queryClient.setQueryData(draftKey(ask.anchor), saved);
       setChangedElsewhere(false);
-      savedToast.current = toast.show(t("compose.savedDraftSaved"), {
+      savedToast.show(t("compose.savedDraftSaved"), {
         action: {
           kind: "undo",
           label: t("compose.savedDraftDelete"),
           onAct: () => {
-            savedToast.current = null;
             deleteFromToast({
               queryClient,
               toast,

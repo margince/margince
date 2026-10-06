@@ -214,8 +214,7 @@ export function TeamsCard() {
       if (error) throwProblem(error);
     },
     onSuccess: (_archived, id) => {
-      // The name is read BEFORE the roster refetch lands, or the row it comes
-      // from is already gone by the time the sentence is built.
+      // Read BEFORE the roster refetch lands, which takes the named row away.
       const name = teamName(teams.data, id);
       qc.invalidateQueries({ queryKey: ["teams"] });
       toast.show(t("users.teamArchived", { name }), {

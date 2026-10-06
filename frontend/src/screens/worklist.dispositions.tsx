@@ -216,9 +216,8 @@ export function usePutDown(item: WorklistItem) {
             action: {
               kind: "undo",
               label: t("worklist.disposition.undo"),
-              // A failed undo needs saying. The toast dismisses itself the
-              // moment the action is pressed, so without this the row stays
-              // hidden and the only way back has just left the screen.
+              // A failed undo needs saying: the toast is gone once Undo is
+              // pressed, so silence would leave the row hidden with no way back.
               onAct: () =>
                 clear.mutate(
                   { activityId: item.id, scope: undoScope(disposition) },

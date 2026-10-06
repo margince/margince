@@ -51,6 +51,11 @@ export type ToastAction = Readonly<{
   onAct: () => void;
 }>;
 
+/** The undo a confirmation carries, for a caller whose take-back is one call. */
+export function undoAction(label: string, onAct: () => void): ToastAction {
+  return { kind: "undo", label, onAct };
+}
+
 /** Names one `show`, so a caller can withdraw its own message and no other. */
 export type ToastId = number;
 
@@ -217,6 +222,29 @@ export function useToast(): Toast {
 }
 
 /**
+ * One caller's own message: `withdraw` takes back the last one it showed, and
+ * never a message somebody else put on screen since.
+ */
+export function useOwnToast() {
+  const toast = useToast();
+  const own = useRef<ToastId | null>(null);
+  return useMemo(
+    () => ({
+      show: (message: ReactNode, options?: ToastOptions) => {
+        own.current = toast.show(message, options);
+      },
+      withdraw: () => {
+        if (own.current !== null) {
+          toast.dismiss(own.current);
+          own.current = null;
+        }
+      },
+    }),
+    [toast],
+  );
+}
+
+/**
  * Where a confirmation appears: fixed to the foot of the viewport, centred, and
  * portalled to the body.
  *
@@ -283,7 +311,9 @@ export function ToastRegion() {
       const same = region.querySelector<HTMLElement>(
         `[data-toast-control="${control}"]`,
       );
-      (same ?? region.querySelector<HTMLElement>("[data-toast-control]"))?.focus();
+      (
+        same ?? region.querySelector<HTMLElement>("[data-toast-control]")
+      )?.focus();
     }
     setFocusInside(region.contains(document.activeElement));
   }, [shownId, region]);

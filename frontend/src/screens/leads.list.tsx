@@ -1,7 +1,7 @@
 // The leads list: the queue a rep works from, as a table or a board. The
 // page a row opens lives in leads.tsx; the presentation both share sits in
 // leadpresentation.tsx.
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { usePageName } from "../app/pagemeta";
@@ -11,7 +11,7 @@ import { currentParams, useUrlParams } from "../app/urlstate";
 import { Badge, SegmentedControl } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { CellStrip } from "../design-system/listtable";
-import { type ToastId, useToast } from "../design-system/toast";
+import { useOwnToast } from "../design-system/toast";
 import { formatDateAbbrev, formatNumber } from "../format/format";
 import { leadIdentityName } from "../format/leadname";
 import { useLocale, useT } from "../i18n";
@@ -261,8 +261,7 @@ function LeadsWorkbench({
   // What the last bulk write did to a row the current view then stopped
   // showing — a successful assign out of "Mine" must never look like nothing
   // happened (or like a failure).
-  const toast = useToast();
-  const assignedAway = useRef<ToastId | null>(null);
+  const assignedAway = useOwnToast();
   const showingMine = state.query.filters.owner_id === viewerId;
   // Only ids the list currently holds count as selected: a row that left the
   // result set (refetched away, paged out, filtered out) must not linger as
@@ -482,10 +481,7 @@ function LeadsWorkbench({
                 );
                 // Each run says its own thing; a sentence about the last one
                 // must not stand beside this one's rows.
-                if (assignedAway.current !== null) {
-                  toast.dismiss(assignedAway.current);
-                  assignedAway.current = null;
-                }
+                assignedAway.withdraw();
                 const moved = outcomes.filter((o) => !o.error);
                 if (
                   action.kind === "assign" &&
@@ -493,12 +489,10 @@ function LeadsWorkbench({
                   action.ownerId !== viewerId &&
                   moved.length > 0
                 ) {
-                  // The verb goes through `action` rather than into the
-                  // message: the region draws it, so it is one control on one
-                  // ground rather than a `Button` hand-placed on the toast's
-                  // dark plate, and the region withdraws the message once it
-                  // has been pressed.
-                  assignedAway.current = toast.show(
+                  // The verb goes through `action`: the region draws it as one
+                  // control on one ground, not a `Button` hand-placed on the
+                  // toast's dark plate, and withdraws the message once pressed.
+                  assignedAway.show(
                     t("lead.assignedAway", {
                       names: moved.map((o) => o.name).join(", "),
                       owner: action.ownerName,
