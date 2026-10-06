@@ -51,6 +51,7 @@ import { useListsAvailable } from "./lists.queries";
 import {
   filterStateFrom,
   filterTreeOf,
+  openableTree,
   type SavedView,
   useSavedView,
   useSaveView,
@@ -60,17 +61,6 @@ import { DeleteViewAction, RenameViewAction } from "./viewactions";
 import "./filters.css";
 
 type Reread = () => Promise<QueryObserverResult<SavedView>>;
-
-/**
- * The tree a view opens on, or null when this page cannot open it: archived,
- * over a record type no builder reads, or holding no filter this editor reads.
- */
-function openableTree(view: SavedView): Node | null {
-  if (view.archived_at || tabOfViewResource(view.resource) === undefined) {
-    return null;
-  }
-  return filterTreeOf(view);
-}
 
 export function OpenedViewPage({
   tab,

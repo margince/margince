@@ -108,9 +108,11 @@ async function sentOf(input: RequestInfo | URL, init?: RequestInit) {
   const method = request?.method ?? init?.method ?? "GET";
   let body: unknown;
   if (method !== "GET" && method !== "DELETE") {
-    body = request
-      ? await request.clone().json()
-      : JSON.parse(String(init?.body));
+    // A write may carry no body at all, as a list visit does.
+    const text = request
+      ? await request.clone().text()
+      : String(init?.body ?? "");
+    body = text === "" ? undefined : JSON.parse(text);
   }
   return {
     method,

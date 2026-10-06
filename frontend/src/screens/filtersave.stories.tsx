@@ -62,7 +62,7 @@ export const SavedViewChosen: Story = {
 };
 
 // Who can find it and what it is for appear once the answer is a list that
-// other people work from.
+// colleagues work from.
 export const LiveListChosen: Story = {
   render: () => {
     routes(true);

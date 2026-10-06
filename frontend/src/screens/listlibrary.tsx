@@ -60,22 +60,22 @@ export const RECORD_TYPE_LABEL: Record<ListRecordType, MessageKey> = {
 };
 
 /**
- * What a list is, in the reader's words rather than the wire's. Neutral: a
- * kind is a fact, and the accent belongs to the page's one primary action.
+ * What a list is, in the reader's words rather than the wire's. A Live List
+ * keeps itself current, so it alone wears info's tint and the breathing dot;
+ * emerald stays the page's one primary action and indigo an agent's proposal.
  */
 export function ListKindBadge({
   list,
 }: Readonly<{ list: Pick<List, "list_type"> }>) {
   const t = useT();
-  return (
-    <Badge>
-      {t(
-        list.list_type === "dynamic"
-          ? "lists.kind.live"
-          : "lists.kind.shortlist",
-      )}
-    </Badge>
-  );
+  if (list.list_type === "dynamic") {
+    return (
+      <Badge tone="info" live>
+        {t("lists.kind.live")}
+      </Badge>
+    );
+  }
+  return <Badge>{t("lists.kind.shortlist")}</Badge>;
 }
 
 /** A list that needs somebody, said on the row; a healthy one says nothing. */

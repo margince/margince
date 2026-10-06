@@ -10,6 +10,7 @@ import {
   Users,
 } from "lucide-react";
 import type { MessageKey } from "../i18n/en";
+import { opensAFocusedFiltersPage } from "../screens/filtersaddress";
 import { CUSTOM_SCREEN, customNavItems } from "./custom";
 import { SCREEN_ENTITY } from "./entity";
 import { EXTENSION_SCREEN } from "./extensions";
@@ -31,6 +32,7 @@ export type {
   NavTrailLevel,
 } from "./subnav";
 export {
+  currentClaim,
   entryLabel,
   navEntryHref,
   navEntryRoute,
@@ -343,23 +345,20 @@ function primaryLevel(route: Route): NavTrailLevel {
         ...forkItems(group.headingKey),
       ],
     })),
-    ancestor: opensARecord(route),
+    ancestor: opensARecord(route) || opensAFocusedFiltersPage(route),
     path: [],
     badgeIds: BADGE_SCREENS,
     barIds: MOBILE_PRIMARY,
   };
 }
 
-// Whether the active row is only the SECTION the page sits in rather than the
-// page itself — which is true exactly when the route opens a RECORD, because a
-// record is the one thing a segment under a screen reaches that is a page of its
-// own. The test is the top bar's own: `SCREEN_ENTITY` is what decides whether
-// the trail up there ends in a record and claims to be the page, so deriving the
-// row's answer from the same map is what keeps exactly one element claiming
-// `aria-current="page"`. Asking `route.id !== undefined` instead read every
-// segment as a page: `#/filters/companies` picks the object tab OF the filters
-// page, and the row that leads there was demoted to an ancestor of a page that
-// does not exist.
+// The active row is only an ANCESTOR exactly where the top bar's trail ends in a
+// page below it, and the two are decided by the same predicates: a record
+// (`SCREEN_ENTITY`, the trail's record branch) and a page below the Filters and
+// views library (`opensAFocusedFiltersPage`, the trail's filters branch). One
+// predicate per question is what keeps every `aria-current="page"` on the same
+// page; `route.id !== undefined` would demote the row on a segment that opens
+// no page, such as `#/filters/views`, the library itself.
 function opensARecord(route: Route): boolean {
   return route.id !== undefined && SCREEN_ENTITY[route.screen] !== undefined;
 }
@@ -385,6 +384,10 @@ function activeRowFor(route: Route): string {
   // no screen and marks no row, which is the honest answer for one.
   if (route.screen === CUSTOM_SCREEN) {
     return route.id ?? route.screen;
+  }
+  // One list is a page of the library that lists it, and has no row of its own.
+  if (route.screen === "lists") {
+    return "filters";
   }
   return route.screen;
 }

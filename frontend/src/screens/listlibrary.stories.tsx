@@ -16,9 +16,9 @@ import type { SavedView } from "./savedviews.queries";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The one table every library group draws: a saved view and a list read alike,
-// the name a link stretched over its row, the kind neutral, and only a list
-// counted. Shared adds who can find each row; a phone folds the facts under
-// the name.
+// the name a link stretched over its row, and only a list counted. A kind is
+// neutral except a Live List's, which wears info's tint and the live dot.
+// Shared adds who can find each row; a phone folds the facts under the name.
 const meta: Meta = { title: "Patterns/Filters and views/Library table" };
 export default meta;
 
@@ -79,6 +79,13 @@ export const OnlyMeRows: Story = {
 };
 
 export const SharedRowsWithWho: Story = {
+  render: () => table(shared, "shared"),
+};
+
+// The Live List badge's tint and dot are colour-mixed from the theme's tokens,
+// so they are checked in the dark theme too.
+export const SharedRowsDark: Story = {
+  globals: { theme: "dark" },
   render: () => table(shared, "shared"),
 };
 

@@ -97,23 +97,26 @@ describe("the filter builder's address", () => {
     );
   });
 
-  // The row IS the page, on every address this screen answers. `#/filters` and
-  // `#/filters/companies` are one page with a different object tab open rather
-  // than a page and something under it — the screen reads that segment as which
-  // vocabulary to offer — so nothing deeper is there to claim what the reader is
-  // looking at, and the row keeps `aria-current="page"` either way. Only a typed
-  // hash or a bookmark reaches the second one today, which is exactly why it
-  // needs a test: nothing in the app links to it for anyone to notice.
-  it("marks itself current, as the page, with or without an object tab", () => {
-    for (const route of [
-      { screen: "filters" },
-      { screen: "filters", id: "companies" },
-    ] as const) {
+  // The row is the page on the library, whichever group an address scrolls
+  // to, and only leads to the page below it: a filter, an opened view, a Live
+  // List's filter or one list. There the top bar's trail ends in that page and
+  // claims it, so the row says `aria-current="true"` instead.
+  it.each([
+    [{ screen: "filters" }, false],
+    [{ screen: "filters", id: "views" }, false],
+    [{ screen: "filters", id: "lists" }, false],
+    [{ screen: "filters", id: "companies" }, true],
+    [{ screen: "filters", id: "contacts", id2: "v1" }, true],
+    [{ screen: "filters", id: "list", id2: "L1" }, true],
+    [{ screen: "lists", id: "L1" }, true],
+  ] as const)(
+    "marks itself current on %o, an ancestor: %s",
+    (route, ancestor) => {
       const [primary] = railTrail(route);
       expect(primary.activeId).toBe("filters");
-      expect(primary.ancestor).toBe(false);
-    }
-  });
+      expect(primary.ancestor).toBe(ancestor);
+    },
+  );
 });
 
 // The other half of the same rule, and why it is not simply "no row is ever an

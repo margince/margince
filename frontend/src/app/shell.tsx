@@ -27,6 +27,7 @@ import { SCREEN_ENTITY } from "./entity";
 import { EXTENSION_SCREEN, findExtension } from "./extensions";
 import { LicenseBanner } from "./licensebanner";
 import {
+  currentClaim,
   entryLabel,
   MOBILE_PRIMARY,
   NAV,
@@ -373,11 +374,11 @@ export function WorkspaceRail({
     };
   }, [sheetOpen]);
 
-  // A nav destination that the phone bar hides behind More: on those routes More
-  // is the current tab, since the row that would carry the state is not rendered.
-  const inSheet = NAV.some(
-    (item) => item.screen === route.screen && !MOBILE_PRIMARY.has(item.screen),
-  );
+  // A destination the phone bar hides behind More: there More is the current
+  // tab, and claims what the row it stands in for would (`currentClaim`).
+  const sheetRow = NAV.find((item) => item.screen === level.shown.activeId);
+  const inSheet = sheetRow ? !MOBILE_PRIMARY.has(sheetRow.screen) : false;
+  const moreClaim = inSheet ? currentClaim(level.shown) : undefined;
 
   // The agent is APP-level chrome: there is one of it, and it belongs to the
   // whole session rather than to any destination. A drilled-in level is
@@ -433,11 +434,10 @@ export function WorkspaceRail({
           aria-label={sheetOpen ? t("shell.closeMenu") : t("shell.more")}
           aria-expanded={sheetOpen}
           // The state has to reach a screen reader, not just the eye: the hidden
-          // route's own link is out of the accessibility tree at this width, so
-          // without this nothing in the bar reports the current page. Dropped once
-          // the sheet is open, because the real row is then visible and carrying
-          // it — two elements claiming the current page is worse than none.
-          aria-current={inSheet && !sheetOpen ? "page" : undefined}
+          // row is out of the accessibility tree at this width. Dropped once the
+          // sheet is open, because the real row is then visible and carrying it
+          // — two elements claiming the current page is worse than none.
+          aria-current={sheetOpen ? undefined : moreClaim}
           onClick={() => setSheetOpen((open) => !open)}
         >
           {sheetOpen ? <X aria-hidden /> : <Menu aria-hidden />}

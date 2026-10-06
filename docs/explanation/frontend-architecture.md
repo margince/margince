@@ -126,8 +126,11 @@ cells. `MOBILE_PRIMARY` (`home`, `contacts`, `deals`) rides the bar; everything
 else lives behind **More**, which expands the same element into a sheet. One
 nav element means one navigation landmark and no second item list to keep in
 sync. The hidden routes' own rows are `display:none` at this width, so
-**More** carries `aria-current="page"` for them. It drops the attribute once the
-sheet is open, so two elements never both claim the current page.
+**More** carries the claim the hidden row would: `aria-current="page"` on the
+destination itself. On a page below it (a record, a focused Filters and views
+page, one list) the top bar's trail claims the page, so **More** says `"true"`.
+It drops the attribute once the sheet is open, so two elements never both claim
+the current page.
 
 The **middle** cell is the agent, which is not a destination: it reports
 instead of navigating, and it belongs to the whole session, not to one screen.

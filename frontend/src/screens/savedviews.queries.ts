@@ -10,7 +10,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch } from "../api/version";
 import { throwProblem } from "./common";
-import type { ViewResource } from "./filtersaddress";
+import { tabOfViewResource, type ViewResource } from "./filtersaddress";
 import { decode, encode, type Node } from "./segmentpredicate";
 
 export type SavedView = components["schemas"]["SavedView"];
@@ -102,6 +102,18 @@ const FILTER_KEY = "filter";
 export function filterTreeOf(view: SavedView): Node | null {
   const stored = view.query as Record<string, unknown> | undefined;
   return decode(stored?.[FILTER_KEY]);
+}
+
+/**
+ * The tree a view opens on, or null when no page can open it: archived, over a
+ * record type no builder reads, or holding no filter this editor reads. The
+ * opened view and the top-bar trail both ask, so they agree on a gone view.
+ */
+export function openableTree(view: SavedView): Node | null {
+  if (view.archived_at || tabOfViewResource(view.resource) === undefined) {
+    return null;
+  }
+  return filterTreeOf(view);
 }
 
 /**

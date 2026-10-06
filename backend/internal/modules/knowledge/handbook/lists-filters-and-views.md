@@ -70,8 +70,8 @@ Also called: my contacts, my deals, my accounts, assigned to me, owned by me.
 
 ### How do I filter by a colleague's name?
 To filter a list by one colleague in Margince, use **Filters and views**: the owner filters on the list screens offer only you, your teams and **Unassigned**.
-1. Open **Filters and views** and pick the **Record type**: **Contacts**, **Companies** or **Deals**.
-2. Choose **Add clause**, then under **Select field** pick **Owner**.
+1. Open **Filters and views**, press **New filter** and pick **Contacts**, **Companies** or **Deals**.
+2. Press **Add condition**, then under **Select field** pick **Owner**.
 3. Keep the operator **is** (or **is any of** for several colleagues) and pick the colleague.
 The matching rows show under **Matching records**.
 Also called: records owned by a teammate, another user's deals, filter by sales rep.
@@ -178,7 +178,7 @@ Also called: save a filter, save a search, bookmark a list, smart list, saved li
 
 ### How do I open a saved view?
 To open a saved view in Margince, open the list it was saved on and press its tab in the header row, beside **All** and **Mine**. The list takes the saved filters, search, sort and **Show archived** at once.
-A view saved on **Filters and views** is opened there instead, with **Load saved filter**.
+A view saved on **Filters and views** opens there instead: press its name in the library.
 Also called: use my saved list, go back to my filter.
 
 ### How do I rename or delete a saved view?
@@ -186,13 +186,14 @@ To rename or delete a saved view in Margince, open the list it was saved on and 
 1. To rename one, choose **Rename** on its row, change the **Name** and press **Save**.
 2. To delete one, choose **Delete** on its row, then **Delete view**. Its tab goes; the records it listed do not change.
 **Manage views** appears once you have saved a view for that list.
+A view saved on **Filters and views** has no tab: press **⋯** on its row in the library, or beside its name once it is open, and choose **Rename**, or **Delete view** and then **Delete view** again to confirm.
 Also called: remove a saved view, edit a view, change a view's name.
 
 ### Can I share a saved view with my team?
 Not the view itself: a saved view in Margince stays private to whoever saved it. To share the same filter, save it as a Live List.
-1. Open **Filters and views**, choose **Build**, and build the filter, or load your saved one with **Load saved filter**.
-2. Press **Save as Live List**, give it a **Name**, and under **Who can find it** pick **A team** or **Everyone**.
-3. Press **Save list**. Your colleagues find it under **Shared views**.
+1. On **Filters and views**, open your saved view and choose **Save as Live List** under **⋯** beside its name. For a new filter, press **Save** and choose **Live List** under **Keep it as**.
+2. Give it a **Name**, and under **Who can find it** pick **A team** or **Everyone**.
+3. Press **Save list**. Your colleagues find it in the library under **Shared**.
 Each colleague sees only the records they could already see. Sharing a single record is different: see [Seats, roles and who can see what](seats-roles-and-access.md).
 Also called: team view, shared list, share a filter, share a segment.
 
@@ -201,30 +202,30 @@ Also called: team view, shared list, share a filter, share a segment.
 **Filters and views** in the sidebar (under **Work**) is the Margince screen for
 a filter a list's toolbar cannot express: several conditions, "any of" instead of
 "all of", groups inside groups, custom fields, and a colleague other than you.
-It covers **Contacts**, **Companies**, **Deals** and **Leads**. The filter is
-dynamic ("Dynamic: updates on every event"): it is re-run every time you look,
-so it always shows today's matches.
+It covers **Contacts**, **Companies**, **Deals** and **Leads**. A filter is
+re-run every time you look, so it always shows today's matches.
 
-The screen has three sections under **Show**. **My views** holds what is yours
-alone: your private lists and your saved filters. **Shared views** holds the
-lists shared with you or with everyone. **Build** is the filter builder.
+The screen opens on the library of every saved view and list you can use, cut
+by search and record type. **Only me** holds your saved views and the lists only
+you can find, and **Shared** holds the lists shared with a team or everyone.
+With Lists off, one group, **Saved views**, holds your views.
 
 ### How do I build a filter?
-To build a detailed filter in Margince, open **Filters and views** in the sidebar, choose **Build**, pick the **Record type**, and choose **Add clause**.
-1. Pick the **Record type**: **Contacts**, **Companies**, **Deals** or **Leads**.
-2. Choose **Add clause**, pick a field under **Select field**, an operator (**is**, **is not**, **is any of**, **contains**…) and the value.
-<!-- prose:allow caps quotes the Match mode labels as the screen shows them -->
-3. Add more. **Match mode** is **All (AND)** or **Any (OR)**; **Add group** nests a group.
-4. The count ("12 contacts match") and **Matching records** update live.
-Groups nest at most 4 levels deep.
+To build a detailed filter in Margince, open **Filters and views** in the sidebar, press **New filter** and pick **Contacts**, **Companies**, **Deals** or **Leads**.
+1. The new filter opens with two ways to start. Under **Build it condition by condition**, press **Add condition**.
+2. Pick a field under **Select field**, an operator (**is**, **is not**, **is any of**, **contains**…) and the value.
+3. Press **Add condition** for more. The **and** between conditions means all of them must match; press it to switch to **or**, any of them. From two conditions on, **⋯** under them → **Add a group** nests a group, at most 4 levels deep.
+4. Once a condition is complete, the count ("12 contacts match") and **Matching records** appear and update as you go.
+To change the record type, press **Contacts**, **Companies**, **Deals** or **Leads** at the top. With conditions in place it asks first, because switching clears them.
 Also called: advanced search, segment, query builder.
 
 ### How do I build a filter by describing it in plain words?
-To build a filter from a sentence in Margince, open **Filters and views** → **Build**, type the list under **Describe the list in plain words** ("companies in Germany with no activity in the last 45 days") and press **Propose filter**.
-1. The proposed conditions appear in the builder as ordinary clauses you can edit. If your filter already has conditions, choose **Replace current filter**, **Add to current filter** or **Discard proposal**.
-2. Anything the fields cannot express, such as "likely to buy", is listed under **Could not use** with the reason.
-3. Check the match count, then save. Nothing is saved until you press **Save view** or **Save as Live List**.
-This needs an AI model configured under **Settings** → **AI models**.
+To build a filter from a sentence in Margince, open **Filters and views**, press **New filter** and pick the record type. Type the records you want under **Describe the contacts you want** (or companies, deals, leads) and press **Propose conditions**.
+1. The proposed conditions land in the builder as dashed rows marked **Proposed**, and the count includes them. Each is an ordinary condition: change its field, operator or value and it becomes yours.
+2. Above them, **Keep all** makes every proposed row yours, **Replace my conditions** keeps only the proposal when you had conditions of your own, and **Undo** puts the filter back.
+3. Anything the fields cannot express, such as "likely to buy", is listed under **Could not use** with the reason.
+4. Check the match count, then save. Saving keeps proposed rows as plain conditions, and nothing is saved until you press **Save**.
+Once the filter has conditions, the box folds under **Describe changes in plain words**. This needs an AI model configured under **Settings** → **AI models**.
 The AI never receives your CRM records. It is sent your sentence, the record type, today's date, your language, and the fields you can filter on (names, types, operators and picklist options, with the custom-field labels you may read). If you can read companies, it is also sent your own company's offer and market, so a phrase like "our target market" can be read.
 Also called: natural-language filter, AI filter, describe a segment.
 
@@ -237,10 +238,11 @@ Custom fields carry a **Custom field** badge. Your own company is never in a com
 Also called: filter fields, which attributes can I filter.
 
 ### How do I save a filter from Filters and views?
-To save a filter built on **Filters and views**, finish at least one clause and press **Save view** beside the match count, then give it a **Name** and press **Save**.
-To use it again, open **Filters and views** → **My views** and click it, or choose it under **Load saved filter** in **Build**.
-To keep it as a named set your colleagues can work from, press **Save as Live List** instead; see [Live Lists and Shortlists](#live-lists-and-shortlists).
-A filter saved here does not appear as a tab on the list screens, and a list's saved view does not appear under **Load saved filter**.
+To save a filter built on **Filters and views**, finish at least one condition and press **Save** at the foot. **Save this filter** opens.
+1. Type a **Name**, and under **Keep it as** choose **Saved view** (only you can find it) or **Live List** (see [Live Lists and Shortlists](#live-lists-and-shortlists)).
+2. Press **Save view** or **Save list**. A saved view opens as its own page, and a Live List opens the list's page.
+To use a saved view again, press its name in the library. It opens showing its conditions as a sentence: press **Edit conditions**, change them, then press **Save changes**, or **Save as new view** to keep both. If the view changed elsewhere since you opened it, Margince saves nothing and offers **Reload view**.
+A filter saved here does not appear as a tab on the list screens, and a list's saved view does not appear in the library.
 Also called: save a segment, keep an advanced search.
 
 ## Selecting several records
@@ -289,20 +291,20 @@ now, so records join and leave it by themselves as they change. A
 **Shortlist** is picked by hand: a record is on it because somebody put it
 there, and it stays until somebody takes it off.
 
-Lists live on **Filters and views**. A list only you can find is under **My
-views**. A shared list is under **Shared views**, with its type, record type,
-how many members you can see, its steward and who it is shared with.
+Lists live on **Filters and views**. A list only you can find is under **Only
+me**. A shared list is under **Shared**, with its kind, record type, how many
+members you can see and who can find it.
 
 ### How do I make a Live List?
-To make a Live List in Margince, build its filter on **Filters and views** → **Build** and press **Save as Live List**.
-1. Pick the **Record type** and add clauses until **Matching records** shows the records you want.
-2. Press **Save as Live List**, type a **Name**, and choose **Who can find it**.
+To make a Live List in Margince, build its filter on **Filters and views** → **New filter**, press **Save** and choose **Live List** under **Keep it as**.
+1. Pick the record type and add conditions until **Matching records** shows the records you want.
+2. Press **Save**, type a **Name**, choose **Live List** and choose **Who can find it**. **Purpose (optional)** says what it is for.
 3. Press **Save list**. The list's own page opens.
 Also called: dynamic list, smart list, saved segment, audience.
 
 ### How do I start a Shortlist?
-To start a Shortlist in Margince, open **Filters and views** → **Shared views** and press **New Shortlist**; from **My views**, **New Shortlist** starts one only you can find.
-1. Type a **Name**, pick the **Record type**, and if you like say **What it is for**.
+To start a Shortlist in Margince, open **Filters and views** and press **New Shortlist** beside **New filter**.
+1. Type a **Name**, pick the **Record type**, and if you like say **What it is for**. **Who can find it** starts on **A team**; pick **Only me** to keep it to yourself.
 2. Press **Create list**.
 3. Add records from a record's page: press **Add to Shortlist**, pick the Shortlist (or **A new Shortlist…**), add a note under **Why (optional)** and press **Add**.
 To add many records at once, tick them on the list screen and pick the Shortlist under **Add to Shortlist** in the bulk bar.
@@ -336,7 +338,7 @@ A Live List's members are worked out again every time you open it, so the list i
 Also called: refresh a list, list sync, when does my list update.
 
 ### What changed on a list since my last visit?
-Margince remembers when you last opened each list. On **Shared views**, a Live List that changed since then shows "+3 / −1": three joined, one left. On a Live List's page, "Since your visit on" and the date give the same counts. They name the newest three records that joined and that left as links ("+2 more" for the rest), and say how often the filter changed. Each member that joined since your visit carries a **New** badge.
+Margince remembers when you last opened each list. In the **Filters and views** library, a Live List that changed since then shows "+3 / −1": three joined, one left. On a Live List's page, "Since your visit on" and the date give the same counts. They name the newest three records that joined and that left as links ("+2 more" for the rest), and say how often the filter changed. Each member that joined since your visit carries a **New** badge.
 **What changed**, at the bottom of the list's page, is the full history. It shows who was added or taken off and how: by hand, in a bulk change, by an automation, or because the record was archived or restored. It also shows "Joined as of" and "Left as of" entries from the 15-minute check, and every change to the list itself. You see only the records you are allowed to see.
 Also called: list history, list activity, who joined, who left, new members.
 
@@ -355,11 +357,11 @@ The notice **Filter no longer works** means a field the filter names has changed
 Also called: broken list, list warning, archived custom field.
 
 ### How do I change a Live List's filter?
-To change which records a Margince Live List holds, open the list and press **Edit filter**. The builder opens on the list's filter, with a notice naming the list.
-1. Change, add or delete clauses; the match count updates as you go.
+To change which records a Margince Live List holds, open the list and press **Edit filter**, or choose **Edit filter** under **⋯** on its row in the library. Its conditions open with a notice naming the list.
+1. Change, add or delete conditions; the match count updates as you go. **Discard changes** puts the list's filter back.
 2. Press **Save to** and the list's name. The dialog names any automations that use the list, because they act on the new filter from the next check. Press **Save filter**; the list's page opens.
 3. From then on records join and leave by the new filter, and **What changed** records the edit.
-If someone changed the list after you opened it, Margince says so and saves nothing: open the list again and redo the edit. **Save as Live List** in the same place makes a new list instead. Only whoever may change the list (see [What is a list's steward?](#what-is-a-lists-steward)) sees **Edit filter**; a Shortlist has no filter.
+If someone changed the list after you opened it, Margince says so and saves nothing: open the list again and redo the edit. To keep a copy instead, choose **Save as new view** under **⋯** at the foot. Only whoever may change the list (see [What is a list's steward?](#what-is-a-lists-steward)) sees **Edit filter**; a Shortlist has no filter.
 Also called: edit a list's criteria, change a segment, update a smart list.
 
 ### How do I rename, archive or restore a list?
@@ -389,10 +391,10 @@ Also called: lists missing, Live Lists not available.
 ## Exporting a list
 
 ### How do I export a list to CSV or Excel?
-To export records from Margince, build a filter on **Filters and views** and press **Export CSV** or **Export JSON**, or open a Live List or Shortlist and press **Export CSV**; the list screens have no export button.
-1. Open **Filters and views** and pick **Contacts**, **Companies** or **Deals**.
-2. Choose **Add clause** and finish at least one clause; the export buttons then appear.
-3. Press **Export CSV** (opens in Excel) or **Export JSON**.
+To export records from Margince, build a filter on **Filters and views** and choose **Export CSV** or **Export JSON** under **⋯** at its foot. A Live List or Shortlist exports with **Export CSV** on its page; the list screens have no export button.
+1. Open **Filters and views**, press **New filter** and pick **Contacts**, **Companies**, **Deals** or **Leads**.
+2. Press **Add condition** and finish at least one condition. **⋯** (**More for this filter**) then appears beside **Save**.
+3. Choose **Export CSV** (opens in Excel) or **Export JSON**. An opened saved view offers both under **⋯** beside its name.
 Only records you can see are exported, and each export is audited. See [What is kept, what is destroyed](retention-exports-and-deletion.md).
 To export a Live List or a Shortlist, open it and press **Export CSV** above its members.
 Also called: download a list, export to spreadsheet, extract contacts.

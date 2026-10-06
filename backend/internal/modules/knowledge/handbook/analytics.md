@@ -45,7 +45,7 @@ To close a forecast link in Margince before its 30 days run out, open **Analytic
 The row leaves the list and anyone who opens the link is refused. Only you see and close the links you issued. Right after **Create link**, **Close link** in the **Your link** dialog does the same. A link also stops on its own after 30 days, or when you lose forecast access. Also called: revoke a share, cancel a report link, stop sharing, see my shared links.
 
 ### How do I see a win rate or export a report?
-**Performance** offers a closed win rate with a minimum cohort and governed CSV export; see [Performance and saved sales reports](sales-reporting.md). To get deal rows out, open **Filters and views** in the sidebar, choose **Deals** as the **Record type**, build a filter, then press **Export CSV** or **Export JSON**. Also called: conversion rate, download report, export to Excel.
+**Performance** offers a closed win rate with a minimum cohort and governed CSV export; see [Performance and saved sales reports](sales-reporting.md). To get deal rows out, open **Filters and views** → **New filter** → **Deals**, build a filter, then choose **⋯** (**More for this filter**) → **Export CSV** or **Export JSON**. Also called: conversion rate, download report, export to Excel.
 
 ## The reporting sections
 

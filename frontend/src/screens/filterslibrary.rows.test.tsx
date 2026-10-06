@@ -70,11 +70,11 @@ describe("a row", () => {
     ).toHaveAttribute("href", `#/lists/${LIVE_ID}`);
   });
 
-  it("says its kind in a neutral badge, and counts only a list's records", async () => {
+  it("says a view's kind in a neutral badge, marks a Live List alone as live, and counts only a list's records", async () => {
     const { wrapper } = mountFilters({
       listsOn: true,
       views: [BERLIN],
-      lists: [liveList],
+      lists: [liveList, shortlist],
     });
     render(<FiltersScreen />, { wrapper });
     const view = await rowOf(BERLIN.name);
@@ -87,17 +87,25 @@ describe("a row", () => {
       en["lists.type.contact"],
     );
     const list = await rowOf(liveList.name);
-    expect(
-      within(list).getByText(en["lists.kind.live"]).closest(".badge")
-        ?.className,
-    ).toBe("badge");
+    // Info rather than emerald or indigo: those say the one primary action and
+    // an agent's proposal, and a list that keeps itself current is neither.
+    const live = within(list)
+      .getByText(en["lists.kind.live"])
+      .closest(".badge");
+    expect(live?.className).toBe("badge badge-info");
+    expect(live?.querySelector(".badge-live-dot")).not.toBeNull();
+    const chosen = within(await rowOf(shortlist.name))
+      .getByText(en["lists.kind.shortlist"])
+      .closest(".badge");
+    expect(chosen?.className).toBe("badge");
+    expect(chosen?.querySelector(".badge-live-dot")).toBeNull();
     expect(within(list).getByText("42 companies")).toBeInTheDocument();
     expect(
       within(list).getByText("42 companies you can see"),
     ).toBeInTheDocument();
   });
 
-  it("shows what a Live List gained and lost since the last visit, and nothing on a Shortlist", async () => {
+  it("shows what a Live List gained and lost since the last visit in a neutral badge, and nothing on a Shortlist", async () => {
     const { wrapper } = mountFilters({
       listsOn: true,
       lists: [
@@ -114,9 +122,10 @@ describe("a row", () => {
     });
     render(<FiltersScreen />, { wrapper });
     const live = await rowOf(liveList.name);
-    expect(
-      within(live).getByText("3 joined and 1 left since your last visit"),
-    ).toBeInTheDocument();
+    const pulse = within(live).getByText(
+      "3 joined and 1 left since your last visit",
+    );
+    expect(pulse.closest(".badge")?.className).toBe("badge");
     const chosen = await rowOf(shortlist.name);
     expect(within(chosen).queryByText(/since your last visit/)).toBeNull();
   });
