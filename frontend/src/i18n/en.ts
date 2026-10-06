@@ -9643,7 +9643,7 @@ export const en = {
     "How often each background pass runs. A running worker picks up a change within a minute: the pass runs once, then continues at the new interval.",
   "operations.pacing.title": "Send pacing",
   "operations.pacing.sub":
-    "How fast one mailbox may send. A change applies to the next send and starts every mailbox's count again.",
+    "How fast one mailbox may send. A change applies to the next send and starts every mailbox’s count again.",
   "operations.adminOnly":
     "Only an administrator or operations user can change this.",
   "operations.updateFailed": "Setting not changed",
@@ -9698,7 +9698,7 @@ export const en = {
     "How often each connected mailbox is checked for new mail.",
   "captureMailSync.interval.label": "Sync interval (seconds)",
   "captureMailSync.interval.help":
-    "Time between one mailbox's syncs, 30 to 3,600. A change applies from each mailbox's next sync.",
+    "Time between one mailbox’s syncs, 30 to 3,600. A change applies from each mailbox’s next sync.",
   "captureMailSync.interval.refusal":
     "Enter a whole number of seconds from 30 to 3,600.",
 
