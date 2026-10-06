@@ -17,7 +17,9 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -34,19 +36,24 @@ type wroteTo struct {
 // Only mail the provider filed as sent by us counts: a message whose From
 // merely names our mailbox proves nothing, which is the rule the answered
 // predicate holds too. A campaign and a notice the installation owes somebody
-// are not a rep keeping a promise, so neither counts.
+// are not a rep keeping a promise, so neither counts. The card names the email
+// and its day, so it reads under the reader's content scope: an email they
+// cannot open is never cited to them.
 func lastWroteTo(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, now time.Time, opts AssembleOptions) (*wroteTo, error) {
 	if err := requireRead(ctx, "activity"); err != nil {
 		return nil, err
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	touches, err := touchesOf(ctx, bind(arg(contactID)), opts, arg)
+	reaches := fmt.Sprintf(contactReachesActivity, bind(arg(contactID)))
+	scope, err := activityScope(ctx, arg)
 	if err != nil {
 		return nil, err
 	}
 	var sent wroteTo
-	err = tx.QueryRow(ctx, `SELECT a.id, a.occurred_at, coalesce(a.subject, '') `+touches+`
+	err = tx.QueryRow(ctx, `SELECT a.id, a.occurred_at, coalesce(a.subject, '')
+		FROM activity a
+		WHERE a.archived_at IS NULL AND `+reaches+` AND (`+scope+`)`+projectScope(opts, arg)+`
 		AND a.kind = 'email' AND a.direction = 'outbound'
 		AND a.counterparty_outbound_attested AND NOT a.bulk_mail_attested`+
 		auth.OriginIsEngagement("a")+`
@@ -60,6 +67,16 @@ func lastWroteTo(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, now ti
 		return nil, fmt.Errorf("read the newest email to the contact: %w", err)
 	}
 	return &sent, nil
+}
+
+// recordZone is the installation's zone, which the day a card names is read
+// in, so every colleague sees the same day.
+func recordZone(ctx context.Context, tx pgx.Tx) (*time.Location, error) {
+	name, err := identity.TimezoneAppliedTx(ctx, tx)
+	if err != nil {
+		return nil, err
+	}
+	return storekit.LoadZone(name)
 }
 
 // owedPromise is the promise a card speaks for and when it was made.
@@ -78,7 +95,7 @@ func promiseBehind(moment crmcontracts.ContactMoment, page *crmcontracts.Contact
 		}
 		for _, task := range page.NextSteps.Data {
 			if task.Id == *moment.Evidence[0].Id {
-				return owedPromise{kind: crmcontracts.ContactMomentMayBeDonePromiseTypeTask, id: task.Id, madeAt: task.CreatedAt}, true
+				return owedPromise{kind: crmcontracts.ContactMomentMayBeDonePromiseTypeTask, id: task.Id, madeAt: task.OccurredAt}, true
 			}
 		}
 		return owedPromise{}, false
@@ -102,7 +119,7 @@ func promiseBehind(moment crmcontracts.ContactMoment, page *crmcontracts.Contact
 
 // mayBeDone turns a promise card into the question whether our last email
 // kept it, when that email went out strictly after the promise was made.
-func mayBeDone(moment crmcontracts.ContactMoment, page *crmcontracts.Contact360, sent *wroteTo) (crmcontracts.ContactMoment, bool) {
+func mayBeDone(moment crmcontracts.ContactMoment, page *crmcontracts.Contact360, sent *wroteTo, zone *time.Location) (crmcontracts.ContactMoment, bool) {
 	if sent == nil {
 		return crmcontracts.ContactMoment{}, false
 	}
@@ -129,7 +146,7 @@ func mayBeDone(moment crmcontracts.ContactMoment, page *crmcontracts.Contact360,
 		Rule:                moment.Rule,
 		RuleVersion:         moment.RuleVersion,
 		EvidenceFingerprint: fingerprintOf(evidence),
-		Headline:            fmt.Sprintf("You may have done this — you wrote to them on %s", at.Format("2 Jan")),
+		Headline:            fmt.Sprintf("You may have done this — you wrote to them on %s", at.In(zone).Format("2 Jan")),
 		WhyNow:              moment.Headline + ". " + moment.WhyNow,
 		// An inference from timing, not an observed fact: the email may be
 		// about something else entirely.
@@ -155,10 +172,10 @@ func mayBeDone(moment crmcontracts.ContactMoment, page *crmcontracts.Contact360,
 // so the plain promise card comes back rather than the walk moving past the
 // promise.
 func proposer(
-	page *crmcontracts.Contact360, sent *wroteTo, dismissed func(crmcontracts.ContactMoment) bool,
+	page *crmcontracts.Contact360, sent *wroteTo, zone *time.Location, dismissed func(crmcontracts.ContactMoment) bool,
 ) func(crmcontracts.ContactMoment) crmcontracts.ContactMoment {
 	return func(moment crmcontracts.ContactMoment) crmcontracts.ContactMoment {
-		if question, ok := mayBeDone(moment, page, sent); ok && !dismissed(question) {
+		if question, ok := mayBeDone(moment, page, sent, zone); ok && !dismissed(question) {
 			return question
 		}
 		return moment

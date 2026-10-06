@@ -13,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/momentaction"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // asIs is the ladder with no email to ask about.
@@ -25,7 +26,7 @@ func overdueTaskPage() (*crmcontracts.Contact360, crmcontracts.Activity) {
 	task := crmcontracts.Activity{
 		Id: openapi_types.UUID(ids.NewV7()), Kind: "task",
 		Subject:    ptr("Follow up with Anna: send demo email"),
-		OccurredAt: filed, CreatedAt: filed, DueAt: ptr(now.Add(-24 * time.Hour)),
+		OccurredAt: filed, CreatedAt: now, DueAt: ptr(now.Add(-24 * time.Hour)),
 	}
 	return &crmcontracts.Contact360{NextSteps: timelineOf(task)}, task
 }
@@ -35,7 +36,7 @@ func sentAt(at time.Time) *wroteTo {
 }
 
 func askedWith(page *crmcontracts.Contact360, sent *wroteTo, dismissed func(crmcontracts.ContactMoment) bool) crmcontracts.ContactMoment {
-	return deriveMomentPast(readerCtx(), now, page, dismissed, proposer(page, sent, dismissed))
+	return deriveMomentPast(readerCtx(), now, page, dismissed, proposer(page, sent, time.UTC, dismissed))
 }
 
 func neverDismissed(crmcontracts.ContactMoment) bool { return false }
@@ -71,8 +72,8 @@ func TestAnEmailNotAfterThePromiseChangesNothing(t *testing.T) {
 	page, task := overdueTaskPage()
 	for name, sent := range map[string]*wroteTo{
 		"no email":           nil,
-		"before the task":    sentAt(task.CreatedAt.Add(-time.Hour)),
-		"the task's instant": sentAt(task.CreatedAt),
+		"before the task":    sentAt(task.OccurredAt.Add(-time.Hour)),
+		"the task's instant": sentAt(task.OccurredAt),
 	} {
 		t.Run(name, func(t *testing.T) {
 			got := askedWith(page, sent, neverDismissed)
@@ -128,12 +129,47 @@ func TestAnEmailAfterAPromisedCommitmentAsksAboutTheClaim(t *testing.T) {
 	}
 }
 
-// Done writes, so a reader who may not log activity sees it blocked.
-func TestDoneIsWithheldFromAReaderWhoCannotWrite(t *testing.T) {
+// The day is the installation's: 20:00 UTC on 3 Aug is already 4 Aug in
+// Ho Chi Minh City.
+func TestTheQuestionNamesTheDayInTheRecordZone(t *testing.T) {
 	page, _ := overdueTaskPage()
-	got := askedWith(page, sentAt(now.Add(-time.Hour)), neverDismissed)
-	momentaction.Withhold(as(nil), &got)
-	if got.RecommendedAction.State != crmcontracts.ContactMomentActionStateBlocked {
-		t.Errorf("Done state = %q for a reader without activity.create, want blocked", got.RecommendedAction.State)
+	saigon, err := time.LoadLocation("Asia/Ho_Chi_Minh")
+	if err != nil {
+		t.Fatalf("loading the zone: %v", err)
+	}
+	sent := sentAt(time.Date(2026, 8, 3, 20, 0, 0, 0, time.UTC))
+	got := deriveMomentPast(readerCtx(), now, page, neverDismissed, proposer(page, sent, saigon, neverDismissed))
+	if got.Headline != "You may have done this — you wrote to them on 4 Aug" {
+		t.Errorf("headline = %q, want the day in the record zone", got.Headline)
+	}
+}
+
+// Done completes the promise, so it asks that promise's own grant: an
+// activity update for a task, a contact update for a claim.
+func TestDoneIsWithheldFromAReaderWhoCannotWriteThePromise(t *testing.T) {
+	page, _ := overdueTaskPage()
+	task := askedWith(page, sentAt(now.Add(-time.Hour)), neverDismissed)
+	claim := task
+	claim.MayBeDone = &crmcontracts.ContactMomentMayBeDone{
+		PromiseType: crmcontracts.ContactMomentMayBeDonePromiseTypeClaim, PromiseId: task.MayBeDone.PromiseId,
+	}
+	cases := map[string]struct {
+		moment crmcontracts.ContactMoment
+		grants map[string]principal.ObjectGrant
+		want   crmcontracts.ContactMomentActionState
+	}{
+		"task, may update activity":  {task, map[string]principal.ObjectGrant{"activity": {Update: true}}, crmcontracts.ContactMomentActionStateAvailable},
+		"task, may only create":      {task, map[string]principal.ObjectGrant{"activity": {Create: true}, "contact": {Update: true}}, crmcontracts.ContactMomentActionStateBlocked},
+		"claim, may update contact":  {claim, map[string]principal.ObjectGrant{"contact": {Update: true}}, crmcontracts.ContactMomentActionStateAvailable},
+		"claim, may update activity": {claim, map[string]principal.ObjectGrant{"activity": {Update: true, Create: true}}, crmcontracts.ContactMomentActionStateBlocked},
+	}
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			moment := c.moment
+			momentaction.Withhold(as(c.grants), &moment)
+			if moment.RecommendedAction.State != c.want {
+				t.Errorf("Done state = %q, want %q", moment.RecommendedAction.State, c.want)
+			}
+		})
 	}
 }

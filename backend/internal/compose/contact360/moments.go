@@ -84,16 +84,13 @@ const prefillIntent = "intent"
 //
 // It runs LAST among the sections so it can read what the others gathered.
 func (s *Service) momentsSection(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, now time.Time, opts AssembleOptions, out *crmcontracts.Contact360) error {
-	var readErr error
+	putAway, err := s.momentDismissals(ctx, tx, contactID)
+	if err != nil {
+		return err
+	}
 	dismissed := func(moment crmcontracts.ContactMoment) bool {
-		if readErr != nil {
-			return false
-		}
-		put, err := s.momentDismissed(ctx, tx, contactID, moment)
-		if err != nil {
-			readErr = err
-		}
-		return put
+		stored, ok := putAway[moment.ClaimKey]
+		return ok && stored == moment.EvidenceFingerprint
 	}
 	// A reader who may not read activity sees no email to cite, so their
 	// promise cards stay as they are.
@@ -101,23 +98,25 @@ func (s *Service) momentsSection(ctx context.Context, tx pgx.Tx, contactID ids.C
 	if err != nil && !errors.Is(err, apperrors.ErrPermissionDenied) {
 		return err
 	}
-	moment := deriveMomentPast(ctx, now, out, dismissed, proposer(out, sent, dismissed))
-	if readErr != nil {
-		return readErr
+	zone, err := recordZone(ctx, tx)
+	if err != nil {
+		return err
 	}
+	moment := deriveMomentPast(ctx, now, out, dismissed, proposer(out, sent, zone, dismissed))
 	momentaction.Withhold(ctx, &moment)
 	out.Moment = &moment
 	return nil
 }
 
-// momentDismissed asks whether this viewer has already put this moment away
-// AND the evidence has not moved since.
+// momentDismissals reads the moments this viewer has put away on this contact,
+// as the fingerprint each was showing, keyed by claim key.
 //
-// The fingerprint comparison is the whole mechanism. A dismissal keyed on the
-// moment's path alone survives the world changing underneath it: the reader
-// dismisses "she went quiet", a reply arrives, and the page stays silent about
-// the thing that just changed. Keyed on the evidence, the dismissal re-arms.
-func (s *Service) momentDismissed(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, moment crmcontracts.ContactMoment) (bool, error) {
+// A moment counts as dismissed only while its fingerprint still matches. A
+// dismissal keyed on the moment's path alone survives the world changing
+// underneath it: the reader dismisses "she went quiet", a reply arrives, and
+// the page stays silent about the thing that just changed. Keyed on the
+// evidence, the dismissal re-arms.
+func (s *Service) momentDismissals(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) (map[string]string, error) {
 	// A dismissal belongs to a contact's screen, so a call carrying no user has
 	// none to honour. An agent reading through a passport must not consume the
 	// granting human's: it sees every moment. This is a fact about the caller,
@@ -129,30 +128,35 @@ func (s *Service) momentDismissed(ctx context.Context, tx pgx.Tx, contactID ids.
 	// it does not do. auth.RequireHuman is what tells the two apart.
 	viewer, ok := principal.Actor(ctx)
 	if !ok || viewer.UserID == (ids.UUID{}) {
-		return false, nil
+		return nil, nil
 	}
 	if err := auth.RequireHuman(ctx); err != nil {
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
-			return false, nil
+			return nil, nil
 		}
-		return false, err
+		return nil, err
 	}
-	var stored string
-	// (user_id, contact_id, claim_key) is the table's primary key, so the three
-	// keys name at most one row and QueryRow cannot be reading the first of
-	// several.
-	err := tx.QueryRow(ctx, `
-		SELECT evidence_fingerprint
+	rows, err := tx.Query(ctx, `
+		SELECT claim_key, evidence_fingerprint
 		FROM contact_moment_dismissal
-		WHERE user_id = $1 AND contact_id = $2 AND claim_key = $3`,
-		viewer.UserID, contactID, moment.ClaimKey).Scan(&stored)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return false, nil
-	}
+		WHERE user_id = $1 AND contact_id = $2`,
+		viewer.UserID, contactID)
 	if err != nil {
-		return false, fmt.Errorf("read moment dismissal: %w", err)
+		return nil, fmt.Errorf("read moment dismissals: %w", err)
 	}
-	return stored == moment.EvidenceFingerprint, nil
+	defer rows.Close()
+	putAway := map[string]string{}
+	for rows.Next() {
+		var key, fingerprint string
+		if err := rows.Scan(&key, &fingerprint); err != nil {
+			return nil, fmt.Errorf("read moment dismissals: %w", err)
+		}
+		putAway[key] = fingerprint
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("read moment dismissals: %w", err)
+	}
+	return putAway, nil
 }
 
 // deriveMoment walks the ladder in ADR-0096's fixed order and returns the first

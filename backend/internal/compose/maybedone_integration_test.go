@@ -11,6 +11,7 @@ package compose
 // the audience the read filters on are the ones capture and send produce.
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -23,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestAnEmailAfterTheTaskProposesItDoneAndNotYetHoldsUntilTheNext(t *testing.T) {
@@ -32,33 +34,20 @@ func TestAnEmailAfterTheTaskProposesItDoneAndNotYetHoldsUntilTheNext(t *testing.
 	contactID := ids.From[ids.ContactKind](contact)
 
 	task := logTaskFor(t, e, contact, "Send demo email", at(time.Now().Add(-48*time.Hour)))
-	created := readTask(t, e, task).CreatedAt
-	// Every email sits clear of the task's creation by an hour, so a drift
-	// between the database clock and this one cannot move it across.
-	after := created.Add(time.Hour)
-	// The page reads as of three hours on, so every email below has been sent.
-	svc := contact360.NewService(e.Pool, e.Contacts, e.Deals, e.Projects,
-		consent.NewStore(InstallationDB(e.Pool)),
-		comms.NewStore(InstallationDB(e.Pool), time.Now, activities.NewStore(InstallationDB(e.Pool))),
-		ai.NewFeedbackStore(InstallationDB(e.Pool)), func() time.Time { return created.Add(3 * time.Hour) })
-	read := func() crmcontracts.ContactMoment {
-		t.Helper()
-		page, err := svc.Assemble(e.Admin(), contactID)
-		if err != nil || page.Moment == nil {
-			t.Fatalf("assembling contact360: %v (moment %v)", err, page.Moment)
-		}
-		return *page.Moment
-	}
+	filed := readTask(t, e, task).OccurredAt
+	after := filed.Add(time.Hour)
+	svc := pageAsOf(e, filed.Add(3*time.Hour))
+	read := func() crmcontracts.ContactMoment { return momentOf(t, svc, e.Admin(), contactID) }
 
-	logEmailFor(t, e, contact, "outbound", true, created.Add(-time.Hour))
-	logEmailFor(t, e, contact, "inbound", false, after)
-	logEmailFor(t, e, other, "outbound", true, after)
-	logEmailFor(t, e, contact, "outbound", false, after)
+	logEmailFor(t, e, e.Admin(), contact, "outbound", true, filed.Add(-time.Hour))
+	logEmailFor(t, e, e.Admin(), contact, "inbound", false, after)
+	logEmailFor(t, e, e.Admin(), other, "outbound", true, after)
+	logEmailFor(t, e, e.Admin(), contact, "outbound", false, after)
 	if got := read(); got.MayBeDone != nil || got.Headline != "You owe them: Send demo email" {
 		t.Fatalf("card = %q, want the overdue card: no attested email to them came after the task", got.Headline)
 	}
 
-	sent := logEmailFor(t, e, contact, "outbound", true, after)
+	sent := logEmailFor(t, e, e.Admin(), contact, "outbound", true, after)
 	question := read()
 	if question.MayBeDone == nil || ids.UUID(question.MayBeDone.PromiseId) != task ||
 		ids.UUID(question.MayBeDone.EmailActivityId) != sent {
@@ -77,18 +66,70 @@ func TestAnEmailAfterTheTaskProposesItDoneAndNotYetHoldsUntilTheNext(t *testing.
 		t.Fatalf("after Not yet the card is %q, want the overdue card back", got.Headline)
 	}
 
-	later := logEmailFor(t, e, contact, "outbound", true, after.Add(time.Hour))
+	later := logEmailFor(t, e, e.Admin(), contact, "outbound", true, after.Add(time.Hour))
 	if got := read(); got.MayBeDone == nil || ids.UUID(got.MayBeDone.EmailActivityId) != later {
 		t.Errorf("after a later email the card is %q, want the question asked again", got.Headline)
 	}
 }
 
+// The card names the email, so it is asked only of a reader who may open it:
+// the author of a participants-only email is asked, a colleague outside it is not.
+func TestOnlyAReaderWhoMayOpenTheEmailIsAskedAboutIt(t *testing.T) {
+	e := integration.Setup(t)
+	perms := principal.Permissions{
+		RoleKeys: []string{"rep"},
+		Objects: map[string]principal.ObjectGrant{
+			"contact":  {Read: true, Update: true},
+			"activity": {Create: true, Read: true, Update: true},
+		},
+		RowScope: principal.RowScopeAll,
+	}
+	author := e.As(e.Rep1, []ids.UUID{e.Team1}, perms)
+	colleague := e.As(e.Rep3, []ids.UUID{e.Team2}, perms)
+	contact := seedLinkedContact(t, e, "carla@kunde.example")
+	contactID := ids.From[ids.ContactKind](contact)
+
+	task := logTaskFor(t, e, contact, "Send the pricing sheet", at(time.Now().Add(-48*time.Hour)))
+	filed := readTask(t, e, task).OccurredAt
+	sent := logEmailFor(t, e, author, contact, "outbound", true, filed.Add(time.Hour))
+	if _, err := e.Activities.SetAudience(author, ids.From[ids.ActivityKind](sent),
+		activities.SetAudienceInput{Audience: "participants"}); err != nil {
+		t.Fatalf("limiting the email to its participants: %v", err)
+	}
+	svc := pageAsOf(e, filed.Add(3*time.Hour))
+
+	if got := momentOf(t, svc, author, contactID); got.MayBeDone == nil || ids.UUID(got.MayBeDone.EmailActivityId) != sent {
+		t.Errorf("the author's card is %q, want the question naming their own email", got.Headline)
+	}
+	if got := momentOf(t, svc, colleague, contactID); got.MayBeDone != nil {
+		t.Errorf("a colleague outside the email's audience was asked %q, citing mail they cannot open", got.Headline)
+	}
+}
+
+// pageAsOf is the contact page service reading as of now, so emails dated
+// relative to the task's own timestamps have all been sent.
+func pageAsOf(e *integration.Env, now time.Time) *contact360.Service {
+	return contact360.NewService(e.Pool, e.Contacts, e.Deals, e.Projects,
+		consent.NewStore(InstallationDB(e.Pool)),
+		comms.NewStore(InstallationDB(e.Pool), time.Now, activities.NewStore(InstallationDB(e.Pool))),
+		ai.NewFeedbackStore(InstallationDB(e.Pool)), func() time.Time { return now })
+}
+
+func momentOf(t *testing.T, svc *contact360.Service, as context.Context, contactID ids.ContactID) crmcontracts.ContactMoment {
+	t.Helper()
+	page, err := svc.Assemble(as, contactID)
+	if err != nil || page.Moment == nil {
+		t.Fatalf("assembling contact360: %v (moment %v)", err, page.Moment)
+	}
+	return *page.Moment
+}
+
 // logEmailFor writes one email linked to the contact through the activity
 // writer. attested is the provider's filing of it as sent by us.
-func logEmailFor(t *testing.T, e *integration.Env, contact ids.UUID, direction string, attested bool, occurred time.Time) ids.UUID {
+func logEmailFor(t *testing.T, e *integration.Env, as context.Context, contact ids.UUID, direction string, attested bool, occurred time.Time) ids.UUID {
 	t.Helper()
 	subject := "Your demo"
-	row, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+	row, _, err := e.Activities.LogActivity(as, activities.LogActivityInput{
 		Kind: "email", Subject: &subject, Direction: &direction, OccurredAt: &occurred, Source: "manual",
 		CounterpartyEmail: "anna@kunde.example", CounterpartyOutboundAttested: attested,
 		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
