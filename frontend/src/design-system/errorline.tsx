@@ -80,7 +80,9 @@ function useScrolledIntoDialogView(standing: boolean, failure: unknown) {
       return;
     }
     shown.current = said;
-    if (!standing && line.current?.closest(".modal")) {
+    const dialog = line.current?.closest(".modal");
+    if (!standing && line.current && dialog) {
+      line.current.style.scrollMarginBlockEnd = `${pinnedFootOver(line.current, dialog)}px`;
       // jsdom has no scrollIntoView; the browser always does.
       line.current.scrollIntoView?.({
         block: "nearest",
@@ -89,4 +91,36 @@ function useScrolledIntoDialogView(standing: boolean, failure: unknown) {
     }
   });
   return line;
+}
+
+// How far a sticky action row reaches into the line's scrollport, measured
+// rather than assumed, because a row that wraps on a phone is taller.
+function pinnedFootOver(line: HTMLElement, dialog: Element): number {
+  let scroller = line.parentElement;
+  while (scroller && scroller !== dialog && !scrolls(scroller)) {
+    scroller = scroller.parentElement;
+  }
+  if (!scroller) {
+    return 0;
+  }
+  // A refusal can land while the dialog still scales in; margins are unscaled.
+  const port = scroller.getBoundingClientRect();
+  const scale = port.height / scroller.offsetHeight || 1;
+  let over = 0;
+  for (const foot of dialog.querySelectorAll(".actions")) {
+    if (
+      scroller.contains(foot) &&
+      !foot.contains(line) &&
+      getComputedStyle(foot).position === "sticky"
+    ) {
+      const reach = port.bottom - foot.getBoundingClientRect().top;
+      over = Math.max(over, reach / scale);
+    }
+  }
+  return over;
+}
+
+function scrolls(element: Element): boolean {
+  const { overflowY } = getComputedStyle(element);
+  return overflowY === "auto" || overflowY === "scroll";
 }

@@ -42,10 +42,7 @@ import { problemMessageOf, throwProblem } from "./common";
 // company is a document about the company; one filed against a deal is evidence
 // in that deal, and it is the only kind the extraction panel will offer to read
 // for deal fields, because a deal is the only record the accept can write to.
-// Filing everything against the company would be the tidier form and would
-// quietly make that feature unreachable, which is the state this screen was in
-// before: the upload existed, hardcoded to the company, and the reading it
-// fed had no way to happen.
+// Filing everything against the company would make that reading unreachable.
 //
 // WHY IT TAKES TWO REQUESTS. The upload endpoint carries the bytes and the
 // parent and nothing else — category and title live behind
@@ -82,8 +79,7 @@ const CATEGORY_KEYS: Record<Category, MessageKey> = {
 //
 // Derived by subtraction from CATEGORY_KEYS rather than listed, so a value added
 // to the contract lands in the picker by default and only a deliberate edit here
-// keeps it out. The alternative — a second hand-kept list — is how the two come
-// to disagree about a category nobody remembers adding.
+// keeps it out. Not a second hand-kept list: the two drift apart.
 const CAPTURED_ONLY: readonly Category[] = [
   "email_attachment",
   "message_attachment",
@@ -110,8 +106,7 @@ export type DocumentAnchor = Readonly<{
 // Which record the file hangs off: the one this dialog was opened from, or one
 // of that account's deals. Two named answers, not a Select carrying a sentinel
 // value beside a list of deal ids — filing against the account is a different
-// KIND of decision from picking one deal of hundreds, and the two spent a
-// release smuggled into one dropdown where the account read as the zeroth deal.
+// KIND of decision from picking one deal of hundreds.
 type Filing = "anchor" | "deal";
 
 /**
@@ -336,7 +331,12 @@ export function AddDocumentDialog({
   });
 
   return (
-    <Modal open={open} onClose={closeAndClear} labelledBy={titleId}>
+    <Modal
+      open={open}
+      onClose={closeAndClear}
+      labelledBy={titleId}
+      intent="form"
+    >
       <Heading size="large" id={titleId} className="modal-title">
         {t("docs.add.title")}
       </Heading>
