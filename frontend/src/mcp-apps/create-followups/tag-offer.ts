@@ -22,7 +22,7 @@ type Outcome =
   | { kind: "busy" }
   | { kind: "applied" }
   | { kind: "declined" }
-  | { kind: "failed"; reason: string };
+  | { kind: "failed"; reason: string; unknown?: true };
 
 const decided = new WeakMap<HTMLElement, Outcome>();
 
@@ -71,6 +71,9 @@ function choices(
   outcome: Outcome | undefined,
   set: (next: Outcome) => void,
 ): HTMLElement {
+  if (outcome?.kind === "failed" && outcome.unknown === true) {
+    return line(outcome.reason);
+  }
   if (outcome?.kind === "declined") return line("Not tagged.");
   if (outcome?.kind === "applied") {
     return line(
@@ -124,7 +127,7 @@ async function accept(
   if (!offer.exists) {
     const made = await callServerTool("create_tag", { name: offer.name });
     if (!made.ok) {
-      set({ kind: "failed", reason: made.reason });
+      set({ kind: "failed", reason: made.reason, unknown: made.unknown });
       return;
     }
   }
@@ -137,7 +140,7 @@ async function accept(
   set(
     applied.ok
       ? { kind: "applied" }
-      : { kind: "failed", reason: applied.reason },
+      : { kind: "failed", reason: applied.reason, unknown: applied.unknown },
   );
 }
 
@@ -156,7 +159,7 @@ async function undo(
   set(
     removed.ok
       ? { kind: "declined" }
-      : { kind: "failed", reason: removed.reason },
+      : { kind: "failed", reason: removed.reason, unknown: removed.unknown },
   );
 }
 

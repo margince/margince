@@ -36,7 +36,7 @@ type Item = {
 type Outcome =
   | { kind: "busy" }
   | { kind: "decided"; approved: boolean }
-  | { kind: "failed"; reason: string };
+  | { kind: "failed"; reason: string; unknown?: true };
 
 const decided = new WeakMap<HTMLElement, Map<string, Outcome>>();
 
@@ -138,6 +138,9 @@ function choices(
   if (item.status !== "pending") {
     return settledLine(`Already ${item.status}.`);
   }
+  if (outcome?.kind === "failed" && outcome.unknown === true) {
+    return settledLine(outcome.reason);
+  }
   if (outcome?.kind === "decided") {
     return settledLine(
       outcome.approved
@@ -161,7 +164,7 @@ function choices(
         item.id,
         result.ok
           ? { kind: "decided", approved: approve }
-          : { kind: "failed", reason: result.reason },
+          : { kind: "failed", reason: result.reason, unknown: result.unknown },
       );
       again();
     });

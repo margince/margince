@@ -39,7 +39,7 @@ type Outcome =
   | { kind: "busy" }
   | { kind: "merged" }
   | { kind: "dismissed" }
-  | { kind: "failed"; reason: string };
+  | { kind: "failed"; reason: string; unknown?: true };
 
 // What the reader decided, per document root and keyed by the queue's pair id,
 // so a result the host redelivers into the same frame keeps it.
@@ -160,6 +160,12 @@ function choices(
     else outcomes.set(candidate.id, next);
     again();
   };
+  // A call the host never answered may have landed, so no retry is offered:
+  // the reader checks first, and a second merge or dismissal would meet the
+  // engine's own conflict at best.
+  if (outcome?.kind === "failed" && outcome.unknown === true) {
+    return settled(outcome.reason);
+  }
   if (outcome?.kind === "merged") {
     return settled("Merged into the record already on file.");
   }
@@ -239,7 +245,11 @@ async function run(
 ): Promise<void> {
   settle({ kind: "busy" });
   const result = await callServerTool(tool, args);
-  settle(result.ok ? onSuccess : { kind: "failed", reason: result.reason });
+  settle(
+    result.ok
+      ? onSuccess
+      : { kind: "failed", reason: result.reason, unknown: result.unknown },
+  );
 }
 
 onResult((data, warnings) => {

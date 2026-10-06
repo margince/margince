@@ -98,6 +98,20 @@ export function onResponse(
   capabilityHandler = capabilities;
 }
 
+// The tools this view declared in actions.json. The transport itself refuses a
+// tool call naming anything else, so no code path of the view, whatever calls
+// sendToHost, can ask the host to run a tool the view did not declare.
+let permittedTools: ReadonlySet<string> = new Set();
+
+/** permitTools replaces the set of tools this view may ask its host to run. */
+export function permitTools(names: readonly string[]): void {
+  permittedTools = new Set(names);
+}
+
+function callIsPermitted(params: unknown): boolean {
+  return permittedTools.has(asText(asRecord(params).name));
+}
+
 /**
  * fromHost checks every inbound message on TWO things: it came from the frame
  * that embedded us, and — once the host's origin is known — from that origin.
@@ -125,6 +139,8 @@ function fromHost(event: MessageEvent): boolean {
  * ever leaves here, because a view holds none.
  */
 export function sendToHost(message: Record<string, unknown>): void {
+  if (message.method === "tools/call" && !callIsPermitted(message.params))
+    return;
   const target =
     hostOrigin === null || hostOrigin === "null" ? "*" : hostOrigin;
   window.parent.postMessage({ jsonrpc: "2.0", ...message }, target);

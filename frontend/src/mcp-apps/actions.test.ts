@@ -219,4 +219,25 @@ describe("a view asks its host to run a declared tool", () => {
       },
     });
   });
+
+  it("never lets the transport carry a tool call the view did not declare", async () => {
+    const parent = stubParent();
+    const actions = await load(parent.win);
+    const bridge = await import("./bridge");
+    actions.declareActions(["merge_records"]);
+    handshake(parent, { serverTools: {} });
+
+    bridge.sendToHost({
+      id: 99,
+      method: "tools/call",
+      params: { name: "update_record", arguments: {} },
+    });
+    expect(callsSent(parent)).toHaveLength(0);
+    bridge.sendToHost({
+      id: 100,
+      method: "tools/call",
+      params: { name: "merge_records", arguments: {} },
+    });
+    expect(callsSent(parent)).toHaveLength(1);
+  });
 });

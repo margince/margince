@@ -8,7 +8,7 @@ const asked: string[] = [];
 let proxies = true;
 let answer:
   | { ok: true; data: unknown; warnings: [] }
-  | { ok: false; reason: string } = {
+  | { ok: false; reason: string; unknown?: true } = {
   ok: true,
   data: {},
   warnings: [],
@@ -253,5 +253,20 @@ describe("the tag offer without host tool calls", () => {
     await press(root, "Ask the assistant to tag it");
     expect(calls).toHaveLength(0);
     expect(asked[0]).toContain("Fair");
+  });
+});
+
+describe("a host call that never answered", () => {
+  it("offers no retry, because the merge may have landed", async () => {
+    answer = {
+      ok: false,
+      reason:
+        "The host did not answer in time, so the change may have gone through.",
+      unknown: true,
+    };
+    const root = mount();
+    await press(root, "Merge into the existing record");
+    expect(labels(root)).toEqual([]);
+    expect(root.textContent).toContain("may have gone through");
   });
 });
