@@ -9,6 +9,39 @@ which includes one clause specific to a repository built this way:
 submitting volume you cannot explain is treated as disrespect for
 reviewers' time.
 
+## Licensing and the Contributor License Agreement
+
+Margince is source-available, not open source. The code is public and free to read, run and modify. Production use is free up to ten seats, and from the eleventh seat a commercial subscription applies. Nobody may host Margince as a service for others without a partner agreement. The full terms are in [LICENSE](LICENSE).
+
+<!-- prose:allow bold counsel's wording; the conversion promise is stated exactly as legal approved it -->
+**Every release converts to the Apache License 2.0 two years after it ships.** Each version carries its own Change Date, stamped in the LICENSE file at release. On that date, that version becomes fully open source, permanently, for everyone. We describe Margince as "source-available, becomes Apache 2.0 in two years", and we do not describe it as open source before that point.
+
+### Purpose of the agreement
+
+Before we can merge your pull request, we need you to accept our [Contributor License Agreement](CLA.md). A bot will prompt you on your first pull request; accepting takes one comment and covers everything you contribute afterwards.
+
+<!-- prose:allow sentence counsel's wording, kept verbatim -->
+We ask for this because of how Margince is licensed. We sell commercial subscriptions, we license hosting partners, and we convert each release to Apache 2.0 on schedule. Every one of those requires us to hold licensing rights over the whole codebase, including the parts written by outside contributors. A Developer Certificate of Origin would confirm that you wrote your code, but it would not give us those rights, and a single contribution without them would leave part of the product that we cannot sell, cannot relicense and cannot convert.
+
+### Effect of the agreement
+
+The CLA is a licence, not a transfer, so you keep the copyright in your contribution and remain free to use, publish and relicense it anywhere else on any terms you choose.
+
+<!-- prose:allow sentence counsel's wording; it states the conversion as policy, not promise -->
+In return, we may license your contribution to others on any terms, including commercial ones. That grant is what makes the paid tiers and the scheduled Apache conversion possible, and it also means we are not contractually limited to the licence we use today. We intend to keep the two-year conversion for every release, and we state it here as published policy so that you can see what it is: a policy, visible in the Change Date of every release, rather than an individual promise to each contributor.
+
+Your contribution comes as is. You give no warranty that it works, and you carry no liability for it.
+
+### Before you open a pull request
+
+Your contribution must be your own work. If it contains code written by someone else, or code under a different licence, say so clearly in the pull request.
+
+Do not include dependencies licensed under the GPL, the AGPL, or any other licence with source-disclosure obligations. Margince follows a permissive-only dependency rule, and our build checks enforce it. A copyleft dependency anywhere in the tree, including one pulled in indirectly by another package, would prevent us from licensing the product as described above.
+
+If you are contributing as part of your job, check that your employer is comfortable with it. Your employer may accept the CLA on behalf of its staff under Clause 7.
+
+We ask every contributor to accept the CLA, including for small fixes and typo corrections. This reflects nothing about the size of the contribution. A record that carries exceptions does not establish a complete chain of rights, which is the only use the record has.
+
 ## Human accountability
 
 **You are accountable for every line you submit, and must be able to
@@ -108,6 +141,11 @@ loop your PR will run:
 3. **CI must be all green before merge**: the same deterministic gates
    plus automated review and static analysis. Address findings
    instead of dismissing them; squash-merge is the house style.
+   One of those checks, `copyleft snippets`, matches the files you add or
+   change against public open-source code, and fails when a fragment
+   matches a copyleft project such as one under the GPL. That covers code
+   an AI tool reproduced from its training data as much as code pasted
+   by hand: rewrite the fragment in your own words, or remove it.
 
 Write it right the first time: match the surrounding file, comments say
 *why* not *what*, never swallow an error, and tests prove behaviour or
