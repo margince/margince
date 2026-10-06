@@ -68,12 +68,12 @@ export function CompanyLifecycleControl({
     setPending(null);
     setFailure(null);
   }
-  // Which stored stage a save was started against. A save still out when the
-  // stage changes elsewhere settles against a record that has moved on, so
-  // its refusal is not drawn over the stage that replaced it.
-  const storedEpoch = useRef(0);
+  // The stage the record holds now, read when a save settles. A save still
+  // out when the stage changes elsewhere settles against a record that has
+  // moved on, so its refusal is not drawn over the stage that replaced it.
+  const latestStored = useRef(stored);
   useEffect(() => {
-    storedEpoch.current += 1;
+    latestStored.current = stored;
   }, [stored]);
   const label = (value: string) => t(LIFECYCLE_LABELS[value as Lifecycle]);
   if (!canUpdate || readOnlyReason) {
@@ -102,14 +102,14 @@ export function CompanyLifecycleControl({
     setPending(next);
     setSaving(true);
     setFailure(null);
-    const startedAt = storedEpoch.current;
+    const startedAgainst = stored;
     try {
       await patch({
         lifecycle: next as NonNullable<UpdateCompanyRequest["lifecycle"]>,
       });
       setPending(null);
     } catch (err) {
-      if (storedEpoch.current === startedAt) {
+      if (latestStored.current === startedAgainst) {
         setFailure(problemMessageOf(err, t));
       }
     } finally {
