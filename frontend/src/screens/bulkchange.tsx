@@ -296,6 +296,7 @@ export function BulkChangeDialog({
           tone: result.changed > 0 ? "success" : "warning",
           action: undoable
             ? {
+                kind: "undo",
                 label: t("common.undo"),
                 onAct: () => openUndo(undoOf(run.request, result)),
               }

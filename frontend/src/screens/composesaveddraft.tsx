@@ -14,7 +14,7 @@ import { ifMatch } from "../api/version";
 import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { paragraphsFrom } from "../design-system/richtext";
-import { type Toast, useToast } from "../design-system/toast";
+import { type Toast, useOwnToast, useToast } from "../design-system/toast";
 import { replySubject } from "../format/replysubject";
 import { useT } from "../i18n";
 import { problemCodeOf, problemMessageOf, throwProblem } from "./common";
@@ -248,16 +248,13 @@ export function useSavedDraft(input: {
   // text alone and only holds the version, so the next save replaces it. A
   // composer reopened still holding the saved words is a restored one too.
   const decided = useRef(new Set<string>());
-  // The "Draft saved" toast is sticky, and every later toast queues behind it.
   // Reopening the composer puts the draft back on screen with its own Delete,
-  // so the toast has said its piece and would otherwise hold the queue.
-  const savedToastUp = useRef(false);
+  // so the "Draft saved" toast, if it is still up, has said its piece.
+  const savedToast = useOwnToast();
   const sends = useRef(0);
   useEffect(() => {
-    if (!open || !savedToastUp.current) return;
-    savedToastUp.current = false;
-    toast.dismiss();
-  }, [open, toast]);
+    if (open) savedToast.withdraw();
+  }, [open, savedToast]);
   const onRestore = input.onRestore;
   const typed = wroteSomething(fields, defaults);
   useEffect(() => {
@@ -307,12 +304,11 @@ export function useSavedDraft(input: {
       if (ask.sends !== sends.current) return;
       queryClient.setQueryData(draftKey(ask.anchor), saved);
       setChangedElsewhere(false);
-      savedToastUp.current = true;
-      toast.show(t("compose.savedDraftSaved"), {
+      savedToast.show(t("compose.savedDraftSaved"), {
         action: {
+          kind: "undo",
           label: t("compose.savedDraftDelete"),
           onAct: () => {
-            savedToastUp.current = false;
             deleteFromToast({
               queryClient,
               toast,

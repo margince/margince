@@ -2022,12 +2022,12 @@ export function ComposeModal({
       // dialog they just read promised "you can move it or take it back from
       // Scheduled messages", and nothing in the product went there.
       //
-      // The verb makes it sticky, which is what this needs and a plain
-      // confirmation does not: the door is the point, and a toast that withdrew
-      // itself after three and a half seconds would take the door with it.
+      // An `open` verb keeps the toast until dismissed: the door is the point,
+      // and a toast that withdrew itself would take the door with it.
       if (result.scheduled) {
         toast.show(t("compose.scheduledQueued"), {
           action: {
+            kind: "open",
             label: t("compose.scheduledOpenQueue"),
             onAct: () => navigate({ screen: SCHEDULED_SCREEN }),
           },
