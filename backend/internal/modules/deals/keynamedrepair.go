@@ -94,6 +94,8 @@ type keyNamedCandidate struct {
 	company, stage string
 }
 
+// renameKeyNamedDealTx resolves one export row inside the caller's transaction and,
+// when apply is set, renames its deal there; a dry run still takes the row locks.
 func (s *Store) renameKeyNamedDealTx(ctx context.Context, tx pgx.Tx, entry KeyNamedDeal,
 	apply bool, active []fieldcatalog.Column,
 ) (KeyNameResult, error) {
@@ -102,12 +104,11 @@ func (s *Store) renameKeyNamedDealTx(ctx context.Context, tx pgx.Tx, entry KeyNa
 	if err != nil {
 		return result, err
 	}
-	switch len(candidates) {
-	case 0:
+	if len(candidates) == 0 {
 		result.Outcome = KeyNameNoMatch
 		return result, nil
-	case 1:
-	default:
+	}
+	if len(candidates) > 1 {
 		result.Outcome = KeyNameAmbiguous
 		return result, nil
 	}

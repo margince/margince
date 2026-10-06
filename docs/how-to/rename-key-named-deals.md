@@ -20,14 +20,32 @@ hubspot,bolt-pilot-7,
 `source_title` is the name the source system shows for it and may be empty. A
 spreadsheet's "Save as CSV" is fine, including its byte-order mark.
 
+`source_system` must equal, letter for letter and in the same case, the value
+the deal carries in its own `source_system` column — what the importer sent as
+`source_system` when it created the deal. The deal read on the API does not
+return that column, so list the values from the database the worker uses:
+
+```
+SELECT source_system, count(*) FROM deal
+ WHERE source_system IS NOT NULL GROUP BY source_system;
+```
+
+A deal imported without a `source_system` carries none, and the repair cannot
+match it.
+
 The run refuses the whole file, naming the line, when the header differs, a
-system or key is empty, the same system and key appear twice, or there are no
-rows.
+system or key is empty, a field holds a control character such as a tab, the
+same system and key appear twice, or there are no rows.
 
 ## Run it
 
 The worker reads its database from `MARGINCE_DSN` like any other worker run.
-Take the workspace id from the installation's admin.
+`--workspace` takes the installation's workspace id, which the API does not
+return; read it from that database and pass it exactly:
+
+```
+SELECT id, slug FROM workspace WHERE archived_at IS NULL;
+```
 
 Dry run first. It writes nothing:
 
@@ -51,9 +69,12 @@ The report has one row per export row, with the columns `OUTCOME`, `DEAL`,
 | --- | --- | --- |
 | `would-rename` | Dry run: one deal matches and would take `NEW NAME`. | Check the name, then run with `--apply`. |
 | `renamed` | The deal now carries `NEW NAME`. | Nothing. |
-| `no-match` | No live deal of that source is still named by the key. | Nothing; it was renamed already, or is archived. |
+| `no-match` | No live deal of that source is still named by the key. | Nothing, when it was renamed already (by this repair or by a person) or is archived. Otherwise the system or key in the file is not what the deal carries: fix the file. |
 | `ambiguous` | More than one live deal shares the key, so none is touched. | Rename them by hand in the app. |
 | `no-company` | The export has no title and the deal has no company to name it after. | Rename it by hand in the app. |
+
+A dry run where every row is `no-match` most likely means the `source_system`
+value is wrong; check it against the query above first.
 
 ## What it will and will not touch
 

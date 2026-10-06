@@ -102,9 +102,9 @@ func writeDisagreements(stdout io.Writer, report []consent.Disagreement) error {
 //
 // Separate from runDebugSubcommand (boot.go) because of WHEN it runs, not what
 // it contains: those loops take no DSN and run before the worker flags, while
-// these read the installation's own rows and must run after the role and
-// release assertions — a report against a schema this binary does not agree
-// with is a report about something else.
+// these read or write the installation's own rows and must run after the role
+// and release assertions — a report against a schema this binary does not agree
+// with is a report about something else, and a write against one corrupts it.
 func runDatabaseSubcommand(ctx context.Context, pool *pgxpool.Pool, args []string, stdout io.Writer) (bool, error) {
 	if len(args) == 0 {
 		return false, nil

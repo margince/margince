@@ -10,6 +10,8 @@ package main
 // operator holding the file, and leaves nothing behind in the product.
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"encoding/csv"
 	"errors"
@@ -20,6 +22,7 @@ import (
 	"slices"
 	"strings"
 	"text/tabwriter"
+	"unicode"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -31,6 +34,8 @@ import (
 )
 
 var keyNameExportHeader = []string{"source_system", "source_key", "source_title"}
+
+var utf8ByteOrderMark = []byte{0xEF, 0xBB, 0xBF}
 
 // keyNameOutcomeOrder fixes the summary line's order, so two runs over one
 // export print the same text.
@@ -82,15 +87,20 @@ func runDealKeyNames(ctx context.Context, pool *pgxpool.Pool, args []string, std
 // readKeyNamedDeals parses the export and refuses it whole on the first row it
 // cannot trust, naming the line so the operator can fix the file.
 func readKeyNamedDeals(r io.Reader) ([]deals.KeyNamedDeal, error) {
-	reader := csv.NewReader(r)
+	// A spreadsheet's "Save as CSV" opens with a byte-order mark; dropped before
+	// parsing, it cannot turn a quoted first header field into a malformed one.
+	buffered := bufio.NewReader(r)
+	if mark, err := buffered.Peek(len(utf8ByteOrderMark)); err == nil && bytes.Equal(mark, utf8ByteOrderMark) {
+		if _, err := buffered.Discard(len(utf8ByteOrderMark)); err != nil {
+			return nil, fmt.Errorf("deal-key-names: reading the export: %w", err)
+		}
+	}
+	reader := csv.NewReader(buffered)
 	reader.FieldsPerRecord = len(keyNameExportHeader)
 	header, err := reader.Read()
 	if err != nil {
 		return nil, fmt.Errorf("deal-key-names: reading the export header: %w", err)
 	}
-	// A spreadsheet's "Save as CSV" opens with a byte-order mark the header
-	// would otherwise never match.
-	header[0] = strings.TrimPrefix(header[0], "\uFEFF")
 	if !slices.Equal(header, keyNameExportHeader) {
 		return nil, fmt.Errorf("deal-key-names: line 1: the header must be %s",
 			strings.Join(keyNameExportHeader, ","))
@@ -116,6 +126,8 @@ func readKeyNamedDeals(r io.Reader) ([]deals.KeyNamedDeal, error) {
 			return nil, fmt.Errorf("deal-key-names: line %d: source_system is empty", line)
 		case entry.SourceKey == "":
 			return nil, fmt.Errorf("deal-key-names: line %d: source_key is empty", line)
+		case slices.ContainsFunc(record, hasControlCharacter):
+			return nil, fmt.Errorf("deal-key-names: line %d: a field holds a control character", line)
 		}
 		pair := [2]string{entry.SourceSystem, entry.SourceKey}
 		if first, dup := seen[pair]; dup {
@@ -143,7 +155,8 @@ func writeKeyNameReport(stdout io.Writer, results []deals.KeyNameResult, applied
 		if !result.DealID.IsZero() {
 			deal = result.DealID.String()
 		}
-		_, _ = fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", result.Outcome, deal, result.Entry.SourceKey, result.To)
+		_, _ = fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", result.Outcome, deal,
+			printable(result.Entry.SourceKey), printable(result.To))
 	}
 	if err := w.Flush(); err != nil {
 		return fmt.Errorf("deal-key-names: writing the report: %w", err)
@@ -159,4 +172,19 @@ func writeKeyNameReport(stdout io.Writer, results []deals.KeyNameResult, applied
 		_, _ = fmt.Fprintln(stdout, "Nothing was written. Run again with --apply to rename the deals marked would-rename.")
 	}
 	return nil
+}
+
+func hasControlCharacter(field string) bool {
+	return strings.ContainsFunc(field, unicode.IsControl)
+}
+
+// printable masks control characters in text bound for the operator's
+// terminal: a deal's company and stage names are anyone's to edit in the app.
+func printable(text string) string {
+	return strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) {
+			return unicode.ReplacementChar
+		}
+		return r
+	}, text)
 }

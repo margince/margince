@@ -5,6 +5,7 @@ package main
 
 import (
 	"bytes"
+	"slices"
 	"strings"
 	"testing"
 
@@ -21,18 +22,20 @@ func TestTheExportIsReadRowByRow(t *testing.T) {
 		{SourceSystem: "legacy", SourceKey: "acme-q3", SourceTitle: "Acme Q3 renewal"},
 		{SourceSystem: "legacy", SourceKey: "beta-1"},
 	}
-	if len(got) != len(want) || got[0] != want[0] || got[1] != want[1] {
+	if !slices.Equal(got, want) {
 		t.Errorf("read %+v, want %+v", got, want)
 	}
 }
 
 func TestAnExportTheRepairCannotTrustIsRefusedWhole(t *testing.T) {
 	for name, body := range map[string]string{
-		"wrong header":   "system,key,title\nlegacy,acme-q3,\n",
-		"empty key":      "source_system,source_key,source_title\nlegacy,,Acme\n",
-		"empty system":   "source_system,source_key,source_title\n,acme-q3,Acme\n",
-		"duplicate key":  "source_system,source_key,source_title\nlegacy,acme-q3,A\nlegacy,acme-q3,B\n",
-		"no rows at all": "source_system,source_key,source_title\n",
+		"wrong header":    "system,key,title\nlegacy,acme-q3,\n",
+		"empty key":       "source_system,source_key,source_title\nlegacy,,Acme\n",
+		"empty system":    "source_system,source_key,source_title\n,acme-q3,Acme\n",
+		"duplicate key":   "source_system,source_key,source_title\nlegacy,acme-q3,A\nlegacy,acme-q3,B\n",
+		"no rows at all":  "source_system,source_key,source_title\n",
+		"escape in title": "source_system,source_key,source_title\nlegacy,acme-q3,Acme\x1b[2K\n",
+		"tab in key":      "source_system,source_key,source_title\nlegacy,\"acme\tq3\",Acme\n",
 	} {
 		t.Run(name, func(t *testing.T) {
 			if _, err := readKeyNamedDeals(strings.NewReader(body)); err == nil {
@@ -51,10 +54,16 @@ func TestARefusedRowIsNamedByItsLine(t *testing.T) {
 }
 
 func TestASpreadsheetsByteOrderMarkDoesNotSpoilTheHeader(t *testing.T) {
-	got, err := readKeyNamedDeals(strings.NewReader(
-		"\uFEFFsource_system,source_key,source_title\nlegacy,acme-q3,Acme\n"))
-	if err != nil || len(got) != 1 {
-		t.Errorf("read %+v, %v; want the one row", got, err)
+	for name, header := range map[string]string{
+		"bare header":   "\uFEFFsource_system,source_key,source_title\n",
+		"quoted header": "\uFEFF\"source_system\",source_key,source_title\n",
+	} {
+		t.Run(name, func(t *testing.T) {
+			got, err := readKeyNamedDeals(strings.NewReader(header + "legacy,acme-q3,Acme\n"))
+			if err != nil || len(got) != 1 {
+				t.Errorf("read %+v, %v; want the one row", got, err)
+			}
+		})
 	}
 }
 
@@ -71,5 +80,21 @@ func TestADryRunReportSaysNothingWasWritten(t *testing.T) {
 		if !strings.Contains(out.String(), want) {
 			t.Errorf("report lacks %q:\n%s", want, out.String())
 		}
+	}
+}
+
+func TestTheReportMasksControlCharactersFromTheApp(t *testing.T) {
+	var out bytes.Buffer
+	err := writeKeyNameReport(&out, []deals.KeyNameResult{
+		{Entry: deals.KeyNamedDeal{SourceKey: "acme-q3"}, To: "Acme\x1b[2K · Proposal", Outcome: deals.KeyNameWouldRename},
+	}, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.IndexByte(out.Bytes(), 0x1b) >= 0 {
+		t.Errorf("report carries a raw escape byte:\n%q", out.String())
+	}
+	if !strings.Contains(out.String(), "Acme\uFFFD[2K · Proposal") {
+		t.Errorf("report lost the name around the masked byte:\n%s", out.String())
 	}
 }
