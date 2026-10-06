@@ -195,7 +195,8 @@ func TestVersionBumpAndSkewSemantics(t *testing.T) {
 	var id string
 	var version int64
 	if err := inTx(t, app, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx,
+		return tx.QueryRow(
+			ctx,
 			`INSERT INTO contact (full_name, source, captured_by) VALUES ('Vera', 'test', 'human:test') RETURNING id, version`,
 		).Scan(&id, &version)
 	}); err != nil {

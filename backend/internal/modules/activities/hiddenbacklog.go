@@ -312,6 +312,11 @@ func (s *Store) waitingStatement(
 	if err != nil {
 		return "", err
 	}
+	// Relaxations widen eligibility rules, never what a reader may be shown.
+	bookedDiscover, err := bookedDiscoverClause(ctx, arg)
+	if err != nil {
+		return "", err
+	}
 	return fmt.Sprintf(waitingRepliesSQL, instant, content, linkVisible, WaitingScanCap,
 		horizon,
 		liveRecord(openDealPredicate, "d"),
@@ -324,7 +329,7 @@ func (s *Store) waitingStatement(
 		messageSnoozeLiftedSQL(fmt.Sprintf("$%d", instant), backContent),
 		fmt.Sprintf("$%d", arg(readerAddresses)),
 		informsUs,
-		noKeyset,
+		noKeyset, bookedDiscover,
 		setAside), nil
 }
 

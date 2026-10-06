@@ -126,3 +126,24 @@ describe("returning to a page", () => {
     expect(offsetOf(container)).toBe(40);
   });
 });
+
+describe("a lane kept for the whole load", () => {
+  function Drawer({ address }: Readonly<{ address: string }>) {
+    const column = useRef<HTMLDivElement>(null);
+    useScrollMemory(column, address, "drawer", "load");
+    return <div ref={column} data-testid="column" />;
+  }
+
+  it("returns the reader to their place through a NEW history entry", () => {
+    // A record's way back to the Worklist drawer pushes an address rather than
+    // stepping Back, so a memory keyed on the entry would open it at the top.
+    const first = render(<Drawer address="#/home?queue=1" />);
+    scrollTo(first.container, 900);
+    first.unmount();
+    window.history.pushState(null, "", "#/contacts/c-1");
+    window.history.pushState(null, "", "#/home?queue=1");
+
+    const again = render(<Drawer address="#/home?queue=1" />);
+    expect(offsetOf(again.container)).toBe(900);
+  });
+});

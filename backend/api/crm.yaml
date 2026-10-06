@@ -36873,6 +36873,30 @@ components:
           type: array
           maxItems: 3
           items: { $ref: '#/components/schemas/ContactMomentAction' }
+        may_be_done:
+          $ref: '#/components/schemas/ContactMomentMayBeDone'
+
+    ContactMomentMayBeDone:
+      type: object
+      description: |
+        Present when the moment is a promise we owe AND we wrote to the contact after it was
+        made: the card asks whether that email kept it, and never decides on its own. `Done`
+        completes the task (`PATCH /activities/{id}` with `is_done`) or settles the claim
+        (`POST /claims/{id}/settle` with `done`). `Not yet` dismisses this moment through
+        `POST /contacts/{id}/moment/dismiss`; the email is part of its fingerprint, so a
+        later email asks again.
+      required: [promise_type, promise_id, email_activity_id, wrote_at]
+      properties:
+        promise_type:
+          type: string
+          description: '`task` — an open task. `claim` — a `commitment_ours` claim with no task.'
+          enum: [task, claim]
+        promise_id: { type: string, format: uuid }
+        email_activity_id:
+          type: string
+          format: uuid
+          description: The newest attested outbound email to the contact sent after the promise was made.
+        wrote_at: { type: string, format: date-time }
 
     ContactMomentRule:
       type: string
@@ -55864,7 +55888,7 @@ components:
       properties:
         kind:
           type: string
-          enum: [pinned, buyer_wrote_last, waiting_days, overdue, due_today, closing_soon, expected_revenue, material, below_material, quiet_days, no_champion, champion_unknown, promised, approved_and_failed, blocks_customer_work, routine, repeated_failure, legal_deadline, opened_overdue, earlier_requests, first_asked, no_next_step, meeting_soon, meeting_unprepared, response_overdue, response_due_soon, unassigned, stale, no_reply_history, asks_nothing, addressed_elsewhere, outcome_unrecorded]
+          enum: [pinned, buyer_wrote_last, waiting_days, overdue, due_today, closing_soon, expected_revenue, material, below_material, quiet_days, no_champion, champion_unknown, promised, approved_and_failed, blocks_customer_work, routine, repeated_failure, legal_deadline, opened_overdue, earlier_requests, first_asked, no_next_step, meeting_soon, meeting_booked, meeting_unprepared, response_overdue, response_due_soon, unassigned, stale, no_reply_history, asks_nothing, addressed_elsewhere, outcome_unrecorded]
           description: 'Which fact this is. The client writes the phrase.'
         value: { $ref: '#/components/schemas/WorklistValue' }
 

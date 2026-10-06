@@ -6520,6 +6520,24 @@ func (e ContactMomentEvidenceType) Valid() bool {
 	}
 }
 
+// Defines values for ContactMomentMayBeDonePromiseType.
+const (
+	ContactMomentMayBeDonePromiseTypeClaim ContactMomentMayBeDonePromiseType = "claim"
+	ContactMomentMayBeDonePromiseTypeTask  ContactMomentMayBeDonePromiseType = "task"
+)
+
+// Valid indicates whether the value is a known member of the ContactMomentMayBeDonePromiseType enum.
+func (e ContactMomentMayBeDonePromiseType) Valid() bool {
+	switch e {
+	case ContactMomentMayBeDonePromiseTypeClaim:
+		return true
+	case ContactMomentMayBeDonePromiseTypeTask:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ContactMomentRule.
 const (
 	ContactMomentRuleGoneQuiet        ContactMomentRule = "gone_quiet"
@@ -18482,6 +18500,7 @@ const (
 	WorklistReasonKindFirstAsked         WorklistReasonKind = "first_asked"
 	WorklistReasonKindLegalDeadline      WorklistReasonKind = "legal_deadline"
 	WorklistReasonKindMaterial           WorklistReasonKind = "material"
+	WorklistReasonKindMeetingBooked      WorklistReasonKind = "meeting_booked"
 	WorklistReasonKindMeetingSoon        WorklistReasonKind = "meeting_soon"
 	WorklistReasonKindMeetingUnprepared  WorklistReasonKind = "meeting_unprepared"
 	WorklistReasonKindNoChampion         WorklistReasonKind = "no_champion"
@@ -18532,6 +18551,8 @@ func (e WorklistReasonKind) Valid() bool {
 	case WorklistReasonKindLegalDeadline:
 		return true
 	case WorklistReasonKindMaterial:
+		return true
+	case WorklistReasonKindMeetingBooked:
 		return true
 	case WorklistReasonKindMeetingSoon:
 		return true
@@ -30254,6 +30275,14 @@ type ContactMoment struct {
 	// Headline The reason in one line, written from the evidence — never a model's paraphrase of it.
 	Headline string `json:"headline"`
 
+	// MayBeDone Present when the moment is a promise we owe AND we wrote to the contact after it was
+	// made: the card asks whether that email kept it, and never decides on its own. `Done`
+	// completes the task (`PATCH /activities/{id}` with `is_done`) or settles the claim
+	// (`POST /claims/{id}/settle` with `done`). `Not yet` dismisses this moment through
+	// `POST /contacts/{id}/moment/dismiss`; the email is part of its fingerprint, so a
+	// later email asks again.
+	MayBeDone *ContactMomentMayBeDone `json:"may_be_done,omitempty"`
+
 	// RecommendedAction What to do about it: a TYPED descriptor, not a label the client has to interpret.
 	//
 	// Kind, destination and prefill together mean a client renders only buttons whose path
@@ -30341,6 +30370,25 @@ type ContactMomentEvidence struct {
 
 // ContactMomentEvidenceType defines model for ContactMomentEvidence.Type.
 type ContactMomentEvidenceType string
+
+// ContactMomentMayBeDone Present when the moment is a promise we owe AND we wrote to the contact after it was
+// made: the card asks whether that email kept it, and never decides on its own. `Done`
+// completes the task (`PATCH /activities/{id}` with `is_done`) or settles the claim
+// (`POST /claims/{id}/settle` with `done`). `Not yet` dismisses this moment through
+// `POST /contacts/{id}/moment/dismiss`; the email is part of its fingerprint, so a
+// later email asks again.
+type ContactMomentMayBeDone struct {
+	// EmailActivityId The newest attested outbound email to the contact sent after the promise was made.
+	EmailActivityId openapi_types.UUID `json:"email_activity_id"`
+	PromiseId       openapi_types.UUID `json:"promise_id"`
+
+	// PromiseType `task` — an open task. `claim` — a `commitment_ours` claim with no task.
+	PromiseType ContactMomentMayBeDonePromiseType `json:"promise_type"`
+	WroteAt     time.Time                         `json:"wrote_at"`
+}
+
+// ContactMomentMayBeDonePromiseType `task` — an open task. `claim` — a `commitment_ours` claim with no task.
+type ContactMomentMayBeDonePromiseType string
 
 // ContactMomentRule Which rung of the fixed ladder selected this moment (ADR-0096 D2), in priority order.
 // Named in the response so the same evidence cannot render differently across clients.

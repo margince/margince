@@ -15,7 +15,12 @@ package activities
 //
 // waiting.go holds what READS it; this holds what it says.
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+
+	"github.com/margince/margince/backend/internal/platform/auth"
+)
 
 // waitingContactRank orders the contacts one message is filed under so the
 // waiting row names who wrote it: the sender's own contact, then a contact that
@@ -163,7 +168,8 @@ var waitingRepliesSQL = `
 	       a.thread_key IS NOT NULL AND a.thread_key <> '',
 	       -- Which conversation, so a caller can show one card per
 	       -- conversation; '' for a message that belongs to none.
-	       coalesce(a.thread_key, ''), coalesce(a.channel_provider, '')
+	       coalesce(a.thread_key, ''), coalesce(a.channel_provider, ''),
+	       ` + bookedMeetingSQL("$%[1]d", "%[19]s") + `
 	  FROM activity a
 	  LEFT JOIN activity_link wl ON wl.activity_id = a.id AND (%[3]s)
 	  -- Who wrote. The sender participant is where capture records the address,
@@ -288,7 +294,7 @@ var waitingRepliesSQL = `
 	   -- ownership events rather than a clause here. Until that exists the
 	   -- judgement stands until its reader withdraws it, and the contract says
 	   -- so rather than promising the re-arm.
-	   AND (%[19]s OR NOT EXISTS (
+	   AND (%[20]s OR NOT EXISTS (
 	         SELECT 1 FROM activity_reader_state mine
 	          WHERE mine.activity_id = a.id
 	            AND mine.reader_id = $%[9]d
@@ -364,4 +370,72 @@ func messageSnoozeLiftedSQL(asOf, backContent string) string {
 			          + make_interval(secs => coalesce(m.duration_seconds, 0)) <= %[1]s))
 		ELSE false
 	END)`, asOf, KindMeeting, backContent)
+}
+
+// bookedMeetingSQL is when the soonest booked meeting with this message's
+// sender starts, or NULL — the fact that turns a waiting card into "meeting
+// booked" instead of a count of waiting days.
+//
+// Booked means: a meeting the sender's contact is on (linked or attending,
+// the walks the answer arms use), not over — by the rule the snooze
+// disposition already applies: canceled and no-show count as over, and over
+// means ENDED, start plus duration — and booked or moved since the message
+// arrived. That last fact is read from the write shape: a meeting created
+// after the ask, or an audited change to its start after it, which is what
+// both move writers leave behind. A meeting that merely predates the ask
+// untouched does not answer it.
+//
+// Workspace-audience and unrestricted, as every off-thread answer arm is —
+// and additionally fenced by the READER's own discover clause, rendered for
+// the `booked` alias. The answer arms only flip a row's eligibility; this
+// prints a date, and a date off a meeting the reader may not discover would
+// be the disclosure itself.
+//
+// asOf is the caller's own placeholder; OFFSET 0 keeps the planner walking
+// from the sender to their meetings, for touchAnswerArm's reason. The audit
+// probe rides idx_audit_entity_narrow.
+func bookedMeetingSQL(asOf, discover string) string {
+	return `(SELECT min(booked.occurred_at)
+	   FROM activity_participant booked_asker
+	  CROSS JOIN LATERAL (
+	        SELECT booked_link.activity_id FROM activity_link booked_link
+	         WHERE booked_link.contact_id = booked_asker.contact_id
+	        UNION
+	        SELECT booked_att.activity_id FROM activity_participant booked_att
+	         WHERE booked_att.contact_id = booked_asker.contact_id
+	        OFFSET 0) booked_walk
+	  CROSS JOIN LATERAL (
+	        SELECT booked.occurred_at FROM activity booked
+	         WHERE booked.id = booked_walk.activity_id
+	           AND booked.kind = '` + KindMeeting + `'
+	           AND booked.archived_at IS NULL
+	           AND booked.restricted_at IS NULL` + auth.AudienceWorkspaceOnly("booked") + `
+	           AND (` + discover + `)
+	           AND coalesce(booked.meeting_status, '') NOT IN ('canceled', 'no_show')
+	           AND booked.occurred_at
+	               + make_interval(secs => coalesce(booked.duration_seconds, 0)) > ` + asOf + `
+	           AND (booked.created_at > a.occurred_at
+	             OR EXISTS (SELECT 1 FROM audit_log booked_move
+	                 WHERE booked_move.entity_type = 'activity'
+	                   AND booked_move.entity_id = booked.id
+	                   AND booked_move.after ? 'occurred_at'
+	                   -- The START moved, not merely a field beside it: the
+	                   -- move writer images occurred_at on every change, a
+	                   -- length-only edit included.
+	                   AND (booked_move.before ->> 'occurred_at')
+	                       IS DISTINCT FROM (booked_move.after ->> 'occurred_at')
+	                   AND booked_move.occurred_at > a.occurred_at
+	                   AND booked_move.occurred_at <= ` + asOf + `))
+	        OFFSET 0) booked
+	  WHERE booked_asker.activity_id = a.id AND booked_asker.role = 'from'
+	    AND booked_asker.contact_id IS NOT NULL)`
+}
+
+// bookedDiscoverClause renders the reader's own discover gate for the booked
+// meeting's alias — the fence on what a waiting row may SHOW, while every
+// eligibility clause beside it stays reader-independent. One helper for the
+// three statements that render waitingRepliesSQL, each of which composes it
+// beside its own argument list.
+func bookedDiscoverClause(ctx context.Context, arg func(any) int) (string, error) {
+	return auth.ActivityDiscoverClause(ctx, "booked", arg)
 }
