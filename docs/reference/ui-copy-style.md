@@ -98,7 +98,7 @@ items and most help text are impersonal statements.
 - **No exclamation marks.**
 - **Spacing.** One space between words, never two. A value may begin or end
   with a space only when it is a fragment the code joins around markup, where
-  that edge space is load-bearing.
+  the code depends on that edge space.
 - **Numbers** as digits, with a comma thousands separator. "to" for ranges
   ("1 to 4", never "1-4"), "of" for part of a set ("3 of 12"). No ordinals in
   UI (1st, 2nd).
@@ -211,15 +211,15 @@ above does not name:
 | Retired vocabulary | A word the test lists from the Vocabulary table's Never column, whole word in any case, outside the keys it names with a reason |
 
 Placeholders are removed before the word rules run, so `{name}` never reads as
-copy. The gate cannot see the rest of this page: tone, sentence case, articles,
-periods, tense, voice, a spaced hyphen, w/, numbers and ranges, list form,
-length ceilings, vocabulary beyond the retired words, message shapes, a contraction outside its list, and
-"you" used where nobody needed addressing. Those are the author's and the
-reviewer's judgement.
+copy. The gate cannot see the rest of this page. Tone, sentence case, articles,
+periods, tense, voice, a spaced hyphen, w/, numbers and ranges, and list form
+are the author's and the reviewer's judgement. So are length ceilings,
+vocabulary beyond the retired words, message shapes, a contraction outside its
+list, and "you" used where nobody needed addressing.
 
 ## Sources
 
 The grammar and message rules follow the Atlassian Design System content
 guidelines (voice and tone, language and grammar, inclusive writing, date and
-time, designing messages), adjusted where Margince is more formal: no
-contractions, a product that never says "I" or "we", no humor.
+time, designing messages). Margince is more formal in three places: no
+contractions, a product that never says "I" or "we", and no humor.

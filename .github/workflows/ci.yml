@@ -158,9 +158,9 @@ jobs:
               - 'extensions/**'
               - 'fixtures/**'
               - 'composition/**'
-              # Only the merge gate itself. release.yml and sbom.yml run no
-              # backend gate, so editing one cannot invalidate a gate result —
-              # and each proves itself when it runs.
+              # Only the merge gate itself. release.yml and sbom.yml boot no
+              # Postgres, so editing one cannot invalidate an integration
+              # result; each proves itself when it runs.
               #
               # The gate is three files now: this caller plus the lane workflows
               # it invokes. The lanes are globbed rather than named one by one so
@@ -675,12 +675,10 @@ jobs:
       - name: a package over its budget reads as a timeout
         working-directory: .
         run: make test-lane-timeout-report
-      # The pin gate rides along here, and only here, because it reads the WHOLE
-      # workflow directory while the backend scope names one file: sbom.yml and
-      # patch.yml match no scope, so gated on the classifier this check would
-      # skip on exactly the PR that unpins an action — and Renovate, which bumps
-      # `uses:` across all three workflows, auto-merges on green. Same reason the
-      # two gates above run unconditionally: supply-chain surface is not a scope.
+      # The pin gate rides along here unconditionally because it reads the whole
+      # workflow directory, and Renovate bumps `uses:` across every workflow and
+      # auto-merges on green. Same reason the two gates above run
+      # unconditionally: supply-chain surface is not a scope.
       # `make check-backend` keeps running it too, so a laptop `make check`
       # reproduces this verdict. Pure bash and grep — no toolchain to install.
       - name: Action and image pins

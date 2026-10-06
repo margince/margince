@@ -5,10 +5,9 @@
 
 package gates
 
-// The write-shape obligation as a fitness function: every mutation that
-// writes an audit row commits a paired outbox event on the same static call path
-// (data-model §11, events.md §4.2 — spelled once in storekit), across
-// modules AND the composition layer. A mutation that audits without
+// Every mutation that writes an audit row commits a paired outbox event on the
+// same static call path, through storekit, across modules and the composition
+// layer. A mutation that audits without
 // emitting silently exempts itself from the event backbone; this test
 // turns that from a reviewer memory into a gate. Exceptions are explicit,
 // keyed by package path + function so a same-named function elsewhere is

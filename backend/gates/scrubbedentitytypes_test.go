@@ -5,7 +5,7 @@
 
 package gates
 
-// Which RECORD TYPES a scrub verb is ever written against.
+// Which record types a scrub verb is ever written against.
 //
 // scrubverbs_test.go asks the neighbouring question — which verbs certify a
 // scrub — and derives its corpus from privacy's writers so a new one cannot

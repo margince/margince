@@ -5,7 +5,7 @@
 
 package gates
 
-// An upload route refuses an unauthorized caller BEFORE it reads the body.
+// An upload route refuses an unauthorized caller before it reads the body.
 //
 // The gate is about ORDER, and order is the whole of it: every one of these
 // routes was already authorized, and every one of them authorized too late.

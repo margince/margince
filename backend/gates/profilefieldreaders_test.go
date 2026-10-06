@@ -5,7 +5,7 @@
 
 package gates
 
-// contact_profile_field holds what a machine ASSERTED about a contact, and
+// contact_profile_field holds what a machine asserted about a contact, and
 // ai_feedback holds what a human then decided about that assertion. A surface
 // that shows the value without consulting the ledger shows the reader the exact
 // claim they already overrode — so consulting it cannot be one caller's job.

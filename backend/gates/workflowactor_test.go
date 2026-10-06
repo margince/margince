@@ -6,7 +6,7 @@
 package gates
 
 // The id a workflow write is attributed to, and the id the selectors that
-// recognise those writes look for, are ONE id.
+// recognise those writes look for, are one id.
 //
 // captured_by is written from the acting principal's id and never from a
 // request body, which is what makes it the unforgeable half of "the system

@@ -12,9 +12,11 @@ Empty reading cards, commitments and conversation previews do not occupy the ove
 
 Relationship direction distinguishes inbound only, outbound only and two-way exchanges. A successful empty pulse, colleague list or signal list is omitted; role restrictions remain explicit. An absence of timestamps does not establish a one-sided relationship.
 
+Identity editing, primary-address selection and employment resolution stay with their existing components.
+
 ## Communication permissions
 
-The sidebar answers permission by purpose and reachability by channel, using the existing consent guard. Loading, failed and successful unknown answers are distinct. Each message still passes its authoritative send check.
+The sidebar answers permission by purpose and reachability by channel, using the existing consent guard, because a reader deciding whether to write needs both answers and they come from different records. Loading, failed and successful unknown answers are distinct. Each message still passes its authoritative send check.
 
 “Manage consent & proof history” opens the existing consent ledger. Recorded grants and send permission remain different concepts: other recorded grounds can affect the guard. Recording or withdrawing consent refreshes the ledger, guard, contact read and communication review. Subject-only confirmation stays subject-only.
 
@@ -25,7 +27,3 @@ On narrow viewports, “Details & permissions” opens the same sidebar content 
 ## Focus and the work queue
 
 Focus uses ordinary eligibility and ranking, without pin controls or saved pin overrides. The separate full work queue keeps its existing pin behavior. The backend selects Focus before applying personal pins to the queue, so old saved pins cannot pull informational notices into Focus or change its order.
-
-## Verification
-
-Behavior tests cover zero-interaction coverage, factual fallback, failed reads and retries, lazy consent history, guard refresh after recording consent, read-only/no-address confirmation, directionality, direct task opening, and separation of Focus ranking from work-queue pins. Storybook includes fresh, profile-only, failed, active-task, phone and dark states. Identity editing, primary-address selection and employment resolution remain owned by their existing components.

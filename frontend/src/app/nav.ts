@@ -43,7 +43,7 @@ export {
 // structure and collapse to hairline rules at 56px, so the collapsed rail is the
 // flat list WDS-NAV-1 describes.
 //
-// It carries ten rows. Filters & views and Projects are destinations here and
+// Filters & views and Projects are destinations here and
 // Automations is not: Automations is set-and-forget configuration and lives
 // inside Settings → AI, where the product already offered a second door to it,
 // while the filter builder is a full authoring surface, and a screen this list
@@ -169,7 +169,7 @@ export const NAV: readonly NavItem[] = NAV_GROUPS.flatMap(
 export const BADGE_SCREENS: ReadonlySet<Screen> = new Set();
 
 // At phone width the sidebar becomes a bottom bar, which fits five thumb-sized
-// cells — ten destinations would need horizontal scrolling, and a nav you have
+// cells — every destination would need horizontal scrolling, and a nav you have
 // to scroll is a nav you cannot see. The CENTRE cell is not a destination: it is
 // the agent, which is app-level chrome and reports rather than navigates, so
 // three destinations ride the bar and More carries the rest.
@@ -314,7 +314,7 @@ const CUSTOM_NAV_GROUPS: Partial<
 // keeps its key as its `id` so `activeId` matching needs nothing new.
 //
 // Upstream's registry is empty, so in vanilla every one of these is a no-op and
-// the rail is the same ten rows rail.test.tsx pins.
+// the rail is the same rows rail.test.tsx pins.
 function forkItems(
   headingKey: MessageKey | undefined,
 ): readonly NavLevelEntry[] {

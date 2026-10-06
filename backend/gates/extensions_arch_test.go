@@ -5,11 +5,9 @@
 
 package gates
 
-// Extension-tier fitness functions (ADR-0120 §3): the compiler already
-// walls extensions off from internal/** (their module paths sit outside
-// the backend module), these tests hold the rest of the import contract
-// from the tree — every extension source dir (enabled or fixture) is
-// enrolled the moment it exists.
+// Every extension source directory (enabled or fixture) is held to the
+// extension tier's import contract from the moment it exists; the compiler
+// already walls extensions off from internal/**.
 
 import (
 	"fmt"

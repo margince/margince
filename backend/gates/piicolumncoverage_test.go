@@ -5,7 +5,7 @@
 
 package gates
 
-// The Art. 17 redaction, judged by COLUMN rather than by table.
+// The Art. 17 redaction, judged by column rather than by table.
 //
 // piicoverage_test.go asks whether erasure writes a registered PII table at
 // all. That question is satisfied by any UPDATE touching it, which is why

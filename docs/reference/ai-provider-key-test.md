@@ -17,18 +17,21 @@ reaches the answer.
 | `openai`, `openai_compatible`, `vllm` | `GET {base}/v1/models`, `Authorization: Bearer` (none for a keyless vLLM) | 200, with the model count |
 | `gemini` | `GET {base}/models`, `x-goog-api-key`, every page | 200, with the model count |
 | `ollama` | `GET {base}/api/tags`, no auth | 200, with the count of pulled models |
-| `jev` | `GET /v1/models` beside its endpoint (TypeSafe's model list), `Authorization: Bearer` — on whatever host the endpoint names, OpenRouter included | 200, with the model count |
+| `jev` | `GET /v1/models` beside its endpoint (TypeSafe's model list), `Authorization: Bearer`, on whatever host the endpoint names, OpenRouter included | 200, with the model count |
 | `jev_compatible` on `openrouter.ai` | `GET https://openrouter.ai/api/v1/key`, `Authorization: Bearer` | 200, no count |
-| `jev_compatible` elsewhere | `POST {endpoint}` with body `{}`, `Authorization: Bearer` when a key is held | 400 or 422, no count, reported as **unconfirmed** (`key_confirmed: false`): the server answered and did not refuse the key, but may have refused the empty body before reading the key. A 200 is **not** a pass: no Jev server answers an empty request, so it is something else at that address |
+| `jev_compatible` elsewhere | `POST {endpoint}` with body `{}`, `Authorization: Bearer` when a key is held | 400 or 422, no count, reported as **unconfirmed** (`key_confirmed: false`). A 200 fails: no Jev server answers an empty request |
 
-Why the two `jev_compatible` rows differ: "compatible" promises only the Jev
-decision route. OpenRouter's model catalogue is public — it answers 200 to any
-key, so listing it proves nothing — which is why its key endpoint is asked
-instead. A self-hosted server publishes nothing but the decision route, and a
-request naming no model is refused before anything is decided. A keyless
-pass — a self-hosted server with no key stored — reads "The server answered":
-no key was sent, so none was accepted. With a key held, the screen says the
-server did not refuse it and that a wrong key would show at the first decision.
+The two `jev_compatible` rows differ because "compatible" promises only the Jev
+decision route. OpenRouter's model list is public and answers 200 to any key, so
+Test asks its key endpoint instead. A self-hosted server publishes only the
+decision route and refuses a request that names no model before anything is
+decided. Its 400 or 422 means the server answered and did not refuse the key,
+but it may have refused the empty body before reading the key. A 200 from that
+address is something other than a Jev server.
+
+With no key stored, a self-hosted pass reads "The server answered": no key was
+sent, so none was accepted. With a key held, the screen says the server did not
+refuse it and that a wrong key would show at the first decision.
 
 A failure answers `ok: false` with one `reason`:
 
@@ -36,9 +39,9 @@ A failure answers `ok: false` with one `reason`:
 |---|---|
 | `no_key` | the provider takes a key and none is stored |
 | `profile_forbids` | the installation profile forbids reaching this provider: a cloud provider under `sovereign`, or under `eu_hosted` a decision lane the routing validator refuses (`jev`, or `jev_compatible` on OpenRouter) |
-| `no_endpoint` | `openai_compatible` or `jev_compatible` with no binding naming a host yet — bind one first |
+| `no_endpoint` | `openai_compatible` or `jev_compatible` with no binding naming a host yet; bind one first |
 | `auth_failed` | the vendor refused the key: 401 or 403, or Gemini's 400 `API_KEY_INVALID` |
-| `rate_limited` | 429 — the vendor is throttling the key, which may still be valid |
+| `rate_limited` | 429: the vendor is throttling the key, which may still be valid |
 | `unreachable` | no answer within 5 seconds, a 5xx, a redirect, or any other status |
 | `not_published` | an adapter this build does not carry |
 

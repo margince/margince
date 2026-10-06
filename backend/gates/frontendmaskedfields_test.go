@@ -5,7 +5,7 @@
 
 package gates
 
-// A field the server can withhold is drawn as WITHHELD, or the screen states
+// A field the server can withhold is drawn as withheld, or the screen states
 // something false.
 //
 // The wire says it twice: the value comes back null and `masked_fields` names

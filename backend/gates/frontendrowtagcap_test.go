@@ -5,7 +5,7 @@
 
 package gates
 
-// The browser and the server must agree on how many tags one LIST ROW carries,
+// The browser and the server must agree on how many tags one list row carries,
 // or the chip strip's "+N" counts a number nobody has.
 //
 // The store caps the tags it attaches per row, because a record somebody tagged

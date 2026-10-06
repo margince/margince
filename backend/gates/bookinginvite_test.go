@@ -5,7 +5,8 @@
 
 package gates
 
-// What booking a meeting CLAIMS and what it DOES, held against each other.
+// What booking a meeting claims to do and what it does, held against each
+// other.
 //
 // `POST /bookings` accepted `attendee_emails`, decoded them into a struct field,
 // and dropped them. The contract said it "sends an invite" and the screen said
