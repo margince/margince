@@ -42346,9 +42346,11 @@ export interface components {
             topic_statement: string;
             /**
              * Format: double
-             * @description The grounding floor: the cosine a passage must reach before it may be cited at all. It removes what is obviously far and is NOT what tells a covered question from an uncovered one — cosine is not calibrated across embedding models, and under some bindings no value separates the two. A reader is told what read the passages by generated_by and by the unreviewed outcome.
+             * @description The grounding floor in force: the cosine a passage must reach before it may be cited at all. It is this corpus's own override when min_similarity_overridden is true, else the floor measured for the embedding binding that reads the corpus (0 where that binding has none). The floor removes what is obviously far and is NOT what tells a covered question from an uncovered one — cosine is not calibrated across embedding models, and under some bindings no value separates the two. A reader is told what read the passages by generated_by and by the unreviewed outcome.
              */
             min_similarity: number;
+            /** @description True when min_similarity is this corpus's own number rather than the binding's measured floor. An override may sit below the measured floor. */
+            min_similarity_overridden?: boolean;
             /** @description The corpus the command palette's ask lands on. At most one per workspace. */
             default_ask: boolean;
             /** @description A re-embed is in flight; every ask answers not_ready until it finishes. */

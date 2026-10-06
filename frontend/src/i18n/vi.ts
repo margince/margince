@@ -753,7 +753,6 @@ export const vi = {
   "brief.readings.unavailable.decisions": "Nguồn không khả dụng",
   "brief.feed.incomplete":
     "Chưa tải được mục nào. Không thể kiểm tra một phần công việc.",
-  "brief.feed.fullWorklist": "Mở danh sách công việc đầy đủ",
   "brief.week.workRecorded": "Có công việc hoàn thành trong tuần.",
   "brief.week.leads_one": "Đã phân công {count} khách hàng tiềm năng.",
   "brief.week.leads_other": "Đã phân công {count} khách hàng tiềm năng.",
@@ -1129,6 +1128,10 @@ export const vi = {
   "deal.undated": "chưa có ngày chốt",
   "deal.lastMail": "Email gần nhất",
   "deal.mail.title": "Các email trước",
+  "deal.openDeal": "Mở deal",
+  "deal.card.summary": "Tóm tắt deal: {name}",
+  "deal.card.email": "Viết email: {name}",
+  "deal.card.addTask": "Thêm công việc: {name}",
   "deal.mail.sent": "Đã gửi {ago}",
   "deal.mail.received": "Đã nhận {ago}",
   "deal.mail.none": "Chưa có email nào về deal này",

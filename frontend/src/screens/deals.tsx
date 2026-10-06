@@ -35,10 +35,10 @@ import {
   EmptyState,
   SegmentedControl,
 } from "../design-system/atoms";
-import {
-  type BoardColumn,
-  type BoardDeal,
-  type BoardMoneyColumn,
+import type {
+  BoardColumn,
+  BoardDeal,
+  BoardMoneyColumn,
   PipelineBoard,
 } from "../design-system/composed";
 import { DataTable } from "../design-system/datatable";
@@ -126,7 +126,8 @@ import { DealBulkBar } from "./dealbulk";
 import { type CompanyNaming, useCompanyMarks } from "./dealcompanymarks";
 import { DealEmailAside } from "./dealemail";
 import { DealFiles } from "./dealfiles";
-import { dealMailAside, lastMailColumn } from "./dealmailaside";
+import { lastMailColumn } from "./dealmailaside";
+import { DealPipelineBoard } from "./dealpipelineboard";
 import {
   DealProjectChip,
   dealProjectFields,
@@ -1629,7 +1630,7 @@ function DealBoardBody({
             </QueryGate>
           ) : (
             <>
-              <PipelineBoard
+              <DealPipelineBoard
                 cardHref={(deal) => routeHash({ screen: "deals", id: deal.id })}
                 zone={recordZone}
                 columns={buildColumns(
@@ -1641,7 +1642,6 @@ function DealBoardBody({
                   rosterOwnerNaming(roster),
                 )}
                 onOpen={openDeal}
-                mailAside={dealMailAside}
                 cardDragHandlers={cardDragHandlers}
                 columnDropHandlers={columnDropHandlers}
                 columnExtras={suggestionGhosts}

@@ -326,6 +326,14 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "DealCard takes the record's zone as a required prop for its close date; the story has to hand it a named one, and a zone read off the runner would draw a different date on every machine the catalog builds on.",
   },
   {
+    file: "screens/dealpipelineboard.stories.tsx",
+    why: "DealPipelineBoard passes the record's zone through to PipelineBoard for its cards' close dates; the story has to hand it a named one, and a zone read off the runner would draw a different date on every machine the catalog builds on.",
+  },
+  {
+    file: "screens/dealpipelineboard.test.tsx",
+    why: "Same prop, satisfied rather than asserted: the suite is about the cards' verbs, and the zone only fills the board's required signature.",
+  },
+  {
     file: "design-system/select.stories.tsx",
     why: "The zone picker's option list — IANA names as DATA the control lists, not a zone anything is formatted in.",
   },

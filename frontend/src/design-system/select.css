@@ -50,11 +50,24 @@
    conditional, and it arrives as `data-motion` from select.tsx for the reason
    spelled out over the popup's animation below: one decision, in one place the
    unit suite can read. */
-.select-control[data-motion="in"] .select-chevron {
+.select-control[data-motion="in"] .select-chevron,
+.select-button[data-motion="in"] .select-chevron {
   transition: transform var(--dur-state);
 }
-.select-control[aria-expanded="true"] .select-chevron {
+.select-control[aria-expanded="true"] .select-chevron,
+.select-button[aria-expanded="true"] .select-chevron {
   transform: rotate(180deg);
+}
+
+/* The `button` appearance: the same trigger worn as a filled button rather
+   than a field. Its box — `--controlHeight`, the inset, the fill, the press —
+   is `.btn` and `.btn-primary` (base.css), so it stands on the one button
+   height rather than a third answer to how tall a control is. What is left
+   here is the row the field face also needs: the face takes the free space and
+   ellipsizes, and the chevron keeps the far edge. */
+.select-button {
+  justify-content: space-between;
+  text-align: left;
 }
 
 /* Above `.overlay` (50) and `.toast-region` (60) in atoms.css: a select inside a

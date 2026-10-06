@@ -587,7 +587,7 @@ test("AC-pipeline-7: board↔table swaps views preserving the deal set", async (
  * grow-into-the-leftover-room sizing this replaced, and would have passed on
  * the defect it exists to catch.
  */
-const STAGE_WIDTH_PX = 240;
+const STAGE_WIDTH_PX = 300;
 
 /**
  * The stage geometry a reader is actually handed, read off the rendered board.
@@ -949,6 +949,9 @@ test("AC-deal-6: a terminal-stage drop is a 🟡 confirm — nothing runs before
   const card = page.locator('[data-deal="d-fleet"]');
   await expect(card).toBeVisible();
   const won = page.locator('[data-stage="s4"]');
+  // The board scrolls sideways and the terminal stage starts at this window's
+  // edge, so it is brought into view the way a rep scrolls to it before a drop.
+  await won.scrollIntoViewIfNeeded();
   await card.dragTo(won);
   await expect(page.getByText("In die Phase Won verschieben?")).toBeVisible();
 

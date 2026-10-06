@@ -763,7 +763,6 @@ export const de = {
   "brief.readings.unavailable.decisions": "Quelle nicht verfügbar",
   "brief.feed.incomplete":
     "Keine Einträge geladen. Ein Teil der Arbeit konnte nicht geprüft werden.",
-  "brief.feed.fullWorklist": "Vollständige Worklist öffnen",
   "brief.week.workRecorded": "Diese Woche wurde Arbeit erledigt.",
   "brief.week.leads_one": "{count} Lead zugewiesen.",
   "brief.week.leads_other": "{count} Leads zugewiesen.",
@@ -1144,6 +1143,10 @@ export const de = {
   "deal.undated": "kein Abschlussdatum",
   "deal.lastMail": "Letzte E-Mail",
   "deal.mail.title": "Bisherige E-Mails",
+  "deal.openDeal": "Deal öffnen",
+  "deal.card.summary": "Deal-Zusammenfassung: {name}",
+  "deal.card.email": "E-Mail schreiben: {name}",
+  "deal.card.addTask": "Aufgabe hinzufügen: {name}",
   "deal.mail.sent": "Gesendet {ago}",
   "deal.mail.received": "Erhalten {ago}",
   "deal.mail.none": "Noch keine E-Mail zu diesem Deal",

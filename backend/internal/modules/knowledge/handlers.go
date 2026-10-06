@@ -72,6 +72,15 @@ func (h Handlers) WithBlobstore(blob blobstore.Store) Handlers {
 	return h
 }
 
+// WithEmbedIdentity binds the embedding identity corpus floors resolve against.
+func (h Handlers) WithEmbedIdentity(identity func() string) Handlers {
+	if h.store == nil {
+		return h
+	}
+	h.store = h.store.WithEmbedIdentity(identity)
+	return h
+}
+
 // ListCorpora serves listCorpora.
 func (h Handlers) ListCorpora(w http.ResponseWriter, r *http.Request) {
 	items, err := h.store.ListCorpora(r.Context())
