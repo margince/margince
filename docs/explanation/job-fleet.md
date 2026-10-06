@@ -77,11 +77,13 @@ Three more are **conditional on what the kind is**, and generation refuses the m
 directions. A field owed and absent fails, and so does a field declared where it means nothing:
 
 - **`cadence`**: required on a dispatcher, refused on an enqueued worker (*"an enqueued worker is
-  enqueued by its dispatcher, never ticked"*). It takes one of a duration, `{operator: Field}` naming
-  the `JobRunnerConfig` dial the number comes from, or `on_demand`. `on_demand` is a *declaration*:
-  `embed_reindex` is enqueued by a human's confirm and by no clock, and an absent cadence would read
-  as a schedule somebody forgot. An optional `schedule_when_positive: Field` is a third posture: the
-  workers stay registered and only the tick goes away.
+  enqueued by its dispatcher, never ticked"*). It takes one of a duration, `{setting: key}` naming
+  the registered setting an admin sets the seconds in, or `on_demand`. `on_demand` is a
+  *declaration*: `embed_reindex` is enqueued by a human's confirm and by no clock, and an absent
+  cadence would read as a schedule somebody forgot. A setting cadence may add `off_at_zero: true`;
+  its setting then admits `0` to switch the pass off, the workers stay registered and only the tick
+  goes away. A running worker re-reads the settings every minute and moves a changed schedule
+  (`backend/internal/compose/jobschedulebook.go`).
 - **`fans_out_to` + `fan_out_unit`**: one declaration, never one without the other. Required on a
   dispatcher (*"a dispatcher that fans out to nothing … does no work at all"*), refused elsewhere,
   and the named child must itself be `role: worker`. The unit is `workspace`, `connection` or

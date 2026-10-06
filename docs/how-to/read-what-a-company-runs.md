@@ -105,9 +105,10 @@ a domain the record never carried.
 
 ## Configure it
 
-Two settings, both read by the **worker** at boot. The api does not read them, because the enricher
-is built in `cmd/worker/jobrunner.go`. Put them in `.env.local`, which `scripts/dev.sh` sources and
-exports.
+Two settings. The certificate log's address is an environment variable the **worker** reads at boot:
+the api does not read it, because the enricher is built in `cmd/worker/jobrunner.go`. Put it in
+`.env.local`, which `scripts/dev.sh` sources and exports. How often the sweep runs is an admin
+setting on Settings → System health, which a running worker picks up without a restart.
 
 ### `MARGINCE_CERTLOG_BASE_URL`: required, or the whole lane is off
 
@@ -131,15 +132,14 @@ job that retries against an unregistered kind:
 job kind is not registered in the client's Workers bundle: technical_enrich_company
 ```
 
-### `--technical-backfill-interval`: how often to refresh
+The worker reads `MARGINCE_CERTLOG_BASE_URL` at boot. Run `make dev` again after changing it: Vite
+hot-reloads the SPA, but not the Go worker.
 
-Defaults to **6h**. Runs on start. `0` turns the sweep off and leaves the lookup to the site read
-that queues it.
+### How often to refresh
 
-### Restart after changing either
-
-The worker is a compiled binary and reads both at boot. Run `make dev` again: Vite hot-reloads the SPA,
-but not the Go worker.
+An admin setting, **Technical lookup sweep (seconds)** on Settings → System health: 21600 seconds
+(6 hours) by default. It runs on start; `0` turns the sweep off and leaves the lookup to the site
+read that queues it. A running worker rechecks for changes every minute.
 
 ## Where it shows
 

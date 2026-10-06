@@ -442,6 +442,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `contentionprobe_test.go` | H2 | A contention probe that cannot see the backend it is waiting for. |
 | `dealforecastmovement_test.go` | H2 | A deal row changes through one door, and that door records the forecast. |
 | `dealmoneypairwriters_test.go` | H2 | The deal money pairing rule is decided in one function, and this fails when a second place decides it. |
+| `docsplainwords_test.go` | H2 | A page whose first line is \<!-- prose:plain --> is written in plain words: a short page, short sentences, and a vocabulary of fewer than 1,000 general words plus named technical terms. |
 | `docsprose_test.go` | H2 | Every Markdown page meets the house prose bar in docs/reference/docs-prose-style.md. |
 | `errmatch_test.go` | H2 | Postgres failures are classified by SQLSTATE or constraint name (the storekit.UniqueViolation / CheckViolation helpers), never by message text, which breaks on a locale change, a driver upgrade, or an unrelated error that mentions the same identifier. |
 | `evidencedeletes_test.go` | H2 | No domain code deletes an evidence row. |

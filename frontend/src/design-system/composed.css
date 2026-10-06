@@ -393,7 +393,11 @@
 .deal-card .deal-head .deal-company {
   color: inherit;
 }
+/* Above the stretched link, like the company, or the pointer never reaches the
+   mark and its name tip never opens. */
 .deal-card .deal-owner {
+  position: relative;
+  z-index: 1;
   margin-left: auto;
   flex: none;
   display: flex;
@@ -528,6 +532,12 @@
    and a full step under it on a company. `.record-head` is drawn by
    `RecordHead` and nothing else, so this rule reaches every record page and no
    other surface. */
+/* The way back over the head: one line of its own, a small step above the
+   identity it leads into. */
+.record-back {
+  margin-bottom: var(--space-3);
+}
+
 .record-head {
   display: flex;
   align-items: center;
@@ -1325,6 +1335,13 @@
   display: block;
   white-space: pre-wrap;
   color: var(--textPrimary);
+}
+
+/* A note's markdown wrapper inherits the row's font and colour instead of the
+   document reader's body font; headings and code keep the reader's own. */
+.tl-text .md {
+  font: inherit;
+  color: inherit;
 }
 
 .tl-text-toggle {

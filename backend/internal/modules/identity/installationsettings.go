@@ -53,6 +53,8 @@ type InstallationSettings struct {
 	// It is the STORED answer and not the effective one: the deployment decides
 	// what is possible, and compose intersects the two.
 	EnabledOidcProviders []string
+	// Operations is the worker's operating values (installationoperations.go).
+	Operations OperationSettings
 }
 
 // InstallationPatch is a sparse installation-settings write: a nil field is
@@ -87,6 +89,9 @@ type InstallationPatch struct {
 	// group grants anything — so the two cannot be collapsed, exactly like
 	// EnabledOidcProviders above.
 	OidcGroupRoleMap *map[string]string
+	// Operations is the sparse patch of the worker's operating values; it
+	// checks its own completeness (installationoperations_test.go).
+	Operations OperationPatch
 }
 
 // pendingWrite is one field of a sparse patch, already reduced to the two
@@ -185,6 +190,10 @@ func (s *InstallationSettingsStore) GetInstallation(ctx context.Context) (Instal
 	if err != nil {
 		return InstallationSettings{}, err
 	}
+	operations, err := s.readOperations(ctx)
+	if err != nil {
+		return InstallationSettings{}, err
+	}
 	return InstallationSettings{
 		Name: name, Timezone: zone, BaseCurrency: currency, BaseLanguage: language, DateFormat: dateFormat, TimeFormat: timeFormat,
 		FiscalYearStartMonth:       fiscalStart,
@@ -193,6 +202,7 @@ func (s *InstallationSettingsStore) GetInstallation(ctx context.Context) (Instal
 		ForecastForwardMeasure:     measure,
 		BaseCurrencyLocked:         locked, BaseCurrencyLockedReason: why,
 		EnabledOidcProviders: providers,
+		Operations:           operations,
 	}, nil
 }
 
@@ -287,7 +297,11 @@ func encodeInstallationPatch(in InstallationPatch) ([]pendingWrite, error) {
 	if err != nil {
 		return nil, err
 	}
-	return []pendingWrite{name, zone, currency, language, fiscal, bannerHours, tokenTTL, measure, providers, dateFormat, timeFormat, requireSSO, requireMFA, groupRoleMap}, nil
+	operations, err := in.Operations.writes()
+	if err != nil {
+		return nil, err
+	}
+	return append([]pendingWrite{name, zone, currency, language, fiscal, bannerHours, tokenTTL, measure, providers, dateFormat, timeFormat, requireSSO, requireMFA, groupRoleMap}, operations...), nil
 }
 
 // UpdateInstallation applies a sparse patch. Named for the same reason as

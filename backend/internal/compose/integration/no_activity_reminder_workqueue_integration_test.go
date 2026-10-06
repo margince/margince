@@ -101,11 +101,7 @@ func TestNoActivityReminderReachesTheOwnersTasksScreenThroughTheRealRiverJob(t *
 
 	ApplyRiverSchema(t)
 	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
-	runner, err := compose.NewJobRunner(e.Pool, quiet, compose.JobRunnerConfig{
-		CloseDateInterval: time.Hour,
-		ReconcileInterval: time.Hour,
-		TimeScanInterval:  time.Hour,
-	})
+	runner, err := compose.NewJobRunner(e.Pool, quiet, compose.JobRunnerConfig{})
 	if err != nil {
 		t.Fatalf("NewJobRunner: %v", err)
 	}

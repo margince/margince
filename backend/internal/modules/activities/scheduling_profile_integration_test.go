@@ -6,9 +6,11 @@
 package activities
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 func TestBookingProfileReadsAccountNameBeforeItsLinkExists(t *testing.T) {
@@ -59,5 +61,27 @@ func TestBookingProfileIgnoresALegacyStoredName(t *testing.T) {
 	profile, err = store.SchedulingProfile(ctx)
 	if err != nil || profile.HostName == nil || *profile.HostName != "Rep" {
 		t.Fatalf("legacy profile: %+v, %v", profile, err)
+	}
+}
+
+// A host who picks a provider before connecting it gets the sentence the
+// no-provider case already gives, naming the provider field, not a server error.
+func TestEnablingBookingsWithoutAUsableCalendarNamesTheProvider(t *testing.T) {
+	for name, calendar := range map[string]*invitationCalendar{
+		"no connection":              {checkErr: connector.ErrAuthRejected},
+		"a connection since revoked": {listErr: connector.ErrAuthRejected},
+	} {
+		e := setupSend(t)
+		store := e.store(nil).WithPublicBaseURL("https://crm.example.test").WithSchedulingCalendar(calendar)
+		profile := defaultSchedulingProfile()
+		profile.Enabled = true
+		profile.Provider = "gcal"
+
+		_, err := store.SaveSchedulingProfile(e.as(principal.RowScopeAll), profile)
+
+		var refusal *SchedulingArgumentError
+		if !errors.As(err, &refusal) || refusal.Field != "provider" || refusal.Code != "required" {
+			t.Errorf("%s answered %v, want a refusal naming provider", name, err)
+		}
 	}
 }

@@ -154,6 +154,10 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The booking API fixture supplies the host’s effective working-hours timezone independently of the viewer’s zone, so the form can show the actual calendar policy.",
   },
   {
+    file: "screens/companyhealthreason.test.tsx",
+    why: "Asserts that a booked meeting's day is named in the record's zone; the day boundary is only checkable against zones the test chose.",
+  },
+  {
     file: "screens/booking-guest-month.test.ts",
     why: "A month is read in the guest's zone, and only a zone with a fall-back clock change makes it longer than the server's 31-day bound.",
   },
@@ -320,6 +324,10 @@ const pinnedZones: { file: string; why: string }[] = [
   {
     file: "design-system/composed.test.tsx",
     why: "Same prop, asserted: the row's rendered time is only checkable against a zone the test chose.",
+  },
+  {
+    file: "design-system/composed.timelinetext.test.tsx",
+    why: "RecordView requires its zone prop; these suites assert a body's links, and a fixed zone keeps the rows they render identical on every runner.",
   },
   {
     file: "design-system/dealcard.stories.tsx",

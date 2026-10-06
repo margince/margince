@@ -108,7 +108,7 @@ export function VCardImport() {
       <Button data-testid="vcard-import" onClick={() => setOpen(true)}>
         {t("vcardImport.action")}
       </Button>
-      <Modal open={open} onClose={close} labelledBy={titleId}>
+      <Modal open={open} onClose={close} labelledBy={titleId} intent="form">
         <Heading size="large" id={titleId} className="t-h2 modal-title">
           {t("vcardImport.title")}
         </Heading>

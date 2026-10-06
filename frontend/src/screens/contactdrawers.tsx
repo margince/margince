@@ -301,8 +301,7 @@ export function ContactResearchDrawer({
       open={open}
       onClose={onClose}
       labelledBy="contact-research-title"
-      size="wide"
-      placement="right"
+      intent="drawer-reading"
     >
       <DrawerHead>
         <div className="pe-drawer-title">
@@ -359,7 +358,7 @@ export function ContactResearchDrawer({
         )}
       </DrawerBody>
 
-      <DrawerFoot>
+      <DrawerFoot className="pe-research-foot">
         <span className="pe-disclosure t-caption">
           {t("contact.research.evidenceOrOmit")}
         </span>

@@ -8,6 +8,7 @@ import {
   briefOmitted,
   briefWithPlan,
 } from "../src/screens/meetingbrief/fixtures";
+import { defaultOperations } from "../src/screens/operationsettings.fixtures";
 import {
   reportingStoryCatalog,
   reportingStoryEvaluation,
@@ -277,6 +278,9 @@ export const deals = [
     pipeline_id: "pl",
     stage_id: "s2",
     company_id: "o-brandt",
+    // The seeded seat carries it, so the card's owner mark and the table's
+    // owner column both have a colleague to name.
+    owner_id: "u1",
     project_id: null as string | null,
     status: "open",
     // The reason a win carries when no signed agreement backs it. Declared on
@@ -1218,6 +1222,7 @@ export async function mockApi(
     signature_enrich: true,
     auto_enrich_daily_cap: 500,
     site_read: { max_pages: 60, max_mib: 32, wall_seconds: 240 },
+    mail_sync_interval_seconds: 120,
   };
   const captureConnections = [
     {
@@ -1452,6 +1457,7 @@ export async function mockApi(
         base_currency_locked: false,
         max_upload_bytes: 25_000_000,
         oauth_access_token_ttl_minutes: 43_200,
+        operations: defaultOperations,
         // Two providers, one of each state, so the sign-in methods card renders
         // both an offered and a withheld row rather than only the empty case.
         sign_in_providers: [

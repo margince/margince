@@ -1,0 +1,24 @@
+# Names a plain page may use: products, protocols, files. See docs/reference/docs-prose-style.md#plain-pages.
+AI
+Apache
+API
+backend
+Compose
+CRM
+Docker
+git
+GitHub
+Go
+Gradion
+LICENSE
+Margince
+MCP
+Node
+Ollama
+pnpm
+Postgres
+React
+Redis
+REST
+vLLM
+worktree

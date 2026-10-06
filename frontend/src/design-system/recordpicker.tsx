@@ -23,6 +23,17 @@ const SEARCH_DEBOUNCE_MS = 250;
 
 export type RecordPickerCandidate = { id: string; name: string };
 
+// Named once: by `label` standing alone, or by the `<label for>` a `Field`
+// points at `id`. Not both: an aria-label overrides the visible label it repeats.
+type RecordPickerName =
+  | Readonly<{
+      // The search field's placeholder and aria-label, already translated,
+      // because only the caller knows WHICH records are being searched.
+      label: string;
+      id?: undefined;
+    }>
+  | Readonly<{ id: string; label?: undefined }>;
+
 export function RecordPicker({
   label,
   searchTargets,
@@ -33,13 +44,6 @@ export function RecordPicker({
   "aria-describedby": describedBy,
   "aria-invalid": invalid,
 }: Readonly<{
-  // Doubles as the search field's placeholder and aria-label — the caller
-  // supplies already-translated copy, because only the caller knows WHICH
-  // records are being searched. Copy about the search ITSELF — the line a
-  // failed lookup puts on screen — is this component's own state and is
-  // written here, in the reader's language.
-  label: string;
-  id?: string;
   "aria-describedby"?: string;
   "aria-invalid"?: boolean;
   searchTargets: (q: string) => Promise<RecordPickerCandidate[]>;
@@ -50,7 +54,8 @@ export function RecordPicker({
   // list and the typed query stay on screen, which is what the user needs to
   // see if the write comes back refused.
   disabled?: boolean;
-}>) {
+}> &
+  RecordPickerName) {
   const t = useT();
   const [term, setTerm] = useState("");
   const [candidates, setCandidates] = useState<RecordPickerCandidate[]>([]);

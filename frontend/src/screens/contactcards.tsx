@@ -172,7 +172,9 @@ export function ContactCommercialCard({
                   />
                   <span>{member.full_name}</span>
                 </span>
-                <span className="t-sub">{readableRole(member.role)}</span>
+                {member.role && (
+                  <span className="t-sub">{readableRole(member.role)}</span>
+                )}
               </div>
             ))}
           </>

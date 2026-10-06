@@ -855,6 +855,9 @@
                     "archived": {
                       "type": "boolean"
                     },
+                    "done": {
+                      "type": "boolean"
+                    },
                     "listed": {
                       "type": "boolean"
                     },
@@ -878,6 +881,9 @@
                   "type": "object",
                   "properties": {
                     "archived": {
+                      "type": "boolean"
+                    },
+                    "done": {
                       "type": "boolean"
                     },
                     "listed": {

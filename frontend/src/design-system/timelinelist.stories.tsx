@@ -73,6 +73,8 @@ export const Flat: Story = {
           kind: "note",
           title: "Budget approved for Q4",
           provenance: { kind: "human", self: false },
+          // A note is drawn as markdown; the mail above stays plain text.
+          body: "## Next steps\n\n- Send the revised quote\n- Book the **review** call\n\nTerms: https://example.com/terms",
         }),
       ]}
     />

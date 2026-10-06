@@ -32,10 +32,7 @@ import (
 // app is wired (gmailWired); otherwise capture stays on the poll and the
 // topic is left empty.
 func gmailWatchConfig(cfg workerConfig, gmailWired bool) compose.GmailWatchConfig {
-	w := compose.GmailWatchConfig{
-		Interval:    cfg.gmailWatchInterval,
-		RenewWithin: cfg.gmailWatchRenew,
-	}
+	w := compose.GmailWatchConfig{}
 	if gmailWired {
 		w.Topic = cfg.gmailPubsubTopic
 	}
@@ -53,8 +50,6 @@ func gmailWatchConfig(cfg workerConfig, gmailWired bool) compose.GmailWatchConfi
 func graphWatchConfig(cfg workerConfig) compose.GraphWatchConfig {
 	return compose.GraphWatchConfig{
 		NotificationURL: cfg.graphNotifyURL,
-		Interval:        cfg.graphWatchInterval,
-		RenewWithin:     cfg.graphWatchRenew,
 	}
 }
 
@@ -86,7 +81,7 @@ func startJobRunner(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vaul
 		ClientID:     cfg.graphClientID,
 		ClientSecret: cfg.graphClientSecret,
 		Tenant:       cfg.graphTenant,
-	}, cfg.captureConfig, logger).WithSyncInterval(cfg.gmailSyncInterval)
+	}, cfg.captureConfig, logger)
 	watchCfg := gmailWatchConfig(cfg, cfg.gmailAppWired())
 
 	// The extension tier's per-call Runtime, bound before the runner exists
@@ -116,13 +111,21 @@ func startJobRunner(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vaul
 	// attachment store rather than two that drift.
 	compose.BindExtensionCapture(pool, cfg.captureConfig)
 
-	runner, err := newJobRunner(pool, logger, cfg, captureReg, watchCfg, vault, lanes, modelPath, weeklyMail)
+	// A failed read starts the worker on the defaults rather than not at all:
+	// the watch below reads again every minute and moves what differs.
+	schedules, err := compose.ReadSchedules(ctx, pool)
+	if err != nil {
+		logger.WarnContext(ctx, "schedules: could not read the schedule settings at boot; starting on the defaults until the next check", "err", err)
+		schedules = compose.DefaultSchedules()
+	}
+	runner, err := newJobRunner(pool, logger, cfg, schedules, captureReg, watchCfg, vault, lanes, modelPath, weeklyMail)
 	if err != nil {
 		return nil, err
 	}
 	if err := runner.Start(ctx); err != nil {
 		return nil, err
 	}
+	go schedules.Watch(ctx, pool, runner, logger)
 	_, _ = fmt.Fprintln(stdout, jobRunnerBanner(cfg, watchCfg,
 		compose.GraphWatchWillRun(captureReg, graphWatchConfig(cfg)), modelPath, vault, lanes.runner))
 	return func() { stopJobRunner(ctx, runner, logger, cfg.jobDrainWindow) }, nil
@@ -205,7 +208,7 @@ func stopJobRunner(ctx context.Context, lane jobLane, logger *slog.Logger, drain
 // deployment condition that turns it on — or the omission that honestly leaves
 // it off. One declaration, so no lane can be enabled by one boot phase and
 // starved by another.
-func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, captureReg *capture.Registry, watchCfg compose.GmailWatchConfig, vault keyvault.Vault, lanes workerLanes, modelPath compose.ModelPath, weeklyMail compose.WeeklyMailConfig) (*jobs.Runner, error) {
+func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, schedules *compose.ScheduleBook, captureReg *capture.Registry, watchCfg compose.GmailWatchConfig, vault keyvault.Vault, lanes workerLanes, modelPath compose.ModelPath, weeklyMail compose.WeeklyMailConfig) (*jobs.Runner, error) {
 	// Firing a scheduled message stages its delivery and enqueues the dispatch
 	// job, through the SAME machinery an immediate send uses. Insert-only, like
 	// the api's: this role works what it inserts, and a stager built on the
@@ -216,6 +219,9 @@ func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, cap
 	}
 	return compose.NewJobRunner(pool, logger, compose.JobRunnerConfig{
 		ListsEnabled: cfg.listsEnabled,
+		// Every setting-driven schedule, read once here and kept current by
+		// the watch startJobRunner starts.
+		Schedules: schedules,
 		// The signal context the runner starts under is cancelled on SIGTERM;
 		// with a drain window, that cancellation stops fetching and leaves the
 		// jobs already running their window to finish (stopJobRunner).
@@ -238,12 +244,10 @@ func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, cap
 		// nothing, and better than answering from an empty table.
 		Geocoder:   geocoderFor(cfg.geocodeBaseURL),
 		VatChecker: vatCheckerFor(cfg.vatCheckBaseURL),
-		Geocoding:  compose.GeocodingConfig{BackfillInterval: cfg.geocodeBackfill},
 		// The technical lookup, when the operator turned it on. Nil leaves the
 		// sweep unregistered and the button answering 501 — declared absent
 		// rather than a lane that queues into a process that will not read.
-		TechnicalEnricher:   technicalEnricherFor(cfg, pool),
-		TechnicalEnrichment: compose.TechnicalEnrichmentConfig{BackfillInterval: cfg.technicalBackfill},
+		TechnicalEnricher: technicalEnricherFor(cfg, pool),
 		// The registry that resolves a staged delivery's mailbox: the SAME
 		// sweep registry the capture polls use, so the connector set that
 		// syncs a mailbox is the one that transmits from it.
@@ -251,18 +255,11 @@ func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, cap
 		// The origin a fired message builds its unsubscribe link on — the same
 		// pair sendPath hands the api's immediate send, so a message scheduled
 		// for later carries the link a message sent now would.
-		SendOrigin:        compose.SendOrigin{PublicBaseURL: cfg.publicBaseURL, Environment: cfg.posture},
-		SendPacing:        compose.SendPacing{Limit: cfg.sendRateLimit, Window: cfg.sendRateWindow, MaxAge: cfg.sendMaxAge},
-		CloseDateInterval: cfg.closeDateInterval,
-		ReconcileInterval: cfg.reconcileInterval,
-		TimeScanInterval:  cfg.timeScanInterval,
-		// The GDPR retention fan-out's cadence: --retention-interval is the
-		// schedule source, now read by River rather than by a ticker.
-		PrivacyRetention: compose.PrivacyRetentionConfig{Interval: cfg.retentionInterval},
+		SendOrigin: compose.SendOrigin{PublicBaseURL: cfg.publicBaseURL, Environment: cfg.posture},
 		// A nil deliverer (no --webhook-key) registers neither half.
-		WebhookRetry: compose.WebhookRetryConfig{Interval: cfg.webhookRetryInterval, Deliverer: lanes.deliverer},
+		WebhookRetry: compose.WebhookRetryConfig{Deliverer: lanes.deliverer},
 		// A nil service (no declared model) registers neither half.
-		AgentScheduler: compose.AgentSchedulerConfig{Interval: cfg.runnerInterval, Service: lanes.runner},
+		AgentScheduler: compose.AgentSchedulerConfig{Service: lanes.runner},
 		// Provider-run execution. Both halves are required: an adapter to
 		// call and a vault to unseal its credential with. Either absent
 		// registers nothing, which is the honest posture for a deployment

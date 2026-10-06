@@ -5,7 +5,6 @@ package introductions
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -23,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // The bounds a reader actually reads. A reason is a paragraph and a note is a
@@ -201,8 +201,11 @@ func requesterOf(ctx context.Context, req NewRequest) (principal.Principal, erro
 			"introductions: an introduction is asked of somebody else: %w",
 			apperrors.ErrInvalidArgument)
 	}
-	if req.InternalReason == "" {
-		return principal.Principal{}, errors.New("introductions: an ask says why it is worth making")
+	if strings.TrimSpace(req.InternalReason) == "" {
+		return principal.Principal{}, &values.ParseError{
+			Field: "internal_reason", Code: "required",
+			Message: "an ask says why it is worth making; give the colleague a reason",
+		}
 	}
 	return actor, nil
 }
@@ -235,10 +238,24 @@ func (s *Store) Decide(
 	suggested *ids.UUID, version int,
 ) error {
 	if answer == StatusSuggestOther && suggested == nil {
-		return errors.New("introductions: suggesting somebody else names them")
+		return &values.ParseError{
+			Field: "suggested_user_id", Code: "required",
+			Message: "name the colleague to suggest in suggested_user_id",
+		}
 	}
 	return s.move(ctx, id, func() Status { return answer }, version, func(cur *Request) error {
-		return May(cur.Status, answer, s.roleOf(ctx, cur))
+		if err := May(cur.Status, answer, s.roleOf(ctx, cur)); err != nil {
+			return err
+		}
+		// Handing the ask back to either party sends the requester to someone
+		// they have already dealt with.
+		if suggested != nil && (*suggested == cur.IntroducerUser || *suggested == cur.RequesterUserID) {
+			return &values.ParseError{
+				Field: "suggested_user_id", Code: "invalid",
+				Message: "suggest a colleague other than the one answering or the one asking",
+			}
+		}
+		return nil
 	}, func(ctx context.Context, tx pgx.Tx, cur *Request) (pgconn.CommandTag, error) {
 		return tx.Exec(ctx, `
 			UPDATE intro_request

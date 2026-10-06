@@ -110,6 +110,21 @@
   }
 }
 
+/* The first column when the row can be ticked for Mark done: the checkbox,
+   then the rank, on one line so the column keeps one width down the queue. */
+.worklist-row-lead {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+/* One width for the box and for the empty slot a row that cannot be ticked
+   keeps in its place, so the ranks and kinds line up down a mixed queue. */
+.worklist-row-lead > :first-child,
+.worklist-row-pick-slot {
+  flex: none;
+  inline-size: var(--space-6);
+}
+
 /* WHAT KIND of work, as the catalog's soft badge: a tint of the tone with its
    hairline, one weight down the column. This span is the CELL and not the
    mark, so it declares nothing the badge already owns — only that a kind may

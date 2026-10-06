@@ -42,7 +42,7 @@ func withholdUnseen(
 			lists = append(lists, ids.UUID(entry.RefId))
 		}
 	}
-	visible, err := auth.VisibleSubset(ctx, tx, string(recordType), named)
+	visible, err := visibleRecords(ctx, tx, recordType, named)
 	if err != nil {
 		return nil, nil, err
 	}

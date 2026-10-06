@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useId, useState } from "react";
+import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
 import { useCanWrite } from "../app/capability";
-import { Button, Field, Modal, Textarea } from "../design-system/atoms";
+import { Button, Field, Textarea } from "../design-system/atoms";
+import { ConfirmModal } from "../design-system/confirmmodal";
 import { ErrorLine } from "../design-system/errorline";
-import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import { useArchiveRecord } from "./archive";
 import { throwProblem } from "./common";
@@ -37,7 +37,6 @@ export function CompanyRejectAction({
   disabledReasonId?: string;
 }>) {
   const t = useT();
-  const headingId = useId();
   const [confirming, setConfirming] = useState(false);
   const [reason, setReason] = useState("");
   // ONE key per confirmation, held across retries. Without it a response lost
@@ -124,58 +123,40 @@ export function CompanyRejectAction({
       >
         {t("company.reject")}
       </Button>
-      <Modal
+      <ConfirmModal
         open={confirming}
         onClose={() => setConfirming(false)}
-        labelledBy={headingId}
+        title={t("company.reject")}
+        confirmLabel={t("company.reject")}
+        confirmVariant="danger"
+        // The reason is REQUIRED by the contract, so the control that sends it
+        // says so before the server has to.
+        confirmDisabled={!ready}
+        onConfirm={() => mutation.mutate({ reason })}
+        pending={mutation.isPending}
       >
-        <Heading size="large" id={headingId} className="t-h2 modal-title">
-          {t("company.reject")}
-        </Heading>
-        <div className="form-stack">
-          <p>
-            {t("company.rejectConfirm", {
-              name: company.display_name,
-              domain: primary.domain,
-            })}
-          </p>
-          <Field
-            label={t("company.rejectReasonLabel")}
-            hint={t("company.rejectReasonHint")}
-            required
-          >
-            {(control) => (
-              <Textarea
-                {...control}
-                rows={3}
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-              />
-            )}
-          </Field>
-          <ErrorLine error={mutation.error} />
-        </div>
-        <div className="actions">
-          <Button
-            onClick={() => setConfirming(false)}
-            disabled={mutation.isPending}
-          >
-            {t("create.cancel")}
-          </Button>
-          <Button
-            variant="danger"
-            // The reason is REQUIRED by the contract, so the control that
-            // sends it says so before the server has to: a refusal for an
-            // empty field the reader can see is a round trip that teaches
-            // them nothing.
-            disabled={!ready || mutation.isPending}
-            onClick={() => mutation.mutate({ reason })}
-            data-testid="reject-company-confirm"
-          >
-            {t("company.reject")}
-          </Button>
-        </div>
-      </Modal>
+        <p>
+          {t("company.rejectConfirm", {
+            name: company.display_name,
+            domain: primary.domain,
+          })}
+        </p>
+        <Field
+          label={t("company.rejectReasonLabel")}
+          hint={t("company.rejectReasonHint")}
+          required
+        >
+          {(control) => (
+            <Textarea
+              {...control}
+              rows={3}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+            />
+          )}
+        </Field>
+        <ErrorLine error={mutation.error} />
+      </ConfirmModal>
     </>
   );
 }

@@ -22,6 +22,7 @@ package integration
 // order the page by the name it is being refused.
 
 import (
+	"bytes"
 	"context"
 	"slices"
 	"testing"
@@ -88,6 +89,33 @@ func TestTheDealsListSortsByTheStatusColumnItDraws(t *testing.T) {
 	// "open" < "won"
 	assertIDOrder(t, listed("status"), []ids.UUID{openDeal, wonDeal}, "status ascending")
 	assertIDOrder(t, listed("-status"), []ids.UUID{wonDeal, openDeal}, "status descending")
+}
+
+// TestTheDealsListSortsByTheOwnerColumnItDraws: by the owner's id, which sets
+// each colleague's deals together, the way the company and contact lists order
+// their own owner column.
+func TestTheDealsListSortsByTheOwnerColumnItDraws(t *testing.T) {
+	e := Setup(t)
+	pipeline, stage, _ := DealFixture(t, e)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, dealCFVPerms)
+
+	// Postgres orders a uuid by its bytes, so the expected order is worked out
+	// here rather than assumed from which rep the harness seeded first.
+	owners := []ids.UUID{e.Rep1, e.Rep2, e.Rep3}
+	slices.SortFunc(owners, func(a, b ids.UUID) int { return bytes.Compare(a[:], b[:]) })
+	// Seeded middle, last, first: the default newest-first sort then gives an
+	// order that is neither ascending nor descending, so a pass cannot come
+	// from it.
+	dealOf := map[ids.UUID]ids.UUID{}
+	for _, owner := range []ids.UUID{owners[1], owners[2], owners[0]} {
+		dealOf[owner] = e.SeedDeal(t, "Owned by "+owner.String(), pipeline, stage, &owner)
+	}
+
+	ascending := []ids.UUID{dealOf[owners[0]], dealOf[owners[1]], dealOf[owners[2]]}
+	assertIDOrder(t, dealsIn(ctx, t, e, "owner_id"), ascending, "owner ascending")
+	descending := slices.Clone(ascending)
+	slices.Reverse(descending)
+	assertIDOrder(t, dealsIn(ctx, t, e, "-owner_id"), descending, "owner descending")
 }
 
 // The refusal still refuses. Widening a vocabulary is the shape most likely to
