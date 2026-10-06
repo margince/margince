@@ -308,6 +308,82 @@ describe("deciding a commission entry", () => {
     ).toBeTruthy();
     expect(urls.length).toBe(before);
   });
+
+  // The ledger answers every read; the decide POST answers with `refusal`.
+  function stubRefusedDecision(refusal: { status: number; body: object }) {
+    const ledgerReads: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        const path = new URL(request.url).pathname;
+        if (path.endsWith("/decide")) {
+          return new Response(JSON.stringify(refusal.body), {
+            status: refusal.status,
+            headers: { "Content-Type": "application/problem+json" },
+          });
+        }
+        if (path.endsWith("/commissions")) ledgerReads.push(path);
+        const body = path.endsWith("/me")
+          ? me(true)
+          : { data: [accrued], page: {} };
+        return new Response(JSON.stringify(body), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }),
+    );
+    return ledgerReads;
+  }
+
+  async function confirmApprove() {
+    render(<PartnerCommissions companyId="o-1" />);
+    await screen.findByTestId("commission-approve");
+    await act(async () => {
+      screen.getByTestId("commission-approve").click();
+    });
+    const dialog = screen.getByRole("dialog");
+    await act(async () => {
+      within(dialog)
+        .getByRole("button", { name: en["commission.decide.approve"] })
+        .click();
+    });
+    return dialog;
+  }
+
+  it("says the entry moved under you and refetches it when another decision won", async () => {
+    const ledgerReads = stubRefusedDecision({
+      status: 409,
+      body: { code: "version_skew", title: "version skew", status: 409 },
+    });
+
+    const dialog = await confirmApprove();
+
+    expect(
+      await within(dialog).findByText(en["edit.versionSkew"]),
+    ).toBeTruthy();
+    // The retry must carry the version the server now holds.
+    await vi.waitFor(() => expect(ledgerReads.length).toBe(2));
+  });
+
+  it("keeps the dialog open with the server's reason when the decision is refused", async () => {
+    const ledgerReads = stubRefusedDecision({
+      status: 422,
+      body: {
+        code: "validation_failed",
+        title: "Unprocessable",
+        detail: "This entry is already settled.",
+        status: 422,
+      },
+    });
+
+    const dialog = await confirmApprove();
+
+    expect(
+      await within(dialog).findByText("This entry is already settled."),
+    ).toBeTruthy();
+    expect(screen.queryByText(en["edit.versionSkew"])).toBeNull();
+    expect(ledgerReads.length).toBe(1);
+  });
 });
 
 // What is still OWED, which is the figure somebody running the programme opens

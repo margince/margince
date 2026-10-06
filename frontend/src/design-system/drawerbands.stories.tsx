@@ -145,9 +145,11 @@ const holdsItsWidth = async () => {
   const body = dialog.querySelector<HTMLElement>(".drawer-body");
   if (!body) throw new Error("The drawer drew no body band.");
   await expect(dialog.scrollWidth).toBeLessThanOrEqual(dialog.clientWidth);
-  await expect(body.getBoundingClientRect().right).toBeLessThanOrEqual(
-    dialog.getBoundingClientRect().right,
-  );
+  // A stack pin that reaches the body band pulls it past both drawer edges.
+  const band = body.getBoundingClientRect();
+  const drawer = dialog.getBoundingClientRect();
+  await expect(band.left).toBeGreaterThanOrEqual(drawer.left);
+  await expect(band.right).toBeLessThanOrEqual(drawer.right);
 };
 
 /** A form in the reading drawer: the body band is the field stack and the

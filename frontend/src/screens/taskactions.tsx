@@ -415,7 +415,7 @@ function SourceActivity({
   const query = useActivity(activityId);
   const meeting: Activity | undefined = query.data;
   return (
-    <Modal open onClose={onClose} labelledBy={titleId} intent="drawer">
+    <Modal open onClose={onClose} labelledBy={titleId} intent="drawer-reading">
       <DrawerHead>
         <Heading size="large" id={titleId} className="t-h2 modal-title">
           {meeting?.subject ?? t("tasks.source")}
