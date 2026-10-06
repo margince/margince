@@ -86,13 +86,7 @@ export function IntroDrawer({
   };
 
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      labelledBy={titleId}
-      placement="right"
-      size="wide"
-    >
+    <Modal open={open} onClose={onClose} labelledBy={titleId} intent="drawer">
       <Heading size="large" id={titleId} className="modal-title">
         {t("contact.intro.askTitle", { name: contactName })}
       </Heading>

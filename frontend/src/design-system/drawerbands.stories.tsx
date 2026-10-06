@@ -4,7 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useId, useState } from "react";
 import { expect, screen, waitFor, within } from "storybook/test";
-import { Badge, Button, Modal } from "./atoms";
+import { Badge, Button, Field, Modal, TextInput } from "./atoms";
 import { DrawerBody, DrawerFoot, DrawerHead } from "./drawerbands";
 import { Heading } from "./heading";
 
@@ -63,6 +63,40 @@ function BandedDrawer({ wide }: Readonly<{ wide: boolean }>) {
   );
 }
 
+// A form drawer: its body is the field stack and its foot the action row. The
+// dialog footer pin leaves a band-body stack alone; the bands pin themselves.
+function FormBandedDrawer() {
+  const titleId = useId();
+  return (
+    <Modal
+      open
+      onClose={() => undefined}
+      labelledBy={titleId}
+      intent="drawer-reading"
+    >
+      <DrawerHead>
+        <Heading size="large" id={titleId} className="t-h2 modal-title">
+          Map a claim
+        </Heading>
+      </DrawerHead>
+      <DrawerBody className="form-stack">
+        <Field label="Field on the record">
+          {(control) => <TextInput {...control} defaultValue="Buying role" />}
+        </Field>
+        <Field label="Value">
+          {(control) => (
+            <TextInput {...control} defaultValue="Procurement lead" />
+          )}
+        </Field>
+      </DrawerBody>
+      <DrawerFoot className="actions">
+        <Button variant="ghost">Cancel</Button>
+        <Button variant="primary">Map claim</Button>
+      </DrawerFoot>
+    </Modal>
+  );
+}
+
 const bodyScrollsToItsEnd = async () => {
   const dialog = await screen.findByRole("dialog", {
     name: "Research on Anna Brandt",
@@ -104,3 +138,23 @@ export const Standard: Story = {
 };
 
 export const BandedDark: Story = { ...Banded, globals: { theme: "dark" } };
+
+const holdsItsWidth = async () => {
+  const dialog = await screen.findByRole("dialog", { name: "Map a claim" });
+  await Promise.all(document.getAnimations().map((motion) => motion.finished));
+  const body = dialog.querySelector<HTMLElement>(".drawer-body");
+  if (!body) throw new Error("The drawer drew no body band.");
+  await expect(dialog.scrollWidth).toBeLessThanOrEqual(dialog.clientWidth);
+  // A stack pin that reaches the body band pulls it past both drawer edges.
+  const band = body.getBoundingClientRect();
+  const drawer = dialog.getBoundingClientRect();
+  await expect(band.left).toBeGreaterThanOrEqual(drawer.left);
+  await expect(band.right).toBeLessThanOrEqual(drawer.right);
+};
+
+/** A form in the reading drawer: the body band is the field stack and the
+ *  foot band the action row, and the drawer never scrolls sideways. */
+export const FormBands: Story = {
+  render: () => <FormBandedDrawer />,
+  play: holdsItsWidth,
+};
