@@ -17,8 +17,8 @@ The lane that produces its results is `make e2e-llm`; it is paid and opt-in, so 
 
 | Assistant | How we connected it | Jobs tried | Can I trust it? | In plain words |
 |---|---|---:|---|---|
-| `claude-sonnet-5-5` | Claude Code CLI | 29 of 31 | 🟢 Yes | Reliable on 29 of 29 jobs tried. |
-| `gpt-5.6-sol` | Codex CLI | 26 of 31 | 🟢 Yes | Reliable on 26 of 26 jobs tried. |
+| `claude-sonnet-5-5` | Claude Code CLI | 31 of 31 | 🟢 Yes | Reliable on 31 of 31 jobs tried. |
+| `gpt-5.6-sol` | Codex CLI | 28 of 31 | 🟢 Yes | Reliable on 28 of 28 jobs tried. |
 
 An assistant rated **Yes** was reliable on every job we tried. One rated **Mostly** was reliable on at least 80 in every 100, and one rated **Not yet** on fewer. We say **Not enough tested yet** when we tried it on under half the jobs.
 
@@ -61,8 +61,8 @@ One row per everyday job, one column per assistant. ✅ did it reliably, ❌ not
 | That whole thread is filed wrong | A conversation moves as a whole<br>The sign-off given up front is used | ✅ | ✅ |
 | Who can introduce us, and what is going cold | The introduction route runs through a colleague<br>The thin deals are the flagged ones<br>The official number is the report's<br>A claim is checked against the records | ✅ | - |
 | What moved my quarter | A repricing is reported as one<br>A slip out of the quarter is not called a loss<br>The movement adds up to the difference between the freezes | ✅ | ✅ |
-| A word from the fair, offered and not claimed | A tag is offered and not claimed | - | - |
-| Not the same contact | Two different contacts are told apart | - | - |
+| A word from the fair, offered and not claimed | A tag is offered and not claimed | ✅ | ✅ |
+| Not the same contact | Two different contacts are told apart | ✅ | ✅ |
 
 ---
 
@@ -102,12 +102,10 @@ Which model drove the lane, and how it went. The tool columns further down are t
 
 | Model | Cases run | Reached their bar | Below it | Runs passed | Reliability |
 |---|---:|---:|---:|---:|---:|
-| `claude-sonnet-5-5@claude-cli` | 29 of 31 | 29 | 0 | 83/87 | 95% |
-| `gpt-5.6-sol@codex-cli` | 26 of 31 | 26 | 0 | 71/78 | 91% |
+| `claude-sonnet-5-5@claude-cli` | 31 of 31 | 31 | 0 | 88/93 | 95% |
+| `gpt-5.6-sol@codex-cli` | 28 of 31 | 28 | 0 | 75/84 | 89% |
 
-> `claude-sonnet-5-5@claude-cli` has no committed run for 2 of 31 cases.
-
-> `gpt-5.6-sol@codex-cli` has no committed run for 5 of 31 cases.
+> `gpt-5.6-sol@codex-cli` has no committed run for 3 of 31 cases.
 
 ## The two surfaces
 
@@ -202,8 +200,10 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case5_before_the_meeting](../../e2e/llm/scenarios/case5-before-the-meeting.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/3 | 2 | **1** A briefing arrives without naming a record<br>**2** The attendees on the other side are named<br>**3** An empty calendar answer is not an empty diary<br>**5** The unkept promise is noticed | `search_records` |
 | [case50_what_moved_my_quarter](../../e2e/llm/scenarios/case50-what-moved-my-quarter.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** A repricing is reported as one<br>**2** A slip out of the quarter is not called a loss<br>**3** The movement adds up to the difference between the freezes | `forecast_movement`, `forecast_readings` |
 | [case50_what_moved_my_quarter](../../e2e/llm/scenarios/case50-what-moved-my-quarter.yaml) | `gpt-5.6-sol@codex-cli` | pass | 3/3 | 2 | **1** A repricing is reported as one<br>**2** A slip out of the quarter is not called a loss<br>**3** The movement adds up to the difference between the freezes | `forecast_movement`, `forecast_readings` |
-| [case54_a_word_from_the_fair](../../e2e/llm/scenarios/case54-a-word-from-the-fair.yaml) | - | not run | - | - | **1** A tag is offered and not claimed | `create_record` |
-| [case56_not_the_same](../../e2e/llm/scenarios/case56-not-the-same.yaml) | - | not run | - | - | **1** Two different contacts are told apart | `create_record`, `decide_duplicate` |
+| [case54_a_word_from_the_fair](../../e2e/llm/scenarios/case54-a-word-from-the-fair.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/3 | 2 | **1** A tag is offered and not claimed | `create_record` |
+| [case54_a_word_from_the_fair](../../e2e/llm/scenarios/case54-a-word-from-the-fair.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/3 | 2 | **1** A tag is offered and not claimed | `create_record` |
+| [case56_not_the_same](../../e2e/llm/scenarios/case56-not-the-same.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** Two different contacts are told apart | `create_record`, `decide_duplicate` |
+| [case56_not_the_same](../../e2e/llm/scenarios/case56-not-the-same.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/3 | 2 | **1** Two different contacts are told apart | `create_record`, `decide_duplicate` |
 | [case6_ask_the_company](../../e2e/llm/scenarios/case6-ask-the-company.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/3 | 2 | **1** The past cases are found without being named<br>**3** The record's date wins over the prose recalling it<br>**5** The disagreement between note and record is pointed out | `search_context` |
 | [case6_ask_the_company](../../e2e/llm/scenarios/case6-ask-the-company.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/3 | 2 | **1** The past cases are found without being named<br>**3** The record's date wins over the prose recalling it<br>**5** The disagreement between note and record is pointed out | `search_context` |
 | [case7_ask_for_a_number](../../e2e/llm/scenarios/case7-ask-for-a-number.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** The counts asked for come back as counts<br>**3** A refusal is not reported as a missing capability | `run_analytics_query` or `run_report` |
@@ -334,6 +334,7 @@ Every run of every case requiring this tool passed, for the model named.
 | `at_risk_relationships` | 1.00 | 3 | `case49_who_can_introduce_us` |
 | `disqualify_lead` | 1.00 | 3 | `case40_sort_the_queue` |
 | `update_tag` | 1.00 | 3 | `case32_two_words_for_one_thing` |
+| `decide_duplicate` | 1.00 | 3 | `case56_not_the_same` |
 | `merge_tags` | 1.00 | 3 | `case32_two_words_for_one_thing` |
 | `data_coverage` | 1.00 | 3 | `case22_can_i_trust_the_numbers` |
 | `list_colleagues` | 1.00 | 3 | `case33_two_cards_for_one_company` |
@@ -391,7 +392,7 @@ Driven, and not every run passed. Open the case to see what was asked.
 | `bulk_update_records` | 0.67 | 2/3 | - | `case47_tidy_the_fair_list` |
 | `read_lists` | 0.67 | 2/3 | - | `case47_tidy_the_fair_list` |
 | `log_activity` | 0.67 | 4/6 | - | `case1_log_it`, `case42_can_i_answer_on_whatsapp` |
-| `create_record` | 0.83 | 5/6 | - | `case1_log_it`, `case2_business_card`, `case54_a_word_from_the_fair`, `case56_not_the_same` |
+| `create_record` | 0.83 | 10/12 | - | `case1_log_it`, `case2_business_card`, `case54_a_word_from_the_fair`, `case56_not_the_same` |
 | `change_lists` | 0.67 | 2/3 | - | `case47_tidy_the_fair_list` |
 | `search_context` | 0.67 | 2/3 | - | `case6_ask_the_company` |
 | `demote_lead` | 0.67 | 2/3 | - | `case47_tidy_the_fair_list` |
@@ -402,7 +403,7 @@ Driven, and not every run passed. Open the case to see what was asked.
 | Tool | Reliability | Passed | Below its bar | Required by |
 |---|---:|---:|---|---|
 | `log_activity` | 0.83 | 5/6 | - | `case1_log_it`, `case42_can_i_answer_on_whatsapp` |
-| `create_record` | 0.83 | 5/6 | - | `case1_log_it`, `case2_business_card`, `case54_a_word_from_the_fair`, `case56_not_the_same` |
+| `create_record` | 0.75 | 9/12 | - | `case1_log_it`, `case2_business_card`, `case54_a_word_from_the_fair`, `case56_not_the_same` |
 | `query_workspace` | 0.67 | 2/3 | - | `case4_use_the_moment` |
 | `search_records` | 0.67 | 2/3 | - | `case5_before_the_meeting` |
 | `search_context` | 0.67 | 2/3 | - | `case6_ask_the_company` |
@@ -411,6 +412,7 @@ Driven, and not every run passed. Open the case to see what was asked.
 | `relink_activities` | 0.83 | 5/6 | - | `case48_that_whole_thread_is_filed_wrong`, `case9_filed_in_the_wrong_place` |
 | `qualify_lead` | 0.67 | 2/3 | - | `case40_sort_the_queue` |
 | `disqualify_lead` | 0.67 | 2/3 | - | `case40_sort_the_queue` |
+| `decide_duplicate` | 0.67 | 2/3 | - | `case56_not_the_same` |
 | `remove_tag` | 0.67 | 2/3 | - | `case31_wrong_word_on_the_record` |
 | `get_record_tags` | 0.67 | 2/3 | - | `case31_wrong_word_on_the_record` |
 

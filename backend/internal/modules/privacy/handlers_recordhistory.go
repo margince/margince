@@ -10,6 +10,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -117,4 +118,18 @@ func recordHistoryEntryToWire(e RecordHistoryEntry) crmcontracts.AuditHistoryEnt
 		}
 	}
 	return out
+}
+
+// leftBehindToWire names the kinds of thing a restore of the record's archive
+// could not bring back. Their ids stay out: restoring a record does not entitle
+// the caller to read a list, tag or link.
+func leftBehindToWire(left []storekit.LeftBehind) *[]crmcontracts.RestoreLeftBehind {
+	if len(left) == 0 {
+		return nil
+	}
+	out := make([]crmcontracts.RestoreLeftBehind, len(left))
+	for i, one := range left {
+		out[i] = crmcontracts.RestoreLeftBehind{Kind: crmcontracts.RestoreLeftBehindKind(one.Kind)}
+	}
+	return &out
 }

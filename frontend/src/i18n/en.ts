@@ -834,6 +834,10 @@ export const en = {
     "{count} field reverts to its value before this change:",
   "history.undo.confirmBody_other":
     "{count} fields revert to their values before this change:",
+  "history.undo.leftBehind_one":
+    "Put back. {count} item could not come back with it.",
+  "history.undo.leftBehind_other":
+    "Put back. {count} items could not come back with it.",
   "history.undo.versionSkew":
     "The record changed while open. The history was reloaded; review the change again before undoing it.",
   "history.undo.noBeforeImage":
