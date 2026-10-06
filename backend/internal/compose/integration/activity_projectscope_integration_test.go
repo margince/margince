@@ -317,7 +317,7 @@ func TestAScopedAccountPageDerivesItsHealthFromOneEngagement(t *testing.T) {
 	held := func(subject string, within ids.ProjectID, daysAgo int) time.Time {
 		at := roomFixedNow.AddDate(0, 0, -daysAgo)
 		logged, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
-			Kind: "meeting", MeetingStatus: StrPtr("held"), Subject: &subject, OccurredAt: &at,
+			Kind: "meeting", MeetingStatus: StrPtr("booked"), Subject: &subject, OccurredAt: &at,
 			Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: f.contact}},
 		})
 		if err != nil {

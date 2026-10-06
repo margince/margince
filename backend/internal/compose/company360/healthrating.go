@@ -119,9 +119,9 @@ func dimension(
 // meetingsAround reads the account's last meeting already held and its next
 // one booked ahead, in one round trip of two LIMIT-1 arms.
 //
-// The held arm reads relstrength.MeetingHeldSQL and the booked arm
-// relstrength.MeetingBookedSQL, so a canceled meeting, a no-show and a booking
-// whose start passed unconfirmed count in neither. Nil is "no meeting on
+// The past arm reads relstrength.MeetingTookPlaceSQL and the future arm
+// relstrength.MeetingAheadSQL, so a canceled meeting or a no-show counts in
+// neither. Nil is "no meeting on
 // record", a fact about the reading rather than a claim that none happened:
 // the caller may hold no scope over the activity that would prove otherwise.
 func (a *assembly) meetingsAround() (last, next *time.Time, err error) {
@@ -144,13 +144,13 @@ func (a *assembly) meetingsAround() (last, next *time.Time, err error) {
 	now := fmt.Sprintf("$%d", nowPos)
 	rows, err := a.tx.Query(a.ctx, fmt.Sprintf(`
 		(SELECT 'last' AS side, a.occurred_at FROM activity a
-		  WHERE %[1]s AND %[2]s AND a.occurred_at <= %[4]s
+		  WHERE %[1]s AND %[2]s
 		  ORDER BY a.occurred_at DESC, a.id DESC LIMIT 1)
 		UNION ALL
 		(SELECT 'next', a.occurred_at FROM activity a
 		  WHERE %[1]s AND %[3]s
 		  ORDER BY a.occurred_at, a.id LIMIT 1)`,
-		where, relstrength.MeetingHeldSQL("a", now), relstrength.MeetingBookedSQL("a", now), now), args...)
+		where, relstrength.MeetingTookPlaceSQL("a", now), relstrength.MeetingAheadSQL("a", now)), args...)
 	if err != nil {
 		return nil, nil, fmt.Errorf("read the account's meetings: %w", err)
 	}

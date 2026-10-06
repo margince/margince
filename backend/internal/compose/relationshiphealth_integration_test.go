@@ -149,8 +149,8 @@ func TestAnOldOrCanceledMeetingLeavesTheRelationshipAtRisk(t *testing.T) {
 	}
 }
 
-// Status and clock decide together. A booking whose start passed without
-// anyone confirming it was held is not contact we had, and a row marked held
+// Status and clock decide together. A booking whose start passed is contact
+// we had, marked held or not; a canceled one is not; and a row marked held
 // but dated ahead is not a booking to keep the account off at risk.
 func TestAMeetingCountsOnlyAsWhatItsStatusAndTimeSay(t *testing.T) {
 	cases := []struct {
@@ -159,7 +159,8 @@ func TestAMeetingCountsOnlyAsWhatItsStatusAndTimeSay(t *testing.T) {
 		days   int // negative is ahead
 		want   crmcontracts.HealthDimensionReasonCode
 	}{
-		{"booked, start passed, never confirmed", "booked", 5, crmcontracts.HealthDimensionReasonCodeQuiet},
+		{"booked, start passed, never marked held", "booked", 5, crmcontracts.HealthDimensionReasonCodeLastMet},
+		{"canceled, start passed", "canceled", 5, crmcontracts.HealthDimensionReasonCodeQuiet},
 		{"marked held but dated ahead", "held", -2, crmcontracts.HealthDimensionReasonCodeQuiet},
 		{"marked held last week", "held", 7, crmcontracts.HealthDimensionReasonCodeLastMet},
 		{"booked ahead", "booked", -2, crmcontracts.HealthDimensionReasonCodeMeetingBooked},

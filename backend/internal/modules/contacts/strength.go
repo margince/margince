@@ -84,14 +84,9 @@ type RelationshipStrength struct {
 	LastInboundActivity *ids.ActivityID
 }
 
-// strengthCounts is the test an activity passes to count as contact, from the
-// one shared definition the company rating also reads — see
-// relstrength.InteractionCountsSQL. strengthCitedCounts is the same test on
-// the `i` alias the cited-message sub-selects use.
-var (
-	strengthCounts      = relstrength.InteractionCountsSQL("a")
-	strengthCitedCounts = relstrength.InteractionCountsSQL("i")
-)
+// The shared test for an activity that counts as contact, on each fold alias.
+var strengthCounts = relstrength.InteractionCountsSQL("a")
+var strengthCitedCounts = relstrength.InteractionCountsSQL("i")
 
 // strengthInteractionUnit is what ONE interaction is when these folds count
 // them, from the same shared definition — see relstrength.InteractionUnitSQL.

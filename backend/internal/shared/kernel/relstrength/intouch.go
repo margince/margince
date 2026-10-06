@@ -19,23 +19,22 @@ import (
 const InTouchDays = 30
 
 // MeetingCountsSQL is the predicate a meeting row passes to count toward
-// contact strength: not canceled and not a no-show. It asks nothing about
-// time; MeetingHeldSQL and MeetingBookedSQL split it by the clock. alias, and
+// contact strength: not canceled and not a no-show, whenever it is. alias, and
 // now in the two below, are compile-time literals or bind placeholders.
 func MeetingCountsSQL(alias string) string {
 	return "(" + alias + ".meeting_status IS NULL OR " + alias + ".meeting_status IN ('booked', 'held'))"
 }
 
-// MeetingHeldSQL is a meeting that took place: marked held, or carrying no
-// status and already started. A calendar import writes no status, and nothing
-// said it was off. A `booked` row whose start has passed was never confirmed.
-func MeetingHeldSQL(alias, now string) string {
-	return "(" + alias + ".meeting_status = 'held' OR (" + alias + ".meeting_status IS NULL AND " +
-		alias + ".occurred_at < " + now + "))"
+// MeetingTookPlaceSQL is a meeting that counts as contact we had: not called
+// off, and already started. A `booked` row stays booked after it happens,
+// because few users ever mark a meeting held.
+func MeetingTookPlaceSQL(alias, now string) string {
+	return "(" + MeetingCountsSQL(alias) + " AND " + alias + ".occurred_at <= " + now + ")"
 }
 
-// MeetingBookedSQL is a meeting still ahead that nobody called off.
-func MeetingBookedSQL(alias, now string) string {
+// MeetingAheadSQL is a meeting still to come that nobody called off. A `held`
+// row dated ahead is a data error, not a booking.
+func MeetingAheadSQL(alias, now string) string {
 	return "((" + alias + ".meeting_status IS NULL OR " + alias + ".meeting_status = 'booked') AND " +
 		alias + ".occurred_at > " + now + ")"
 }
