@@ -25,9 +25,22 @@ func (n *nestedOwnPolicy) UnmarshalJSON(raw []byte) error {
 	return nil
 }
 
+// nestedCatchAll has the shape of a generated additionalProperties:true type:
+// the extra members land in a map, through a decoder of its own.
 type nestedCatchAll struct {
 	Known           string            `json:"known"`
 	AdditionalProps map[string]string `json:"-"`
+}
+
+func (c *nestedCatchAll) UnmarshalJSON(raw []byte) error {
+	var members map[string]string
+	if err := json.Unmarshal(raw, &members); err != nil {
+		return err
+	}
+	c.Known = members["known"]
+	delete(members, "known")
+	c.AdditionalProps = members
+	return nil
 }
 
 type nestedRoot struct {
