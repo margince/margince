@@ -473,8 +473,8 @@ cases:
         they would decide that themselves.
   case56_not_the_same:
     1:
-      name: Two different people are told apart
+      name: Two different contacts are told apart
       statement: >-
-        The user says the flagged record is a different person, so the pair is
+        The user says the flagged record is a different contact, so the pair is
         dismissed with decide_duplicate rather than merged, and the answer says
         they were kept apart.

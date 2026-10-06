@@ -62,7 +62,7 @@ One row per everyday job, one column per assistant. ✅ did it reliably, ❌ not
 | Who can introduce us, and what is going cold | The introduction route runs through a colleague<br>The thin deals are the flagged ones<br>The official number is the report's<br>A claim is checked against the records | ✅ | - |
 | What moved my quarter | A repricing is reported as one<br>A slip out of the quarter is not called a loss<br>The movement adds up to the difference between the freezes | ✅ | ✅ |
 | A word from the fair, offered and not claimed | A tag is offered and not claimed | - | - |
-| Not the same person | Two different people are told apart | - | - |
+| Not the same contact | Two different contacts are told apart | - | - |
 
 ---
 
@@ -203,7 +203,7 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case50_what_moved_my_quarter](../../e2e/llm/scenarios/case50-what-moved-my-quarter.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** A repricing is reported as one<br>**2** A slip out of the quarter is not called a loss<br>**3** The movement adds up to the difference between the freezes | `forecast_movement`, `forecast_readings` |
 | [case50_what_moved_my_quarter](../../e2e/llm/scenarios/case50-what-moved-my-quarter.yaml) | `gpt-5.6-sol@codex-cli` | pass | 3/3 | 2 | **1** A repricing is reported as one<br>**2** A slip out of the quarter is not called a loss<br>**3** The movement adds up to the difference between the freezes | `forecast_movement`, `forecast_readings` |
 | [case54_a_word_from_the_fair](../../e2e/llm/scenarios/case54-a-word-from-the-fair.yaml) | - | not run | - | - | **1** A tag is offered and not claimed | `create_record` |
-| [case56_not_the_same](../../e2e/llm/scenarios/case56-not-the-same.yaml) | - | not run | - | - | **1** Two different people are told apart | `create_record`, `decide_duplicate` |
+| [case56_not_the_same](../../e2e/llm/scenarios/case56-not-the-same.yaml) | - | not run | - | - | **1** Two different contacts are told apart | `create_record`, `decide_duplicate` |
 | [case6_ask_the_company](../../e2e/llm/scenarios/case6-ask-the-company.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/3 | 2 | **1** The past cases are found without being named<br>**3** The record's date wins over the prose recalling it<br>**5** The disagreement between note and record is pointed out | `search_context` |
 | [case6_ask_the_company](../../e2e/llm/scenarios/case6-ask-the-company.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/3 | 2 | **1** The past cases are found without being named<br>**3** The record's date wins over the prose recalling it<br>**5** The disagreement between note and record is pointed out | `search_context` |
 | [case7_ask_for_a_number](../../e2e/llm/scenarios/case7-ask-for-a-number.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** The counts asked for come back as counts<br>**3** A refusal is not reported as a missing capability | `run_analytics_query` or `run_report` |
@@ -280,7 +280,7 @@ The numbers in the table above, in words. Source: [`e2e/llm/criteria.yaml`](../.
 | `case50_what_moved_my_quarter` | 2 | A slip out of the quarter is not called a loss | The deal whose close date moved to a later quarter is reported as having left the quarter, not as lost or won. |
 | `case50_what_moved_my_quarter` | 3 | The movement adds up to the difference between the freezes | The opening and closing figures are the tool's, and the causes named are the ones it returned. |
 | `case54_a_word_from_the_fair` | 1 | A tag is offered and not claimed | The word the user named is passed to the create as an offer and the answer says the workspace has it, but never reports it as applied: the user said they would decide that themselves. |
-| `case56_not_the_same` | 1 | Two different people are told apart | The user says the flagged record is a different person, so the pair is dismissed with decide_duplicate rather than merged, and the answer says they were kept apart. |
+| `case56_not_the_same` | 1 | Two different contacts are told apart | The user says the flagged record is a different contact, so the pair is dismissed with decide_duplicate rather than merged, and the answer says they were kept apart. |
 | `case5_before_the_meeting` | 1 | A briefing arrives without naming a record | The request names the account the way someone says it out loud, "Vietnam partner", and not the way the record carries it. So an answer that only repeats the question has found nothing, and what the record holds beyond it is the evidence that it was opened. |
 | `case5_before_the_meeting` | 2 | The attendees on the other side are named | The briefing names the contacts on the other side of the meeting rather than describing the roles they hold. |
 | `case5_before_the_meeting` | 3 | An empty calendar answer is not an empty diary | No calendar is connected, so every slot comes back free and that is what the CRM's own meeting records leave open. Reporting it as a clear day, or as the meeting being absent from the user's diary, states something about a diary this product was never shown. |

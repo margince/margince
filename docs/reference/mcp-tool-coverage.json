@@ -946,7 +946,7 @@
     },
     {
       "name": "case56_not_the_same",
-      "title": "Not the same person",
+      "title": "Not the same contact",
       "file": "case56-not-the-same.yaml",
       "criteria": [
         1
@@ -1458,8 +1458,8 @@
     {
       "case": "case56_not_the_same",
       "number": 1,
-      "name": "Two different people are told apart",
-      "statement": "The user says the flagged record is a different person, so the pair is dismissed with decide_duplicate rather than merged, and the answer says they were kept apart."
+      "name": "Two different contacts are told apart",
+      "statement": "The user says the flagged record is a different contact, so the pair is dismissed with decide_duplicate rather than merged, and the answer says they were kept apart."
     },
     {
       "case": "case5_before_the_meeting",

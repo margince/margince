@@ -1,7 +1,7 @@
 # CASE 54 — A word from the fair, offered and not claimed.
 #
 # create_record takes an optional offer_tag: the assistant passes the word the
-# user said fits the person it just created, and the answer says what accepting
+# user said fits the contact it just created, and the answer says what accepting
 # it would take. Nothing is applied by the create. The failure this case holds
 # is the one the tool's copy warns against: reading "an offer" as permission and
 # reporting the tag as applied, which is a write nobody asked for and a sentence
@@ -28,7 +28,7 @@ must_call:
   - create_record
 
 # The offer is the assistant handing the word to the create. Without it the
-# answer can still say the tag exists, but the person never sees an offer they
+# answer can still say the tag exists, but the user never sees an offer they
 # can accept in one tap.
 must_call_with:
   - create_record.offer_tag=K5 Conference 2026
