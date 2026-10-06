@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { screen, userEvent, within } from "storybook/test";
+import { expect, screen, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { DealRoomPage } from "./dealroompage";
 import {
@@ -126,6 +126,9 @@ export const SettingTheEndDate: Story = {
     await userEvent.click(
       await screen.findByRole("button", { name: /Set end date/ }),
     );
-    await screen.findByRole("dialog");
+    const dialog = await screen.findByRole("dialog", { name: "Set end date" });
+    await expect(within(dialog).getByLabelText(/Access ends on/)).toHaveValue(
+      "2026-11-30",
+    );
   },
 };

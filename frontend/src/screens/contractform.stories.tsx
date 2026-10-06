@@ -295,11 +295,21 @@ export const SaveRefused: Story = {
     );
   },
   play: async () => {
+    const body = (await screen.findByLabelText(/^Title/)).closest(
+      ".drawer-body",
+    );
+    if (!(body instanceof HTMLElement)) {
+      throw new Error("The contract form drew no drawer body to scroll.");
+    }
+    // Without overflow there is no fold for the refusal to land below.
+    await expect(body.scrollHeight).toBeGreaterThan(body.clientHeight);
+    body.scrollTop = 0;
     await userEvent.click(
       await screen.findByRole("button", { name: "Save changes" }),
     );
     await expect(await screen.findByRole("alert")).toHaveTextContent(
       "This agreement changed while you were editing it.",
     );
+    await waitFor(() => expect(body.scrollTop).toBeGreaterThan(0));
   },
 };

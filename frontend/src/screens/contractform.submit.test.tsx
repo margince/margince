@@ -19,9 +19,13 @@ import { ContractForm } from "./contractform";
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
-function stubApi(): Request[] {
+function stubApi(
+  answer: () => Response | Promise<Response> = () =>
+    Response.json({ id: "c-1" }, { status: 201 }),
+) {
   const writes: Request[] = [];
   vi.stubGlobal(
     "fetch",
@@ -30,7 +34,7 @@ function stubApi(): Request[] {
         input instanceof Request ? input : new Request(String(input), init);
       if (request.method === "POST") {
         writes.push(request);
-        return Response.json({ id: "c-1" }, { status: 201 });
+        return answer();
       }
       if (new URL(request.url).pathname.endsWith("/installation/settings")) {
         return Response.json({ base_currency: "EUR" });
@@ -69,8 +73,9 @@ async function fieldsForm() {
 it("records the agreement when the reader submits from a field", async () => {
   const writes = stubApi();
   show();
+  const user = userEvent.setup();
   const { title, form } = await fieldsForm();
-  await userEvent.type(title, "MSA");
+  await user.type(title, "MSA");
   fireEvent.submit(form);
 
   await waitFor(() => expect(writes).toHaveLength(1));
@@ -80,11 +85,55 @@ it("records the agreement when the reader submits from a field", async () => {
 it("sends nothing on a submit while the form refuses its own draft", async () => {
   const writes = stubApi();
   show();
+  const user = userEvent.setup();
   const { title, form } = await fieldsForm();
   fireEvent.submit(form);
-  await userEvent.type(title, "M");
+  await user.type(title, "M");
   fireEvent.submit(form);
 
   await waitFor(() => expect(writes).toHaveLength(1));
   expect(await writes[0]?.json()).toMatchObject({ title: "M" });
+});
+
+// A browser's Enter reaches the form as a click on that default button, so the
+// button's own busy swallow is what keeps a second Enter from writing twice.
+it("sends one write while the first is still out", async () => {
+  const writes = stubApi(() => new Promise<Response>(() => {}));
+  show();
+  const user = userEvent.setup();
+  const { title, form } = await fieldsForm();
+  await user.type(title, "MSA");
+  fireEvent.submit(form);
+  const save = screen.getByRole("button", { name: "Record contract" });
+  await waitFor(() => expect(save).toHaveAttribute("aria-busy", "true"));
+
+  await user.click(save);
+  await user.click(save);
+
+  expect(writes).toHaveLength(1);
+});
+
+it("brings a repeated identical refusal back into view", async () => {
+  const scroll = vi
+    .spyOn(HTMLElement.prototype, "scrollIntoView")
+    .mockImplementation(() => {});
+  stubApi(() =>
+    Response.json(
+      { title: "Conflict", status: 409, detail: "Already recorded." },
+      { status: 409 },
+    ),
+  );
+  show();
+  const user = userEvent.setup();
+  const { title } = await fieldsForm();
+  await user.type(title, "MSA");
+  const save = screen.getByRole("button", { name: "Record contract" });
+
+  await user.click(save);
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "Already recorded.",
+  );
+  await user.click(save);
+  await waitFor(() => expect(scroll).toHaveBeenCalledTimes(2));
+  expect(screen.getByRole("alert")).toHaveTextContent("Already recorded.");
 });

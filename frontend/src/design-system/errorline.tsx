@@ -37,11 +37,14 @@ export function ErrorLine({
   standing,
 }: ErrorLineProps) {
   const t = useT();
-  const line = useScrolledIntoDialogView(standing === true);
   // A `false` error is a guard's short-circuit (`isError && error`), not a
   // failure, and an empty string says nothing an alert could announce.
   const absent =
     error === undefined || error === null || error === false || error === "";
+  const line = useScrolledIntoDialogView(
+    standing === true,
+    absent ? null : error,
+  );
   const message = absent ? children : problemMessageOf(error, t);
   if (
     message === undefined ||
@@ -65,14 +68,14 @@ export function ErrorLine({
   );
 }
 
-// Keyed on the drawn text, not the props: a caller's `children` is a new
-// element every render, and re-scrolling on each keystroke would yank the form.
-function useScrolledIntoDialogView(standing: boolean) {
+// Keyed on the thrown value, new per failed attempt, so an identical refusal
+// still scrolls; `children` is a new element every render, so it keys on text.
+function useScrolledIntoDialogView(standing: boolean, failure: unknown) {
   const line = useRef<HTMLParagraphElement & HTMLSpanElement>(null);
-  const shown = useRef<string | null>(null);
+  const shown = useRef<unknown>(null);
   const reduced = usePrefersReducedMotion();
   useEffect(() => {
-    const said = line.current?.textContent ?? null;
+    const said = failure ?? line.current?.textContent ?? null;
     if (said === shown.current) {
       return;
     }

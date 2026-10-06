@@ -135,6 +135,23 @@ describe("ErrorLine in a dialog", () => {
     expect(scroll).toHaveBeenCalledTimes(2);
   });
 
+  it("scrolls for each failed attempt, even when the refusal reads the same", () => {
+    const scroll = watchScrolls();
+    const view = (error: Error) => (
+      <LocaleProvider initial="en">
+        <div className="modal">
+          <ErrorLine error={error} />
+        </div>
+      </LocaleProvider>
+    );
+    const first = new Error("The save was refused.");
+    const { rerender } = render(view(first));
+    rerender(view(first));
+    expect(scroll).toHaveBeenCalledTimes(1);
+    rerender(view(new Error("The save was refused.")));
+    expect(scroll).toHaveBeenCalledTimes(2);
+  });
+
   it("leaves the page where it is outside a dialog, and for a standing state", () => {
     const scroll = watchScrolls();
     inEnglish(

@@ -152,6 +152,14 @@ export const ReopeningAClosedDeal: Story = {
     await userEvent.click(
       await screen.findByRole("button", { name: "Reopen" }),
     );
-    await screen.findByRole("dialog");
+    const dialog = await screen.findByRole("dialog", {
+      name: "Move this deal back to an open stage",
+    });
+    const stage = within(dialog).getByRole("button", { name: "Qualified" });
+    await userEvent.click(stage);
+    await expect(stage).toHaveAttribute("aria-pressed", "true");
+    await expect(
+      within(dialog).getByRole("button", { name: "Reopen" }),
+    ).toBeEnabled();
   },
 };
