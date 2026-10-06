@@ -1,9 +1,9 @@
 {
-  "scenario": "case2_business_card",
+  "scenario": "case56_not_the_same",
   "criteria": [
-    4
+    1
   ],
-  "passed": 3,
+  "passed": 2,
   "runs": 3,
   "pass_at": 2,
   "driver": "gpt:cli",
@@ -12,10 +12,10 @@
   "search": "semantic",
   "self_judged": false,
   "usage": {
-    "input_tokens": 166442,
-    "output_tokens": 5297,
+    "input_tokens": 98490,
+    "output_tokens": 5054,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 563456,
+    "cache_read_input_tokens": 722816,
     "runs_measured": 3,
     "runs_costed": 0,
     "cost_usd": null

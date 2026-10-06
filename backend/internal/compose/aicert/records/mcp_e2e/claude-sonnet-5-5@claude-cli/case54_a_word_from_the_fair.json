@@ -1,9 +1,9 @@
 {
-  "scenario": "case2_business_card",
+  "scenario": "case54_a_word_from_the_fair",
   "criteria": [
-    4
+    1
   ],
-  "passed": 3,
+  "passed": 2,
   "runs": 3,
   "pass_at": 2,
   "driver": "claude:cli",
@@ -12,12 +12,12 @@
   "search": "semantic",
   "self_judged": true,
   "usage": {
-    "input_tokens": 24,
-    "output_tokens": 4394,
-    "cache_creation_input_tokens": 47479,
-    "cache_read_input_tokens": 738075,
+    "input_tokens": 32,
+    "output_tokens": 4083,
+    "cache_creation_input_tokens": 89189,
+    "cache_read_input_tokens": 944453,
     "runs_measured": 3,
     "runs_costed": 3,
-    "cost_usd": 0.3815
+    "cost_usd": 0.5865
   }
 }
