@@ -31,7 +31,7 @@ type wroteTo struct {
 }
 
 // lastWroteTo reads the newest email the workspace itself sent to the
-// contact, or nil when there is none.
+// contact; false when there is none.
 //
 // Only mail the provider filed as sent by us counts: a message whose From
 // merely names our mailbox proves nothing, which is the rule the answered
@@ -39,16 +39,16 @@ type wroteTo struct {
 // are not a rep keeping a promise, so neither counts. The card names the email
 // and its day, so it reads under the reader's content scope: an email they
 // cannot open is never cited to them.
-func lastWroteTo(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, now time.Time, opts AssembleOptions) (*wroteTo, error) {
+func lastWroteTo(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, now time.Time, opts AssembleOptions) (wroteTo, bool, error) {
 	if err := requireRead(ctx, "activity"); err != nil {
-		return nil, err
+		return wroteTo{}, false, err
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	reaches := fmt.Sprintf(contactReachesActivity, bind(arg(contactID)))
 	scope, err := activityScope(ctx, arg)
 	if err != nil {
-		return nil, err
+		return wroteTo{}, false, err
 	}
 	var sent wroteTo
 	err = tx.QueryRow(ctx, `SELECT a.id, a.occurred_at, coalesce(a.subject, '')
@@ -61,12 +61,12 @@ func lastWroteTo(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, now ti
 		ORDER BY a.occurred_at DESC, a.id DESC
 		LIMIT 1`, args...).Scan(&sent.id, &sent.at, &sent.subject)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, nil
+		return wroteTo{}, false, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("read the newest email to the contact: %w", err)
+		return wroteTo{}, false, fmt.Errorf("read the newest email to the contact: %w", err)
 	}
-	return &sent, nil
+	return sent, true, nil
 }
 
 // recordZone is the installation's zone, which the day a card names is read

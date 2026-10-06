@@ -94,9 +94,13 @@ func (s *Service) momentsSection(ctx context.Context, tx pgx.Tx, contactID ids.C
 	}
 	// A reader who may not read activity sees no email to cite, so their
 	// promise cards stay as they are.
-	sent, err := lastWroteTo(ctx, tx, contactID, now, opts)
+	var sent *wroteTo
+	latest, found, err := lastWroteTo(ctx, tx, contactID, now, opts)
 	if err != nil && !errors.Is(err, apperrors.ErrPermissionDenied) {
 		return err
+	}
+	if found {
+		sent = &latest
 	}
 	zone, err := recordZone(ctx, tx)
 	if err != nil {
@@ -128,11 +132,11 @@ func (s *Service) momentDismissals(ctx context.Context, tx pgx.Tx, contactID ids
 	// it does not do. auth.RequireHuman is what tells the two apart.
 	viewer, ok := principal.Actor(ctx)
 	if !ok || viewer.UserID == (ids.UUID{}) {
-		return nil, nil
+		return map[string]string{}, nil
 	}
 	if err := auth.RequireHuman(ctx); err != nil {
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
-			return nil, nil
+			return map[string]string{}, nil
 		}
 		return nil, err
 	}
