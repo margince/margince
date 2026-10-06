@@ -349,8 +349,7 @@ Two providers speak the one wire, `base_url` being the full endpoint: `jev`,
 TypeSafe's own API, and `jev_compatible`, any Jev-wire server: OpenRouter
 ([openrouter.md](../reference/openrouter.md#11-the-decisions-endpoint)) or a
 self-hosted Kev, Laya or LiteLLM. `sovereign` refuses `jev` and holds
-`jev_compatible` to its endpoint rule; `eu_hosted` refuses `jev` and an
-OpenRouter endpoint. See [configuration.md](../reference/configuration.md).
+`jev_compatible` to its endpoint rule. See [configuration.md](../reference/configuration.md).
 
 ## The one gate: `ai.Router`
 
