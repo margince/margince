@@ -416,3 +416,94 @@ describe("the highlight has three outcomes and says which", () => {
     expect(scrolled).toEqual([]);
   });
 });
+
+describe("autolink", () => {
+  const SOURCE =
+    "See https://example.com/a, or [the terms](https://example.com/t).\n\n`https://example.com/code`";
+
+  it("leaves a bare address as text unless asked", () => {
+    render(<Markdown source={SOURCE} />);
+    expect(screen.getAllByRole("link").map((a) => a.textContent)).toEqual([
+      "the terms",
+    ]);
+  });
+
+  it("links a bare address in prose and nothing in code or inside a link", () => {
+    render(<Markdown source={SOURCE} autolink />);
+    expect(
+      screen.getAllByRole("link").map((a) => a.getAttribute("href")),
+    ).toEqual(["https://example.com/a", "https://example.com/t"]);
+    expect(screen.getByText("https://example.com/code").tagName).toBe("CODE");
+  });
+});
+
+describe("autolink shows where every link goes", () => {
+  it("keeps a label as text and makes the real address the link", () => {
+    const { container } = render(
+      <Markdown source="[Your bank](https://evil.example/login)" autolink />,
+    );
+    const link = screen.getByRole("link");
+    expect(link.textContent).toBe("https://evil.example/login");
+    expect(link.getAttribute("href")).toBe("https://evil.example/login");
+    expect(screen.queryByRole("link", { name: "Your bank" })).toBeNull();
+    expect(visibleText(container)).toBe(
+      "Your bank (https://evil.example/login)",
+    );
+  });
+
+  it("renders a javascript: link as its label and nothing to press", () => {
+    const { container } = render(
+      <Markdown source="[Verify](javascript:alert(1))" autolink />,
+    );
+    expect(screen.queryByRole("link")).toBeNull();
+    expect(visibleText(container)).toBe("Verify");
+  });
+
+  it("leaves a link whose label is its address as one link", () => {
+    render(
+      <Markdown
+        source="[https://example.com/t](https://example.com/t)"
+        autolink
+      />,
+    );
+    expect(screen.getAllByRole("link").map((a) => a.textContent)).toEqual([
+      "https://example.com/t",
+    ]);
+  });
+});
+
+describe("which characters a bare address takes", () => {
+  const linked = (source: string) => {
+    render(<Markdown source={source} autolink />);
+    return screen.getAllByRole("link").map((a) => a.getAttribute("href"));
+  };
+
+  it("keeps a balanced parenthesis inside the address", () => {
+    expect(linked("Reset at https://example.test/reset/(token) today")).toEqual(
+      ["https://example.test/reset/(token)"],
+    );
+  });
+
+  it("leaves the parenthesis that closes the prose around it", () => {
+    expect(linked("(see https://x.test/a) and https://x.test/b.")).toEqual([
+      "https://x.test/a",
+      "https://x.test/b",
+    ]);
+  });
+
+  it("links no scheme glued to the word before it", () => {
+    render(
+      <Markdown
+        source="wordhttps://example.com/x and überhttps://example.com/y"
+        autolink
+      />,
+    );
+    expect(screen.queryByRole("link")).toBeNull();
+  });
+
+  it("reads the scheme in any case", () => {
+    expect(linked("Open HTTPS://Example.test/Path now")).toEqual([
+      "HTTPS://Example.test/Path",
+    ]);
+  });
+});
