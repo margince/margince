@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { ImportCard } from "./import";
 import {
   installFetchStub,
@@ -158,6 +158,7 @@ export const AskingBeforeStartingOver: Story = {
     await canvas.findByRole("row", { name: /Email/ });
     await userEvent.click(canvas.getByRole("button", { name: "Companies" }));
     const page = within(canvasElement.ownerDocument.body);
-    await expect(await page.findByRole("dialog")).toBeVisible();
+    const dialog = await page.findByRole("dialog");
+    await waitFor(() => expect(dialog).toBeVisible());
   },
 };
