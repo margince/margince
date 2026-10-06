@@ -164,10 +164,10 @@ describe("putting one change back", () => {
     );
 
     expect(
-      await screen.findByText(/2 links, tags or list memberships could not/i),
+      await screen.findByText(/2 items could not/i),
     ).toBeTruthy();
     await waitFor(() => expect(restored).toBe(true));
-    expect(screen.getByText(/2 links, tags or list memberships/i)).toBeTruthy();
+    expect(screen.getByText(/2 items could not/i)).toBeTruthy();
   });
 
   // A greyed control that says nothing is the shape this feature exists to

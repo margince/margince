@@ -201,8 +201,12 @@ func asSet(expr string) string {
 func childFieldsThatMoved(ctx context.Context, tx pgx.Tx, row AuditRow, asked []byte) ([]string, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT k.key
-		FROM jsonb_each($2::jsonb) AS k(key, value)
-		JOIN `+pgx.Identifier{row.EntityType}.Sanitize()+` r ON r.id = $1
+		FROM (
+			SELECT i.key, i.value
+			FROM jsonb_each($2::jsonb) AS i(key, value)
+			JOIN `+pgx.Identifier{row.EntityType}.Sanitize()+` r ON r.id = $1
+			WHERE NOT to_jsonb(r) ? i.key
+		) AS k
 		CROSS JOIN LATERAL (
 			SELECT later.after -> k.key AS value
 			FROM audit_log later
@@ -211,8 +215,7 @@ func childFieldsThatMoved(ctx context.Context, tx pgx.Tx, row AuditRow, asked []
 			      (SELECT this.occurred_at, this.id FROM audit_log this WHERE this.id = $4)
 			ORDER BY later.occurred_at DESC, later.id DESC
 			LIMIT 1) latest
-		WHERE NOT to_jsonb(r) ? k.key
-		  AND `+asSet("latest.value")+` IS DISTINCT FROM `+asSet("k.value")+`
+		WHERE `+asSet("latest.value")+` IS DISTINCT FROM `+asSet("k.value")+`
 		ORDER BY 1`, row.EntityID, asked, row.EntityType, row.ID)
 	if err != nil {
 		return nil, err

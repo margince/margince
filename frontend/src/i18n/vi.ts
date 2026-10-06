@@ -841,9 +841,9 @@ export const vi = {
   "history.undo.confirmBody_other":
     "{count} trường sẽ trở lại giá trị trước thay đổi này:",
   "history.undo.leftBehind_one":
-    "Đã hoàn tác. {count} liên kết, thẻ hoặc mục trong danh sách không khôi phục được cùng bản ghi.",
+    "Đã hoàn tác. {count} mục liên quan không khôi phục được cùng bản ghi.",
   "history.undo.leftBehind_other":
-    "Đã hoàn tác. {count} liên kết, thẻ hoặc mục trong danh sách không khôi phục được cùng bản ghi.",
+    "Đã hoàn tác. {count} mục liên quan không khôi phục được cùng bản ghi.",
   "history.undo.versionSkew":
     "Bản ghi đã thay đổi trong lúc bạn đang xem. Lịch sử vừa được tải lại — hãy kiểm tra lại thay đổi trước khi hoàn tác.",
   "history.undo.noBeforeImage":
