@@ -70,6 +70,7 @@ export const Folded: StoryObj = {
 export const FoldedDark: StoryObj = {
   ...Folded,
   globals: { ...Folded.globals, theme: "dark" },
+  tags: ["uat-phone"],
 };
 
 /** A fresh mail on a record with history: the earlier threads fold the same way. */
