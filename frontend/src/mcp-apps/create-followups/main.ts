@@ -20,12 +20,7 @@ import {
 import actions from "../actions.json";
 import { el, onResult } from "../bridge";
 import { button, panel, panelBody } from "../parts";
-import {
-  asList,
-  asRecord,
-  asText,
-  type Warning,
-} from "../types";
+import { asList, asRecord, asText, type Warning } from "../types";
 import { tagOfferPanel } from "./tag-offer";
 import "../view.css";
 
