@@ -29344,6 +29344,7 @@ components:
             Where the provider is reached. Required on `openai_compatible` while a lane binds it,
             and on `jev_compatible` while the decisions lane binds it (the FULL decision endpoint,
             posted to as written). Optional elsewhere; empty means the adapter's compiled default.
+            Refused on `gemini_vertex`, whose host follows from `location`.
         upstream:
           $ref: '#/components/schemas/AiOpenRouterUpstream'
         location:
@@ -29370,8 +29371,13 @@ components:
         data_collection: { type: string, enum: [allow, deny], description: "deny keeps every request off hosts that may store or train on prompts." }
         enforce_distillable_text: { type: boolean, description: "Only models whose licence allows their output to train other models." }
 
+    # Not closed with additionalProperties: AiEmbeddingsBinding extends this by allOf, which a
+    # closed base would reject. The server closes it on every routing write instead.
     AiTierBinding:
       type: object
+      description: |
+        One tier's binding. A key this schema does not declare is refused with a 422 naming its
+        path, on every routing write.
       required: [provider, model]
       properties:
         provider:

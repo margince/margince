@@ -419,7 +419,6 @@ function DocumentRow({
   const t = useT();
   const [confirming, setConfirming] = useState(false);
   const remove = useDeleteDocument(corpusId);
-
   return (
     <div className="form-stack">
       <SectionHeader
@@ -446,6 +445,7 @@ function DocumentRow({
         open={confirming}
         title={t("knowledge.deleteConfirm.title")}
         confirmLabel={t("knowledge.deleteDocument")}
+        confirmVariant="danger"
         onClose={() => setConfirming(false)}
         onConfirm={() => {
           remove.mutate({ id: doc.id });

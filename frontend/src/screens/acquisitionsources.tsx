@@ -163,7 +163,12 @@ function AddAcquisitionSourceDialog({
   const t = useT();
   const [label, setLabel] = useState("");
   return (
-    <Modal open onClose={onClose} labelledBy="acq-source-add-title">
+    <Modal
+      open
+      onClose={onClose}
+      labelledBy="acq-source-add-title"
+      intent="form"
+    >
       <Heading
         size="large"
         className="t-h3 modal-title"
@@ -171,22 +176,34 @@ function AddAcquisitionSourceDialog({
       >
         {t("acqSources.addTitle")}
       </Heading>
-      <Field label={t("acqSources.addLabel")} hint={t("acqSources.addHint")}>
-        {(control) => (
-          <TextInput
-            {...control}
-            value={label}
-            onChange={(e) => setLabel(e.target.value)}
-          />
-        )}
-      </Field>
+      <form
+        id="acq-source-add-form"
+        className="form-stack"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (label.trim() && !pending) {
+            onAdd(label.trim());
+          }
+        }}
+      >
+        <Field label={t("acqSources.addLabel")} hint={t("acqSources.addHint")}>
+          {(control) => (
+            <TextInput
+              {...control}
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+            />
+          )}
+        </Field>
+      </form>
       <div className="actions">
         <Button variant="ghost" onClick={onClose}>
           {t("deals.cancel")}
         </Button>
         <Button
+          type="submit"
+          form="acq-source-add-form"
           disabled={!label.trim() || pending}
-          onClick={() => onAdd(label.trim())}
         >
           {t("acqSources.addConfirm")}
         </Button>

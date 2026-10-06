@@ -133,7 +133,7 @@ function FilePreviewDialog({
     <Modal
       open={file !== null}
       onClose={onClose}
-      placement="full"
+      intent="full"
       labelledBy={TITLE_ID}
     >
       {file !== null && (

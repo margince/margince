@@ -220,6 +220,10 @@ func (h Handlers) UpdateSavedView(w http.ResponseWriter, r *http.Request, id crm
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
+	if err := httperr.RefuseNull(r, "name"); err != nil {
+		writeErr(w, r, err)
+		return
+	}
 	in := UpdateSavedViewInput{Name: req.Name, IfVersion: ifVersion}
 	if req.Query != nil {
 		q := *req.Query

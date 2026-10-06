@@ -55,14 +55,23 @@ func validateVertexPlacement(label string, binding ProviderConfig) error {
 		}
 		return nil
 	}
-	if binding.BaseURL != "" {
-		return fmt.Errorf("ai: routing config: %s: gemini_vertex takes no base_url — its host follows from `location`", label)
+	if err := vertexBaseURLError(label, binding.BaseURL); err != nil {
+		return err
 	}
 	if err := vertexLocationError(label, binding.Location); err != nil {
 		return err
 	}
 	if binding.Model != "" && !vertexModelShape.MatchString(binding.Model) {
 		return fmt.Errorf("ai: routing config: %s: gemini_vertex model %q is not a publisher model id such as gemini-3.5-flash", label, binding.Model)
+	}
+	return nil
+}
+
+// vertexBaseURLError is the one refusal of a host on gemini_vertex, whether it
+// sits on a lane binding or on the provider's own entry; label names which.
+func vertexBaseURLError(label, baseURL string) error {
+	if baseURL != "" {
+		return fmt.Errorf("ai: routing config: %s: gemini_vertex takes no base_url — its host follows from `location`", label)
 	}
 	return nil
 }

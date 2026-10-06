@@ -354,7 +354,7 @@ function SecretRevealModal({
   });
 
   return (
-    <Modal open onClose={onClose} labelledBy={headingId}>
+    <Modal open onClose={onClose} labelledBy={headingId} intent="confirm">
       <Heading size="large" id={headingId} className="t-h2 modal-title">
         {t("webhooks.secret.title")}
       </Heading>

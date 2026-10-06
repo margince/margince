@@ -2,16 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useIsFetching } from "@tanstack/react-query";
-import { type ReactNode, useEffect, useId, useState } from "react";
+import { useEffect, useState } from "react";
 import type { Screen } from "../app/router";
-import { Modal } from "../design-system/atoms";
-import {
-  DrawerBody,
-  DrawerFoot,
-  DrawerHead,
-} from "../design-system/drawerbands";
-import { Heading } from "../design-system/heading";
-import { intentForFieldCount } from "../design-system/modal";
 import { CF_OBJECTS, type CfObject } from "./customfields.logic";
 
 // Past this a catalog read that has not answered stops holding the dialog.
@@ -59,53 +51,4 @@ export function useSettledOpen(open: boolean, catalog?: CfObject): boolean {
     setShown(next);
   }
   return next;
-}
-
-// The create/edit dialog around a record form. Its shape follows the fields it
-// counts, taken once per opening: a box changing shape remounts the form.
-export function RecordFormDialog({
-  open,
-  title,
-  onClose,
-  fieldCount,
-  form,
-  actions,
-}: Readonly<{
-  open: boolean;
-  title: string;
-  onClose: () => void;
-  fieldCount: number;
-  form: ReactNode;
-  actions: ReactNode;
-}>) {
-  const headingId = useId();
-  const live = intentForFieldCount(fieldCount);
-  const [opening, setOpening] = useState({ open, shape: live });
-  if (opening.open !== open) {
-    setOpening({ open, shape: open ? live : opening.shape });
-  }
-  const shape = open && !opening.open ? live : opening.shape;
-  return (
-    <Modal open={open} onClose={onClose} labelledBy={headingId} intent={shape}>
-      {shape === "form" ? (
-        <>
-          <Heading size="large" id={headingId} className="t-h2 modal-title">
-            {title}
-          </Heading>
-          {form}
-          <div className="actions">{actions}</div>
-        </>
-      ) : (
-        <>
-          <DrawerHead>
-            <Heading size="large" id={headingId} className="t-h2 modal-title">
-              {title}
-            </Heading>
-          </DrawerHead>
-          <DrawerBody>{form}</DrawerBody>
-          <DrawerFoot className="actions">{actions}</DrawerFoot>
-        </>
-      )}
-    </Modal>
-  );
 }
