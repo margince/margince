@@ -120,6 +120,21 @@ func (s *Store) SchedulingProfile(ctx context.Context) (crmcontracts.SchedulingP
 	return s.brandSchedulingProfile(ctx, profile), err
 }
 
+func errCalendarNotConnected() error {
+	return &SchedulingArgumentError{Field: "provider", Code: "required", Message: "Connect a calendar before enabling bookings"}
+}
+
+// checkCalendarConnected asks the provider seam whether the host's calendar
+// answers. A host with no connection, or one the provider no longer honours,
+// is told to connect one: a request of theirs, never a server fault.
+func (s *Store) checkCalendarConnected(ctx context.Context, host ids.UserID, provider string) error {
+	err := s.calendar.Check(ctx, host, provider)
+	if errors.Is(err, connector.ErrAuthRejected) {
+		return errCalendarNotConnected()
+	}
+	return err
+}
+
 func validateSchedulingProfile(p crmcontracts.SchedulingProfile) error {
 	if err := validateSchedulingLimits(p); err != nil {
 		return err
@@ -128,7 +143,7 @@ func validateSchedulingProfile(p crmcontracts.SchedulingProfile) error {
 		return &SchedulingArgumentError{Field: "host_name", Code: "required", Message: "Set your name in Settings → Account before enabling bookings"}
 	}
 	if p.Enabled && p.Provider != "gcal" && p.Provider != "graphcal" {
-		return &SchedulingArgumentError{Field: "provider", Code: "required", Message: "Connect a calendar before enabling bookings"}
+		return errCalendarNotConnected()
 	}
 	if p.BlockingCalendars != nil && len(*p.BlockingCalendars) > 10 {
 		return &SchedulingArgumentError{Field: "blocking_calendars", Code: "too_many", Message: "Choose at most ten calendars"}
@@ -163,7 +178,7 @@ func (s *Store) SaveSchedulingProfile(ctx context.Context, profile crmcontracts.
 		if s.calendar == nil {
 			return profile, apperrors.ErrPermissionDenied
 		}
-		if err := s.calendar.Check(ctx, host, string(profile.Provider)); err != nil {
+		if err := s.checkCalendarConnected(ctx, host, string(profile.Provider)); err != nil {
 			return profile, err
 		}
 		if err := s.validateBookingCalendars(ctx, host, &profile); err != nil {
@@ -183,6 +198,9 @@ func (s *Store) validateBookingCalendars(ctx context.Context, host ids.UserID, p
 		return apperrors.ErrPermissionDenied
 	}
 	calendars, err := s.calendar.List(ctx, host, string(profile.Provider))
+	if errors.Is(err, connector.ErrAuthRejected) {
+		return errCalendarNotConnected()
+	}
 	if err != nil {
 		return err
 	}
