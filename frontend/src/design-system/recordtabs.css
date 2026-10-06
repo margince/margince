@@ -192,6 +192,21 @@
 .recordtabs-strip {
   flex: 1 1 auto;
 }
+/* A lone label has no tab to scroll to, and squeezed beside the trailing
+   control it became a scroll box with nothing a keyboard can reach. So it
+   never scrolls: the trailing control wraps under it first, and a label wider
+   than the row on its own wraps its words rather than push the page. */
+.recordtabs-row:has(> .recordtabs-strip > [aria-current="page"]) {
+  flex-wrap: wrap;
+}
+.recordtabs-strip:has(> [aria-current="page"]) {
+  flex: 0 1 auto;
+  overflow-x: visible;
+}
+.recordtabs-strip > .recordtabs-tab[aria-current="page"] {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
 .recordtabs-trailing {
   flex: none;
   margin-inline-start: auto;

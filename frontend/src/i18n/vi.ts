@@ -11058,6 +11058,7 @@ export const vi = {
   "worklist.handled.about": "Về",
   "worklist.handled.when": "Khi nào",
   "worklist.handled.noRecord": "Không nêu hồ sơ nào",
+  "worklist.handled.hiddenRecord": "Hồ sơ không khả dụng",
   "worklist.handled.wayBack": "Hoàn tác",
   "worklist.handled.putBackDone": "Đã hoàn tác",
   "worklist.handled.truncated":

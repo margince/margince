@@ -205,9 +205,8 @@ export function ApprovalRow({
     approval.target_entity_id,
   );
 
-  // Sticky, because this confirmation carries a verb and a reader reaching for
-  // it must not lose it mid-reach. Only on approve: a rejection changed
-  // nothing, so there is nothing to put back.
+  // An undo like any other: it lives ACTION_TOAST_MS, held while hovered or
+  // focused. Only on approve: a rejection changed nothing to put back.
   const showUndoOffer = (verdict: "approve" | "reject") => {
     if (verdict !== "approve" || !undoTarget) {
       return;
@@ -216,6 +215,7 @@ export function ApprovalRow({
     // and withdraws the message once it has been pressed.
     toast.show(t("decision.applied"), {
       action: {
+        kind: "undo",
         label: t("decision.undoOnRecord"),
         onAct: () => navigate(undoTarget),
       },

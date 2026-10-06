@@ -7,6 +7,11 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useUnsavedGuard } from "../app/unsaved";
 import { Badge, Button, Field, SegmentedControl } from "../design-system/atoms";
+import {
+  DrawerBody,
+  DrawerFoot,
+  DrawerHead,
+} from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
 import { Modal } from "../design-system/modal";
 import { Select } from "../design-system/select";
@@ -148,7 +153,7 @@ export function TaskSheet({
       placement="right"
       size="wide"
     >
-      <div className="drawer-head">
+      <DrawerHead>
         <Heading size="large" id={titleId} className="t-h2 modal-title">
           {route.display_name}
         </Heading>
@@ -162,8 +167,8 @@ export function TaskSheet({
             .join(" · ")}
         </p>
         {decides ? <Badge>{t("aiTasks.decisionFirst")}</Badge> : null}
-      </div>
-      <div className="drawer-body">
+      </DrawerHead>
+      <DrawerBody>
         {canSeeCalls ? (
           <TaskRecentCalls route={route} draft={draft} decides={decides} />
         ) : null}
@@ -181,8 +186,8 @@ export function TaskSheet({
         />
         <ContractFacts route={route} />
         <SaveProblem error={save.isError ? save.error : null} />
-      </div>
-      <div className="drawer-foot actions">
+      </DrawerBody>
+      <DrawerFoot className="actions">
         <span className="t-caption actions-lead">
           {changed ? t("aiTaskSheet.unsaved") : t("aiTaskSheet.applies")}
         </span>
@@ -200,7 +205,7 @@ export function TaskSheet({
             {t("aiTaskSheet.save")}
           </Button>
         </span>
-      </div>
+      </DrawerFoot>
     </Modal>
   );
 }

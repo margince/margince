@@ -170,6 +170,7 @@ export function BriefSetAsides({
         }),
         {
           action: {
+            kind: "undo",
             label: t("brief.snooze.undo"),
             // A failed take-back is reported by `answer` itself, which raises
             // the server's own message as a second toast — better than a fixed

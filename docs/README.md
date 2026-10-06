@@ -77,6 +77,7 @@ first deadline is 24 hours.
 ### How-to: accomplish a task
 - [Import purchased employment history](how-to/import-employment-history.md): contact channels, employer matching, installation and backfill.
 - [Inventory what history left in the Worklist](how-to/inventory-home-attention.md): a read-only count of imported mail, old requests, privacy duties and proposals before a repair.
+- [Rename deals still named by their import key](how-to/rename-key-named-deals.md): fix imported deals whose name is the source key, from the source export, dry run first.
 - [Operate sales reporting](how-to/operate-reporting.md): setup, captures, schedules, privacy and durable schedule pause.
 - [add-an-endpoint.md](how-to/add-an-endpoint.md): add or change an API operation (contract, gen, handler).
 - [add-a-module.md](how-to/add-a-module.md): add a new capability (module) or a cross-module edge, wired into compose.
