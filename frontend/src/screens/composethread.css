@@ -85,6 +85,13 @@
   overflow-y: auto;
 }
 
+/* Each scroller here is the containing block for what it holds: a `.sr-only`
+   resolved against `.modal` instead escapes this clip and scrolls the drawer. */
+.compose-split > .compose-fields,
+.compose-thread-scroll {
+  position: relative;
+}
+
 /* The thread is one conversation rather than a record's whole chronology, so
    the date gutter that keeps an account's timeline in a straight column buys
    nothing here and costs a third of the measure. */
@@ -92,25 +99,57 @@
   padding-inline-start: 0;
 }
 
-/* Below the fold the two columns cannot both be read, so the conversation
-   folds ABOVE the form rather than beside it, keeping its own scroll and a
-   height that leaves the form on screen. A pane that merely narrowed would be
-   two unreadable halves; one that vanished would put the reply back over the
-   thread it answers, which is the failure this exists to fix. */
-@media (max-width: 1100px) {
+/* The dialog's body stack is what the two columns are decided by, and the
+   height they share out. */
+.form-stack:has(> .compose-split) {
+  container: compose / inline-size;
+  flex: 1 1 auto;
+  min-block-size: 0;
+}
+
+.compose-fold {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-block-size: 0;
+}
+.compose-fold > .compose-fold-toggle {
+  align-self: flex-start;
+}
+.compose-fold-column {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-block-size: 0;
+}
+.compose-fold-column > .compose-thread {
+  flex: 1 1 auto;
+}
+
+/* Where both columns cannot be read, the conversation folds above the draft
+   behind its toggle, its scroll short enough to keep the draft in view. */
+@container compose (min-width: 46rem) {
+  .compose-fold > .compose-fold-toggle {
+    display: none;
+  }
+}
+@container compose (width < 46rem) {
   .compose-split {
     grid-template-columns: minmax(0, 1fr);
-    /* The thread row takes what its capped scroll needs and the form takes the
-       rest. Left to stretch, the grid split the drawer's height between the
-       two rows and the thread — capped at 14rem below — sat over a band of
-       nothing, above a form that had been given half the drawer for no reason. */
+    /* The fold takes what it needs and the draft the rest; stretched, the two
+       rows would split the height and leave a band of nothing under the fold. */
     grid-template-rows: auto minmax(0, 1fr);
+  }
+  .compose-fold {
+    border-block-end: 1px solid var(--borderSubtle);
+    padding-block-end: var(--space-3);
+  }
+  .compose-fold[data-open="false"] > .compose-fold-column {
+    display: none;
   }
   .compose-thread {
     border-inline-end: 0;
     padding-inline-end: 0;
-    border-block-end: 1px solid var(--borderSubtle);
-    padding-block-end: var(--space-4);
   }
   .compose-thread-scroll {
     max-block-size: 14rem;

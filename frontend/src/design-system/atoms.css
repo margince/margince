@@ -368,17 +368,10 @@
   flex-direction: column;
   padding: 0;
 }
-/* The legacy SPLIT drawer: a reply beside the conversation it answers. Below
-   the fold width the conversation folds into a disclosure (composethread.css)
-   and the width follows it down. */
+/* The legacy SPLIT drawer, kept for the brief's queue: a banded drawer whose
+   width follows the window down. */
 .modal-drawer-split {
   width: clamp(360px, 62vw, 1040px);
-}
-/* A body stack between the split drawer and its two columns passes on the
-   height the columns claim. */
-.modal-drawer-split > .form-stack {
-  flex: 1 1 auto;
-  min-block-size: 0;
 }
 /* In a dialog the stack's gap is the only space between its rows; a row's own
    margin would add to it. Declared before `.modal .actions`, so its margin wins. */

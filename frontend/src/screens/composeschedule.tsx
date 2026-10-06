@@ -146,47 +146,49 @@ export function ScheduleDialog({
   }, [open]);
   const picked = new Date(`${day}T${String(hour).padStart(2, "0")}:00`);
   return (
-    <Modal open={open} onClose={onClose} labelledBy={headingId} size="wide">
+    <Modal open={open} onClose={onClose} labelledBy={headingId} intent="form">
       <Heading size="large" id={headingId} className="t-h2 modal-title">
         {picking ? t("compose.schedulePick") : t("compose.scheduleSend")}
       </Heading>
       {picking ? (
         <>
-          <div className="schedule-pick">
-            <Calendar
-              month={month}
-              onMonthChange={setMonth}
-              selected={day}
-              onSelect={setDay}
-              today={now}
-              locale={locale}
-            />
-            <div className="schedule-when">
-              <Eyebrow>{t("compose.scheduleDate")}</Eyebrow>
-              <p className="schedule-date t-body">
-                {formatDateAbbrev(picked.toISOString(), locale, zone)}
-              </p>
-              <Eyebrow>{t("compose.scheduleTime")}</Eyebrow>
-              <div className="schedule-hours">
-                {SCHEDULE_HOURS.map((option) => (
-                  <button
-                    key={option}
-                    type="button"
-                    className="schedule-hour t-num"
-                    aria-pressed={option === hour}
-                    onClick={() => setHour(option)}
-                  >
-                    {`${String(option).padStart(2, "0")}:00`}
-                  </button>
-                ))}
+          <div className="form-stack">
+            <div className="schedule-pick">
+              <Calendar
+                month={month}
+                onMonthChange={setMonth}
+                selected={day}
+                onSelect={setDay}
+                today={now}
+                locale={locale}
+              />
+              <div className="schedule-when">
+                <Eyebrow>{t("compose.scheduleDate")}</Eyebrow>
+                <p className="schedule-date t-body">
+                  {formatDateAbbrev(picked.toISOString(), locale, zone)}
+                </p>
+                <Eyebrow>{t("compose.scheduleTime")}</Eyebrow>
+                <div className="schedule-hours">
+                  {SCHEDULE_HOURS.map((option) => (
+                    <button
+                      key={option}
+                      type="button"
+                      className="schedule-hour t-num"
+                      aria-pressed={option === hour}
+                      onClick={() => setHour(option)}
+                    >
+                      {`${String(option).padStart(2, "0")}:00`}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
+            <p className="t-caption schedule-foot">
+              {t("compose.scheduleGoesOut", {
+                when: momentLabel(picked, locale, zone),
+              })}
+            </p>
           </div>
-          <p className="t-caption schedule-foot">
-            {t("compose.scheduleGoesOut", {
-              when: momentLabel(picked, locale, zone),
-            })}
-          </p>
           <div className="actions">
             <Button onClick={onClose}>{t("create.cancel")}</Button>
             <Button
