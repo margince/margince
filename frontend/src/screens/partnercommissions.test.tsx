@@ -309,14 +309,17 @@ describe("deciding a commission entry", () => {
     expect(urls.length).toBe(before);
   });
 
-  // The ledger answers every read; the decide POST answers with `refusal`.
+  // The decide POST answers with `refusal`; each ledger read answers the entry
+  // one version on, as if another decision landed between reads.
   function stubRefusedDecision(refusal: { status: number; body: object }) {
     const ledgerReads: string[] = [];
+    const decidedVersions: (string | null)[] = [];
     vi.stubGlobal(
       "fetch",
       vi.fn(async (request: Request) => {
         const path = new URL(request.url).pathname;
         if (path.endsWith("/decide")) {
+          decidedVersions.push(request.headers.get("If-Match"));
           return new Response(JSON.stringify(refusal.body), {
             status: refusal.status,
             headers: { "Content-Type": "application/problem+json" },
@@ -325,14 +328,14 @@ describe("deciding a commission entry", () => {
         if (path.endsWith("/commissions")) ledgerReads.push(path);
         const body = path.endsWith("/me")
           ? me(true)
-          : { data: [accrued], page: {} };
+          : { data: [{ ...accrued, version: ledgerReads.length }], page: {} };
         return new Response(JSON.stringify(body), {
           status: 200,
           headers: { "Content-Type": "application/json" },
         });
       }),
     );
-    return ledgerReads;
+    return { ledgerReads, decidedVersions };
   }
 
   async function confirmApprove() {
@@ -351,7 +354,7 @@ describe("deciding a commission entry", () => {
   }
 
   it("says the entry moved under you and refetches it when another decision won", async () => {
-    const ledgerReads = stubRefusedDecision({
+    const { ledgerReads, decidedVersions } = stubRefusedDecision({
       status: 409,
       body: { code: "version_skew", title: "version skew", status: 409 },
     });
@@ -361,12 +364,19 @@ describe("deciding a commission entry", () => {
     expect(
       await within(dialog).findByText(en["edit.versionSkew"]),
     ).toBeTruthy();
-    // The retry must carry the version the server now holds.
     await vi.waitFor(() => expect(ledgerReads.length).toBe(2));
+    await act(async () => {
+      within(screen.getByRole("dialog"))
+        .getByRole("button", { name: en["commission.decide.approve"] })
+        .click();
+    });
+
+    // Pressing again sends the refetched version, not the one that was refused.
+    await vi.waitFor(() => expect(decidedVersions).toEqual(["1", "2"]));
   });
 
   it("keeps the dialog open with the server's reason when the decision is refused", async () => {
-    const ledgerReads = stubRefusedDecision({
+    const { ledgerReads } = stubRefusedDecision({
       status: 422,
       body: {
         code: "validation_failed",
