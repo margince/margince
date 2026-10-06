@@ -92,6 +92,7 @@ export function AssignProjectOwnerAction({
         {t("project.assignOwner")}
       </Button>
       <ConfirmModal
+        intent="form"
         open={open}
         onClose={() => {
           setOpen(false);

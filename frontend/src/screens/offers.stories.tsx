@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { screen, userEvent, within } from "storybook/test";
 import { OfferScreen } from "./offers";
 import {
   emptyPage,
@@ -72,6 +73,17 @@ export const Draft: Story = {
   },
 };
 
+/** The draft's header form, open over the offer. */
+export const EditingTheHeader: Story = {
+  ...Draft,
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", { name: "Edit header" }),
+    );
+    await screen.findByRole("dialog");
+  },
+};
+
 // An AI-proposed line whose price couldn't be grounded: unit_price_minor is
 // the honest 0 sentinel, never rendered as a real €0.00 price (P11).
 export const DraftUnpricedLine: Story = {
@@ -119,6 +131,17 @@ export const Sent: Story = {
         <OfferScreen id="o-1" />
       </StoryProviders>
     );
+  },
+};
+
+/** Rejecting a sent offer: the reason box and the danger confirm. */
+export const Rejecting: Story = {
+  ...Sent,
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", { name: "Reject" }),
+    );
+    await screen.findByRole("dialog");
   },
 };
 

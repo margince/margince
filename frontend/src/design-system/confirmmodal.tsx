@@ -7,6 +7,8 @@ import { Heading } from "./heading";
 import type { ModalIntent } from "./modal";
 import { AutonomyDot } from "./trust";
 
+type DotTier = Parameters<typeof AutonomyDot>[0]["tier"];
+
 // The body and its fields are the caller's; the dialog owns their spacing.
 
 // Modal's own pair, narrowed to the placements a confirm takes.
@@ -42,7 +44,7 @@ export function ConfirmModal({
   open: boolean;
   onClose: () => void;
   title: string;
-  tier?: "confirm";
+  tier?: DotTier;
   confirmLabel: string;
   // The confirm button's tone. Defaults to "primary" (backward-compatible);
   // a destructive confirm (e.g. reject-with-reason) passes "danger" so it
