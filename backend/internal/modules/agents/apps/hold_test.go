@@ -58,9 +58,8 @@ type webTier struct {
 	served  atomic.Int64
 }
 
-// secondViewURI names a view only these tests publish. The production catalog
-// holds one view, and the held-versus-missing cases need a neighbour to be held
-// while another is not.
+// secondViewURI names a view only these tests publish. The held-versus-missing
+// cases need a neighbour to be held while another is not.
 const secondViewURI = "ui://margince/second-view.html"
 
 // withSecondView adds that neighbour to the catalog for one test.
@@ -457,7 +456,7 @@ func TestTheMetricsSectionNamesEachViewSeparately(t *testing.T) {
 	t.Errorf("the fetch failures went uncounted:\n%s", body)
 }
 
-// stampedBrief is the relationship map's document carrying a build revision,
+// stampedBrief is the create-followups document carrying a build revision,
 // the way the inliner writes one.
 func stampedBrief(revision string) string {
 	return strings.Replace(documentFor(CreateFollowupsURI), "-->",

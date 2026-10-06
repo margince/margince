@@ -21,7 +21,6 @@ import actions from "../actions.json";
 import { el, onResult } from "../bridge";
 import { button, panel, panelBody } from "../parts";
 import {
-  asFiniteNumber,
   asList,
   asRecord,
   asText,
@@ -38,7 +37,6 @@ const MERGEABLE = new Set(["contact", "company"]);
 type Candidate = {
   id: string;
   otherID: string;
-  confidence: number | null;
   evidence: { field: string; mine: string; theirs: string }[];
 };
 
@@ -67,7 +65,6 @@ function candidatesOf(data: Record<string, unknown>): Candidate[] {
     .map((c) => ({
       id: asText(c.candidate_id),
       otherID: asText(c.other_record_id),
-      confidence: asFiniteNumber(c.confidence),
       evidence: asList(c.evidence)
         .map(asRecord)
         .map((e) => ({

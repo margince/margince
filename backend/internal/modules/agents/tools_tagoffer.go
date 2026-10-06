@@ -28,17 +28,18 @@ type TagOffer struct {
 }
 
 // TagOfferFor answers what accepting one proposed word would take, or nil when
-// the word cannot be offered: it is blank, or a retired word holds the name.
-type TagOfferFor func(ctx context.Context, name string) (*TagOffer, error)
+// the word cannot be offered: it is blank, the record type takes no tags, or a
+// retired word holds the name.
+type TagOfferFor func(ctx context.Context, recordType, name string) (*TagOffer, error)
 
 // offerTag turns the proposed word into an offer. The record is already created
 // by the time this runs, so a failure is carried as a warning and never fails
 // the call, for the reason reportDuplicates gives.
-func (t createRecord) offerTag(ctx context.Context, word string) *TagOffer {
+func (t createRecord) offerTag(ctx context.Context, recordType, word string) *TagOffer {
 	if word == "" || t.tagOffer == nil {
 		return nil
 	}
-	offer, err := t.tagOffer(ctx, word)
+	offer, err := t.tagOffer(ctx, recordType, word)
 	if err != nil {
 		noteWarning(ctx, CodeTagOfferUnavailable,
 			"The record was created. Whether the tag word "+word+" could be offered could not be checked, "+

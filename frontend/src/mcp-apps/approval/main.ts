@@ -24,7 +24,6 @@ declareActions(actions.approval);
 
 type Item = {
   id: string;
-  bundleID: string;
   kind: string;
   status: string;
   summary: string;
@@ -79,7 +78,6 @@ function itemOf(raw: unknown): Item | null {
   const expires = Date.parse(asText(a.expires_at));
   return {
     id,
-    bundleID: asText(a.bundle_id),
     kind: asText(a.kind),
     status: asText(a.status),
     summary: asText(a.summary),

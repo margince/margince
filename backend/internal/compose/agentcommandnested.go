@@ -104,10 +104,19 @@ func createOfferCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, bo
 }
 
 //nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
-func dismissDuplicateCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, _ []byte) (agents.GovernedCall, error) {
+func dismissDuplicateCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, body []byte) (agents.GovernedCall, error) {
 	id, err := routedID(r)
 	if err != nil {
 		return nil, err
+	}
+	// The route also carries the merge arm. One merge in the system is
+	// merge_records, which stages and pins by its own rules, so an agent that
+	// asks this door for a merge is sent there rather than served a second one.
+	var req struct {
+		Disposition string `json:"disposition"`
+	}
+	if err := json.Unmarshal(body, &req); err == nil && req.Disposition == "merge" {
+		return nil, httperr.Validation("disposition", "use_merge_records", "an agent merges with merge_records, and this verb only dismisses a pair")
 	}
 	return agents.NewDismissDuplicateCall(deps.language, agents.DedupeCommand{ID: id}), nil
 }

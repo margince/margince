@@ -65,7 +65,7 @@ type whoKnowsTool struct{ list WhoKnowsLister }
 
 func (t whoKnowsTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
-		Name: "who_knows", Title: "Next steps for this record", Version: toolVersionV1,
+		Name: "who_knows", Title: "Who knows this contact", Version: toolVersionV1,
 		Description:   whoKnowsCopy.render(),
 		Instead:       whoKnowsCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,

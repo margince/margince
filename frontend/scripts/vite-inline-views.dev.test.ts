@@ -87,7 +87,7 @@ it("is wired into the dev server `make dev` actually starts", () => {
   // Without this the middleware above is a facility nothing reaches: `make dev`
   // runs vite.config.ts, not the mcp-apps build config, so a request for a view
   // would fall through the SPA fallback to a dev index.html carrying `src=`
-  // module scripts and /@vite/client — both refused by name, leaving both views
+  // module scripts and /@vite/client — both refused by name, leaving every view
   // permanently unadvertised in every dev stack.
   expect(pluginNames(spaConfig.plugins)).toContain("mcp-apps:serve-views");
 });

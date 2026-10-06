@@ -5,6 +5,7 @@ package compose
 
 import (
 	"context"
+	"slices"
 	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -18,9 +19,10 @@ import (
 // agree on what "the workspace already has this word" means.
 func tagOfferSeam(pool *pgxpool.Pool) agents.TagOfferFor {
 	store := collections.NewStore(InstallationDB(pool))
-	return func(ctx context.Context, name string) (*agents.TagOffer, error) {
+	taggable := tagAdapter{store: store}.TaggableTypes()
+	return func(ctx context.Context, recordType, name string) (*agents.TagOffer, error) {
 		word := strings.TrimSpace(name)
-		if word == "" {
+		if word == "" || !slices.Contains(taggable, recordType) {
 			return nil, nil
 		}
 		id, state, err := store.LookupTagName(ctx, word)

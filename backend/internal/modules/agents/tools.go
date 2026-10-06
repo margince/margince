@@ -304,7 +304,7 @@ func (t createRecord) Handle(ctx context.Context, in json.RawMessage) (json.RawM
 	return marshalResult(createdRecord{
 		wireRecord:          rec,
 		DuplicateCandidates: t.reportDuplicates(ctx, args.RecordType, ref.ID),
-		TagOffer:            t.offerTag(ctx, args.OfferTag),
+		TagOffer:            t.offerTag(ctx, args.RecordType, args.OfferTag),
 	}, nil)
 }
 
