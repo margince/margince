@@ -4,9 +4,14 @@ import { Breadcrumb, type Crumb } from "../design-system/breadcrumb";
 import { useLocale, useT } from "../i18n";
 import { SETTINGS_SCREEN } from "../screens/settingsnav";
 import { AccountMenu } from "./account";
-import { SCREEN_ENTITY } from "./entity";
 import { EXTENSION_SCREEN, findExtension } from "./extensions";
-import { entryLabel, NAV, type NavSection } from "./nav";
+import {
+  entryLabel,
+  NAV,
+  type NavSection,
+  recordKindOf,
+  reservedPageTitle,
+} from "./nav";
 import { NotificationBell } from "./notificationbell";
 import {
   OFF_RAIL_TITLE_KEYS,
@@ -53,13 +58,13 @@ function useCrumbs(route: Route, section?: NavSection): readonly Crumb[] {
   // A record kind, and only then: an id segment that names no record is a
   // screen's own state — the settings tab, for one — and the page is still the
   // screen.
-  const recordKind = route.id ? SCREEN_ENTITY[route.screen] : undefined;
+  const recordKind = recordKindOf(route);
   const subject = useRouteSubject(route);
   const inSection = sectionHead(section, route);
   const unit =
     route.screen === EXTENSION_SCREEN ? findExtension(route.id) : null;
 
-  if (recordKind && route.id) {
+  if ((recordKind && route.id) || reservedPageTitle(route)) {
     // A record's trail leads back to the list it was opened from, which is the
     // one place the reader can go that is not "somewhere else entirely".
     return [

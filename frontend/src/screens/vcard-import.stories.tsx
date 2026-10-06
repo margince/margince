@@ -4,50 +4,54 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
-import { VCardImport } from "./vcard-import";
+import { VCardImportPage } from "./vcard-import";
 
-// The dialog is the surface worth reviewing, and it only exists once opened —
-// so every story here presses the button and leaves it open. What differs
-// between them is the REPORT, which is the part that has to survive being read
-// by somebody checking an import against a stack of cards on their desk.
+// What differs between these is the REPORT, which is the part that has to
+// survive being read by somebody checking an import against a stack of cards
+// on their desk.
 
-const meta: Meta<typeof VCardImport> = {
+const meta: Meta<typeof VCardImportPage> = {
   title: "Patterns/vCard import",
-  component: VCardImport,
-  parameters: { layout: "padded" },
+  component: VCardImportPage,
+  parameters: { layout: "fullscreen" },
 };
 export default meta;
 
-type Story = StoryObj<typeof VCardImport>;
+type Story = StoryObj<typeof VCardImportPage>;
 
 const ROUTE = "POST /contacts/vcard-import";
 
-async function openDialog(canvasElement: HTMLElement) {
-  const canvas = within(canvasElement.ownerDocument.body);
-  await userEvent.click(await canvas.findByTestId("vcard-import"));
+async function arrive(canvasElement: HTMLElement) {
+  const canvas = within(canvasElement);
+  await canvas.findByRole("heading", { level: 1 });
   return canvas;
 }
 
-/** The dialog before anything is chosen: what the file is, and why these are
+/** The page before anything is chosen: what the file is, and why these are
  * written straight in rather than queued. */
 export const Empty: Story = {
   render: () => {
     installFetchStub({});
     return (
       <StoryProviders locale="de">
-        <VCardImport />
+        <VCardImportPage />
       </StoryProviders>
     );
   },
   play: async ({ canvasElement }) => {
-    const canvas = await openDialog(canvasElement);
-    // The dialog ARRIVES: `overlay-arrive` (atoms.css) fades the scrim and the
-    // box in over --dur-move, so the dropzone is in the DOM a frame before it
-    // is visible, and a query that resolves on the node alone reads the
-    // half-arrived state. The settled dialog is what this story is about.
+    const canvas = await arrive(canvasElement);
+    // The page ARRIVES (enter.css), so the dropzone is in the DOM a frame
+    // before it is visible.
     const dropzone = await canvas.findByTestId("vcard-import-file");
     await waitFor(() => expect(dropzone).toBeVisible());
   },
+};
+
+/** The empty page in dark, where its derived tones re-resolve. */
+export const EmptyDark: Story = {
+  globals: { theme: "dark" },
+  render: Empty.render,
+  play: Empty.play,
 };
 
 /** A mixed file, which is the ordinary case: some cards land, some fill gaps
@@ -78,12 +82,12 @@ export const MixedReport: Story = {
     });
     return (
       <StoryProviders locale="de">
-        <VCardImport />
+        <VCardImportPage />
       </StoryProviders>
     );
   },
   play: async ({ canvasElement }) => {
-    const canvas = await openDialog(canvasElement);
+    const canvas = await arrive(canvasElement);
     const input = (await canvas.findByTestId(
       "vcard-import-file",
     )) as HTMLElement;
@@ -96,9 +100,7 @@ export const MixedReport: Story = {
         }),
       );
     }
-    // The report lands inside the same arriving dialog `Empty` waits out: the
-    // node is in the DOM a frame before `overlay-arrive` has faded it in, so
-    // the settled state is what this story asserts.
+    // The settled report is what this story asserts, not the arriving node.
     const report = await canvas.findByTestId("vcard-import-report");
     await waitFor(() => expect(report).toBeVisible());
   },
@@ -122,12 +124,12 @@ export const Refused: Story = {
     });
     return (
       <StoryProviders locale="de">
-        <VCardImport />
+        <VCardImportPage />
       </StoryProviders>
     );
   },
   play: async ({ canvasElement }) => {
-    const canvas = await openDialog(canvasElement);
+    const canvas = await arrive(canvasElement);
     const holder = await canvas.findByTestId("vcard-import-file");
     const field = holder.querySelector("input[type=file]");
     if (field instanceof HTMLInputElement) {
@@ -136,8 +138,7 @@ export const Refused: Story = {
         new File(["nonsense"], "kaputt.vcf", { type: "text/vcard" }),
       );
     }
-    // Same arrival as the report above: query the node, then wait for it to be
-    // visible rather than reading the half-faded dialog.
+    // Same arrival as the report above.
     const error = await canvas.findByTestId("vcard-import-error");
     await waitFor(() => expect(error).toBeVisible());
   },

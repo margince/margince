@@ -20,7 +20,6 @@ import { parseSource, sourceFileAt } from "../../scripts/lib/source-tree";
 /** Per file: legacy props handed to a dialog, and `Modal`s naming no box. */
 const BASELINE: Record<string, { legacy: number; bare: number }> = {
   "design-system/confirmmodal.tsx": { legacy: 2, bare: 0 },
-  "screens/import.tsx": { legacy: 1, bare: 0 },
 };
 
 const DIALOGS = new Set(["Modal", "ConfirmModal"]);
