@@ -2,11 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { screen, userEvent, within } from "storybook/test";
+import { expect, screen, userEvent, within } from "storybook/test";
 import { StoryProviders } from "../screens/story-utils";
 import { Button } from "./atoms";
 import { stubClipboard } from "./clipboard-testing";
-import { useClipboardCopy } from "./clipboardcopy";
+import { CopyableText, useClipboardCopy } from "./clipboardcopy";
 
 // The three states one copy control has, drawn by the hook that owns all three.
 //
@@ -26,7 +26,7 @@ function CopyTheLink({ text = LINK }: Readonly<{ text?: string }>) {
   });
   return (
     <div style={{ display: "grid", gap: "var(--space-3)", maxWidth: "32rem" }}>
-      <code>{text}</code>
+      <CopyableText text={text} label="Room link" />
       <div>
         <Button onClick={copy.copy}>{copy.label}</Button>
       </div>
@@ -78,12 +78,18 @@ export const Refused: Story = {
     // Put back whatever this browser had: the catalog renders many stories on
     // one page, and a clipboard taken away for good would make the next surface
     // that copies fail for a reason nobody could find here.
+    // Set up first: user-event installs a clipboard of its own.
+    const user = userEvent.setup();
     const clipboard = stubClipboard("absent");
     try {
-      await userEvent.click(
-        within(canvasElement).getByRole("button", { name: "Copy link" }),
-      );
+      const canvas = within(canvasElement);
+      await user.click(canvas.getByRole("button", { name: "Copy link" }));
       await screen.findByText("Clipboard access denied");
+      // The remedy says to copy by hand, so the keyboard must reach the text.
+      await user.tab({ shift: true });
+      const link = canvas.getByRole("textbox", { name: "Room link" });
+      await expect(link).toHaveFocus();
+      await expect(document.getSelection()?.toString()).toBe(LINK);
     } finally {
       clipboard.restore();
     }

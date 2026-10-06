@@ -166,9 +166,12 @@ export function RecordPicker({
         disabled={disabled}
         onChange={(event) => setTerm(event.target.value)}
         // Inside a form, Enter here would submit the record picked BEFORE this
-        // search; a pick is a click on a candidate, never this keystroke.
+        // search; a pick is a click on a candidate, never this keystroke. An
+        // IME's Enter commits its candidate, and Safari reports it as 229.
         onKeyDown={(event) => {
-          if (event.key === "Enter") event.preventDefault();
+          const composing =
+            event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229;
+          if (event.key === "Enter" && !composing) event.preventDefault();
         }}
       />
       {searchFailure !== null && (

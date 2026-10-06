@@ -2,7 +2,7 @@ import { useCallback, useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import { Button, Modal } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
-import { useClipboardCopy } from "../design-system/clipboardcopy";
+import { CopyableText, useClipboardCopy } from "../design-system/clipboardcopy";
 import { Heading } from "../design-system/heading";
 import { formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
@@ -180,11 +180,11 @@ function CopyableLink({ url }: Readonly<{ url: string }>) {
   });
   return (
     <div className="users-link-row">
-      {/* The shared one-time-secret block, so the whole URL wraps in view and
-          stays selectable by hand when the clipboard API is refused. */}
-      <pre className="code-block" data-testid="password-link-url">
-        {url}
-      </pre>
+      <CopyableText
+        text={url}
+        label={t("users.link.urlLabel")}
+        testId="password-link-url"
+      />
       <Button onClick={copy.copy}>{copy.label}</Button>
       {/* The BOX takes the whole line; a notice owns no layout of its own. */}
       {copy.notice !== null && (

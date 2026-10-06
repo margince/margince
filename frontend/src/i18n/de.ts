@@ -8785,6 +8785,7 @@ export const de = {
   "users.link.pending": "Link wird erstellt…",
   "users.link.body":
     "Sende diesen Link über einen vertrauenswürdigen Kanal an das Mitglied. Er funktioniert einmal und wird nur jetzt angezeigt. Ein neuer Link kann in der Zeile des Mitglieds erstellt werden.",
+  "users.link.urlLabel": "Passwort-Link",
   "users.link.copy": "Link kopieren",
   "users.link.copied": "Kopiert",
   "users.link.copyFailed":

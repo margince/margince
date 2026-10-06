@@ -176,33 +176,28 @@ export const ErasureSearchEnter: Story = {
   }),
   play: async ({ canvasElement }) => {
     openedRequests.length = 0;
-    await userEvent.click(
+    const user = userEvent.setup();
+    await user.click(
       await within(canvasElement).findByRole("button", {
         name: /new request/i,
       }),
     );
-    await userEvent.click(
-      await screen.findByRole("combobox", { name: "Kind" }),
-    );
-    await userEvent.click(
-      await screen.findByRole("option", { name: "erasure" }),
-    );
+    await user.click(await screen.findByRole("combobox", { name: "Kind" }));
+    await user.click(await screen.findByRole("option", { name: "erasure" }));
     const search = await screen.findByRole("searchbox", { name: "Contact" });
-    await userEvent.type(search, "anna");
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Anna Weber" }),
-    );
+    await user.type(search, "anna");
+    await user.click(await screen.findByRole("button", { name: "Anna Weber" }));
     fireEvent.change(screen.getByLabelText("Due"), {
       target: { value: "2026-08-01" },
     });
-    await userEvent.type(search, "ben");
+    await user.type(search, "ben");
     const enter = new KeyboardEvent("keydown", {
       key: "Enter",
       bubbles: true,
       cancelable: true,
     });
     await expect(search.dispatchEvent(enter)).toBe(false);
-    await userEvent.click(screen.getByRole("button", { name: "Open request" }));
+    await user.click(screen.getByRole("button", { name: "Open request" }));
     await waitFor(() => expect(openedRequests).toHaveLength(1));
   },
 };

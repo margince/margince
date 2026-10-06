@@ -288,17 +288,24 @@ describe("admin-issued set-password link", () => {
     vi.stubGlobal("fetch", backend({ adminPasswordLink: true }));
     // An email-less installation served over plain http is the deployment this
     // whole feature serves, and it is exactly the one with no clipboard.
+    const user = userEvent.setup();
     stubClipboard("absent");
     render(<UsersAdminCard />);
     await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
 
     await clickLinkAction();
     await screen.findByTestId("password-link-url");
-    await userEvent.click(screen.getByRole("button", { name: /copy link/i }));
+    await user.click(screen.getByRole("button", { name: /copy link/i }));
     // The admin is told to copy by hand rather than left with a dead button:
     // the heading says the copy did not happen, the body says what to do.
     expect(await screen.findByText(/clipboard access denied/i)).toBeTruthy();
     expect(screen.getByText(/copy it manually/i)).toBeTruthy();
+
+    // Copying by hand has to work from the keyboard too.
+    await user.tab({ shift: true });
+    const link = screen.getByRole("textbox", { name: "Set-password link" });
+    expect(document.activeElement).toBe(link);
+    expect(document.getSelection()?.toString()).toBe(LINK_URL);
   });
 
   it("recovers from a transport failure instead of hanging on pending", async () => {

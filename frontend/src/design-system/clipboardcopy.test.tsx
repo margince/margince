@@ -8,7 +8,7 @@ import { useState } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { stubClipboard, stubDeferredClipboard } from "./clipboard-testing";
-import { useClipboardCopy } from "./clipboardcopy";
+import { CopyableText, useClipboardCopy } from "./clipboardcopy";
 
 const LABELS = {
   copy: "Copy link",
@@ -140,5 +140,22 @@ describe("useClipboardCopy", () => {
     );
     expect(screen.getByRole("button", { name: "Copied" })).toBeTruthy();
     deferred.restore();
+  });
+});
+
+describe("CopyableText", () => {
+  it("is a named stop in the tab order that selects all of its text on focus", async () => {
+    const user = userEvent.setup();
+    render(
+      <CopyableText text="https://crm.example.test/#/set?k=1" label="Link" />,
+    );
+
+    await user.tab();
+
+    const text = screen.getByRole("textbox", { name: "Link" });
+    expect(document.activeElement).toBe(text);
+    expect(document.getSelection()?.toString()).toBe(
+      "https://crm.example.test/#/set?k=1",
+    );
   });
 });
