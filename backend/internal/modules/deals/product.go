@@ -50,6 +50,11 @@ func (s *Store) CreateProduct(ctx context.Context, in CreateProductInput) (crmco
 	if err := auth.Require(ctx, "product", principal.ActionCreate); err != nil {
 		return crmcontracts.Product{}, err
 	}
+	name, err := httperr.RequireNonBlank("name", in.Name)
+	if err != nil {
+		return crmcontracts.Product{}, err
+	}
+	in.Name = name
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return crmcontracts.Product{}, err

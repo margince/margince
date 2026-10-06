@@ -34,12 +34,6 @@ func (h Handlers) CreateProduct(w http.ResponseWriter, r *http.Request, _ crmcon
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	name, err := httperr.RequireNonBlank("name", req.Name)
-	if err != nil {
-		writeStoreErr(w, r, err)
-		return
-	}
-	req.Name = name
 	billingModel, billingMonths := billingClassificationOf(req.BillingModel, req.BillingIntervalMonths)
 	in := CreateProductInput{
 		Name:           req.Name,

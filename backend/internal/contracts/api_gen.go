@@ -23006,7 +23006,9 @@ type AiTaskSettings struct {
 	Thinking *string `json:"thinking,omitempty"`
 }
 
-// AiTierBinding defines model for AiTierBinding.
+// AiTierBinding One tier's binding. A key this schema does not declare is refused with a 422 naming its
+// path, on every routing write, even though the schema is not closed with
+// `additionalProperties` (an `allOf` extension such as `AiEmbeddingsBinding` cannot be).
 type AiTierBinding struct {
 	// BaseUrl On a tier, the provider's host as resolved from `providers`; on write it is accepted
 	// only when empty or equal to the provider's, and a different one is a 422

@@ -81,9 +81,7 @@ func Validation(field, code, message string) *DetailedError {
 }
 
 // RequireNonBlank is the one rule for a record's required name, on create and
-// on edit alike: present and not only spaces. It answers the trimmed text, so
-// what was accepted is what is stored and shown. A name of spaces satisfies
-// "required" on the wire and then reads as blank in every list and picker.
+// edit alike. It answers the trimmed text, so what was accepted is what is stored.
 func RequireNonBlank(field, raw string) (string, error) {
 	name := strings.TrimSpace(raw)
 	if name == "" {

@@ -13,12 +13,9 @@ import (
 var unmarshalerType = reflect.TypeFor[json.Unmarshaler]()
 
 // RejectUnknownNestedKeys refuses a key no struct on the way down declares,
-// naming it by its path (`upstream.zdr`, `tiers.cheap.nope`). encoding/json
-// drops such a key, so a contract that closes an object with
-// additionalProperties:false would otherwise answer 200 for a setting it never
-// stored. A type with its own UnmarshalJSON or a catch-all map owns its key
-// policy and is not entered, and a body that is not the shape asked for is left
-// to the decoder to report.
+// naming it by its path (`upstream.zdr`): encoding/json drops it, so the write
+// would answer 200 for a setting it never stored. A type with its own
+// UnmarshalJSON or a catch-all map owns its key policy and is not entered.
 //
 //craft:ignore naked-any mirror of RejectNonCanonicalKeys's seam target
 func RejectUnknownNestedKeys(raw json.RawMessage, into any) error {

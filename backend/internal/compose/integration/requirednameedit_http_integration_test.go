@@ -9,6 +9,7 @@ package integration
 // blanks it leaves a record that is a blank row in every list and picker.
 
 import (
+	"fmt"
 	"net/http"
 	"testing"
 
@@ -36,10 +37,9 @@ func TestAnEditCannotBlankARecordsRequiredNameOverHTTP(t *testing.T) {
 			id := createdID(t, e, rec.path, rec.create)
 			original := rec.create[rec.field]
 			for label, value := range map[string]any{"empty": "", "spaces": "   ", "null": nil} {
-				var problem projectProblem
-				status := e.Call(t, "PATCH", rec.path+"/"+id, AnyMap{rec.field: value}, nil, &problem)
-				if status != http.StatusUnprocessableEntity && status != http.StatusBadRequest {
-					t.Errorf("PATCH %s %s=%s → %d, want a 4xx refusal", rec.kind, rec.field, label, status)
+				status := e.Call(t, "PATCH", rec.path+"/"+id, AnyMap{rec.field: value}, nil, nil)
+				if status != http.StatusUnprocessableEntity {
+					t.Errorf("PATCH %s %s=%s → %d, want 422", rec.kind, rec.field, label, status)
 				}
 			}
 			var read AnyMap
@@ -51,4 +51,49 @@ func TestAnEditCannotBlankARecordsRequiredNameOverHTTP(t *testing.T) {
 			}
 		})
 	}
+}
+
+// The same rule on the records whose names were left out of the first pass:
+// an offer template, a knowledge corpus and a lead's name when one is sent.
+func TestASiblingRecordsRequiredNameIsRefusedBlankOnCreateAndEdit(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+
+	t.Run("offer template edit", func(t *testing.T) {
+		id := createdID(t, e, "/v1/offer-templates", AnyMap{"name": "Standard", "layout": AnyMap{}})
+		var read struct {
+			Version int64 `json:"version"`
+		}
+		if status := e.Call(t, "GET", "/v1/offer-templates/"+id, nil, nil, &read); status != http.StatusOK {
+			t.Fatalf("GET template → %d", status)
+		}
+		status := e.Call(t, "PUT", "/v1/offer-templates/"+id,
+			AnyMap{"name": "   ", "locale": "en-GB", "is_default": false, "layout": AnyMap{}},
+			map[string]string{"If-Match": fmt.Sprint(read.Version)}, nil)
+		if status != http.StatusUnprocessableEntity {
+			t.Errorf("PUT a template named with spaces → %d, want 422", status)
+		}
+	})
+
+	t.Run("corpus create", func(t *testing.T) {
+		status := e.Call(t, "POST", "/v1/knowledge/corpora", AnyMap{"name": "   ", "topic_statement": "Pricing"}, nil, nil)
+		if status != http.StatusUnprocessableEntity {
+			t.Errorf("POST a corpus named with spaces → %d, want 422", status)
+		}
+	})
+
+	t.Run("corpus edit", func(t *testing.T) {
+		id := createdID(t, e, "/v1/knowledge/corpora", AnyMap{"name": "Pricing", "topic_statement": "Pricing"})
+		status := e.Call(t, "PATCH", "/v1/knowledge/corpora/"+id, AnyMap{"name": "   "}, nil, nil)
+		if status != http.StatusUnprocessableEntity {
+			t.Errorf("PATCH a corpus name to spaces → %d, want 422", status)
+		}
+	})
+
+	t.Run("lead create", func(t *testing.T) {
+		status := e.Call(t, "POST", "/v1/leads", AnyMap{"full_name": "   ", "email": "blank@lead.test", "source": "manual"}, nil, nil)
+		if status != http.StatusUnprocessableEntity {
+			t.Errorf("POST a lead named with spaces → %d, want 422", status)
+		}
+	})
 }

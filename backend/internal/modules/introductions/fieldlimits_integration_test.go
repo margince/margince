@@ -33,6 +33,7 @@ func TestAnAskCountsCharactersAndRefusesWhatIsTooLong(t *testing.T) {
 		{"reason over", "internal_reason", func(r *NewRequest) { r.InternalReason = strings.Repeat("a", 2001) }},
 		{"value over", "value_for_target", func(r *NewRequest) { r.ValueForTarget = strings.Repeat("é", 2001) }},
 		{"note over", "forwardable_note", func(r *NewRequest) { r.ForwardableNote = strings.Repeat("ế", 4001) }},
+		{"blank reason", "internal_reason", func(r *NewRequest) { r.InternalReason = "" }},
 		{"unknown fallback", "fallback_policy", func(r *NewRequest) { r.FallbackPolicy = "zzz" }},
 		{"unknown note origin", "note_generated_by", func(r *NewRequest) { r.NoteGeneratedBy = "zzz" }},
 	}
@@ -85,5 +86,25 @@ func TestAnAnswerAndAWithdrawalRefuseAReasonOverTheLimit(t *testing.T) {
 	ok := strings.Repeat("é", 2000)
 	if err := e.store.Cancel(e.asUser(e.requester), id, ok, 1); err != nil {
 		t.Fatalf("2000 characters withdraw cleanly: %v", err)
+	}
+}
+
+// An ask that states neither enum is a contact typing with no fallback, and
+// the store records exactly that.
+func TestAnAskThatStatesNoEnumIsStoredAsHumanWithNoFallback(t *testing.T) {
+	e := setupIntro(t)
+	req := e.ask()
+	req.NoteGeneratedBy, req.FallbackPolicy = "", ""
+	id, err := e.store.Create(e.asUser(e.requester), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var origin, fallback string
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT note_generated_by, fallback_policy FROM intro_request WHERE id = $1`, id).Scan(&origin, &fallback); err != nil {
+		t.Fatal(err)
+	}
+	if origin != "human" || fallback != "none" {
+		t.Errorf("stored %q and %q, want human and none", origin, fallback)
 	}
 }

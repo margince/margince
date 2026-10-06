@@ -19841,6 +19841,11 @@ export interface components {
             /** @description Only models whose licence allows their output to train other models. */
             enforce_distillable_text?: boolean;
         };
+        /**
+         * @description One tier's binding. A key this schema does not declare is refused with a 422 naming its
+         *     path, on every routing write, even though the schema is not closed with
+         *     `additionalProperties` (an `allOf` extension such as `AiEmbeddingsBinding` cannot be).
+         */
         AiTierBinding: {
             /**
              * @description The adapter serving this tier: fake | anthropic | ollama | vllm | openai_compatible

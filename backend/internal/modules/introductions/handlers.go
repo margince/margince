@@ -81,9 +81,9 @@ func (h Handlers) CreateIntroRequest(w http.ResponseWriter, r *http.Request, id 
 		InternalReason:   body.InternalReason,
 		ValueForTarget:   deref(body.ValueForTarget),
 		ForwardableNote:  deref(body.ForwardableNote),
-		NoteGeneratedBy:  noteOriginOf(body.NoteGeneratedBy),
+		NoteGeneratedBy:  enumOf(body.NoteGeneratedBy),
 		NoteAIGenerated:  body.NoteAiGenerated != nil && *body.NoteAiGenerated,
-		FallbackPolicy:   fallbackOf(body.FallbackPolicy),
+		FallbackPolicy:   enumOf(body.FallbackPolicy),
 		NameDropAllowed:  body.NameDropAllowed != nil && *body.NameDropAllowed,
 		DueAt:            h.now().Add(askWindow),
 	})
@@ -209,19 +209,11 @@ func deref(s *string) string {
 	return *s
 }
 
-// noteOriginOf defaults an unstated origin to `human`. A client that sends no
-// provenance has a contact typing, and claiming a model wrote it would mark
-// honest copy as machine-authored.
-func noteOriginOf(o *crmcontracts.IntroNoteOrigin) string {
-	if o == nil {
-		return "human"
+// enumOf spells an optional enum as the string the store judges; unstated is
+// empty, which the store defaults.
+func enumOf[T ~string](v *T) string {
+	if v == nil {
+		return ""
 	}
-	return string(*o)
-}
-
-func fallbackOf(p *crmcontracts.IntroFallbackPolicy) string {
-	if p == nil {
-		return "none"
-	}
-	return string(*p)
+	return string(*v)
 }

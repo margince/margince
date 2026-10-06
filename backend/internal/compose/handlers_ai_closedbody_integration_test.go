@@ -56,7 +56,7 @@ func TestAnUnknownNestedKeyIsRefusedNamingItsPathOnEveryRoutingWrite(t *testing.
 		"routing replace tier routing": {
 			routing.ReplaceAiRouting, "/v1/ai/routing",
 			`{"tiers":{"cheap_cloud":{"provider":"fake","model":"m","routing":{"provider":{"zdr_typo":true}}}}}`,
-			`zdr_typo`,
+			`tiers.cheap_cloud.routing.provider.zdr_typo`,
 		},
 	}
 	for name, tc := range cases {

@@ -460,6 +460,9 @@ func nullIfEmpty(s string) *string {
 // refused rather than defaulted: an unknown note origin recorded as `human`
 // would disclose model prose as typed.
 func validateAsk(req NewRequest) error {
+	if req.InternalReason == "" {
+		return &values.ParseError{Field: "internal_reason", Code: "required", Message: "internal_reason is required"}
+	}
 	if err := tooLong("internal_reason", req.InternalReason, reasonBound); err != nil {
 		return err
 	}
@@ -469,14 +472,10 @@ func validateAsk(req NewRequest) error {
 	if err := tooLong("forwardable_note", req.ForwardableNote, noteBound); err != nil {
 		return err
 	}
-	switch req.NoteGeneratedBy {
-	case "human", "model", "deterministic":
-	default:
+	if !crmcontracts.IntroNoteOrigin(req.NoteGeneratedBy).Valid() {
 		return notAllowed("note_generated_by", "human, model or deterministic")
 	}
-	switch req.FallbackPolicy {
-	case "none", "name_drop", "next_route":
-	default:
+	if !crmcontracts.IntroFallbackPolicy(req.FallbackPolicy).Valid() {
 		return notAllowed("fallback_policy", "none, name_drop or next_route")
 	}
 	return nil

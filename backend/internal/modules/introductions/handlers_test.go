@@ -120,28 +120,19 @@ func TestANameDroppedAskCarriesNoIntroducedAt(t *testing.T) {
 	}
 }
 
-// A client that sends no provenance has a contact typing. Defaulting the other
-// way would mark honest copy as machine-authored, which is the same lie in
-// reverse and just as visible to whoever reads the disclosure.
-func TestUnstatedProvenanceIsHuman(t *testing.T) {
-	if got := noteOriginOf(nil); got != "human" {
-		t.Errorf("an unstated origin defaulted to %q", got)
+// An unstated enum reaches the store as empty, which the store defaults, and a
+// stated one reaches it as written so an unknown value can be refused.
+func TestAnOptionalEnumReachesTheStoreAsWritten(t *testing.T) {
+	if got := enumOf[crmcontracts.IntroNoteOrigin](nil); got != "" {
+		t.Errorf("an unstated origin went on as %q, want empty", got)
 	}
 	model := crmcontracts.IntroNoteOriginIntroNoteOriginModel
-	if got := noteOriginOf(&model); got != "model" {
+	if got := enumOf(&model); got != "model" {
 		t.Errorf("a stated origin became %q", got)
 	}
-}
-
-// An unstated fallback is "none" and never a policy the requester did not pick:
-// a default of name_drop would lend the colleague's name on their behalf.
-func TestUnstatedFallbackIsNone(t *testing.T) {
-	if got := fallbackOf(nil); got != "none" {
-		t.Errorf("an unstated fallback defaulted to %q", got)
-	}
-	drop := crmcontracts.IntroFallbackPolicyIntroFallbackPolicyNameDrop
-	if got := fallbackOf(&drop); got != "name_drop" {
-		t.Errorf("a stated fallback became %q", got)
+	unknown := crmcontracts.IntroFallbackPolicy("zzz")
+	if got := enumOf(&unknown); got != "zzz" {
+		t.Errorf("an unknown fallback became %q instead of reaching the store to be refused", got)
 	}
 }
 
