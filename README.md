@@ -1,4 +1,4 @@
-<!-- prose:plain -->
+<!-- prose:plain max-words=1000 -->
 # Margince
 
 Margince is a CRM that fills its own records from mail, meetings and calendars. AI agents work in it under
