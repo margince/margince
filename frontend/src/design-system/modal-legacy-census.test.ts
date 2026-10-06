@@ -280,11 +280,13 @@ const A = () => (
     <ds.Modal open />
     <Pane intent="drawer" />
     <ConfirmModal open />
+    <Pane size="wide" {...(c ? { size: "full" } : {})} />
+    <ds.Modal intent="form" {...{ ...rest }} />
     {/* <Pane size="wide" /> */}
   </>
 );`;
     const source = parseSource("planted.tsx", planted);
-    expect(censusOf(source)).toEqual({ dialogs: 6, legacy: 5, bare: 1 });
-    expect(tagsInText(planted)).toBe(6);
+    expect(censusOf(source)).toEqual({ dialogs: 8, legacy: 9, bare: 1 });
+    expect(tagsInText(planted)).toBe(8);
   });
 });

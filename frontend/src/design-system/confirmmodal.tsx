@@ -11,7 +11,7 @@ import { AutonomyDot } from "./trust";
 
 // Modal's own pair, narrowed to the placements a confirm takes.
 type ConfirmBox =
-  | { intent?: ModalIntent; size?: never; placement?: never }
+  | { intent?: Exclude<ModalIntent, "full">; size?: never; placement?: never }
   | {
       intent?: never;
       size?: "default" | "wide" | "split";

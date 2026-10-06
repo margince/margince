@@ -277,7 +277,9 @@ describe("ConfirmModal", () => {
 
 describe("the box a confirm sits in", () => {
   function boxOf(
-    box: { intent?: ModalIntent } | { size?: "wide"; placement?: "right" },
+    box:
+      | { intent?: Exclude<ModalIntent, "full"> }
+      | { size?: "wide"; placement?: "right" },
   ) {
     rtlRender(
       <ConfirmModal
@@ -306,6 +308,23 @@ describe("the box a confirm sits in", () => {
     expect(boxOf({ placement: "right", size: "wide" })).toBe(
       "modal modal-drawer modal-drawer-wide",
     );
+  });
+
+  it("refuses the lightbox, which clips a body past the viewport", () => {
+    rtlRender(
+      <ConfirmModal
+        open
+        onClose={vi.fn()}
+        title="Full"
+        confirmLabel="Go"
+        onConfirm={vi.fn()}
+        // @ts-expect-error a confirm never takes the full intent
+        intent="full"
+      >
+        <p>Body</p>
+      </ConfirmModal>,
+    );
+    expect(screen.getByRole("dialog", { name: "Full" })).toBeInTheDocument();
   });
 
   it("refuses an intent beside a legacy prop", () => {

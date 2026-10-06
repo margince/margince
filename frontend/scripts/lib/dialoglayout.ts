@@ -318,31 +318,57 @@ const spreadArms = (x: ts.Expression): ts.ObjectLiteralExpression[] => {
   const [a, b] = [spreadArms(x.whenTrue), spreadArms(x.whenFalse)];
   return a.length > 0 && b.length > 0 ? [...a, ...b] : [];
 };
-const valueIn = (o: ts.ObjectLiteralExpression, name: string) => {
-  const p = o.properties.find((q) => q.name?.getText() === name);
-  if (p && ts.isShorthandPropertyAssignment(p)) return p.name;
-  return p && ts.isPropertyAssignment(p) ? p.initializer : undefined;
+type Member = ts.JsxAttributeLike | ts.ObjectLiteralElementLike;
+const memberKey = (m: Member) => {
+  const key = m.name;
+  if (!key || ts.isComputedPropertyName(key)) return undefined;
+  return ts.isJsxNamespacedName(key) ? key.getText() : key.text;
 };
-/** Every value a call may hand prop `name`, `undefined` for an arm that hands
+const initOf = (m: Member) => {
+  if (ts.isShorthandPropertyAssignment(m)) return m.name;
+  if (ts.isPropertyAssignment(m)) return m.initializer;
+  const init = ts.isJsxAttribute(m) ? m.initializer : undefined;
+  return init && ts.isJsxExpression(init) ? init.expression : init;
+};
+type Reading = { values: ts.Expression[]; open: boolean } | "any";
+// What one member hands `name`; `open` when it may leave the prop unset.
+function memberReading(m: Member, name: string): Reading {
+  if (ts.isJsxSpreadAttribute(m) || ts.isSpreadAssignment(m)) {
+    const arms = spreadArms(m.expression).map((o) =>
+      lastNamed(o.properties, name),
+    );
+    const read = arms.filter((r) => r !== "any");
+    if (arms.length === 0 || read.length < arms.length) return "any";
+    const values = read.flatMap((r) => r.values);
+    return { values, open: read.some((r) => r.open) };
+  }
+  const key = memberKey(m);
+  if (key === undefined) return "any";
+  if (key !== name) return { values: [], open: true };
+  const x = initOf(m);
+  return x ? { values: [x], open: false } : "any";
+}
+// The last member naming `name` wins, as JSX and object spreads apply in
+// source order.
+function lastNamed(members: readonly Member[], name: string): Reading {
+  const values: ts.Expression[] = [];
+  for (const m of [...members].reverse()) {
+    const read = memberReading(m, name);
+    if (read === "any") return "any";
+    values.push(...read.values);
+    if (!read.open) return { values, open: false };
+  }
+  return { values, open: true };
+}
+/** Every value a call may hand prop `name`, `undefined` for a path that hands
  * none; "any" when a bare attribute or an unreadable spread hides the value. */
 export function handedTo(
   e: ts.Node,
   name: string,
 ): (ts.Expression | undefined)[] | "any" {
-  const a = attr(e, name);
-  if (a) {
-    const init = a.initializer;
-    const x = init && ts.isJsxExpression(init) ? init.expression : init;
-    return x ? [x] : "any";
-  }
-  const all: readonly ts.JsxAttributeLike[] =
-    opening(e)?.attributes.properties ?? [];
-  const arms = all
-    .filter(ts.isJsxSpreadAttribute)
-    .map((s) => spreadArms(s.expression));
-  if (arms.some((o) => o.length === 0)) return "any";
-  const handed = arms.flat().map((o) => valueIn(o, name));
-  return handed.length > 0 ? handed : [undefined];
+  const read = lastNamed(opening(e)?.attributes.properties ?? [], name);
+  if (read === "any") return "any";
+  return read.open ? [...read.values, undefined] : read.values;
 }
 const below = new WeakMap<ts.Node, readonly ts.Node[]>();
 const elementsBelow = new WeakMap<ts.Node, readonly ts.Node[]>();

@@ -16,11 +16,14 @@ const meta: Meta<typeof DrawerHead> = {
 export default meta;
 type Story = StoryObj<typeof DrawerHead>;
 
-const CLAIMS = Array.from(
-  { length: 24 },
-  (_, n) =>
-    `Claim ${n + 1}: Globex GmbH named a procurement lead on its careers page, quoted with the date it was read.`,
-);
+// A claim per 12px of window: each is a line or more, so the body overflows
+// at any canvas height.
+const claims = () =>
+  Array.from(
+    { length: Math.ceil(window.innerHeight / 12) },
+    (_, n) =>
+      `Claim ${n + 1}: Globex GmbH named a procurement lead on its careers page, quoted with the date it was read.`,
+  );
 
 function BandedDrawer({ wide }: Readonly<{ wide: boolean }>) {
   const [open, setOpen] = useState(true);
@@ -43,7 +46,7 @@ function BandedDrawer({ wide }: Readonly<{ wide: boolean }>) {
           <Badge>Public sources only</Badge>
         </DrawerHead>
         <DrawerBody>
-          {CLAIMS.map((claim) => (
+          {claims().map((claim) => (
             <p key={claim} className="t-body">
               {claim}
             </p>
@@ -71,7 +74,7 @@ const bodyScrollsToItsEnd = async () => {
   const save = within(dialog).getByRole("button", { name: "Save 3 claims" });
   const footTop = save.getBoundingClientRect().top;
   body.scrollTop = body.scrollHeight;
-  const last = within(body).getByText(CLAIMS[CLAIMS.length - 1]);
+  const last = within(body).getByText(claims().at(-1) ?? "");
   await waitFor(() =>
     expect(last.getBoundingClientRect().bottom).toBeLessThanOrEqual(
       body.getBoundingClientRect().bottom + 1,
@@ -96,3 +99,5 @@ export const Standard: Story = {
   render: () => <BandedDrawer wide={false} />,
   play: bodyScrollsToItsEnd,
 };
+
+export const BandedDark: Story = { ...Banded, globals: { theme: "dark" } };
