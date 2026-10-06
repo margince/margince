@@ -1,7 +1,7 @@
 # Rename deals still named by their import key
 
 An import that carried no deal title named each deal after the source system's
-key, so the pipeline shows `acme-q3-renewal-2` where a person expects a name.
+key, so the pipeline shows `acme-q3-renewal-2` where a user expects a name.
 `worker deal-key-names` renames those deals from the source system's export. It
 runs once per export, by whoever holds the file, and leaves nothing behind in
 the product.
@@ -69,7 +69,7 @@ The report has one row per export row, with the columns `OUTCOME`, `DEAL`,
 | --- | --- | --- |
 | `would-rename` | Dry run: one deal matches and would take `NEW NAME`. | Check the name, then run with `--apply`. |
 | `renamed` | The deal now carries `NEW NAME`. | Nothing. |
-| `no-match` | No live deal of that source is still named by the key. | Nothing, when it was renamed already (by this repair or by a person) or is archived. Otherwise the system or key in the file is not what the deal carries: fix the file. |
+| `no-match` | No live deal of that source is still named by the key. | Nothing, when it was renamed already (by this repair or by a user) or is archived. Otherwise the system or key in the file is not what the deal carries: fix the file. |
 | `ambiguous` | More than one live deal shares the key, so none is touched. | Rename them by hand in the app. |
 | `no-company` | The export has no title and the deal has no company to name it after. | Rename it by hand in the app. |
 
@@ -78,7 +78,7 @@ value is wrong; check it against the query above first.
 
 ## What it will and will not touch
 
-- A deal is renamed only while its name still equals the key. A name a person
+- A deal is renamed only while its name still equals the key. A name a user
   has edited stays.
 - Archived deals are untouched.
 - The new name is `source_title` when the export has one, otherwise

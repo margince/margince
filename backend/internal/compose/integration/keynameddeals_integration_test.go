@@ -140,7 +140,7 @@ func TestWithoutATitleTheDealIsNamedForItsCompanyAndStage(t *testing.T) {
 	}
 }
 
-func TestANameAPersonChangedIsLeftAlone(t *testing.T) {
+func TestANameSomeoneChangedIsLeftAlone(t *testing.T) {
 	f := newKeyNamedFixture(t)
 	id := f.importDeal(t, "acme-q3", f.company(t, "Acme"))
 	edited := "Acme expansion"
@@ -151,10 +151,10 @@ func TestANameAPersonChangedIsLeftAlone(t *testing.T) {
 	got := f.repair(t, true, exportRow("acme-q3", "Acme Q3 renewal"))[0]
 
 	if got.Outcome != deals.KeyNameNoMatch {
-		t.Errorf("outcome = %q, want no-match for a deal a person renamed", got.Outcome)
+		t.Errorf("outcome = %q, want no-match for a deal a user renamed", got.Outcome)
 	}
 	if name := f.nameOf(t, id); name != edited {
-		t.Errorf("deal name = %q, want the person's %q", name, edited)
+		t.Errorf("deal name = %q, want the user's %q", name, edited)
 	}
 }
 

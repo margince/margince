@@ -13,7 +13,7 @@ func TestAKeyNamedDealTakesItsSourceTitleThenItsCompanyAndStage(t *testing.T) {
 		{"the export's title wins", "acme-q3", "Acme Q3 renewal", "Acme", "Proposal", "Acme Q3 renewal", true},
 		{"a blank title falls back", "acme-q3", "  ", "Acme", "Proposal", "Acme · Proposal", true},
 		{"a title that is the key is no title", "acme-q3", "acme-q3", "Acme", "Proposal", "Acme · Proposal", true},
-		{"no title and no company is left for a person", "acme-q3", "", "", "Proposal", "", false},
+		{"no title and no company is left for a user", "acme-q3", "", "", "Proposal", "", false},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

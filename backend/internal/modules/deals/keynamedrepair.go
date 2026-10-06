@@ -6,7 +6,7 @@ package deals
 // Renaming imported deals whose name is still the source system's key.
 //
 // The deal keeps no source key, so only the export can say which names are
-// keys; a name that no longer equals its key was changed by a person and stays.
+// keys; a name that no longer equals its key was changed by someone and stays.
 
 import (
 	"context"
@@ -29,15 +29,15 @@ type KeyNamedDeal struct{ SourceSystem, SourceKey, SourceTitle string }
 type KeyNameOutcome string
 
 const (
-	// KeyNameRenamed: the one matching deal now carries its new name.
+	// KeyNameRenamed means the one matching deal now carries its new name.
 	KeyNameRenamed KeyNameOutcome = "renamed"
-	// KeyNameWouldRename: a dry run found the deal and the name it would take.
+	// KeyNameWouldRename means a dry run found the deal and the name it would take.
 	KeyNameWouldRename KeyNameOutcome = "would-rename"
-	// KeyNameNoMatch: no live deal of that source is still named by the key.
+	// KeyNameNoMatch means no live deal of that source is still named by the key.
 	KeyNameNoMatch KeyNameOutcome = "no-match"
-	// KeyNameAmbiguous: more than one live deal shares the key, so none is touched.
+	// KeyNameAmbiguous means more than one live deal shares the key, so none is touched.
 	KeyNameAmbiguous KeyNameOutcome = "ambiguous"
-	// KeyNameNoCompany: neither a title nor a company gives a better name.
+	// KeyNameNoCompany means neither a title nor a company gives a better name.
 	KeyNameNoCompany KeyNameOutcome = "no-company"
 )
 
@@ -136,8 +136,8 @@ func (s *Store) renameKeyNamedDealTx(ctx context.Context, tx pgx.Tx, entry KeyNa
 }
 
 // keyNamedCandidates locks every live deal of the entry's source still named by
-// its key. FOR UPDATE OF d: a person renaming one between this read and the
-// rename waits, and a person who renamed it first takes it out of the match.
+// its key. FOR UPDATE OF d: a user renaming one between this read and the
+// rename waits, and a user who renamed it first takes it out of the match.
 func keyNamedCandidates(ctx context.Context, tx pgx.Tx, entry KeyNamedDeal) ([]keyNamedCandidate, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT d.id, coalesce(c.display_name, ''), st.name
