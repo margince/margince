@@ -24,8 +24,9 @@ import (
 // CalendarSystem is the provider every CalendarMeeting is captured from.
 const CalendarSystem = "gcal"
 
-// CalendarSink is the Sink as compose builds it for a calendar connector: the
-// cancel seam wired to the module that owns the activity table.
+// CalendarSink is a bare Sink plus the one seam the cancel path needs: the
+// meeting closer, wired to the module that owns the activity table. No other
+// option compose sets on a calendar Sink is wired here.
 func (e *Env) CalendarSink() *capture.Sink {
 	return capture.NewSink(e.DB()).WithMeetingCloser(
 		activities.CancelCapturedMeetingFor(capture.SeatHoldsActivityTx),
@@ -52,13 +53,13 @@ func (e *Env) ConnectorOwnerCtx(owner ids.UUID, connectorName string) context.Co
 	})
 }
 
-// CalendarMeeting is one meeting on the admin seat's calendar.
+// CalendarMeeting is one meeting on the admin seat's calendar. It has no
+// direction, because a calendar capture never records one.
 type CalendarMeeting struct {
-	Event     string
-	At        time.Time
-	Direction string
-	Links     []datasource.EntityRef
-	Parties   []connector.MessageParticipant
+	Event   string
+	At      time.Time
+	Links   []datasource.EntityRef
+	Parties []connector.MessageParticipant
 }
 
 // Capture lands the meeting as a calendar pull does and answers its id.
@@ -68,7 +69,7 @@ func (m CalendarMeeting) Capture(t *testing.T, e *Env) ids.UUID {
 		EntityType: "activity",
 		NaturalKey: connector.NaturalKey{SourceSystem: CalendarSystem, SourceID: m.Event},
 		Fields: capture.ActivityFields{
-			Kind: "meeting", Subject: "Account review", OccurredAt: m.At, Direction: m.Direction,
+			Kind: "meeting", Subject: "Account review", OccurredAt: m.At,
 		},
 		Links:        m.Links,
 		Participants: m.Parties,

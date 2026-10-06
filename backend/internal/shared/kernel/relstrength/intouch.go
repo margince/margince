@@ -62,7 +62,7 @@ func MeetingAheadSQL(alias, now string) string {
 // nobody called off.
 func InteractionCountsSQL(alias string) string {
 	return alias + ".kind IN " + InteractionKindSQLGroup() +
-		" AND (" + alias + ".kind <> 'meeting' OR " + MeetingCountsSQL(alias) + ")"
+		" AND (" + alias + ".kind <> '" + kindMeeting + "' OR " + MeetingCountsSQL(alias) + ")"
 }
 
 // How an account's contact stands, by what made it so.
