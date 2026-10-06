@@ -241,14 +241,17 @@ const upSummaryFormat = "applied %d core+custom+extension + %d river migration(s
 // It lives here rather than in a migration file for two reasons that both
 // come from river_job not being ours: the table does not exist while the
 // core lane runs (River's own migrator creates it, on the pool opened
-// above), and dbmigrate.Up wraps every migration in a transaction.
+// above), and dbmigrate.Up wraps every migration in a transaction unless the
+// file asks otherwise with dbmigrate.NoTransactionMarker.
 //
 // Deliberately NOT CONCURRENTLY. This runs outside dbmigrate's
 // per-migration transaction but alongside boot, and a plain CREATE INDEX
 // on a fresh river_job is trivial. If that table ever grows large enough
-// for the write lock to matter, the answer is an explicit
-// non-transactional lane in the migrator — a separate change, not a flag
-// on this one.
+// for the write lock to matter, the answer is a concurrent build HERE and
+// not a migration: river_job does not exist while the core lane runs, which
+// is the first reason above, and this step already runs outside any
+// transaction. dbmigrate.NoTransactionMarker is for a migration that needs
+// the same freedom on a table the core lane can see.
 const riverWorkspaceArgIndex = `
 CREATE INDEX IF NOT EXISTS river_job_workspace_arg
     ON river_job ((args ->> 'workspace_id'))`

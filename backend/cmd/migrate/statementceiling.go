@@ -80,5 +80,6 @@ func ceilingMillis(ceiling time.Duration) string {
 // and its idle_in_transaction lift still applies. cmd/api wraps these the same way.
 func riverMigrationDSN(dsn string, ceiling time.Duration) string {
 	return database.WithoutRequestCeilings(
-		database.WithDSNParam(dsn, "statement_timeout", ceilingMillis(ceiling)))
+		database.WithDSNParam(dsn, "statement_timeout", ceilingMillis(ceiling)),
+	)
 }
