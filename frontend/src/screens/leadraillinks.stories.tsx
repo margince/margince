@@ -96,12 +96,20 @@ export const Refused: Story = {
   render: () => section({}, "lead-not-yours"),
 };
 
-/** The project verb's picker, a form dialog over the lead page. */
+/** The project verb's picker, a search list anchored to the verb. */
 export const AttachingAProject: Story = {
   render: () => {
     installFetchStub({
       "GET /leads/l-1": () => jsonResponse(lead({ writable: true })),
       "GET /me": meRoute({ lead: ["read", "update"], project: ["read"] }),
+      "GET /projects": () =>
+        jsonResponse({
+          data: [
+            { id: "pr-2", name: "Beacon rollout", key: "BEA" },
+            { id: "pr-3", name: "Beacon phase two", key: "BE2" },
+          ],
+          page: { has_more: false, next_cursor: null },
+        }),
     });
     return (
       <StoryProviders>
@@ -115,6 +123,8 @@ export const AttachingAProject: Story = {
       name: "Attach project",
     });
     await userEvent.click(attach);
-    await within(document.body).findByRole("dialog");
+    const panel = within(await within(document.body).findByRole("dialog"));
+    await userEvent.type(panel.getByRole("combobox"), "Beacon");
+    await panel.findByRole("option", { name: /Beacon rollout/ });
   },
 };

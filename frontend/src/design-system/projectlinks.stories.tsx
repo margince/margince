@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { screen, userEvent, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
 import { Badge } from "./atoms";
 import {
@@ -137,4 +138,17 @@ export const NotDetachableHere: Story = {
       emptyBody="companyProjects.empty"
     />
   ),
+};
+
+/** The attach form open: a role for the link, and the project to link. */
+export const Attaching: Story = {
+  render: () => <Live />,
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", {
+        name: /^Attach project/,
+      }),
+    );
+    await screen.findByRole("dialog");
+  },
 };
