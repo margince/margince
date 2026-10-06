@@ -91,7 +91,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	approvalsSvc := decidingApprovalsService(pool, send, log)
 	registry := agents.NewRegistry(approvalsAdapter{svc: approvalsSvc}, gate, opts...)
 	agents.RegisterCoreTools(registry, provider, provider, provider, fieldOwnership{pool: pool}, newConsumerMailSeam(db),
-		openDuplicatesFor(pool))
+		openDuplicatesFor(pool), tagOfferSeam(db))
 	agents.RegisterListTool(registry, provider, provider)
 	relinker, disqualifier, demoter, advancer := lifecycleSeams(pool)
 	agents.RegisterLifecycleTools(registry, provider, relinker, disqualifier, demoter, advancer)
@@ -136,7 +136,8 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	agents.RegisterResolveTool(registry, provider, entityResolver(pool))
 	agents.RegisterWhoamiTool(registry, actingIdentity(pool))
 	agents.RegisterColleaguesTool(registry, colleagueLister(pool))
-	agents.RegisterTagTools(registry, tagSeam(pool))
+	agents.RegisterTagTools(registry, tagSeamFor(db))
+	agents.RegisterDuplicateTools(registry, duplicateQueueSeam(db))
 	agents.RegisterListTools(registry, newListSeam(pool, features.lists))
 	agents.RegisterImportTools(registry, importsOr(imports, db))
 	agents.RegisterSlippingTools(registry, slippingLister(pool), followUpDrafter(provider))

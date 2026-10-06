@@ -27,7 +27,7 @@ func (p *pageProbeProvider) Search(context.Context, datasource.SearchQuery) (dat
 // the namer arrives as a registry option, not as a per-tool argument.
 func recordToolsNamedBy(p datasource.SystemOfRecordProvider, name SeatNamer) *Registry {
 	r := NewRegistry(nil, nil, WithSeatNamer(name))
-	RegisterCoreTools(r, p, nil, nil, nil, nil, nil)
+	RegisterCoreTools(r, p, nil, nil, nil, nil, nil, nil)
 	RegisterListTool(r, p, noFilterVocabulary{})
 	return r
 }

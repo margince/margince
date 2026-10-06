@@ -18,52 +18,20 @@ package approvals
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// actingForAHuman guards the inbox and the decision. A decision is a human's,
-// and the question this answers is whether one is behind THIS call — not which
-// transport it arrived on.
-//
-// A passport carries the human it was minted by: AgentIdentity.Principal sets
-// UserID, OnBehalfOf, the seat, the teams and the permissions from that human,
-// so an agent call is already bounded by everything a decision is bounded by —
-// the RBAC the staged effect needs, row-scope visibility of its target, and the
-// licensing ceiling. A contact answering in a chat window is the same contact
-// answering in a browser tab (ADR-0055), and the decision happens when they give
-// the instruction.
-//
-// So what is refused here is a call with NO human behind it: the system
-// principal, a connector, and an agent principal carrying no on_behalf_of —
-// which is a credential nobody lent, whatever else it holds.
-//
-// This is deliberately not the whole answer for a decision. What a passport may
-// RELEASE — and whether it is the credential that proposed the thing in the
-// first place — is agentMayDecide below; being somebody's agent is admission,
-// not authority.
+// actingForAHuman guards the inbox and the decision: a decision is a human's,
+// whether it arrives from a browser or from a passport acting for one
+// (platform/auth.RequireActingForAHuman states the rule). What a passport may RELEASE
+// is agentMayDecide below; being somebody's agent is admission, not authority.
 func actingForAHuman(ctx context.Context) error {
-	p, ok := principal.Actor(ctx)
-	if !ok {
-		return errors.New("crmapprovals: no actor bound to context")
-	}
-	switch p.Type {
-	case principal.PrincipalHuman:
-		return nil
-	case principal.PrincipalAgent:
-		if p.OnBehalfOf.IsZero() {
-			return fmt.Errorf("this credential names no human it acts for, so it decides nothing: %w",
-				apperrors.ErrPermissionDenied)
-		}
-		return nil
-	default:
-		return fmt.Errorf("approvals are decided by contacts, not by %s principals: %w",
-			p.Type, apperrors.ErrPermissionDenied)
-	}
+	return auth.RequireActingForAHuman(ctx, "approvals are decided")
 }
 
 // sendingKinds are the kinds whose APPROVAL puts a message on the wire at the

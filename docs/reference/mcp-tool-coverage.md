@@ -17,8 +17,8 @@ The lane that produces its results is `make e2e-llm`; it is paid and opt-in, so 
 
 | Assistant | How we connected it | Jobs tried | Can I trust it? | In plain words |
 |---|---|---:|---|---|
-| `claude-sonnet-5-5` | Claude Code CLI | 29 of 29 | 🟢 Yes | Reliable on 29 of 29 jobs tried. |
-| `gpt-5.6-sol` | Codex CLI | 26 of 29 | 🟢 Yes | Reliable on 26 of 26 jobs tried. |
+| `claude-sonnet-5-5` | Claude Code CLI | 29 of 31 | 🟢 Yes | Reliable on 29 of 29 jobs tried. |
+| `gpt-5.6-sol` | Codex CLI | 26 of 31 | 🟢 Yes | Reliable on 26 of 26 jobs tried. |
 
 An assistant rated **Yes** was reliable on every job we tried. One rated **Mostly** was reliable on at least 80 in every 100, and one rated **Not yet** on fewer. We say **Not enough tested yet** when we tried it on under half the jobs.
 
@@ -61,6 +61,8 @@ One row per everyday job, one column per assistant. ✅ did it reliably, ❌ not
 | That whole thread is filed wrong | A conversation moves as a whole<br>The sign-off given up front is used | ✅ | ✅ |
 | Who can introduce us, and what is going cold | The introduction route runs through a colleague<br>The thin deals are the flagged ones<br>The official number is the report's<br>A claim is checked against the records | ✅ | - |
 | What moved my quarter | A repricing is reported as one<br>A slip out of the quarter is not called a loss<br>The movement adds up to the difference between the freezes | ✅ | ✅ |
+| A word from the fair, offered and not claimed | A tag is offered and not claimed | - | - |
+| Not the same contact | Two different contacts are told apart | - | - |
 
 ---
 
@@ -85,14 +87,14 @@ Everything below is the detail behind the two tables above: which tools each job
 
 | | |
 |---|---:|
-| Tools the assistant is offered | 81 |
-| … some case requires | 49 |
+| Tools the assistant is offered | 82 |
+| … some case requires | 50 |
 | … some case requires as one of a set | 4 |
 | … **no case requires** | 28 |
 | … of those, permitted somewhere but never required | 23 |
 | Prompt tokens spent on tools no case requires | 8482 |
-| Use cases | 29 |
-| Acceptance criteria the cases declare, each with a statement | 73 |
+| Use cases | 31 |
+| Acceptance criteria the cases declare, each with a statement | 75 |
 
 ## By model
 
@@ -100,10 +102,12 @@ Which model drove the lane, and how it went. The tool columns further down are t
 
 | Model | Cases run | Reached their bar | Below it | Runs passed | Reliability |
 |---|---:|---:|---:|---:|---:|
-| `claude-sonnet-5-5@claude-cli` | 29 of 29 | 29 | 0 | 83/87 | 95% |
-| `gpt-5.6-sol@codex-cli` | 26 of 29 | 26 | 0 | 71/78 | 91% |
+| `claude-sonnet-5-5@claude-cli` | 29 of 31 | 29 | 0 | 83/87 | 95% |
+| `gpt-5.6-sol@codex-cli` | 26 of 31 | 26 | 0 | 71/78 | 91% |
 
-> `gpt-5.6-sol@codex-cli` has no committed run for 3 of 29 cases.
+> `claude-sonnet-5-5@claude-cli` has no committed run for 2 of 31 cases.
+
+> `gpt-5.6-sol@codex-cli` has no committed run for 5 of 31 cases.
 
 ## The two surfaces
 
@@ -112,7 +116,7 @@ A tool being "untried" means something different on each, so the numbers above a
 | | Surface A: MCP | Surface B: scheduled agents |
 |---|---|---|
 | Who drives it | a user, watching | a job on a timer, unattended |
-| Menu | 81 tools, the whole catalog | 5 to 7 tools, declared per agent |
+| Menu | 82 tools, the whole catalog | 5 to 7 tools, declared per agent |
 | A wrong reach | the user corrects it | nobody is there |
 | Graded by | the use-case lane on this page | [ai-certification.md](ai-certification.md) |
 
@@ -198,6 +202,8 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case5_before_the_meeting](../../e2e/llm/scenarios/case5-before-the-meeting.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/3 | 2 | **1** A briefing arrives without naming a record<br>**2** The attendees on the other side are named<br>**3** An empty calendar answer is not an empty diary<br>**5** The unkept promise is noticed | `search_records` |
 | [case50_what_moved_my_quarter](../../e2e/llm/scenarios/case50-what-moved-my-quarter.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** A repricing is reported as one<br>**2** A slip out of the quarter is not called a loss<br>**3** The movement adds up to the difference between the freezes | `forecast_movement`, `forecast_readings` |
 | [case50_what_moved_my_quarter](../../e2e/llm/scenarios/case50-what-moved-my-quarter.yaml) | `gpt-5.6-sol@codex-cli` | pass | 3/3 | 2 | **1** A repricing is reported as one<br>**2** A slip out of the quarter is not called a loss<br>**3** The movement adds up to the difference between the freezes | `forecast_movement`, `forecast_readings` |
+| [case54_a_word_from_the_fair](../../e2e/llm/scenarios/case54-a-word-from-the-fair.yaml) | - | not run | - | - | **1** A tag is offered and not claimed | `create_record` |
+| [case56_not_the_same](../../e2e/llm/scenarios/case56-not-the-same.yaml) | - | not run | - | - | **1** Two different contacts are told apart | `create_record`, `decide_duplicate` |
 | [case6_ask_the_company](../../e2e/llm/scenarios/case6-ask-the-company.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/3 | 2 | **1** The past cases are found without being named<br>**3** The record's date wins over the prose recalling it<br>**5** The disagreement between note and record is pointed out | `search_context` |
 | [case6_ask_the_company](../../e2e/llm/scenarios/case6-ask-the-company.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/3 | 2 | **1** The past cases are found without being named<br>**3** The record's date wins over the prose recalling it<br>**5** The disagreement between note and record is pointed out | `search_context` |
 | [case7_ask_for_a_number](../../e2e/llm/scenarios/case7-ask-for-a-number.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** The counts asked for come back as counts<br>**3** A refusal is not reported as a missing capability | `run_analytics_query` or `run_report` |
@@ -273,6 +279,8 @@ The numbers in the table above, in words. Source: [`e2e/llm/criteria.yaml`](../.
 | `case50_what_moved_my_quarter` | 1 | A repricing is reported as one | The deal whose amount changed is named with its old and new figure, so the answer matches the tool's amount cause. |
 | `case50_what_moved_my_quarter` | 2 | A slip out of the quarter is not called a loss | The deal whose close date moved to a later quarter is reported as having left the quarter, not as lost or won. |
 | `case50_what_moved_my_quarter` | 3 | The movement adds up to the difference between the freezes | The opening and closing figures are the tool's, and the causes named are the ones it returned. |
+| `case54_a_word_from_the_fair` | 1 | A tag is offered and not claimed | The word the user named is passed to the create as an offer and the answer says the workspace has it, but never reports it as applied: the user said they would decide that themselves. |
+| `case56_not_the_same` | 1 | Two different contacts are told apart | The user says the flagged record is a different contact, so the pair is dismissed with decide_duplicate rather than merged, and the answer says they were kept apart. |
 | `case5_before_the_meeting` | 1 | A briefing arrives without naming a record | The request names the account the way someone says it out loud, "Vietnam partner", and not the way the record carries it. So an answer that only repeats the question has found nothing, and what the record holds beyond it is the evidence that it was opened. |
 | `case5_before_the_meeting` | 2 | The attendees on the other side are named | The briefing names the contacts on the other side of the meeting rather than describing the roles they hold. |
 | `case5_before_the_meeting` | 3 | An empty calendar answer is not an empty diary | No calendar is connected, so every slot comes back free and that is what the CRM's own meeting records leave open. Reporting it as a clear day, or as the meeting being absent from the user's diary, states something about a diary this product was never shown. |
@@ -383,8 +391,8 @@ Driven, and not every run passed. Open the case to see what was asked.
 | `bulk_update_records` | 0.67 | 2/3 | - | `case47_tidy_the_fair_list` |
 | `read_lists` | 0.67 | 2/3 | - | `case47_tidy_the_fair_list` |
 | `log_activity` | 0.67 | 4/6 | - | `case1_log_it`, `case42_can_i_answer_on_whatsapp` |
+| `create_record` | 0.83 | 5/6 | - | `case1_log_it`, `case2_business_card`, `case54_a_word_from_the_fair`, `case56_not_the_same` |
 | `change_lists` | 0.67 | 2/3 | - | `case47_tidy_the_fair_list` |
-| `create_record` | 0.83 | 5/6 | - | `case1_log_it`, `case2_business_card` |
 | `search_context` | 0.67 | 2/3 | - | `case6_ask_the_company` |
 | `demote_lead` | 0.67 | 2/3 | - | `case47_tidy_the_fair_list` |
 | `list_channel_providers` | 0.67 | 2/3 | - | `case42_can_i_answer_on_whatsapp` |
@@ -394,7 +402,7 @@ Driven, and not every run passed. Open the case to see what was asked.
 | Tool | Reliability | Passed | Below its bar | Required by |
 |---|---:|---:|---|---|
 | `log_activity` | 0.83 | 5/6 | - | `case1_log_it`, `case42_can_i_answer_on_whatsapp` |
-| `create_record` | 0.83 | 5/6 | - | `case1_log_it`, `case2_business_card` |
+| `create_record` | 0.83 | 5/6 | - | `case1_log_it`, `case2_business_card`, `case54_a_word_from_the_fair`, `case56_not_the_same` |
 | `query_workspace` | 0.67 | 2/3 | - | `case4_use_the_moment` |
 | `search_records` | 0.67 | 2/3 | - | `case5_before_the_meeting` |
 | `search_context` | 0.67 | 2/3 | - | `case6_ask_the_company` |
@@ -455,7 +463,7 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 | Tool | Tokens | Graded by | Permitted in | Attached to |
 |---|---:|---|---|---|
 | `list_records` | 794 | `agent_loop` | `case10_finish_the_import`, `case21_what_are_we_closing`, `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case41_close_the_project`, `case43_the_fair_leads_are_prospects`, `case45_move_the_deal_on`, `case47_tidy_the_fair_list`, `case48_that_whole_thread_is_filed_wrong`, `case49_who_can_introduce_us`, `case50_what_moved_my_quarter`, `case7_ask_for_a_number`, `case9_filed_in_the_wrong_place` | `morning_brief`, `overnight_at_risk_sweep` |
-| `resolve_entities` | 493 | - | `case1_log_it`, `case23_find_us_a_slot`, `case2_business_card`, `case30_a_word_for_it`, `case33_two_cards_for_one_company`, `case42_can_i_answer_on_whatsapp`, `case43_the_fair_leads_are_prospects`, `case44_chase_what_is_slipping`, `case45_move_the_deal_on`, `case46_get_us_in_a_room`, `case47_tidy_the_fair_list`, `case48_that_whole_thread_is_filed_wrong`, `case49_who_can_introduce_us`, `case50_what_moved_my_quarter` | - |
+| `resolve_entities` | 493 | - | `case1_log_it`, `case23_find_us_a_slot`, `case2_business_card`, `case30_a_word_for_it`, `case33_two_cards_for_one_company`, `case42_can_i_answer_on_whatsapp`, `case43_the_fair_leads_are_prospects`, `case44_chase_what_is_slipping`, `case45_move_the_deal_on`, `case46_get_us_in_a_room`, `case47_tidy_the_fair_list`, `case48_that_whole_thread_is_filed_wrong`, `case49_who_can_introduce_us`, `case50_what_moved_my_quarter`, `case54_a_word_from_the_fair`, `case56_not_the_same` | - |
 | `annotate_brief` | 417 | `agent_loop` | - | `morning_brief` |
 | `review_commitments` | 401 | - | `case41_close_the_project` | `overnight_at_risk_sweep` |
 | `prep_for_meeting` | 394 | - | `case23_find_us_a_slot`, `case5_before_the_meeting` | - |
@@ -466,7 +474,7 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 | `describe_record_fields` | 345 | - | `case43_the_fair_leads_are_prospects` | - |
 | `search_report_evidence` | 335 | - | `case49_who_can_introduce_us` | - |
 | `forecast_input_checks` | 324 | - | `case21_what_are_we_closing`, `case22_can_i_trust_the_numbers`, `case45_move_the_deal_on`, `case50_what_moved_my_quarter` | - |
-| `read_record` | 292 | `agent_loop` | `case10_finish_the_import`, `case1_log_it`, `case21_what_are_we_closing`, `case23_find_us_a_slot`, `case2_business_card`, `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case41_close_the_project`, `case42_can_i_answer_on_whatsapp`, `case43_the_fair_leads_are_prospects`, `case44_chase_what_is_slipping`, `case45_move_the_deal_on`, `case46_get_us_in_a_room`, `case47_tidy_the_fair_list`, `case48_that_whole_thread_is_filed_wrong`, `case49_who_can_introduce_us`, `case4_use_the_moment`, `case50_what_moved_my_quarter`, `case5_before_the_meeting`, `case6_ask_the_company`, `case7_ask_for_a_number`, `case8_whats_waiting`, `case9_filed_in_the_wrong_place` | `morning_brief`, `overnight_at_risk_sweep` |
+| `read_record` | 292 | `agent_loop` | `case10_finish_the_import`, `case1_log_it`, `case21_what_are_we_closing`, `case23_find_us_a_slot`, `case2_business_card`, `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case41_close_the_project`, `case42_can_i_answer_on_whatsapp`, `case43_the_fair_leads_are_prospects`, `case44_chase_what_is_slipping`, `case45_move_the_deal_on`, `case46_get_us_in_a_room`, `case47_tidy_the_fair_list`, `case48_that_whole_thread_is_filed_wrong`, `case49_who_can_introduce_us`, `case4_use_the_moment`, `case50_what_moved_my_quarter`, `case54_a_word_from_the_fair`, `case56_not_the_same`, `case5_before_the_meeting`, `case6_ask_the_company`, `case7_ask_for_a_number`, `case8_whats_waiting`, `case9_filed_in_the_wrong_place` | `morning_brief`, `overnight_at_risk_sweep` |
 | `describe_analytics_vocabulary` | 286 | - | `case49_who_can_introduce_us`, `case7_ask_for_a_number` | - |
 | `prepare_handoff` | 267 | - | `case41_close_the_project` | - |
 | `describe_query_vocabulary` | 266 | - | `case4_use_the_moment` | - |
@@ -480,6 +488,6 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 | `read_brief` | 205 | `agent_loop` | - | `morning_brief` |
 | `who_knows` | 197 | - | `case33_two_cards_for_one_company`, `case49_who_can_introduce_us`, `case5_before_the_meeting` | - |
 | `list_pipelines` | 191 | - | `case1_log_it`, `case20_put_it_in_the_board_pack`, `case45_move_the_deal_on` | - |
-| `whoami` | 129 | - | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case42_can_i_answer_on_whatsapp`, `case43_the_fair_leads_are_prospects`, `case46_get_us_in_a_room`, `case47_tidy_the_fair_list` | - |
+| `whoami` | 129 | - | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case42_can_i_answer_on_whatsapp`, `case43_the_fair_leads_are_prospects`, `case46_get_us_in_a_room`, `case47_tidy_the_fair_list`, `case54_a_word_from_the_fair`, `case56_not_the_same` | - |
 | `read_import_run` | 67 | - | `case10_finish_the_import`, `case3_spreadsheet` | - |
 
