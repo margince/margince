@@ -19,6 +19,7 @@ import {
   RecordFormBody,
   usePublishedValues,
 } from "./create";
+import { catalogOfRecord, useSettledOpen } from "./create.dialog";
 import {
   prefillFromRecord,
   prefillRowsFromRecord,
@@ -315,6 +316,7 @@ export function EditAction<Updated extends { id: string }>({
 }>) {
   const t = useT();
   const [editing, setEditing] = useState(false);
+  const shown = useSettledOpen(editing, catalogOfRecord(recordKey));
   const mutation = useUpdateRecord<Updated>({
     update: (values, rows, opened) => update(values, rows, opened),
     invalidate,
@@ -359,7 +361,7 @@ export function EditAction<Updated extends { id: string }>({
         />
       )}
       <EditRecordModal
-        open={editing}
+        open={shown}
         onClose={() => setEditing(false)}
         title={label}
         fields={fields}

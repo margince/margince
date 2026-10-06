@@ -169,6 +169,14 @@ export function AskMarginceModal({
   const answer = ask.data?.corpus.id === corpusId ? ask.data : undefined;
   const claims = useMemo(() => answer?.claims ?? [], [answer]);
   const cited = openCite === null ? undefined : claims[openCite];
+  const citedDoc = useRef<HTMLElement | null>(null);
+  const citedChunk = cited?.chunk_id;
+  // Stacked on a narrow drawer, the document opens below the answer.
+  useEffect(() => {
+    if (citedChunk !== undefined) {
+      citedDoc.current?.scrollIntoView?.({ block: "nearest" });
+    }
+  }, [citedChunk]);
 
   return (
     <Modal
@@ -273,12 +281,7 @@ export function AskMarginceModal({
             ) : null}
           </section>
           {cited ? (
-            <section
-              key={cited.chunk_id}
-              className="ask-modal-doc"
-              // Stacked on a narrow drawer, the document opens below the answer.
-              ref={(node) => node?.scrollIntoView?.({ block: "nearest" })}
-            >
+            <section className="ask-modal-doc" ref={citedDoc}>
               <CitedDocument key={cited.chunk_id} claim={cited} />
             </section>
           ) : null}

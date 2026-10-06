@@ -228,8 +228,8 @@ function stubDealBackend(
   });
 }
 
-// Column totals come from the server's per-stage aggregate, not from summing
-// the page of cards that happened to load.
+// Column totals are the server's per-stage Σround(amount×p/100), never a sum of
+// the cards that loaded: the card cap is unrelated to the totals' correctness.
 describe("buildStageTotals", () => {
   it("carries one currency's totals straight through", () => {
     const totals = buildStageTotals([

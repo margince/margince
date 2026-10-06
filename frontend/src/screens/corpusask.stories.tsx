@@ -277,7 +277,7 @@ export const NotReady: Story = {
   render: askCard("how long are captured messages kept", () =>
     jsonResponse(NOT_READY),
   ),
-  play: seeAnswer(/Nothing is wrong with your question/),
+  play: seeAnswer(/The question is not the problem/),
 };
 
 // The refusal about the INSTALLATION: no search lane is bound, so nothing was
@@ -297,7 +297,7 @@ export const Unreviewed: Story = {
   render: askCard("what is the boiling point of nitrogen", () =>
     jsonResponse(UNREVIEWED),
   ),
-  play: seeAnswer(/Nothing has read them/),
+  play: seeAnswer(/They have not been reviewed/),
 };
 
 // Mid-ask: the button keeps its label and says it is busy beside it; swapping
