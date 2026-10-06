@@ -11,12 +11,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -33,9 +35,19 @@ type BulkClaim struct {
 	Done    bool
 }
 
+// ErrClaimNeedsTheUser refuses an agent a promise: whether a human kept their
+// word is theirs to say (SettleConversationClaim).
+var ErrClaimNeedsTheUser = &httperr.DetailedError{
+	Status: http.StatusForbidden, Code: "commitment_needs_the_user",
+	Detail: "a commitment is marked done by the user, not by an agent; ask them to mark it done on their Worklist",
+}
+
 // LockClaimForBulkTx takes the row lock a bulk change holds for its whole
-// transaction. A claim that is gone, or whose contact or source message the
-// caller may not see, answers apperrors.ErrNotFound.
+// transaction, over a claim a Worklist promise row names (ourPromiseWithNoTask).
+// Any other claim, or one whose contact or source message the caller may not
+// see, answers apperrors.ErrNotFound. Then an agent is refused with
+// ErrClaimNeedsTheUser, and only then is write authority asked, so a visible
+// promise always gives an agent that one reason.
 func (s *Store) LockClaimForBulkTx(ctx context.Context, tx pgx.Tx, id ids.UUID) (BulkClaim, error) {
 	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
 		return BulkClaim{}, err
@@ -47,21 +59,27 @@ func (s *Store) LockClaimForBulkTx(ctx context.Context, tx pgx.Tx, id ids.UUID) 
 	var contactID, activityID ids.UUID
 	var status string
 	err := tx.QueryRow(ctx, `
-		SELECT contact_id, source_activity_id, status, body, version FROM conversation_claim
-		 WHERE id = $1`, id).Scan(&contactID, &activityID, &status, &claim.Body, &claim.Version)
+		SELECT c.contact_id, c.source_activity_id, c.status, c.body, c.version FROM conversation_claim c
+		 WHERE c.id = $1 AND `+ourPromiseWithNoTask, id).Scan(&contactID, &activityID, &status, &claim.Body, &claim.Version)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return BulkClaim{}, apperrors.ErrNotFound
 	}
 	if err != nil {
 		return BulkClaim{}, fmt.Errorf("lock claim %s for a bulk change: %w", id, err)
 	}
-	// The settlement's own gates, asked under the lock and before the version
-	// is compared, so a claim the caller may not settle is never reported as
-	// having moved.
-	if err := auth.EnsureWritableLive(ctx, tx, "contact", contactID); err != nil {
+	if err := auth.EnsureVisibleLive(ctx, tx, "contact", contactID); err != nil {
 		return BulkClaim{}, err
 	}
 	if err := auth.EnsureActivityContentVisibleLive(ctx, tx, activityID); err != nil {
+		return BulkClaim{}, err
+	}
+	if err := auth.RequireHuman(ctx); err != nil {
+		if errors.Is(err, apperrors.ErrPermissionDenied) {
+			return BulkClaim{}, ErrClaimNeedsTheUser
+		}
+		return BulkClaim{}, err
+	}
+	if err := auth.EnsureWritableLive(ctx, tx, "contact", contactID); err != nil {
 		return BulkClaim{}, err
 	}
 	claim.Done = status == claimStatusDone
@@ -92,49 +110,58 @@ func (s *Store) SetClaimDoneTx(ctx context.Context, tx pgx.Tx, id ids.UUID, done
 	return version, nil
 }
 
-// VisibleClaims answers which of the named claims the caller may see now:
-// the contact and activity read grants OpenCommitmentsDue asks, their contact
-// in scope, and the message they quote readable.
+// VisibleClaims answers which of the named claims the caller may see now,
+// through the gates OpenCommitmentsDue reads promises under: the contact and
+// activity read grants, a live contact in scope, and a live message whose
+// content the caller may read. One query for the whole batch.
 func VisibleClaims(ctx context.Context, tx pgx.Tx, named []ids.UUID) (map[ids.UUID]bool, error) {
 	out := make(map[ids.UUID]bool, len(named))
-	for _, object := range []string{"contact", "activity"} {
-		err := auth.Require(ctx, object, principal.ActionRead)
-		if errors.Is(err, apperrors.ErrPermissionDenied) {
-			return out, nil
-		}
-		if err != nil {
-			return nil, err
-		}
-	}
-	for _, id := range named {
-		var contactID, activityID ids.UUID
-		err := tx.QueryRow(ctx, `
-			SELECT contact_id, source_activity_id FROM conversation_claim
-			 WHERE id = $1 AND archived_at IS NULL`, id).Scan(&contactID, &activityID)
-		if errors.Is(err, pgx.ErrNoRows) {
-			continue
-		}
-		if err != nil {
-			return nil, fmt.Errorf("read claim %s: %w", id, err)
-		}
-		seen, err := claimSeen(ctx, tx, contactID, activityID)
-		if err != nil {
-			return nil, err
-		}
-		out[id] = seen
-	}
-	return out, nil
-}
-
-// claimSeen reduces the two gates a claim is read through to a verdict; only a
-// not-found is one.
-func claimSeen(ctx context.Context, tx pgx.Tx, contactID, activityID ids.UUID) (bool, error) {
-	err := auth.EnsureReadable(ctx, tx, "contact", contactID)
+	err := auth.Require(ctx, "contact", principal.ActionRead)
 	if err == nil {
-		err = auth.EnsureActivityContentVisibleLive(ctx, tx, activityID)
+		err = auth.Require(ctx, "activity", principal.ActionRead)
 	}
-	if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
-		return false, nil
+	if errors.Is(err, apperrors.ErrPermissionDenied) {
+		return out, nil
 	}
-	return err == nil, err
+	if err != nil {
+		return nil, err
+	}
+	if len(named) == 0 {
+		return out, nil
+	}
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	idsPos := arg(named)
+	activityScope, err := auth.ActivityContentClause(ctx, "a", arg)
+	if err != nil {
+		return nil, err
+	}
+	if activityScope == "" {
+		activityScope = sqlAlwaysVisible
+	}
+	contactScope, err := auth.ScopeClauseFor(ctx, "contact", "pr", arg)
+	if err != nil {
+		return nil, err
+	}
+	if contactScope == "" {
+		contactScope = sqlAlwaysVisible
+	}
+	rows, err := tx.Query(ctx, fmt.Sprintf(`
+		SELECT c.id FROM conversation_claim c
+		  JOIN activity a ON a.id = c.source_activity_id AND a.archived_at IS NULL
+		  JOIN contact pr ON pr.id = c.contact_id AND pr.archived_at IS NULL
+		 WHERE c.id = ANY($%d) AND c.archived_at IS NULL AND (%s) AND (%s)`,
+		idsPos, activityScope, contactScope), args...)
+	if err != nil {
+		return nil, fmt.Errorf("read which claims the caller may see: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id ids.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("read which claims the caller may see: %w", err)
+		}
+		out[id] = true
+	}
+	return out, rows.Err()
 }

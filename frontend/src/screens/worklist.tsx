@@ -275,7 +275,7 @@ function WorklistBody({
     review.length,
     day.summary.buckets?.review,
   );
-  const selection = useWorklistPicks(queue);
+  const selection = useWorklistPicks(queue, `${scope}/${filter}/${owner}`);
 
   const rowProps: RowContext = {
     // Numbered WITHIN the panel each row is drawn in, not across the day.

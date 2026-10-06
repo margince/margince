@@ -9,13 +9,21 @@
 
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  render,
+  renderHook,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { WorklistScreen } from "./worklist";
+import { useWorklistPicks } from "./worklist.bulkdone";
 import { day, jsonResponse, row, stub } from "./worklist.testkit";
 
 afterEach(() => {
@@ -118,6 +126,21 @@ describe("ticking Worklist rows for Mark done", () => {
     expect(
       (selectBox("Promised the same thing") as HTMLInputElement).checked,
     ).toBe(false);
+  });
+
+  it("drops the selection when the reader changes the filter", () => {
+    const { result, rerender } = renderHook(
+      ({ view }) => useWorklistPicks([aTask, aPromise], view),
+      { initialProps: { view: "mine/all/" } },
+    );
+    act(() => result.current.selectAll());
+    expect(result.current.rows).toHaveLength(2);
+
+    rerender({ view: "mine/tasks/" });
+    expect(result.current.rows).toHaveLength(0);
+
+    rerender({ view: "mine/all/" });
+    expect(result.current.rows).toHaveLength(0);
   });
 
   it("selects every shown task and promise and previews them as one change", async () => {

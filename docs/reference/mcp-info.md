@@ -15,7 +15,7 @@ receives it. This page is rendered from that file.
 | Resources | 11 |
 | Tool catalog | 246.3 KB |
 | Resource catalog | 4.1 KB |
-| Approx. wire tokens | 64093 |
+| Approx. wire tokens | 64096 |
 | Largest tool | `prep_for_meeting` (9.0 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -31,7 +31,7 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 |---|---:|---:|---|
 | Output schemas | 108.4 KB | 44% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 65.0 KB | 26% | Yes, every step |
-| Input schemas | 55.9 KB | 22% | Yes, every step |
+| Input schemas | 56.0 KB | 22% | Yes, every step |
 | _Names, annotations, punctuation_ | 16.9 KB | 6% | Partly |
 | **Description + input schema** | **120.9 KB** | **49%** | **the recurring cost** |
 
@@ -1715,7 +1715,7 @@ requires passport scope "write".)
       "type": "string"
     },
     "record_type": {
-      "description": "A lead takes every verb but archive. A worklist_item is a Worklist task, and takes complete alone; a Worklist commitment is refused, because the user marks it done",
+      "description": "A lead takes every verb but archive and complete. A worklist_item is a Worklist task, and takes complete alone; a Worklist commitment is refused, because the user marks it done",
       "enum": [
         "contact",
         "company",

@@ -14,7 +14,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/http"
 
 	"github.com/jackc/pgx/v5"
 
@@ -22,19 +21,9 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
-
-// errCommitmentNeedsTheUser refuses an agent a promise: whether a human kept
-// their word is theirs to say (SettleConversationClaim), so the row is skipped
-// with this reason rather than as not_writable.
-var errCommitmentNeedsTheUser = &httperr.DetailedError{
-	Status: http.StatusForbidden, Code: "commitment_needs_the_user",
-	Detail: "a commitment is marked done by the user, not by an agent; ask them to mark it done on their Worklist",
-}
 
 // worklistBulkTarget is the Worklist's share of a bulk change.
 type worklistBulkTarget struct {
@@ -62,9 +51,6 @@ func (t worklistBulkTarget) lockItem(ctx context.Context, tx pgx.Tx, id ids.UUID
 	claim, err := t.claims.LockClaimForBulkTx(ctx, tx, id)
 	if err != nil {
 		return worklistItem{}, err
-	}
-	if actor, ok := principal.Actor(ctx); ok && actor.Type == principal.PrincipalAgent {
-		return worklistItem{}, errCommitmentNeedsTheUser
 	}
 	return worklistItem{row: bulkRow{label: claim.Body, version: claim.Version}, promise: true, done: claim.Done}, nil
 }
@@ -136,21 +122,12 @@ func visibleRecords(
 	if err != nil {
 		return nil, err
 	}
-	tasksRead, err := readGranted(ctx, "activity")
-	if err != nil || !tasksRead {
-		return seen, err
+	tasks, err := activities.VisibleTasks(ctx, tx, named)
+	if err != nil {
+		return nil, err
 	}
-	for _, id := range named {
-		if seen[id] {
-			continue
-		}
-		err := auth.EnsureActivityContentVisible(ctx, tx, id)
-		switch {
-		case err == nil:
-			seen[id] = true
-		case !errors.Is(err, apperrors.ErrNotFound):
-			return nil, err
-		}
+	for id := range tasks {
+		seen[id] = true
 	}
 	return seen, nil
 }

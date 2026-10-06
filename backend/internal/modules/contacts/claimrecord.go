@@ -25,8 +25,11 @@ import (
 // promise the dispatch turned into a task is that task from then on: counting
 // the claim as well would show one promise twice. Readers of one record's
 // claims keep the task-backed ones, so the quote and the task stay reachable.
-const ourPromiseNotYetATask = `c.kind = 'commitment_ours' AND c.status = 'open' AND NOT c.needs_review
-		   AND c.task_activity_id IS NULL`
+const ourPromiseNotYetATask = ourPromiseWithNoTask + ` AND c.status = 'open'`
+
+// ourPromiseWithNoTask is ourPromiseNotYetATask whatever its status: the
+// claims a Worklist promise row names, open or settled since.
+const ourPromiseWithNoTask = `c.kind = 'commitment_ours' AND NOT c.needs_review AND c.task_activity_id IS NULL`
 
 // RecordConversationClaimTx files an extracted claim inside the caller's
 // transaction, so the claim commits with whatever the extraction did about it.

@@ -122,21 +122,14 @@ func activityWriteArms(p principal.Principal, arg func(any) int) string {
 }
 
 // ActivityWritableSubset answers which of the named live, unheld activities
-// the caller holds write authority over — the authority half
-// EnsureActivityWritable asks of one row, asked of a page at once. The object
-// grant is the caller's to ask first, and the rows are ones the caller was
-// already shown, so visibility is not re-asked.
+// the caller may change: the content gate EnsureActivityWritable asks first,
+// then its authority arms, asked of a page at once. The object grant is the
+// caller's to ask first.
 func ActivityWritableSubset(ctx context.Context, tx pgx.Tx, rowIDs []ids.UUID) (map[ids.UUID]bool, error) {
 	out := make(map[ids.UUID]bool, len(rowIDs))
 	p, err := rbacActor(ctx)
 	if err != nil {
 		return nil, err
-	}
-	if Unbounded(p) {
-		for _, id := range rowIDs {
-			out[id] = true
-		}
-		return out, nil
 	}
 	if len(rowIDs) == 0 {
 		return out, nil
@@ -144,11 +137,21 @@ func ActivityWritableSubset(ctx context.Context, tx pgx.Tx, rowIDs []ids.UUID) (
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	idsPos := arg(rowIDs)
-	arms := activityWriteArms(p, arg)
+	content, err := ActivityContentClause(ctx, "a", arg)
+	if err != nil {
+		return nil, err
+	}
+	// An unbounded caller edits every activity they can read, as
+	// EnsureActivityWritableIn lets them; the live and content filters still hold.
+	arms := "true"
+	if !Unbounded(p) {
+		arms = activityWriteArms(p, arg)
+	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(
 		`SELECT a.id FROM activity a
-		  WHERE a.id = ANY($%d) AND a.archived_at IS NULL AND a.restricted_at IS NULL AND %s`,
-		idsPos, arms), args...)
+		  WHERE a.id = ANY($%d) AND a.archived_at IS NULL AND a.restricted_at IS NULL
+		    AND (%s) AND %s`,
+		idsPos, content, arms), args...)
 	if err != nil {
 		return nil, fmt.Errorf("auth: reading which activities the caller may change: %w", err)
 	}

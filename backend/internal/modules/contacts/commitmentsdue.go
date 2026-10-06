@@ -346,7 +346,8 @@ func (s *Store) MarkSettleable(ctx context.Context, promises []CommitmentDue) er
 			clause = sqlAlwaysVisible
 		}
 		rows, err := tx.Query(ctx, fmt.Sprintf(
-			`SELECT pr.id FROM contact pr WHERE pr.id = ANY($%d) AND (%s)`, idsPos, clause), args...)
+			`SELECT pr.id FROM contact pr WHERE pr.id = ANY($%d) AND pr.archived_at IS NULL AND (%s)`,
+			idsPos, clause), args...)
 		if err != nil {
 			return fmt.Errorf("read which contacts the caller may change: %w", err)
 		}

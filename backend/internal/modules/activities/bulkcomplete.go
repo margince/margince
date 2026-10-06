@@ -86,3 +86,42 @@ func (s *Store) WritableTasks(ctx context.Context, named []ids.UUID) (map[ids.UU
 	})
 	return out, err
 }
+
+// VisibleTasks answers which of the named ids are live tasks whose content
+// the caller may read now, in one query for the whole batch.
+func VisibleTasks(ctx context.Context, tx pgx.Tx, named []ids.UUID) (map[ids.UUID]bool, error) {
+	out := make(map[ids.UUID]bool, len(named))
+	err := auth.Require(ctx, "activity", principal.ActionRead)
+	if errors.Is(err, apperrors.ErrPermissionDenied) || len(named) == 0 {
+		return out, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	idsPos := arg(named)
+	content, err := auth.ActivityContentClause(ctx, "a", arg)
+	if err != nil {
+		return nil, err
+	}
+	if content == "" {
+		content = sqlTrue
+	}
+	rows, err := tx.Query(ctx, fmt.Sprintf(`
+		SELECT a.id FROM activity a
+		 WHERE a.id = ANY($%d) AND a.kind = 'task' AND a.archived_at IS NULL AND (%s)`,
+		idsPos, content), args...)
+	if err != nil {
+		return nil, fmt.Errorf("activities: reading which tasks the caller may see: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id ids.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("activities: reading which tasks the caller may see: %w", err)
+		}
+		out[id] = true
+	}
+	return out, rows.Err()
+}

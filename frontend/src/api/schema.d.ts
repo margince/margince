@@ -28148,7 +28148,8 @@ export interface components {
         };
         /**
          * @description The kind of record a bulk change acts on. One change acts on one kind. A lead takes every
-         *     verb but `archive`: a lead leaves the queue by being disqualified, which has no bulk verb.
+         *     verb but `archive` and `complete`: a lead leaves the queue by being disqualified, which has
+         *     no bulk verb.
          *     A `worklist_item` is a task or a promise (a conversation claim) as the Worklist lists it,
          *     named by the id its row carries; `complete` is its only verb, and no other kind takes it.
          * @enum {string}

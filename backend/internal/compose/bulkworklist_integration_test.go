@@ -44,9 +44,16 @@ func seedWorklistTask(t *testing.T, e *integration.Env, contact ids.UUID, subjec
 // writer, quoting a message logged for it.
 func seedWorklistPromise(t *testing.T, e *integration.Env, contact ids.UUID, body string) crmcontracts.BulkItem {
 	t.Helper()
+	return seedClaim(t, e, contact, body, "commitment_ours")
+}
+
+// seedClaim records one open claim of kind to contact, quoting a message
+// logged for it.
+func seedClaim(t *testing.T, e *integration.Env, contact ids.UUID, body, kind string) crmcontracts.BulkItem {
+	t.Helper()
 	subject := "Questions about the offer"
 	message, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
-		Kind: "email", Subject: &subject, Source: "manual",
+		Kind: "email", Subject: &subject, Body: &body, Source: "manual",
 		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 	})
 	if err != nil {
@@ -54,7 +61,7 @@ func seedWorklistPromise(t *testing.T, e *integration.Env, contact ids.UUID, bod
 	}
 	due := time.Now().Add(time.Hour)
 	claim, err := contacts.NewStore(e.DB()).RecordConversationClaim(e.Admin(), contacts.ClaimInput{
-		ContactID: ids.From[ids.ContactKind](contact), Kind: "commitment_ours",
+		ContactID: ids.From[ids.ContactKind](contact), Kind: kind,
 		Body: body, ActivityID: ids.UUID(message.Id), Quote: body, DueAt: &due, Source: "manual",
 	})
 	if err != nil {
@@ -271,5 +278,47 @@ func TestTheWorklistOffersDoneOnlyWhereTheReaderMayWrite(t *testing.T) {
 		if err != nil || len(promises) != 1 || promises[0].Settleable != tc.writable {
 			t.Errorf("%s: promises %+v (%v), want one with settleable = %v", name, promises, err, tc.writable)
 		}
+	}
+}
+
+// A worklist_item names only a claim a Worklist promise row could name: a
+// promise the customer made is no Worklist row, so the change finds nothing.
+func TestABulkCompletionReachesOnlyTheReadersOwnPromises(t *testing.T) {
+	e := integration.Setup(t)
+	contact := e.SeedContact(t, "Frau Adler", &e.Rep1)
+	theirs := seedClaim(t, e, contact, "We will send the signed order", "commitment_theirs")
+
+	out, err := bulkEngineFor(e).Execute(e.Admin(), completeItems(theirs))
+	if err != nil || out.Changed != 0 {
+		t.Fatalf("execute → %+v, %v; want nothing changed", out, err)
+	}
+	assertReasons(t, "execute", skipReasons(out.Skipped),
+		map[openapi_types.UUID]crmcontracts.BulkSkipReason{theirs.Id: crmcontracts.BulkSkipReasonNotFound})
+	if got := e.WsScalar(t, `SELECT status FROM conversation_claim WHERE id = $1`, theirs.Id); got != "open" {
+		t.Errorf("the customer's promise is %s, want it left open", got)
+	}
+}
+
+// An agent that may read the contact but not change it still hears the one
+// reason a promise is refused to an agent, not the write authority it lacks.
+func TestAnAgentIsToldThePromiseIsTheUsersBeforeAnyWriteCheck(t *testing.T) {
+	e := integration.Setup(t)
+	contact := e.SeedContact(t, "Herr Lang", &e.Rep1)
+	promise := seedWorklistPromise(t, e, contact, "Call back on Monday")
+	readOnly := principal.Permissions{
+		RoleKeys: integration.SchedulerPerms.RoleKeys,
+		Objects: map[string]principal.ObjectGrant{
+			"contact": {Read: true}, "activity": {Read: true, Update: true},
+		},
+		RowScope: integration.SchedulerPerms.RowScope,
+	}
+	agent := e.AgentFor(t, e.Rep1, []ids.UUID{e.Team1}, readOnly)
+
+	out, err := bulkEngineFor(e).Execute(agent, completeItems(promise))
+	if err != nil || len(out.Skipped) != 1 {
+		t.Fatalf("execute → %+v, %v; want the promise skipped", out, err)
+	}
+	if skip := out.Skipped[0]; skip.Code == nil || *skip.Code != "commitment_needs_the_user" {
+		t.Errorf("the promise was skipped as %+v, want commitment_needs_the_user", skip)
 	}
 }

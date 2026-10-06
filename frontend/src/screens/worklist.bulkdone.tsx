@@ -44,10 +44,21 @@ export type WorklistPicks = Readonly<{
 
 /**
  * The selection over the loaded queue. Only rows the queue still holds count,
- * so a row a refetch or a filter took away cannot stay selected out of sight.
+ * so a row a refetch took away cannot stay selected out of sight.
  */
-export function useWorklistPicks(queue: readonly WorklistItem[]) {
+export function useWorklistPicks(
+  queue: readonly WorklistItem[],
+  /** Which cut of the day is loaded; a new one starts with nothing ticked. */
+  view: string,
+) {
   const [ticked, setTicked] = useState<ReadonlySet<string>>(new Set());
+  // Cleared rather than kept per view: a selection carried back to a filter
+  // the reader left would be acted on without being seen again.
+  const [tickedFor, setTickedFor] = useState(view);
+  if (tickedFor !== view) {
+    setTickedFor(view);
+    setTicked(new Set());
+  }
   const eligible = queue.filter(bulkDoneEligible);
   const rows = eligible.filter((item) => ticked.has(rowIdentity(item)));
   const picks: WorklistPicks = {

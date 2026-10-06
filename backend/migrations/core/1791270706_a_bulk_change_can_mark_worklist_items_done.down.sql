@@ -1,5 +1,8 @@
 SET LOCAL lock_timeout = '5s';
 
+-- Held before the DELETE, so no completion can commit between it and the
+-- narrowed checks below.
+LOCK TABLE bulk_operation IN ACCESS EXCLUSIVE MODE;
 DELETE FROM bulk_operation WHERE verb = 'complete' OR record_type = 'worklist_item';
 ALTER TABLE bulk_operation DROP CONSTRAINT bulk_operation_verb_check;
 ALTER TABLE bulk_operation ADD CONSTRAINT bulk_operation_verb_check

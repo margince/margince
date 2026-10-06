@@ -3550,8 +3550,9 @@ export const de = {
   "bulk.stateDone": "Erledigt",
   "bulk.stateOpen": "Offen",
   "bulk.reason.no_change_done": "Steht schon so",
-  "worklist.bulk.selectAll_one": "Die {count} angezeigte auswählen",
-  "worklist.bulk.selectAll_other": "Alle {count} angezeigten auswählen",
+  "worklist.bulk.selectAll_one": "Den {count} angezeigten Eintrag auswählen",
+  "worklist.bulk.selectAll_other":
+    "Alle {count} angezeigten Einträge auswählen",
   "worklist.bulk.clear": "Auswahl aufheben",
   "worklist.bulk.markDone": "Als erledigt markieren",
 

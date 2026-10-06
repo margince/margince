@@ -3596,7 +3596,7 @@ export const en = {
   "bulk.undoneWorklistItems_one": "{count} task or commitment opened again.",
   "bulk.undoneWorklistItems_other":
     "{count} tasks and commitments opened again.",
-  "bulk.titleComplete": "Mark the selected {unit} done?",
+  "bulk.titleComplete": "Mark selected {unit} done?",
   "bulk.confirmComplete": "Mark done",
   "bulk.stateDone": "Done",
   "bulk.stateOpen": "Open",

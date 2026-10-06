@@ -10,16 +10,16 @@
   "totals": {
     "tools": 81,
     "resources": 11,
-    "tool_catalog_bytes": 252195,
+    "tool_catalog_bytes": 252208,
     "resource_catalog_bytes": 4179,
-    "approx_wire_tokens_total": 64093,
+    "approx_wire_tokens_total": 64096,
     "largest_tool_bytes": 9253,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
       "description_bytes": 66529,
-      "input_schema_bytes": 57284,
+      "input_schema_bytes": 57297,
       "output_schema_bytes": 111035,
-      "description_plus_input_schema_bytes": 123813
+      "description_plus_input_schema_bytes": 123826
     }
   },
   "tools": {
@@ -1239,7 +1239,7 @@
               "type": "string"
             },
             "record_type": {
-              "description": "A lead takes every verb but archive. A worklist_item is a Worklist task, and takes complete alone; a Worklist commitment is refused, because the user marks it done",
+              "description": "A lead takes every verb but archive and complete. A worklist_item is a Worklist task, and takes complete alone; a Worklist commitment is refused, because the user marks it done",
               "enum": [
                 "contact",
                 "company",

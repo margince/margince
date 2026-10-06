@@ -2102,7 +2102,7 @@
     },
     {
       "name": "bulk_update_records",
-      "tokens": 806,
+      "tokens": 809,
       "agents": [],
       "required_by_cases": [
         "case47_tidy_the_fair_list"
