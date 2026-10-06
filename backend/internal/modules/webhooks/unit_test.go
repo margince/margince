@@ -125,6 +125,7 @@ func TestValidateEventTypes(t *testing.T) {
 		{"unknown", []string{"nonsense.happened"}, true},
 		{"pipeline entity-less", []string{"capture.received"}, true},
 		{"one valid", []string{"deal.created"}, false},
+		{"repeated type", []string{"deal.created", "deal.created"}, true},
 		{"valid then pipeline", []string{"deal.created", "capture.skipped"}, true},
 	}
 	for _, tc := range tests {

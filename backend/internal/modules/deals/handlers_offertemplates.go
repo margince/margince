@@ -50,10 +50,12 @@ func (h Handlers) CreateOfferTemplate(w http.ResponseWriter, r *http.Request, _ 
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	if req.Name == "" {
-		writeStoreErr(w, r, &RequiredFieldError{Field: offerTemplateNameField})
+	name, err := httperr.RequireNonBlank(offerTemplateNameField, req.Name)
+	if err != nil {
+		writeStoreErr(w, r, err)
 		return
 	}
+	req.Name = name
 	if req.Layout == nil {
 		writeStoreErr(w, r, &RequiredFieldError{Field: "layout"})
 		return
@@ -95,10 +97,12 @@ func (h Handlers) UpdateOfferTemplate(w http.ResponseWriter, r *http.Request, id
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	if req.Name == "" {
-		writeStoreErr(w, r, &RequiredFieldError{Field: offerTemplateNameField})
+	name, err := httperr.RequireNonBlank(offerTemplateNameField, req.Name)
+	if err != nil {
+		writeStoreErr(w, r, err)
 		return
 	}
+	req.Name = name
 	if req.Layout == nil {
 		writeStoreErr(w, r, &RequiredFieldError{Field: "layout"})
 		return

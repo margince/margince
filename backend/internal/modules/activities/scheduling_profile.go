@@ -139,6 +139,9 @@ func validateSchedulingProfile(p crmcontracts.SchedulingProfile) error {
 	if err := validateSchedulingLimits(p); err != nil {
 		return err
 	}
+	if !p.Provider.Valid() {
+		return &SchedulingArgumentError{Field: "provider", Code: "invalid", Message: "Choose a supported calendar provider"}
+	}
 	if p.Enabled && (p.HostName == nil || strings.TrimSpace(*p.HostName) == "") {
 		return &SchedulingArgumentError{Field: "host_name", Code: "required", Message: "Set your name in Settings → Account before enabling bookings"}
 	}

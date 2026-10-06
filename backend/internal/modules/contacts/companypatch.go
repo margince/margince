@@ -16,6 +16,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 )
 
 // buildCompanyPatch folds the caller's sparse company edit into a patch.
@@ -25,6 +26,13 @@ func buildCompanyPatch(ctx context.Context, tx pgx.Tx, current crmcontracts.Comp
 	p := storekit.NewPatch()
 	if err := storekit.ApplyClears(p, in.Clear, clearableCompanyColumns(current)); err != nil {
 		return nil, err
+	}
+	if in.DisplayName != nil {
+		name, err := httperr.RequireNonBlank("display_name", *in.DisplayName)
+		if err != nil {
+			return nil, err
+		}
+		p.Set("display_name", current.DisplayName, name)
 	}
 	setCompanyPlainFields(p, current, in)
 	if err := setCompanyCheckedFields(ctx, tx, p, current, in); err != nil {
@@ -46,9 +54,6 @@ func buildCompanyPatch(ctx context.Context, tx pgx.Tx, current crmcontracts.Comp
 // supplied it". Kept apart from the checked ones so a reader can see at a
 // glance which fields carry a rule and which do not.
 func setCompanyPlainFields(p *storekit.Patch, current crmcontracts.Company, in UpdateCompanyInput) {
-	if in.DisplayName != nil {
-		p.Set("display_name", current.DisplayName, *in.DisplayName)
-	}
 	if in.LegalName != nil {
 		p.Set("legal_name", current.LegalName, *in.LegalName)
 	}
