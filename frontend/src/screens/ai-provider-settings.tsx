@@ -324,7 +324,6 @@ export function ProviderSettingsForm({
       {provider === VERTEX_PROVIDER && (
         <VertexLocationField
           value={location}
-          profile={routing.profile}
           disabled={disabled}
           onChange={setLocation}
         />

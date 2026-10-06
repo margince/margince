@@ -9162,10 +9162,6 @@ export const vi = {
     "Không đọc được tệp. Hãy chọn lại, hoặc dán nội dung của nó.",
   "aiRouting.location.label": "Vị trí",
   "aiRouting.location.help": "Nơi Google xử lý các lệnh gọi của làn này.",
-  "aiRouting.location.residentHelp":
-    "Hồ sơ eu_hosted chỉ chấp nhận các vị trí được đánh dấu lưu trú EU.",
-  "aiRouting.location.forbidden":
-    "Vị trí này nằm ngoài EU, nên hồ sơ eu_hosted từ chối nó. Hãy chọn một vị trí lưu trú EU.",
   "aiRouting.location.loading":
     "Đang hỏi Google khóa này truy cập được những vị trí nào…",
   "aiRouting.location.noKey":
@@ -9182,7 +9178,6 @@ export const vi = {
   "aiRouting.location.group.global": "Toàn cầu",
   "aiRouting.location.resident": "Lưu trú EU",
   "aiRouting.location.nonResident": "Không lưu trú",
-  "aiRouting.location.notResident": "ngoài EU",
   "aiRouting.probe.checking":
     "Đang kiểm tra {location} có phục vụ mô hình này không…",
   "aiRouting.probe.served": "Được phục vụ tại {location}.",

@@ -283,7 +283,6 @@ function SliceFields({
           laneName={draft.tier}
           binding={draft.binding}
           catalogue={catalogue}
-          profile={routing.profile}
           vertexLocation={vertexLocation}
           providerSettings={routing.providers?.[draft.binding.provider] ?? {}}
           disabled={disabled}
@@ -306,7 +305,6 @@ function SliceFields({
             laneName="embeddings"
             binding={draft.binding}
             catalogue={catalogue}
-            profile={routing.profile}
             vertexLocation={vertexLocation}
             providerSettings={routing.providers?.[draft.binding.provider] ?? {}}
             disabled={disabled}

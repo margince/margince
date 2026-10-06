@@ -229,12 +229,6 @@ func (c *decisionClient) probeKey(ctx context.Context, provider string) (count i
 	}
 }
 
-// decisionLaneForbidden is whether the profile refuses this lane, read by the
-// routing validator's own residency rule rather than a second copy of it.
-func decisionLaneForbidden(profile Profile, lane DecisionsConfig) bool {
-	return RoutingConfig{Profile: profile, Decisions: &lane}.decisionsResidencyGap() != nil
-}
-
 // boundDecisionLane is the decision binding a test or a list uses for
 // provider: the stored lane when it names this provider, at the provider's
 // endpoint — else the adapter's default, which `jev_compatible`, having none,

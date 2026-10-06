@@ -194,33 +194,6 @@ func TestAProbeSaysWhetherALocationServesOneModel(t *testing.T) {
 	}
 }
 
-// The EU refusal comes before any client is built: not one request — not even
-// the token exchange — reaches Google for a location eu_hosted refuses,
-// whether the screen lists models there or probes one.
-func TestEUHostedAsksGoogleNothingAboutALocationOutsideTheEU(t *testing.T) {
-	t.Parallel()
-	selector, google := googleAt(t, servedAt(t))
-	store := &RoutingStore{keys: allCloudKeys(t), selectBrain: selector}
-	cfg := RoutingConfig{Profile: ProfileEUHosted}
-	for _, q := range []AvailableModelsQuery{
-		{Provider: providerGeminiVertex, Tier: "premium", Location: "europe-west2"},
-		{Provider: providerGeminiVertex, Tier: "premium", Location: "us", Model: "gemini-3.5-flash"},
-		{Provider: providerGeminiVertex, Tier: "embeddings", Location: "global", Model: "gemini-embedding-001"},
-	} {
-		if got := store.availableModels(context.Background(), cfg, q); got.Unavailable != AvailabilityProfileForbids {
-			t.Errorf("%+v answered %q, want profile_forbids", q, got.Unavailable)
-		}
-	}
-	if n := google.requests.Load(); n != 0 {
-		t.Errorf("%d request(s) reached Google for locations eu_hosted refuses", n)
-	}
-	// The control: the same store does reach Google for a resident location.
-	store.availableModels(context.Background(), cfg, AvailableModelsQuery{Provider: providerGeminiVertex, Location: "europe-west4", Model: "gemini-3.5-flash"})
-	if google.requests.Load() == 0 {
-		t.Error("a resident location reached nobody either, so the zero above proves nothing")
-	}
-}
-
 func TestAMalformedLocationIsRefusedAsTheCallersFault(t *testing.T) {
 	t.Parallel()
 	store := &RoutingStore{keys: allCloudKeys(t)}

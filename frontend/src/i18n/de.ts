@@ -9256,10 +9256,6 @@ export const de = {
   "aiRouting.location.label": "Standort",
   "aiRouting.location.help":
     "Wo Google die Aufrufe dieser Strecke verarbeitet.",
-  "aiRouting.location.residentHelp":
-    "Das Profil eu_hosted lässt nur die als EU-resident markierten Standorte zu.",
-  "aiRouting.location.forbidden":
-    "Dieser Standort liegt außerhalb der EU, daher lehnt das Profil eu_hosted ihn ab. Wähle einen EU-residenten Standort.",
   "aiRouting.location.loading":
     "Google wird gefragt, welche Standorte dieser Schlüssel erreicht…",
   "aiRouting.location.noKey":
@@ -9276,7 +9272,6 @@ export const de = {
   "aiRouting.location.group.global": "Global",
   "aiRouting.location.resident": "EU-resident",
   "aiRouting.location.nonResident": "Nicht resident",
-  "aiRouting.location.notResident": "außerhalb der EU",
   "aiRouting.probe.checking":
     "Es wird geprüft, ob {location} dieses Modell bedient…",
   "aiRouting.probe.served": "Wird in {location} bedient.",

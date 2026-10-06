@@ -72,8 +72,6 @@ func TestTheDecisionsLaneIsValidatedLikeTheEmbedLane(t *testing.T) {
 		{"self-hosted on loopback under sovereign", laneRouting("sovereign", selfHost), ""},
 		{"self-hosted in a private range under sovereign", laneRouting("sovereign", strings.Replace(selfHost, "127.0.0.1", "10.0.4.2", 1)), ""},
 		{"self-hosted at link-local", laneRouting("cloud_frontier", strings.Replace(selfHost, "127.0.0.1:8767", "169.254.169.254", 1)), "the decisions lane"},
-		{"the broker under eu_hosted", laneRouting("eu_hosted", broker), "cannot be pinned to an EU host"},
-		{"the official API under eu_hosted", laneRouting("eu_hosted", official), "not pinned to an EU host"},
 		{"self-hosted under eu_hosted", laneRouting("eu_hosted", selfHost), ""},
 		{"a typo'd lane key", laneRouting("cloud_frontier", "decisions: {provider: jev, model: m, input: [text]}\n"), "field input not found"},
 	}
