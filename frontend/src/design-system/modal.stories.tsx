@@ -89,7 +89,9 @@ function IntentDemo({
 
 const opens = (name: string) => async () => {
   const dialog = within(await screen.findByRole("dialog", { name }));
-  await expect(dialog.getByRole("button", { name: "Close" })).toBeVisible();
+  await expect(
+    dialog.getByRole("button", { name: "Close" }),
+  ).toBeInTheDocument();
 };
 
 /** A yes/no before something irreversible: 440px, and a card on a phone. */

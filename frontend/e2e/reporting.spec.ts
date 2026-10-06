@@ -113,6 +113,7 @@ for (const colorScheme of ["light", "dark"] satisfies ("light" | "dark")[]) {
         page.getByText("Frozen booking receipt", { exact: true }),
       ).toHaveCount(0);
       await page.keyboard.press("Escape");
+      await expect(page.getByRole("dialog")).toBeHidden();
       await expect(lastPoint).toBeFocused();
       const accessibility = await new AxeBuilder({ page })
         .include(".reporting-grid")

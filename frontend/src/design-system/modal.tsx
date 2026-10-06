@@ -98,6 +98,7 @@ export function Modal({
     return null;
   }
   const leaving = state === "closing";
+  const box = modalClass(intent, size, placement);
   // Portalled to the document body rather than rendered in place: a dialog
   // opened from inside a collapsed container — the record header's overflow
   // menu — would otherwise be hidden along with it, and the click that opened
@@ -110,7 +111,7 @@ export function Modal({
     // path, and it is `useDialogFocus`'s, not this element's.
     <div // NOSONAR: backdrop dismiss only; keyboard path (Esc) handled by the effect above
       className={
-        (intent ? intent.startsWith("drawer") : placement === "right")
+        box.split(" ").includes("modal-drawer")
           ? "overlay overlay-right"
           : "overlay"
       }
@@ -144,7 +145,7 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={labelledBy}
-        className={modalClass(intent, size, placement)}
+        className={box}
         ref={dialog}
         // Focusable so a dialog whose body is pure text still receives focus
         // when it opens, rather than leaving it on the page behind.

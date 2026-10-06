@@ -5,8 +5,8 @@ import type { ReactNode, Ref, UIEventHandler } from "react";
 
 type Band = Readonly<{ children: ReactNode; className?: string }>;
 
-// Its first child is the `Heading` the Modal's `labelledBy` names. A wide
-// drawer keeps this band and the foot in view while the body scrolls.
+// Its first child is the `Heading` the Modal's `labelledBy` names. The drawer
+// keeps this band and the foot in view while the body scrolls.
 export function DrawerHead({ children, className }: Band) {
   return (
     <div className={["drawer-head", className ?? ""].filter(Boolean).join(" ")}>

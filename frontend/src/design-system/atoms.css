@@ -274,7 +274,7 @@
  * does, and `overflow: hidden` keeps the document's scroll inside the stage
  * rather than moving the box. */
 .modal-full {
-  width: min(1240px, calc(100vw - 48px));
+  width: min(var(--dialogFullWidth), calc(100vw - 48px));
   height: calc(100dvh - 48px);
   max-height: calc(100dvh - 48px);
   display: flex;
@@ -348,14 +348,17 @@
   box-shadow: var(--shadow-pop);
   padding: var(--space-5);
 }
-/* A drawer that keeps its head and foot as bands to its own edge needs the
-   corners clipped, or the two sticky bands square off the radius they sit in.
-   `clip` rather than `hidden`: it clips without making the drawer a scroll
-   container, which is the body's job below. An unbanded drawer is one scrolling
-   column and keeps `.modal`'s own `overflow-y: auto` — taking its scrollbar
-   away would bury the end of a long form. */
+/* A banded drawer scrolls only its body, so head and foot stay put. Not
+   `hidden`: it would make the drawer a second scroll container. */
 .modal-drawer:has(> .drawer-head) {
   overflow: clip;
+  display: flex;
+  flex-direction: column;
+}
+.modal-drawer:has(> .drawer-head) > .drawer-body {
+  flex: 1;
+  min-block-size: 0;
+  overflow-y: auto;
 }
 /* The READING drawer: its bands are sticky so close and commit stay in reach
    however long the body runs. */
@@ -393,6 +396,11 @@
 .modal-drawer:not(.modal-drawer-wide) > .drawer-head {
   margin-bottom: var(--space-3);
 }
+/* The room a field's focus glow draws in, which the body's scroll would clip. */
+.modal-drawer:not(.modal-drawer-wide) > .drawer-body {
+  margin: calc(var(--space-1) * -1);
+  padding: var(--space-1);
+}
 .modal-drawer-wide > .drawer-head {
   position: sticky;
   top: 0;
@@ -402,8 +410,6 @@
   border-bottom: 1px solid var(--borderSubtle);
 }
 .modal-drawer-wide > .drawer-body {
-  flex: 1;
-  overflow-y: auto;
   padding: var(--space-5);
 }
 .modal-drawer-wide > .drawer-foot {

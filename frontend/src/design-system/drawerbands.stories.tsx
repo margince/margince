@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useId, useState } from "react";
+import { expect, screen, waitFor, within } from "storybook/test";
 import { Badge, Button, Modal } from "./atoms";
 import { DrawerBody, DrawerFoot, DrawerHead } from "./drawerbands";
 import { Heading } from "./heading";
@@ -48,29 +49,50 @@ function BandedDrawer({ wide }: Readonly<{ wide: boolean }>) {
             </p>
           ))}
         </DrawerBody>
-        {wide && (
-          <DrawerFoot>
-            <span className="t-caption">
-              Nothing is saved until you map it.
-            </span>
-            <Button variant="primary" onClick={() => setOpen(false)}>
-              Save 3 claims
-            </Button>
-          </DrawerFoot>
-        )}
+        <DrawerFoot>
+          <span className="t-caption">Nothing is saved until you map it.</span>
+          <Button variant="primary" onClick={() => setOpen(false)}>
+            Save 3 claims
+          </Button>
+        </DrawerFoot>
       </Modal>
     </>
   );
 }
 
-/** The wide drawer's three bands: the head and foot stay put while the body
- *  scrolls between them, each paying its own inset to the drawer's edge. */
-export const Banded: Story = {
-  render: () => <BandedDrawer wide />,
+const bodyScrollsToItsEnd = async () => {
+  const dialog = await screen.findByRole("dialog", {
+    name: "Research on Anna Brandt",
+  });
+  const body = dialog.querySelector<HTMLElement>(".drawer-body");
+  if (!body) throw new Error("The drawer drew no body band.");
+  await Promise.all(document.getAnimations().map((motion) => motion.finished));
+  await expect(body.scrollHeight).toBeGreaterThan(body.clientHeight);
+  const save = within(dialog).getByRole("button", { name: "Save 3 claims" });
+  const footTop = save.getBoundingClientRect().top;
+  body.scrollTop = body.scrollHeight;
+  const last = within(body).getByText(CLAIMS[CLAIMS.length - 1]);
+  await waitFor(() =>
+    expect(last.getBoundingClientRect().bottom).toBeLessThanOrEqual(
+      body.getBoundingClientRect().bottom + 1,
+    ),
+  );
+  await expect(save.getBoundingClientRect().top).toBe(footTop);
+  await expect(save.getBoundingClientRect().bottom).toBeLessThanOrEqual(
+    dialog.getBoundingClientRect().bottom,
+  );
 };
 
-/** The standard drawer is one scrolling column; the head only spaces the
- *  title from what follows. */
+/** The reading drawer's three bands, each paying its own inset to the
+ *  drawer's edge. */
+export const Banded: Story = {
+  render: () => <BandedDrawer wide />,
+  play: bodyScrollsToItsEnd,
+};
+
+/** The standard drawer: the drawer's padding frames the three bands, and the
+ *  body scrolls between the head and the foot. */
 export const Standard: Story = {
   render: () => <BandedDrawer wide={false} />,
+  play: bodyScrollsToItsEnd,
 };
