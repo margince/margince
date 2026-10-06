@@ -79,9 +79,11 @@ means the wrong thing.
 ## Copy follows the style pages
 
 English catalog text follows [`docs/reference/ui-copy-style.md`](../docs/reference/ui-copy-style.md);
-German adds [`ui-copy-style-de.md`](../docs/reference/ui-copy-style-de.md). `copy-style.test.ts`
-and `copy-style-de.test.ts` hold only the mechanical rules; tone, vocabulary,
-length and message shape are yours to check before you add or change a value.
+German adds [`ui-copy-style-de.md`](../docs/reference/ui-copy-style-de.md) and Vietnamese
+[`ui-copy-style-vi.md`](../docs/reference/ui-copy-style-vi.md). `copy-style.test.ts`,
+`copy-style-de.test.ts` and `copy-style-vi.test.ts` hold only the mechanical
+rules; tone, vocabulary, length and message shape are yours to check before you
+add or change a value.
 
 ## A test may not depend on how busy the machine is
 
