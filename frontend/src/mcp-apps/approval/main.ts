@@ -16,7 +16,7 @@ import {
 import actions from "../actions.json";
 import { badge } from "../badge";
 import { el, onResult } from "../bridge";
-import { button, panel, panelBody } from "../parts";
+import { button, keepFocus, panel, panelBody } from "../parts";
 import { asList, asRecord, asText, type Warning } from "../types";
 import "../view.css";
 
@@ -86,11 +86,16 @@ function itemOf(raw: unknown): Item | null {
   };
 }
 
+/** render draws the card, keeping the reader's place across a redraw. */
 export function render(
   root: HTMLElement,
   data: unknown,
   warnings: Warning[],
 ): void {
+  keepFocus(root, () => draw(root, data, warnings));
+}
+
+function draw(root: HTMLElement, data: unknown, warnings: Warning[]): void {
   root.replaceChildren();
   const item = itemOf(data);
   if (item === null) return;

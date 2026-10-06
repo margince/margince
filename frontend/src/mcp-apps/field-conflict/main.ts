@@ -17,7 +17,7 @@ import {
 } from "../actions";
 import actions from "../actions.json";
 import { el, onResult } from "../bridge";
-import { button, panel, panelBody } from "../parts";
+import { button, keepFocus, panel, panelBody } from "../parts";
 import { asList, asRecord, asText, type Warning } from "../types";
 import "../view.css";
 
@@ -101,11 +101,16 @@ function table(conflict: Conflict): HTMLElement {
   return grid;
 }
 
+/** render draws the card, keeping the reader's place across a redraw. */
 export function render(
   root: HTMLElement,
   data: unknown,
   warnings: Warning[],
 ): void {
+  keepFocus(root, () => draw(root, data, warnings));
+}
+
+function draw(root: HTMLElement, data: unknown, warnings: Warning[]): void {
   root.replaceChildren();
   const conflict = conflictOf(data);
   if (conflict === null) return;

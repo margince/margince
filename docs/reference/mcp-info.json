@@ -10,16 +10,16 @@
   "totals": {
     "tools": 82,
     "resources": 9,
-    "tool_catalog_bytes": 257174,
+    "tool_catalog_bytes": 257189,
     "resource_catalog_bytes": 3560,
-    "approx_wire_tokens_total": 65183,
+    "approx_wire_tokens_total": 65187,
     "largest_tool_bytes": 9293,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
       "description_bytes": 66909,
-      "input_schema_bytes": 57831,
+      "input_schema_bytes": 57846,
       "output_schema_bytes": 112146,
-      "description_plus_input_schema_bytes": 124740
+      "description_plus_input_schema_bytes": 124755
     }
   },
   "tools": {
@@ -2953,6 +2953,7 @@
             },
             "offer_tag": {
               "description": "A tag word the user said fits this record, such as the event they met at. It offers the tag to the user and applies nothing.",
+              "maxLength": 64,
               "type": "string"
             },
             "record_type": {

@@ -6,6 +6,10 @@ import { createFollowupsFixture } from "./fixture";
 const calls: { tool: string; args: Record<string, unknown> }[] = [];
 const asked: string[] = [];
 let proxies = true;
+const answers: Array<
+  | { ok: true; data: unknown; warnings: [] }
+  | { ok: false; reason: string; unknown?: true }
+> = [];
 let answer:
   | { ok: true; data: unknown; warnings: [] }
   | { ok: false; reason: string; unknown?: true } = {
@@ -19,7 +23,7 @@ vi.mock("../actions", () => ({
   canCallTools: () => proxies,
   callServerTool: async (tool: string, args: Record<string, unknown>) => {
     calls.push({ tool, args });
-    return answer;
+    return answers.shift() ?? answer;
   },
   askAssistant: (text: string) => {
     asked.push(text);
@@ -48,6 +52,7 @@ async function press(root: HTMLElement, label: string) {
 
 beforeEach(() => {
   calls.length = 0;
+  answers.length = 0;
   asked.length = 0;
   proxies = true;
   answer = { ok: true, data: {}, warnings: [] };
@@ -192,7 +197,8 @@ describe("the tag offer", () => {
     expect(root.textContent).toContain("Not tagged.");
   });
 
-  it("coins a new word first when the seat may, and applies it by name", async () => {
+  it("coins a new word first when the seat may, and applies it by the id it was given", async () => {
+    answers.push({ ok: true, data: { tag_id: "t9" }, warnings: [] });
     const root = mount(
       withOffer({ name: "Fair", exists: false, may_create: true }),
     );
@@ -200,7 +206,37 @@ describe("the tag offer", () => {
     await press(root, "Add the tag and tag it");
     expect(calls.map((c) => c.tool)).toEqual(["create_tag", "apply_tag"]);
     expect(calls[0].args).toEqual({ name: "Fair" });
-    expect(calls[1].args.tag_name).toBe("Fair");
+    expect(calls[1].args.tag_id).toBe("t9");
+  });
+
+  it("retries a failed apply without coining the word a second time", async () => {
+    answers.push(
+      { ok: true, data: { tag_id: "t9" }, warnings: [] },
+      { ok: false, reason: "The record is archived." },
+    );
+    const root = mount(
+      withOffer({ name: "Fair", exists: false, may_create: true }),
+    );
+    await press(root, "Add the tag and tag it");
+    expect(labels(root)).toEqual(["Tag it", "No thanks"]);
+    await press(root, "Tag it");
+    expect(calls.map((c) => c.tool)).toEqual([
+      "create_tag",
+      "apply_tag",
+      "apply_tag",
+    ]);
+    expect(root.textContent).toContain("Tagged “Fair”.");
+  });
+
+  it("keeps Undo when taking the tag off failed, since it may still be on", async () => {
+    const root = mount(withOffer(existing));
+    await press(root, "Tag it");
+    answers.push({ ok: false, reason: "The record is read-only." });
+    await press(root, "Undo");
+    expect(labels(root)).toEqual(["Undo"]);
+    expect(root.querySelector(".refusal")?.textContent).toBe(
+      "The record is read-only.",
+    );
   });
 
   it("offers no button for a word the seat cannot add", () => {

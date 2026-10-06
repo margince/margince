@@ -31,7 +31,7 @@
   "catalog": {
     "tools": 82,
     "system_frame_tokens": 586,
-    "tokens": 28965,
+    "tokens": 28969,
     "median_tool_tokens": 292,
     "mean_tool_tokens": 352
   },
@@ -124,7 +124,7 @@
     },
     {
       "name": "create_record",
-      "tokens": 663
+      "tokens": 667
     },
     {
       "name": "send_message",

@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 82 |
 | Resources | 9 |
-| Tool catalog | 251.1 KB |
+| Tool catalog | 251.2 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 65183 |
+| Approx. wire tokens | 65187 |
 | Largest tool | `prep_for_meeting` (9.1 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -3452,6 +3452,7 @@ Renders its result in [`ui://margince/create-followups.html`](#create_followups_
     },
     "offer_tag": {
       "description": "A tag word the user said fits this record, such as the event they met at. It offers the tag to the user and applies nothing.",
+      "maxLength": 64,
       "type": "string"
     },
     "record_type": {

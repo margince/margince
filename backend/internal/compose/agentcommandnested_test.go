@@ -237,6 +237,12 @@ func TestTheDedupeDoorRefusesAnAgentsMergeArm(t *testing.T) {
 		t.Fatalf("an agent's merge arm = %v, want a refusal that names merge_records", err)
 	}
 
+	for _, body := range []string{``, `{}`, `not json`, `{"disposition":"bogus"}`} {
+		if _, err := dismissDuplicateCommand(agentPolicy{}, operandWalkDeps(), merge, []byte(body)); err == nil {
+			t.Errorf("body %q was staged as a dismissal, want a refusal before it can fail on redemption", body)
+		}
+	}
+
 	call, err := dismissDuplicateCommand(agentPolicy{}, operandWalkDeps(), merge, []byte(`{"disposition":"not_a_duplicate"}`))
 	if err != nil || call == nil {
 		t.Fatalf("an agent's dismissal = %v, %v, want a governed call", call, err)

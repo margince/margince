@@ -13,6 +13,10 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 )
 
+// maxTagNameBytes is create_tag's own bound on a word, so an offer never proposes
+// a name the coinage would refuse.
+const maxTagNameBytes = 64
+
 // tagOfferSeam answers what accepting a proposed word would take, through the
 // store apply_tag resolves names with, so an offer and the apply that follows
 // agree on what "the workspace already has this word" means.
@@ -21,7 +25,7 @@ func tagOfferSeam(db *database.DB) agents.TagOfferFor {
 	taggable := tagAdapter{store: store}.TaggableTypes()
 	return func(ctx context.Context, recordType, name string) (*agents.TagOffer, error) {
 		word := strings.TrimSpace(name)
-		if word == "" || !slices.Contains(taggable, recordType) {
+		if word == "" || len(word) > maxTagNameBytes || !slices.Contains(taggable, recordType) {
 			return nil, nil
 		}
 		id, state, err := store.LookupTagName(ctx, word)

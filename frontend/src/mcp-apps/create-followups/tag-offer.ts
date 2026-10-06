@@ -2,6 +2,9 @@
 // created. Accepting applies it through the host, coining the word first when
 // the workspace has none and the seat may; declining makes no call. A word
 // applied can be taken off again, because that is what makes it safe to offer.
+//
+// The tag is held by ID from the moment it exists (offered or coined), so a
+// retry after a failed apply never coins it twice and an undo survives a rename.
 
 import { askAssistant, callServerTool, canCallTools } from "../actions";
 import { el } from "../bridge";
@@ -18,13 +21,17 @@ type Offer = {
   mayCreate: boolean;
 };
 
-type Outcome =
-  | { kind: "busy" }
-  | { kind: "applied" }
-  | { kind: "declined" }
-  | { kind: "failed"; reason: string; unknown?: true };
+/** What the panel knows: where the offer stands, and the tag's id once there is
+ *  one. `reason` is what the last failed call said. */
+type State = {
+  phase: "idle" | "busy" | "coined" | "applied" | "declined" | "unknown";
+  tagID: string;
+  reason?: string;
+};
 
-const decided = new WeakMap<HTMLElement, Outcome>();
+const decided = new WeakMap<HTMLElement, State>();
+
+type Target = { record_type: string; record_id: string };
 
 function offerOf(created: Record<string, unknown>): Offer | null {
   const raw = asRecord(created.tag_offer);
@@ -51,7 +58,8 @@ export function tagOfferPanel(
     record_type: asText(created.record_type),
     record_id: asText(created.id),
   };
-  const set = (next: Outcome) => {
+  const state = decided.get(root) ?? { phase: "idle", tagID: offer.tagID };
+  const set = (next: State) => {
     decided.set(root, next);
     again();
   };
@@ -59,7 +67,7 @@ export function tagOfferPanel(
   const body = panelBody();
   body.append(
     el("p", "intro", `Tag it “${offer.name}”?`),
-    choices(offer, record, decided.get(root), set),
+    choices(offer, record, state, set),
   );
   card.appendChild(body);
   return card;
@@ -67,22 +75,24 @@ export function tagOfferPanel(
 
 function choices(
   offer: Offer,
-  record: { record_type: string; record_id: string },
-  outcome: Outcome | undefined,
-  set: (next: Outcome) => void,
+  record: Target,
+  state: State,
+  set: (next: State) => void,
 ): HTMLElement {
-  if (outcome?.kind === "failed" && outcome.unknown === true) {
-    return line(outcome.reason);
-  }
-  if (outcome?.kind === "declined") return line("Not tagged.");
-  if (outcome?.kind === "applied") {
-    return line(
+  if (state.phase === "unknown") return line(state.reason ?? "");
+  if (state.phase === "declined") return line("Not tagged.");
+  if (state.phase === "applied") {
+    const row = line(
       `Tagged “${offer.name}”.`,
-      button("Undo", "ghost", () => void undo(offer, record, set)),
+      button("Undo", "ghost", () => void undo(state, record, set)),
     );
+    if (state.reason !== undefined)
+      row.appendChild(el("p", "refusal", state.reason));
+    return row;
   }
   const row = el("div", "choices");
-  if (!offer.exists && !offer.mayCreate) {
+  const known = state.tagID !== "";
+  if (!known && !offer.mayCreate) {
     row.appendChild(
       el(
         "p",
@@ -96,71 +106,95 @@ function choices(
     row.appendChild(
       button("Ask the assistant to tag it", "primary", () =>
         askAssistant(
-          `Tag the ${record.record_type} ${record.record_id} “${offer.name}”${offer.exists ? "" : ", adding the tag first"}.`,
+          `Tag the ${record.record_type} ${record.record_id} “${offer.name}”${known ? "" : ", adding the tag first"}.`,
         ),
       ),
     );
     return row;
   }
-  const busy = outcome?.kind === "busy";
+  const busy = state.phase === "busy";
   row.append(
     button(
-      offer.exists ? "Tag it" : "Add the tag and tag it",
+      known ? "Tag it" : "Add the tag and tag it",
       "primary",
-      () => void accept(offer, record, set),
+      () => void accept(offer, record, state, set),
       busy,
     ),
-    button("No thanks", "ghost", () => set({ kind: "declined" }), busy),
+    button(
+      "No thanks",
+      "ghost",
+      () => set({ ...state, phase: "declined" }),
+      busy,
+    ),
   );
-  if (outcome?.kind === "failed") {
-    row.appendChild(el("p", "refusal", outcome.reason));
-  }
+  if (state.reason !== undefined)
+    row.appendChild(el("p", "refusal", state.reason));
   return row;
 }
 
+/** accept coins the word when it is new, then applies it by id. A coined word
+ *  stays coined: when the apply fails the state keeps its id, so the retry
+ *  applies directly. */
 async function accept(
   offer: Offer,
-  record: { record_type: string; record_id: string },
-  set: (next: Outcome) => void,
+  record: Target,
+  state: State,
+  set: (next: State) => void,
 ): Promise<void> {
-  set({ kind: "busy" });
-  if (!offer.exists) {
+  set({ ...state, phase: "busy", reason: undefined });
+  let tagID = state.tagID;
+  if (tagID === "") {
     const made = await callServerTool("create_tag", { name: offer.name });
     if (!made.ok) {
-      set({ kind: "failed", reason: made.reason, unknown: made.unknown });
+      set(failure(state, made));
       return;
     }
+    tagID = asText(asRecord(made.data).tag_id);
+    state = { ...state, tagID };
   }
   const applied = await callServerTool("apply_tag", {
     ...record,
-    ...(offer.tagID === ""
-      ? { tag_name: offer.name }
-      : { tag_id: offer.tagID }),
+    tag_id: tagID,
   });
   set(
     applied.ok
-      ? { kind: "applied" }
-      : { kind: "failed", reason: applied.reason, unknown: applied.unknown },
+      ? { phase: "applied", tagID }
+      : {
+          ...failure(state, applied),
+          phase: applied.unknown === true ? "unknown" : "coined",
+        },
   );
 }
 
 async function undo(
-  offer: Offer,
-  record: { record_type: string; record_id: string },
-  set: (next: Outcome) => void,
+  state: State,
+  record: Target,
+  set: (next: State) => void,
 ): Promise<void> {
-  set({ kind: "busy" });
+  set({ ...state, phase: "busy", reason: undefined });
   const removed = await callServerTool("remove_tag", {
     ...record,
-    ...(offer.tagID === ""
-      ? { tag_name: offer.name }
-      : { tag_id: offer.tagID }),
+    tag_id: state.tagID,
   });
   set(
     removed.ok
-      ? { kind: "declined" }
-      : { kind: "failed", reason: removed.reason, unknown: removed.unknown },
+      ? { phase: "declined", tagID: state.tagID }
+      : {
+          ...failure(state, removed),
+          phase: removed.unknown === true ? "unknown" : "applied",
+        },
   );
+}
+
+function failure(
+  state: State,
+  result: { ok: false; reason: string; unknown?: true },
+): State {
+  return {
+    tagID: state.tagID,
+    phase: result.unknown === true ? "unknown" : "idle",
+    reason: result.reason,
+  };
 }
 
 function line(text: string, extra?: HTMLElement): HTMLElement {

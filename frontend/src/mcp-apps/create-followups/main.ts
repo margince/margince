@@ -19,7 +19,7 @@ import {
 } from "../actions";
 import actions from "../actions.json";
 import { el, onResult } from "../bridge";
-import { button, panel, panelBody } from "../parts";
+import { button, keepFocus, panel, panelBody } from "../parts";
 import { asList, asRecord, asText, type Warning } from "../types";
 import { tagOfferPanel } from "./tag-offer";
 import "../view.css";
@@ -108,11 +108,16 @@ function settled(text: string, undo?: HTMLElement): HTMLElement {
   return line;
 }
 
+/** render draws the card, keeping the reader's place across a redraw. */
 export function render(
   root: HTMLElement,
   data: unknown,
   warnings: Warning[],
 ): void {
+  keepFocus(root, () => draw(root, data, warnings));
+}
+
+function draw(root: HTMLElement, data: unknown, warnings: Warning[]): void {
   root.replaceChildren();
   const created = asRecord(data);
   const again = () => render(root, data, warnings);

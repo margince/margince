@@ -30,6 +30,14 @@
 /* The app's button, which a choice card presses. */
 @import "../design-system/base.css";
 
+/* Controls and scrollbars follow the dark preference of a document no host
+   stamped, and stay light where a host stated light. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+  }
+}
+
 * {
   box-sizing: border-box;
 }

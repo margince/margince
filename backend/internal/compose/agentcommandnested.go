@@ -115,8 +115,9 @@ func dismissDuplicateCommand(_ agentPolicy, deps restCommandDeps, r *http.Reques
 	var req struct {
 		Disposition string `json:"disposition"`
 	}
-	if err := json.Unmarshal(body, &req); err == nil && req.Disposition == "merge" {
-		return nil, httperr.Validation("disposition", "use_merge_records", "an agent merges with merge_records, and this verb only dismisses a pair")
+	if err := json.Unmarshal(body, &req); err != nil || req.Disposition != "not_a_duplicate" {
+		return nil, httperr.Validation("disposition", "use_merge_records",
+			"an agent dismisses a pair with disposition not_a_duplicate, and merges with merge_records")
 	}
 	return agents.NewDismissDuplicateCall(deps.language, agents.DedupeCommand{ID: id}), nil
 }

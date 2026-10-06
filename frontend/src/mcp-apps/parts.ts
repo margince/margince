@@ -109,6 +109,26 @@ export function button(
   return node;
 }
 
+/**
+ * keepFocus runs a renderer that rebuilds the whole card and puts focus back on
+ * the button the reader was on, matched by its label. A press re-renders for its
+ * busy state, and a rebuilt document would otherwise drop a keyboard or
+ * screen-reader user to the top of the page mid-action.
+ */
+export function keepFocus(root: HTMLElement, draw: () => void): void {
+  const active = document.activeElement;
+  const label =
+    active instanceof HTMLButtonElement && root.contains(active)
+      ? active.textContent
+      : null;
+  draw();
+  if (label === null) return;
+  const same = [...root.querySelectorAll("button")].find(
+    (b) => b.textContent === label,
+  );
+  same?.focus();
+}
+
 /** strengthMeter mirrors `StrengthMeter`: three rising bars beside the word. */
 export function strengthMeter(band: StrengthBand, word: string): HTMLElement {
   const node = el("span", "strength-meter");
