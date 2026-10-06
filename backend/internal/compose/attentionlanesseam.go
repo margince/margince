@@ -435,9 +435,9 @@ func (o attentionOverdue) OverduePerAssignee(
 // cannot come to answer different questions. A second statement, which is what a
 // true total beside a bounded page costs and what needs_you has always paid.
 func (t attentionTasks) CountOpenForViewer(
-	ctx context.Context, until time.Time, scope attention.TaskScope, owner ids.UUID,
+	ctx context.Context, asOf, until time.Time, scope attention.TaskScope, owner ids.UUID,
 ) (int, error) {
-	in, ok := openTasksDueBy(ctx, until, scope, owner)
+	in, ok := openTasksDueBy(ctx, asOf, until, scope, owner)
 	if !ok {
 		return 0, nil
 	}
