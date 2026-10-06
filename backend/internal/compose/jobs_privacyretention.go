@@ -56,15 +56,6 @@ const (
 // own selector table instead of hand-counting it.
 var privacyRetentionPassTimeout = privacy.MaxPassDuration + 5*time.Minute
 
-// PrivacyRetentionConfig is the retention pass's slice of the runner's boot
-// configuration.
-type PrivacyRetentionConfig struct {
-	// Interval is the dispatcher's cadence — the operator-facing
-	// --retention-interval, which stays the schedule source it always was.
-	// Non-positive schedules no retention dispatch; api/jobs.yaml declares it.
-	Interval time.Duration
-}
-
 // addPrivacyRetentionJobs registers the retention workers and returns the
 // dispatcher's periodic schedule for the caller to append.
 //
@@ -73,12 +64,8 @@ type PrivacyRetentionConfig struct {
 // runner's own (Art. 17 reaches the attachment bytes), and the edge invalidator
 // is a search closure, which a module may not import from privacy.
 //
-// A non-positive interval registers the workers but no schedule — the posture
-// the declaration states and jobschedule.go resolves. It cannot reach a
-// deployment that owes the storage-limitation obligation: --retention-interval
-// carries a positive default and cmd/worker's validateSchedulerIntervals
-// refuses a non-positive one at boot. The omission serves the callers that
-// wire a runner for a few named passes and never meant to run this one.
+// Its cadence is an admin's setting with no off: the storage-limitation
+// obligation does not pause.
 func addPrivacyRetentionJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig, log *slog.Logger) []*river.PeriodicJob {
 	// Built per job rather than once: this pass is fleet-wide, so the
 	// workspace is the one the job names, not the one an installation

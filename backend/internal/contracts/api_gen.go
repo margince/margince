@@ -26158,6 +26158,10 @@ type CaptureSettings struct {
 	// held for.
 	MailSharing bool `json:"mail_sharing"`
 
+	// MailSyncIntervalSeconds How long a mailbox waits after a successful sync before the next one, in seconds.
+	// Applies from each mailbox's next sync. Default 120.
+	MailSyncIntervalSeconds int `json:"mail_sync_interval_seconds"`
+
 	// SharedPostureAllowed Whether a seat may put their mailbox in the `shared` posture at all — colleagues
 	// reading a captured message the moment it lands, before anything has judged it.
 	//
@@ -35174,6 +35178,11 @@ type InstallationSettings struct {
 	// they were issued with.
 	OauthAccessTokenTtlMinutes int `json:"oauth_access_token_ttl_minutes"`
 
+	// Operations The worker's operating values: how often each background pass runs, how far ahead a
+	// mailbox subscription is renewed, and how fast one mailbox sends. A running worker reads
+	// them again within a minute of a change, so none needs a restart.
+	Operations OperationSettings `json:"operations"`
+
 	// SignInProviders Every external sign-in provider this deployment holds credentials for, and whether
 	// the installation currently offers it on the login screen. The list is what the
 	// DEPLOYMENT makes possible: an admin can turn one off, but cannot add one, because
@@ -38385,6 +38394,56 @@ type OpenDealRoomThreadRequest struct {
 
 	// Source Provenance. Required on the seller edge; a buyer's comment always carries the credential's own value. `manual` for someone writing through this product.
 	Source *string `json:"source,omitempty"`
+}
+
+// OperationSettings The worker's operating values: how often each background pass runs, how far ahead a
+// mailbox subscription is renewed, and how fast one mailbox sends. A running worker reads
+// them again within a minute of a change, so none needs a restart.
+type OperationSettings struct {
+	// AgentRunnerIntervalSeconds How often scheduled agents are checked for a run that is due, in seconds. Default 30.
+	AgentRunnerIntervalSeconds int `json:"agent_runner_interval_seconds"`
+
+	// CloseDateSweepIntervalSeconds How often deals whose close date has passed are flagged, in seconds. Default 86400.
+	CloseDateSweepIntervalSeconds int `json:"close_date_sweep_interval_seconds"`
+
+	// FollowUpReconcileIntervalSeconds How often stalled deals are checked for a follow-up to propose, in seconds. Default 86400.
+	FollowUpReconcileIntervalSeconds int `json:"follow_up_reconcile_interval_seconds"`
+
+	// GeocodeBackfillIntervalSeconds How often addresses without coordinates are looked up, in seconds, from 300; 0 switches the sweep off. Default 3600.
+	GeocodeBackfillIntervalSeconds int `json:"geocode_backfill_interval_seconds"`
+
+	// GmailWatchRenewWithinHours How far ahead of expiry a Gmail push subscription is renewed, in hours. A watch lasts seven days. Default 48.
+	GmailWatchRenewWithinHours int `json:"gmail_watch_renew_within_hours"`
+
+	// GmailWatchScanIntervalSeconds How often Gmail push subscriptions are checked for renewal, in seconds. Default 21600.
+	GmailWatchScanIntervalSeconds int `json:"gmail_watch_scan_interval_seconds"`
+
+	// GraphWatchRenewWithinHours How far ahead of expiry a Microsoft 365 mail subscription is renewed, in hours. A subscription lasts just under three days. Default 24.
+	GraphWatchRenewWithinHours int `json:"graph_watch_renew_within_hours"`
+
+	// GraphWatchScanIntervalSeconds How often Microsoft 365 mail subscriptions are checked for renewal, in seconds. Default 21600.
+	GraphWatchScanIntervalSeconds int `json:"graph_watch_scan_interval_seconds"`
+
+	// RetentionSweepIntervalSeconds How often data past its retention period is removed, in seconds. Default 86400. It cannot be switched off.
+	RetentionSweepIntervalSeconds int `json:"retention_sweep_interval_seconds"`
+
+	// SendMaxAgeHours How long a delivery held back by the send rate may wait before it stops with a reason, in hours. Default 24.
+	SendMaxAgeHours int `json:"send_max_age_hours"`
+
+	// SendRateLimit How many messages one mailbox may send per window. A burst bound, not a quota. Default 30.
+	SendRateLimit int `json:"send_rate_limit"`
+
+	// SendRateWindowSeconds The window the send rate is counted over, in seconds. Default 60.
+	SendRateWindowSeconds int `json:"send_rate_window_seconds"`
+
+	// TechnicalBackfillIntervalSeconds How often company domains without technical facts are looked up, in seconds, from 300; 0 switches the sweep off. Default 21600.
+	TechnicalBackfillIntervalSeconds int `json:"technical_backfill_interval_seconds"`
+
+	// TimeScanIntervalSeconds How often time-based automation rules are checked, in seconds. Default 3600.
+	TimeScanIntervalSeconds int `json:"time_scan_interval_seconds"`
+
+	// WebhookRetryIntervalSeconds How often failed webhook deliveries are retried, in seconds. Default 30.
+	WebhookRetryIntervalSeconds int `json:"webhook_retry_interval_seconds"`
 }
 
 // OutcomeReview defines model for OutcomeReview.
@@ -43995,6 +44054,9 @@ type UpdateCaptureSettingsRequest struct {
 	// MailSharing Toggle the workspace mail-sharing posture; affects correspondence captured from now on — mail, and chat on a transport whose credential belongs to one member.
 	MailSharing *bool `json:"mail_sharing,omitempty"`
 
+	// MailSyncIntervalSeconds Set how long a mailbox waits between syncs, in seconds.
+	MailSyncIntervalSeconds *int `json:"mail_sync_interval_seconds,omitempty"`
+
 	// SharedPostureAllowed Allow a seat to put their mailbox in the `shared` posture. Off by default; see CaptureSettings.shared_posture_allowed for what turning it on asserts.
 	SharedPostureAllowed *bool `json:"shared_posture_allowed,omitempty"`
 
@@ -44327,6 +44389,9 @@ type UpdateDealRoomRequest struct {
 
 // UpdateInstallationSettingsRequest A sparse installation-settings patch (admin/ops, human-only).
 type UpdateInstallationSettingsRequest struct {
+	// AgentRunnerIntervalSeconds Set the value `OperationSettings.agent_runner_interval_seconds` describes.
+	AgentRunnerIntervalSeconds *int `json:"agent_runner_interval_seconds,omitempty"`
+
 	// BaseCurrency ISO-4217 code. Refused with `setting_frozen` once anything has frozen a conversion
 	// rate against the current base.
 	BaseCurrency *string `json:"base_currency,omitempty"`
@@ -44334,6 +44399,9 @@ type UpdateInstallationSettingsRequest struct {
 	// BaseLanguage The language shared AI writing is written in. Never frozen: changing it re-means
 	// nothing already written, so artifacts stay in the language they were written in.
 	BaseLanguage *UpdateInstallationSettingsRequestBaseLanguage `json:"base_language,omitempty"`
+
+	// CloseDateSweepIntervalSeconds Set the value `OperationSettings.close_date_sweep_interval_seconds` describes.
+	CloseDateSweepIntervalSeconds *int `json:"close_date_sweep_interval_seconds,omitempty"`
 
 	// DateFormat Display dates using the UI language, DD.MM.YYYY, MM/DD/YYYY, or YYYY-MM-DD. Defaults to locale; never changes stored dates or reporting boundaries.
 	DateFormat *UpdateInstallationSettingsRequestDateFormat `json:"date_format,omitempty"`
@@ -44367,10 +44435,28 @@ type UpdateInstallationSettingsRequest struct {
 	// margince/margince#2569.
 	FiscalYearStartMonth *int `json:"fiscal_year_start_month,omitempty"`
 
+	// FollowUpReconcileIntervalSeconds Set the value `OperationSettings.follow_up_reconcile_interval_seconds` describes.
+	FollowUpReconcileIntervalSeconds *int `json:"follow_up_reconcile_interval_seconds,omitempty"`
+
 	// ForecastForwardMeasure Which remaining-pipeline reading a projected landing is built from. Never frozen:
 	// it is applied on READ and stores nothing, so changing it re-computes every landing
 	// at once and re-means no stored row.
 	ForecastForwardMeasure *UpdateInstallationSettingsRequestForecastForwardMeasure `json:"forecast_forward_measure,omitempty"`
+
+	// GeocodeBackfillIntervalSeconds Set the value `OperationSettings.geocode_backfill_interval_seconds` describes.
+	GeocodeBackfillIntervalSeconds *int `json:"geocode_backfill_interval_seconds,omitempty"`
+
+	// GmailWatchRenewWithinHours Set the value `OperationSettings.gmail_watch_renew_within_hours` describes.
+	GmailWatchRenewWithinHours *int `json:"gmail_watch_renew_within_hours,omitempty"`
+
+	// GmailWatchScanIntervalSeconds Set the value `OperationSettings.gmail_watch_scan_interval_seconds` describes.
+	GmailWatchScanIntervalSeconds *int `json:"gmail_watch_scan_interval_seconds,omitempty"`
+
+	// GraphWatchRenewWithinHours Set the value `OperationSettings.graph_watch_renew_within_hours` describes.
+	GraphWatchRenewWithinHours *int `json:"graph_watch_renew_within_hours,omitempty"`
+
+	// GraphWatchScanIntervalSeconds Set the value `OperationSettings.graph_watch_scan_interval_seconds` describes.
+	GraphWatchScanIntervalSeconds *int `json:"graph_watch_scan_interval_seconds,omitempty"`
 
 	// Name Rename the company.
 	Name *string `json:"name,omitempty"`
@@ -44407,11 +44493,32 @@ type UpdateInstallationSettingsRequest struct {
 	// always exempt.
 	RequireSso *bool `json:"require_sso,omitempty"`
 
+	// RetentionSweepIntervalSeconds Set the value `OperationSettings.retention_sweep_interval_seconds` describes.
+	RetentionSweepIntervalSeconds *int `json:"retention_sweep_interval_seconds,omitempty"`
+
+	// SendMaxAgeHours Set the value `OperationSettings.send_max_age_hours` describes.
+	SendMaxAgeHours *int `json:"send_max_age_hours,omitempty"`
+
+	// SendRateLimit Set the value `OperationSettings.send_rate_limit` describes.
+	SendRateLimit *int `json:"send_rate_limit,omitempty"`
+
+	// SendRateWindowSeconds Set the value `OperationSettings.send_rate_window_seconds` describes.
+	SendRateWindowSeconds *int `json:"send_rate_window_seconds,omitempty"`
+
+	// TechnicalBackfillIntervalSeconds Set the value `OperationSettings.technical_backfill_interval_seconds` describes.
+	TechnicalBackfillIntervalSeconds *int `json:"technical_backfill_interval_seconds,omitempty"`
+
 	// TimeFormat Display times using the UI language, a 24-hour clock, or a 12-hour clock. Defaults to locale; never changes timezones or stored instants.
 	TimeFormat *UpdateInstallationSettingsRequestTimeFormat `json:"time_format,omitempty"`
 
+	// TimeScanIntervalSeconds Set the value `OperationSettings.time_scan_interval_seconds` describes.
+	TimeScanIntervalSeconds *int `json:"time_scan_interval_seconds,omitempty"`
+
 	// Timezone The IANA reporting zone.
 	Timezone *string `json:"timezone,omitempty"`
+
+	// WebhookRetryIntervalSeconds Set the value `OperationSettings.webhook_retry_interval_seconds` describes.
+	WebhookRetryIntervalSeconds *int `json:"webhook_retry_interval_seconds,omitempty"`
 }
 
 // UpdateInstallationSettingsRequestBaseLanguage The language shared AI writing is written in. Never frozen: changing it re-means

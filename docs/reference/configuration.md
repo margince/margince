@@ -8,9 +8,12 @@ required value is a boot error, as is an invalid `--log-level` /
 `--log-format`.
 
 A limit an admin tunes while the product runs is a setting, not configuration.
-The daily cap on automatic website reads and the per-read crawl limits are on
-Settings → Capture rules; the connector access-token lifetime is on Settings →
-Sign-in and apps. Each takes effect on its next use, with no restart.
+The daily cap on automatic website reads, the per-read crawl limits and how
+often a mailbox syncs are on Settings → Capture rules; the connector
+access-token lifetime is on Settings → Sign-in and apps. How often each
+background pass runs, how far ahead a mail subscription is renewed and how fast
+one mailbox sends are on Settings → System health. Each takes effect on its
+next use, or within a minute for a schedule, with no restart.
 
 **One installation serves one organization.** No request selects a tenant: the
 server resolves its singleton organization itself, so a call carries only the
@@ -525,18 +528,7 @@ Webhook retries need `cmd/worker`. See
 | `--redis-password` | `MARGINCE_REDIS_PASSWORD` | — | Event-bus credential, where the instance requires one. Empty is the ordinary case on a network the deployment controls. Set it wherever anything else can reach the bus; the desktop bundle mints one per installation because its bus listens on loopback. Prefer the environment: argv is readable by every process on the machine |
 | `--ai-routing` | `MARGINCE_AI_ROUTING` | — | **Ignored, and warns** (see the api row). A bound installation runs the Surface-B runner + embeddings from the database. This role re-reads the stored binding on an interval, so it never serves one the api has replaced |
 | `--ai-fake` | (none) | `false` | run the Surface-B runner on the offline fake model |
-| `--runner-interval` | `MARGINCE_RUNNER_INTERVAL` | `30s` | Surface-B scheduler tick: the River periodic schedule of the `agent_scheduler` dispatcher, which enqueues one `agent_scheduler_workspace` job per live workspace. It paces the fan-out; the catalog's daily due hour decides when a brief runs |
-| `--retention-interval` | `MARGINCE_RETENTION_INTERVAL` | `24h` | retention evaluator pass interval: the River periodic schedule of the `privacy_retention` dispatcher, which enqueues one `privacy_retention_workspace` job per workspace |
-| `--time-scan-interval` | `MARGINCE_TIME_SCAN_INTERVAL` | `1h` | clock-trigger automation scan interval (`no_activity_reminder` et al.): the River periodic schedule of the `time_scan` dispatcher, which enqueues one `time_scan_workspace` job per live workspace |
-| `--close-date-interval` | `MARGINCE_CLOSE_DATE_INTERVAL` | `24h` | close-date hygiene sweep interval (deals whose expected close date has passed) |
 | `--webhook-key` | `MARGINCE_WEBHOOK_KEY` | — | base64 32-byte key sealing outbound-webhook signing secrets; unset = the delivery worker stays off (no `cg:webhooks` consumer, no retry sweep) |
-| `--webhook-retry-interval` | `MARGINCE_WEBHOOK_RETRY_INTERVAL` | `30s` | how often the outbound-webhook retry dispatcher fans one due-retry pass out per live workspace (worker role only) |
-| `--reconcile-interval` | `MARGINCE_RECONCILE_INTERVAL` | `24h` | overnight follow-up reconciliation pass interval |
-| `--send-rate-limit` | `MARGINCE_SEND_RATE_LIMIT` | `0` (= built-in 30) | outbound messages one mailbox may transmit per `--send-rate-window`. Burst pacing rather than a quota: the provider enforces its own daily cap and throttles an account that bursts past it. The limiter counts in the bus Redis, so every worker replica paces one mailbox against one window |
-| `--send-rate-window` | `MARGINCE_SEND_RATE_WINDOW` | `0` (= built-in 1m) | the window the per-mailbox send rate is measured over |
-| `--send-max-age` | `MARGINCE_SEND_MAX_AGE` | `0` (= built-in 24h) | how long a staged send may be deferred by the pacing chain before it parks with a reason. Without a bound, a permanently saturated policy would defer a message forever |
-| `--geocode-backfill-interval` | `MARGINCE_GEOCODE_BACKFILL_INTERVAL` | `1h` | how often the worker looks for companies whose address predates this installation's geocoder: a seeded or imported database, or one configured later. Nothing writes those addresses again, so without this pass they are never located. Runs on start; `0` turns the sweep off and leaves geocoding on write alone |
-| `--technical-backfill-interval` | `MARGINCE_TECHNICAL_BACKFILL_INTERVAL` | `6h` | how often the worker looks for companies whose technical profile is missing or stale. No write triggers a refresh (a company's mail provider changes outside the CRM), so this sweep is the only thing that observes a change. Runs on start; `0` turns the sweep off and leaves the button working |
 | `--job-drain-window` | `MARGINCE_JOB_DRAIN_WINDOW` | `20s` | how long a job already running at shutdown is given to finish before its context is cancelled. Must be positive. The pod's termination grace period has to cover it plus 5s and teardown; see [Stopping the worker](#stopping-the-worker) |
 | `--observe-addr` | `MARGINCE_OBSERVE_ADDR` | — (off) | address to serve this worker's `/healthz`, `/readyz` and `/metrics` on, e.g. `127.0.0.1:9101`. Empty serves nothing; see below |
 | `--observe-pprof` | `MARGINCE_OBSERVE_PPROF` | `false` | `true` also serves Go's `net/http/pprof` profiles under `/debug/pprof/` on that same listener; requires `--observe-addr`. Enable temporarily; see below |
@@ -787,14 +779,11 @@ runs the background sync.
 | `--connector-state-key` | `MARGINCE_CONNECTOR_STATE_KEY` | api | HMAC key (≥32 bytes) signing the OAuth connect `state`; required for both connect flows |
 | `--mcp-apps-base-url` | `MARGINCE_MCP_APPS_BASE_URL` | api | the origin the api reads the MCP App view documents from (`GET <origin>/mcp-apps/<view>.html`), fetched once at startup and refreshed periodically. Defaults to `--public-base-url`, which the connector gate already requires, so wherever `/mcp` is served the chain cannot be empty. The value must be reachable from the api, which can differ from publicly reachable: a container may lack ingress hairpin routing, external DNS or egress. A CDN origin is supported and recommended. The scheme must be `https` unless the host is a literal loopback or private address (or `localhost`); a cleartext hostname such as `http://web.internal` is refused at boot, naming the setting. With the connector gate off, no fetch happens |
 | `--api-base-url` | `MARGINCE_API_BASE_URL` | api | the api's externally reachable base for the OAuth callback `redirect_uri`; defaults to `--public-base-url`. Set it only when api and SPA are on different origins (e.g. dev). Messaging channels need no public address of their own: Telegram ingress long-polls. Google sign-in (`/auth/oidc/google/*`) reuses this `redirect_uri`, which must be added to the Google app's **authorized redirect URIs in the Google Cloud Console**. Sign-in needs no new credentials beyond the app (stored under Settings or the `MARGINCE_GMAIL_*` pair) and that Console edit; without it every attempt ends in `redirect_uri_mismatch`. The routes mount whenever the state key and this base are set; the login page shows the button once a client resolves |
-| `--gmail-sync-interval` | `MARGINCE_GMAIL_SYNC_INTERVAL` | worker | Gmail incremental-sync poll interval (default `2m`) |
 | `--gmail-pubsub-topic` | `MARGINCE_GMAIL_PUBSUB_TOPIC` | worker | Gmail Pub/Sub topic (`projects/<p>/topics/<t>`); enables the push-watch register+renew job (empty = poll only) |
-| `--gmail-watch-interval` / `--gmail-watch-renew-within` | `MARGINCE_GMAIL_WATCH_INTERVAL` / `MARGINCE_GMAIL_WATCH_RENEW_WITHIN` | worker | push-watch maintenance scan (`6h`) / renew this far ahead of the 7-day expiry (`48h`) |
 | `--gmail-push-token` | `MARGINCE_GMAIL_PUSH_TOKEN` | api | shared secret on the Pub/Sub push subscription URL; enables `POST /webhooks/gmail` (empty = route absent) |
 | `--gmail-push-audience` / `--gmail-push-service-account` | `MARGINCE_GMAIL_PUSH_AUDIENCE` / `MARGINCE_GMAIL_PUSH_SERVICE_ACCOUNT` | api | OIDC audience + signing service-account email; set both and the push webhook also verifies Google's OIDC token |
 | `--gmail-jwks-url` | `MARGINCE_GMAIL_JWKS_URL` | api | override Google's OIDC JWKS URL; test/dev only |
 | `--graph-notification-url` | `MARGINCE_GRAPH_NOTIFICATION_URL` | worker | public URL Microsoft posts Graph change notifications to, operator token included (`https://<api>/webhooks/graph?token=…`); enables the subscription register+renew job (empty = poll only) |
-| `--graph-watch-interval` / `--graph-watch-renew-within` | `MARGINCE_GRAPH_WATCH_INTERVAL` / `MARGINCE_GRAPH_WATCH_RENEW_WITHIN` | worker | Graph subscription maintenance scan (`6h`) / renew this far ahead of its deadline (`24h`). Microsoft's ceiling for a `/me/messages` subscription is 4230 minutes (just under three days), while a Gmail watch lasts seven, so the Gmail defaults do not carry across |
 | `--graph-push-token` | `MARGINCE_GRAPH_PUSH_TOKEN` | api | shared secret on the Graph change-notification URL; enables `POST /webhooks/graph` (empty = route absent). It must be the same token the worker's `--graph-notification-url` carries, and it is the only admission factor: Microsoft signs nothing on a change notification |
 
 ### Microsoft sign-in tenants

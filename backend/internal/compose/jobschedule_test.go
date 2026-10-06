@@ -4,11 +4,10 @@
 package compose
 
 import (
+	"encoding/json"
 	"go/ast"
 	"maps"
-	"reflect"
 	"slices"
-	"strings"
 	"testing"
 	"time"
 
@@ -16,6 +15,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/jobs"
+	"github.com/margince/margince/backend/internal/platform/settings"
 )
 
 // specFor answers the declaration a test names, failing rather than returning
@@ -31,41 +31,18 @@ func specFor(t *testing.T, kind string) jobs.Spec {
 	return spec
 }
 
-// TestScheduleIntervalReadsTheDeclaredLiteral covers three kinds with three
-// different literals, so a resolver that returned one hard-coded duration
-// could not pass.
-func TestScheduleIntervalReadsTheDeclaredLiteral(t *testing.T) {
-	cases := []struct {
-		kind string
-		want time.Duration
-	}{
-		{"idempotency_retention", time.Hour},
-		{"embed_drift_sweep", 15 * time.Minute},
-		{"gmail_sync", 30 * time.Second},
+// TestASettingCadenceRunsAtTheSettingsValue pins that a {setting: …} cadence
+// schedules from the book's value for that setting. Seven minutes is a value no
+// default carries, so a resolver falling back to a default cannot produce it.
+func TestASettingCadenceRunsAtTheSettingsValue(t *testing.T) {
+	spec := specFor(t, CloseDateSweepArgs{}.Kind())
+	book := newScheduleBook(map[string]time.Duration{spec.Cadence.Setting: 7 * time.Minute})
+	if got := periodicFor(JobRunnerConfig{Schedules: book}, CloseDateSweepArgs{}); len(got) != 1 {
+		t.Fatalf("got %d periodic jobs, want 1", len(got))
 	}
-	for _, tc := range cases {
-		got, scheduled := scheduleInterval(JobRunnerConfig{}, specFor(t, tc.kind))
-		if !scheduled {
-			t.Errorf("%s: no schedule, want one — a literal cadence does not depend on the configuration", tc.kind)
-			continue
-		}
-		if got != tc.want {
-			t.Errorf("%s: interval = %s, want %s", tc.kind, got, tc.want)
-		}
-	}
-}
-
-// TestScheduleIntervalTakesTheOperatorsDial pins that an {operator: …} cadence
-// reads the named field. Seven minutes is a value no declaration carries, so a
-// resolver falling back to a literal cannot produce it.
-func TestScheduleIntervalTakesTheOperatorsDial(t *testing.T) {
-	cfg := JobRunnerConfig{CloseDateInterval: 7 * time.Minute}
-	got, scheduled := scheduleInterval(cfg, specFor(t, "close_date_sweep"))
-	if !scheduled {
-		t.Fatal("close_date_sweep: no schedule, want one")
-	}
-	if got != 7*time.Minute {
-		t.Errorf("interval = %s, want 7m — an {operator: …} cadence must read the config field it names", got)
+	start := time.Date(2026, 1, 1, 9, 0, 0, 0, time.UTC)
+	if next := book.intervals[spec.Cadence.Setting].Next(start); next != start.Add(7*time.Minute) {
+		t.Errorf("the next run after %s is %s, want seven minutes later", start, next)
 	}
 }
 
@@ -91,14 +68,6 @@ func TestPeriodicForUsesTheDeclaredLiteralCadence(t *testing.T) {
 	}
 }
 
-func TestPeriodicForTakesTheOperatorsIntervalWhenDeclared(t *testing.T) {
-	cfg := JobRunnerConfig{CloseDateInterval: 7 * time.Minute}
-	got := periodicFor(cfg, CloseDateSweepArgs{})
-	if len(got) != 1 {
-		t.Fatalf("got %d periodic jobs, want 1 — an {operator: …} cadence must read the config field", len(got))
-	}
-}
-
 func TestPeriodicForRegistersNothingWhenItsDependencyIsAbsent(t *testing.T) {
 	got := periodicFor(JobRunnerConfig{}, GmailSyncArgs{})
 	if len(got) != 0 {
@@ -112,7 +81,7 @@ func TestPeriodicForRegistersNothingWhenItsDependencyIsAbsent(t *testing.T) {
 // guard it replaces made easy to get wrong.
 func TestPeriodicForNeedsEveryFieldOfADeclaredConjunction(t *testing.T) {
 	registry := &capture.Registry{}
-	watch := GmailWatchConfig{Topic: "projects/p/topics/t", Interval: time.Hour}
+	watch := GmailWatchConfig{Topic: "projects/p/topics/t"}
 
 	if got := periodicFor(JobRunnerConfig{GmailRegistry: registry}, GmailWatchArgs{}); len(got) != 0 {
 		t.Errorf("with a registry but no topic: got %d periodic jobs, want 0 — every field of a conjunction has to be supplied", len(got))
@@ -125,77 +94,77 @@ func TestPeriodicForNeedsEveryFieldOfADeclaredConjunction(t *testing.T) {
 	}
 }
 
-// Every kind that DECLARES schedule-when-positive honours it, and the subjects
-// are the declarations rather than a list beside them.
-//
-// This covered one kind of the six. A kind whose wiring stopped honouring its
-// own declaration failed no unit test, and only two of the rest were watched at
-// all — by the slower integration suites, which is a long way to travel to
-// learn that a boolean was read.
-//
-// scheduleInterval rather than periodicFor, deliberately: periodicFor consults
-// the registration gate first, so for a kind that registers only when some
-// dependency was supplied, "no entry" under a zero config proves nothing about
-// the interval. Asking the cadence directly leaves the interval as the only
-// thing that can answer, which is what the assertion claims.
-//
-// Both directions per kind, because the negative half alone cannot tell a kind
-// that omits its schedule on a non-positive interval from one that has no
-// schedule to place at all.
-func TestEveryKindDeclaringScheduleWhenPositiveOmitsItsScheduleWithoutOne(t *testing.T) {
+// Every kind that declares off_at_zero places no schedule while its setting
+// holds zero, and one once it holds a positive value. Both directions per
+// kind, because the negative half alone cannot tell a kind that honours zero
+// from one that never schedules at all. The subjects are the declarations.
+func TestEveryOffAtZeroKindPlacesNoScheduleAtZero(t *testing.T) {
 	declaring := 0
 	for kind, spec := range jobs.Declared() {
-		if spec.Cadence.ScheduleWhenPositive == "" {
+		if !spec.Cadence.OffAtZero {
 			continue
 		}
 		declaring++
 		t.Run(kind, func(t *testing.T) {
-			if _, scheduled := scheduleInterval(JobRunnerConfig{}, spec); scheduled {
-				t.Errorf("a zero %s still placed a schedule — the declaration says a non-positive "+
-					"interval means no pass, and an operator who set it to zero is still swept",
-					spec.Cadence.ScheduleWhenPositive)
+			off := newScheduleBook(map[string]time.Duration{spec.Cadence.Setting: 0})
+			if _, running := off.schedule(spec, nil, nil); running {
+				t.Errorf("%s at zero still placed a schedule; an admin who switched it off is still swept", spec.Cadence.Setting)
 			}
-			cfg := JobRunnerConfig{}
-			setInterval(t, &cfg, spec.Cadence.ScheduleWhenPositive, time.Hour)
-			if _, scheduled := scheduleInterval(cfg, spec); !scheduled {
-				t.Errorf("a positive %s placed no schedule — then the assertion above holds for a "+
-					"kind that never schedules, and says nothing about the interval",
-					spec.Cadence.ScheduleWhenPositive)
+			on := newScheduleBook(map[string]time.Duration{spec.Cadence.Setting: time.Hour})
+			if _, running := on.schedule(spec, nil, nil); !running {
+				t.Errorf("%s at an hour placed no schedule, so the half above proves nothing", spec.Cadence.Setting)
 			}
 		})
 	}
 	if declaring == 0 {
-		t.Fatal("no kind declares schedule_when_positive — the specs moved, or this test has " +
-			"stopped reading the field it derives its subjects from")
+		t.Fatal("no kind declares off_at_zero — the specs moved, or this test has stopped reading the field it derives its subjects from")
 	}
 }
 
-// setInterval writes a duration to the JobRunnerConfig field a cadence NAMES,
-// so the corpus above needs nothing but the declaration. The paths are the ones
-// operatorIntervals answers, one or two segments deep.
-func setInterval(t *testing.T, cfg *JobRunnerConfig, path string, d time.Duration) {
-	t.Helper()
-	field := reflect.ValueOf(cfg).Elem()
-	for _, segment := range strings.Split(path, ".") {
-		field = field.FieldByName(segment)
-		if !field.IsValid() {
-			t.Fatalf("the cadence names JobRunnerConfig.%s, which has no field %q", path, segment)
+// TestOffAtZeroMatchesWhatTheSettingAdmits holds each declaration to its
+// setting: a cadence that may be switched off reads a setting that admits
+// zero, and one that may not reads a setting that refuses it. Otherwise an
+// admin could save a zero the schedule then runs as a busy loop, or be refused
+// the off the contract promises.
+func TestOffAtZeroMatchesWhatTheSettingAdmits(t *testing.T) {
+	definitions := map[string]settings.Definition{}
+	for _, def := range settingsDefinitions() {
+		definitions[def.Key()] = def
+	}
+	for kind, spec := range jobs.Declared() {
+		if spec.Cadence.Setting == "" {
+			continue
+		}
+		def, registered := definitions[spec.Cadence.Setting]
+		if !registered {
+			t.Errorf("%s schedules from %s, which no module registers", kind, spec.Cadence.Setting)
+			continue
+		}
+		admitsZero := def.ValidateJSON(json.RawMessage("0")) == nil
+		if admitsZero != spec.Cadence.OffAtZero {
+			t.Errorf("%s: off_at_zero is %t but %s admits zero: %t", kind, spec.Cadence.OffAtZero, spec.Cadence.Setting, admitsZero)
 		}
 	}
-	if field.Type() != reflect.TypeOf(time.Duration(0)) {
-		t.Fatalf("JobRunnerConfig.%s is %s, not a duration — a cadence names an interval", path, field.Type())
-	}
-	field.Set(reflect.ValueOf(d))
 }
 
-// TestPeriodicForKeepsAScheduleTheDeclarationDidNotMakeConditional is the
-// other half of the posture above: schedule-when-positive is DECLARED per
-// kind, not a reading applied to every operator dial. close_date_sweep does
-// not declare it, so a zero interval still places its entry — which is what
-// cmd/worker's boot validation exists to keep out of a real deployment.
-func TestPeriodicForKeepsAScheduleTheDeclarationDidNotMakeConditional(t *testing.T) {
-	if got := periodicFor(JobRunnerConfig{}, CloseDateSweepArgs{}); len(got) != 1 {
-		t.Errorf("got %d periodic jobs, want 1 — close_date_sweep declares no schedule_when_positive, so the two postures must not be collapsed", len(got))
+// TestEveryScheduleSettingDefaultsToWholeSeconds is what scheduleValue's panic
+// leans on: every setting a cadence reads defaults to a positive whole number
+// of seconds, so DefaultSchedules builds and nothing a default schedules runs
+// in a loop.
+func TestEveryScheduleSettingDefaultsToWholeSeconds(t *testing.T) {
+	keys := scheduleSettings()
+	if len(keys) == 0 {
+		t.Fatal("no cadence reads a setting — this test has stopped reading the contract")
+	}
+	for _, key := range keys {
+		raw, err := settingDefault(key)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var seconds int
+		if err := json.Unmarshal(raw, &seconds); err != nil || seconds <= 0 {
+			t.Errorf("%s defaults to %s, want a positive whole number of seconds", key, raw)
+		}
 	}
 }
 
@@ -226,21 +195,6 @@ func TestRegistersHonoursBothAbsentPostures(t *testing.T) {
 	}
 }
 
-// declaredFieldPaths collects, over every declared kind, the JobRunnerConfig
-// field paths pathsIn names — the set a lookup table in this package has to
-// answer.
-func declaredFieldPaths(pathsIn func(jobs.Spec) []string) []string {
-	seen := map[string]struct{}{}
-	for _, spec := range jobs.Declared() {
-		for _, path := range pathsIn(spec) {
-			if path != "" {
-				seen[path] = struct{}{}
-			}
-		}
-	}
-	return slices.Sorted(maps.Keys(seen))
-}
-
 // assertTableAnswersExactly compares a lookup table's keys with the paths the
 // declaration names. Both directions matter: an unanswered path panics the
 // boot, and an answer no kind names is a dead entry nobody would notice.
@@ -268,17 +222,6 @@ func TestEveryDeclaredRegistrationFieldIsAnswered(t *testing.T) {
 	assertTableAnswersExactly(t, "configDependencies",
 		slices.Sorted(maps.Keys(configDependencies(JobRunnerConfig{}))),
 		slices.Sorted(maps.Keys(gatedDependencyPaths())))
-}
-
-// TestEveryDeclaredCadenceFieldIsAnswered is the same obligation for the
-// operator dials — both the field a cadence is read from and the field whose
-// positivity decides whether there is a cadence at all.
-func TestEveryDeclaredCadenceFieldIsAnswered(t *testing.T) {
-	assertTableAnswersExactly(t, "operatorIntervals",
-		slices.Sorted(maps.Keys(operatorIntervals(JobRunnerConfig{}))),
-		declaredFieldPaths(func(spec jobs.Spec) []string {
-			return []string{spec.Cadence.OperatorField, spec.Cadence.ScheduleWhenPositive}
-		}))
 }
 
 // scheduledDispatcherFloor guards against a vacuous pass below. Twenty-two
@@ -362,10 +305,10 @@ func TestEveryScheduledKindIsWiredExactlyOnce(t *testing.T) {
 }
 
 // declaresAClock reports whether the contract gives this kind a schedule of its
-// own — a fixed interval, or an operator field that carries one. A kind with
-// neither is reached by its dispatcher, and has no periodicFor site to own.
+// own — a fixed interval, or a setting that carries one. A kind with neither
+// is reached by its dispatcher, and has no periodicFor site to own.
 func declaresAClock(c jobs.Cadence) bool {
-	return c.Fixed != 0 || c.OperatorField != "" || c.OnDemand
+	return c.Fixed != 0 || c.Setting != "" || c.OnDemand
 }
 
 // TestThePeriodicInsertYieldsToAnArgsOwnedCap is what makes periodicInsertOpts'

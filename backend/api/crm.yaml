@@ -27959,7 +27959,7 @@ components:
       description: |
         The installation's identity and reporting basis (ADR-0090). Read by every role,
         changed only by admin/ops.
-      required: [name, timezone, base_currency, base_language, fiscal_year_start_month, dead_work_banner_hours, oauth_access_token_ttl_minutes, forecast_forward_measure, base_currency_locked, max_upload_bytes, sign_in_providers]
+      required: [name, timezone, base_currency, base_language, fiscal_year_start_month, dead_work_banner_hours, oauth_access_token_ttl_minutes, forecast_forward_measure, base_currency_locked, max_upload_bytes, sign_in_providers, operations]
       properties:
         name:
           type: string
@@ -28059,6 +28059,8 @@ components:
             for the code exchange and every refresh rotation alike. 30 days by default, at most
             90. A change applies to the next token minted; tokens already issued keep the expiry
             they were issued with.
+        operations:
+          $ref: '#/components/schemas/OperationSettings'
         dead_work_banner_hours:
           type: integer
           minimum: 1
@@ -28180,6 +28182,21 @@ components:
           minimum: 5
           maximum: 129600
           description: Set how long a connector's access token lives, in minutes. Reaches the next token minted.
+        agent_runner_interval_seconds: { type: integer, minimum: 10, maximum: 3600, description: 'Set the value `OperationSettings.agent_runner_interval_seconds` describes.' }
+        webhook_retry_interval_seconds: { type: integer, minimum: 10, maximum: 3600, description: 'Set the value `OperationSettings.webhook_retry_interval_seconds` describes.' }
+        time_scan_interval_seconds: { type: integer, minimum: 60, maximum: 86400, description: 'Set the value `OperationSettings.time_scan_interval_seconds` describes.' }
+        close_date_sweep_interval_seconds: { type: integer, minimum: 3600, maximum: 604800, description: 'Set the value `OperationSettings.close_date_sweep_interval_seconds` describes.' }
+        follow_up_reconcile_interval_seconds: { type: integer, minimum: 3600, maximum: 604800, description: 'Set the value `OperationSettings.follow_up_reconcile_interval_seconds` describes.' }
+        retention_sweep_interval_seconds: { type: integer, minimum: 3600, maximum: 604800, description: 'Set the value `OperationSettings.retention_sweep_interval_seconds` describes.' }
+        geocode_backfill_interval_seconds: { type: integer, minimum: 0, maximum: 604800, description: 'Set the value `OperationSettings.geocode_backfill_interval_seconds` describes.' }
+        technical_backfill_interval_seconds: { type: integer, minimum: 0, maximum: 604800, description: 'Set the value `OperationSettings.technical_backfill_interval_seconds` describes.' }
+        gmail_watch_scan_interval_seconds: { type: integer, minimum: 600, maximum: 86400, description: 'Set the value `OperationSettings.gmail_watch_scan_interval_seconds` describes.' }
+        graph_watch_scan_interval_seconds: { type: integer, minimum: 600, maximum: 86400, description: 'Set the value `OperationSettings.graph_watch_scan_interval_seconds` describes.' }
+        gmail_watch_renew_within_hours: { type: integer, minimum: 24, maximum: 144, description: 'Set the value `OperationSettings.gmail_watch_renew_within_hours` describes.' }
+        graph_watch_renew_within_hours: { type: integer, minimum: 24, maximum: 60, description: 'Set the value `OperationSettings.graph_watch_renew_within_hours` describes.' }
+        send_rate_limit: { type: integer, minimum: 1, maximum: 1000, description: 'Set the value `OperationSettings.send_rate_limit` describes.' }
+        send_rate_window_seconds: { type: integer, minimum: 10, maximum: 3600, description: 'Set the value `OperationSettings.send_rate_window_seconds` describes.' }
+        send_max_age_hours: { type: integer, minimum: 1, maximum: 168, description: 'Set the value `OperationSettings.send_max_age_hours` describes.' }
         dead_work_banner_hours:
           type: integer
           minimum: 1
@@ -28584,7 +28601,7 @@ components:
       description: |
         The workspace-shared capture posture (ADR-0072, CAP-PARAM-7). Read by every role,
         changed only by admin/ops.
-      required: [auto_enrich, mail_sharing, shared_posture_allowed, signature_enrich, auto_enrich_daily_cap, site_read]
+      required: [auto_enrich, mail_sharing, shared_posture_allowed, signature_enrich, auto_enrich_daily_cap, site_read, mail_sync_interval_seconds]
       properties:
         auto_enrich_daily_cap:
           type: integer
@@ -28598,6 +28615,13 @@ components:
             without a restart. Default 500.
         site_read:
           $ref: '#/components/schemas/SiteReadLimits'
+        mail_sync_interval_seconds:
+          type: integer
+          minimum: 30
+          maximum: 3600
+          description: |
+            How long a mailbox waits after a successful sync before the next one, in seconds.
+            Applies from each mailbox's next sync. Default 120.
         mail_sharing:
           type: boolean
           description: |
@@ -29568,6 +29592,31 @@ components:
         max_mib: { type: integer, description: 'Mebibytes one read may hold, summed over its pages. Default 32.' }
         wall_seconds: { type: integer, description: 'Seconds one crawl may run before it stops and extracts what it has. Default 240.' }
 
+    OperationSettings:
+      type: object
+      additionalProperties: false
+      description: |
+        The worker's operating values: how often each background pass runs, how far ahead a
+        mailbox subscription is renewed, and how fast one mailbox sends. A running worker reads
+        them again within a minute of a change, so none needs a restart.
+      required: [agent_runner_interval_seconds, webhook_retry_interval_seconds, time_scan_interval_seconds, close_date_sweep_interval_seconds, follow_up_reconcile_interval_seconds, retention_sweep_interval_seconds, geocode_backfill_interval_seconds, technical_backfill_interval_seconds, gmail_watch_scan_interval_seconds, graph_watch_scan_interval_seconds, gmail_watch_renew_within_hours, graph_watch_renew_within_hours, send_rate_limit, send_rate_window_seconds, send_max_age_hours]
+      properties:
+        agent_runner_interval_seconds: { type: integer, minimum: 10, maximum: 3600, description: 'How often scheduled agents are checked for a run that is due, in seconds. Default 30.' }
+        webhook_retry_interval_seconds: { type: integer, minimum: 10, maximum: 3600, description: 'How often failed webhook deliveries are retried, in seconds. Default 30.' }
+        time_scan_interval_seconds: { type: integer, minimum: 60, maximum: 86400, description: 'How often time-based automation rules are checked, in seconds. Default 3600.' }
+        close_date_sweep_interval_seconds: { type: integer, minimum: 3600, maximum: 604800, description: 'How often deals whose close date has passed are flagged, in seconds. Default 86400.' }
+        follow_up_reconcile_interval_seconds: { type: integer, minimum: 3600, maximum: 604800, description: 'How often stalled deals are checked for a follow-up to propose, in seconds. Default 86400.' }
+        retention_sweep_interval_seconds: { type: integer, minimum: 3600, maximum: 604800, description: 'How often data past its retention period is removed, in seconds. Default 86400. It cannot be switched off.' }
+        geocode_backfill_interval_seconds: { type: integer, minimum: 0, maximum: 604800, description: 'How often addresses without coordinates are looked up, in seconds, from 300; 0 switches the sweep off. Default 3600.' }
+        technical_backfill_interval_seconds: { type: integer, minimum: 0, maximum: 604800, description: 'How often company domains without technical facts are looked up, in seconds, from 300; 0 switches the sweep off. Default 21600.' }
+        gmail_watch_scan_interval_seconds: { type: integer, minimum: 600, maximum: 86400, description: 'How often Gmail push subscriptions are checked for renewal, in seconds. Default 21600.' }
+        graph_watch_scan_interval_seconds: { type: integer, minimum: 600, maximum: 86400, description: 'How often Microsoft 365 mail subscriptions are checked for renewal, in seconds. Default 21600.' }
+        gmail_watch_renew_within_hours: { type: integer, minimum: 24, maximum: 144, description: 'How far ahead of expiry a Gmail push subscription is renewed, in hours. A watch lasts seven days. Default 48.' }
+        graph_watch_renew_within_hours: { type: integer, minimum: 24, maximum: 60, description: 'How far ahead of expiry a Microsoft 365 mail subscription is renewed, in hours. A subscription lasts just under three days. Default 24.' }
+        send_rate_limit: { type: integer, minimum: 1, maximum: 1000, description: 'How many messages one mailbox may send per window. A burst bound, not a quota. Default 30.' }
+        send_rate_window_seconds: { type: integer, minimum: 10, maximum: 3600, description: 'The window the send rate is counted over, in seconds. Default 60.' }
+        send_max_age_hours: { type: integer, minimum: 1, maximum: 168, description: 'How long a delivery held back by the send rate may wait before it stops with a reason, in hours. Default 24.' }
+
     UpdateCaptureSettingsRequest:
       type: object
       description: A sparse capture-settings patch (admin/ops).
@@ -29577,6 +29626,7 @@ components:
         site_read_max_pages: { type: integer, minimum: 1, maximum: 200, description: 'Set the page limit of one website read.' }
         site_read_max_mib: { type: integer, minimum: 1, maximum: 128, description: 'Set the size limit of one website read, in MiB.' }
         site_read_wall_seconds: { type: integer, minimum: 30, maximum: 600, description: 'Set the time limit of one website crawl, in seconds.' }
+        mail_sync_interval_seconds: { type: integer, minimum: 30, maximum: 3600, description: 'Set how long a mailbox waits between syncs, in seconds.' }
         mail_sharing: { type: boolean, description: 'Toggle the workspace mail-sharing posture; affects correspondence captured from now on — mail, and chat on a transport whose credential belongs to one member.' }
         signature_enrich: { type: boolean, description: 'Toggle the tenant-wide default for reading contact details out of captured mail — its signature and any attached vCard. A mailbox that set its own switch keeps it.' }
         shared_posture_allowed: { type: boolean, description: 'Allow a seat to put their mailbox in the `shared` posture. Off by default; see CaptureSettings.shared_posture_allowed for what turning it on asserts.' }

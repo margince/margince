@@ -131,15 +131,14 @@ job that retries against an unregistered kind:
 job kind is not registered in the client's Workers bundle: technical_enrich_company
 ```
 
-### `--technical-backfill-interval`: how often to refresh
+The worker is a compiled binary and reads this at boot. Run `make dev` again after changing it: Vite
+hot-reloads the SPA, but not the Go worker.
 
-Defaults to **6h**. Runs on start. `0` turns the sweep off and leaves the lookup to the site read
-that queues it.
+### How often to refresh
 
-### Restart after changing either
-
-The worker is a compiled binary and reads both at boot. Run `make dev` again: Vite hot-reloads the SPA,
-but not the Go worker.
+An admin setting, **Technical lookup sweep** on Settings → System health: 21600 seconds (6 hours)
+by default. It runs on start; `0` turns the sweep off and leaves the lookup to the site read that
+queues it. A running worker picks up a change within a minute.
 
 ## Where it shows
 

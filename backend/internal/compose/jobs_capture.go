@@ -20,6 +20,7 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -47,7 +48,7 @@ func addGmailCaptureJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConf
 	// Calendar connection (the same Google OAuth app) syncs on the identical
 	// per-connection path a mailbox does — there is no gcal-specific job.
 	// Per-connection pacing lives in the registry's scheduling sidecar
-	// (next_sync_at = success + --gmail-sync-interval), which is why the
+	// (next_sync_at = success + the mail sync setting), which is why the
 	// dispatcher's own cadence can be frequent without meaning frequent
 	// provider calls.
 	addDeclaredWorker[CaptureSyncArgs](reg, &captureSyncWorker{registry: cfg.GmailRegistry, log: log})
@@ -62,7 +63,7 @@ func addGmailCaptureJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConf
 		return
 	}
 	addDeclaredWorker[GmailWatchArgs](reg, &gmailWatchWorker{
-		registry: cfg.GmailRegistry, renewWithin: cfg.GmailWatch.RenewWithin, log: log,
+		registry: cfg.GmailRegistry, pool: pool, log: log,
 	})
 	addDeclaredWorker[GmailWatchRenewArgs](reg, &gmailWatchRenewWorker{
 		registry: cfg.GmailRegistry, topic: cfg.GmailWatch.Topic,
@@ -111,12 +112,12 @@ func addCapturePipelineJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerC
 	// message, in the same transaction as the activity; this role only needs
 	// the worker registered.
 	if cfg.SendRegistry != nil {
-		addDeclaredWorker[SendEmailArgs](reg, newSendWorker(pool, cfg.SendRegistry, cfg.SendPacing, cfg.SendBlob, cfg.ControllerRelay, cfg.ControllerVault))
+		addDeclaredWorker[SendEmailArgs](reg, newSendWorker(pool, cfg.SendRegistry, cfg.SendBlob, cfg.ControllerRelay, cfg.ControllerVault))
 		// The alarm for a message a rep chose to send later. Firing one creates
 		// its delivery and its dispatch job, so it registers only where that
 		// machinery exists — a role that cannot send cannot fire either.
 		if cfg.SendDelivery != nil {
-			worker := newScheduledSendWorker(pool, cfg.SendDelivery, cfg.SendBlob, cfg.SendPacing, cfg.SendOrigin)
+			worker := newScheduledSendWorker(pool, cfg.SendDelivery, cfg.SendBlob, cfg.SendOrigin)
 			worker.store = worker.store.WithSendAuthority(workerMailAuthority(cfg.SendRegistry))
 			addDeclaredWorker[ScheduledSendArgs](reg, worker)
 		}
@@ -199,27 +200,18 @@ func addCapturePipelineJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerC
 // GraphWatchConfig configures the Microsoft Graph subscription-renewal pass.
 // NotificationURL is the endpoint Microsoft posts change notifications to,
 // operator token and all (empty disables the pass entirely — Outlook capture
-// stays on the poll); Interval is the scan cadence; and RenewWithin is how far
-// ahead of a subscription's deadline it is renewed.
-//
-// RenewWithin matters more here than it does for Gmail: a Graph subscription
-// lapses in under three days where a Gmail watch lasts seven, so a deployment
-// that carried Gmail's defaults across would let every Outlook mailbox go
-// quiet between scans.
+// stays on the poll). The scan's cadence and how far ahead of a deadline it
+// renews are settings (identity/settingsschedules.go).
 type GraphWatchConfig struct {
 	NotificationURL string
-	Interval        time.Duration
-	RenewWithin     time.Duration
 }
 
 // GmailWatchConfig configures the Gmail push-watch maintenance pass. Topic is
 // the Pub/Sub topic Gmail publishes change notifications to (empty disables the
-// pass entirely — capture stays on the poll); Interval is the scan cadence; and
-// RenewWithin is how far ahead of a watch's expiry it is re-registered.
+// pass entirely — capture stays on the poll). Cadence and renewal margin are
+// settings, as for Graph.
 type GmailWatchConfig struct {
-	Topic       string
-	Interval    time.Duration
-	RenewWithin time.Duration
+	Topic string
 }
 
 // GmailSyncArgs schedules one DISPATCH pass: scan the fleet for due Gmail
@@ -356,13 +348,17 @@ func (GmailWatchArgs) FleetWide() {}
 // connection's problem, and per-connection jobs keep it from being read as the
 // tenant's.
 type gmailWatchWorker struct {
-	registry    *capture.Registry
-	renewWithin time.Duration
-	log         *slog.Logger
+	registry *capture.Registry
+	pool     *pgxpool.Pool
+	log      *slog.Logger
 }
 
 func (w *gmailWatchWorker) Work(ctx context.Context, _ *river.Job[GmailWatchArgs]) error {
-	return jobs.FaultContext(ctx, dispatchDueWatches(ctx, w.registry, providerGmail, w.renewWithin,
+	renewWithin, err := renewWithinOf(ctx, w.pool, identity.GmailWatchRenewWithinHours)
+	if err != nil {
+		return jobs.FaultContext(ctx, err)
+	}
+	return jobs.FaultContext(ctx, dispatchDueWatches(ctx, w.registry, providerGmail, renewWithin,
 		func(ws ids.UUID, connID string) error {
 			return dispatchOne(ctx, GmailWatchRenewArgs{Workspace: ws, ConnectionID: connID}, nil)
 		}))
@@ -461,13 +457,17 @@ func (GraphWatchArgs) FleetWide() {}
 
 // graphWatchWorker is the Graph twin of gmailWatchWorker, on the same walk.
 type graphWatchWorker struct {
-	registry    *capture.Registry
-	renewWithin time.Duration
-	log         *slog.Logger
+	registry *capture.Registry
+	pool     *pgxpool.Pool
+	log      *slog.Logger
 }
 
 func (w *graphWatchWorker) Work(ctx context.Context, _ *river.Job[GraphWatchArgs]) error {
-	return jobs.FaultContext(ctx, dispatchDueWatches(ctx, w.registry, providerGraph, w.renewWithin,
+	renewWithin, err := renewWithinOf(ctx, w.pool, identity.GraphWatchRenewWithinHours)
+	if err != nil {
+		return jobs.FaultContext(ctx, err)
+	}
+	return jobs.FaultContext(ctx, dispatchDueWatches(ctx, w.registry, providerGraph, renewWithin,
 		func(ws ids.UUID, connID string) error {
 			return dispatchOne(ctx, GraphWatchRenewArgs{Workspace: ws, ConnectionID: connID}, nil)
 		}))

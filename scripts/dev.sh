@@ -1397,28 +1397,15 @@ up)
   # .env.local set a BYOK key, else the offline fake, so its runner
   # matches the api), the same blobstore endpoint, and the .env.local keys
   # already exported into this shell (vault + Gmail secrets travel via the
-  # environment, never CLI flags). Gmail adds a short sync poll only when the
-  # connector is configured.
-  #
-  # --retention-interval 720h: the worker runs the nightly GDPR
-  # retention/erasure pass unconditionally — it is the River schedule of the
-  # privacy_retention dispatcher, which fans out one job per workspace.
-  # RunOnStart still fires one fan-out immediately at boot (inherent, not gated
-  # by this flag) — but it only ERASES data past its jurisdiction floor, so on
-  # a fresh dev database it is a no-op. The long interval just stops it
-  # recurring during a dev session.
+  # environment, never CLI flags). How often each pass runs and how often a
+  # mailbox syncs are admin settings (Settings -> System health, Capture), so
+  # a demo that wants a quicker mail poll sets it there.
   ( cd backend && GOWORK="$PWD/../build/composition/go.work" go build -o ../bin/worker ./cmd/worker ) > >(log_as boot) 2>&1
-  worker_gmail_flags=()
-  if [[ "$gmail_enabled" == "1" ]]; then
-    # A short poll makes the demo mailbox responsive; the default is 2m.
-    worker_gmail_flags=(--gmail-sync-interval 30s)
-  fi
   MARGINCE_BLOBSTORE_BUCKET="$blob_bucket" \
     ./bin/worker --dsn "$dev_app_url" --redis "${REDIS_ADDR}" \
     --config "$deploy_cfg" \
     "${public_base_url_flag[@]}" \
-    --retention-interval 720h \
-    "${ai_flag[@]+"${ai_flag[@]}"}" "${worker_gmail_flags[@]+"${worker_gmail_flags[@]}"}" > >(log_as worker) 2>&1 &
+    "${ai_flag[@]+"${ai_flag[@]}"}" > >(log_as worker) 2>&1 &
   worker_pid=$!
   # A dead worker is indistinguishable from a broken feature, which is what
   # makes it expensive: every queue-backed lane still ACCEPTS work, durably and

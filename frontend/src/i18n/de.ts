@@ -9505,6 +9505,69 @@ export const de = {
   "agentConnections.ttl.refusal":
     "Gib eine ganze Zahl von 5 bis 129.600 Minuten ein.",
   "agentConnections.updateFailed": "Einstellung nicht geändert",
+  "operations.schedules.title": "Hintergrund-Zeitpläne",
+  "operations.schedules.sub":
+    "Wie oft jeder Hintergrundlauf startet. Ein laufender Worker übernimmt eine Änderung innerhalb einer Minute: Der Lauf startet einmal und läuft dann im neuen Abstand weiter.",
+  "operations.pacing.title": "Versandtempo",
+  "operations.pacing.sub":
+    "Wie schnell ein Postfach senden darf. Eine Änderung gilt ab dem nächsten Versand und setzt die Zählung jedes Postfachs zurück.",
+  "operations.adminOnly": "Nur Admins und Operations können das ändern.",
+  "operations.updateFailed": "Einstellung nicht geändert",
+  "operations.refusal": "Gib eine ganze Zahl im angegebenen Bereich ein.",
+  "operations.agentRunner.label": "Agent-Läufe (Sekunden)",
+  "operations.agentRunner.help":
+    "Wie oft geplante Agents auf einen fälligen Lauf geprüft werden, 10 bis 3.600.",
+  "operations.webhookRetry.label": "Webhook-Wiederholungen (Sekunden)",
+  "operations.webhookRetry.help":
+    "Wie oft fehlgeschlagene Webhook-Zustellungen wiederholt werden, 10 bis 3.600.",
+  "operations.timeScan.label": "Zeitgesteuerte Automationen (Sekunden)",
+  "operations.timeScan.help":
+    "Wie oft zeitgesteuerte Regeln geprüft werden, 60 bis 86.400.",
+  "operations.closeDate.label": "Überfällige Abschlussdaten (Sekunden)",
+  "operations.closeDate.help":
+    "Wie oft Deals mit überschrittenem Abschlussdatum markiert werden, 3.600 bis 604.800.",
+  "operations.followUp.label": "Follow-up-Vorschläge (Sekunden)",
+  "operations.followUp.help":
+    "Wie oft stockende Deals auf ein vorzuschlagendes Follow-up geprüft werden, 3.600 bis 604.800.",
+  "operations.retention.label": "Datenaufbewahrung (Sekunden)",
+  "operations.retention.help":
+    "Wie oft Daten nach Ablauf ihrer Aufbewahrungsfrist gelöscht werden, 3.600 bis 604.800. Lässt sich nicht ausschalten.",
+  "operations.geocode.label": "Adressabgleich (Sekunden)",
+  "operations.geocode.help":
+    "Wie oft Adressen ohne Koordinaten nachgeschlagen werden, 300 bis 604.800, oder 0 für aus.",
+  "operations.technical.label": "Technik-Abgleich (Sekunden)",
+  "operations.technical.help":
+    "Wie oft Unternehmensdomains ohne technische Angaben nachgeschlagen werden, 300 bis 604.800, oder 0 für aus.",
+  "operations.gmailWatchScan.label": "Gmail-Push-Prüfung (Sekunden)",
+  "operations.gmailWatchScan.help":
+    "Wie oft Gmail-Push-Abos auf Erneuerung geprüft werden, 600 bis 86.400.",
+  "operations.graphWatchScan.label": "Microsoft-365-Push-Prüfung (Sekunden)",
+  "operations.graphWatchScan.help":
+    "Wie oft Microsoft-365-Mail-Abos auf Erneuerung geprüft werden, 600 bis 86.400.",
+  "operations.gmailWatchRenew.label": "Gmail-Erneuerungsvorlauf (Stunden)",
+  "operations.gmailWatchRenew.help":
+    "Wie lange vor dem Ablauf nach 7 Tagen ein Gmail-Abo erneuert wird, 24 bis 144.",
+  "operations.graphWatchRenew.label":
+    "Microsoft-365-Erneuerungsvorlauf (Stunden)",
+  "operations.graphWatchRenew.help":
+    "Wie lange vor dem Ablauf nach 3 Tagen ein Microsoft-365-Abo erneuert wird, 24 bis 60.",
+  "operations.sendRateLimit.label": "Nachrichten pro Zeitfenster",
+  "operations.sendRateLimit.help":
+    "Wie viele Nachrichten ein Postfach in einem Zeitfenster senden darf, 1 bis 1.000.",
+  "operations.sendRateWindow.label": "Zeitfenster (Sekunden)",
+  "operations.sendRateWindow.help":
+    "Das Zeitfenster, über das Nachrichten gezählt werden, 10 bis 3.600.",
+  "operations.sendMaxAge.label": "Längste Wartezeit (Stunden)",
+  "operations.sendMaxAge.help":
+    "Wie lange eine zurückgehaltene Nachricht warten darf, bevor sie mit einem Grund anhält, 1 bis 168.",
+  "captureMailSync.title": "E-Mail-Abgleich",
+  "captureMailSync.sub":
+    "Wie oft jedes verbundene Postfach auf neue E-Mails geprüft wird.",
+  "captureMailSync.interval.label": "Abgleichsintervall (Sekunden)",
+  "captureMailSync.interval.help":
+    "Zeit zwischen zwei Abgleichen eines Postfachs, 30 bis 3.600. Eine Änderung gilt ab dem nächsten Abgleich jedes Postfachs.",
+  "captureMailSync.interval.refusal":
+    "Gib eine ganze Zahl von 30 bis 3.600 Sekunden ein.",
   "captureSettings.adminOnly": "Nur Admins und Operations können das ändern.",
 
   "ownDomains.companyTitle": "Unternehmensdomains",

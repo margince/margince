@@ -113,19 +113,21 @@ func TestARefusedSyncPacesTheRetryOnTheLadder(t *testing.T) {
 	pacedWithin(ctx, t, "imap", time.Minute, time.Hour)
 }
 
-// A healthy sync paces the next one at the interval the worker was configured
-// with — the flag's value, honoured in the units the flag is written in.
+// A healthy sync paces the next one at the interval an admin set, read when
+// the sync records itself — so a change reaches the very next sync.
 func TestAHealthySyncPacesTheNextOneAtTheConfiguredInterval(t *testing.T) {
 	ctx, reg, _, _ := newCaptureRegistryFixture(t)
 	// Distinctive on purpose: the default is two minutes, so an interval that
 	// never reached the write would still land inside any bound wide enough to
-	// hold the default, and this test would pass on the wrong number.
-	reg.WithSyncInterval(90 * time.Minute)
+	// hold the default, and this test would pass on the wrong number. The
+	// setting row is written directly: the subject is the sync reading it, and
+	// the admin write path has its own test.
+	setMailSyncSeconds(t, ctx, 3600)
 
 	if err := syncOnceOf(ctx, t, reg, "gmail"); err != nil {
 		t.Fatalf("SyncOnce: %v", err)
 	}
-	pacedWithin(ctx, t, "gmail", 85*time.Minute, 90*time.Minute)
+	pacedWithin(ctx, t, "gmail", 55*time.Minute, 60*time.Minute)
 }
 
 // A rate-limit honours the provider's Retry-After when it is longer than the
@@ -142,4 +144,25 @@ func TestARateLimitedSyncHonoursTheProvidersRetryAfter(t *testing.T) {
 	// The ladder's early rungs are minutes, so a schedule near three hours can
 	// only have come from the Retry-After.
 	pacedWithin(ctx, t, "graph", 175*time.Minute, 3*time.Hour)
+}
+
+// setMailSyncSeconds writes the mail-sync setting's row as the owner, the way
+// an admin's change would leave it.
+func setMailSyncSeconds(t *testing.T, ctx context.Context, seconds int) {
+	t.Helper()
+	owner, _ := setupCaptureDB(t)
+	if _, err := owner.Exec(ctx, `
+		INSERT INTO setting (key, value) VALUES ($1, to_jsonb($2::int))
+		ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
+		capture.MailSyncIntervalSeconds.Key(), seconds); err != nil {
+		t.Fatalf("setting the mail sync interval: %v", err)
+	}
+	// The row outlives the test in a database the package's other tests
+	// share, and they pace at the default.
+	t.Cleanup(func() {
+		if _, err := owner.Exec(context.Background(), `DELETE FROM setting WHERE key = $1`,
+			capture.MailSyncIntervalSeconds.Key()); err != nil {
+			t.Errorf("clearing the mail sync interval: %v", err)
+		}
+	})
 }

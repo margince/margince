@@ -83,7 +83,11 @@ import { BriefDeliveryRows } from "./briefdelivery";
 import { CaptureActivityTab } from "./capture-activity";
 import { OwnerIdentitiesCard } from "./capture-owner-identities";
 import { CaptureSendersCard } from "./capture-senders";
-import { CaptureSettingsCard, WebsiteReadingCard } from "./capture-settings";
+import {
+  CaptureSettingsCard,
+  MailSyncCard,
+  WebsiteReadingCard,
+} from "./capture-settings";
 import { CaptureHealthCard } from "./capturehealth";
 import {
   LoadMoreButton,
@@ -125,6 +129,7 @@ import { MeetingSettings } from "./meeting-settings";
 import { NotificationSettingsCard } from "./notification-settings";
 import { OAuthAppCard } from "./oauth-app";
 import { OfferTemplatesAdmin } from "./offertemplates";
+import { BackgroundSchedulesCard, SendPacingCard } from "./operationsettings";
 import { OvernightGrantCard } from "./overnight-grant";
 import { OwnDomainsCard } from "./own-domains";
 import { PasswordSettingRow } from "./passwordcard";
@@ -300,6 +305,9 @@ export function tabContent(id: SettingsPageId): ReactNode {
               used to sit on the reader's own Connections page, where "Only you"
               was written over a switch that binds everybody. */}
           <MailSharingCard />
+          {/* How often the mailboxes under that rule are read, before what is
+              done with what they bring in. */}
+          <MailSyncCard />
           {/* Then which domains are OURS, then what to do with mail from the
               rest, then which of the rest are consumer mailboxes — the posture,
               then the two judgements that read it. */}
@@ -372,6 +380,10 @@ export function tabContent(id: SettingsPageId): ReactNode {
               system is holding: they hid beside the custom-field editor. */}
           <EmbedReindexCard />
           <JobHealthCard />
+          {/* How often that work is scheduled and how fast mail leaves, under
+              the reading of what it is holding. */}
+          <BackgroundSchedulesCard />
+          <SendPacingCard />
           {/* Beside the queue reading, not under Capture or Extensions: each
               answers "is something broken in the background". */}
           <CaptureHealthCard />

@@ -374,7 +374,8 @@ Delivery is a background capability, gated on the deployment signing key:
   deliverer that serves **replay only** needs no resolver: replay re-sends an already-authorized
   delivery and never fans out.
 
-The retry dispatcher's cadence is `--webhook-retry-interval` (worker only, default `30s`). Each tick
+The retry dispatcher's cadence is the **Webhook retries** setting on Settings → System health
+(default 30 seconds). Each tick
 enqueues one `webhook_retry_workspace` job per live workspace. It paces the fleet fan-out, not one
 delivery's backoff. The per-delivery schedule is the exponential ladder above, and the dial only decides
 how promptly an elapsed backoff is noticed. Archived workspaces are skipped, since nobody listens for a
@@ -500,4 +501,4 @@ authorization snapshot, so a read-only viewer sees the list and deliveries but n
 - The outbox → relay → consumer-group bus the delivery worker rides: [write-backbone.md](write-backbone.md).
 - Why the owner-scope gate reads *live* RBAC and what row scope means: [authorization.md](authorization.md), [rbac-roles-and-teams.md](rbac-roles-and-teams.md).
 - How the REST contract (`crm.yaml`) is generated; `public-events.yaml` follows a variant of the same contract-first pattern: [contract-first.md](contract-first.md).
-- Every flag and env var (`--webhook-key`, `--webhook-retry-interval`): [reference/configuration.md](../reference/configuration.md).
+- Every flag and env var (`--webhook-key`): [reference/configuration.md](../reference/configuration.md).

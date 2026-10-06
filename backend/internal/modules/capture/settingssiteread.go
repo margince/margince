@@ -82,3 +82,17 @@ func between(unit string, lowest, highest int) func(int) error {
 		return nil
 	}
 }
+
+// MailSyncIntervalSeconds is how long a healthy mailbox connection waits
+// between polls. Push notifications, where a mailbox has them, make this the
+// safety net rather than the latency floor. Two minutes by default; at least
+// thirty seconds so a fleet of mailboxes cannot poll a provider into a rate
+// limit, at most an hour so a mailbox without push still feels live.
+var MailSyncIntervalSeconds = settings.Define[int](
+	"capture.mail_sync_interval_seconds", captureSettingsObject, "update",
+	DefaultMailSyncIntervalSeconds, between("seconds", 30, 3600),
+).MachineryApplied() // the sync applies it to the next_sync_at it writes
+
+// DefaultMailSyncIntervalSeconds is a healthy connection's poll interval when
+// nobody has chosen one.
+const DefaultMailSyncIntervalSeconds = 120

@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/jobtest"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -152,10 +153,9 @@ func TestRetentionReportsAPassThatCouldNotWrite(t *testing.T) {
 func startRetentionRunner(t *testing.T, e *integration.Env, interval time.Duration) (*jobs.Runner, <-chan *river.Event, <-chan *river.Event) {
 	t.Helper()
 	return jobtest.StartTestJobRunner(t, e.Pool, compose.JobRunnerConfig{
-		CloseDateInterval: time.Hour,
-		ReconcileInterval: time.Hour,
-		TimeScanInterval:  time.Hour,
-		PrivacyRetention:  compose.PrivacyRetentionConfig{Interval: interval},
+		Schedules: compose.SchedulesForTest(map[string]time.Duration{
+			identity.RetentionSweepIntervalSeconds.Key(): interval,
+		}),
 	})
 }
 
@@ -216,7 +216,7 @@ func TestPrivacyRetentionRecordsAFailedPassAsAFailedRow(t *testing.T) {
 // TestPrivacyRetentionDispatchRepeatsOnItsConfiguredInterval pins the half of
 // the schedule a boot pass hides. RunOnStart fires once whatever the cadence
 // is, so a dispatcher wired to a constant instead of the operator's
-// --retention-interval looks identical at boot and then never runs again — a
+// the retention setting looks identical at boot and then never runs again — a
 // dead storage-limitation obligation with every gate green. Two dispatches less
 // than jobtest.DispatchGapBound apart can only happen if a cadence far shorter
 // than any constant in reach is what River is scheduling on.
@@ -234,49 +234,5 @@ func TestPrivacyRetentionDispatchRepeatsOnItsConfiguredInterval(t *testing.T) {
 	if gap := second.Sub(first); gap > jobtest.DispatchGapBound {
 		t.Fatalf("the two %s dispatches were %s apart, over the %s bound — the schedule is not the configured %s interval but some larger constant, and the gmail_sync dispatcher's declared 30s scan is the one that would look exactly like this",
 			kind, gap, jobtest.DispatchGapBound, jobtest.DispatchInterval)
-	}
-}
-
-// TestPrivacyRetentionWithoutAnIntervalSchedulesNothingButStillWorksAQueuedRow
-// pins the omission. River accepts PeriodicInterval(0) and turns it into a
-// schedule whose next run time never advances, so a runner assembled by a
-// caller that never meant to run retention would dispatch the pass as fast as
-// Postgres accepts an insert — contending for the default queue against
-// whatever that caller actually wired the runner for, and never failing.
-// Registering no schedule is the honest reading; the WORKERS still register,
-// so a row an earlier boot queued is still worked rather than stranded.
-func TestPrivacyRetentionWithoutAnIntervalSchedulesNothingButStillWorksAQueuedRow(t *testing.T) {
-	e := integration.Setup(t)
-	integration.ApplyRiverSchema(t)
-
-	runner, completed, _ := startRetentionRunner(t, e, 0)
-	if err := runner.Enqueue(context.Background(),
-		compose.PrivacyRetentionArgs{}, nil); err != nil {
-		t.Fatalf("enqueueing the pass an earlier boot would have left: %v", err)
-	}
-
-	// The close-date sweep is the FENCE, and it has to be: River inserts every
-	// RunOnStart periodic job in one round after Start returns, so a run that
-	// only waited on the hand-queued row could read the count before that round
-	// had happened at all — and would then report zero however the schedule was
-	// wired. Waiting for a sibling RunOnStart dispatcher to complete puts the
-	// round provably in the past. The workspace pass is waited on for the other
-	// half of the claim: a queued row is still worked with no schedule present.
-	waitCtx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
-	jobtest.AwaitKindsCompleted(waitCtx, t, completed,
-		compose.CloseDateSweepArgs{}.Kind(), compose.PrivacyRetentionArgs{}.Kind())
-
-	var dispatched int
-	if err := e.Pool.QueryRow(context.Background(),
-		`SELECT count(*) FROM river_job WHERE kind = $1`,
-		compose.PrivacyRetentionArgs{}.Kind()).Scan(&dispatched); err != nil {
-		t.Fatalf("counting the dispatched retention passes: %v", err)
-	}
-	// Exactly the one row this test queued by hand: the schedule and the work
-	// are one kind now, so a spinning schedule shows as rows above this floor.
-	if dispatched != 1 {
-		t.Errorf("%d %s rows exist after a runner was given no retention interval, want only the one queued here — a zero duration is not a cadence, and River spins on it rather than refusing it",
-			dispatched, compose.PrivacyRetentionArgs{}.Kind())
 	}
 }

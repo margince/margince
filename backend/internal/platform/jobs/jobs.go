@@ -166,6 +166,19 @@ func (r *Runner) Start(ctx context.Context) error {
 	return nil
 }
 
+// RemovePeriodic takes the schedule registered under id off this client.
+// Removing one that is not registered does nothing.
+func (r *Runner) RemovePeriodic(id string) { r.client.PeriodicJobs().RemoveByID(id) }
+
+// AddPeriodic registers a schedule on this client. A job with RunOnStart runs
+// once now, then on its schedule.
+func (r *Runner) AddPeriodic(job *river.PeriodicJob) error {
+	if _, err := r.client.PeriodicJobs().AddSafely(job); err != nil {
+		return fmt.Errorf("jobs: adding a schedule: %w", err)
+	}
+	return nil
+}
+
 // Stop drains in-flight jobs and shuts the client down gracefully; a job
 // caught mid-flight by shutdown finishes rather than being abandoned.
 func (r *Runner) Stop(ctx context.Context) error {

@@ -29,7 +29,7 @@ workspace worker, never a fleet loop inside one job row.
    - `opts_owner`: `fan_out` if a dispatcher's fan-out builds this kind's insert options, `args`
      if the args type's own `InsertOpts()` does, `caller` if scattered enqueue sites do.
 
-   Then by role. A dispatcher also declares `cadence` (a duration, `{operator: Field}`, or
+   Then by role. A dispatcher also declares `cadence` (a duration, `{setting: key}`, or
    `on_demand`) and the pair `fans_out_to` + `fan_out_unit` (`workspace`, `connection` or `build`).
    A fan-out child (`opts_owner: fan_out`) also declares `max_attempts`. Three is the house
    number; a different one says why in the entry's `reason:`.

@@ -17,7 +17,8 @@ import (
 )
 
 // jobRunnerBanner names, for every lane, the configuration that enabled it or
-// the reason it is off.
+// the reason it is off. How often each lane runs is an admin's setting and
+// may change while the worker runs, so the banner does not state it.
 func jobRunnerBanner(cfg workerConfig, watchCfg compose.GmailWatchConfig, graphWatchRuns bool, modelPath compose.ModelPath, vault keyvault.Vault, runnerSvc *compose.RunnerService) string {
 	gmailWired := cfg.gmailAppWired()
 	providers := "imap"
@@ -27,12 +28,12 @@ func jobRunnerBanner(cfg workerConfig, watchCfg compose.GmailWatchConfig, graphW
 	if cfg.graphClientID != "" && cfg.graphClientSecret != "" {
 		providers += "+graph"
 	}
-	captureNote := fmt.Sprintf("capture sweep every %s: %s", cfg.gmailSyncInterval, providers)
+	captureNote := "capture sweep: " + providers
 	switch {
 	case gmailWired && watchCfg.Topic != "":
-		captureNote = fmt.Sprintf("capture sweep every %s: %s, watch renew every %s", cfg.gmailSyncInterval, providers, cfg.gmailWatchInterval)
+		captureNote += ", gmail watch renew on"
 	case gmailWired:
-		captureNote = fmt.Sprintf("capture sweep every %s: %s (watch off: no pubsub topic)", cfg.gmailSyncInterval, providers)
+		captureNote += " (watch off: no pubsub topic)"
 	}
 	captureNote += graphWatchNote(cfg, graphWatchRuns)
 	// The Telegram poller is gated on the same vault (it unseals each bot's
@@ -53,21 +54,20 @@ func jobRunnerBanner(cfg workerConfig, watchCfg compose.GmailWatchConfig, graphW
 	// worker booted without it re-attempts none of them.
 	webhookNote := "webhook retry off (no --webhook-key: parked deliveries are NOT re-attempted)"
 	if cfg.webhookKey != "" {
-		webhookNote = fmt.Sprintf("webhook retry every %s", cfg.webhookRetryInterval)
+		webhookNote = "webhook retry on"
 	}
 	// Read off the SERVICE, which is the value registration itself gates on
 	// (compose.AgentSchedulerConfig.Service) — not off the model path that
-	// happens to decide it today. A banner announcing a cadence on a worker
+	// happens to decide it today. A banner announcing a scheduler on a worker
 	// that registered no scheduler is worse than no banner, and this line is
 	// the one place an operator looks. Without a service the agent catalog is
 	// never seeded, so no morning brief and no at-risk sweep ever runs while
 	// every other lane here reads healthy; say so by name.
 	schedulerNote := "agent scheduler off (no model path: no brief and no at-risk sweep will run — configure --ai-routing)"
 	if runnerSvc != nil {
-		schedulerNote = fmt.Sprintf("agent scheduler every %s", cfg.runnerInterval)
+		schedulerNote = "agent scheduler on"
 	}
-	return fmt.Sprintf("worker running River jobs (close-date every %s, reconcile every %s, time-scan every %s, retention every %s, %s, %s, %s, %s, %s)",
-		cfg.closeDateInterval, cfg.reconcileInterval, cfg.timeScanInterval, cfg.retentionInterval,
+	return fmt.Sprintf("worker running River jobs (%s, %s, %s, %s, %s)",
 		captureNote, channelNote, deepReadNote, webhookNote, schedulerNote)
 }
 
@@ -88,7 +88,7 @@ func graphWatchNote(cfg workerConfig, runs bool) string {
 	case cfg.graphClientID == "" && cfg.graphNotifyURL == "":
 		return ""
 	case runs:
-		return fmt.Sprintf(", graph subscription renew every %s", cfg.graphWatchInterval)
+		return ", graph subscription renew on"
 	case cfg.graphNotifyURL == "":
 		return ", graph push off: no notification url"
 	default:

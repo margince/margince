@@ -316,12 +316,3 @@ func technicalActor(ctx context.Context) context.Context {
 func technicalBackfillActor(ctx context.Context) context.Context {
 	return principal.SystemActing(ctx, "system:technical-backfill")
 }
-
-// TechnicalEnrichmentConfig is the sweep's cadence.
-type TechnicalEnrichmentConfig struct {
-	// BackfillInterval is how often the pass looks for companies whose
-	// technical picture is missing or stale. It runs on start too, so wiring
-	// the lookup on a database that already holds its customers begins reading
-	// them at boot rather than at the first tick.
-	BackfillInterval time.Duration
-}
