@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { useState } from "react";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural } from "../i18n";
 
@@ -19,4 +20,15 @@ export function LeftBehindNotice({ count }: Readonly<{ count: number }>) {
       })}
     </p>
   );
+}
+
+// The count belongs to the record it was produced for: a panel that stays
+// mounted while the reader moves to another record shows none of it.
+export function useLeftBehind(kind: string, id: string) {
+  const record = `${kind}:${id}`;
+  const [held, setHeld] = useState({ record, count: 0 });
+  return {
+    count: held.record === record ? held.count : 0,
+    report: (count: number) => setHeld({ record, count }),
+  };
 }

@@ -31,7 +31,7 @@ import {
 import { HistoryEdgeDetail } from "./historyedge";
 import { HistoryFieldDiff } from "./historyfielddiff";
 import { historyFieldLabel } from "./historyfieldlabels";
-import { LeftBehindNotice } from "./historyleftbehind";
+import { LeftBehindNotice, useLeftBehind } from "./historyleftbehind";
 import { historyRows } from "./historyreversal";
 import { actorName, ReversalPairRow } from "./historyreversalrow";
 import { undoRefusalKey, VERSION_SKEW_CODE } from "./historyundo";
@@ -413,8 +413,8 @@ export function RecordHistory({
   const { locale } = useLocale();
   const query = useRecordHistory(kind, id);
   const entries = query.data?.pages.flatMap((page) => page.data) ?? [];
-  const [leftBehind, setLeftBehind] = useState(0);
-  const panelRestore = restore && { ...restore, onLeftBehind: setLeftBehind };
+  const left = useLeftBehind(kind, id);
+  const panelRestore = restore && { ...restore, onLeftBehind: left.report };
 
   // Honest state matrix (§3a): the pending/error halves are QueryStates'
   // (shared with FieldHistoryTimeline and QueryGate); empty vs. the list is
@@ -486,7 +486,7 @@ export function RecordHistory({
 
   return (
     <Card className="history-card">
-      <LeftBehindNotice count={leftBehind} />
+      <LeftBehindNotice count={left.count} />
       <QueryStates query={query} pendingLabel={t("tab.timeline")}>
         {body}
       </QueryStates>
