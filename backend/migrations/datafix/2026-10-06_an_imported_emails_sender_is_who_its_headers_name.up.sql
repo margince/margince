@@ -2,15 +2,20 @@ SET LOCAL lock_timeout = '3s';
 -- The hand-logging writer used to record EVERY linked contact of a logged
 -- email as its sender, whatever From/To/Cc the caller stated, so an email an
 -- importer mirrored carries a `from` participant row per linked contact. The
--- writer is fixed; this corrects the rows already written: each linked
--- contact takes the role its address appears on in the stated headers, and a
--- party described twice — once by contact or seat, once by bare address —
--- becomes one row.
+-- writer is fixed; this corrects the ROLES of the rows already written: each
+-- linked contact takes the role its address appears on in the stated headers.
+-- Nothing is deleted and no address moves between rows — the fixed writer
+-- keeps a contact row and the bare header rows side by side, and so does the
+-- repair. A row whose role is already the header's is left exactly as it is,
+-- which is what makes mail the fixed writer logged a no-op here.
 --
 -- Scope: email activities that state their headers (at least one
 -- address-bearing from/to/cc row) AND carry at least one contact-only row,
 -- which is the shape only the logged writer produces. An email without stated
--- headers keeps the old behaviour, exactly as the fixed writer does.
+-- headers keeps the old behaviour, exactly as the fixed writer does. An
+-- activity where a stated address ever belonged to more than one contact is
+-- left alone entirely: the address may have changed hands since capture, and
+-- today's owner is not evidence about who sent mail then.
 
 CREATE TEMP TABLE damaged_email ON COMMIT DROP AS
 SELECT a.id, a.direction
@@ -21,7 +26,13 @@ SELECT a.id, a.direction
                   AND h.address IS NOT NULL AND h.address <> '')
    AND EXISTS (SELECT 1 FROM activity_participant p
                 WHERE p.activity_id = a.id AND p.role IN ('from', 'to', 'cc')
-                  AND p.contact_id IS NOT NULL AND p.address IS NULL AND p.user_id IS NULL);
+                  AND p.contact_id IS NOT NULL AND p.address IS NULL AND p.user_id IS NULL)
+   AND NOT EXISTS (
+         SELECT 1 FROM activity_participant h
+          WHERE h.activity_id = a.id AND h.role IN ('from', 'to', 'cc')
+            AND h.address IS NOT NULL
+            AND (SELECT count(DISTINCT e.contact_id) FROM contact_email e
+                  WHERE lower(e.email) = lower(h.address)) > 1);
 
 -- What the rows said before, for the audit entry at the end.
 CREATE TEMP TABLE before_rows ON COMMIT DROP AS
@@ -51,7 +62,9 @@ SELECT d.id AS activity_id, p.id AS row_id, p.role AS old_role, p.contact_id,
  WHERE p.contact_id IS NOT NULL AND p.address IS NULL AND p.user_id IS NULL
    AND p.role IN ('from', 'to', 'cc');
 
--- A row whose header role an identical row already holds is the duplicate.
+-- A row whose header role an identical row already holds is the duplicate the
+-- pre-fix writer minted twice; the uniqueness index refuses the move, so it
+-- goes instead.
 WITH gone AS (
     DELETE FROM activity_participant p
      USING header_role hr
@@ -72,72 +85,6 @@ WITH moved AS (
                           AND t.contact_id = hr.contact_id AND t.address IS NULL AND t.user_id IS NULL)
     RETURNING p.activity_id
 ) INSERT INTO touched SELECT DISTINCT activity_id FROM moved;
-
--- A contact row keeps the stated address it stood beside, the way a promoted
--- capture row carries one.
-WITH filled AS (
-    UPDATE activity_participant k
-       SET address = lower(b.address)
-      FROM damaged_email d, activity_participant b, contact_email e
-     WHERE k.activity_id = d.id AND b.activity_id = d.id
-       AND k.contact_id IS NOT NULL AND k.user_id IS NULL AND k.address IS NULL
-       AND b.user_id IS NULL AND b.contact_id IS NULL AND b.channel_user_id IS NULL
-       AND b.address IS NOT NULL AND b.role = k.role
-       AND e.contact_id = k.contact_id AND e.archived_at IS NULL
-       AND lower(e.email) = lower(b.address)
-       AND NOT EXISTS (SELECT 1 FROM activity_participant x
-                        WHERE x.activity_id = k.activity_id AND x.role = k.role
-                          AND x.contact_id = k.contact_id AND x.address = lower(b.address))
-    RETURNING k.activity_id
-) INSERT INTO touched SELECT DISTINCT activity_id FROM filled;
-
--- A contact-only row whose contact already has an address-bearing row on the
--- same header is the same party twice.
-WITH gone AS (
-    DELETE FROM activity_participant p
-     USING damaged_email d
-     WHERE p.activity_id = d.id
-       AND p.contact_id IS NOT NULL AND p.address IS NULL AND p.user_id IS NULL
-       AND EXISTS (SELECT 1 FROM activity_participant k
-                    WHERE k.activity_id = d.id AND k.role = p.role
-                      AND k.contact_id = p.contact_id AND k.address IS NOT NULL)
-    RETURNING p.activity_id
-) INSERT INTO touched SELECT DISTINCT activity_id FROM gone;
-
--- A bare address row whose party already sits on the same header as a contact
--- is the same party twice.
-WITH gone AS (
-    DELETE FROM activity_participant b
-     USING damaged_email d
-     WHERE b.activity_id = d.id
-       AND b.user_id IS NULL AND b.contact_id IS NULL AND b.channel_user_id IS NULL
-       AND b.address IS NOT NULL
-       AND EXISTS (SELECT 1 FROM activity_participant k
-                    WHERE k.activity_id = d.id AND k.role = b.role AND k.id <> b.id
-                      AND k.contact_id IS NOT NULL
-                      AND (lower(k.address) = lower(b.address)
-                           OR EXISTS (SELECT 1 FROM contact_email e
-                                       WHERE e.contact_id = k.contact_id AND e.archived_at IS NULL
-                                         AND lower(e.email) = lower(b.address))))
-    RETURNING b.activity_id
-) INSERT INTO touched SELECT DISTINCT activity_id FROM gone;
-
--- A bare address row naming a seat that already sits on the same header as a
--- user row is the same human twice.
-WITH gone AS (
-    DELETE FROM activity_participant b
-     USING damaged_email d, activity_participant k
-     WHERE b.activity_id = d.id
-       AND b.user_id IS NULL AND b.contact_id IS NULL AND b.channel_user_id IS NULL
-       AND b.address IS NOT NULL
-       AND k.activity_id = d.id AND k.role = b.role AND k.user_id IS NOT NULL
-       AND (EXISTS (SELECT 1 FROM app_user u
-                     WHERE u.id = k.user_id AND lower(u.email) = lower(b.address))
-            OR EXISTS (SELECT 1 FROM capture_owner_identity oi
-                        WHERE oi.user_id = k.user_id AND oi.kind = 'address'
-                          AND oi.value = lower(b.address)))
-    RETURNING b.activity_id
-) INSERT INTO touched SELECT DISTINCT activity_id FROM gone;
 
 INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id, before, after)
 SELECT 'system', 'migration', 'update', 'activity', t.activity_id,

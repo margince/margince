@@ -7,6 +7,7 @@ package migrations_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -29,16 +30,13 @@ SELECT id, $2, 'gmail', 'connector:gmail' FROM c RETURNING contact_id`, name, em
 	return id
 }
 
-// importedEmail seeds an inbound email the way the pre-fix logged writer and a
-// mail capture together left one: every linked contact as a `from` row, the
-// stated headers as bare address rows, and the mailbox owner as a user row.
-func importedEmail(ctx context.Context, t *testing.T, conn *pgx.Conn, seat, sourceID string) string {
+func importedActivity(ctx context.Context, t *testing.T, conn *pgx.Conn, seat, kind, sourceID string) string {
 	t.Helper()
 	var id string
 	if err := conn.QueryRow(ctx, `
 		INSERT INTO activity (kind, subject, direction, occurred_at, source_system, source_id, source, captured_by)
-		VALUES ('email', 'hi', 'inbound', now(), 'mirror:importfix', $2, 'importfix:seed',
-		        'connector:gmail:' || $1) RETURNING id`, seat, sourceID).Scan(&id); err != nil {
+		VALUES ($1, 'hi', 'inbound', now(), 'mirror:importfix', $2, 'importfix:seed',
+		        'connector:gmail:' || $3) RETURNING id`, kind, sourceID, seat).Scan(&id); err != nil {
 		t.Fatal(err)
 	}
 	return id
@@ -53,6 +51,53 @@ func participant(ctx context.Context, t *testing.T, conn *pgx.Conn, activity, ro
 	}
 }
 
+type participantRow struct {
+	role, contact, user, address string
+}
+
+func readParticipants(ctx context.Context, t *testing.T, conn *pgx.Conn, activity string) []participantRow {
+	t.Helper()
+	rows, err := conn.Query(ctx, `
+		SELECT role, coalesce(contact_id::text, ''), coalesce(user_id::text, ''), coalesce(address, '')
+		  FROM activity_participant WHERE activity_id = $1
+		 ORDER BY role, contact_id::text, user_id::text, address`, activity)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	var out []participantRow
+	for rows.Next() {
+		var r participantRow
+		if err := rows.Scan(&r.role, &r.contact, &r.user, &r.address); err != nil {
+			t.Fatal(err)
+		}
+		out = append(out, r)
+	}
+	return out
+}
+
+func assertParticipants(t *testing.T, name string, got, want []participantRow) {
+	t.Helper()
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("%s: participant rows\n got %v\nwant %v", name, got, want)
+	}
+}
+
+func auditCount(ctx context.Context, t *testing.T, conn *pgx.Conn, activity string) int {
+	t.Helper()
+	var n int
+	if err := conn.QueryRow(ctx, `
+		SELECT count(*) FROM audit_log WHERE entity_type = 'activity' AND entity_id = $1`,
+		activity).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	return n
+}
+
+// The pre-fix writer's damage: every linked contact a sender. The repair
+// moves each contact to the role its address holds in the stated headers and
+// deletes or moves NOTHING else — the bare header rows and the seat row are
+// the fixed writer's own shape and stay exactly as written.
 func TestAnImportedEmailsSenderIsWhoItsHeadersName(t *testing.T) {
 	dsn, _ := dsns(t)
 	conn := connect(t, dsn)
@@ -69,90 +114,102 @@ func TestAnImportedEmailsSenderIsWhoItsHeadersName(t *testing.T) {
 	unnamed := namedContact(ctx, t, conn, "Unnamed", "unnamed@customer.test")
 
 	s := func(v string) *string { return &v }
-	damaged := importedEmail(ctx, t, conn, seat, "damaged")
-	// The pre-fix writer's rows: every linked contact a sender.
-	participant(ctx, t, conn, damaged, "from", nil, &sender, nil)
-	participant(ctx, t, conn, damaged, "from", nil, &colleague, nil)
-	participant(ctx, t, conn, damaged, "from", nil, &unnamed, nil)
-	// The stated headers, as the importer supplied them.
+	damaged := importedActivity(ctx, t, conn, seat, "email", "damaged")
+	for _, contact := range []string{sender, colleague, unnamed} {
+		participant(ctx, t, conn, damaged, "from", nil, &contact, nil)
+	}
 	participant(ctx, t, conn, damaged, "from", nil, nil, s("sender@customer.test"))
 	participant(ctx, t, conn, damaged, "to", nil, nil, s("rep@importfix.test"))
 	participant(ctx, t, conn, damaged, "to", nil, nil, s("colleague@customer.test"))
-	// The mailbox owner's own capture of it.
+	participant(ctx, t, conn, damaged, "bcc", nil, nil, s("quiet@customer.test"))
 	participant(ctx, t, conn, damaged, "to", &seat, nil, nil)
+
+	execFile(ctx, t, conn, importedSenderRolesUp)
+	execFile(ctx, t, conn, importedSenderRolesUp)
+
+	assertParticipants(t, "repaired", readParticipants(ctx, t, conn, damaged), []participantRow{
+		{"bcc", "", "", "quiet@customer.test"},
+		// The contact the headers do not name keeps the receiving side of an
+		// inbound message without becoming the sender the headers deny.
+		{"cc", unnamed, "", ""},
+		{"from", sender, "", ""},
+		{"from", "", "", "sender@customer.test"},
+		{"to", colleague, "", ""},
+		{"to", "", seat, ""},
+		{"to", "", "", "colleague@customer.test"},
+		{"to", "", "", "rep@importfix.test"},
+	})
+	if n := auditCount(ctx, t, conn, damaged); n != 1 {
+		t.Errorf("audit rows for the repaired email: got %d, want 1 (two runs, one change)", n)
+	}
+}
+
+// What the repair must not touch, each control one rule.
+func TestTheSenderRoleFixLeavesTheRestAlone(t *testing.T) {
+	dsn, _ := dsns(t)
+	conn := connect(t, dsn)
+	headSchema(t, conn)
+	ctx := context.Background()
+
+	var seat string
+	if err := conn.QueryRow(ctx,
+		`INSERT INTO app_user (email, display_name) VALUES ('rep@importcontrol.test', 'Rep') RETURNING id`).Scan(&seat); err != nil {
+		t.Fatal(err)
+	}
+	s := func(v string) *string { return &v }
+	seeded := map[string][]participantRow{}
+	keep := func(name, activity string) {
+		seeded[name] = readParticipants(ctx, t, conn, activity)
+	}
+	activities := map[string]string{}
 
 	// An email stating no headers keeps the old behaviour, as the fixed
 	// writer does.
-	headerless := importedEmail(ctx, t, conn, seat, "headerless")
-	participant(ctx, t, conn, headerless, "from", nil, &sender, nil)
-	participant(ctx, t, conn, headerless, "from", nil, &colleague, nil)
+	bare := namedContact(ctx, t, conn, "Bare", "bare@control.test")
+	headerless := importedActivity(ctx, t, conn, seat, "email", "headerless")
+	participant(ctx, t, conn, headerless, "from", nil, &bare, nil)
+	activities["headerless"] = headerless
 
-	execFile(ctx, t, conn, importedSenderRolesUp)
-	execFile(ctx, t, conn, importedSenderRolesUp)
+	// Mail the FIXED writer logged: the contact already sits on its header
+	// role beside the bare rows. In scope, and a no-op.
+	fixed := namedContact(ctx, t, conn, "Fixed", "fixed@control.test")
+	correct := importedActivity(ctx, t, conn, seat, "email", "correct")
+	participant(ctx, t, conn, correct, "from", nil, &fixed, nil)
+	participant(ctx, t, conn, correct, "from", nil, nil, s("fixed@control.test"))
+	participant(ctx, t, conn, correct, "to", nil, nil, s("rep@importcontrol.test"))
+	activities["the fixed writer's mail"] = correct
 
-	type row struct {
-		role, contact, user, address string
-	}
-	read := func(activity string) []row {
-		rows, err := conn.Query(ctx, `
-			SELECT role, coalesce(contact_id::text, ''), coalesce(user_id::text, ''), coalesce(address, '')
-			  FROM activity_participant WHERE activity_id = $1
-			 ORDER BY role, contact_id::text, user_id::text, address`, activity)
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer rows.Close()
-		var out []row
-		for rows.Next() {
-			var r row
-			if err := rows.Scan(&r.role, &r.contact, &r.user, &r.address); err != nil {
-				t.Fatal(err)
-			}
-			out = append(out, r)
-		}
-		return out
-	}
-
-	want := []row{
-		// The contact the headers do not name keeps the receiving side of an
-		// inbound message without becoming a recipient the headers deny.
-		{"cc", unnamed, "", ""},
-		{"from", sender, "", "sender@customer.test"},
-		{"to", colleague, "", "colleague@customer.test"},
-		{"to", "", seat, ""},
-	}
-	got := read(damaged)
-	if len(got) != len(want) {
-		t.Fatalf("repaired rows: got %v, want %v", got, want)
-	}
-	for i := range want {
-		if got[i] != want[i] {
-			t.Errorf("repaired row %d: got %v, want %v", i, got[i], want[i])
-		}
-	}
-
-	untouched := read(headerless)
-	if len(untouched) != 2 || untouched[0].role != "from" || untouched[1].role != "from" {
-		t.Errorf("an email without stated headers was rewritten: %v", untouched)
-	}
-
-	var audited int
-	if err := conn.QueryRow(ctx, `
-		SELECT count(*) FROM audit_log
-		 WHERE entity_type = 'activity' AND entity_id = $1
-		   AND after->>'datafix' = '2026-10-06_an_imported_emails_sender_is_who_its_headers_name'`,
-		damaged).Scan(&audited); err != nil {
+	// An address that ever belonged to two contacts proves nothing about who
+	// sent mail then, so the whole activity waits for a human.
+	first := namedContact(ctx, t, conn, "First Holder", "moved@control.test")
+	if _, err := conn.Exec(ctx,
+		`UPDATE contact_email SET archived_at = now() WHERE contact_id = $1`, first); err != nil {
 		t.Fatal(err)
 	}
-	if audited != 1 {
-		t.Errorf("audit rows for the repaired email: got %d, want 1 (two runs, one change)", audited)
+	second := namedContact(ctx, t, conn, "Second Holder", "moved@control.test")
+	moved := importedActivity(ctx, t, conn, seat, "email", "moved")
+	participant(ctx, t, conn, moved, "from", nil, &first, nil)
+	participant(ctx, t, conn, moved, "from", nil, &second, nil)
+	participant(ctx, t, conn, moved, "from", nil, nil, s("moved@control.test"))
+	activities["a moved address"] = moved
+
+	// A call is not this fix's kind, however its rows look.
+	caller := namedContact(ctx, t, conn, "Caller", "caller@control.test")
+	call := importedActivity(ctx, t, conn, seat, "call", "call")
+	participant(ctx, t, conn, call, "from", nil, &caller, nil)
+	participant(ctx, t, conn, call, "to", nil, nil, s("caller@control.test"))
+	activities["a call"] = call
+
+	for name, activity := range activities {
+		keep(name, activity)
 	}
-	if err := conn.QueryRow(ctx, `
-		SELECT count(*) FROM audit_log WHERE entity_type = 'activity' AND entity_id = $1`,
-		headerless).Scan(&audited); err != nil {
-		t.Fatal(err)
-	}
-	if audited != 0 {
-		t.Errorf("the untouched email gained %d audit rows", audited)
+
+	execFile(ctx, t, conn, importedSenderRolesUp)
+
+	for name, activity := range activities {
+		assertParticipants(t, name, readParticipants(ctx, t, conn, activity), seeded[name])
+		if n := auditCount(ctx, t, conn, activity); n != 0 {
+			t.Errorf("%s gained %d audit rows", name, n)
+		}
 	}
 }
