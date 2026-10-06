@@ -16,17 +16,36 @@ package compose
 import (
 	"io"
 	"log/slog"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// briefUpsertSQL mirrors contactbrief.Service.save. A mirror is a liability, so
+// TestTheBriefCacheTestsMirrorTheWriterTheyStandIn holds the two together.
+const briefUpsertSQL = `
+	WITH live AS (
+	    SELECT id FROM contact WHERE id = $2 AND archived_at IS NULL FOR SHARE
+	)
+	INSERT INTO contact_brief (user_id, contact_id, fingerprint,
+	                          generated_at, generated_by, payload)
+	SELECT $1, live.id, $3, $4, $5, $6 FROM live
+	ON CONFLICT (user_id, contact_id) DO UPDATE
+	SET fingerprint = EXCLUDED.fingerprint,
+	    generated_at = EXCLUDED.generated_at,
+	    generated_by = EXCLUDED.generated_by,
+	    payload = EXCLUDED.payload`
+
 func TestErasureDestroysTheCachedBriefEveryReaderHeld(t *testing.T) {
 	e := integration.Setup(t)
 	subject := e.SeedContact(t, "Briefed Subject", &e.AdminUser)
+	bystander := e.SeedContact(t, "Unrelated Contact", &e.AdminUser)
 	cacheABrief(t, e, subject)
+	cacheABrief(t, e, bystander)
 
 	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), subject, "subject request"); err != nil {
 		t.Fatalf("EraseContact → %v", err)
@@ -35,12 +54,19 @@ func TestErasureDestroysTheCachedBriefEveryReaderHeld(t *testing.T) {
 		t.Errorf("%d cached brief(s) survive the erasure, each holding what the model was told "+
 			"about this subject", n)
 	}
+	if n := cachedBriefs(t, e, bystander); n != 1 {
+		t.Errorf("the bystander's cached brief count is %d, want 1 — the purge is keyed on one "+
+			"contact, and a statement that wiped the installation's caches would read as a pass "+
+			"on the assertion above", n)
+	}
 }
 
 func TestAnonymisingAContactDestroysTheCachedBriefToo(t *testing.T) {
 	e := integration.Setup(t)
 	subject := e.SeedContact(t, "Briefed Subject", &e.AdminUser)
+	bystander := e.SeedContact(t, "Unrelated Contact", &e.AdminUser)
 	cacheABrief(t, e, subject)
+	cacheABrief(t, e, bystander)
 
 	service := NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	if _, err := service.AnonymiseContacts(e.Admin(), []ids.UUID{subject}, privacy.PurgeOwnerRule); err != nil {
@@ -48,6 +74,9 @@ func TestAnonymisingAContactDestroysTheCachedBriefToo(t *testing.T) {
 	}
 	if n := cachedBriefs(t, e, subject); n != 0 {
 		t.Errorf("%d cached brief(s) survive the anonymise, still answering with the name it cleared", n)
+	}
+	if n := cachedBriefs(t, e, bystander); n != 1 {
+		t.Errorf("the bystander's cached brief count is %d, want 1", n)
 	}
 }
 
@@ -81,4 +110,82 @@ func cachedBriefs(t *testing.T, e *integration.Env, subject ids.UUID) int {
 		t.Fatalf("counting the subject's cached briefs: %v", err)
 	}
 	return n
+}
+
+// A brief composed before an erasure must not land after it. Generation reads
+// the record, waits on a model and then saves, so the window is wide enough for
+// the whole erasure to run inside it.
+//
+// Both halves of the guard are asserted, because the cheap one looks sufficient
+// and is not: the archived_at test alone reads the pre-erasure row under MVCC
+// and writes anyway, which is why the statement takes the row.
+func TestABriefComposedBeforeAnErasureCannotLandAfterIt(t *testing.T) {
+	e := integration.Setup(t)
+	subject := e.SeedContact(t, "Briefed Subject", &e.AdminUser)
+
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), subject, "subject request"); err != nil {
+		t.Fatalf("EraseContact → %v", err)
+	}
+	if err := saveABrief(e, subject); err != nil {
+		t.Fatalf("the late save errored rather than writing nothing: %v", err)
+	}
+	if n := cachedBriefs(t, e, subject); n != 0 {
+		t.Errorf("a brief landed for an erased subject: %d row(s), holding the prose the erasure "+
+			"destroyed", n)
+	}
+
+	// And the interleave the archived_at test cannot see: the erasure is in
+	// flight and uncommitted, so the row still reads as live. The save must WAIT
+	// on it rather than write, which a lock timeout proves without depending on
+	// how long anything takes to run.
+	live := e.SeedContact(t, "Still Live", &e.AdminUser)
+	erasing, err := e.Pool.Begin(e.Admin())
+	if err != nil {
+		t.Fatalf("opening the erasing transaction: %v", err)
+	}
+	defer func() {
+		if err := erasing.Rollback(e.Admin()); err != nil {
+			t.Errorf("rolling back the erasing transaction: %v", err)
+		}
+	}()
+	if _, err := erasing.Exec(e.Admin(),
+		`UPDATE contact SET archived_at = now() WHERE id = $1`, live); err != nil {
+		t.Fatalf("archiving the contact in the open transaction: %v", err)
+	}
+	if err := saveABriefWaitingAtMost(t, e, live, "250ms"); err == nil {
+		t.Error("the save completed while an erasure held the contact row, so it never took the " +
+			"row and an in-flight erasure cannot stop it")
+	} else if !strings.Contains(err.Error(), "lock timeout") && !strings.Contains(err.Error(), "55P03") {
+		t.Errorf("the save failed for a reason other than waiting on the row: %v", err)
+	}
+}
+
+// saveABrief runs the cache write the brief service runs, as its own statement
+// rather than through Service.save: reaching that unexported path needs an
+// assembled page and a model lane, and what is under test is the statement.
+func saveABrief(e *integration.Env, contact ids.UUID) error {
+	_, err := e.Pool.Exec(e.Admin(), briefUpsertSQL,
+		e.AdminUser, contact, "fp-late", time.Now(), "deterministic",
+		`{"headline":"composed before the erasure"}`)
+	return err
+}
+
+func saveABriefWaitingAtMost(t *testing.T, e *integration.Env, contact ids.UUID, wait string) error {
+	t.Helper()
+	tx, err := e.Pool.Begin(e.Admin())
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := tx.Rollback(e.Admin()); err != nil {
+			t.Errorf("rolling back the racing save: %v", err)
+		}
+	}()
+	if _, err := tx.Exec(e.Admin(), `SET LOCAL lock_timeout = '`+wait+`'`); err != nil {
+		return err
+	}
+	_, err = tx.Exec(e.Admin(), briefUpsertSQL,
+		e.AdminUser, contact, "fp-racing", time.Now(), "deterministic",
+		`{"headline":"composed while the erasure ran"}`)
+	return err
 }
