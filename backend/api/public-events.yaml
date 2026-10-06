@@ -127,6 +127,7 @@ components:
         - email_signature.changed
         - user_locale.changed
         - user_display_name.changed
+        - user_greeting_name.changed
         - linkedin_account.changed
         - linkedin_network.imported
         - linkedin_match.decided
@@ -1942,7 +1943,7 @@ components:
         fields (subject, body, occurred_at, due_at, remind_at,
         assignee_id, is_done, meeting_status) each carried only when this update touched
         them, plus RelinkActivity's relinked target and SetActivityAudience's
-        audience, plus explicit request-reminder restoration's restored flag and
+        audience, plus the undo of a project filing, explicit request-reminder restoration's restored flag and
         capture's own-sent-mail direction correction — a fixed, KNOWN key
         set (unlike contact/company/deal/lead.updated's genuinely
         open patch), so it is typed rather than an open map.
@@ -2005,6 +2006,12 @@ components:
             Set when capture learned that a message stored as received was the
             seat's own sent mail (absent otherwise). The counterparty changes
             with it; a subscriber that must know re-reads the row.
+        project_filing_undone:
+          type: boolean
+          description: >-
+            True when a member undid the activity's filing under a project: the project link and
+            the retention class that filing gave it are gone (absent otherwise). Who decided and
+            why is audit-log material, not published.
         outbound_attested:
           type: boolean
           description: >-
@@ -3004,6 +3011,28 @@ components:
             The name now in force, trimmed. Never empty: a name of only
             whitespace is refused, and a save that moved nothing writes nothing
             and publishes nothing.
+      additionalProperties: false
+
+    PublicEventUserGreetingNameChanged:
+      type: object
+      x-event-type: user_greeting_name.changed
+      x-entity-type: user
+      x-version: 1
+      description: >-
+        Payload for user_greeting_name.changed — the name a member's colleagues
+        greet them by changed (identity/greetingname.go). The member saved it
+        themselves, or their first sign-in through a login provider filled an
+        empty one from the provider's given name. A subscriber that drafts a
+        greeting to this member reads it, because the first word of the display
+        name is not always the name somebody is greeted by.
+      required:
+        - greeting_name
+      properties:
+        greeting_name:
+          type: [string, 'null']
+          description: >-
+            The greeting name now in force, trimmed. Null when it was cleared,
+            and greetings fall back to the first word of the display name.
       additionalProperties: false
 
     PublicEventLinkedinAccountChanged:

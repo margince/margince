@@ -26,6 +26,7 @@ import (
 )
 
 type openAICompatClient struct {
+	model.NoHealth
 	http         *http.Client
 	baseURL      string
 	apiKey       string // "" ⇒ send no Authorization header (local vLLM)

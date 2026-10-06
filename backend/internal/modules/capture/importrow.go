@@ -264,7 +264,9 @@ func seatDeliveredTx(
 // stamps a footer per recipient, a second seat whose transport maps the body
 // differently. Refusing is the safe direction for all of them — the seat still
 // holds the message in its own mailbox, and the capture reports it skipped
-// rather than claiming a grant it cannot prove.
+// rather than claiming a grant it cannot prove. A file kept from private mail
+// by name only has no checksum, so a message carrying one is never proven
+// either: its file names are private too.
 func replayClaimIsProvenTx(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, fields ActivityFields, parts []connector.Part,
 ) (bool, error) {

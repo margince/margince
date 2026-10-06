@@ -23,6 +23,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -57,6 +58,7 @@ func (x *SignalExtractor) convertLegacyCommitments(ctx context.Context) (int, er
 		return 0, fmt.Errorf("signal extract: reading the commitment signals owed a reading: %w", err)
 	}
 	settled := 0
+	var refused error
 	for _, legacy := range owed {
 		if stop, cancelled := outOfTime(ctx); stop {
 			if cancelled {
@@ -65,11 +67,27 @@ func (x *SignalExtractor) convertLegacyCommitments(ctx context.Context) (int, er
 			break
 		}
 		if err := x.convertLegacyCommitment(ctx, legacy); err != nil {
-			return settled, err
+			// A deferral is the WORKSPACE's answer: every signal behind this one
+			// meets the same block, so asking again costs the pass and finds nothing.
+			//
+			// Joined with whatever an earlier signal refused, not substituted for it:
+			// a per-signal failure that only ever shows up on passes that then defer
+			// is one nobody is told about. IsDeferral reads through the join, so the
+			// caller still sees this for what it is.
+			if ai.IsDeferral(err) {
+				return settled, errors.Join(refused, err)
+			}
+			// Anything else costs only its own signal. These are read oldest first,
+			// so ending the loop leaves the backlog behind one bad record for as
+			// long as it is broken; the fault is reported after the rest have run.
+			if refused == nil {
+				refused = err
+			}
+			continue
 		}
 		settled++
 	}
-	return settled, nil
+	return settled, refused
 }
 
 // convertLegacyCommitment reads one signal's message through the rule and

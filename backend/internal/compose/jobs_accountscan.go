@@ -8,7 +8,6 @@ package compose
 
 import (
 	"context"
-	"errors"
 	"log/slog"
 	"time"
 
@@ -106,8 +105,8 @@ func newAccountScanWorker(pool *pgxpool.Pool, brain completer, routingVersion fu
 	}
 }
 
-// Work reads the scan under the reader's own authority. A budget deferral
-// snoozes the job until the window the router named; any other outcome is
+// Work reads the scan under the reader's own authority. A deferral
+// snoozes the job until the moment the router named; any other outcome is
 // on the row, which the page and the rail read.
 func (w *accountScanWorker) Work(ctx context.Context, job *river.Job[AccountScanArgs]) error {
 	wsCtx, err := workspaceJobCtx(ctx, job.Args)
@@ -119,9 +118,9 @@ func (w *accountScanWorker) Work(ctx context.Context, job *river.Job[AccountScan
 		return jobs.FaultContext(ctx, err)
 	}
 	err = w.svc.Run(runCtx, job.Args.ScanID, ids.From[ids.CompanyKind](job.Args.CompanyID))
-	var deferral *ai.BudgetDeferralError
-	if !errors.As(err, &deferral) {
+	until, deferred := ai.DeferredUntil(err)
+	if !deferred {
 		return jobs.FaultContext(ctx, err)
 	}
-	return river.JobSnooze(max(time.Until(deferral.NextAttemptAt), 0))
+	return river.JobSnooze(max(time.Until(until), 0))
 }

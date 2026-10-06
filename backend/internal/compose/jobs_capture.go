@@ -167,12 +167,12 @@ func addCapturePipelineJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerC
 		// The capture list config is the SAME value the sink is composed from, so
 		// the tier ladder and the verdict lane read one operator allowlist.
 		engine: NewCounterpartyVerdictEngine(pool, cfg.VerdictBrain, cfg.CaptureConfig, log),
-		// The personal-mail purge, and only when an object store is bound. A
-		// nil store means no purger and the stage is skipped: destroying the
-		// rows that name an attachment while its bytes stay in a bucket would
-		// report mail as gone while it is not, which is the same reason the
-		// HTTP purge is built at the store and not at assembly.
-		purger: capturePurgerFor(pool, cfg.Blobstore, log, cfg.ControllerVault),
+		// The personal-mail purge and the private-thread strip, only when an
+		// object store is bound: a nil store skips both, since changing the rows
+		// that name an attachment while its bytes stay in a bucket would report
+		// files as gone while they are not.
+		purger:   capturePurgerFor(pool, cfg.Blobstore, log, cfg.ControllerVault),
+		stripper: privateThreadStripperFor(pool, cfg.Blobstore),
 		// The stall notice, which is the only thing that tells a seat their
 		// backlog stopped moving: an outage refunds the attempt rather than
 		// spending it, so nothing retires and nothing else surfaces it.

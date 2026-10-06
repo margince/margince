@@ -66,14 +66,10 @@ type workerConfig struct {
 	webhookKey           string
 	geocodeBaseURL       string
 	vatCheckBaseURL      string
-	vatCheckRequester    string
 	geocodeBackfill      time.Duration
 	certLogBaseURL       string
 	technicalBackfill    time.Duration
 	webhookRetryInterval time.Duration
-	deepReadMaxPages     int
-	deepReadMaxBytes     int
-	deepReadWall         time.Duration
 	// jobDrainWindow is how long a job already running at shutdown keeps its
 	// work context; see defaultJobDrainWindow for the budget it is part of.
 	jobDrainWindow time.Duration
@@ -98,20 +94,6 @@ type workerConfig struct {
 	unknownVars []string
 }
 
-// registerJobDrainFlag binds --job-drain-window, whose default an environment
-// variable may move.
-func registerJobDrainFlag(fs *flag.FlagSet, cfg *workerConfig) error {
-	drain, err := envDurationOr(jobDrainWindowEnv, defaultJobDrainWindow)
-	if err != nil {
-		return err
-	}
-	fs.DurationVar(&cfg.jobDrainWindow, "job-drain-window", drain,
-		"how long a job already running at shutdown is given to finish before its context is cancelled; "+
-			"shutdown then waits a further 5s for cancelled jobs to return, so the pod's termination grace "+
-			"period must cover the drain window plus that and a few seconds of teardown")
-	return nil
-}
-
 // workerFlagSet registers this role's flags and their environment bindings,
 // unparsed — the same registration that a boot reads and that describes this
 // role's configurable surface, so neither is a copy of the other.
@@ -133,17 +115,17 @@ func workerFlagSet() (*flag.FlagSet, *cliflags.Env, *workerConfig, error) {
 		"Event-bus credential, where the instance requires one")
 	env.String(fs, &cfg.routingPath, "ai-routing", "MARGINCE_AI_ROUTING", "", "IGNORED (kept so an existing command line still parses): the model binding is a stored setting, declared for a fresh install under `seeds.ai_routing` in margince.yaml and changed on a running one through Settings -> AI or PUT /v1/ai/routing. Passing it logs a warning naming which of those applies and does nothing else. Nothing reads a routing file any more: the debug lanes take --model or --ai-fake, and the certification runner is told its model outright")
 	fs.BoolVar(&cfg.fakeBrain, "ai-fake", false, "run the Surface-B runner on the offline fake model (dev/test only)")
-	fs.DurationVar(&cfg.runnerInterval, "runner-interval", 30*time.Second, "how often the Surface-B scheduler fans one seed-and-execute pass out per live workspace")
-	fs.DurationVar(&cfg.retentionInterval, "retention-interval", 24*time.Hour, "retention evaluator pass interval")
-	fs.DurationVar(&cfg.closeDateInterval, "close-date-interval", 24*time.Hour, "close-date hygiene sweep interval (INV-CLOSE-PAST)")
-	fs.DurationVar(&cfg.reconcileInterval, "reconcile-interval", 24*time.Hour, "overnight follow-up reconciliation pass interval (features/07 §8a)")
-	fs.DurationVar(&cfg.timeScanInterval, "time-scan-interval", time.Hour, "clock-trigger scan interval (no_activity_reminder et al., Task 14)")
-	fs.DurationVar(&cfg.geocodeBackfill, "geocode-backfill-interval", time.Hour,
+	env.Duration(fs, &cfg.runnerInterval, "runner-interval", "MARGINCE_RUNNER_INTERVAL", 30*time.Second, "how often the Surface-B scheduler fans one seed-and-execute pass out per live workspace")
+	env.Duration(fs, &cfg.retentionInterval, "retention-interval", "MARGINCE_RETENTION_INTERVAL", 24*time.Hour, "retention evaluator pass interval")
+	env.Duration(fs, &cfg.closeDateInterval, "close-date-interval", "MARGINCE_CLOSE_DATE_INTERVAL", 24*time.Hour, "close-date hygiene sweep interval (INV-CLOSE-PAST)")
+	env.Duration(fs, &cfg.reconcileInterval, "reconcile-interval", "MARGINCE_RECONCILE_INTERVAL", 24*time.Hour, "overnight follow-up reconciliation pass interval")
+	env.Duration(fs, &cfg.timeScanInterval, "time-scan-interval", "MARGINCE_TIME_SCAN_INTERVAL", time.Hour, "clock-trigger scan interval (no_activity_reminder and the other time triggers)")
+	env.Duration(fs, &cfg.geocodeBackfill, "geocode-backfill-interval", "MARGINCE_GEOCODE_BACKFILL_INTERVAL", time.Hour,
 		"how often to look for companies whose address predates this installation's geocoder — a "+
 			"seeded or imported database, or one configured after the fact. Nothing writes those "+
 			"addresses again, so without this pass they are never located. Runs on start; 0 turns "+
 			"the sweep off and leaves geocoding-on-write alone.")
-	fs.DurationVar(&cfg.technicalBackfill, "technical-backfill-interval", 6*time.Hour,
+	env.Duration(fs, &cfg.technicalBackfill, "technical-backfill-interval", "MARGINCE_TECHNICAL_BACKFILL_INTERVAL", 6*time.Hour,
 		"how often to look for companies whose technical profile is missing or stale. Unlike "+
 			"geocoding there is no write to trigger on — a company's mail provider changes at the "+
 			"COMPANY — so this pass is the only thing that observes a move. Runs on start; 0 turns "+
@@ -153,31 +135,29 @@ func workerFlagSet() (*flag.FlagSet, *cliflags.Env, *workerConfig, error) {
 	env.String(fs, &cfg.graphClientID, "graph-client-id", "MARGINCE_GRAPH_CLIENT_ID", "", "Microsoft (Entra) application id for the Outlook/M365 capture connector; enables its background sync poll")
 	env.String(fs, &cfg.graphClientSecret, "graph-client-secret", "MARGINCE_GRAPH_CLIENT_SECRET", "", "Microsoft client secret for the Outlook/M365 capture connector")
 	env.String(fs, &cfg.graphTenant, "graph-tenant", "MARGINCE_GRAPH_TENANT", "", "Microsoft identity tenant for token refresh (default: common — any company)")
-	fs.DurationVar(&cfg.gmailSyncInterval, "gmail-sync-interval", 2*time.Minute, "Gmail incremental-sync poll interval")
+	env.Duration(fs, &cfg.gmailSyncInterval, "gmail-sync-interval", "MARGINCE_GMAIL_SYNC_INTERVAL", 2*time.Minute, "Gmail incremental-sync poll interval")
 	env.String(fs, &cfg.gmailPubsubTopic, "gmail-pubsub-topic", "MARGINCE_GMAIL_PUBSUB_TOPIC", "", "Gmail Pub/Sub topic (projects/<p>/topics/<t>); enables the push-watch register+renew job. Empty leaves capture on the poll.")
-	fs.DurationVar(&cfg.gmailWatchInterval, "gmail-watch-interval", 6*time.Hour, "Gmail push-watch maintenance scan interval")
-	fs.DurationVar(&cfg.gmailWatchRenew, "gmail-watch-renew-within", 48*time.Hour, "renew a Gmail watch this far ahead of its 7-day expiry")
+	env.Duration(fs, &cfg.gmailWatchInterval, "gmail-watch-interval", "MARGINCE_GMAIL_WATCH_INTERVAL", 6*time.Hour, "Gmail push-watch maintenance scan interval")
+	env.Duration(fs, &cfg.gmailWatchRenew, "gmail-watch-renew-within", "MARGINCE_GMAIL_WATCH_RENEW_WITHIN", 48*time.Hour, "renew a Gmail watch this far ahead of its 7-day expiry")
 	env.String(fs, &cfg.graphNotifyURL, "graph-notification-url", "MARGINCE_GRAPH_NOTIFICATION_URL", "", "public URL Microsoft posts Graph change notifications to, operator token and all (https://<api>/webhooks/graph?token=...); enables the subscription register+renew job. Empty leaves Outlook capture on the poll.")
-	fs.DurationVar(&cfg.graphWatchInterval, "graph-watch-interval", 6*time.Hour, "Graph subscription maintenance scan interval")
-	fs.DurationVar(&cfg.graphWatchRenew, "graph-watch-renew-within", 24*time.Hour, "renew a Graph subscription this far ahead of its <3-day deadline")
-	if err := registerDeepReadFlags(fs, cfg); err != nil {
-		return nil, nil, nil, err
-	}
-	if err := registerJobDrainFlag(fs, cfg); err != nil {
-		return nil, nil, nil, err
-	}
+	env.Duration(fs, &cfg.graphWatchInterval, "graph-watch-interval", "MARGINCE_GRAPH_WATCH_INTERVAL", 6*time.Hour, "Graph subscription maintenance scan interval")
+	env.Duration(fs, &cfg.graphWatchRenew, "graph-watch-renew-within", "MARGINCE_GRAPH_WATCH_RENEW_WITHIN", 24*time.Hour, "renew a Graph subscription this far ahead of its <3-day deadline")
+	env.Duration(fs, &cfg.jobDrainWindow, "job-drain-window", jobDrainWindowEnv, defaultJobDrainWindow,
+		"how long a job already running at shutdown is given to finish before its context is cancelled; "+
+			"shutdown then waits a further 5s for cancelled jobs to return, so the pod's termination grace "+
+			"period must cover the drain window plus that and a few seconds of teardown")
 	// Outbound pacing. Zero on any of the three takes the compose default —
 	// a forgotten flag must degrade to the conservative rule, never to "no
 	// limit" or "defer forever".
-	fs.IntVar(&cfg.sendRateLimit, "send-rate-limit", 0, "outbound messages one mailbox may transmit per --send-rate-window; 0 takes the built-in default")
-	fs.DurationVar(&cfg.sendRateWindow, "send-rate-window", 0, "window the outbound per-mailbox rate limit is measured over; 0 takes the built-in default")
-	fs.DurationVar(&cfg.sendMaxAge, "send-max-age", 0, "how long a staged send may be deferred before it parks with a reason; 0 takes the built-in default")
+	env.Int(fs, &cfg.sendRateLimit, "send-rate-limit", "MARGINCE_SEND_RATE_LIMIT", 0, "outbound messages one mailbox may transmit per --send-rate-window; 0 takes the built-in default")
+	env.Duration(fs, &cfg.sendRateWindow, "send-rate-window", "MARGINCE_SEND_RATE_WINDOW", 0, "window the outbound per-mailbox rate limit is measured over; 0 takes the built-in default")
+	env.Duration(fs, &cfg.sendMaxAge, "send-max-age", "MARGINCE_SEND_MAX_AGE", 0, "how long a staged send may be deferred before it parks with a reason; 0 takes the built-in default")
 	env.String(fs, &cfg.webhookKey, "webhook-key", "MARGINCE_WEBHOOK_KEY", "", "base64 32-byte key sealing outbound-webhook signing secrets; enables the cg:webhooks delivery consumer + retry sweep. Empty leaves the delivery worker off.")
 	// A fleet fan-out — one job row per live workspace per tick — so the default
 	// is tens of seconds, not the few an in-process ticker could afford. Taken
 	// verbatim as the River schedule; compose clamps nothing
 	// (compose.WebhookRetryConfig.Interval).
-	fs.DurationVar(&cfg.webhookRetryInterval, "webhook-retry-interval", 30*time.Second, "how often the outbound-webhook retry dispatcher fans one due-retry pass out per live workspace")
+	env.Duration(fs, &cfg.webhookRetryInterval, "webhook-retry-interval", "MARGINCE_WEBHOOK_RETRY_INTERVAL", 30*time.Second, "how often the outbound-webhook retry dispatcher fans one due-retry pass out per live workspace")
 	// Off by default, and off means no listener at all rather than one bound
 	// somewhere harmless. Unlike the api's /metrics it carries no workspace id
 	// and no tenant data — but it is unauthenticated and discloses dependency
@@ -192,11 +172,6 @@ func workerFlagSet() (*flag.FlagSet, *cliflags.Env, *workerConfig, error) {
 		"VIES base URL; enables checking a company's stated VAT ID against the EU register. "+
 			"Empty leaves it off and a VAT number is stored as the page stated it, unverified. "+
 			"Use 'public' for the Commission's own service.")
-	env.String(fs, &cfg.vatCheckRequester, "vat-check-requester", "MARGINCE_VAT_CHECK_REQUESTER", "",
-		"This installation's OWN VAT ID (e.g. DE123456789). VIES issues a consultation number — "+
-			"the receipt a business shows to say it verified a counterpart — only for a check made "+
-			"under a requester's number. Without it the check still runs and still answers; it just "+
-			"comes back with no proof attached.")
 	env.String(fs, &cfg.certLogBaseURL, "certlog-base-url", "MARGINCE_CERTLOG_BASE_URL", "",
 		"certificate-transparency base URL; enables reading what a company publicly runs — its DNS "+
 			"records, its certificate history and one polite fetch of its own homepage. Empty "+
@@ -238,21 +213,14 @@ func parseWorkerFlags(args []string) (workerConfig, error) {
 	// rather than in each flag's default because `flag` echoes a non-empty default
 	// in its usage output, and these values are DSNs, signing keys, OAuth client
 	// secrets and bearer tokens — see internal/platform/cliflags.
-	env.Apply(fs, config.FromOS)
+	if err := env.Apply(fs, config.FromOS); err != nil {
+		return workerConfig{}, fmt.Errorf("worker: %w", err)
+	}
 	// After Apply, so the report describes the environment the role consulted.
 	cfg.unknownVars = registry.Undeclared(config.Environ())
 	cfg.posture = runtimeenv.Parse(config.FromOS(runtimeenv.EnvVar))
 	if cfg.dsn == "" {
 		return workerConfig{}, errors.New("worker: --dsn or MARGINCE_DSN required")
-	}
-	// The refusal half of the auto-enrich daily cap: a typo fails the boot
-	// here; compose resolves the value where it is spent, from the same
-	// process environment, which is fixed at exec.
-	if _, err := compose.AutoEnrichDailyCapFromEnv(config.FromOS); err != nil {
-		return workerConfig{}, err
-	}
-	if cfg.deepReadMaxPages < 0 || cfg.deepReadMaxBytes < 0 || cfg.deepReadWall < 0 {
-		return workerConfig{}, errors.New("worker: the deep-read caps must be zero (default/uncapped) or positive")
 	}
 	// A negative pacing value would read as "take the default" downstream,
 	// which quietly ignores what the operator actually typed.
@@ -299,39 +267,6 @@ func resolveObservePprof(cfg *workerConfig) error {
 	return nil
 }
 
-// registerDeepReadFlags declares the three deep-read crawl caps. They are a
-// group of their own because each backs its flag default with an environment
-// variable that has to be READ before the flag is declared, and a set-but
-// unparseable value there is a boot error rather than a silent fallback to the
-// built-in — an operator who typed a cap and got the default instead would have
-// no way to tell.
-// The deep-read caps, named so each role can declare them without spelling the
-// strings a second time.
-const (
-	deepReadMaxPagesEnv = "MARGINCE_DEEPREAD_MAX_PAGES"
-	deepReadMaxBytesEnv = "MARGINCE_DEEPREAD_MAX_BYTES"
-	deepReadWallEnv     = "MARGINCE_DEEPREAD_WALL"
-)
-
-func registerDeepReadFlags(fs *flag.FlagSet, cfg *workerConfig) error {
-	maxPages, err := envIntOr(deepReadMaxPagesEnv, 0)
-	if err != nil {
-		return err
-	}
-	maxBytes, err := envIntOr(deepReadMaxBytesEnv, 0)
-	if err != nil {
-		return err
-	}
-	wall, err := envDurationOr(deepReadWallEnv, 0)
-	if err != nil {
-		return err
-	}
-	fs.IntVar(&cfg.deepReadMaxPages, "deepread-max-pages", maxPages, "deep-read crawl page cap; 0 takes the built-in default")
-	fs.IntVar(&cfg.deepReadMaxBytes, "deepread-max-bytes", maxBytes, "deep-read crawl aggregate byte cap; 0 takes the built-in default")
-	fs.DurationVar(&cfg.deepReadWall, "deepread-wall", wall, "deep-read crawl wall clock; 0 takes the built-in default")
-	return nil
-}
-
 // validateSchedulerIntervals rejects a non-positive value for any duration
 // that becomes a River periodic schedule. River refuses none of them:
 // PeriodicInterval(0) yields Next(t) == t, so the enqueuer re-derives a run
@@ -343,8 +278,8 @@ func registerDeepReadFlags(fs *flag.FlagSet, cfg *workerConfig) error {
 // gmail-watch-renew-within and graph-watch-renew-within are lead times —
 // time.Now().Add(within) in DueWatches — so zero validly means "renew
 // missing or already-expired watches" and both are checked separately
-// (negative only); and the deep-read / backfill caps are counts with a documented
-// zero-means-default meaning, validated above. Zero and negative here are
+// (negative only); and the two backfill intervals, where zero switches the
+// sweep off, are not schedules this set governs. Zero and negative here are
 // boot errors, never silent defaults.
 func validateSchedulerIntervals(cfg workerConfig) error {
 	intervals := []struct {
@@ -377,21 +312,6 @@ func validateSchedulerIntervals(cfg workerConfig) error {
 	return nil
 }
 
-// envIntOr / envDurationOr back a numeric flag's default with an
-// environment variable; a set-but-unparseable value is a boot error,
-// never a silent fallback.
-func envIntOr(key string, fallback int) (int, error) {
-	v := config.FromOS(key)
-	if v == "" {
-		return fallback, nil
-	}
-	parsed, err := strconv.Atoi(v)
-	if err != nil {
-		return 0, fmt.Errorf("worker: %s=%q is not an integer: %w", key, v, err)
-	}
-	return parsed, nil
-}
-
 // defaultFxBootstrapCurrencies is the candidate set the FX refresh proposes on
 // an empty sheet when the operator configured none — the three foreign
 // currencies the base-EUR UI and the demo seed already use. Overridable via
@@ -409,18 +329,6 @@ func fxBootstrapCurrencies(configured []string) []string {
 		return append([]string(nil), defaultFxBootstrapCurrencies...)
 	}
 	return configured
-}
-
-func envDurationOr(key string, fallback time.Duration) (time.Duration, error) {
-	v := config.FromOS(key)
-	if v == "" {
-		return fallback, nil
-	}
-	parsed, err := time.ParseDuration(v)
-	if err != nil {
-		return 0, fmt.Errorf("worker: %s=%q is not a duration: %w", key, v, err)
-	}
-	return parsed, nil
 }
 
 // sendPath is the worker's outbound-send configuration. The Surface-B agent

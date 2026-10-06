@@ -95,6 +95,14 @@ func (stubs) ReadActivityPipelineTrace(w nethttp.ResponseWriter, r *nethttp.Requ
 	httperr.NotImplemented(w, r, "ReadActivityPipelineTrace")
 }
 
+func (stubs) GetActivityProjectFiling(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetActivityProjectFiling")
+}
+
+func (stubs) UndoActivityProjectFiling(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "UndoActivityProjectFiling")
+}
+
 func (stubs) RelinkActivity(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.RelinkActivityParams) {
 	httperr.NotImplemented(w, r, "RelinkActivity")
 }
@@ -229,6 +237,10 @@ func (stubs) ReplaceAiPriceSync(w nethttp.ResponseWriter, r *nethttp.Request) {
 
 func (stubs) GetAiProfile(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetAiProfile")
+}
+
+func (stubs) GetAiProviderHealth(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetAiProviderHealth")
 }
 
 func (stubs) ListAiProviderKeys(w nethttp.ResponseWriter, r *nethttp.Request) {
@@ -1635,6 +1647,10 @@ func (stubs) PreviewAccountSendAuthorization(w nethttp.ResponseWriter, r *nethtt
 	httperr.NotImplemented(w, r, "PreviewAccountSendAuthorization")
 }
 
+func (stubs) PreviewEmailSignOff(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "PreviewEmailSignOff")
+}
+
 func (stubs) EmbedReindexStart(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "EmbedReindexStart")
 }
@@ -2069,6 +2085,10 @@ func (stubs) GetMyEmailSignature(w nethttp.ResponseWriter, r *nethttp.Request) {
 
 func (stubs) SaveMyEmailSignature(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "SaveMyEmailSignature")
+}
+
+func (stubs) SaveMyGreetingName(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "SaveMyGreetingName")
 }
 
 func (stubs) GetMyLinkedInAccount(w nethttp.ResponseWriter, r *nethttp.Request) {

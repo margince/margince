@@ -224,10 +224,12 @@ var tableOwners = map[string]string{
 	"linkedin_account":    "internal/modules/contacts",
 	"linkedin_connection": "internal/modules/contacts",
 	"attachment":          "internal/modules/activities",
-	// The intent ledger beside it: a key is provisional from before the bytes
-	// are stored until the attachment row that speaks for them commits, so it
-	// is written by exactly the module that writes those rows.
-	"stored_object_intent": "internal/modules/activities",
+	// The intent ledger: a key is provisional from before its bytes are stored until
+	// the row that speaks for them commits. Five modules put bytes and each clears
+	// its own key on the transaction writing its owning row, so the writes reach this
+	// table from all of them through platform's helper — which is why the helper, and
+	// the table with it, sit below every module rather than inside one.
+	"stored_object_intent": "internal/platform/storedobjects",
 	"deal_document_hide":   "internal/modules/activities",
 	"meeting_proposal":     "internal/modules/activities",
 	"meeting_invitation":   "internal/modules/activities",

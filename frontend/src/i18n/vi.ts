@@ -581,6 +581,8 @@ export const vi = {
   "aiAdmin.coverage":
     "Chỉ đếm các lần đọc website, quét tài khoản và tạo giọng văn được lưu bền vững. Không bao gồm mọi lượt AI theo lịch và không đảm bảo yêu cầu vẫn đủ điều kiện chạy.",
   "aiAdmin.unavailable": "Không khả dụng",
+  "aiAdmin.providerWaiting":
+    "Đang chờ nhà cung cấp AI: {waiting}. Công việc tự chạy tiếp khi nhà cung cấp phản hồi.",
   "aiAdmin.impact.blocked": "Chờ hạn mức",
   "aiAdmin.impact.model": "Đã chọn mô hình khác",
   "aiAdmin.impact.decision": "Đã đổi mô hình quyết định",
@@ -1379,6 +1381,12 @@ export const vi = {
     "Yêu cầu thất bại. Không có nguyên nhân nào được báo về.",
   "common.assistantUnavailable":
     "Trợ lý chưa phản hồi nên không thể soạn giúp bạn phần này. Quản trị viên có thể kiểm tra liên kết mô hình trong Cài đặt → AI. Không bắt buộc phải có trợ lý — bạn có thể tự nhập các thông tin này.",
+  "common.providerOutOfCredit":
+    "Nhà cung cấp AI đã hết số dư. Hãy liên hệ quản trị viên hệ thống của bạn.",
+  "common.providerUnauthorized":
+    "Nhà cung cấp AI đã từ chối thông tin xác thực được cấu hình. Hãy liên hệ quản trị viên hệ thống của bạn.",
+  "common.providerUnavailable":
+    "Nhà cung cấp AI hiện không phản hồi. Hãy thử lại sau hoặc liên hệ quản trị viên hệ thống của bạn.",
   "common.gatewayUnavailable":
     "Máy chủ chưa hoàn tất yêu cầu này kịp thời. Có thể nó vẫn đang chạy — hãy đợi một lát trước khi thử lại, nếu không cùng một công việc sẽ chạy hai lần.",
   "common.permissionDenied":
@@ -2427,6 +2435,7 @@ export const vi = {
   "email.detail.none": "Thư này",
   "email.detail.attachments_one": "{count} tệp đính kèm",
   "email.detail.attachments_other": "{count} tệp đính kèm",
+  "email.detail.attachmentWithheld": "Không lưu vì thư là riêng tư.",
   "email.detail.showQuoted": "Hiện phần trích dẫn",
   "email.detail.withheldReason": "Thư này không được chia sẻ với bạn",
   "email.detail.from": "Từ",
@@ -4354,6 +4363,15 @@ export const vi = {
   "compose.savedDraftDeleted": "Đã xóa bản nháp đã lưu",
   "compose.savedDraftRestored": "Đã khôi phục bản nháp đã lưu",
   "compose.savedDraftRemove": "Xóa bản nháp đã lưu",
+  "compose.savedDraftByAgent":
+    "Đã khôi phục bản nháp của agent. Hãy đọc trước khi gửi.",
+  "compose.waitingDraftTitle": "Bản nháp đang chờ",
+  "compose.waitingDraftOpen": "Mở bản nháp",
+  "compose.waitingDraftByAgent":
+    "Một agent đã soạn “{subject}” để xem xét. Chưa có gì được gửi.",
+  "compose.waitingDraftByYou":
+    "Email chưa gửi “{subject}” đã được lưu từ trình soạn thảo.",
+  "compose.waitingDraftNoSubject": "Không có tiêu đề",
   "compose.savedDraftChangedTitle": "Bản nháp đã đổi ở cửa sổ khác",
   "compose.savedDraftChangedBody":
     "Khi lưu, nội dung trên màn hình được giữ lại. Tải phiên bản đã lưu để viết tiếp từ đó.",
@@ -4392,6 +4410,11 @@ export const vi = {
   "compose.whyThisDraft": "Vì sao có bản nháp này?",
   "compose.body": "Nội dung",
   "compose.bodyHint": "Nhấp vào văn bản để chỉnh sửa.",
+  "compose.signOff": "Được thêm khi gửi",
+  "compose.signOffClosing":
+    "Bạn chưa có chữ ký, nên lời kết này sẽ được thêm vào.",
+  "compose.signOffSet": "Đặt chữ ký",
+  "compose.signOffFailed": "Không tải được lời kết sẽ được thêm khi gửi.",
   "compose.transport": "Cách gửi",
   "compose.transportEmail": "Email",
   "compose.recipientHint": "Tên hoặc địa chỉ",
@@ -4989,7 +5012,7 @@ export const vi = {
   "settings.signatureLabel": "Lời kết của bạn",
   "settings.signaturePlaceholder": "Nguyễn Minh Anh\nGradion · +84 28 123456",
   "settings.signatureHint":
-    "Chỉ văn bản thuần. Để trống nghĩa là gửi không chữ ký. AI không bao giờ tự viết lời kết — chữ ký này mới là thứ được gửi đi.",
+    "Chỉ văn bản thuần. Để trống thì thư kết bằng một lời kết ngắn kèm tên bạn. Bản nháp AI không tự thêm lời kết.",
   "settings.signatureSaving": "Đang lưu…",
   "settings.signatureEdit": "Sửa chữ ký",
   "settings.signatureNone": "Chưa đặt lời kết",
@@ -5008,6 +5031,10 @@ export const vi = {
   "settings.displayNameHelp":
     "C\u00e1ch \u0111\u1ed3ng nghi\u1ec7p th\u1ea5y b\u1ea1n \u2014 tr\u00ean b\u1ea3n ghi, trong danh s\u00e1ch ch\u1ecdn v\u00e0 trong nh\u1eadt k\u00fd.",
   "settings.displayNameSave": "L\u01b0u",
+  "settings.greetingName": "Tên gọi",
+  "settings.greetingNameHelp":
+    "Tên dùng để chào bạn trong bản nháp và lời chào. Để trống thì dùng chữ đầu tiên trong tên của bạn.",
+  "settings.greetingNameSave": "Lưu",
   "settings.languageHelp": "Chỉ giữ trong phiên làm việc.",
   "settings.deviceCard": "Thiết bị này",
   "settings.installApp": "Ứng dụng Margince",
@@ -5426,6 +5453,36 @@ export const vi = {
   "jobs.reasonVetted":
     "Lý do, lớp lỗi và cách xử lý đều là câu chữ của chính tầng tác vụ, không bao giờ là nguyên nhân thô từ worker. Một lỗi mà tầng đó không diễn đạt được sẽ báo bằng câu thay thế cố định và không mang lớp lỗi nào. Một lớp lỗi được đặt ra cho văn bản chưa kiểm chứng sẽ khiến cảnh báo của bạn dựa trên phỏng đoán.",
   "jobs.generatedAt": "Đọc lúc {time}",
+
+  "settings.providerHealth": "Trạng thái nhà cung cấp AI",
+  "settings.providerHealthSub":
+    "Từng nhà cung cấp AI có đang phản hồi hay không, theo máy chủ này ghi nhận.",
+  "providerHealth.adminOnly":
+    "Trạng thái nhà cung cấp AI áp dụng cho toàn bộ hệ thống và cần một quyền mà vai trò của bạn không có.",
+  "providerHealth.healthy": "Tất cả nhà cung cấp AI đang phản hồi.",
+  "aiProviderHealth.label.degraded": "Suy giảm",
+  "aiProviderHealth.label.down": "Không kết nối được",
+  "aiProviderHealth.label.outOfCredit": "Hết tín dụng",
+  "aiProviderHealth.label.unauthorized": "Khóa bị từ chối",
+  "aiProviderHealth.reason.degraded":
+    "Một số yêu cầu tới nhà cung cấp này đang thất bại. Các lệnh gọi vẫn được gửi đi.",
+  "aiProviderHealth.reason.down":
+    "Không kết nối được tới nhà cung cấp này. Các lệnh gọi chờ đến lần kiểm tra tiếp theo.",
+  "aiProviderHealth.reason.outOfCredit":
+    "Tài khoản đã hết tín dụng. Các lệnh gọi chờ đến lần kiểm tra tiếp theo.",
+  "aiProviderHealth.reason.unauthorized":
+    "Nhà cung cấp đã từ chối khóa API. Các lệnh gọi chờ đến lần kiểm tra tiếp theo.",
+  "aiProviderHealth.fix.degraded":
+    "Hãy xem trang trạng thái của nhà cung cấp, hoặc liên hệ quản trị viên hệ thống của bạn.",
+  "aiProviderHealth.fix.down":
+    "Hãy xem trang trạng thái và máy chủ của nhà cung cấp, hoặc liên hệ quản trị viên hệ thống.",
+  "aiProviderHealth.fix.outOfCredit":
+    "Hãy nạp tín dụng cho tài khoản nhà cung cấp, hoặc liên hệ quản trị viên hệ thống.",
+  "aiProviderHealth.fix.unauthorized":
+    "Hãy thay khóa, hoặc liên hệ quản trị viên hệ thống của bạn.",
+  "aiProviderHealth.since": "Bắt đầu {when}",
+  "aiProviderHealth.nextCheck": "Lần kiểm tra tiếp theo {when}",
+  "aiProviderHealth.nextCheckDue": "Đã đến lúc kiểm tra tiếp",
 
   "settings.extIngest": "Bản ghi bị từ chối từ trình kết nối",
   "settings.extIngestSub":
@@ -8568,6 +8625,9 @@ export const vi = {
   "users.nameLabel": "Họ tên người dùng mới",
   "users.emailPlaceholder": "name@company.com",
   "users.namePlaceholder": "Họ và tên",
+  "users.greetingLabel": "Tên gọi",
+  "users.greetingHint":
+    "Không bắt buộc. Tên dùng khi chào, nếu đó không phải chữ đầu tiên của họ tên.",
   "users.deactivateConfirmTitle": "Vô hiệu hoá {name}?",
   "users.deactivateConfirmBody":
     "Người đó sẽ bị đăng xuất ở mọi nơi và mọi passport Agent của họ bị thu hồi ngay. Bạn có thể kích hoạt lại sau, nhưng họ sẽ phải đăng nhập lại.",
@@ -9304,6 +9364,39 @@ export const vi = {
   "captureSettings.removeFailed": "Không thể xóa mục loại trừ này",
   "captureSettings.addFailed": "Không thể thêm mục loại trừ này",
   "captureSettings.updateFailed": "Chưa thay đổi cài đặt",
+  "captureReading.title": "Đọc website",
+  "captureReading.sub":
+    "Mức Margince đọc từ website của công ty. Thay đổi áp dụng cho lần đọc tiếp theo.",
+  "captureReading.dailyCap.label": "Lượt đọc tự động mỗi ngày",
+  "captureReading.dailyCap.help":
+    "Lượt đọc không ai yêu cầu, trên mọi công ty, từ 1 đến 20.000 mỗi ngày.",
+  "captureReading.dailyCap.refusal": "Nhập một số nguyên từ 1 đến 20.000.",
+  "captureReading.maxPages.label": "Số trang mỗi lượt",
+  "captureReading.maxPages.help":
+    "Số trang tối đa một lượt đọc tải về, từ 1 đến 200 (lượt tự động dừng ở 12).",
+  "captureReading.maxPages.refusal":
+    "Nhập một số nguyên từ 1 đến 200 cho số trang.",
+  "captureReading.maxMiB.label": "Dung lượng mỗi lượt (MiB)",
+  "captureReading.maxMiB.help":
+    "Lượng dữ liệu tối đa một lượt đọc giữ lại qua các trang, từ 1 đến 128 MiB.",
+  "captureReading.maxMiB.refusal":
+    "Nhập một số nguyên từ 1 đến 128 cho số MiB.",
+  "captureReading.wall.label": "Thời gian đọc (giây)",
+  "captureReading.wall.help":
+    "Thời gian dài nhất một lượt đọc chạy trước khi giữ lại những gì đã tìm được, từ 30 đến 600 giây.",
+  "captureReading.wall.refusal":
+    "Nhập một số nguyên từ 30 đến 600 cho số giây.",
+  "agentConnections.title": "Kết nối agent",
+  "agentConnections.sub":
+    "Thời gian một agent kết nối qua MCP giữ passport trước khi gia hạn. Thay đổi áp dụng cho passport được cấp tiếp theo.",
+  "agentConnections.adminOnly":
+    "Chỉ quản trị viên hoặc vận hành mới đổi được mục này.",
+  "agentConnections.ttl.label": "Thời hạn passport (phút)",
+  "agentConnections.ttl.help":
+    "Một số nguyên phút, từ 5 đến 129.600 (90 ngày).",
+  "agentConnections.ttl.refusal":
+    "Nhập một số nguyên từ 5 đến 129.600 cho số phút.",
+  "agentConnections.updateFailed": "Chưa thay đổi cài đặt",
   "captureSettings.adminOnly":
     "Chỉ quản trị viên hoặc vận hành mới đổi được mục này.",
 
@@ -11815,8 +11908,6 @@ export const vi = {
     "Việc chuyển một lead thành deal đang chờ bạn duyệt",
   "magic.action.approval_overnight":
     "Một đề xuất từ đêm qua đang chờ bạn duyệt",
-  "magic.action.approval_transcript_proposal":
-    "Một đề xuất từ bản ghi âm đang chờ bạn duyệt",
   "magic.action.approval_commitment_task":
     "Một lời hứa từ cuộc trò chuyện đang chờ bạn duyệt",
   "magic.action.approval_capture_counterparty":
@@ -12079,4 +12170,40 @@ export const vi = {
   "aiServing.notObject": "phải là một đối tượng: phần văn bản giữa { và }.",
   "aiServing.previewFailed":
     "Máy chủ không kiểm tra được giá trị này: {reason} Chưa thể lưu cho tới khi kiểm tra được.",
+  "projectFiling.action": "Hoàn tác lưu hồ sơ",
+  "projectFiling.title": "Hoàn tác việc lưu vào dự án?",
+  "projectFiling.loading": "Đang kiểm tra điều gì đang giữ hoạt động này…",
+  "projectFiling.explain":
+    "Việc lưu hoạt động này vào {projects} đã đánh dấu nó là thư từ thương mại, thứ mà các đợt quét xóa dữ liệu và lưu giữ phải giữ lại. Hoàn tác sẽ gỡ nó khỏi dự án và thu hồi dấu đó.",
+  "projectFiling.reason": "Vì sao việc lưu này sai?",
+  "projectFiling.reasonHint":
+    "Được lưu trong nhật ký kiểm toán cùng tên của bạn.",
+  "projectFiling.reasonRequired":
+    "Hãy ghi vì sao việc lưu này sai. Lý do được lưu trong nhật ký kiểm toán.",
+  "projectFiling.confirm": "Hoàn tác lưu hồ sơ",
+  "projectFiling.doneTitle": "Đã hoàn tác việc lưu",
+  "projectFiling.done":
+    "Hoạt động không còn được lưu trong dự án và dấu lưu giữ của nó đã được thu hồi.",
+  "projectFiling.decisions": "Các quyết định đã ghi nhận",
+  "projectFiling.decision": "{name}, lúc {when}",
+  "projectFiling.refusal.not_filed":
+    "Hoạt động này không được giữ bởi việc lưu vào dự án, nên không có gì để hoàn tác.",
+  "projectFiling.refusal.other_basis_remains":
+    "Vẫn còn căn cứ khác xác định hoạt động này là thư từ thương mại, chẳng hạn deal đã thắng, báo giá đã gửi hoặc ghim của bên kiểm soát dữ liệu, nên nó giữ dấu lưu giữ.",
+  "projectFiling.refusal.restricted":
+    "Một lệnh giữ theo luật đã bắt đầu với hoạt động này. Lệnh giữ đã bắt đầu thì không bao giờ rút ngắn.",
+  "projectFiling.refusal.qualifying_deal":
+    "Hoạt động này được lưu trong một deal xác định nó là thư từ thương mại, nên nó giữ dấu lưu giữ.",
+  "projectFiling.actionFor": "Hoàn tác lưu hồ sơ: {subject}",
+  "projectFiling.hiddenProject": "một dự án bạn không xem được",
+  "projectFiling.decisionRedacted":
+    "Một quyết định đã được ghi nhận lúc {when}",
+  "projectFiling.refusal.archived":
+    "Hoạt động này đã được lưu trữ, nên không thể hoàn tác việc lưu nữa.",
+  "projectFiling.refusal.erasure_pending":
+    "Một yêu cầu xóa dữ liệu đang mở liên quan đến một liên hệ trên hoạt động này, nên dấu lưu giữ được giữ cho tới khi yêu cầu được quyết định.",
+  "projectFiling.refusal.legal_hold":
+    "Một lệnh lưu giữ pháp lý đang áp dụng cho bản ghi mà hoạt động này liên kết tới, nên dấu lưu giữ được giữ cho tới khi lệnh được gỡ.",
+  "projectFiling.refusal.hidden_project":
+    "Một dự án bạn không xem được vẫn đang giữ hoạt động này. Hãy nhờ bên có quyền xem dự án hoàn tác việc lưu.",
 } as const satisfies Record<MessageKey, string>;

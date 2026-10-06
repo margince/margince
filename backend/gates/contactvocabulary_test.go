@@ -202,6 +202,9 @@ var retired = gatekit.Waive(map[string]string{
 	"backend/migrations/enginebackfill_integration_test.go": "it REPLAYS a shipped migration, " +
 		"and names the columns back for the length of the replay so the real file runs rather " +
 		"than a retyped copy of it",
+	"backend/migrations/contactretentionscope_integration_test.go": "it seeds the retention rows " +
+		"an installation stored under the retired name, which is what the migration it replays exists " +
+		"to carry over",
 	"CHANGELOG.md": "entries say what they said when they were written",
 	"sbom-schemas": "a vendored SPDX schema, not ours to rename",
 	"e2e/llm/testdata": "recorded model output — what a model actually said on a run, which " +

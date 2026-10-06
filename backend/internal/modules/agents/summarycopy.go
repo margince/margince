@@ -42,7 +42,7 @@ type summaryCopy struct {
 	// Correspondence. Addresses, subjects and bodies pass through, quoted where
 	// the sentence quotes them.
 	sendEmail, cc, sendSubject, sendMessage, draftReply, accountSend, accountSendFiled, booking,
-	bookingHost, bookingLinks, noSubject, relinkActivity, relinkThread, relinkActivities string
+	bookingHost, bookingLinks, noSubject, relinkActivity, relinkActivities string
 
 	// Imports. The counts are the report's; the record type reads as a noun.
 	importPreview, importCommit, importCreate, importUpdate, importUnchanged, importSkip,
@@ -116,7 +116,6 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		bookingLinks:        ", attached to %d record(s)",
 		noSubject:           "(no subject)",
 		relinkActivity:      "Re-associate activity %s to %s %s",
-		relinkThread:        "Re-associate the conversation %q to %s %s",
 		relinkActivities:    "Re-associate %d activities to %s %s",
 		importPreview:       "Check a file of %s records against this workspace, writing nothing",
 		importCommit:        "Import %d rows as %s records: %s",
@@ -192,7 +191,6 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		bookingLinks:        ", verknüpfte Datensätze: %d",
 		noSubject:           "(kein Betreff)",
 		relinkActivity:      "Aktivität %s neu zuordnen: %s %s",
-		relinkThread:        "Unterhaltung %q neu zuordnen: %s %s",
 		relinkActivities:    "%d Aktivitäten neu zuordnen: %s %s",
 		importPreview:       "Datei mit Datensätzen vom Typ %s mit diesem Workspace abgleichen, ohne etwas zu schreiben",
 		importCommit:        "%d Zeilen als Datensätze vom Typ %s importieren: %s",
@@ -268,7 +266,6 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		bookingLinks:        ", gắn với %d bản ghi",
 		noSubject:           "(không có tiêu đề)",
 		relinkActivity:      "Liên kết lại hoạt động %s với %s %s",
-		relinkThread:        "Liên kết lại cuộc trò chuyện %q với %s %s",
 		relinkActivities:    "Liên kết lại %d hoạt động với %s %s",
 		importPreview:       "Kiểm tra một tệp bản ghi loại %s với không gian làm việc này, không ghi gì cả",
 		importCommit:        "Nhập %d dòng thành bản ghi loại %s: %s",

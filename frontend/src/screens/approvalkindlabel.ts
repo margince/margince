@@ -57,6 +57,7 @@ export const KIND_LABEL: Readonly<Record<string, MessageKey>> = {
   company_name_promotion: "approval.kind.company_name_promotion",
   vcard_create: "approval.kind.vcard_create",
   lifecycle_change: "approval.kind.lifecycle_change",
+  // Retired: nothing stages it, but decided cards still carry it.
   transcript_proposal: "approval.kind.transcript_proposal",
   commitment_task: "approval.kind.commitment_task",
   stage_progression: "approval.kind.stage_progression",

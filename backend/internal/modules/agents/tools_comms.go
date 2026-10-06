@@ -35,10 +35,9 @@ type Comms interface {
 	// prior message, and the product refuses to fabricate a placeholder
 	// activity to obtain one (ADR-0087).
 	//
-	// Without it there is no way to draft the follow-up after a first meeting,
-	// which is the case the web app's own "Draft a follow-up" button serves;
-	// an assistant asked for one had to fall back on a note nobody can send.
-	DraftCompanyEmail(ctx context.Context, links []RecordLink, intent string) (subject, body string, err error)
+	// It drafts through the engine the web composer uses for the same record,
+	// and leaves the draft for the human the agent acts for to review.
+	DraftCompanyEmail(ctx context.Context, links []RecordLink, intent string) (FirstDraft, error)
 	SendEmail(ctx context.Context, anchor ids.UUID, in SendEmailArgs) (SendEmailResult, error)
 	// SendCompanyEmail starts a NEW conversation instead of continuing one
 	// (ADR-0087). It takes no anchor — there is no prior message, and the
@@ -222,25 +221,28 @@ func (t draftEmailTool) Handle(ctx context.Context, in json.RawMessage) (json.Ra
 			return nil, err
 		}
 		// EVERY link is read before anything else happens, exactly as the send
-		// path's guard does (commandlinked.go). The composer reads nothing —
-		// the draft comes from the caller's own intent — so it would otherwise
-		// be possible for a passport holding only `draft` to name any id at
-		// all and have it recorded as evidence, and to learn from an
-		// idempotent replay whether that id is readable. A draft scope must not
-		// be a record-visibility oracle.
+		// path's guard does (commandlinked.go). The engine reads only the
+		// recipient's record, so without this a passport holding only `draft`
+		// could name any other id and learn from the answer whether it is
+		// readable. A draft scope must not be a record-visibility oracle.
 		if _, err := readStageableLinks(ctx, t.p, links); err != nil {
 			return nil, err
 		}
-		subject, body, err := t.comms.DraftCompanyEmail(ctx, links, args.Intent)
+		draft, err := t.comms.DraftCompanyEmail(ctx, links, args.Intent)
 		if err != nil {
 			return nil, err
 		}
-		// No noteDerivedContent: this composes from the caller's own intent,
-		// not from captured thread content, so it carries no external tier.
+		// The engine writes from the recipient's record, correspondence
+		// included, so the text carries that content's tier.
+		noteDerivedContent(ctx)
 		for _, l := range links {
 			noteEvidence(ctx, datasource.EntityType(l.EntityType), l.EntityID)
 		}
-		return json.Marshal(DraftEmailResult{Subject: subject, Body: body, Links: links})
+		return json.Marshal(DraftEmailResult{
+			Subject: draft.Subject, Body: draft.Body, Links: links, To: draft.To,
+			AIGenerated: draft.AIGenerated, AIDisclosure: draft.AIDisclosure,
+			SavedDraftID: draft.SavedDraftID, NotSaved: draft.NotSaved,
+		})
 	}
 	if len(args.Links) > 0 {
 		return nil, &BadArgsError{Cause: errors.New(

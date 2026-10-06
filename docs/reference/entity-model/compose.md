@@ -23,7 +23,7 @@ The 36 tables owned by `compose`, as the migrations build them. [Back to the ent
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `activity_id` | `uuid` | yes | Points at `activity.id` — deleting the parent deletes this row. |
-| `outcome` | `text` | yes | One of `attendees`, `none`, `capped`, `unreadable`. |
+| `outcome` | `text` | yes | One of `attendees`, `none`, `capped`, `capped_seats`, `unreadable`. |
 | `repaired_at` | `timestamp with time zone` | yes | Required `timestamp with time zone`, defaulting to `now()`. |
 
 **Points at**
@@ -34,7 +34,7 @@ The 36 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 **Rules**
 
-- `activity_meeting_attendee_repair_outcome_check` — `CHECK ((outcome = ANY (ARRAY['attendees', 'none', 'capped', 'unreadable'])))`
+- `activity_meeting_attendee_repair_outcome_check` — `CHECK ((outcome = ANY (ARRAY['attendees', 'none', 'capped', 'capped_seats', 'unreadable'])))`
 
 **Indexes**
 

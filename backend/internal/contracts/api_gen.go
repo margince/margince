@@ -1105,6 +1105,30 @@ func (e AiProfileState) Valid() bool {
 	}
 }
 
+// Defines values for AiProviderHealthEntryHealth.
+const (
+	AiProviderHealthEntryHealthDegraded     AiProviderHealthEntryHealth = "degraded"
+	AiProviderHealthEntryHealthDown         AiProviderHealthEntryHealth = "down"
+	AiProviderHealthEntryHealthOutOfCredit  AiProviderHealthEntryHealth = "out_of_credit"
+	AiProviderHealthEntryHealthUnauthorized AiProviderHealthEntryHealth = "unauthorized"
+)
+
+// Valid indicates whether the value is a known member of the AiProviderHealthEntryHealth enum.
+func (e AiProviderHealthEntryHealth) Valid() bool {
+	switch e {
+	case AiProviderHealthEntryHealthDegraded:
+		return true
+	case AiProviderHealthEntryHealthDown:
+		return true
+	case AiProviderHealthEntryHealthOutOfCredit:
+		return true
+	case AiProviderHealthEntryHealthUnauthorized:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AiProviderKeyStatusCredentialKind.
 const (
 	AiProviderKeyStatusCredentialKindApiKey         AiProviderKeyStatusCredentialKind = "api_key"
@@ -8740,6 +8764,27 @@ func (e EmailPresentationLifecycle) Valid() bool {
 	}
 }
 
+// Defines values for EmailSignOffKind.
+const (
+	EmailSignOffKindClosing   EmailSignOffKind = "closing"
+	EmailSignOffKindNone      EmailSignOffKind = "none"
+	EmailSignOffKindSignature EmailSignOffKind = "signature"
+)
+
+// Valid indicates whether the value is a known member of the EmailSignOffKind enum.
+func (e EmailSignOffKind) Valid() bool {
+	switch e {
+	case EmailSignOffKindClosing:
+		return true
+	case EmailSignOffKindNone:
+		return true
+	case EmailSignOffKindSignature:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for EmailSummaryDirection.
 const (
 	EmailSummaryDirectionInbound  EmailSummaryDirection = "inbound"
@@ -12505,6 +12550,42 @@ func (e Project360Section) Valid() bool {
 	case Project360SectionRollups:
 		return true
 	case Project360SectionStakeholders:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ProjectFilingRefusalCode.
+const (
+	ProjectFilingRefusalCodeArchived          ProjectFilingRefusalCode = "archived"
+	ProjectFilingRefusalCodeErasurePending    ProjectFilingRefusalCode = "erasure_pending"
+	ProjectFilingRefusalCodeHiddenProject     ProjectFilingRefusalCode = "hidden_project"
+	ProjectFilingRefusalCodeLegalHold         ProjectFilingRefusalCode = "legal_hold"
+	ProjectFilingRefusalCodeNotFiled          ProjectFilingRefusalCode = "not_filed"
+	ProjectFilingRefusalCodeOtherBasisRemains ProjectFilingRefusalCode = "other_basis_remains"
+	ProjectFilingRefusalCodeQualifyingDeal    ProjectFilingRefusalCode = "qualifying_deal"
+	ProjectFilingRefusalCodeRestricted        ProjectFilingRefusalCode = "restricted"
+)
+
+// Valid indicates whether the value is a known member of the ProjectFilingRefusalCode enum.
+func (e ProjectFilingRefusalCode) Valid() bool {
+	switch e {
+	case ProjectFilingRefusalCodeArchived:
+		return true
+	case ProjectFilingRefusalCodeErasurePending:
+		return true
+	case ProjectFilingRefusalCodeHiddenProject:
+		return true
+	case ProjectFilingRefusalCodeLegalHold:
+		return true
+	case ProjectFilingRefusalCodeNotFiled:
+		return true
+	case ProjectFilingRefusalCodeOtherBasisRemains:
+		return true
+	case ProjectFilingRefusalCodeQualifyingDeal:
+		return true
+	case ProjectFilingRefusalCodeRestricted:
 		return true
 	default:
 		return false
@@ -22055,6 +22136,9 @@ type AiDeferredWork struct {
 	Carrier   string `json:"carrier"`
 	Count     *int64 `json:"count,omitempty"`
 	Unit      string `json:"unit"`
+
+	// WaitingOnProvider Work waiting for the AI provider to answer, not for the budget. It resumes by itself at the provider's next probe, and a budget raise does not change it; `count` holds only what a raise would resume.
+	WaitingOnProvider *int64 `json:"waiting_on_provider,omitempty"`
 }
 
 // AiEmbeddingsBinding defines model for AiEmbeddingsBinding.
@@ -22509,6 +22593,32 @@ type AiProfileProviders string
 
 // AiProfileState defines model for AiProfile.State.
 type AiProfileState string
+
+// AiProviderHealth defines model for AiProviderHealth.
+type AiProviderHealth struct {
+	// Providers Providers that are not answering normally, in name order. Empty when all are.
+	Providers []AiProviderHealthEntry `json:"providers"`
+}
+
+// AiProviderHealthEntry defines model for AiProviderHealthEntry.
+type AiProviderHealthEntry struct {
+	// Health `degraded` still takes calls; the other three refuse them until `retry_after`, when one
+	// probe is allowed. `out_of_credit` and `unauthorized` are the administrator's to fix.
+	Health AiProviderHealthEntryHealth `json:"health"`
+
+	// Provider The provider's name as the routing binds it, never a key or host.
+	Provider string `json:"provider"`
+
+	// RetryAfter When one probe call is next allowed. Absent for `degraded`, which is not blocked.
+	RetryAfter *time.Time `json:"retry_after,omitempty"`
+
+	// Since When the provider first stopped answering normally, kept across failed probes.
+	Since time.Time `json:"since"`
+}
+
+// AiProviderHealthEntryHealth `degraded` still takes calls; the other three refuse them until `retry_after`, when one
+// probe is allowed. `out_of_credit` and `unauthorized` are the administrator's to fix.
+type AiProviderHealthEntryHealth string
 
 // AiProviderKeyInput Exactly one of the two fields, the one the vendor's `credential_kind` names. The server refuses neither, both, or the other one with a 422.
 type AiProviderKeyInput struct {
@@ -23224,7 +23334,7 @@ type Approval struct {
 	ExpiresAt *time.Time         `json:"expires_at,omitempty"`
 	Id        openapi_types.UUID `json:"id"`
 
-	// Kind Examples: coldstart | send_email | advance_deal | promote_lead | overnight | deal_follow_up | transcript_proposal | commitment_task.
+	// Kind Examples: coldstart | send_email | advance_deal | promote_lead | overnight | deal_follow_up | commitment_task.
 	Kind       string              `json:"kind"`
 	OnBehalfOf *openapi_types.UUID `json:"on_behalf_of,omitempty"`
 
@@ -23484,6 +23594,9 @@ type AssuranceRunAcceptedStatus string
 // addressed by an internal object key that is never exposed on the wire.
 type Attachment struct {
 	ByteSize *int64 `json:"byte_size,omitempty"`
+
+	// BytesWithheld True for a file a private message carried that was recorded by name, size and type only: no bytes were kept, so there is nothing to download (404) or read.
+	BytesWithheld *bool `json:"bytes_withheld,omitempty"`
 
 	// CapturedBy Server-stamped from the authenticated principal; never client-supplied.
 	CapturedBy *string `json:"captured_by,omitempty"`
@@ -26005,6 +26118,13 @@ type CaptureSettings struct {
 	// excluded (cold start reads it). Default is ON (the testing posture).
 	AutoEnrich bool `json:"auto_enrich"`
 
+	// AutoEnrichDailyCap The installation-wide ceiling on AUTOMATIC website reads started in one UTC day.
+	// Company auto-enrichment and domain triage spend it from one counter. It paces and only
+	// paces: concurrency is bounded by the deep-read worker pool and model spend by the AI
+	// budget. Read at the top of every sweep and on every capture, so a change applies
+	// without a restart. Default 500.
+	AutoEnrichDailyCap int `json:"auto_enrich_daily_cap"`
+
 	// MailSharing The workspace's capture-sharing posture, ON by default: captured correspondence is
 	// readable by every colleague who can see the contact. Switched OFF, everything captured
 	// FROM THEN ON is held to its participants and the capturing member — already-captured
@@ -26045,6 +26165,10 @@ type CaptureSettings struct {
 	// "Workspace" here is the storage tenant, not the word the product shows a reader —
 	// the surface calls it the company's default.
 	SignatureEnrich bool `json:"signature_enrich"`
+
+	// SiteRead What one website read may fetch. Read when a read starts, so a change applies to the next
+	// one. An automatic read also runs under its own lower page ceiling.
+	SiteRead SiteReadLimits `json:"site_read"`
 }
 
 // CaptureSourceEntry One capture provenance id that is not a transport, as the directory publishes it.
@@ -32968,10 +33092,13 @@ type EmailAccessStatus string
 
 // EmailAttachmentSummary One file that came with the message. Metadata only; bytes are fetched separately.
 type EmailAttachmentSummary struct {
-	ByteSize    *int               `json:"byte_size,omitempty"`
-	ContentType *string            `json:"content_type,omitempty"`
-	Filename    string             `json:"filename"`
-	Id          openapi_types.UUID `json:"id"`
+	ByteSize *int `json:"byte_size,omitempty"`
+
+	// BytesWithheld True when the message is private to its owner and the file was recorded by name, size and type only. There are no bytes to fetch.
+	BytesWithheld *bool              `json:"bytes_withheld,omitempty"`
+	ContentType   *string            `json:"content_type,omitempty"`
+	Filename      string             `json:"filename"`
+	Id            openapi_types.UUID `json:"id"`
 }
 
 // EmailDelivery Whether an outbound message actually left, and why not when it did not.
@@ -33122,11 +33249,37 @@ type EmailPresentation struct {
 // frame when the reads that serve them land, and they are not listed until then.
 type EmailPresentationLifecycle string
 
+// EmailSignOff defines model for EmailSignOff.
+type EmailSignOff struct {
+	// Kind `signature`: the caller's own, from Settings. `closing`: the caller has written
+	// none, so the send closes with a plain greeting and their name when available. `none`: this
+	// send appends nothing.
+	Kind EmailSignOffKind `json:"kind"`
+
+	// Text The block appended below the message, plain text, exactly as sent. Empty when
+	// `kind` is `none`.
+	Text string `json:"text"`
+}
+
+// EmailSignOffKind `signature`: the caller's own, from Settings. `closing`: the caller has written
+// none, so the send closes with a plain greeting and their name when available. `none`: this
+// send appends nothing.
+type EmailSignOffKind string
+
+// EmailSignOffRequest defines model for EmailSignOffRequest.
+type EmailSignOffRequest struct {
+	// Body The message as written so far, plain text. Read only for its language.
+	Body string `json:"body"`
+
+	// Subject The subject, read for its language when the body is too short to tell.
+	Subject *string `json:"subject,omitempty"`
+}
+
 // EmailSignature defines model for EmailSignature.
 type EmailSignature struct {
 	// Body The sign-off appended below every message this member sends, plain text.
-	// Empty means unsigned, which is the state of every member who has not
-	// written one.
+	// Empty means none written; a send then closes with a plain greeting and
+	// the member's display name when one is on file.
 	Body      string     `json:"body"`
 	UpdatedAt *time.Time `json:"updated_at,omitempty"`
 }
@@ -34971,6 +35124,12 @@ type InstallationSettings struct {
 	// Name The company's display name.
 	Name string `json:"name"`
 
+	// OauthAccessTokenTtlMinutes How long the access token an MCP connector's OAuth handshake mints lives, in minutes —
+	// for the code exchange and every refresh rotation alike. 30 days by default, at most
+	// 90. A change applies to the next token minted; tokens already issued keep the expiry
+	// they were issued with.
+	OauthAccessTokenTtlMinutes int `json:"oauth_access_token_ttl_minutes"`
+
 	// SignInProviders Every external sign-in provider this deployment holds credentials for, and whether
 	// the installation currently offers it on the login screen. The list is what the
 	// DEPLOYMENT makes possible: an admin can turn one off, but cannot add one, because
@@ -35250,6 +35409,9 @@ type InviteDealRoomParticipantRequest struct {
 type InviteUserRequest struct {
 	DisplayName string              `json:"display_name"`
 	Email       openapi_types.Email `json:"email"`
+
+	// GreetingName The name the member's greetings use, when the first word of `display_name` is not it. Optional; absent, empty or null leaves it unset.
+	GreetingName *string `json:"greeting_name,omitempty"`
 
 	// Role A live role's key: one of the seeded system roles or one made with `createRole`. Seeded keys are wire vocabulary and diverge from the product names on purpose — `manager` displays as "Team Lead", `rep` as "User"; `management` is the whole-company seat that holds no admin power. A caller who is not an admin may only produce an account whose whole access their own contains — every grant, row scope, team and readable field — because the set-password link goes to an address the caller chooses. `listAssignableRoles` names the roles this caller may hand out.
 	Role string `json:"role"`
@@ -36563,7 +36725,9 @@ type MagicUndo struct {
 
 // MailDraft One rep's unsent message, readable by its author and nobody else. Not an activity.
 type MailDraft struct {
-	AnchorId openapi_types.UUID `json:"anchor_id"`
+	// AgentDrafted An agent wrote these words for the author through `draft_email`, and the author has not saved over them yet. The screen says so before the message is sent. A save from the composer clears it.
+	AgentDrafted bool               `json:"agent_drafted"`
+	AnchorId     openapi_types.UUID `json:"anchor_id"`
 
 	// AnchorType What the composer opened against: `activity` for a reply to that message, or the
 	// record a new conversation starts from.
@@ -38959,6 +39123,55 @@ type ProjectCompanyListResponse struct {
 	Data []ProjectCompany `json:"data"`
 }
 
+// ProjectFiling What filing one activity under a project did to its retention, and whether the filing can be undone. Names projects by the name frozen when the filing qualified the correspondence, so a renamed or deleted project still reads as what it was.
+type ProjectFiling struct {
+	// Filed Whether the activity carries evidence that filing it under a project qualified it.
+	Filed bool `json:"filed"`
+
+	// Projects The project filings on record, oldest first.
+	Projects []ProjectFilingEntry `json:"projects"`
+
+	// Refusal Why a filed activity cannot be undone. Absent when it can, or when it is not filed.
+	Refusal  *ProjectFilingRefusal `json:"refusal,omitempty"`
+	Undoable bool                  `json:"undoable"`
+
+	// Undone Undo decisions already taken on this activity, newest first.
+	Undone []ProjectFilingUndoDecision `json:"undone"`
+}
+
+// ProjectFilingEntry defines model for ProjectFilingEntry.
+type ProjectFilingEntry struct {
+	// Hidden True when the project exists and the caller cannot see it; its name is withheld.
+	Hidden *bool `json:"hidden,omitempty"`
+
+	// Name The project's name when the filing qualified the activity. Empty when the project is hidden from the caller.
+	Name        string    `json:"name"`
+	QualifiedAt time.Time `json:"qualified_at"`
+}
+
+// ProjectFilingRefusal defines model for ProjectFilingRefusal.
+type ProjectFilingRefusal struct {
+	Code    ProjectFilingRefusalCode `json:"code"`
+	Message string                   `json:"message"`
+}
+
+// ProjectFilingRefusalCode defines model for ProjectFilingRefusal.Code.
+type ProjectFilingRefusalCode string
+
+// ProjectFilingUndoDecision defines model for ProjectFilingUndoDecision.
+type ProjectFilingUndoDecision struct {
+	At     time.Time `json:"at"`
+	ByName string    `json:"by_name"`
+
+	// Id The audit entry that recorded the decision.
+	Id       openapi_types.UUID `json:"id"`
+	Projects []string           `json:"projects"`
+	Reason   string             `json:"reason"`
+
+	// Redacted True when the decision touched a project the caller cannot see; only its moment is shown.
+	Redacted *bool `json:"redacted,omitempty"`
+}
+
 // ProjectHealthAssessment One judgement of how a project is going, on the day it applies to. Assessments are never edited: a mistake is corrected by superseding the row, so what was said and when it was said both survive the correction.
 type ProjectHealthAssessment struct {
 	// AssessedAt When the judgement APPLIES, which is not when it was written: a lead catching up on Monday records Friday's reading, and the timeline shows it on Friday.
@@ -41328,6 +41541,13 @@ type SaveMyDisplayNameRequest struct {
 	DisplayName string `json:"display_name"`
 }
 
+// SaveMyGreetingNameRequest defines model for SaveMyGreetingNameRequest.
+type SaveMyGreetingNameRequest struct {
+	// GreetingName The name a colleague's greeting uses. Surrounding whitespace is
+	// trimmed; empty or null clears it.
+	GreetingName *string `json:"greeting_name"`
+}
+
 // SaveMyLocaleRequest defines model for SaveMyLocaleRequest.
 type SaveMyLocaleRequest struct {
 	// Locale The language to render this contact's own interface in. One of the
@@ -42620,6 +42840,19 @@ type SignalWarmth struct {
 // SignalWarmthRouting The real routing branch — warm signals surface in the warm room, cold ones queue separately.
 type SignalWarmthRouting string
 
+// SiteReadLimits What one website read may fetch. Read when a read starts, so a change applies to the next
+// one. An automatic read also runs under its own lower page ceiling.
+type SiteReadLimits struct {
+	// MaxMib Mebibytes one read may hold, summed over its pages. Default 32.
+	MaxMib int `json:"max_mib"`
+
+	// MaxPages Pages one read may fetch. Default 60.
+	MaxPages int `json:"max_pages"`
+
+	// WallSeconds Seconds one crawl may run before it stops and extracts what it has. Default 240.
+	WallSeconds int `json:"wall_seconds"`
+}
+
 // SiteReadPage One page the crawl fetched.
 type SiteReadPage struct {
 	Kind SiteReadPageKind `json:"kind"`
@@ -43712,6 +43945,9 @@ type UpdateCaptureSettingsRequest struct {
 	// AutoEnrich Toggle captured-company auto-enrichment.
 	AutoEnrich *bool `json:"auto_enrich,omitempty"`
 
+	// AutoEnrichDailyCap Set the daily ceiling on automatic website reads.
+	AutoEnrichDailyCap *int `json:"auto_enrich_daily_cap,omitempty"`
+
 	// MailSharing Toggle the workspace mail-sharing posture; affects correspondence captured from now on — mail, and chat on a transport whose credential belongs to one member.
 	MailSharing *bool `json:"mail_sharing,omitempty"`
 
@@ -43720,6 +43956,15 @@ type UpdateCaptureSettingsRequest struct {
 
 	// SignatureEnrich Toggle the tenant-wide default for reading contact details out of captured mail — its signature and any attached vCard. A mailbox that set its own switch keeps it.
 	SignatureEnrich *bool `json:"signature_enrich,omitempty"`
+
+	// SiteReadMaxMib Set the size limit of one website read, in MiB.
+	SiteReadMaxMib *int `json:"site_read_max_mib,omitempty"`
+
+	// SiteReadMaxPages Set the page limit of one website read.
+	SiteReadMaxPages *int `json:"site_read_max_pages,omitempty"`
+
+	// SiteReadWallSeconds Set the time limit of one website crawl, in seconds.
+	SiteReadWallSeconds *int `json:"site_read_wall_seconds,omitempty"`
 }
 
 // UpdateCompanyFactRequest The correction path the fact store never had — without it the page can render a confirmed state nothing is able to produce.
@@ -44085,6 +44330,9 @@ type UpdateInstallationSettingsRequest struct {
 
 	// Name Rename the company.
 	Name *string `json:"name,omitempty"`
+
+	// OauthAccessTokenTtlMinutes Set how long a connector's access token lives, in minutes. Reaches the next token minted.
+	OauthAccessTokenTtlMinutes *int `json:"oauth_access_token_ttl_minutes,omitempty"`
 
 	// OidcGroupRoleMap Directory groups that GRANT roles at corporate sign-in. Each key is a group
 	// exactly as the IdP spells it in the ID token's `groups` claim; each value is
@@ -44545,7 +44793,10 @@ type User struct {
 	CreatedAt      *time.Time            `json:"created_at,omitempty"`
 	DisplayName    string                `json:"display_name"`
 	Email          openapi_types.Email   `json:"email"`
-	Id             openapi_types.UUID    `json:"id"`
+
+	// GreetingName The name a colleague's greeting uses ("Hi Sofia,"), absent or null when nobody has said. Read through one rule on both sides: this when set, else the first word of `display_name`. Present on the caller's own seat; absent on the roster.
+	GreetingName *string            `json:"greeting_name,omitempty"`
+	Id           openapi_types.UUID `json:"id"`
 
 	// IsAgent First-party Agent Runner identity vs a human seat.
 	IsAgent bool `json:"is_agent"`
@@ -53078,6 +53329,9 @@ type SetActivityDispositionJSONRequestBody = SetActivityDispositionRequest
 // DraftEmailJSONRequestBody defines body for DraftEmail for application/json ContentType.
 type DraftEmailJSONRequestBody DraftEmailJSONBody
 
+// UndoActivityProjectFilingJSONRequestBody defines body for UndoActivityProjectFiling for application/json ContentType.
+type UndoActivityProjectFilingJSONRequestBody = RetentionOverrideRequest
+
 // RelinkActivityJSONRequestBody defines body for RelinkActivity for application/json ContentType.
 type RelinkActivityJSONRequestBody RelinkActivityJSONBody
 
@@ -53516,6 +53770,9 @@ type SendCompanyEmailJSONRequestBody = SendCompanyEmailRequest
 // PreviewAccountSendAuthorizationJSONRequestBody defines body for PreviewAccountSendAuthorization for application/json ContentType.
 type PreviewAccountSendAuthorizationJSONRequestBody = PreviewAccountSendRequest
 
+// PreviewEmailSignOffJSONRequestBody defines body for PreviewEmailSignOff for application/json ContentType.
+type PreviewEmailSignOffJSONRequestBody = EmailSignOffRequest
+
 // EmbedReindexStartJSONRequestBody defines body for EmbedReindexStart for application/json ContentType.
 type EmbedReindexStartJSONRequestBody = EmbedReindexStartRequest
 
@@ -53644,6 +53901,9 @@ type SaveMyDisplayNameJSONRequestBody = SaveMyDisplayNameRequest
 
 // SaveMyEmailSignatureJSONRequestBody defines body for SaveMyEmailSignature for application/json ContentType.
 type SaveMyEmailSignatureJSONRequestBody = SaveEmailSignatureRequest
+
+// SaveMyGreetingNameJSONRequestBody defines body for SaveMyGreetingName for application/json ContentType.
+type SaveMyGreetingNameJSONRequestBody = SaveMyGreetingNameRequest
 
 // SaveMyLinkedInAccountJSONRequestBody defines body for SaveMyLinkedInAccount for application/json ContentType.
 type SaveMyLinkedInAccountJSONRequestBody = SaveLinkedInAccountRequest
@@ -64460,6 +64720,12 @@ type ServerInterface interface {
 	// Every ingress stage this message passed through, and why each did or did not run.
 	// (GET /activities/{id}/pipeline)
 	ReadActivityPipelineTrace(w http.ResponseWriter, r *http.Request, id Id)
+	// What filing this activity under a project did to its retention, and whether it can be undone.
+	// (GET /activities/{id}/project-filing)
+	GetActivityProjectFiling(w http.ResponseWriter, r *http.Request, id Id)
+	// Undo filing this activity under a project. Requires a stated reason; audited.
+	// (POST /activities/{id}/project-filing/undo)
+	UndoActivityProjectFiling(w http.ResponseWriter, r *http.Request, id Id)
 	// Re-associate a captured activity to a chosen deal/entity (idempotent, source-preserving).
 	// (POST /activities/{id}/relink)
 	RelinkActivity(w http.ResponseWriter, r *http.Request, id Id, params RelinkActivityParams)
@@ -64562,6 +64828,9 @@ type ServerInterface interface {
 	// Authenticated AI configuration posture for transparent human-facing workspaces.
 	// (GET /ai/profile)
 	GetAiProfile(w http.ResponseWriter, r *http.Request)
+	// Which AI providers are not answering, and why.
+	// (GET /ai/provider-health)
+	GetAiProviderHealth(w http.ResponseWriter, r *http.Request)
 	// Which model vendors hold a credential (admin/ops).
 	// (GET /ai/provider-keys)
 	ListAiProviderKeys(w http.ResponseWriter, r *http.Request)
@@ -65615,6 +65884,9 @@ type ServerInterface interface {
 	// Would this account-started message be allowed, and on what ground.
 	// (POST /emails:preview)
 	PreviewAccountSendAuthorization(w http.ResponseWriter, r *http.Request)
+	// The sign-off a send of this message would append beneath it.
+	// (POST /emails:sign-off)
+	PreviewEmailSignOff(w http.ResponseWriter, r *http.Request)
 	// Confirm and start a fleet-wide reindex.
 	// (POST /embeddings/reindex)
 	EmbedReindexStart(w http.ResponseWriter, r *http.Request)
@@ -65942,6 +66214,9 @@ type ServerInterface interface {
 	// Write or clear your own sign-off.
 	// (PUT /me/email-signature)
 	SaveMyEmailSignature(w http.ResponseWriter, r *http.Request)
+	// Change the name colleagues greet you by.
+	// (PUT /me/greeting-name)
+	SaveMyGreetingName(w http.ResponseWriter, r *http.Request)
 	// Your own LinkedIn account as this CRM records it.
 	// (GET /me/linkedin-account)
 	GetMyLinkedInAccount(w http.ResponseWriter, r *http.Request)
@@ -66854,6 +67129,18 @@ func (_ Unimplemented) ReadActivityPipelineTrace(w http.ResponseWriter, r *http.
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// What filing this activity under a project did to its retention, and whether it can be undone.
+// (GET /activities/{id}/project-filing)
+func (_ Unimplemented) GetActivityProjectFiling(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Undo filing this activity under a project. Requires a stated reason; audited.
+// (POST /activities/{id}/project-filing/undo)
+func (_ Unimplemented) UndoActivityProjectFiling(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Re-associate a captured activity to a chosen deal/entity (idempotent, source-preserving).
 // (POST /activities/{id}/relink)
 func (_ Unimplemented) RelinkActivity(w http.ResponseWriter, r *http.Request, id Id, params RelinkActivityParams) {
@@ -67055,6 +67342,12 @@ func (_ Unimplemented) ReplaceAiPriceSync(w http.ResponseWriter, r *http.Request
 // Authenticated AI configuration posture for transparent human-facing workspaces.
 // (GET /ai/profile)
 func (_ Unimplemented) GetAiProfile(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Which AI providers are not answering, and why.
+// (GET /ai/provider-health)
+func (_ Unimplemented) GetAiProviderHealth(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -69164,6 +69457,12 @@ func (_ Unimplemented) PreviewAccountSendAuthorization(w http.ResponseWriter, r 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// The sign-off a send of this message would append beneath it.
+// (POST /emails:sign-off)
+func (_ Unimplemented) PreviewEmailSignOff(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Confirm and start a fleet-wide reindex.
 // (POST /embeddings/reindex)
 func (_ Unimplemented) EmbedReindexStart(w http.ResponseWriter, r *http.Request) {
@@ -69815,6 +70114,12 @@ func (_ Unimplemented) GetMyEmailSignature(w http.ResponseWriter, r *http.Reques
 // Write or clear your own sign-off.
 // (PUT /me/email-signature)
 func (_ Unimplemented) SaveMyEmailSignature(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Change the name colleagues greet you by.
+// (PUT /me/greeting-name)
+func (_ Unimplemented) SaveMyGreetingName(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -72421,6 +72726,70 @@ func (siw *ServerInterfaceWrapper) ReadActivityPipelineTrace(w http.ResponseWrit
 	handler.ServeHTTP(w, r)
 }
 
+// GetActivityProjectFiling operation middleware
+func (siw *ServerInterfaceWrapper) GetActivityProjectFiling(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetActivityProjectFiling(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UndoActivityProjectFiling operation middleware
+func (siw *ServerInterfaceWrapper) UndoActivityProjectFiling(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UndoActivityProjectFiling(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // RelinkActivity operation middleware
 func (siw *ServerInterfaceWrapper) RelinkActivity(w http.ResponseWriter, r *http.Request) {
 
@@ -73721,6 +74090,26 @@ func (siw *ServerInterfaceWrapper) GetAiProfile(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetAiProfile(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAiProviderHealth operation middleware
+func (siw *ServerInterfaceWrapper) GetAiProviderHealth(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAiProviderHealth(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -89219,6 +89608,26 @@ func (siw *ServerInterfaceWrapper) PreviewAccountSendAuthorization(w http.Respon
 	handler.ServeHTTP(w, r)
 }
 
+// PreviewEmailSignOff operation middleware
+func (siw *ServerInterfaceWrapper) PreviewEmailSignOff(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewEmailSignOff(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // EmbedReindexStart operation middleware
 func (siw *ServerInterfaceWrapper) EmbedReindexStart(w http.ResponseWriter, r *http.Request) {
 
@@ -93169,6 +93578,26 @@ func (siw *ServerInterfaceWrapper) SaveMyEmailSignature(w http.ResponseWriter, r
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SaveMyEmailSignature(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SaveMyGreetingName operation middleware
+func (siw *ServerInterfaceWrapper) SaveMyGreetingName(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SaveMyGreetingName(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -104932,6 +105361,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/activities/{id}/pipeline", wrapper.ReadActivityPipelineTrace)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/activities/{id}/project-filing", wrapper.GetActivityProjectFiling)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/activities/{id}/project-filing/undo", wrapper.UndoActivityProjectFiling)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/activities/{id}/relink", wrapper.RelinkActivity)
 	})
 	r.Group(func(r chi.Router) {
@@ -105032,6 +105467,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/profile", wrapper.GetAiProfile)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/ai/provider-health", wrapper.GetAiProviderHealth)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/provider-keys", wrapper.ListAiProviderKeys)
@@ -106087,6 +106525,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/emails:preview", wrapper.PreviewAccountSendAuthorization)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/emails:sign-off", wrapper.PreviewEmailSignOff)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/embeddings/reindex", wrapper.EmbedReindexStart)
 	})
 	r.Group(func(r chi.Router) {
@@ -106412,6 +106853,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/me/email-signature", wrapper.SaveMyEmailSignature)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/me/greeting-name", wrapper.SaveMyGreetingName)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/me/linkedin-account", wrapper.GetMyLinkedInAccount)

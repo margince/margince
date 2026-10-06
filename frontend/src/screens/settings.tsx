@@ -67,6 +67,7 @@ import { viewerZone } from "../format/timezone";
 import { LOCALES, type Locale, localeNameKey, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { AcquisitionSourcesCard } from "./acquisitionsources";
+import { AgentConnectionsCard } from "./agent-token-settings";
 import { AiBudgetCard } from "./ai-admin";
 import { ModelPricesCard } from "./ai-price-sync";
 import { AiProviderKeysCard } from "./ai-provider-keys";
@@ -82,7 +83,7 @@ import { BriefDeliveryRows } from "./briefdelivery";
 import { CaptureActivityTab } from "./capture-activity";
 import { OwnerIdentitiesCard } from "./capture-owner-identities";
 import { CaptureSendersCard } from "./capture-senders";
-import { CaptureSettingsCard } from "./capture-settings";
+import { CaptureSettingsCard, WebsiteReadingCard } from "./capture-settings";
 import { CaptureHealthCard } from "./capturehealth";
 import {
   LoadMoreButton,
@@ -128,6 +129,7 @@ import { OvernightGrantCard } from "./overnight-grant";
 import { OwnDomainsCard } from "./own-domains";
 import { PasswordSettingRow } from "./passwordcard";
 import { ProductsAdmin } from "./products";
+import { ProviderHealthCard } from "./providerhealth";
 import { FxRatesCard, ModelCostsCard } from "./rates";
 import { RecordRolesCard } from "./recordroles";
 import { ReviewTemplatesCard } from "./reviewtemplates";
@@ -135,6 +137,10 @@ import { RolesSettings } from "./roles-settings";
 import { PipelinesCard } from "./settings.pipelines";
 import { PrivacyLanes } from "./settings.privacy";
 import { StageAutomationCard } from "./settings.stageautomation";
+import {
+  DisplayNameSettingRow,
+  GreetingNameSettingRow,
+} from "./settings-names";
 import { SignInMethodsCard } from "./sign-in-methods";
 import { TagVocabularyCard } from "./tagadmin";
 import { ThisDevicePanel } from "./thisdevice";
@@ -147,11 +153,6 @@ import "./settings.css";
 import { ProvidersStat } from "./ai-settings";
 import type { SettingsPageId } from "./settingscatalog";
 import { SettingsBoundary, SettingsHome } from "./settingshome";
-// The catalog, the addresses and the visibility predicate moved to
-// ./settingsnav so `src/app/**` can read them without pulling in every card.
-// Re-exported here because this module's own consumers — the tests, the stories,
-// the testkit — ask for both halves, and splitting their imports would be churn
-// that proves nothing.
 import {
   ADMIN_SEGMENT,
   SETTINGS_SCREEN,
@@ -163,6 +164,7 @@ import {
   useVisibleSettingsPages,
 } from "./settingsnav";
 import { settingsHref, settingsRouteTarget } from "./settingsrouting";
+import { useSaveSignature } from "./settingssignature";
 
 // Re-exported so this module's own consumers — the tests, the stories, the
 // testkit — keep asking one module for both halves. Splitting their imports
@@ -238,6 +240,7 @@ export function tabContent(id: SettingsPageId): ReactNode {
       return (
         <>
           <SignInMethodsCard />
+          <AgentConnectionsCard />
           <OAuthAppCard provider="google" />
           <OAuthAppCard provider="microsoft" />
         </>
@@ -302,6 +305,7 @@ export function tabContent(id: SettingsPageId): ReactNode {
               then the two judgements that read it. */}
           <OwnDomainsCard />
           <CaptureSettingsCard />
+          <WebsiteReadingCard />
           <ConsumerMailDomainsCard />
           {/* Last, because it is the OUTCOME of the three above rather than a
               fourth rule: which domains ended up refused a company, and whether
@@ -365,15 +369,14 @@ export function tabContent(id: SettingsPageId): ReactNode {
       return (
         <>
           {/* A reindex that costs tokens, then a read of what the background
-              system is holding. They hid beside the custom-field editor before,
-              which put "define a field" and "watch a stalled queue" on one
-              page. */}
+              system is holding: they hid beside the custom-field editor. */}
           <EmbedReindexCard />
           <JobHealthCard />
           {/* Beside the queue reading, not under Capture or Extensions: each
               answers "is something broken in the background". */}
           <CaptureHealthCard />
           <ExtensionIngestHealthCard />
+          <ProviderHealthCard />
         </>
       );
     case "extensions":
@@ -679,6 +682,7 @@ function AccountCard() {
               three-field form live in passwordcard.tsx, exported as a ROW
               precisely so this page can place it among its own. */}
           <DisplayNameSettingRow toast={toast} />
+          <GreetingNameSettingRow toast={toast} />
           <PasswordSettingRow />
           <SignatureSettingRow toast={toast} />
           <LanguageSettingRow />
@@ -704,7 +708,6 @@ function AccountCard() {
 // line, which is the part a reader recognises their own signature by.
 function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
   const t = useT();
-  const queryClient = useQueryClient();
   const titleId = useId();
   const [open, setOpen] = useState(false);
   const [body, setBody] = useState<string | null>(null);
@@ -718,29 +721,17 @@ function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
       return data ?? { body: "" };
     },
   });
-  const save = useMutation({
-    mutationFn: async (next: string) => {
-      const { data, error } = await api.PUT("/me/email-signature", {
-        body: { body: next },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-    onSuccess: (saved) => {
-      // Hand the edit back to the server's answer. It trims what it stores, so
-      // a member who typed trailing spaces would otherwise keep seeing them
-      // over a row that no longer has them — with Save still lit, offering to
-      // save a difference that exists only in the browser.
-      setBody(saved?.body ?? "");
-      queryClient.invalidateQueries({ queryKey: ["me-email-signature"] });
-      // Committing the edit is what the dialog was opened for, so a save closes
-      // it — and the toast is what says the write landed, on the page the
-      // reader is handed back to.
-      setOpen(false);
-      toast.show(t("settings.saved"));
-    },
+  const save = useSaveSignature((saved) => {
+    // Hand the edit back to the server's answer. It trims what it stores, so
+    // a member who typed trailing spaces would otherwise keep seeing them
+    // over a row that no longer has them — with Save still lit, offering to
+    // save a difference that exists only in the browser.
+    setBody(saved?.body ?? "");
+    // Committing the edit is what the dialog was opened for, so a save closes
+    // it — and the toast is what says the write landed, on the page the
+    // reader is handed back to.
+    setOpen(false);
+    toast.show(t("settings.saved"));
   });
 
   // The saved value until the member types; theirs from then on. Reading state
@@ -887,83 +878,6 @@ function AppearanceSettingRow() {
             label: t(THEME_LABEL_KEYS[option]),
           }))}
         />
-      )}
-    />
-  );
-}
-
-/**
- * The name colleagues see you by.
- *
- * The saved answer is read back from `/me` rather than kept here, so the shell's
- * account chip and the roster agree with this row the moment it lands.
- */
-function DisplayNameSettingRow({ toast }: Readonly<{ toast: Toast }>) {
-  const t = useT();
-  const me = useMe();
-  const queryClient = useQueryClient();
-  const stored = me.data?.user.display_name ?? "";
-  // null means "not editing" — the row shows the stored name until the reader
-  // types, so a `/me` refetch cannot overwrite what they are in the middle of.
-  const [draft, setDraft] = useState<string | null>(null);
-  const shown = draft ?? stored;
-  const save = useMutation({
-    mutationFn: async (next: string) => {
-      const { data, error } = await api.PUT("/me/display-name", {
-        body: { display_name: next },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
-    },
-    onSuccess: (saved) => {
-      // Keep the saved name visible if the account refetch is delayed or fails.
-      setDraft(saved?.display_name ?? null);
-      void queryClient.invalidateQueries({ queryKey: ["scheduling-profile"] });
-      toast.show(t("settings.saved"));
-      void queryClient.invalidateQueries({ queryKey: ["me"] });
-    },
-  });
-  // Trimmed for the comparison as well as for the send, or a name with a
-  // trailing space reads as a change and the server answers that it is not one.
-  const trimmed = shown.trim();
-  const dirty = trimmed !== stored;
-  // Counted in CHARACTERS, which is what the contract's `maxLength` means and
-  // what the server checks with `utf8.RuneCountInString`. `String.length` would
-  // count UTF-16 units and refuse a name the server admits.
-  const tooLong = [...trimmed].length > 255;
-  const refusal = save.error ? problemMessageOf(save.error, t) : undefined;
-  return (
-    <SettingRow
-      label={t("settings.displayName")}
-      description={t("settings.displayNameHelp")}
-      layout="stack"
-      control={(row) => (
-        // The catalogued pairing of field and verb, as the pipeline rows use.
-        <div className="form-stack settingrow-measure">
-          <Field label={t("settings.displayName")} labelHidden error={refusal}>
-            {(field) => (
-              <TextInput
-                {...field}
-                aria-labelledby={row["aria-labelledby"]}
-                aria-describedby={[field, row]
-                  .map((owner) => owner["aria-describedby"])
-                  .filter(Boolean)
-                  .join(" ")}
-                value={shown}
-                // No `maxLength`: UTF-16 units, not the runes `tooLong` counts.
-                onChange={(event) => setDraft(event.target.value)}
-              />
-            )}
-          </Field>
-          <Button
-            disabled={!dirty || trimmed === "" || tooLong || save.isPending}
-            onClick={() => save.mutate(trimmed)}
-          >
-            {t("settings.displayNameSave")}
-          </Button>
-        </div>
       )}
     />
   );

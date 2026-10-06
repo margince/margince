@@ -92,8 +92,7 @@ func TestTheCatalogueNamesEveryDeclaredKindsRole(t *testing.T) {
 // TestADeclaredTimeoutIsNeverPublishedAsZeroSeconds — zero was ambiguous
 // between River's silent one-minute default and a deliberate absence, which
 // is the ambiguity this whole contract exists to remove. A deliberate
-// absence is -1; a wall clock the operator sets is not knowable from the
-// declaration at all, so the label is absent rather than guessed at.
+// absence is -1, and every other declared kind states its deadline.
 func TestADeclaredTimeoutIsNeverPublishedAsZeroSeconds(t *testing.T) {
 	out := renderJobMetrics(t, jobs.Snapshot{})
 
@@ -102,7 +101,7 @@ func TestADeclaredTimeoutIsNeverPublishedAsZeroSeconds(t *testing.T) {
 			"minute and as a deliberate absence at the same time\ngot:\n%s", out)
 	}
 
-	var sawNone, sawOperator, sawFixed int
+	var sawNone, sawFixed int
 	for kind, spec := range jobs.Declared() {
 		series := infoSeriesFor(t, out, kind)
 		switch {
@@ -110,13 +109,6 @@ func TestADeclaredTimeoutIsNeverPublishedAsZeroSeconds(t *testing.T) {
 			sawNone++
 			if !strings.Contains(series, `timeout_seconds="-1"`) {
 				t.Errorf("%s deliberately has no deadline; want timeout_seconds=\"-1\", got %s", kind, series)
-			}
-		case spec.Timeout.FromOperator():
-			sawOperator++
-			if strings.Contains(series, "timeout_seconds=") {
-				t.Errorf("%s takes its wall clock from an operator's dial, which this process "+
-					"does not hold — publishing a number here feeds an alert a deadline the "+
-					"runtime does not honour. got %s", kind, series)
 			}
 		default:
 			sawFixed++
@@ -126,9 +118,9 @@ func TestADeclaredTimeoutIsNeverPublishedAsZeroSeconds(t *testing.T) {
 			}
 		}
 	}
-	if sawNone == 0 || sawOperator == 0 || sawFixed == 0 {
-		t.Fatalf("covered %d none / %d operator / %d fixed policies; a branch with no declared "+
-			"kind behind it is not actually gated here", sawNone, sawOperator, sawFixed)
+	if sawNone == 0 || sawFixed == 0 {
+		t.Fatalf("covered %d none / %d fixed policies; a branch with no declared "+
+			"kind behind it is not actually gated here", sawNone, sawFixed)
 	}
 }
 
@@ -330,16 +322,10 @@ func TestNoTimeoutPolicyResolvesToZeroSeconds(t *testing.T) {
 		}
 	}
 
-	// The two the file does not state: an operator's dial, and a Spec nobody
-	// declared. Both must be reported as unstated rather than as a number.
-	for name, policy := range map[string]jobs.TimeoutPolicy{
-		"operator":   {OperatorField: "DeepReadCaps"},
-		"undeclared": {},
-	} {
-		if _, stated := declaredTimeoutSeconds(policy); stated {
-			t.Errorf("%s: the declaration states no deadline for this policy, so the exposition "+
-				"must not publish one", name)
-		}
+	// A Spec nobody declared states no deadline, and must be reported as
+	// unstated rather than as a number.
+	if _, stated := declaredTimeoutSeconds(jobs.TimeoutPolicy{}); stated {
+		t.Error("an undeclared policy states no deadline, so the exposition must not publish one")
 	}
 }
 

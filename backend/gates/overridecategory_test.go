@@ -41,7 +41,7 @@ import (
 // its category CHECK. Named rather than globbed: a glob matching nothing would
 // report PASS, which is the under-recognition this repository treats as a
 // failure in itself.
-const overrideMigration = "1791171640_a_rep_may_vouch_for_a_send.up.sql"
+const overrideMigration = "1791255835_a_rep_may_vouch_for_a_send.up.sql"
 
 // overrideCategoryConstraint captures the ARRAY body of the
 // communication_override_category CHECK. Mirrors categoryConstraint's shape in

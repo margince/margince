@@ -233,8 +233,15 @@ func (s *Service) decideInTx(ctx context.Context, tx pgx.Tx, p principal.Princip
 	// this module keeps everywhere. Before the status check, because what a
 	// credential may release is a question about the credential and not about
 	// how far this particular proposal has got.
-	if err := agentMayDecide(p, a, approve, s.ownReleaseFor(ctx, a)); err != nil {
+	if err := agentMayDecide(p, a, approve, s.ownReleaseFor(ctx, tx, a)); err != nil {
 		return row{}, err
+	}
+	// An agent never edits what it releases, whoever staged it: what a credential
+	// may release is judged on the staged payload, so an edit would release
+	// something that was never classified. The contact edits in the CRM.
+	if p.Type == principal.PrincipalAgent && edited != nil {
+		return row{}, fmt.Errorf("an agent never edits what it releases; the contact edits and "+
+			"releases it in the CRM: %w", apperrors.ErrPermissionDenied)
 	}
 	if st := a.effectiveStatus(s.now()); st != "pending" {
 		// The ROW travels with the refusal. recordDecision has to tell an
@@ -244,6 +251,12 @@ func (s *Service) decideInTx(ctx context.Context, tx pgx.Tx, p principal.Princip
 		// is the answer that decides whether a human's yes is honoured or
 		// refused.
 		return a, &AlreadyDecidedError{Status: st}
+	}
+	// A retired kind is governed only so its decided cards stay readable;
+	// nothing applies it, so a yes would be recorded and do nothing.
+	if approve && retiredKinds[a.Kind] {
+		return row{}, fmt.Errorf("crmapprovals: %s is retired and can no longer be applied: %w",
+			a.Kind, apperrors.ErrConflict)
 	}
 
 	status, action, verdict := approvalStatusRejected, "reject", approvalStatusRejected

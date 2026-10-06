@@ -40,7 +40,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/licensecheck"
 	"github.com/margince/margince/backend/internal/platform/mailer"
-	"github.com/margince/margince/backend/internal/platform/ratelimit"
 )
 
 func main() {
@@ -123,7 +122,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	// built, not because construction order matters — the registry reaches
 	// limiters made either side of this line — but because the line belongs
 	// where the client it shares is opened.
-	ratelimit.ShareProcess(rdb)
+	shareThroughRedis(ctx, rdb)
 
 	surfaceOpts, resetLane, err := declaredSurfaceOptions(ctx, cfg, deployCfg, pool, schemaPool, vault, rdb, logger, stdout)
 	if err != nil {
@@ -321,12 +320,6 @@ func baseComposeOptions(ctx context.Context, cfg apiConfig, capCfg compose.Captu
 		// gate is on.
 		opts = append(opts, compose.WithMCPResource(strings.TrimSuffix(cfg.publicBaseURL, "/")+"/mcp"))
 	}
-	// An operator-shortened access token, applied to both mints of a
-	// connection's life. Zero is "not configured", which keeps the passport
-	// default — declared by omission, never a silent guess.
-	if cfg.oauthAccessTokenTTL != 0 {
-		opts = append(opts, compose.WithOAuthAccessTokenTTL(cfg.oauthAccessTokenTTL))
-	}
 	// The channel-connection surface needs no public origin of its own: Telegram
 	// ingress polls, so nothing is ever told where to reach this installation.
 	// It must precede kvOpts below, which hands it the vault it seals with.
@@ -342,13 +335,6 @@ func baseComposeOptions(ctx context.Context, cfg apiConfig, capCfg compose.Captu
 	}
 	opts = append(opts, blobOpts...)
 
-	// The refusal half of the auto-enrich daily cap: this role spends it too
-	// (an approval accept can queue a domain-triage read), so a typo fails the
-	// boot here; compose resolves the value where it is spent, from the same
-	// process environment, which is fixed at exec.
-	if _, err := compose.AutoEnrichDailyCapFromEnv(config.FromOS); err != nil {
-		return nil, nil, nil, fmt.Errorf("api: %w", err)
-	}
 	kvOpts, err := keyvaultOptions(pool, vault, stdout)
 	if err != nil {
 		return nil, nil, nil, err

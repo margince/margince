@@ -78,13 +78,24 @@ func FixedOIDCProvider(p OIDCProvider) OIDCProviderSource {
 // OIDCVerifier is what ssologin needs from an ID-token verifier — defined
 // here, not imported from compose, so identity never depends on compose (a
 // module never imports a sibling; compose injects the edge instead).
-//
-// groups is the token's standard `groups` claim, feeding the additive
-// group→role grants (OidcGroupRoleMap). An absent claim is an EMPTY list,
-// never an error: most Google tokens carry none, and a token with no groups
-// simply grants nothing.
 type OIDCVerifier interface {
-	Verify(ctx context.Context, idToken string) (email, sub string, emailVerified bool, groups []string, err error)
+	Verify(ctx context.Context, idToken string) (OIDCClaims, error)
+}
+
+// OIDCClaims is what a verified ID token says about who signed in.
+type OIDCClaims struct {
+	Email         string
+	Subject       string
+	EmailVerified bool
+	// Groups is the token's standard `groups` claim, feeding the additive
+	// group→role grants (OidcGroupRoleMap). An absent claim is an EMPTY list,
+	// never an error: most Google tokens carry none, and a token with no
+	// groups simply grants nothing.
+	Groups []string
+	// GivenName is the `given_name` claim, empty when the provider sends none.
+	// Google sends it under the `profile` scope; Microsoft only when the app
+	// registration asks for it. It fills an empty greeting name and nothing else.
+	GivenName string
 }
 
 // OIDCExchanger is what ssologin needs from the code exchange.
@@ -362,13 +373,13 @@ func (h Handlers) OidcSignInCallback(w http.ResponseWriter, r *http.Request, pro
 		return
 	}
 
-	email, sub, groups, reason, err := h.exchangeAndVerify(ctx, provider, p, code, codeVerifier)
+	claims, reason, err := h.exchangeAndVerify(ctx, provider, p, code, codeVerifier)
 	if reason != "" {
 		fail(ctx, reason, err)
 		return
 	}
 
-	token, err := h.svc.LoginViaFederatedIdentity(withUserAgent(ctx, r.UserAgent()), provider, sub, email, groups)
+	token, err := h.svc.LoginViaFederatedIdentity(withUserAgent(ctx, r.UserAgent()), provider, claims)
 	if err != nil {
 		fail(ctx, "resolve/link account", err)
 		return
@@ -380,19 +391,19 @@ func (h Handlers) OidcSignInCallback(w http.ResponseWriter, r *http.Request, pro
 // exchangeAndVerify redeems the authorization code and validates the ID
 // token it returns, split out of OidcSignInCallback so that function's own
 // branching stays over the state/cookie plumbing rather than growing to
-// cover the token round trip too. A non-empty reason means refuse; email/sub
-// and groups are meaningful only when reason is empty.
-func (h Handlers) exchangeAndVerify(ctx context.Context, provider string, p OIDCProvider, code, codeVerifier string) (email, sub string, groups []string, reason string, err error) {
+// cover the token round trip too. A non-empty reason means refuse; the claims
+// are meaningful only when reason is empty.
+func (h Handlers) exchangeAndVerify(ctx context.Context, provider string, p OIDCProvider, code, codeVerifier string) (claims OIDCClaims, reason string, err error) {
 	idToken, err := p.Exchanger.Exchange(ctx, code, codeVerifier, h.callbackURI(provider))
 	if err != nil {
-		return "", "", nil, "token exchange", err
+		return OIDCClaims{}, "token exchange", err
 	}
-	email, sub, emailVerified, groups, err := p.Verifier.Verify(ctx, idToken)
+	claims, err = p.Verifier.Verify(ctx, idToken)
 	if err != nil {
-		return "", "", nil, "id token verification", err
+		return OIDCClaims{}, "id token verification", err
 	}
-	if !emailVerified {
-		return "", "", nil, "email not verified", nil
+	if !claims.EmailVerified {
+		return OIDCClaims{}, "email not verified", nil
 	}
 	// email/sub are both required to reach here (they identify who signed
 	// in and are what LoginViaFederatedIdentity resolves/links against) —
@@ -400,10 +411,10 @@ func (h Handlers) exchangeAndVerify(ctx context.Context, provider string, p OIDC
 	// so an unchecked blank value would resolve/link a blank identity
 	// rather than being refused here. groups is not: a token naming none is
 	// the common case and grants nothing.
-	if email == "" || sub == "" {
-		return "", "", nil, "missing email or subject claim", nil
+	if claims.Email == "" || claims.Subject == "" {
+		return OIDCClaims{}, "missing email or subject claim", nil
 	}
-	return email, sub, groups, "", nil
+	return claims, "", nil
 }
 
 // logOidcFailure writes one system_log row for a refused/failed OIDC

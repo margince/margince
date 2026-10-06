@@ -6895,7 +6895,7 @@ paths:
         A `meeting` or a `call` cannot be relinked to an `company` — it is with a contact, and
         the company is reached through that contact's employer. The estate refuses it
         (migration 1788000100).
-      x-mcp-tool: { verb: relink_activity, record_type: activity, tier: dynamic, tier_resolver: destination_record_type, confirmation_required_when: 'entity_type is project — filing under a project classifies the activity as commercial correspondence, which is write-once and cannot be undone by relinking away', scope: write }
+      x-mcp-tool: { verb: relink_activity, record_type: activity, tier: dynamic, tier_resolver: destination_record_type, confirmation_required_when: 'entity_type is project — filing under a project classifies the activity as commercial correspondence — a member can take that back with a written reason, but a human or a member confirms it first', scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
         # Conditions the move on the version the caller read the ACTIVITY at.
@@ -6928,6 +6928,78 @@ paths:
         '409': { $ref: '#/components/responses/VersionConflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /activities/{id}/project-filing:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Activities]
+      operationId: getActivityProjectFiling
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: What filing this activity under a project did to its retention, and whether it can be undone.
+      description: |
+        Answers from the same judgement the undo applies, so the screen offering the undo and the
+        write refusing it cannot disagree: `undoable` is true only when the project filing is the
+        SOLE reason the correspondence is kept, no statutory hold has started, and no qualifying deal
+        is linked. When it is not, `refusal` says which rule stands in the way. `undone` lists the
+        decisions already taken on this activity — who, when and the written reason — newest first,
+        which is how the audit entry is shown where the activity is.
+      responses:
+        '200':
+          description: The filing's state.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProjectFiling' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /activities/{id}/project-filing/undo:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Activities]
+      operationId: undoActivityProjectFiling
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      # The one door out of the commercial-correspondence class a project filing
+      # stamped. It removes the project link and the filing's evidence, then
+      # clears the class, in one transaction. Never an agent's: an agent that
+      # could undo the shield it was allowed to write has no floor under it.
+      summary: Undo filing this activity under a project. Requires a stated reason; audited.
+      description: |
+        Removes the activity from its project and withdraws the retention class that filing gave it,
+        so the correspondence is treated as ordinary again. Allowed only when the project filing is
+        the sole basis for the class: another qualifying basis (a won deal, a sent offer, a
+        controller's pin, a second project) keeps it and the call answers `409
+        other_basis_remains`. An activity already restricted by a statutory hold answers `409
+        restricted` — a hold that has started never shortens. The decision is recorded with the
+        deciding member's name and the written reason, in one transaction with the audit entry and
+        the `activity.updated` event.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RetentionOverrideRequest' }
+      responses:
+        '200':
+          description: The filing's state after the undo.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProjectFiling' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: >-
+            The filing cannot be undone; the problem's `code` is one of `not_filed`, `archived`,
+            `restricted`, `legal_hold`, `erasure_pending`, `hidden_project`, `other_basis_remains`
+            or `qualifying_deal`, or `decider_unnamed` when the deciding account has no display name.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /activities/relink-thread:
     post:
       tags: [Activities]
@@ -6947,7 +7019,7 @@ paths:
         A `meeting` or a `call` cannot be relinked to an `company` — it is with a contact, and
         the company is reached through that contact's employer. The estate refuses it
         (migration 1788000100).
-      x-mcp-tool: { verb: relink_thread, record_type: activity, tier: dynamic, tier_resolver: destination_record_type, confirmation_required_when: 'entity_type is project — filing under a project classifies every activity in the thread as commercial correspondence, which is write-once and cannot be undone by relinking away', scope: write }
+      x-mcp-tool: { verb: relink_thread, record_type: activity, tier: dynamic, tier_resolver: destination_record_type, confirmation_required_when: 'entity_type is project — filing under a project classifies every activity in the thread as commercial correspondence — a member can take that back with a written reason, but a human or a member confirms it first', scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -6984,7 +7056,7 @@ paths:
         the company is reached through that contact's employer. The estate refuses it
         (migration 1788000100).
 
-      x-mcp-tool: { verb: relink_activities, record_type: activity, tier: dynamic, tier_resolver: destination_record_type, confirmation_required_when: 'entity_type is project — filing under a project classifies every named activity as commercial correspondence, which is write-once and cannot be undone by relinking away', scope: write }
+      x-mcp-tool: { verb: relink_activities, record_type: activity, tier: dynamic, tier_resolver: destination_record_type, confirmation_required_when: 'entity_type is project — filing under a project classifies every named activity as commercial correspondence — a member can take that back with a written reason, but a human or a member confirms it first', scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -7107,6 +7179,15 @@ paths:
         Drafting is 🟢 (never auto-sends). The draft is returned, not sent. Keeping the rep's
         unsent message is a separate, explicit act at `PUT /mail-drafts`, which this route
         never performs.
+
+        The `draft_email` verb has a second shape this route does not serve: given `links`
+        instead of an activity, it drafts the FIRST message to a contact or lead through the
+        same engine as `POST /contacts/{id}/draft-email`, `POST /companies/{id}/draft-email` or
+        `POST /leads/{id}/draft-email`. It saves the draft in the saved drafts of the human the
+        agent acts for, marked `agent_drafted`, only when that human keeps no unsent draft of
+        their own for the recipient. Otherwise it returns the draft unsaved. The tool result
+        says which: `saved_draft_id` names the saved draft, and `not_saved` says why there is
+        none.
       x-mcp-tool: { verb: draft_email, record_type: activity, tier: auto_execute, scope: draft }
       requestBody:
         required: false
@@ -7260,6 +7341,38 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /emails:sign-off:
+    post:
+      tags: [Activities]
+      operationId: previewEmailSignOff
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: The sign-off a send of this message would append beneath it.
+      description: |
+        What the composer shows under the body, read-only. It runs the code the send
+        runs, so the block shown is the block sent.
+
+        The caller's own signature when they have written one. Otherwise a plain
+        closing in the message's language — detected from `body`, then `subject`, then
+        the installation's language, then English — above the caller's display name
+        when one is on file.
+
+        Writes nothing. The send asks again, so a signature changed in between goes out
+        as changed.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EmailSignOffRequest' }
+      responses:
+        '200':
+          description: The block a send would append.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EmailSignOff' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /activities/{id}/send-email:
@@ -7506,8 +7619,12 @@ paths:
         is not an activity, not a scheduled send and never on a timeline, and only the seat
         that wrote it can read it. There is at most one per author and anchor.
 
-        The AI drafting routes still persist nothing: a draft exists only because the rep's
-        composer saved one here.
+        The AI drafting routes still persist nothing. A draft exists because the rep's composer
+        saved one here, or because an agent acting for the rep drafted a first message to a
+        contact or lead through `draft_email` (`agent_drafted`). The agent's draft is kept here
+        only when the rep has no draft of their own for that anchor; otherwise the tool returns
+        it unsaved with `not_saved` and this store is unchanged. That second writer is the tool
+        surface, not this route.
       x-agent-access: human-only
       parameters:
         - name: anchor_type
@@ -16096,6 +16213,33 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AiHealth' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+
+  /ai/provider-health:
+    get:
+      tags: [AI]
+      operationId: getAiProviderHealth
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Which AI providers are not answering, and why.
+      description: |
+        Every provider this process currently treats as degraded, down, out of credit or refusing
+        its credential, in name order. A provider that is answering normally is not listed, so an
+        empty list is the healthy answer.
+
+        The API and the worker each publish their status changes to Redis and this reads the merged
+        view, where the worst or blocking status wins, so an outage only the worker saw still shows.
+        Without Redis a process shows only its own view. Shared entries expire after 30
+        minutes unless refreshed every 10 while the provider is unhealthy. It is learned from real
+        calls, not a probe. The list never contains a key, a host or the
+        provider's own message text. It is admitted through the same grant as `/ai/health`.
+      responses:
+        '200':
+          description: The providers that are not answering normally.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AiProviderHealth' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
 
@@ -24879,8 +25023,8 @@ paths:
         (`POST /claims/{id}/settle`).
 
         Needs `contact:read`, `activity:read` and `relationship:read` on top of the deal
-        grant: each row names a contact, quotes a captured activity, and is this account's
-        through the contact's employment edge. A commitment whose contact or activity the
+        grant: each row names a contact, quotes a captured activity, and belongs to this
+        account through the contact's employment edge. A commitment whose contact or activity the
         caller may not see is left out, and `complete` is then false, so the card can say it
         speaks about less than the account rather than that nothing is owed. `has_more`
         says more commitments exist past the 25 returned. A deal with no company has
@@ -25098,8 +25242,8 @@ paths:
         edits another member's through this API.
 
         A member who has never written one has no row, and that is not an error:
-        `body` is empty and mail goes out unsigned, which is what happens today
-        for everyone.
+        `body` is empty, and their mail closes with a plain greeting and their
+        display name, when one is on file, instead (`POST /emails:sign-off` shows it).
       responses:
         '200':
           description: The caller's signature.
@@ -25115,7 +25259,7 @@ paths:
       summary: Write or clear your own sign-off.
       description: |
         An empty `body` CLEARS the signature — a member emptying the field means
-        "send my mail unsigned", not "leave what was there".
+        "sign off with the plain closing", not "leave what was there".
 
         Plain text only. The transport sends `text/plain` and the drafting
         prompts forbid the model from writing a sign-off of its own, so what is
@@ -25529,6 +25673,40 @@ paths:
       responses:
         '200':
           description: The caller's seat, with the new name.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /me/greeting-name:
+    put:
+      tags: [Identity]
+      operationId: saveMyGreetingName
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
+      x-agent-access: human-only
+      summary: Change the name colleagues greet you by.
+      description: |
+        Always the CALLER's own, never anybody else's: there is no id to pass.
+
+        A greeting opens with one name, and the first word of the display name
+        is often the wrong one ("Dr. Sofia Meier", "Nguyễn Thị Lan"). This is the
+        word a colleague's greeting uses instead. Empty or null clears it, and
+        the greeting falls back to the first word of the display name.
+
+        The first sign-in through a login provider fills it from the provider's
+        given name, but only while it is empty, so a value saved here is never
+        overwritten.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SaveMyGreetingNameRequest' }
+      responses:
+        '200':
+          description: The caller's seat, with the new greeting name.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/User' }
@@ -27782,7 +27960,7 @@ components:
       description: |
         The installation's identity and reporting basis (ADR-0090). Read by every role,
         changed only by admin/ops.
-      required: [name, timezone, base_currency, base_language, fiscal_year_start_month, dead_work_banner_hours, forecast_forward_measure, base_currency_locked, max_upload_bytes, sign_in_providers]
+      required: [name, timezone, base_currency, base_language, fiscal_year_start_month, dead_work_banner_hours, oauth_access_token_ttl_minutes, forecast_forward_measure, base_currency_locked, max_upload_bytes, sign_in_providers]
       properties:
         name:
           type: string
@@ -27873,6 +28051,15 @@ components:
             a file too large is refused before it is sent instead of after. The ceiling bounds
             the whole request, part framing included, which is why a client should leave a
             little room rather than compare a file against it exactly.
+        oauth_access_token_ttl_minutes:
+          type: integer
+          minimum: 5
+          maximum: 129600
+          description: |
+            How long the access token an MCP connector's OAuth handshake mints lives, in minutes —
+            for the code exchange and every refresh rotation alike. 30 days by default, at most
+            90. A change applies to the next token minted; tokens already issued keep the expiry
+            they were issued with.
         dead_work_banner_hours:
           type: integer
           minimum: 1
@@ -27989,6 +28176,11 @@ components:
             It creates no accounts: an email nobody invited is refused exactly as
             before, whether they have groups or not. Omit the field to leave the map unchanged; send an
             empty object to clear it; sending a map replaces the whole stored map.
+        oauth_access_token_ttl_minutes:
+          type: integer
+          minimum: 5
+          maximum: 129600
+          description: Set how long a connector's access token lives, in minutes. Reaches the next token minted.
         dead_work_banner_hours:
           type: integer
           minimum: 1
@@ -28393,8 +28585,20 @@ components:
       description: |
         The workspace-shared capture posture (ADR-0072, CAP-PARAM-7). Read by every role,
         changed only by admin/ops.
-      required: [auto_enrich, mail_sharing, shared_posture_allowed, signature_enrich]
+      required: [auto_enrich, mail_sharing, shared_posture_allowed, signature_enrich, auto_enrich_daily_cap, site_read]
       properties:
+        auto_enrich_daily_cap:
+          type: integer
+          minimum: 1
+          maximum: 20000
+          description: |
+            The installation-wide ceiling on AUTOMATIC website reads started in one UTC day.
+            Company auto-enrichment and domain triage spend it from one counter. It paces and only
+            paces: concurrency is bounded by the deep-read worker pool and model spend by the AI
+            budget. Read at the top of every sweep and on every capture, so a change applies
+            without a restart. Default 500.
+        site_read:
+          $ref: '#/components/schemas/SiteReadLimits'
         mail_sharing:
           type: boolean
           description: |
@@ -29354,11 +29558,27 @@ components:
           type: boolean
           description: Toggle whether contacts are looked up automatically for the free details.
 
+    SiteReadLimits:
+      type: object
+      additionalProperties: false
+      description: |
+        What one website read may fetch. Read when a read starts, so a change applies to the next
+        one. An automatic read also runs under its own lower page ceiling.
+      required: [max_pages, max_mib, wall_seconds]
+      properties:
+        max_pages: { type: integer, description: 'Pages one read may fetch. Default 60.' }
+        max_mib: { type: integer, description: 'Mebibytes one read may hold, summed over its pages. Default 32.' }
+        wall_seconds: { type: integer, description: 'Seconds one crawl may run before it stops and extracts what it has. Default 240.' }
+
     UpdateCaptureSettingsRequest:
       type: object
       description: A sparse capture-settings patch (admin/ops).
       properties:
         auto_enrich: { type: boolean, description: Toggle captured-company auto-enrichment. }
+        auto_enrich_daily_cap: { type: integer, minimum: 1, maximum: 20000, description: 'Set the daily ceiling on automatic website reads.' }
+        site_read_max_pages: { type: integer, minimum: 1, maximum: 200, description: 'Set the page limit of one website read.' }
+        site_read_max_mib: { type: integer, minimum: 1, maximum: 128, description: 'Set the size limit of one website read, in MiB.' }
+        site_read_wall_seconds: { type: integer, minimum: 30, maximum: 600, description: 'Set the time limit of one website crawl, in seconds.' }
         mail_sharing: { type: boolean, description: 'Toggle the workspace mail-sharing posture; affects correspondence captured from now on — mail, and chat on a transport whose credential belongs to one member.' }
         signature_enrich: { type: boolean, description: 'Toggle the tenant-wide default for reading contact details out of captured mail — its signature and any attached vCard. A mailbox that set its own switch keeps it.' }
         shared_posture_allowed: { type: boolean, description: 'Allow a seat to put their mailbox in the `shared` posture. Off by default; see CaptureSettings.shared_posture_allowed for what turning it on asserts.' }
@@ -30012,6 +30232,12 @@ components:
         filename: { type: string }
         byte_size: { type: [integer, 'null'] }
         content_type: { type: [string, 'null'] }
+        bytes_withheld:
+          type: boolean
+          readOnly: true
+          description: >-
+            True when the message is private to its owner and the file was recorded by
+            name, size and type only. There are no bytes to fetch.
 
     EmailAccess:
       type: object
@@ -30856,6 +31082,37 @@ components:
           type: array
           items: { $ref: '#/components/schemas/AiRungHealth' }
 
+    AiProviderHealth:
+      type: object
+      required: [providers]
+      properties:
+        providers:
+          type: array
+          description: Providers that are not answering normally, in name order. Empty when all are.
+          items: { $ref: '#/components/schemas/AiProviderHealthEntry' }
+
+    AiProviderHealthEntry:
+      type: object
+      required: [provider, health, since]
+      properties:
+        provider:
+          type: string
+          description: The provider's name as the routing binds it, never a key or host.
+        health:
+          type: string
+          enum: [degraded, down, out_of_credit, unauthorized]
+          description: |
+            `degraded` still takes calls; the other three refuse them until `retry_after`, when one
+            probe is allowed. `out_of_credit` and `unauthorized` are the administrator's to fix.
+        since:
+          type: string
+          format: date-time
+          description: When the provider first stopped answering normally, kept across failed probes.
+        retry_after:
+          type: string
+          format: date-time
+          description: When one probe call is next allowed. Absent for `degraded`, which is not blocked.
+
     AiRungHealth:
       type: object
       description: One model tier and what it has been doing.
@@ -31032,6 +31289,13 @@ components:
         unit: { type: string }
         available: { type: boolean }
         count: { type: integer, format: int64 }
+        waiting_on_provider:
+          type: integer
+          format: int64
+          description: >-
+            Work waiting for the AI provider to answer, not for the budget. It resumes by
+            itself at the provider's next probe, and a budget raise does not change it;
+            `count` holds only what a raise would resume.
     AiStatus:
       type: object
       required: [observed_at, budget, routing_version, task_contract_hash, features, deferred_work, deferred_work_coverage]
@@ -37085,9 +37349,35 @@ components:
           type: string
           description: |
             The sign-off appended below every message this member sends, plain text.
-            Empty means unsigned, which is the state of every member who has not
-            written one.
+            Empty means none written; a send then closes with a plain greeting and
+            the member's display name when one is on file.
         updated_at: { type: [string, 'null'], format: date-time }
+    EmailSignOffRequest:
+      type: object
+      required: [body]
+      properties:
+        body:
+          type: string
+          description: The message as written so far, plain text. Read only for its language.
+        subject:
+          type: string
+          description: The subject, read for its language when the body is too short to tell.
+    EmailSignOff:
+      type: object
+      required: [text, kind]
+      properties:
+        text:
+          type: string
+          description: |
+            The block appended below the message, plain text, exactly as sent. Empty when
+            `kind` is `none`.
+        kind:
+          type: string
+          enum: [signature, closing, none]
+          description: |
+            `signature`: the caller's own, from Settings. `closing`: the caller has written
+            none, so the send closes with a plain greeting and their name when available. `none`: this
+            send appends nothing.
     SaveEmailSignatureRequest:
       type: object
       required: [body]
@@ -37112,6 +37402,17 @@ components:
             The name colleagues see. Surrounding whitespace is trimmed and a name
             that is only whitespace is refused — the same bounds the invite form
             applies, because this writes the same column.
+      additionalProperties: false
+    SaveMyGreetingNameRequest:
+      type: object
+      required: [greeting_name]
+      properties:
+        greeting_name:
+          type: [string, 'null']
+          maxLength: 100
+          description: |
+            The name a colleague's greeting uses. Surrounding whitespace is
+            trimmed; empty or null clears it.
       additionalProperties: false
     WorkingHours:
       type: object
@@ -40666,6 +40967,12 @@ components:
             as company_id above, and just as deliberately not a second parent. Set at
             upload by the contact filing the paper; never inferred from a filename or a date,
             which is the guess the document state exists to refuse.
+        bytes_withheld:
+          type: boolean
+          readOnly: true
+          description: >-
+            True for a file a private message carried that was recorded by name, size and
+            type only: no bytes were kept, so there is nothing to download (404) or read.
         source: { type: string }
         captured_by: { type: string, readOnly: true, description: 'Server-stamped from the authenticated principal; never client-supplied.' }
         created_at: { type: string, format: date-time }
@@ -41326,7 +41633,7 @@ components:
 
     MailDraft:
       type: object
-      required: [id, anchor_type, anchor_id, to, cc, bcc, subject, body, version, created_at, updated_at]
+      required: [id, anchor_type, anchor_id, to, cc, bcc, subject, body, version, agent_drafted, created_at, updated_at]
       description: |
         One rep's unsent message, readable by its author and nobody else. Not an activity.
       properties:
@@ -41340,6 +41647,12 @@ components:
         body: { type: string }
         html_body: { type: [string, 'null'] }
         version: { type: integer, format: int64 }
+        agent_drafted:
+          type: boolean
+          description: >-
+            An agent wrote these words for the author through `draft_email`, and the author has
+            not saved over them yet. The screen says so before the message is sent. A save from
+            the composer clears it.
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
 
@@ -44538,6 +44851,13 @@ components:
         id: { type: string, format: uuid }
         email: { type: string, format: email }
         display_name: { type: string }
+        greeting_name:
+          type: [string, 'null']
+          maxLength: 100
+          description: >
+            The name a colleague's greeting uses ("Hi Sofia,"), absent or null when nobody has said.
+            Read through one rule on both sides: this when set, else the first word of
+            `display_name`. Present on the caller's own seat; absent on the roster.
         timezone: { type: string, default: UTC, description: IANA name. }
         locale:
           type: string
@@ -44642,6 +44962,12 @@ components:
       properties:
         email: { type: string, format: email }
         display_name: { type: string, minLength: 1, maxLength: 255 }
+        greeting_name:
+          type: [string, 'null']
+          maxLength: 100
+          description: >-
+            The name the member's greetings use, when the first word of `display_name`
+            is not it. Optional; absent, empty or null leaves it unset.
         role:
           type: string
           maxLength: 64
@@ -49156,7 +49482,7 @@ components:
       required: [id, kind, status, proposed_by, created_at]
       properties:
         id: { type: string, format: uuid }
-        kind: { type: string, description: 'Examples: coldstart | send_email | advance_deal | promote_lead | overnight | deal_follow_up | transcript_proposal | commitment_task.' }
+        kind: { type: string, description: 'Examples: coldstart | send_email | advance_deal | promote_lead | overnight | deal_follow_up | commitment_task.' }
         status: { type: string, enum: [pending, approved, rejected, expired] }
         proposal_id: { type: [string, 'null'], format: uuid, description: 'For kind=coldstart, the ColdStartProposal this approval accepts (links the staged proposal to its approval item).' }
         proposed_by: { type: string, description: 'agent:<id> / connector:<n> that staged this.' }
@@ -49551,6 +49877,58 @@ components:
         lawful_basis: { type: [string, 'null'] }
         enabled: { type: boolean }
 
+    ProjectFiling:
+      type: object
+      description: >-
+        What filing one activity under a project did to its retention, and whether the filing
+        can be undone. Names projects by the name frozen when the filing qualified the
+        correspondence, so a renamed or deleted project still reads as what it was.
+      required: [filed, projects, undoable, undone]
+      properties:
+        filed:
+          type: boolean
+          description: Whether the activity carries evidence that filing it under a project qualified it.
+        projects:
+          type: array
+          description: The project filings on record, oldest first.
+          items: { $ref: '#/components/schemas/ProjectFilingEntry' }
+        undoable: { type: boolean }
+        refusal:
+          description: Why a filed activity cannot be undone. Absent when it can, or when it is not filed.
+          allOf: [ { $ref: '#/components/schemas/ProjectFilingRefusal' } ]
+        undone:
+          type: array
+          description: Undo decisions already taken on this activity, newest first.
+          items: { $ref: '#/components/schemas/ProjectFilingUndoDecision' }
+    ProjectFilingEntry:
+      type: object
+      required: [name, qualified_at]
+      properties:
+        name: { type: string, description: "The project's name when the filing qualified the activity. Empty when the project is hidden from the caller." }
+        hidden:
+          type: boolean
+          description: True when the project exists and the caller cannot see it; its name is withheld.
+        qualified_at: { type: string, format: date-time }
+    ProjectFilingRefusal:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string, enum: [not_filed, archived, restricted, legal_hold, erasure_pending, hidden_project, other_basis_remains, qualifying_deal] }
+        message: { type: string }
+    ProjectFilingUndoDecision:
+      type: object
+      required: [id, at, by_name, reason, projects]
+      properties:
+        id: { type: string, format: uuid, description: The audit entry that recorded the decision. }
+        at: { type: string, format: date-time }
+        redacted:
+          type: boolean
+          description: True when the decision touched a project the caller cannot see; only its moment is shown.
+        by_name: { type: string }
+        reason: { type: string }
+        projects:
+          type: array
+          items: { type: string }
     RetentionOverrideRequest:
       type: object
       # The reason is what makes the override a decision rather than a toggle:

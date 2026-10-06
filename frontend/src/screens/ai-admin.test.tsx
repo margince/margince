@@ -141,6 +141,28 @@ it("names a carrier the preview could not count as unavailable", async () => {
   expect(within(list).getByText(/Company scans:\s*Unavailable/)).toBeTruthy();
   expect(within(list).getByText(/Website reads:\s*3/)).toBeTruthy();
 });
+// The budget count is what a raise would resume; work waiting on the provider
+// is its own line, shown only when there is some.
+it("shows the provider wait beside the carrier's budget count", async () => {
+  const user = userEvent.setup({ delay: null });
+  mount();
+  await user.click(
+    await screen.findByRole("button", { name: "Edit allowance" }),
+  );
+  await user.click(screen.getByRole("button", { name: "Preview effects" }));
+  const waiting = await screen.findByText(
+    "Recorded work waiting on the allowance",
+  );
+  const list = waiting.closest("details");
+  if (!(list instanceof HTMLElement)) {
+    throw new Error("the deferred work is not a disclosure");
+  }
+  expect(
+    within(list).getAllByText(
+      "Waiting for the AI provider: 2. It resumes by itself when the provider answers.",
+    ),
+  ).toHaveLength(1);
+});
 it("keeps a rejected draft visible after a concurrent edit", async () => {
   const user = userEvent.setup({ delay: null });
   mount(undefined, true);

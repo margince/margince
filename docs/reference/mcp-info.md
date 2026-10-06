@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 81 |
 | Resources | 11 |
-| Tool catalog | 244.8 KB |
+| Tool catalog | 245.9 KB |
 | Resource catalog | 4.1 KB |
-| Approx. wire tokens | 63704 |
+| Approx. wire tokens | 63994 |
 | Largest tool | `prep_for_meeting` (9.0 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,11 +29,11 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 108.2 KB | 44% | **No** — a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 63.9 KB | 26% | Yes, every step |
-| Input schemas | 55.7 KB | 22% | Yes, every step |
+| Output schemas | 108.4 KB | 44% | **No** — a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 64.8 KB | 26% | Yes, every step |
+| Input schemas | 55.8 KB | 22% | Yes, every step |
 | _Names, annotations, punctuation_ | 16.9 KB | 6% | Partly |
-| **Description + input schema** | **119.6 KB** | **48%** | **the recurring cost** |
+| **Description + input schema** | **120.6 KB** | **49%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -90,7 +90,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`describe_report_blocks`](#describe_report_blocks) | Describe the report block grammar | yes |  | 2.0 KB |
 | [`describe_report_vocabulary`](#describe_report_vocabulary) | Describe the report vocabulary | yes |  | 2.4 KB |
 | [`disqualify_lead`](#disqualify_lead) | Disqualify a lead |  |  | 2.0 KB |
-| [`draft_email`](#draft_email) | Draft an email |  |  | 2.5 KB |
+| [`draft_email`](#draft_email) | Draft an email |  |  | 3.1 KB |
 | [`draft_follow_ups_for`](#draft_follow_ups_for) | Draft follow-ups |  |  | 2.6 KB |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 2.6 KB |
 | [`forecast_input_checks`](#forecast_input_checks) | What the forecast's inputs were checked against | yes |  | 2.7 KB |
@@ -107,7 +107,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`list_pipelines`](#list_pipelines) | List pipelines and their stages | yes |  | 2.3 KB |
 | [`list_records`](#list_records) | List records | yes |  | 4.6 KB |
 | [`list_tags`](#list_tags) | List tags | yes |  | 1.6 KB |
-| [`log_activity`](#log_activity) | Log an activity |  |  | 3.9 KB |
+| [`log_activity`](#log_activity) | Log an activity |  |  | 4.0 KB |
 | [`merge_records`](#merge_records) | Merge two records |  |  | 2.4 KB |
 | [`merge_tags`](#merge_tags) | Fold one tag into another |  |  | 2.0 KB |
 | [`prep_for_meeting`](#prep_for_meeting) | Prepare for a meeting | yes |  | 9.0 KB |
@@ -125,9 +125,9 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`read_project_360`](#read_project_360) | Read a project's page | yes |  | 6.4 KB |
 | [`read_record`](#read_record) | Read a record | yes |  | 2.5 KB |
 | [`read_reporting`](#read_reporting) | Read sales reporting | yes |  | 3.2 KB |
-| [`relink_activities`](#relink_activities) | Re-associate a set of activities to a record |  |  | 2.0 KB |
-| [`relink_activity`](#relink_activity) | Re-associate an activity to a record |  |  | 2.3 KB |
-| [`relink_thread`](#relink_thread) | Re-associate a whole conversation to a record |  |  | 2.0 KB |
+| [`relink_activities`](#relink_activities) | Re-associate a set of activities to a record |  |  | 2.2 KB |
+| [`relink_activity`](#relink_activity) | Re-associate an activity to a record |  |  | 2.4 KB |
+| [`relink_thread`](#relink_thread) | Re-associate a whole conversation to a record |  |  | 2.2 KB |
 | [`remove_tag`](#remove_tag) | Take a tag off a record |  |  | 1.9 KB |
 | [`resolve_entities`](#resolve_entities) | Resolve contacts and companies | yes |  | 3.5 KB |
 | [`review_commitments`](#review_commitments) | Review open commitments | yes | [`ui://margince/commitments.html`](#commitments_view) | 3.4 KB |
@@ -5252,7 +5252,7 @@ Close out a lead that is not going anywhere, so it stops appearing as live work.
 
 **Draft an email**
 
-Compose an email: a reply to a recorded thread (activity_id), or a FIRST message to a record (links). It writes the message and stops: nothing is sent. With no drafting model configured the text is a short deterministic note rather than a composed one. draft_follow_ups_for drafts across a set of slipping deals at once; send_email sends a reply, send_company_email a first message. Keep what comes back — subject, body, and the activity_id or links echoed with it; the send takes them. Re-writing the text in between means a human approves one message and another goes out. (Governance: runs immediately; requires passport scope "draft".)
+Compose an email: a reply to a recorded thread (activity_id), or a FIRST message to a contact or lead (links naming that recipient; with a contact, also the company, its deal or a project the message is about), written from that recipient's record. Nothing is sent. A first message is saved in Margince for the human you act for: it waits on the contact's or lead's page, marked as drafted by an agent, until they review, edit and send it there. It is not saved when they already keep an unsent draft of their own for that recipient (not_saved says so), and a reply is never saved: show those in full. With no drafting model configured the text is a short deterministic note. draft_follow_ups_for drafts across a set of slipping deals at once; send_email sends a reply, send_company_email a first message. Keep what comes back — subject, body, to, and the activity_id or links echoed with it; the send takes them. Re-writing the text in between means a human approves one message and another goes out. (Governance: runs immediately; requires passport scope "draft".)
 
 <details><summary>Input schema</summary>
 
@@ -5316,6 +5316,12 @@ Compose an email: a reply to a recorded thread (activity_id), or a FIRST message
   "properties": {
     "data": {
       "properties": {
+        "ai_disclosure": {
+          "type": "string"
+        },
+        "ai_generated": {
+          "type": "boolean"
+        },
         "body": {
           "type": "string"
         },
@@ -5342,8 +5348,21 @@ Compose an email: a reply to a recorded thread (activity_id), or a FIRST message
           },
           "type": "array"
         },
+        "not_saved": {
+          "type": "string"
+        },
+        "saved_draft_id": {
+          "format": "uuid",
+          "type": "string"
+        },
         "subject": {
           "type": "string"
+        },
+        "to": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         }
       },
       "required": [
@@ -8331,7 +8350,7 @@ The workspace's words for grouping records, with the tag_id apply_tag takes. Arc
 
 **Log an activity**
 
-Record something that happened — a call, a meeting, a note, a message — on the records it was about: name every one of them in this call. A meeting is with a contact, and also concerns their company and the deal it is for. It writes history and changes nothing else: no deal moves, no field updates, nobody is notified. Unlinked, it appears on no timeline, and adding a link afterwards is a second call — relink_activity — which a human has to approve when it files under a project. Use progress_deal when the same event also moves a deal, so move and note are one act; create_task for something still owed. Keep the activity id — draft_email, send_email and send_message identify a conversation by it. (Governance: runs immediately; requires passport scope "write".)
+Record something that happened — a call, a meeting, a note, a message — on the records it was about: name every one of them in this call. A meeting is with a contact, and also concerns their company and the deal it is for. It writes history and changes nothing else: no deal moves, no field updates, nobody is notified. Unlinked, it appears on no timeline, and adding a link afterwards is a second call — relink_activity — which waits for the user's yes when it files under a project. Use progress_deal when the same event also moves a deal, so move and note are one act; create_task for something still owed. Keep the activity id — draft_email, send_email and send_message identify a conversation by it. (Governance: runs immediately; requires passport scope "write".)
 
 <details><summary>Input schema</summary>
 
@@ -8376,7 +8395,7 @@ Record something that happened — a call, a meeting, a note, a message — on t
       "type": "string"
     },
     "links": {
-      "description": "Every record this was about, ALL OF THEM in this call — EXCEPT a project, which this verb REFUSES: filing under a project writes a write-once retention mark, so it is made through relink_activity, which a human approves. A meeting or a call is with a CONTACT and reaches their company through them — linking one to a company is REFUSED, so name the contact who was there and the company follows from where they work. A meeting linked to the deal alone sits on no attendee's timeline and the company sees nothing. Adding a link AFTERWARDS is a second write — and a later link onto a project stages an approval a human must decide before it takes effect.",
+      "description": "Every record this was about, ALL OF THEM in this call — EXCEPT a project, which this verb REFUSES: filing under a project marks the activity as commercial correspondence, so it is made through relink_activity, which waits for the user's yes. A meeting or a call is with a CONTACT and reaches their company through them — linking one to a company is REFUSED, so name the contact who was there and the company follows from where they work. A meeting linked to the deal alone sits on no attendee's timeline and the company sees nothing. Adding a link AFTERWARDS is a second write — and a later link onto a project stages an approval that waits for the user's yes before it takes effect.",
       "items": {
         "additionalProperties": false,
         "properties": {
@@ -13182,7 +13201,7 @@ Discover standard sales metrics, evaluate the same graphs as Analytics, or reope
 
 **Re-associate a set of activities to a record**
 
-Move up to 500 named activities onto one record, all or nothing. Each id must be visible and writable to you. A project destination needs a human. relink_thread moves one conversation. The answer lists the ids moved. (Governance: some calls run immediately and others a human approves first, decided per call from its arguments; requires passport scope "write".)
+Move up to 500 named activities onto one record, all or nothing. Each id must be visible and writable to you. A project destination, or any move the installation's policy raises, is staged for confirmation and the retry moves exactly these ids; once the user says yes, relay it with decide_approval. A filing under a project can be undone by a member from the activity. relink_activity moves one message. The answer is the count moved. (Governance: some calls run immediately and others a human approves first, decided per call from its arguments; requires passport scope "write".)
 
 <details><summary>Input schema</summary>
 
@@ -13342,7 +13361,7 @@ Move up to 500 named activities onto one record, all or nothing. Each id must be
 
 **Re-associate an activity to a record**
 
-Fix what a recorded activity is about, when a captured mail or meeting landed on the wrong record or on none. Changes only the association; content is untouched. By default the new link is ADDED beside existing ones. log_activity records an event not recorded yet; relink_thread moves a whole conversation; relink_activities a picked set. Set replace_existing_of_type to move rather than associate. (Governance: some calls run immediately and others a human approves first, decided per call from its arguments; requires passport scope "write".)
+Fix what a recorded activity is about, when a captured mail or meeting landed on the wrong record or on none. Changes only the association; content is untouched. By default the new link is ADDED beside existing ones. Onto a project it waits for the user's yes; the answer says whether you may relay it with decide_approval. log_activity records an event not recorded yet; relink_activities moves a picked set, such as a whole thread's activities. Set replace_existing_of_type to move rather than associate. (Governance: some calls run immediately and others a human approves first, decided per call from its arguments; requires passport scope "write".)
 
 <details><summary>Input schema</summary>
 
@@ -13500,7 +13519,7 @@ Fix what a recorded activity is about, when a captured mail or meeting landed on
 
 **Re-associate a whole conversation to a record**
 
-Move one whole conversation (by thread_key) onto a record, in one transaction. Moves only activities you may write; the rest stay, uncounted. A project destination needs a human. relink_activity moves one message. The answer lists the ids moved. (Governance: some calls run immediately and others a human approves first, decided per call from its arguments; requires passport scope "write".)
+Move one whole conversation (by thread_key) onto a record, in one transaction. Refused for an assistant, at every destination and however it is called: a thread key cannot be confirmed because the conversation may grow before the retry. List the thread's activities and call relink_activities with exactly those ids. relink_activities moves a named set; relink_activity moves one message. (Governance: some calls run immediately and others a human approves first, decided per call from its arguments; requires passport scope "write".)
 
 <details><summary>Input schema</summary>
 
@@ -13509,7 +13528,7 @@ Move one whole conversation (by thread_key) onto a record, in one transaction. M
   "additionalProperties": false,
   "properties": {
     "approval_id": {
-      "description": "Set on approved retry",
+      "description": "Cannot authorize a thread move; use relink_activities",
       "format": "uuid",
       "type": "string"
     },

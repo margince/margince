@@ -4632,6 +4632,64 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/activities/{id}/project-filing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * What filing this activity under a project did to its retention, and whether it can be undone.
+         * @description Answers from the same judgement the undo applies, so the screen offering the undo and the
+         *     write refusing it cannot disagree: `undoable` is true only when the project filing is the
+         *     SOLE reason the correspondence is kept, no statutory hold has started, and no qualifying deal
+         *     is linked. When it is not, `refusal` says which rule stands in the way. `undone` lists the
+         *     decisions already taken on this activity — who, when and the written reason — newest first,
+         *     which is how the audit entry is shown where the activity is.
+         */
+        get: operations["getActivityProjectFiling"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/activities/{id}/project-filing/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Undo filing this activity under a project. Requires a stated reason; audited.
+         * @description Removes the activity from its project and withdraws the retention class that filing gave it,
+         *     so the correspondence is treated as ordinary again. Allowed only when the project filing is
+         *     the sole basis for the class: another qualifying basis (a won deal, a sent offer, a
+         *     controller's pin, a second project) keeps it and the call answers `409
+         *     other_basis_remains`. An activity already restricted by a statutory hold answers `409
+         *     restricted` — a hold that has started never shortens. The decision is recorded with the
+         *     deciding member's name and the written reason, in one transaction with the audit entry and
+         *     the `activity.updated` event.
+         */
+        post: operations["undoActivityProjectFiling"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/activities/relink-thread": {
         parameters: {
             query?: never;
@@ -4800,6 +4858,15 @@ export interface paths {
          * @description Drafting is 🟢 (never auto-sends). The draft is returned, not sent. Keeping the rep's
          *     unsent message is a separate, explicit act at `PUT /mail-drafts`, which this route
          *     never performs.
+         *
+         *     The `draft_email` verb has a second shape this route does not serve: given `links`
+         *     instead of an activity, it drafts the FIRST message to a contact or lead through the
+         *     same engine as `POST /contacts/{id}/draft-email`, `POST /companies/{id}/draft-email` or
+         *     `POST /leads/{id}/draft-email`. It saves the draft in the saved drafts of the human the
+         *     agent acts for, marked `agent_drafted`, only when that human keeps no unsent draft of
+         *     their own for the recipient. Otherwise it returns the draft unsaved. The tool result
+         *     says which: `saved_draft_id` names the saved draft, and `not_saved` says why there is
+         *     none.
          */
         post: operations["draftEmail"];
         delete?: never;
@@ -4921,6 +4988,35 @@ export interface paths {
          *     code, authorizes nothing and records nothing.
          */
         post: operations["previewAccountSendAuthorization"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/emails:sign-off": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * The sign-off a send of this message would append beneath it.
+         * @description What the composer shows under the body, read-only. It runs the code the send
+         *     runs, so the block shown is the block sent.
+         *
+         *     The caller's own signature when they have written one. Otherwise a plain
+         *     closing in the message's language — detected from `body`, then `subject`, then
+         *     the installation's language, then English — above the caller's display name
+         *     when one is on file.
+         *
+         *     Writes nothing. The send asks again, so a signature changed in between goes out
+         *     as changed.
+         */
+        post: operations["previewEmailSignOff"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5095,8 +5191,12 @@ export interface paths {
          *     is not an activity, not a scheduled send and never on a timeline, and only the seat
          *     that wrote it can read it. There is at most one per author and anchor.
          *
-         *     The AI drafting routes still persist nothing: a draft exists only because the rep's
-         *     composer saved one here.
+         *     The AI drafting routes still persist nothing. A draft exists because the rep's composer
+         *     saved one here, or because an agent acting for the rep drafted a first message to a
+         *     contact or lead through `draft_email` (`agent_drafted`). The agent's draft is kept here
+         *     only when the rep has no draft of their own for that anchor; otherwise the tool returns
+         *     it unsaved with `not_saved` and this store is unchanged. That second writer is the tool
+         *     surface, not this route.
          */
         get: operations["getMailDraft"];
         /**
@@ -10754,6 +10854,35 @@ export interface paths {
          *     call a lane that died forty minutes ago healthy on the strength of this morning.
          */
         get: operations["getAiHealth"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/provider-health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Which AI providers are not answering, and why.
+         * @description Every provider this process currently treats as degraded, down, out of credit or refusing
+         *     its credential, in name order. A provider that is answering normally is not listed, so an
+         *     empty list is the healthy answer.
+         *
+         *     The API and the worker each publish their status changes to Redis and this reads the merged
+         *     view, where the worst or blocking status wins, so an outage only the worker saw still shows.
+         *     Without Redis a process shows only its own view. Shared entries expire after 30
+         *     minutes unless refreshed every 10 while the provider is unhealthy. It is learned from real
+         *     calls, not a probe. The list never contains a key, a host or the
+         *     provider's own message text. It is admitted through the same grant as `/ai/health`.
+         */
+        get: operations["getAiProviderHealth"];
         put?: never;
         post?: never;
         delete?: never;
@@ -16911,8 +17040,8 @@ export interface paths {
          *     (`POST /claims/{id}/settle`).
          *
          *     Needs `contact:read`, `activity:read` and `relationship:read` on top of the deal
-         *     grant: each row names a contact, quotes a captured activity, and is this account's
-         *     through the contact's employment edge. A commitment whose contact or activity the
+         *     grant: each row names a contact, quotes a captured activity, and belongs to this
+         *     account through the contact's employment edge. A commitment whose contact or activity the
          *     caller may not see is left out, and `complete` is then false, so the card can say it
          *     speaks about less than the account rather than that nothing is owed. `has_more`
          *     says more commitments exist past the 25 returned. A deal with no company has
@@ -17095,14 +17224,14 @@ export interface paths {
          *     edits another member's through this API.
          *
          *     A member who has never written one has no row, and that is not an error:
-         *     `body` is empty and mail goes out unsigned, which is what happens today
-         *     for everyone.
+         *     `body` is empty, and their mail closes with a plain greeting and their
+         *     display name, when one is on file, instead (`POST /emails:sign-off` shows it).
          */
         get: operations["getMyEmailSignature"];
         /**
          * Write or clear your own sign-off.
          * @description An empty `body` CLEARS the signature — a member emptying the field means
-         *     "send my mail unsigned", not "leave what was there".
+         *     "sign off with the plain closing", not "leave what was there".
          *
          *     Plain text only. The transport sends `text/plain` and the drafting
          *     prompts forbid the model from writing a sign-off of its own, so what is
@@ -17430,6 +17559,35 @@ export interface paths {
          *     share pickers, the audit trail — so one write reaches every surface.
          */
         put: operations["saveMyDisplayName"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/greeting-name": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Change the name colleagues greet you by.
+         * @description Always the CALLER's own, never anybody else's: there is no id to pass.
+         *
+         *     A greeting opens with one name, and the first word of the display name
+         *     is often the wrong one ("Dr. Sofia Meier", "Nguyễn Thị Lan"). This is the
+         *     word a colleague's greeting uses instead. Empty or null clears it, and
+         *     the greeting falls back to the first word of the display name.
+         *
+         *     The first sign-in through a login provider fills it from the provider's
+         *     given name, but only while it is empty, so a value saved here is never
+         *     overwritten.
+         */
+        put: operations["saveMyGreetingName"];
         post?: never;
         delete?: never;
         options?: never;
@@ -18818,6 +18976,13 @@ export interface components {
              */
             max_upload_bytes: number;
             /**
+             * @description How long the access token an MCP connector's OAuth handshake mints lives, in minutes —
+             *     for the code exchange and every refresh rotation alike. 30 days by default, at most
+             *     90. A change applies to the next token minted; tokens already issued keep the expiry
+             *     they were issued with.
+             */
+            oauth_access_token_ttl_minutes: number;
+            /**
              * @description How far back the maintenance banner looks before it calls dead work a problem, in
              *     hours. 24 by default, bounded above by River's own seven-day retention — a window
              *     past that cannot narrow anything, since every terminal row still there is inside it.
@@ -18926,6 +19091,8 @@ export interface components {
             oidc_group_role_map?: {
                 [key: string]: string;
             };
+            /** @description Set how long a connector's access token lives, in minutes. Reaches the next token minted. */
+            oauth_access_token_ttl_minutes?: number;
             /**
              * @description How far back the maintenance banner looks before it calls dead work a problem, in
              *     hours. 24 by default, bounded above by River's own seven-day retention — a window
@@ -19191,6 +19358,15 @@ export interface components {
          *     changed only by admin/ops.
          */
         CaptureSettings: {
+            /**
+             * @description The installation-wide ceiling on AUTOMATIC website reads started in one UTC day.
+             *     Company auto-enrichment and domain triage spend it from one counter. It paces and only
+             *     paces: concurrency is bounded by the deep-read worker pool and model spend by the AI
+             *     budget. Read at the top of every sweep and on every capture, so a change applies
+             *     without a restart. Default 500.
+             */
+            auto_enrich_daily_cap: number;
+            site_read: components["schemas"]["SiteReadLimits"];
             /**
              * @description The workspace's capture-sharing posture, ON by default: captured correspondence is
              *     readable by every colleague who can see the contact. Switched OFF, everything captured
@@ -19845,10 +20021,30 @@ export interface components {
             /** @description Toggle whether contacts are looked up automatically for the free details. */
             automatic_lookup?: boolean;
         };
+        /**
+         * @description What one website read may fetch. Read when a read starts, so a change applies to the next
+         *     one. An automatic read also runs under its own lower page ceiling.
+         */
+        SiteReadLimits: {
+            /** @description Pages one read may fetch. Default 60. */
+            max_pages: number;
+            /** @description Mebibytes one read may hold, summed over its pages. Default 32. */
+            max_mib: number;
+            /** @description Seconds one crawl may run before it stops and extracts what it has. Default 240. */
+            wall_seconds: number;
+        };
         /** @description A sparse capture-settings patch (admin/ops). */
         UpdateCaptureSettingsRequest: {
             /** @description Toggle captured-company auto-enrichment. */
             auto_enrich?: boolean;
+            /** @description Set the daily ceiling on automatic website reads. */
+            auto_enrich_daily_cap?: number;
+            /** @description Set the page limit of one website read. */
+            site_read_max_pages?: number;
+            /** @description Set the size limit of one website read, in MiB. */
+            site_read_max_mib?: number;
+            /** @description Set the time limit of one website crawl, in seconds. */
+            site_read_wall_seconds?: number;
             /** @description Toggle the workspace mail-sharing posture; affects correspondence captured from now on — mail, and chat on a transport whose credential belongs to one member. */
             mail_sharing?: boolean;
             /** @description Toggle the tenant-wide default for reading contact details out of captured mail — its signature and any attached vCard. A mailbox that set its own switch keeps it. */
@@ -20445,6 +20641,8 @@ export interface components {
             filename: string;
             byte_size?: number | null;
             content_type?: string | null;
+            /** @description True when the message is private to its owner and the file was recorded by name, size and type only. There are no bytes to fetch. */
+            readonly bytes_withheld?: boolean;
         };
         /**
          * @description Who reads this message, and what this caller may do about that. `can_change` and
@@ -21267,6 +21465,30 @@ export interface components {
             window_hours: number;
             rungs: components["schemas"]["AiRungHealth"][];
         };
+        AiProviderHealth: {
+            /** @description Providers that are not answering normally, in name order. Empty when all are. */
+            providers: components["schemas"]["AiProviderHealthEntry"][];
+        };
+        AiProviderHealthEntry: {
+            /** @description The provider's name as the routing binds it, never a key or host. */
+            provider: string;
+            /**
+             * @description `degraded` still takes calls; the other three refuse them until `retry_after`, when one
+             *     probe is allowed. `out_of_credit` and `unauthorized` are the administrator's to fix.
+             * @enum {string}
+             */
+            health: "degraded" | "down" | "out_of_credit" | "unauthorized";
+            /**
+             * Format: date-time
+             * @description When the provider first stopped answering normally, kept across failed probes.
+             */
+            since: string;
+            /**
+             * Format: date-time
+             * @description When one probe call is next allowed. Absent for `degraded`, which is not blocked.
+             */
+            retry_after?: string;
+        };
         /** @description One model tier and what it has been doing. */
         AiRungHealth: {
             /** @description The rung's name — `local_small`, `cloud_large` and the rest. */
@@ -21477,6 +21699,11 @@ export interface components {
             available: boolean;
             /** Format: int64 */
             count?: number;
+            /**
+             * Format: int64
+             * @description Work waiting for the AI provider to answer, not for the budget. It resumes by itself at the provider's next probe, and a budget raise does not change it; `count` holds only what a raise would resume.
+             */
+            waiting_on_provider?: number;
         };
         AiStatus: {
             /** Format: date-time */
@@ -26147,12 +26374,32 @@ export interface components {
         EmailSignature: {
             /**
              * @description The sign-off appended below every message this member sends, plain text.
-             *     Empty means unsigned, which is the state of every member who has not
-             *     written one.
+             *     Empty means none written; a send then closes with a plain greeting and
+             *     the member's display name when one is on file.
              */
             body: string;
             /** Format: date-time */
             updated_at?: string | null;
+        };
+        EmailSignOffRequest: {
+            /** @description The message as written so far, plain text. Read only for its language. */
+            body: string;
+            /** @description The subject, read for its language when the body is too short to tell. */
+            subject?: string;
+        };
+        EmailSignOff: {
+            /**
+             * @description The block appended below the message, plain text, exactly as sent. Empty when
+             *     `kind` is `none`.
+             */
+            text: string;
+            /**
+             * @description `signature`: the caller's own, from Settings. `closing`: the caller has written
+             *     none, so the send closes with a plain greeting and their name when available. `none`: this
+             *     send appends nothing.
+             * @enum {string}
+             */
+            kind: "signature" | "closing" | "none";
         };
         SaveEmailSignatureRequest: {
             /**
@@ -26169,6 +26416,13 @@ export interface components {
              *     applies, because this writes the same column.
              */
             display_name: string;
+        };
+        SaveMyGreetingNameRequest: {
+            /**
+             * @description The name a colleague's greeting uses. Surrounding whitespace is
+             *     trimmed; empty or null clears it.
+             */
+            greeting_name: string | null;
         };
         /**
          * @description When one contact is bookable, on their own clock.
@@ -29402,6 +29656,8 @@ export interface components {
              * @description The agreement this document is about (CONTRACT-DDL-5) — the same kind of roll-up as company_id above, and just as deliberately not a second parent. Set at upload by the contact filing the paper; never inferred from a filename or a date, which is the guess the document state exists to refuse.
              */
             readonly contract_id?: string | null;
+            /** @description True for a file a private message carried that was recorded by name, size and type only: no bytes were kept, so there is nothing to download (404) or read. */
+            readonly bytes_withheld?: boolean;
             source: string;
             /** @description Server-stamped from the authenticated principal; never client-supplied. */
             readonly captured_by: string;
@@ -29996,6 +30252,8 @@ export interface components {
             html_body?: string | null;
             /** Format: int64 */
             version: number;
+            /** @description An agent wrote these words for the author through `draft_email`, and the author has not saved over them yet. The screen says so before the message is sent. A save from the composer clears it. */
+            agent_drafted: boolean;
             /** Format: date-time */
             created_at: string;
             /** Format: date-time */
@@ -32628,6 +32886,8 @@ export interface components {
             /** Format: email */
             email: string;
             display_name: string;
+            /** @description The name a colleague's greeting uses ("Hi Sofia,"), absent or null when nobody has said. Read through one rule on both sides: this when set, else the first word of `display_name`. Present on the caller's own seat; absent on the roster. */
+            greeting_name?: string | null;
             /**
              * @description IANA name.
              * @default UTC
@@ -32690,6 +32950,8 @@ export interface components {
             /** Format: email */
             email: string;
             display_name: string;
+            /** @description The name the member's greetings use, when the first word of `display_name` is not it. Optional; absent, empty or null leaves it unset. */
+            greeting_name?: string | null;
             /** @description A live role's key: one of the seeded system roles or one made with `createRole`. Seeded keys are wire vocabulary and diverge from the product names on purpose — `manager` displays as "Team Lead", `rep` as "User"; `management` is the whole-company seat that holds no admin power. A caller who is not an admin may only produce an account whose whole access their own contains — every grant, row scope, team and readable field — because the set-password link goes to an address the caller chooses. `listAssignableRoles` names the roles this caller may hand out. */
             role: string;
             /** @description The teams the member joins on arrival, in the same transaction as the seat and the role. A team-scoped role (`manager`, `rep`) with no team sees and edits only its own records; the access preview says what a given role + teams will see before the invite is sent. */
@@ -35859,7 +36121,7 @@ export interface components {
         Approval: {
             /** Format: uuid */
             id: string;
-            /** @description Examples: coldstart | send_email | advance_deal | promote_lead | overnight | deal_follow_up | transcript_proposal | commitment_task. */
+            /** @description Examples: coldstart | send_email | advance_deal | promote_lead | overnight | deal_follow_up | commitment_task. */
             kind: string;
             /** @enum {string} */
             status: "pending" | "approved" | "rejected" | "expired";
@@ -36249,6 +36511,45 @@ export interface components {
             action?: components["schemas"]["RetentionAction"];
             lawful_basis?: string | null;
             enabled?: boolean;
+        };
+        /** @description What filing one activity under a project did to its retention, and whether the filing can be undone. Names projects by the name frozen when the filing qualified the correspondence, so a renamed or deleted project still reads as what it was. */
+        ProjectFiling: {
+            /** @description Whether the activity carries evidence that filing it under a project qualified it. */
+            filed: boolean;
+            /** @description The project filings on record, oldest first. */
+            projects: components["schemas"]["ProjectFilingEntry"][];
+            undoable: boolean;
+            /** @description Why a filed activity cannot be undone. Absent when it can, or when it is not filed. */
+            refusal?: components["schemas"]["ProjectFilingRefusal"];
+            /** @description Undo decisions already taken on this activity, newest first. */
+            undone: components["schemas"]["ProjectFilingUndoDecision"][];
+        };
+        ProjectFilingEntry: {
+            /** @description The project's name when the filing qualified the activity. Empty when the project is hidden from the caller. */
+            name: string;
+            /** @description True when the project exists and the caller cannot see it; its name is withheld. */
+            hidden?: boolean;
+            /** Format: date-time */
+            qualified_at: string;
+        };
+        ProjectFilingRefusal: {
+            /** @enum {string} */
+            code: "not_filed" | "archived" | "restricted" | "legal_hold" | "erasure_pending" | "hidden_project" | "other_basis_remains" | "qualifying_deal";
+            message: string;
+        };
+        ProjectFilingUndoDecision: {
+            /**
+             * Format: uuid
+             * @description The audit entry that recorded the decision.
+             */
+            id: string;
+            /** Format: date-time */
+            at: string;
+            /** @description True when the decision touched a project the caller cannot see; only its moment is shown. */
+            redacted?: boolean;
+            by_name: string;
+            reason: string;
+            projects: string[];
         };
         RetentionOverrideRequest: {
             reason: string;
@@ -49664,6 +49965,72 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    getActivityProjectFiling: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The filing's state. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectFiling"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    undoActivityProjectFiling: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RetentionOverrideRequest"];
+            };
+        };
+        responses: {
+            /** @description The filing's state after the undo. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectFiling"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description The filing cannot be undone; the problem's `code` is one of `not_filed`, `archived`, `restricted`, `legal_hold`, `erasure_pending`, `hidden_project`, `other_basis_remains` or `qualifying_deal`, or `decider_unnamed` when the deciding account has no display name. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
     relinkThread: {
         parameters: {
             query?: never;
@@ -49961,6 +50328,32 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    previewEmailSignOff: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmailSignOffRequest"];
+            };
+        };
+        responses: {
+            /** @description The block a send would append. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailSignOff"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -59177,6 +59570,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AiHealth"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+        };
+    };
+    getAiProviderHealth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The providers that are not answering normally. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiProviderHealth"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -68530,6 +68945,34 @@ export interface operations {
         };
         responses: {
             /** @description The caller's seat, with the new name. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    saveMyGreetingName: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveMyGreetingNameRequest"];
+            };
+        };
+        responses: {
+            /** @description The caller's seat, with the new greeting name. */
             200: {
                 headers: {
                     [name: string]: unknown;

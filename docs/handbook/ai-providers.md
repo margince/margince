@@ -127,3 +127,20 @@ A model tier says its provider has no host when the provider cannot be reached
 until one is set: **OpenAI-compatible** and **Jev-compatible** have no address
 of their own. Open that provider's sheet under **Providers**, pick its
 **Service**, and choose **Save connection**; the tier can then be saved.
+
+### How do I see whether an AI provider is working?
+To see whether an AI provider is working in Margince, open **Settings**, then **System health**, and read the **AI provider status** card; **AI models** also shows a second badge on each provider under **Providers**.
+The card lists only providers that are not answering normally, with why, **Started** and **Next check**. It reads "All AI providers are answering." when none is listed.
+It shows the view of the server and the background worker together, learned from their calls, and only roles with access to AI diagnostics can open it.
+Also called: is the AI down, AI outage, model provider health, AI provider status.
+
+### What does "Out of credit", "Key rejected", "Unreachable" or "Degraded" mean on an AI provider?
+"Out of credit" means the provider account has no credit or quota left, so top it up; "Key rejected" means the provider refused the API key, so replace it under **Providers**; "Unreachable" means the provider's host is not answering, so check its status page and host; "Degraded" means some requests fail but calls still go through.
+Margince checks again by itself; a successful key **Test** clears it at once, and saving a key within about 30 seconds. The first three stop calls until then.
+Also called: provider badge, provider status, credit exhausted, 401, API key refused.
+
+### What does a provider badge on AI models mean?
+A badge next to a provider under **Providers** means Margince has found it not answering: **Out of credit**, **Key rejected**, **Unreachable** or **Degraded**.
+Fix the cause named on **Settings**, then **System health**, in the **AI provider status** card; testing a new key under **Providers** clears it at once.
+A rate-limit reply or a "no permission for this model" refusal does not mark a provider: Margince tries the next model. Only three timeouts in a row mark it **Degraded**.
+Also called: provider status, provider down, API key refused, out of credit.

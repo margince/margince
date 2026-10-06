@@ -28,10 +28,6 @@
   overflow-wrap: anywhere;
 }
 
-.sourceemail__when {
-  margin: 0;
-}
-
 /* The air between the envelope facts and the words themselves. */
 .sourceemail__body {
   margin-top: var(--space-2);

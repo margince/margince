@@ -32,6 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/statedreason"
 )
 
 // Audit verbs of the controller's two decisions (0287, A167/ADR-0116 §6).
@@ -39,10 +40,6 @@ const (
 	actionRelease = "release"
 	actionPin     = "pin"
 )
-
-// maxOverrideReason bounds what the contract accepts, so a reason that would
-// be truncated on its way to the audit row is refused before it is recorded.
-const maxOverrideReason = 2000
 
 // ReleaseRestriction ends a restriction by ERASING the record, with a stated
 // reason, and records who decided.
@@ -266,11 +263,11 @@ type StatedReason struct{ text string }
 // matches the contract's, so a reason that would be truncated on its way to
 // the audit row is refused before it is recorded rather than after.
 func ParseStatedReason(reason string) (StatedReason, error) {
-	stated := strings.TrimSpace(reason)
-	if stated == "" || len([]rune(stated)) > maxOverrideReason {
+	stated, ok := statedreason.Trim(reason)
+	if !ok {
 		return StatedReason{}, httperr.Validation("reason", "required", fmt.Sprintf(
 			"an override of the retention ladder records a controller's decision, so it must state "+
-				"why in 1–%d characters", maxOverrideReason,
+				"why in 1–%d characters", statedreason.Max,
 		))
 	}
 	return StatedReason{text: stated}, nil

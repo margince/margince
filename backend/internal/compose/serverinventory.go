@@ -453,6 +453,8 @@ type Server struct {
 	// reason company360Svc is: the relationship brief is assembled from THIS gated
 	// read rather than a second one that could drift from what the page shows.
 	contact360Svc *contact360.Service
+	// firstDrafts are the composer's drafting engines, which draft_email reaches too.
+	firstDrafts firstMessageEngines
 	// meetingBriefSvc is held so an option can bind its model lane after the
 	// handler sets are built.
 	meetingBriefSvc *meetingbrief.Service

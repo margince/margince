@@ -272,6 +272,40 @@ func (s *Store) VatNumberForCheck(ctx context.Context, company ids.CompanyID) (s
 	return strings.TrimSpace(number), worth && strings.TrimSpace(number) != "", nil
 }
 
+// RequesterVatNumber answers this installation's OWN VAT ID — the number a
+// register consultation is made under — or empty when nobody has stated or
+// confirmed one. A number the website reader proposed and nobody confirmed is
+// not this installation's legal identity, and asking under a wrong one would
+// file somebody else's name on the receipt.
+func (s *Store) RequesterVatNumber(ctx context.Context) (string, error) {
+	if err := auth.Require(ctx, entityCompany, principal.ActionRead); err != nil {
+		return "", err
+	}
+	var number string
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var company ids.UUID
+		err := tx.QueryRow(ctx, `
+			SELECT f.company_id, btrim(f.value)
+			  FROM company_profile_field f
+			  JOIN company o ON o.id = f.company_id
+			 WHERE o.is_anchor AND o.archived_at IS NULL
+			   AND f.field = 'register_vat'
+			   AND (f.source = 'human' OR f.verified_at IS NOT NULL)`).Scan(&company, &number)
+		if errors.Is(err, pgx.ErrNoRows) {
+			// No trusted number: the consultation still runs, without a receipt.
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		return auth.EnsureVisible(ctx, tx, entityCompany, company)
+	})
+	if err != nil {
+		return "", fmt.Errorf("contacts: reading this installation's own VAT number: %w", err)
+	}
+	return number, nil
+}
+
 // RecordVatCheck stores what the register answered about a company's VAT ID.
 //
 // It is an UPDATE gate rather than a create: the row is a fact about the

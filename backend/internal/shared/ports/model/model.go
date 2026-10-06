@@ -180,6 +180,10 @@ type Client interface {
 	// Caps reports what the provider supports so callers route correctly
 	// (cheap/local for capture+classify, premium when quality demands).
 	Caps() Capabilities
+
+	// Health reports whether the provider is answering for everyone. Layers
+	// above skip a blocked provider rather than spend an attempt on it.
+	Health() ProviderHealthStatus
 }
 
 type Request struct {

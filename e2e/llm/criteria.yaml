@@ -434,15 +434,15 @@ cases:
         the ones it returned.
   case48_that_whole_thread_is_filed_wrong:
     1:
-      name: A held move is not reported as done
+      name: A conversation moves as a whole
       statement: >-
-        Re-filing a conversation waits for a human's release, and the answer
-        says the mails have not moved yet.
+        All three messages leave Kieler for Rhön Hydraulik; one or two messages
+        moved leaves the thread split across two accounts.
     2:
-      name: What is waiting is named well enough to decide
+      name: The sign-off given up front is used
       statement: >-
-        The answer says all three messages would move from Kieler to Rhön
-        Hydraulik, so whoever releases it knows what they are releasing.
+        The re-filing is staged for approval and released on the user's word,
+        not handed back with an instruction to open the app.
   case49_who_can_introduce_us:
     1:
       name: The route is a colleague's, not the caller's

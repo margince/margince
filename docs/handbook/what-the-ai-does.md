@@ -23,6 +23,12 @@ Also called: AI writer, write a reply, compose with AI.
 To fill deal fields from a file, open the company's **Documents** tab, file the document on a deal with **Add document** (choose **A deal**, not **This company**), then choose **Show extracted fields** on that document and **Read this file**. Margince shows each field it found with the passage it read it from; choose **Accept {count} fields** to save them, or **Dismiss**. Nothing is written to the deal until you accept. A document filed against the company offers no reading.
 Also called: extract from contract, read a PDF, parse an offer.
 
+### What happens to my mail and enrichment while the AI provider is down?
+While an AI provider is down, out of credit or rejecting its key, Margince stops calling it, and mail questions and company enrichment wait and try again at the next check, without using up their attempts, including the call that first finds the credit gone, the key refused or the host unreachable.
+Requests you make yourself fail at once with a message to contact your system administrator.
+Your administrator sees the cause under **Settings**, **System health**, in **AI provider status**.
+Also called: AI outage, no credit, mail stuck unsure, enrichment stopped.
+
 ## What the AI actually does for you
 
 **Drafting.** The AI writes email drafts (**Draft with AI**). It does not send
@@ -120,9 +126,10 @@ steps from a transcript, and building your writing voice.
 Each shows as queued, running, done, degraded, failed — or **stalled**.
 
 There is a seventh state those six do not name: work can be **deferred** because
-the company's monthly AI allowance is spent. That is not a failure and not a
-stall — the request is kept whole, with its original authority and attempt
-limits, and a sweep picks it up when the allowance is raised or the month rolls.
+the company's monthly AI allowance is spent, or the AI provider is not
+answering. That is not a failure and not a stall — the request is kept whole, with its original authority and attempt
+limits, and a sweep picks it up later. Work held for the allowance wakes when the allowance is raised or the month rolls;
+work held for the provider wakes by itself at the provider's next check, and raising the allowance does not hasten it.
 See [Settings](settings.md).
 
 "Stalled" means the work has been running unusually long and may have stopped.
