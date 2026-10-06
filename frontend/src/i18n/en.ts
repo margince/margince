@@ -4523,7 +4523,7 @@ export const en = {
   "compose.waitingDraftByAgent":
     "An agent drafted “{subject}” for review. Nothing has been sent.",
   "compose.waitingDraftByYou":
-    "Unsent email “{subject}”, saved from the composer.",
+    "The unsent email “{subject}” was saved from the composer.",
   "compose.waitingDraftNoSubject": "No subject",
   "compose.savedDraftChangedTitle": "Draft changed in another window",
   "compose.savedDraftChangedBody":

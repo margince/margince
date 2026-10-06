@@ -4414,13 +4414,13 @@ export const de = {
   "compose.savedDraftRestored": "Gespeicherter Entwurf wiederhergestellt",
   "compose.savedDraftRemove": "Gespeicherten Entwurf löschen",
   "compose.savedDraftByAgent":
-    "Entwurf eines Agenten wiederhergestellt. Vor dem Senden lesen.",
+    "Entwurf eines Agenten wiederhergestellt. Lies den Entwurf vor dem Senden.",
   "compose.waitingDraftTitle": "Entwurf wartet",
   "compose.waitingDraftOpen": "Entwurf öffnen",
   "compose.waitingDraftByAgent":
     "Ein Agent hat „{subject}“ zur Prüfung entworfen. Nichts wurde gesendet.",
   "compose.waitingDraftByYou":
-    "Nicht gesendete E-Mail „{subject}“, im Editor gespeichert.",
+    "Die nicht gesendete E-Mail „{subject}“ wurde im Editor gespeichert.",
   "compose.waitingDraftNoSubject": "Kein Betreff",
   "compose.savedDraftChangedTitle": "Entwurf in einem anderen Fenster geändert",
   "compose.savedDraftChangedBody":

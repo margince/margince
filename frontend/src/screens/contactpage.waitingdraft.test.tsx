@@ -1,6 +1,6 @@
 /** @vitest-environment happy-dom */
 import { focusManager } from "@tanstack/react-query";
-import { act, cleanup, screen, within } from "@testing-library/react";
+import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../api/schema";
@@ -84,6 +84,39 @@ describe("a draft waiting on the contact", () => {
     expect(
       await screen.findByText(en["compose.waitingDraftTitle"]),
     ).toBeTruthy();
+  });
+
+  it("is withdrawn while the composer holds it", async () => {
+    const user = userEvent.setup();
+    mount("overview", view, [], {
+      "GET /mail-drafts": () => jsonResponse(AGENT_DRAFT),
+    });
+    await user.click(
+      await screen.findByRole("button", {
+        name: en["compose.waitingDraftOpen"],
+      }),
+    );
+    await screen.findByDisplayValue("After the fleet demo");
+    expect(screen.queryByText(en["compose.waitingDraftTitle"])).toBeNull();
+  });
+
+  it("is withdrawn when reading it again fails", async () => {
+    let failing = false;
+    mount("overview", view, [], {
+      "GET /mail-drafts": () =>
+        failing
+          ? jsonResponse({ title: "Unavailable" }, 503)
+          : jsonResponse(AGENT_DRAFT),
+    });
+    await screen.findByText(en["compose.waitingDraftTitle"]);
+    failing = true;
+    act(() => {
+      focusManager.setFocused(false);
+      focusManager.setFocused(true);
+    });
+    await waitFor(() =>
+      expect(screen.queryByText(en["compose.waitingDraftTitle"])).toBeNull(),
+    );
   });
 
   it("is absent when the reader keeps no draft here", async () => {

@@ -56,6 +56,9 @@ func TestAnAgentPassesTheDraftingGateOnlyWithTheScopeNamed(t *testing.T) {
 	if err := RequireHumanOrAgentScope(buyer, principal.ScopeDraft); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("a buyer = %v, want ErrPermissionDenied", err)
 	}
+	if err := RequireHumanOrAgentScope(context.Background(), principal.ScopeDraft); err == nil {
+		t.Error("a context with no actor was admitted")
+	}
 }
 
 func TestRequireHumanNeedsAnActor(t *testing.T) {

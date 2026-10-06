@@ -109,10 +109,12 @@ func TestDraftEmailLinksNameOneRecipient(t *testing.T) {
 	}
 
 	for name, links := range map[string][]agents.RecordLink{
-		"a company alone":         {link("company", company)},
-		"two recipients":          {link("contact", contact), link("lead", lead)},
-		"two companies":           {link("contact", contact), link("company", company), link("company", ids.NewV7())},
-		"a deal and no recipient": {link("deal", ids.NewV7())},
+		"a company alone":                  {link("company", company)},
+		"two recipients":                   {link("contact", contact), link("lead", lead)},
+		"two companies":                    {link("contact", contact), link("company", company), link("company", ids.NewV7())},
+		"an activity beside a contact":     {link("contact", contact), link("activity", ids.NewV7())},
+		"an unknown type beside a contact": {link("contact", contact), link("invoice", ids.NewV7())},
+		"a deal and no recipient":          {link("deal", ids.NewV7())},
 		"two deals": {
 			link("contact", contact), link("company", company),
 			link("deal", ids.NewV7()), link("deal", ids.NewV7()),

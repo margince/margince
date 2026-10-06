@@ -4364,7 +4364,7 @@ export const vi = {
   "compose.waitingDraftByAgent":
     "Một agent đã soạn “{subject}” để xem xét. Chưa có gì được gửi.",
   "compose.waitingDraftByYou":
-    "Email chưa gửi “{subject}”, đã lưu từ trình soạn thảo.",
+    "Email chưa gửi “{subject}” đã được lưu từ trình soạn thảo.",
   "compose.waitingDraftNoSubject": "Không có tiêu đề",
   "compose.savedDraftChangedTitle": "Bản nháp đã đổi ở cửa sổ khác",
   "compose.savedDraftChangedBody":

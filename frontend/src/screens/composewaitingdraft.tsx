@@ -85,7 +85,10 @@ export function useWaitingDraftBand(input: {
   readOnlyReason: string | null | undefined;
   readOnlyReasonId: string;
 }): ReactNode {
-  const waiting = useWaitingDraft(input.anchor, input.composerOpen).data;
+  const read = useWaitingDraft(input.anchor, input.composerOpen);
+  // A cached draft is not shown while the composer holds it or after a read
+  // failed: the notice would offer to open words that may no longer be there.
+  const waiting = input.composerOpen || read.isError ? undefined : read.data;
   if (!input.readOnlyReason && !waiting) return undefined;
   return (
     <>

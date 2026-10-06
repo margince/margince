@@ -16,6 +16,7 @@ package compose
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/margince/margince/backend/internal/compose/accountdraft"
 	"github.com/margince/margince/backend/internal/compose/contactdraft"
@@ -73,6 +74,10 @@ func firstMessageOf(links []agents.RecordLink) (firstMessage, error) {
 			}
 			project := ids.From[ids.ProjectKind](link.EntityID)
 			out.project = &project
+		default:
+			return firstMessage{}, badFirstMessage(fmt.Sprintf(
+				"a first message cannot be drafted from a %q link; name a contact or lead, and its company, deal or project",
+				link.EntityType))
 		}
 	}
 	if out.recipient.ID.IsZero() {
