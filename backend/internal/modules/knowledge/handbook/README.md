@@ -30,6 +30,7 @@ Settings in Margince, by page:
 - My mailbox stopped syncing, or emails stopped coming in: what do I do? → [Connecting your mailbox and calendar](connecting-mail-and-calendars.md)
 - How do I invite a colleague or change a role? → [Seats, roles and who can see what](seats-roles-and-access.md)
 - How do I add an AI provider's key, connect OpenRouter, or choose a Vertex location? → [AI providers](ai-providers.md)
+- What happens to an AI task while its provider is down? → [AI providers](ai-providers.md)
 
 Records, deals and mail in Margince, by page:
 - How do I create a contact or company, merge, archive or tag one? → [Contacts, companies, leads, deals and projects](records.md)

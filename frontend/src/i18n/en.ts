@@ -583,7 +583,6 @@ export const en = {
   "aiAdmin.impact.exempt": "Continues beyond allowance",
   "aiAdmin.activity": "Activity",
   "aiAdmin.model": "Model selected by policy",
-  "aiAdmin.thenLadder": "then",
   "aiAdmin.decisionSkip.unbound": "Decision model not used: none is bound.",
   "aiAdmin.decisionSkip.uncertified":
     "Decision model not used: not certified for this activity.",
@@ -9530,10 +9529,29 @@ export const en = {
   "aiRouting.median": "Median {ms} ms",
   "aiTasks.title": "AI tasks",
   "aiTasks.intro":
-    "Edit a task to see how its calls went and to set its thinking level and timeouts. Its tier is fixed by contract; each row shows the tier and the model it runs on now.",
+    "Each row shows a task’s tier and the provider that serves it. Select a task’s name for what it does, its state, and what it does while its provider is down. Edit sets its thinking level and timeouts; its tier is fixed by contract.",
   "aiTasks.whatItDoes": "{task}: what it does",
   "aiTasks.decisionFirst": "Decision model first",
   "aiTasks.viewCalls": "View calls",
+  "aiTasks.deferral.nowEmbedding":
+    "Refused now: search indexing tries again on its own schedule.",
+  "aiTasks.deferral.embedding":
+    "When its provider is down, out of credit or refusing its key, search indexing is refused and tries again on its own schedule.",
+  "aiTasks.dot.ok": "Answering",
+  "aiTasks.dot.bad": "Needs attention",
+  "aiTasks.dot.idle": "No recent calls",
+  "aiTasks.deferral.background":
+    "When every model this task can use is down, out of credit or refusing its key, its work waits and tries again at the provider’s next check, without using up its attempts.",
+  "aiTasks.deferral.interactive":
+    "When every model this task can use is down, out of credit or refusing its key, a request fails at once and asks the user to contact their administrator.",
+  "aiTasks.deferral.nowBackground":
+    "Waiting now: every model this task can use is blocked.",
+  "aiTasks.deferral.nowInteractive":
+    "Failing now: every model this task can use is blocked.",
+  "aiTasks.deferral.skipping":
+    "A blocked provider is skipped, and the next model in line answers.",
+  "aiTasks.embeddingsEdit":
+    "Search and retrieval has no thinking level or timeouts to set. Change its provider and model on the embeddings row under Model tiers.",
   "workingHours.title": "Bookable hours",
   "workingHours.sub": "Personal setting. Only you set your hours.",
   "workingHours.unsetTitle": "Not set yet",

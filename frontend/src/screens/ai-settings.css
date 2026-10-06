@@ -350,30 +350,63 @@
   gap: var(--space-2);
 }
 
-/* A chain of models, one per line: providers in one column so the ids start on
- * one edge, and the arrow under the mark of the step that hands over. */
-.ai-modelchain {
-  display: grid;
-  grid-template-columns: 11.5rem minmax(0, 1fr);
-  align-items: center;
-  gap: var(--space-1) var(--space-3);
+/* The task table reads as the rows of the cards above it: no header row on
+ * screen (a screen reader still has it), and its first and last cells sit on
+ * the card's edges, so every Edit on the page ends on one line. */
+.ai-task-table thead {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
-.ai-modelchain-arrow {
-  justify-self: center;
+.ai-task-table :is(th, td):first-child {
+  padding-inline-start: 0;
+}
+
+.ai-task-table :is(th, td):last-child {
+  padding-inline-end: 0;
+}
+
+/* A task row is its name and nothing under it; the rest opens from the name. */
+.ai-task-name {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.ai-task-details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ai-task-details-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+}
+
+.ai-model-facts {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+}
+
+.ai-model-facts dt {
   color: var(--textSecondary);
 }
 
-/* On a phone the provider column would leave the model id no room, so the
- * chain stacks: each mark over its id, the arrow between the steps. */
-@media (max-width: 720px) {
-  .ai-modelchain {
-    grid-template-columns: minmax(0, 1fr);
-  }
+.ai-model-facts dd {
+  margin: 0;
+}
 
-  .ai-modelchain-arrow {
-    justify-self: start;
-  }
+.ai-model-id {
+  overflow-wrap: anywhere;
 }
 
 /* One vendor's line of the last price sync: name in the providers' column, then what the run did. */

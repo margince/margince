@@ -81,6 +81,8 @@ provider and Settings → System health shows the **AI provider status** card. W
 is reopened by an operator:
 [recover-after-a-provider-outage.md](../how-to/recover-after-a-provider-outage.md).
 The budget's own deferral is above, under *The monthly budget* in [ai-runtime.md](ai-runtime.md).
+What each task does in an outage, row by row, is generated into
+[ai-provider-outages.md](../reference/ai-provider-outages.md).
 
 ## What is not covered
 

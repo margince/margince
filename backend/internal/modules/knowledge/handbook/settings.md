@@ -232,8 +232,8 @@ listed by activity. What you see is the current setting; **AI call log** shows
 what ran. Shared bindings sit under **Advanced**, and changing one can move
 several activities at once. Prices show input and output cost per million
 tokens. To know where data is processed and what it costs, check the model and
-provider shown on each row, not the tier name. Each row in **AI tasks** names its tier, and **View
-calls** opens the **AI call log** narrowed to that task.
+provider shown on each row, not the tier name. Each row in **AI tasks** names its tier; its name opens its state, outage behaviour and
+**View calls**, and **Edit** sets its thinking level and timeouts (Search and retrieval has neither: set its model under **Model tiers**).
 
 Changes take effect within about a minute; a call in flight keeps its binding.
 

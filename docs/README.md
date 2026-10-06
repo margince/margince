@@ -142,6 +142,7 @@ first deadline is 24 hours.
 - [make-targets.md](reference/make-targets.md): every `make` target.
 - [system-requirements.md](reference/system-requirements.md): what an installation needs, on one node or with the api, worker, web and database on separate nodes.
 - [ai-egress.md](reference/ai-egress.md): every declared AI task, and whether the text it reads can leave the installation. Generated from `backend/api/ai-tasks.yaml`.
+- [ai-provider-outages.md](reference/ai-provider-outages.md): every declared AI task, and what it does while its provider is down, out of credit or refusing its key. Generated from `backend/api/ai-tasks.yaml`.
 - [record-vocabulary.md](reference/record-vocabulary.md): the rule that the reader and the program use the same record noun, and the gates that keep a second spelling out.
 - [ui-copy-style.md](reference/ui-copy-style.md): the standard for the English UI catalog, and which rules `frontend/src/i18n/copy-style.test.ts` holds.
 - [docs-prose-style.md](reference/docs-prose-style.md): the voice and the house bar every Markdown page is held to, and which rules `backend/gates/docsprose_test.go` checks.
