@@ -12,6 +12,7 @@ because the choice decides where this installation's text goes.
 | preset | binds | needs |
 |---|---|---|
 | [`gemini_cloud.yaml`](gemini_cloud.yaml) | every tier to Gemini, embeddings to `gemini-embedding-001` | `GEMINI_API_KEY` |
+| [`gemini_vertex_eu.yaml`](gemini_vertex_eu.yaml) | every tier to Gemini on Vertex AI at `location: eu` and embeddings at `europe-west4`, under `eu_hosted` | `GEMINI_VERTEX_SA_JSON` (a service-account key) |
 | [`openrouter_cloud.yaml`](openrouter_cloud.yaml) | every tier to an OpenRouter-brokered model | `OPENAI_COMPATIBLE_API_KEY` |
 | [`consumer_class_brokered.yaml`](consumer_class_brokered.yaml) | every tier to a Gemma 4 an operator could self-host, brokered at fp8 | `OPENAI_COMPATIBLE_API_KEY` |
 | [`openrouter_cloud_eu.yaml`](openrouter_cloud_eu.yaml) | every lane, embeddings included, to Mistral's EU-region endpoint (`only: [mistral/eu]`) | `OPENAI_COMPATIBLE_API_KEY` |
@@ -21,6 +22,13 @@ because the choice decides where this installation's text goes.
 `gemini_cloud.yaml` is the binding a dev stack bootstraps with today, lifted out
 of `margince.dev.yaml` so it can be named and reused. The dev overlay still
 carries its own copy — that file is the dev posture and has to stand alone.
+
+`gemini_vertex_eu.yaml` binds `gemini_cloud.yaml`'s Flash and Flash-Lite at its
+thinking levels, on Vertex AI at an EU location, under `eu_hosted`; frontier takes
+Flash too, because Vertex serves no Pro model in the EU. A location outside the
+EU member states — London and Zürich included — is refused at save. The key is a service
+account holding `roles/aiplatform.user`; the steps are in
+[docs/how-to/connect-a-cloud-model-provider.md](../../docs/how-to/connect-a-cloud-model-provider.md) §5.
 
 **A thinking-level experiment is not a preset.** A `gemini` tier can name
 `thinking_level:` ([configuration.md](../../docs/reference/configuration.md)),

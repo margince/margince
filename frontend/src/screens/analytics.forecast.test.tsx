@@ -76,6 +76,7 @@ type StubOpts = {
   // where no nightly run has completed. Every other test here stubs a finished
   // run, which is why that case went unrendered until somebody opened the page.
   assuranceStatus?: number;
+  unreadSource?: boolean;
 };
 
 function forecastStub(opts: StubOpts = {}) {
@@ -111,9 +112,11 @@ function forecastStub(opts: StubOpts = {}) {
         run_id: "r1",
         as_of: "2026-05-14T09:00:00Z",
         status: "complete",
-        readiness: "ready",
+        readiness: opts.unreadSource ? undefined : "ready",
         eligible_deals: 12,
-        sources: [{ source: "mail", state: "checked" }],
+        sources: [
+          { source: "mail", state: opts.unreadSource ? "stale" : "checked" },
+        ],
       });
     }
     return jsonResponse(opts.readings ?? readings());
@@ -143,9 +146,9 @@ describe("ForecastView", () => {
       }),
     );
     render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
-    const answer = await screen.findByText(/current call is/i);
+    const answer = await screen.findByText(/Manager forecast:/i);
     expect(answer.textContent).toContain("2,000.00");
-    expect(answer.textContent).toContain("1,200.00");
+    expect(answer.textContent).toContain("1,600.00");
   });
 
   // The gap between a call and its evidence has a DIRECTION, and one sentence
@@ -174,31 +177,31 @@ describe("ForecastView", () => {
       render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
     }
 
-    it("says a call above its evidence is over it", async () => {
+    it("says a forecast above won plus confirmed commits is over it", async () => {
       withCall(200_000);
 
-      const detail = await screen.findByText(/over evidence$/);
+      const detail = await screen.findByText(/above won \+ confirmed commits$/);
       expect(detail.textContent).toContain(
-        formatMoneyCompact(80_000, "EUR", "en"),
+        formatMoneyCompact(40_000, "EUR", "en"),
       );
       expect(detail.textContent).not.toContain("-");
     });
 
-    it("says a call below its evidence is under it, not over it by a minus", async () => {
+    it("says a forecast below won plus confirmed commits is under it, not over it by a minus", async () => {
       withCall(100_000);
 
-      const detail = await screen.findByText(/under evidence$/);
+      const detail = await screen.findByText(/below won \+ confirmed commits$/);
       expect(detail.textContent).toContain(
-        formatMoneyCompact(20_000, "EUR", "en"),
+        formatMoneyCompact(60_000, "EUR", "en"),
       );
       expect(detail.textContent).not.toContain("-");
-      expect(screen.queryByText(/over evidence/)).toBeNull();
+      expect(screen.queryByText(/above won \+ confirmed commits/)).toBeNull();
     });
 
     // Its own arm rather than a zero: "±€0 over evidence" is a difference
     // nobody has.
     it("says a call that matches its evidence carries no gap at all", async () => {
-      withCall(120_000);
+      withCall(160_000);
 
       expect(
         await screen.findByText(
@@ -208,7 +211,9 @@ describe("ForecastView", () => {
           ),
         ),
       ).toBeTruthy();
-      expect(screen.queryByText(/(over|under) evidence/)).toBeNull();
+      expect(
+        screen.queryByText(/(above|below) won \+ confirmed commits/),
+      ).toBeNull();
     });
   });
 
@@ -217,7 +222,9 @@ describe("ForecastView", () => {
   it("says nobody has called rather than calling it zero", async () => {
     vi.stubGlobal("fetch", forecastStub());
     render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
-    expect(await screen.findByText(/No call recorded/i)).toBeTruthy();
+    expect(
+      await screen.findByText(/No manager forecast submitted/i),
+    ).toBeTruthy();
   });
 
   // An unpriced deal is real pipeline contributing zero money. A total shown
@@ -234,7 +241,7 @@ describe("ForecastView", () => {
   it("says nothing about pricing when every deal carries an amount", async () => {
     vi.stubGlobal("fetch", forecastStub());
     render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
-    await screen.findByText(/No call recorded/i);
+    await screen.findByText(/No manager forecast submitted/i);
     expect(screen.queryByText(/of 12 deals/i)).toBeNull();
   });
 
@@ -278,9 +285,9 @@ describe("ForecastView", () => {
     const user = userEvent.setup();
     await user.click(await screen.findByRole("button", { name: /^Week$/i }));
     await user.click(
-      await screen.findByRole("button", { name: /Update call/i }),
+      await screen.findByRole("button", { name: /Update forecast/i }),
     );
-    await user.click(screen.getByRole("button", { name: /Save call/i }));
+    await user.click(screen.getByRole("button", { name: /Save forecast/i }));
 
     await waitFor(() => expect(posted).toHaveLength(1));
     expect(posted[0].period).toBe("week");
@@ -293,13 +300,13 @@ describe("ForecastView", () => {
 
     const user = userEvent.setup();
     await user.click(
-      await screen.findByRole("button", { name: /Update call/i }),
+      await screen.findByRole("button", { name: /Update forecast/i }),
     );
     await user.type(
       await screen.findByLabelText(/Supporting note/i),
       "Two renewals slipped",
     );
-    await user.click(screen.getByRole("button", { name: /Save call/i }));
+    await user.click(screen.getByRole("button", { name: /Save forecast/i }));
 
     await waitFor(() => expect(posted).toHaveLength(1));
     expect(posted[0].note).toBe("Two renewals slipped");
@@ -315,9 +322,9 @@ describe("ForecastView", () => {
 
     const user = userEvent.setup();
     await user.click(
-      await screen.findByRole("button", { name: /Update call/i }),
+      await screen.findByRole("button", { name: /Update forecast/i }),
     );
-    await user.click(screen.getByRole("button", { name: /Save call/i }));
+    await user.click(screen.getByRole("button", { name: /Save forecast/i }));
 
     await waitFor(() => expect(posted).toHaveLength(1));
     expect(posted[0].note).toBeUndefined();
@@ -351,4 +358,11 @@ describe("ForecastView", () => {
     expect(screen.queryByText(/Couldn't load this view/)).toBeNull();
     expect(screen.queryByText(/not found/)).toBeNull();
   });
+});
+
+it("keeps an unread source visible even when there are no findings or readiness verdict", async () => {
+  vi.stubGlobal("fetch", forecastStub({ unreadSource: true }));
+  render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
+  const warning = await screen.findByText(/Not checked:.*mail/i);
+  expect(warning.closest("details")).toBeNull();
 });

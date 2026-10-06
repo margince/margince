@@ -18,7 +18,7 @@ Margince Settings has 32 pages in seven groups:
 - **People**: Members, Teams, Seats and license.
 - **Sales**: Pipelines, Stage automation, Lead handling, Acquisition sources, Outcome reviews, Responsibility roles, Fields, Tags, Products and offers.
 - **Data**: Capture rules, Integrations, Knowledge, Data import.
-- **AI**: Models and routing, Automations, AI usage, Model calls.
+- **AI**: AI usage, AI models, AI call log, Automations.
 - **Governance**: Privacy and retention, Audit log, System health, Extensions, Reset data.
 You see only the pages your permissions open. The Reset data page appears only where the deployment enables it.
 
@@ -55,9 +55,9 @@ Sales and data settings in Margince each have one page.
 
 ### Which settings page do I need for AI and governance?
 AI and governance settings in Margince each have one page.
-- Which model does which work, and provider keys: **Models and routing**.
+- Which model does which work, and provider keys: **AI models**.
 - Trigger-and-action rules: **Automations**.
-- The monthly AI allowance and what was spent: **AI usage**. Each call that ran: **Model calls**.
+- The monthly AI allowance and what was spent: **AI usage**. Each call that ran: **AI call log**.
 - Consent purposes, retention and privacy requests: **Privacy and retention**.
 - Who did what, and when: **Audit log**.
 - Background jobs and rebuilding the search index: **System health**.
@@ -229,26 +229,30 @@ seats they appear under **Read-only settings** on **Overview**. Two stay in a sa
 authors, and **Outcome reviews**, where reading the questions is itself the
 point of opening the page.
 
-## Models and routing, Automations, AI usage, and Model calls
+## AI usage, AI models, AI call log, and Automations
 
-The AI group in Settings has four pages: **Models and routing**,
-**Automations**, **AI usage** and **Model calls**.
+The AI group in Settings has four pages: **AI usage**,
+**AI models**, **AI call log** and **Automations**.
 
 **Model routing** — which model serves each kind of work, presented by activity
-rather than by tier. What you see is the current policy; **Model calls** is what
+rather than by tier. What you see is the current policy; **AI call log** is what
 actually ran. Shared bindings sit under Advanced, and changing one can move
-several activities at once. Prices name input and output cost per million tokens
-separately, rather than one unexplained arrow, and a tier name proves nothing
-about where data is processed or what it costs — read the binding.
+several activities at once. Prices show input and output cost per million
+tokens, and a tier name proves nothing about where data is processed or what it
+costs — read the binding. Each row in **AI tasks** names its tier, and **View
+calls** opens the **AI call log** narrowed to that task.
 
-Changes take effect without a restart: a running process picks up a saved
-binding within about a minute, and a call already in flight keeps the one it
-started with.
+Changes take effect within about a minute; a call in flight keeps its binding.
 
-**Provider keys** — your own keys for whichever provider you use. Margince can
-also run entirely against a local model with no cloud key at all.
+**Providers** — each provider's key, and where it is reached: a host, OpenRouter
+hosts, or a Vertex location. A second badge shows when a provider is not
+answering. See [AI providers](ai-providers.md).
 
-**Automations** — the trigger-and-action catalogue. **Monthly AI allowance** — Admin and Ops set it; Management can read it and not
+**Automations** — the trigger-and-action catalogue. Three rules watch a Live
+List and, when a record joins or leaves it, add a task, notify the rule's owner,
+or add the record to a Shortlist. They run from the 15-minute check, once per
+record the owner can see. More than 100 changes in one check, an archived list
+or a broken filter pause the rule until its owner resumes it. **Monthly AI allowance** — Admin and Ops set it; Management can read it and not
 change it. The default is **12 million tokens per active full user each month**,
 pooled across the company. It is not an individual quota and not a spending cap
 in money. You can override the calculation with a fixed company total, which
@@ -271,7 +275,7 @@ Preview an allowance or model change before saving. A save is refused if the
 stored configuration has moved since you previewed it, so you never save against
 an answer you did not see.
 
-**AI usage** and **Model calls** — "AI spend this month against the
+**AI usage** and **AI call log** — "AI spend this month against the
 allowance", and "each model request and its response". Anything that failed
 outright stays visible in **Background jobs**, on **System health**, instead.
 
@@ -324,6 +328,8 @@ reading and emptying the installation are no longer three buttons on one screen.
 - **Search index** — rebuilding the index behind search and the AI's retrieval.
 - **Background jobs** — "Queued background jobs and failed jobs by owner."
   Admin and Ops.
+- **AI provider status** — whether each AI provider is answering, as the server
+  and the background worker have seen it, merged into one view. See [AI providers](ai-providers.md).
 - **Mail capture checks** — whether mail capture's background repair passes keep
   up: when each last succeeded, how many contacts and threads are waiting in
   each mailbox, and how many filed meetings are held back across the whole

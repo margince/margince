@@ -1,418 +1,233 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
+import { X } from "lucide-react";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { navigate } from "../app/router";
-import { Button, Field, Textarea, TextInput } from "../design-system/atoms";
+import { Breadcrumb } from "../design-system/breadcrumb";
+import { ChoiceList } from "../design-system/choicelist";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
-import { MeetingSlots } from "../design-system/meetingslots";
-import { Panel, PanelBody } from "../design-system/panel";
-import { RecordPicker } from "../design-system/recordpicker";
-import { Select } from "../design-system/select";
-import { formatDate, formatDateTime, formatNumber } from "../format/format";
-import { dayInZone, startOfDayInZone, viewerZone } from "../format/timezone";
-import { useLocale, usePlural, useT } from "../i18n";
-import { useInviteAvailability } from "./booking-availability";
+import { IconAction } from "../design-system/iconaction";
+import { viewerZone } from "../format/timezone";
+import { useT } from "../i18n";
 import { useBookingCalendar } from "./booking-calendar-state";
-import { BookingBack, BookingZone, useBookingIntent } from "./booking-common";
-import { BookingProposal } from "./booking-proposal";
-import { BookingSetup } from "./booking-setup";
-import { QueryGate, throwProblem } from "./common";
+import {
+  BookingBlocked,
+  type BookingMode,
+  BookingPicker,
+  type BookingSlot,
+} from "./booking-picker";
+import { type BookingEdit, BookingReview } from "./booking-review";
+import { throwProblem } from "./common";
 import { useSchedulingProfile } from "./scheduling-profile-query";
 import { useWorkingHours } from "./working-hours";
 
-type Request = components["schemas"]["MeetingInvitationRequest"];
+type Contact = components["schemas"]["Contact"];
+
+type Edits = Readonly<{
+  contact?: { id: string; name: string };
+  attendee?: string;
+  subject?: string;
+  location?: string;
+  description?: string;
+  video?: boolean;
+  duration?: number;
+}>;
+
 export function BookingInviteScreen({
   contactId,
 }: Readonly<{ contactId?: string }>) {
   const t = useT();
-  const plural = usePlural();
-  const { locale } = useLocale();
   const [zone, setZone] = useState(viewerZone);
-  const intent = useBookingIntent();
-  const [mode, setMode] = useState("propose");
-  const [options, setOptions] = useState<{ start: string; end: string }[]>([]);
-  const [selectedContactId, setSelectedContactId] = useState(contactId ?? "");
-  const [email, setEmail] = useState<string | null>(null);
-  const [editedSubject, setSubject] = useState<string | null>(null);
-  const [editedLocation, setLocation] = useState<string | null>(null);
-  const [description, setDescription] = useState("");
+  const [mode, setMode] = useState<BookingMode>("propose");
+  const [picks, setPicks] = useState<BookingSlot[]>([]);
+  const [edits, setEdits] = useState<Edits>({});
+  const [from, setFrom] = useState(() => new Date().toISOString());
   const [searchAhead, setSearchAhead] = useState(false);
   const hours = useWorkingHours(true);
-  const [from, setFrom] = useState(() => new Date().toISOString());
-  const [editedDuration, setDuration] = useState<number | null>(null);
-  const [selected, setSelected] = useState<{
-    start: string;
-    end: string;
-  } | null>(null);
+  const profile = useSchedulingProfile(true);
+  const selectedId = edits.contact?.id ?? contactId ?? "";
   const contact = useQuery({
-    queryKey: ["booking-contact", selectedContactId],
-    enabled: !!selectedContactId,
+    queryKey: ["booking-contact", selectedId],
+    enabled: !!selectedId,
     queryFn: async () => {
       const { data, error } = await api.GET("/contacts/{id}", {
-        params: { path: { id: selectedContactId } },
+        params: { path: { id: selectedId } },
       });
       if (error) throwProblem(error);
       return data;
     },
   });
-  const profile = useSchedulingProfile(true);
-  const defaults = profile.data ?? {
-    title: t("book.subject"),
-    location: "",
-    duration_minutes: 30,
-    provider: "",
-  };
-  const subject = editedSubject ?? defaults.title;
-  const location = editedLocation ?? defaults.location;
-  const duration = editedDuration ?? defaults.duration_minutes;
-  const attendee = email ?? bookingRecipient(contact.data);
-  const { ready, connections } = useBookingCalendar(defaults.provider, false);
-  const configured = ready;
-  const { earliest, latest, outsideHorizon, slots } = useInviteAvailability(
-    from,
-    duration,
-    searchAhead,
-    configured,
-    profile.data,
-    hours.data,
-  );
-  const send = useMutation({
-    mutationFn: async (body: Request) => {
-      const { data, error } = await api.POST("/scheduling/invitations", {
-        body,
-        params: { header: { "Idempotency-Key": intent(body) } },
-      });
-      if (error) throwProblem(error);
-      return data;
-    },
-    onSuccess: (value) =>
-      navigate({ screen: "book", id: `meeting-${value.id}` }),
-  });
+  const saved = profile.data;
+  const provider = saved?.provider ?? "";
+  const { ready, connections } = useBookingCalendar(provider, false);
+  const settled = !profile.isPending && !connections.isPending;
+  const name = contact.data?.full_name;
+  const draft = bookingDraft(edits, contact.data, saved, selectedId, t);
+  const edit = (change: BookingEdit) =>
+    setEdits((current) => ({
+      ...current,
+      ...change,
+      ...(change.contact ? { attendee: undefined } : {}),
+    }));
+  const pick = (slot: BookingSlot) =>
+    setPicks((current) => togglePick(current, slot, mode));
+  const back = () =>
+    navigate(
+      contactId
+        ? { screen: "contacts", id: contactId, id2: "meetings" }
+        : { screen: "home" },
+    );
   return (
     <div className="book-page">
-      <BookingBack />
-      <header className="book-heading">
-        <Heading as="h1" size="large">
-          {t("scheduling.new")}
-        </Heading>
-        <Button onClick={() => navigate({ screen: "book" })}>
-          {t("scheduling.myLink")}
-        </Button>
-      </header>
-      <InviteSetup
-        profile={profile.data}
-        pending={profile.isPending}
-        connectionsPending={connections.isPending}
-        error={profile.error}
-        configured={configured}
+      <BookingHead
+        contactId={selectedId || undefined}
+        name={name}
+        onClose={back}
       />
-      <div className="book-mode">
-        <Select
-          aria-label={t("scheduling.method")}
-          value={mode}
-          onChange={setMode}
-          options={[
-            { value: "propose", label: t("scheduling.propose") },
-            { value: "invite", label: t("scheduling.invite") },
-            { value: "link", label: t("scheduling.sharePersonal") },
-          ]}
-        />
-      </div>
-      <div className="book-profile-grid">
-        <Panel title={t(bookingModeLabel(mode))}>
-          <PanelBody>
-            <div className="book-form">
-              <RecordPicker
-                label={t("scheduling.contact")}
-                selected={
-                  contact.data
-                    ? { id: selectedContactId, name: contact.data.full_name }
-                    : null
-                }
-                onPick={(value) => {
-                  setSelectedContactId(value.id);
-                  setEmail(null);
-                }}
-                searchTargets={searchBookingContacts}
-              />
-              <Field label={t("book.attendee")}>
-                {(control) => (
-                  <TextInput
-                    {...control}
-                    type="email"
-                    value={attendee}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                )}
-              </Field>
-              <Field label={t("scheduling.subject")}>
-                {(control) => (
-                  <TextInput
-                    {...control}
-                    value={subject}
-                    onChange={(e) => setSubject(e.target.value)}
-                  />
-                )}
-              </Field>
-              <Field label={t("scheduling.duration")}>
-                {(control) => (
-                  <TextInput
-                    {...control}
-                    type="number"
-                    min={15}
-                    max={480}
-                    value={duration}
-                    onChange={(e) => {
-                      setDuration(Number(e.target.value));
-                      setOptions([]);
-                      setSelected(null);
-                    }}
-                  />
-                )}
-              </Field>
-
-              <Field label={t("scheduling.location")}>
-                {(control) => (
-                  <TextInput
-                    {...control}
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                  />
-                )}
-              </Field>
-              <Field label={t("scheduling.agenda")}>
-                {(control) => (
-                  <Textarea
-                    {...control}
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                  />
-                )}
-              </Field>
-              {selected && (
-                <p>{formatDateTime(selected.start, locale, zone)}</p>
-              )}
-              {mode === "invite" ? (
-                <Button
-                  variant="primary"
-                  disabled={
-                    !configured ||
-                    !selectedContactId ||
-                    !attendee ||
-                    !subject ||
-                    !selected ||
-                    send.isPending
-                  }
-                  onClick={() => {
-                    if (selected)
-                      send.mutate({
-                        contact_id: selectedContactId,
-                        attendee_email: attendee,
-                        subject,
-                        location,
-                        description,
-                        ...selected,
-                      });
-                  }}
-                >
-                  {t("scheduling.invite")}
-                </Button>
-              ) : (
-                <BookingProposal
-                  available={configured}
-                  personalOnly={mode === "link"}
-                  zone={zone}
-                  request={{
-                    contact_id: selectedContactId,
-                    attendee_email: attendee,
-                    subject,
-                    location,
-                    description,
-                    duration_minutes: duration,
-                    options: mode === "link" ? [] : options,
-                  }}
-                />
-              )}
-              <ErrorLine error={send.error} />
-            </div>
-          </PanelBody>
-        </Panel>
-        {mode !== "link" && (
-          <Panel title={t("scheduling.chooseTime")}>
-            <PanelBody>
-              <div className="book-form">
-                <Field label={t("scheduling.date")}>
-                  {(control) => (
-                    <TextInput
-                      {...control}
-                      type="date"
-                      min={dayInZone(earliest, zone)}
-                      max={dayInZone(latest, zone)}
-                      value={dayInZone(new Date(from).getTime(), zone)}
-                      onChange={(e) => {
-                        if (e.target.value) {
-                          setFrom(startOfDayInZone(e.target.value, zone));
-                          setSearchAhead(false);
-                          setSelected(null);
-                          setOptions([]);
-                        }
-                      }}
-                    />
-                  )}
-                </Field>
-                <p className="t-caption">
-                  {t("scheduling.bookingUntil", {
-                    date: formatDate(
-                      new Date(latest).toISOString(),
-                      locale,
-                      zone,
-                    ),
-                  })}
-                </p>
-                {mode === "propose" && (
-                  <p className="t-caption">
-                    {plural("scheduling.selectOptions", options.length, {
-                      count: formatNumber(options.length, locale),
-                    })}
-                  </p>
-                )}
-                <BookingZone value={zone} onChange={setZone} />
-                <AvailabilityNotice
-                  hours={hours}
-                  configured={configured}
-                  outsideHorizon={outsideHorizon}
-                />
-                {configured && !outsideHorizon && (
-                  <QueryGate pendingLabel={t("common.loading")} query={slots}>
-                    {(value) => (
-                      <>
-                        <MeetingSlots
-                          slots={value.slots.map((slot) => ({
-                            ...slot,
-                            label: formatDateTime(slot.start, locale, zone),
-                          }))}
-                          selected={selected?.start}
-                          selectedMany={
-                            mode === "propose"
-                              ? options.map((slot) => slot.start)
-                              : undefined
-                          }
-                          onSelect={(slot) => {
-                            if (mode === "propose")
-                              setOptions((current) =>
-                                toggleProposalOption(current, slot),
-                              );
-                            else setSelected(slot);
-                          }}
-                          empty={t(
-                            searchAhead
-                              ? "scheduling.noTimesHorizon"
-                              : "scheduling.noTimes",
-                          )}
-                        />
-                        <EmptyAvailability
-                          empty={value.slots.length === 0}
-                          searched={searchAhead}
-                          onSearch={() => setSearchAhead(true)}
-                        />
-                        {value.truncated && (
-                          <Button
-                            onClick={() => {
-                              const last = value.slots.at(-1);
-                              if (last) {
-                                setFrom(
-                                  new Date(
-                                    new Date(last.start).getTime() + 15 * 60000,
-                                  ).toISOString(),
-                                );
-                                setSelected(null);
-                              }
-                            }}
-                          >
-                            {t("scheduling.next")}
-                          </Button>
-                        )}
-                      </>
-                    )}
-                  </QueryGate>
-                )}
-              </div>
-            </PanelBody>
-          </Panel>
+      <ErrorLine error={profile.error} />
+      <ChoiceList
+        legend={t("scheduling.method")}
+        hideLegend
+        layout="cards"
+        value={mode}
+        onChange={(next) => {
+          setMode(next);
+          if (next === "invite") setPicks((current) => current.slice(0, 1));
+        }}
+        choices={[
+          {
+            value: "propose",
+            label: t("scheduling.propose"),
+            description: t("scheduling.proposeHelp"),
+          },
+          {
+            value: "invite",
+            label: t("scheduling.invite"),
+            description: t("scheduling.inviteHelp"),
+          },
+          {
+            value: "link",
+            label: t("scheduling.sharePersonal"),
+            description: t("scheduling.linkHelp"),
+          },
+        ]}
+      />
+      <div className="book-compose">
+        {/* Every mode keeps the week on screen, a personal link as the times
+            the guest will choose from, so changing mode never reflows the page. */}
+        {settled && !ready ? (
+          <BookingBlocked />
+        ) : (
+          <BookingPicker
+            mode={mode}
+            configured={settled && ready}
+            profile={saved}
+            hours={hours}
+            zone={zone}
+            onZone={setZone}
+            duration={draft.duration}
+            onDuration={(duration) => {
+              setEdits((current) => ({ ...current, duration }));
+              setPicks([]);
+            }}
+            from={from}
+            onFrom={setFrom}
+            searchAhead={searchAhead}
+            onSearchAhead={setSearchAhead}
+            picks={picks}
+            onPick={pick}
+          />
         )}
+        <BookingReview
+          mode={mode}
+          draft={draft}
+          onEdit={edit}
+          picks={picks}
+          onRemovePick={(slot) =>
+            setPicks((current) => current.filter((p) => p.start !== slot.start))
+          }
+          configured={settled && ready}
+          zone={zone}
+          searchContacts={searchBookingContacts}
+        />
       </div>
     </div>
   );
 }
 
-function bookingRecipient(contact?: components["schemas"]["Contact"]) {
+// A proposal offers up to three times and an invite exactly one, so a pick
+// toggles within the mode's bound rather than silently growing past it.
+export function togglePick(
+  current: readonly BookingSlot[],
+  slot: BookingSlot,
+  mode: BookingMode,
+): BookingSlot[] {
+  if (current.some((option) => option.start === slot.start))
+    return current.filter((option) => option.start !== slot.start);
+  if (mode === "invite") return [slot];
+  return current.length < 3 ? [...current, slot] : [...current];
+}
+
+function bookingDraft(
+  edits: Edits,
+  contact: Contact | undefined,
+  saved: components["schemas"]["SchedulingProfile"] | undefined,
+  contactId: string,
+  t: ReturnType<typeof useT>,
+) {
+  return {
+    contactId,
+    contactName: edits.contact?.name ?? contact?.full_name,
+    attendee: edits.attendee ?? bookingRecipient(contact),
+    subject: edits.subject ?? saved?.title ?? t("book.subject"),
+    location: edits.location ?? saved?.location ?? "",
+    description: edits.description ?? "",
+    duration: edits.duration ?? saved?.duration_minutes ?? 30,
+    video: edits.video ?? saved?.video_call ?? true,
+    provider: saved?.provider ?? "",
+  };
+}
+
+function BookingHead({
+  contactId,
+  name,
+  onClose,
+}: Readonly<{ contactId?: string; name?: string; onClose: () => void }>) {
+  const t = useT();
+  return (
+    <header className="book-heading">
+      <div className="book-form">
+        {contactId && name && (
+          <Breadcrumb
+            label={t("scheduling.new")}
+            items={[
+              { label: t("nav.contacts"), href: "#/contacts" },
+              { label: name, href: `#/contacts/${contactId}/meetings` },
+              { label: t("scheduling.new") },
+            ]}
+          />
+        )}
+        <Heading as="h1" size="large">
+          {name ? t("scheduling.bookWith", { name }) : t("scheduling.new")}
+        </Heading>
+      </div>
+      <IconAction
+        label={t("common.close")}
+        icon={<X aria-hidden />}
+        onClick={onClose}
+      />
+    </header>
+  );
+}
+
+function bookingRecipient(contact?: Contact) {
   const addresses = contact?.emails ?? [];
   return (
     contact?.primary_email ??
     addresses.find((address) => address.is_primary)?.email ??
     (addresses.length === 1 ? addresses[0].email : "")
-  );
-}
-
-function toggleProposalOption(
-  current: { start: string; end: string }[],
-  slot: { start: string; end: string },
-) {
-  if (current.some((option) => option.start === slot.start))
-    return current.filter((option) => option.start !== slot.start);
-  return current.length < 3 ? [...current, slot] : current;
-}
-
-function bookingModeLabel(mode: string) {
-  if (mode === "propose") return "scheduling.propose";
-  return mode === "link" ? "scheduling.sharePersonal" : "scheduling.invite";
-}
-
-function InviteSetup({
-  profile,
-  pending,
-  error,
-  configured,
-  connectionsPending,
-}: Readonly<{
-  profile?: components["schemas"]["SchedulingProfile"];
-  pending: boolean;
-  error: unknown;
-  configured: boolean;
-  connectionsPending: boolean;
-}>) {
-  const t = useT();
-  return (
-    <>
-      {(pending || connectionsPending) && <p>{t("common.loading")}</p>}
-      <ErrorLine error={error} />
-      {profile && !pending && !connectionsPending && !configured && (
-        <BookingSetup />
-      )}
-    </>
-  );
-}
-
-function EmptyAvailability({
-  empty,
-  searched,
-  onSearch,
-}: Readonly<{ empty: boolean; searched: boolean; onSearch: () => void }>) {
-  const t = useT();
-  if (!empty) return null;
-  return (
-    <div className="book-form">
-      <p className="t-caption">{t("scheduling.noTimesHelp")}</p>
-      <p className="t-caption">{t("scheduling.allDayBlocks")}</p>
-      {!searched && (
-        <Button onClick={onSearch}>{t("scheduling.findNext")}</Button>
-      )}
-      <a href="#/settings/meetings" target="_blank" rel="noreferrer">
-        {t("scheduling.openSettings")}
-      </a>
-    </div>
   );
 }
 
@@ -424,39 +239,4 @@ async function searchBookingContacts(q: string) {
   return data.data
     .filter((hit) => hit.type === "contact")
     .map((hit) => ({ id: hit.id, name: hit.title ?? hit.id }));
-}
-
-function AvailabilityNotice({
-  hours,
-  configured,
-  outsideHorizon,
-}: Readonly<{
-  hours: ReturnType<typeof useWorkingHours>;
-  configured: boolean;
-  outsideHorizon: boolean;
-}>) {
-  const t = useT();
-  return (
-    <>
-      {hours.data?.working_hours && (
-        <p className="t-caption">
-          {t("scheduling.effectiveHours", {
-            start: hours.data.working_hours.start_time,
-            end: hours.data.working_hours.end_time,
-            zone: hours.data.working_hours.timezone,
-          })}
-        </p>
-      )}
-      <ErrorLine error={hours.error} />
-      {!configured && <p>{t("scheduling.finishSetup")}</p>}
-      {configured && outsideHorizon && (
-        <div className="book-form">
-          <p>{t("scheduling.outsideHorizon")}</p>
-          <a href="#/settings/meetings" target="_blank" rel="noreferrer">
-            {t("scheduling.openSettings")}
-          </a>
-        </div>
-      )}
-    </>
-  );
 }

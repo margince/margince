@@ -200,7 +200,7 @@ func availableSummary(
 	if activity.Direction != nil && *activity.Direction == crmcontracts.ActivityDirectionInbound {
 		far = parties.from
 	}
-	summary.Counterparty = counterpartyOf(far)
+	summary.Counterparty, summary.CounterpartyContactId = counterpartyOf(far)
 	if activity.EmailSummary != nil {
 		summary.Move = activity.EmailSummary.Move
 	}
@@ -233,7 +233,7 @@ func callerIsSenderSeat(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (bool
 // its own — the parent decided, exactly as ListAttachments' parent check does.
 func readEmailAttachments(ctx context.Context, tx pgx.Tx, id ids.ActivityID) ([]crmcontracts.EmailAttachmentSummary, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT at.id, at.filename, at.byte_size, at.content_type
+		SELECT at.id, at.filename, at.byte_size, at.content_type, at.bytes_withheld
 		  FROM attachment at
 		 WHERE at.entity_type = 'activity' AND at.entity_id = $1 AND at.archived_at IS NULL
 		 ORDER BY at.created_at, at.id`, id.UUID)
@@ -245,9 +245,11 @@ func readEmailAttachments(ctx context.Context, tx pgx.Tx, id ids.ActivityID) ([]
 	for rows.Next() {
 		var a crmcontracts.EmailAttachmentSummary
 		var raw ids.UUID
-		if err := rows.Scan(&raw, &a.Filename, &a.ByteSize, &a.ContentType); err != nil {
+		var withheld bool
+		if err := rows.Scan(&raw, &a.Filename, &a.ByteSize, &a.ContentType, &withheld); err != nil {
 			return nil, err
 		}
+		a.BytesWithheld = &withheld
 		a.Id = openapi_types.UUID(raw)
 		out = append(out, a)
 	}

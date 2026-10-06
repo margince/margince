@@ -63,10 +63,12 @@ func projectCheckConstraints(t *testing.T) []string {
 // installation runs no request-validator middleware, so an unknown phase reaches
 // the CHECK. That constraint has a real message now (ProjectPhaseError).
 var unreachableChecks = gatekit.Waive(map[string]string{
-	"project_visibility_check": "no writer names the visibility column — head " +
-		"narrowed the CHECK to visibility = 'workspace', the contract exposes no " +
-		"project visibility field, and nothing in the store sets one, so no " +
-		"request can produce a row that violates it",
+	"project_version_js_safe": "a caller cannot reach it. version is server-stamped: " +
+		"it defaults to 1 and every writer bumps it in SQL with `version = version + 1`, " +
+		"while a request carries a version only as the optimistic-concurrency " +
+		"precondition storekit.Patch puts in its WHERE — never as a value to store. So " +
+		"the only way past the bound is 2^53 successful writes to one row, and a refusal " +
+		"naming a field would be naming a field no caller sent",
 	"project_source_author_needs_a_source": "the violating combination cannot be " +
 		"written. The CHECK refuses an author on a row naming no source_system, and " +
 		"the ONLY door that writes those two columns is the importer's create, and " +

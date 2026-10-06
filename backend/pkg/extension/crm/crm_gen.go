@@ -712,6 +712,15 @@ type EmailSummary struct {
 	// see — the row then says the direction alone rather than inventing a stranger.
 	Counterparty *string `json:"counterparty,omitempty"`
 
+	// CounterpartyContactId The contact `counterparty` names, when the party it was taken from resolved to one
+	// this caller may see. Present so a client can key a face on the RECORD rather than on
+	// the phrase: the phrase cannot be turned back into a contact, and matching it by name
+	// is wrong in both directions — a contact renamed since capture stops matching and
+	// draws a second colour, and two contacts sharing a name cannot be told apart. Absent
+	// when the far side resolved to no contact, which is a face the client has nothing
+	// better to key than the words.
+	CounterpartyContactId *string `json:"counterparty_contact_id,omitempty"`
+
 	// Delivery What happened to an outbound message, when this row is one and a delivery was
 	// staged for it. Absent on an inbound message, and on an outbound one logged
 	// rather than sent — neither has a delivery to report, which is a different

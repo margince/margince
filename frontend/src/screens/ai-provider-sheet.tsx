@@ -9,15 +9,15 @@ import { Badge, Button, Modal } from "../design-system/atoms";
 import { DataTable } from "../design-system/datatable";
 import { Heading } from "../design-system/heading";
 import { today } from "../format/calendarday";
+import { stable } from "../format/collate";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { useAiModelCatalogue } from "./ai-models";
+import { borrowedRows, useAiModelCatalogue } from "./ai-models";
+import { usePriceSync } from "./ai-price-sync";
 import { pricingPageFor } from "./ai-provider-links";
+import { providerName } from "./ai-provider-names";
 import type { ProviderUse } from "./ai-routing-query";
-import {
-  type ModelPriceRefresh,
-  ProviderRefreshLine,
-} from "./rate-catalogue-refresh";
+import { ProviderRefreshLine } from "./rate-catalogue-refresh";
 import { type BoundModel, PriceForm } from "./rate-manual";
 import { RemovePriceDialog } from "./rate-remove";
 import "./ai-settings.css";
@@ -27,8 +27,8 @@ type SheetRow = components["schemas"]["AiModelRate"];
 
 export type ProviderUsage = ProviderUse;
 
-// Whether a vendor can be called (`usable`) crossed with whether routing binds
-// it. Four readings, and the two worth a reader's attention are the off-diagonal
+// Whether a vendor can be called (`usable`, the server's answer) crossed with
+// whether routing binds it. Four readings, and the two worth a reader's attention are the off-diagonal
 // ones: a binding with nothing to call it with fails closed, and a keyed vendor
 // nothing is bound to is ready to take a binding.
 export type ProviderState = "active" | "ready" | "needs_key" | "inactive";
@@ -37,7 +37,7 @@ export function providerState(
   status: ProviderStatus,
   usage: ProviderUsage | undefined,
 ): ProviderState {
-  const usable = status.configured || status.optional || status.env_var === "";
+  const usable = status.usable;
   if (usage) return usable ? "active" : "needs_key";
   return usable ? "ready" : "inactive";
 }
@@ -68,14 +68,15 @@ export const STATE_TONE = {
 export function ProviderSheet({
   status,
   usage,
-  refresh,
   connection,
+  figures,
   onClose,
 }: Readonly<{
   status: ProviderStatus;
   usage: ProviderUsage | undefined;
-  refresh: ModelPriceRefresh;
   connection: ReactNode;
+  // What this vendor's calls did, between how it is reached and what it costs.
+  figures?: ReactNode;
   onClose: () => void;
 }>) {
   const t = useT();
@@ -91,7 +92,7 @@ export function ProviderSheet({
     >
       <div className="drawer-head">
         <Heading size="large" id={titleId} className="t-h2 modal-title">
-          {status.provider}
+          {providerName(status.provider, t)}
         </Heading>
         <p className="t-caption ai-sheet-status">
           <Badge tone={STATE_TONE[state]}>{t(STATE_LABEL[state])}</Badge>
@@ -109,10 +110,11 @@ export function ProviderSheet({
           </Heading>
           {connection}
         </section>
+        {figures}
         <ProviderPrices
           provider={status.provider}
+          pricedBy={status.priced_by}
           usage={usage}
-          refresh={refresh}
         />
       </div>
     </Modal>
@@ -136,17 +138,21 @@ function firstVerb(section: HTMLElement | null): HTMLElement | null {
 // the vendor has no prices, which is a claim about the data.
 function ProviderPrices({
   provider,
+  pricedBy,
   usage,
-  refresh,
 }: Readonly<{
   provider: string;
+  pricedBy?: string;
   usage: ProviderUsage | undefined;
-  refresh: ModelPriceRefresh;
 }>) {
   const t = useT();
   const canRead = useCan("ai_model_rate", "read");
   const canWrite = useCanUpsert("ai_model_rate");
   const sheet = useAiModelCatalogue(canRead);
+  const sync = usePriceSync(canRead);
+  const lastLine = sync.data?.last_run?.report.providers.find(
+    (p) => p.provider === provider,
+  );
   // The row being edited, `{}` for a new price, nothing while the table shows.
   const [form, setForm] = useState<{
     initial?: SheetRow;
@@ -170,7 +176,7 @@ function ProviderPrices({
     target?.focus();
   }, [form]);
   if (!canRead) return null;
-  const rows = (sheet.data ?? []).filter((r) => r.provider === provider);
+  const rows = pricedRows(sheet.data ?? [], provider, pricedBy);
   const page = pricingPageFor(provider, usage?.baseUrls ?? []);
   // Models routing runs on this vendor that the sheet cannot price: the reason
   // a lane elsewhere on the page says "no price".
@@ -222,7 +228,7 @@ function ProviderPrices({
               </>
             ) : null}
           </p>
-          <ProviderRefreshLine refresh={refresh} provider={provider} />
+          <ProviderRefreshLine line={lastLine} />
           {canWrite &&
             unpriced.map((m) => (
               <p key={`${m.lane}/${m.model}`} className="t-sub">
@@ -237,8 +243,11 @@ function ProviderPrices({
           ) : (
             <PriceTable
               rows={rows}
+              provider={provider}
               verbs={canWrite}
-              onEdit={(r) => setForm({ initial: r })}
+              // A borrowed row is corrected by writing this provider's own
+              // price for the model, which then overrides it.
+              onEdit={(r) => setForm({ initial: { ...r, provider } })}
               onRemove={setRemoving}
             />
           )}
@@ -255,15 +264,31 @@ function ProviderPrices({
   );
 }
 
+// The rows that price this provider's calls: its own, and for a provider
+// priced by another (the server's priced_by), the other's rows for models its
+// own sheet does not list — the same fallback the server prices a call with.
+function pricedRows(
+  sheet: readonly SheetRow[],
+  provider: string,
+  pricedBy: string | undefined,
+): SheetRow[] {
+  const own = sheet.filter((r) => r.provider === provider);
+  return [...own, ...borrowedRows(sheet, provider, pricedBy)].sort((a, b) =>
+    stable(a.model_id, b.model_id),
+  );
+}
+
 // The prices themselves, one row per model, with the two verbs a writer holds
 // on a row: correcting the price, and taking the whole entry off the sheet.
 function PriceTable({
   rows,
+  provider,
   verbs,
   onEdit,
   onRemove,
 }: Readonly<{
   rows: SheetRow[];
+  provider: string;
   verbs: boolean;
   onEdit: (row: SheetRow) => void;
   onRemove: (row: SheetRow) => void;
@@ -286,6 +311,16 @@ function PriceTable({
                 {r.effective_date > today() ? (
                   <Badge tone="info">
                     {t("aiRates.manual.from", { date: r.effective_date })}
+                  </Badge>
+                ) : null}
+                {r.source === "manual" ? (
+                  <Badge>{t("aiProviders.setByHand")}</Badge>
+                ) : null}
+                {r.provider !== provider ? (
+                  <Badge>
+                    {t("aiProviders.borrowedFrom", {
+                      provider: providerName(r.provider, t),
+                    })}
                   </Badge>
                 ) : null}
               </span>
@@ -331,16 +366,19 @@ function PriceTable({
                       >
                         <Pencil aria-hidden />
                       </Button>
-                      <Button
-                        iconOnly
-                        variant="ghost"
-                        aria-label={t("aiRates.remove.verb", {
-                          model: r.model_id,
-                        })}
-                        onClick={() => onRemove(r)}
-                      >
-                        <Trash2 aria-hidden />
-                      </Button>
+                      {/* A borrowed row is the other provider's to remove. */}
+                      {r.provider === provider ? (
+                        <Button
+                          iconOnly
+                          variant="ghost"
+                          aria-label={t("aiRates.remove.verb", {
+                            model: r.model_id,
+                          })}
+                          onClick={() => onRemove(r)}
+                        >
+                          <Trash2 aria-hidden />
+                        </Button>
+                      ) : null}
                     </div>
                   ),
                 },

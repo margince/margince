@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { screen } from "storybook/test";
 import { ReportingComparison } from "./reporting.comparison";
 import { reportingEditions } from "./reporting.scenarios";
 import { reportingStoryRoutes } from "./reporting.story-fixtures";
@@ -8,11 +9,14 @@ import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 const meta: Meta = { title: "Records/Reports/Analytics/Compare editions" };
 export default meta;
 type Story = StoryObj;
-function Preview() {
+function Preview({ paginated = false }: Readonly<{ paginated?: boolean }>) {
+  const [loaded, setLoaded] = useState(!paginated);
   const [open, setOpen] = useState(true);
   return open ? (
     <ReportingComparison
-      editions={reportingEditions}
+      editions={loaded ? reportingEditions : [reportingEditions[0]]}
+      hasMore={!loaded}
+      onLoadMore={() => setLoaded(true)}
       onClose={() => setOpen(false)}
     />
   ) : (
@@ -39,6 +43,9 @@ export const Default: Story = {
       </StoryProviders>
     );
   },
+  play: async () => {
+    await screen.findByRole("dialog");
+  },
 };
 
 export const MembershipChanged: Story = {
@@ -61,4 +68,19 @@ export const MembershipChanged: Story = {
       </StoryProviders>
     );
   },
+};
+
+export const OlderHistory: Story = {
+  render: () => {
+    installFetchStub(reportingStoryRoutes());
+    return (
+      <StoryProviders>
+        <Preview paginated />
+      </StoryProviders>
+    );
+  },
+};
+export const OlderHistoryDark: Story = {
+  ...OlderHistory,
+  globals: { theme: "dark" },
 };

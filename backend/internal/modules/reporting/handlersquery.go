@@ -93,7 +93,7 @@ func (h Handlers) GetReportingEditionEvidence(w http.ResponseWriter, r *http.Req
 
 // SelectionFromQuery gives live views and evidence identical filter parsing.
 func SelectionFromQuery(q url.Values) (crmcontracts.ReportingSelection, error) {
-	selection := crmcontracts.ReportingSelection{Period: "this_month", TargetBasis: "month", CloseWindow: reportingFiscalQuarter, Metrics: []crmcontracts.ReportingMetricID{"bookings_won", "open_pipeline", reportingStageAge}, Blocks: []crmcontracts.ReportingBlockKind{"bookings_trend", "stage_distribution", "owner_attainment", reportingStageAge}}
+	selection := crmcontracts.ReportingSelection{Period: reportingThisMonth, TargetBasis: "month", CloseWindow: reportingFiscalQuarter, Metrics: []crmcontracts.ReportingMetricID{"bookings_won", "open_pipeline", reportingStageAge}, Blocks: []crmcontracts.ReportingBlockKind{"bookings_trend", "stage_distribution", "owner_attainment", reportingStageAge}}
 	selection.Scope.Kind = crmcontracts.ReportingScopeKind(q.Get("scope_kind"))
 	for _, binding := range []struct {
 		name        string

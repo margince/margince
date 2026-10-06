@@ -383,14 +383,8 @@ func assertLedgerMatches(namespace string, done map[string]appliedRow, m Migrati
 // own answer.
 func assertContentMatches(namespace string, done map[string]appliedRow, m Migration) error {
 	recorded, ok := done[m.Version]
-	current := Digest(m)
-	if !ok || recorded.digest == nil || *recorded.digest == current {
+	if !ok || recorded.digest == nil || ContentAdmitted(namespace, m, *recorded.digest) {
 		return nil
-	}
-	for _, eq := range equivalentContent[namespace][m.Version] {
-		if *recorded.digest == eq.applied && current == eq.source {
-			return nil
-		}
 	}
 	return fmt.Errorf(
 		"pgmigrate: %s %s_%s: applied content does not match the source — this database ran a "+

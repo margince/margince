@@ -201,15 +201,36 @@ func ingestOne(ctx context.Context, rt extension.Runtime, req queued) (extension
 // the column is for is the archive subscription's join back from an activity id.
 func markLanded(ctx context.Context, rt extension.Runtime, req queued, result extension.Result) error {
 	return rt.Tx(ctx, func(ctx context.Context, tx extension.Tx) error {
+		// ONE statement, which is the rule this whole path keeps: the record is
+		// ingested with no transaction of this unit's open, and the row moves
+		// once afterwards. Consuming the marker in a second statement would
+		// also leave a window between the two in which the row is neither.
+		//
+		// The archive may already have come and gone. Its own UPDATE could not
+		// match this row — activity_id is written here, atomically with the
+		// state — so it left the id in the marker table instead, and taking it
+		// now is what makes the two arrival orders end the same way.
+		//
+		// The delete runs whether or not the update below matches. A row that
+		// is no longer waiting was advanced by the archive subscription itself,
+		// which means it matched and wrote no marker, so the two do not occur
+		// together.
+		//
 		// Still pending, so a request the archive subscription withdrew while
 		// this tick was ingesting is not dragged back to `ingested` by a write
 		// that started before it.
 		_, err := tx.Exec(ctx,
-			`UPDATE `+inboundTable+`
-			    SET state = $2, activity_id = nullif($3, '')::uuid,
+			`WITH consumed AS (
+			     DELETE FROM `+archivedFirstTable+`
+			      WHERE activity_id = nullif($3, '')::uuid
+			     RETURNING activity_id
+			 )
+			 UPDATE `+inboundTable+`
+			    SET state = CASE WHEN EXISTS (SELECT 1 FROM consumed) THEN $5 ELSE $2 END,
+			        activity_id = nullif($3, '')::uuid,
 			        attempts = attempts + 1, last_error_class = NULL, updated_at = now()
 			  WHERE id = $1::uuid AND state = $4`,
-			req.id, stateLanded, result.Ref.ID, stateWaiting)
+			req.id, stateLanded, result.Ref.ID, stateWaiting, stateWithdrawn)
 		return err
 	})
 }

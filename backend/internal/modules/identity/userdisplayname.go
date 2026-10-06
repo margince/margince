@@ -80,9 +80,9 @@ func (s *Service) SaveMyDisplayName(ctx context.Context, name string) (Seat, err
 		// change that did not happen, and a before-image that was already
 		// stale. Two renames racing would record the same thing.
 		if err := tx.QueryRow(ctx,
-			`SELECT email, display_name, COALESCE(locale, '')
+			`SELECT email, display_name, COALESCE(locale, ''), greeting_name
 			   FROM app_user WHERE id = $1 AND `+LiveMemberSQL("")+` FOR UPDATE`,
-			human).Scan(&seat.Email, &before, &seat.Locale); err != nil {
+			human).Scan(&seat.Email, &before, &seat.Locale, &seat.GreetingName); err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return apperrors.ErrNotFound
 			}

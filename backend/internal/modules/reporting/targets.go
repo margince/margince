@@ -20,8 +20,10 @@ import (
 )
 
 const (
-	targetColumns = "t.id,r.definition,t.period_start,t.period_end,t.unit,t.revision,t.version,t.created_at"
-	targetFrom    = " FROM sales_target t JOIN sales_target_revision r ON r.target_id=t.id AND r.revision=t.revision"
+	targetRetiredSQL = "COALESCE((r.definition->>'retired')::boolean,false)"
+	activeTarget     = targetRetiredSQL + "=false"
+	targetColumns    = "t.id,r.definition,t.period_start,t.period_end,t.unit,t.revision,t.version,t.created_at"
+	targetFrom       = " FROM sales_target t JOIN sales_target_revision r ON r.target_id=t.id AND r.revision=t.revision"
 )
 
 func scanTarget(row pgx.Row) (crmcontracts.ReportingTarget, error) {
@@ -56,6 +58,9 @@ func (s *Service) GetTarget(ctx context.Context, id ids.UUID) (crmcontracts.Repo
 		if err != nil {
 			return err
 		}
+		if err := s.targetHistory(ctx, tx, &out); err != nil {
+			return err
+		}
 		return s.targetAllocation(ctx, tx, &out)
 	})
 	return out, err
@@ -76,8 +81,14 @@ func (s *Service) targetClause(ctx context.Context, tx pgx.Tx, b *bindings) (str
 	return "((t.scope_kind='owner' AND t.scope_id=ANY(" + b.add(members) + ")) OR (t.scope_kind='team' AND t.scope_id=ANY(" + b.add(actor.TeamIDs) + ")))", nil
 }
 
+// TargetFilter selects current target definitions before pagination.
+type TargetFilter struct {
+	Retired     *bool
+	PeriodStart *openapi_types.Date
+}
+
 // ListTargets exposes only targets within the reader’s live scope.
-func (s *Service) ListTargets(ctx context.Context, after *ids.UUID, limit int) (crmcontracts.ReportingTargetList, error) {
+func (s *Service) ListTargets(ctx context.Context, after *ids.UUID, limit int, filter TargetFilter) (crmcontracts.ReportingTargetList, error) {
 	if err := auth.Require(ctx, "sales_target", principal.ActionRead); err != nil {
 		return crmcontracts.ReportingTargetList{}, err
 	}
@@ -91,6 +102,13 @@ func (s *Service) ListTargets(ctx context.Context, after *ids.UUID, limit int) (
 		}
 		if after != nil {
 			where += " AND t.id>" + b.add(*after)
+		}
+		if filter.Retired != nil {
+			where += " AND " + targetRetiredSQL + "=" + b.add(*filter.Retired)
+		}
+		if filter.PeriodStart != nil {
+			// The filter is a local calendar date; t.period_start is its zoned instant.
+			where += " AND r.definition->>'period_start'=" + b.add(filter.PeriodStart.Format("2006-01-02"))
 		}
 		rows, err := tx.Query(ctx, "SELECT "+targetColumns+targetFrom+" WHERE "+where+" ORDER BY t.id LIMIT "+b.add(limit+1), b.values...)
 		if err != nil {

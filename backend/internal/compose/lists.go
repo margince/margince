@@ -7,7 +7,9 @@ import "github.com/jackc/pgx/v5/pgxpool"
 
 // WithListsEnabled switches Live Lists and Shortlists on for this server: the
 // /lists routes, the list_id narrowing of the record lists, the list export
-// source, the company page's memberships and the agent list tools. cmd/api
+// source, the company page's memberships, the Live Lists a custom field's
+// retire names, the automation rules that watch a list and the agent list
+// tools. cmd/api
 // reads lists.enabled from the deployment file and passes it here.
 func WithListsEnabled(on bool) Option {
 	return func(s *Server, _ *pgxpool.Pool) {
@@ -29,6 +31,8 @@ func (s *Server) publishListsAvailability(pool *pgxpool.Pool) {
 	s.contactsHandlers = s.contactsHandlers.WithListMembers(lists.MemberFilter)
 	s.dealsHandlers = s.dealsHandlers.WithListMembers(lists.MemberFilter)
 	s.bulkHandlers.engine.withLists(lists)
+	s.customfieldsHandlers = s.WithLiveLists(lists.LiveListsUsingField)
+	s.automationHandlers = s.WithLists(NewListRules(pool))
 	if s.company360Svc != nil {
 		s.company360Svc.ShowListMemberships()
 	}

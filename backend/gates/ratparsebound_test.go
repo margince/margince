@@ -69,6 +69,9 @@ var unfencedRatParseWaivers = gatekit.Waive(map[string]string{
 	"internal/compose/rateproposals.go:sameRate": "compares a rate fxRateString already fenced, or a " +
 		"numeric(20,10) value read back from the currency sheet, against another of the same; the proposal " +
 		"payload it reads is written by the server from those values",
+	"internal/modules/ai/modelsdev.go:usdPerMTok": "re-spells a figure of the models.dev price sheet, a " +
+		"public file read under a 16 MiB cap and decoded as a JSON number, which may legitimately write an " +
+		"exponent (1e-7) that PlainDecimal refuses; it refuses a figure longer than 32 bytes or above 1e6 before and after the parse",
 	"internal/modules/deals/offer_totals.go:ratFromDecimal": "its rune filter admits only digits, " +
 		"'.' and '-' before the parse, mirroring the numeric columns it reads, so no exponent or fraction " +
 		"form reaches big.Rat",

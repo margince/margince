@@ -43,6 +43,7 @@ type Config struct {
 	Lists          Lists           `yaml:"lists"`
 	Operations     Operations      `yaml:"operations"`
 	Uploads        Uploads         `yaml:"uploads"`
+	Web            Web             `yaml:"web"`
 }
 
 // Operations carries the ops kill switches (OPS-CFG-9): capabilities an
@@ -79,62 +80,15 @@ type Operations struct {
 	AllowTestMailbox bool `yaml:"allow_test_mailbox"`
 }
 
-// Lists switches Live Lists and Shortlists on. They are off until an operator
-// turns them on: the product is being built, and nothing an installation shows
-// should advertise an unfinished surface.
+// Analytics accepts the inert retired key so existing configuration files still load.
 type Analytics struct {
 	PerformanceEnabled bool `yaml:"performance_enabled"`
 }
 
+// Lists switches Live Lists and Shortlists. They are on unless an operator
+// writes `enabled: false`, which hides every list surface and deletes no list.
 type Lists struct {
 	Enabled bool `yaml:"enabled"`
-}
-
-// CompanyContextRollout is the ordered deployment capability for company
-// knowledge. The empty YAML value resolves to onboarding so an upgrade keeps
-// today's behavior until an operator deliberately stages it backward.
-type CompanyContextRollout string
-
-const (
-	// CompanyContextOff disables context reads, task injection, and onboarding.
-	CompanyContextOff CompanyContextRollout = "off"
-	// CompanyContextRead enables the canonical read model and settings surface.
-	CompanyContextRead CompanyContextRollout = "read"
-	// CompanyContextTasks additionally enables declared AI task injection.
-	CompanyContextTasks CompanyContextRollout = "tasks"
-	// CompanyContextOnboarding additionally enables the first-run experience.
-	CompanyContextOnboarding CompanyContextRollout = "onboarding"
-)
-
-// CompanyContext configures the operator-controlled company-context rollout.
-type CompanyContext struct {
-	Rollout CompanyContextRollout `yaml:"rollout"`
-}
-
-// EffectiveRollout applies the compiled-in default without mutating the
-// decoded configuration.
-func (c CompanyContext) EffectiveRollout() CompanyContextRollout {
-	if c.Rollout == "" {
-		return CompanyContextOnboarding
-	}
-	return c.Rollout
-}
-
-// ReadEnabled reports whether typed reads, refresh, and settings are active.
-func (c CompanyContext) ReadEnabled() bool {
-	stage := c.EffectiveRollout()
-	return stage == CompanyContextRead || stage == CompanyContextTasks || stage == CompanyContextOnboarding
-}
-
-// TasksEnabled reports whether declared model tasks may receive company data.
-func (c CompanyContext) TasksEnabled() bool {
-	stage := c.EffectiveRollout()
-	return stage == CompanyContextTasks || stage == CompanyContextOnboarding
-}
-
-// OnboardingEnabled reports whether the five-step first-run surface is active.
-func (c CompanyContext) OnboardingEnabled() bool {
-	return c.EffectiveRollout() == CompanyContextOnboarding
 }
 
 // Workspace names the installation's singleton workspace — the tenant every
@@ -347,7 +301,7 @@ type MCP struct {
 // One document: what a running process reads is the base file plus its
 // posture's overlay, which is Load in layers.go.
 func Parse(raw []byte) (Config, error) {
-	cfg := Config{Version: 1}
+	cfg := compiledDefaults()
 	dec := yaml.NewDecoder(strings.NewReader(string(raw)))
 	dec.KnownFields(true)
 	if err := dec.Decode(&cfg); err != nil {
@@ -357,6 +311,12 @@ func Parse(raw []byte) (Config, error) {
 		return Config{}, err
 	}
 	return cfg, nil
+}
+
+// compiledDefaults is the layer under every file: what an installation runs
+// with for each key its files leave unwritten.
+func compiledDefaults() Config {
+	return Config{Version: 1, Lists: Lists{Enabled: true}}
 }
 
 func (c Config) validate() error {
@@ -391,6 +351,9 @@ func (c Config) validate() error {
 		return fmt.Errorf("deployconfig: company_context.rollout %q is not off, read, tasks, or onboarding", c.CompanyContext.Rollout)
 	}
 	if err := c.Uploads.validate(); err != nil {
+		return err
+	}
+	if err := c.Web.validate(); err != nil {
 		return err
 	}
 	if c.Email.Enabled {

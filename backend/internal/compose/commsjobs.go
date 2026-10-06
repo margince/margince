@@ -98,14 +98,11 @@ const minSendSnooze = time.Second
 // there is nothing to deduplicate against — and a unique-by-args window would
 // silently drop the second of two legitimate sends staged in the same instant.
 //
-// The queue is named HERE and not only in the contract. comms_send_email is
-// opts_owner: caller, which makes api/jobs.yaml's `queue:` a description of
-// where the rows are meant to land rather than the thing that puts them there;
-// River reads this struct. An InsertOpts naming no queue is River's own
-// default, so leaving it out would keep the send on the shared pool however
-// the contract reads.
+// The queue is api/jobs.yaml's and jobs.QueuedAs supplies it. Naming one here
+// too is what this kind was already bitten by: the declaration moved to
+// comms_send, nothing read it, and every send went on landing on `default`.
 func sendInsertOpts() *river.InsertOpts {
-	return &river.InsertOpts{Queue: commsSendQueue, MaxAttempts: sendMaxAttempts}
+	return jobs.QueuedAs[SendEmailArgs](&river.InsertOpts{MaxAttempts: sendMaxAttempts})
 }
 
 // deliveryDispatcher is the one attempt the worker drives. It exists so the

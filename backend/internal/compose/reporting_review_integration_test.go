@@ -15,7 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-func TestReportingCompanyKeepsUnattributedAndDepartedBookings(t *testing.T) {
+func TestReportingCompanyUsesCurrentOwnersForLegacyAndDepartedBookings(t *testing.T) {
 	f := reportingBusiness(t)
 	// NULL attribution is the pre-upgrade history shape; the closes themselves use the real writer.
 	if _, err := f.env.owner.Exec(context.Background(), "UPDATE deal_stage_history SET owner_id_at_change=NULL WHERE owner_id_at_change=$1", f.env.Rep1); err != nil {
@@ -34,17 +34,20 @@ func TestReportingCompanyKeepsUnattributedAndDepartedBookings(t *testing.T) {
 	if result.Metrics[0].Value == nil || *result.Metrics[0].Value != 21600000 {
 		t.Fatalf("bookings lost: %+v", result.Metrics)
 	}
+	if result.Metrics[0].Coverage.Status != "ok" {
+		t.Fatalf("obsolete history hid current ownership: %+v", result.Metrics[0].Coverage)
+	}
 	found := false
 	for _, point := range result.Charts[0].Points {
-		if point.Key == (ids.UUID{}).String() {
-			found = point.Label == "Unassigned" && point.Target == nil && point.Value != nil && *point.Value == 10800000
+		if point.Key == f.env.Rep1.String() {
+			found = point.Value != nil && *point.Value == 10800000
 		}
 		if point.Key == f.env.Rep3.String() && point.Target != nil {
 			t.Fatal("departed owner has a live target")
 		}
 	}
 	if !found {
-		t.Fatalf("unattributed bucket missing: %+v", result.Charts[0])
+		t.Fatalf("current owner missing: %+v", result.Charts[0])
 	}
 }
 

@@ -572,6 +572,41 @@ export const AMeetingWithNoOutcomeRecorded: Story = {
   },
 };
 
+/**
+ * The same row naming who the meeting was with, the account they work for and
+ * who hosted it. A host whose name the reader may not resolve arrives with no
+ * label and is not drawn.
+ */
+export const AMeetingNamingItsCustomerAndHost: Story = {
+  args: {
+    ...baseArgs,
+    item: {
+      ...AMeetingWithNoOutcomeRecorded.args?.item,
+      id: "m3",
+      source: "meeting_outcome",
+      category: "meetings",
+      level: 1,
+      consequence: "data_drifts",
+      because: [{ kind: "outcome_unrecorded" }],
+      actions: [],
+      title: "Weekly sync",
+      contact: {
+        id: "22222222-2222-7222-8222-222222222222",
+        label: "Sonya Beck",
+        employer: {
+          company_id: "33333333-3333-7333-8333-333333333333",
+          company_name: "Turbinenbau GmbH",
+        },
+      },
+      host: {
+        kind: "user",
+        id: "44444444-4444-7444-8444-444444444444",
+        label: "Lena Fischer",
+      },
+    },
+  },
+};
+
 // A waiting message, drawn as the MESSAGE.
 //
 // The row a rep meets most, and the one no story here showed: when the server

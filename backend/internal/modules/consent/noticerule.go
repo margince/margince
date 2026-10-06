@@ -81,7 +81,12 @@ func DutyFor(acquisitionKind string) (NoticeDuty, bool) {
 	// duty, and moving the records between two systems of one controller is
 	// not a new acquisition. Opening a case per migrated contact put a whole
 	// portal on the Focus list as overdue disclosures nobody owed.
-	case "crm_migration":
+	//
+	// Mailbox history is the same move for a mailbox: somebody a seat wrote to,
+	// or a received message named on To or Cc, before the mailbox was connected
+	// was already in the company's mail, and reading it here is not a new
+	// acquisition.
+	case "crm_migration", "mailbox_history":
 		return NoticeDuty{}, false
 
 	// A form or event registration IS from the subject, but unlike the four

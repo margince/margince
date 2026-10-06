@@ -22,6 +22,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"testing"
 
@@ -467,4 +468,28 @@ func assertOwnerCount(t *testing.T, o *oauthEnv, want int, query string, args ..
 func sha256Hex(raw string) string {
 	sum := sha256.Sum256([]byte(raw))
 	return hex.EncodeToString(sum[:])
+}
+
+func TestOAuthRegistersAClientSendingStandardMetadata(t *testing.T) {
+	o := setupOAuth(t)
+
+	var registered struct {
+		ClientID      string   `json:"client_id"`
+		GrantTypes    []string `json:"grant_types"`
+		ResponseTypes []string `json:"response_types"`
+	}
+	if status := o.Call(t, "POST", "/oauth/register", integration.AnyMap{
+		"client_name": "Le Chat", "redirect_uris": []string{oauthRedirect},
+		"token_endpoint_auth_method": "none",
+		"grant_types":                []string{"authorization_code", "refresh_token"},
+		"response_types":             []string{"code"},
+		"scope":                      "read write", "client_uri": "https://chat.example",
+		"software_id": "chat-connector",
+	}, nil, &registered); status != http.StatusCreated || registered.ClientID == "" {
+		t.Fatalf("DCR with standard metadata → %d %+v, want 201", status, registered)
+	}
+	if !slices.Equal(registered.GrantTypes, []string{"authorization_code", "refresh_token"}) ||
+		!slices.Equal(registered.ResponseTypes, []string{"code"}) {
+		t.Errorf("echoed %+v, want the grant and response types the server issues", registered)
+	}
 }

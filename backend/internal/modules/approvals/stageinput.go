@@ -44,6 +44,10 @@ type StageInput struct {
 	CoTargetType string
 	CoTargetID   ids.UUID
 	Summary      string
+	// TargetLabel names the target when its table has no name to read, such as
+	// a captured message offered as a new contact. Nil reads the name from the
+	// target row, which is what every named record does.
+	TargetLabel *string
 	// JoinPending collapses an identical live proposal under an atomic
 	// transaction lock. It is for at-least-once worker paths whose retries
 	// must return the existing approval instead of multiplying inbox rows.

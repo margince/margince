@@ -49,6 +49,7 @@ var modelRouteSuffixes = []string{
 	"/coldstart/preview",
 	"/messages",
 	"/regenerate",
+	"/filters/propose",
 }
 
 // boundByResponseDeadline decides how long THIS request has, and applies that

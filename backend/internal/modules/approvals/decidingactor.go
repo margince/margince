@@ -99,11 +99,10 @@ func ReleaseSends(kind string) bool { return sendingKinds[kind] }
 // agentMayDecide bounds what a PASSPORT may do to one staged proposal, given
 // that actingForAHuman has already admitted it as somebody's agent.
 //
-// Three questions, one place, because they fail the same way if any is missed:
-// a credential must not release what its human did not lend it, it must not be
-// the thing that confirms its own proposal, and it must not stand in for a
-// contact it does not act for — two passports lent by two contacts otherwise walk
-// a confirm-first action through end to end with nobody having looked.
+// A credential acts for its human with that human's permissions: what the human
+// could release in the CRM, it may release from the conversation. The rules here
+// are the places that sentence stops short — a release that cannot be taken
+// back, a proposal staged for somebody else, and caps the human withheld.
 //
 // A human decides on the strength of their seat and their grants; an agent
 // decides on the strength of a credential a human minted with a fixed set of
@@ -112,88 +111,19 @@ func ReleaseSends(kind string) bool { return sendingKinds[kind] }
 // decision is a durable change to somebody else's queue, and `send` on top of it
 // where approving is the send.
 //
-// Only on approve. A rejection of a held draft releases nothing outward — it
-// cancels a message — so demanding the send cap to cancel a send would leave a
-// credential able to start work it cannot stop.
+// Only on approve. A rejection discards a proposal and cannot escalate, so an
+// agent may always take a request off somebody's desk — its own included.
 //
 // A human principal carries no ScopeSet at all (scopes are a passport's shape,
 // not a seat's), so this answers nothing for them and must not be asked.
-func agentMayDecide(p principal.Principal, a row, approve bool) error {
+func agentMayDecide(p principal.Principal, a row, approve bool, own ownRelease) error {
 	if p.Type != principal.PrincipalAgent {
 		return nil
 	}
-	// THE PROPOSER DOES NOT CONFIRM ITS OWN PROPOSAL. A 🟡 call is refused so a
-	// contact sees what the agent wanted before it happens; a credential that
-	// could then approve the row it just staged and re-issue the call has walked
-	// through the tier by itself, and the confirmation was of nothing.
-	//
-	// Only the release. Rejecting a proposal you made discards it, which is the
-	// one answer that cannot escalate — an agent that changes its mind should be
-	// able to take its own request off somebody's desk rather than leave it
-	// there.
-	//
-	// It binds the AGENT and not the human, which is what makes it a rule rather
-	// than an obstacle: the same human answers this in the app, or on a
-	// credential they had to be present to mint. What it stops is the loop that
-	// needs nobody at all.
-	//
-	// sameAgent, not passport equality: a credential that rotates its token is
-	// the same agent afterwards, and the loop this refuses is one an agent can
-	// otherwise walk by waiting for its own access token to expire.
-	if approve && sameAgent(a, p) {
-		return fmt.Errorf("this credential proposed the action, so it does not also release it — "+
-			"the contact it acts for answers it in the CRM: %w", apperrors.ErrPermissionDenied)
-	}
-	// AND IT DOES NOT CONFIRM ANOTHER CONTACT'S. The rule above binds the
-	// credential; this one binds the HUMAN behind it, and without the second the
-	// first buys nothing. Two humans each lend a passport: A's stages the
-	// confirm-first call, B's approves it, A's redeems it, and the whole tier has
-	// been satisfied by two autonomous agents with nobody having looked. The
-	// decide route is itself auto_execute, so B's approval needed no confirmation
-	// of its own — which is what turns a bounded loan into a way around the tier
-	// rather than an exercise of it.
-	//
-	// What a lent credential may answer is what the human who lent it could have
-	// answered in the CRM themselves, and a proposal staged for somebody else is
-	// not that. UserID, not OnBehalfOf, is the comparison: a passport carries its
-	// lender's user id (AgentIdentity.Principal), so this is the same "is this
-	// your own business" test decidable() applies to a self-only kind, asked of
-	// the decision instead of the read.
-	//
-	// A row with NO recorded human — a SERVER proposal, which attributableStager
-	// guarantees is what a NULL passport_id means — is deliberately outside the
-	// rule. It is the unattended policy apply (compose/autoapply.go), which
-	// releases under the OWNER's own authority and is bounded by that rather than
-	// by a staging nobody made on anybody's behalf.
-	//
-	// Approve only, for the reason the self-approval rule is: a rejection
-	// discards a proposal and cannot escalate, and an agent unable to take a
-	// request off a desk is an obstacle rather than a rule.
-	if approve && a.OnBehalfOf != nil &&
-		(p.UserID == ids.Nil || a.OnBehalfOf.UUID != p.UserID) {
-		return fmt.Errorf("this credential acts for somebody other than the human this action was "+
-			"staged for, so it does not release it — that contact answers it themselves: %w",
-			apperrors.ErrPermissionDenied)
-	}
-	// AND A CONNECTED CREDENTIAL RELEASES NOTHING AN AGENT STAGED. The two
-	// rules above bind the credential and the human; between them sits the loan
-	// one human makes twice. Two connected agents of the SAME contact pass both:
-	// A stages, B releases, and the tier is satisfied with nobody having looked
-	// — the loop the rule above exists to stop, reached by lending two
-	// credentials instead of one.
-	//
-	// The line is the DECIDER'S grant, because presence is what the release
-	// asks for and the rule above already says where presence comes from: the
-	// app, "or a credential they had to be present to mint". Minting one by
-	// hand costs a human session; a connection does not, and nobody is present
-	// when the agent behind it answers. So a connected credential does not
-	// release an agent's proposal — whatever staged it, and whoever it was
-	// staged for — while a hand-minted one still does, which leaves that
-	// sentence true rather than withdrawing it.
-	if approve && p.ConnectionID != ids.Nil && a.PassportID != nil {
-		return fmt.Errorf("a connected credential does not release an action another credential "+
-			"staged — the contact answers it in the CRM, or on a credential they minted "+
-			"themselves: %w", apperrors.ErrPermissionDenied)
+	if approve {
+		if err := agentReleasesOnlyItsHumansProposal(p, a, own); err != nil {
+			return err
+		}
 	}
 	kind := a.Kind
 	// A step-up is a question ABOUT this credential — how much of what it may
@@ -213,6 +143,53 @@ func agentMayDecide(p principal.Principal, a row, approve bool) error {
 	if approve && sendingKinds[kind] && !p.Scopes.Has(principal.ScopeSend) {
 		return fmt.Errorf("approving a %s proposal sends the message it holds, which spends the send cap "+
 			"this credential does not carry: %w", kind, apperrors.ErrPermissionDenied)
+	}
+	return nil
+}
+
+// agentReleasesOnlyItsHumansProposal is the approve-only half of agentMayDecide.
+//
+// AN AGENT DOES NOT CONFIRM ANOTHER CONTACT'S PROPOSAL. Two humans each lend a
+// passport: A's stages the confirm-first call, B's approves it, A's redeems it,
+// and the tier has been satisfied by two agents with nobody having looked.
+// UserID is the comparison because a passport carries its lender's user id
+// (AgentIdentity.Principal) — the same "is this your own business" test
+// decidable() applies to a self-only kind.
+//
+// A row with NO recorded human is a SERVER proposal (attributableStager
+// guarantees a NULL passport_id means that): the unattended policy apply,
+// bounded by the owner's own authority rather than by a staging.
+func agentReleasesOnlyItsHumansProposal(p principal.Principal, a row, own ownRelease) error {
+	if a.OnBehalfOf != nil && (p.UserID == ids.Nil || a.OnBehalfOf.UUID != p.UserID) {
+		return fmt.Errorf("this credential acts for somebody other than the human this action was "+
+			"staged for, so it does not release it — that contact answers it themselves: %w",
+			apperrors.ErrPermissionDenied)
+	}
+	if a.PassportID != nil && (own == ownReleaseRefused || a.OnBehalfOf == nil) {
+		return agentReleasesNoIrreversibleProposal(p, a)
+	}
+	return nil
+}
+
+// agentReleasesNoIrreversibleProposal holds the agent-staged proposals whose
+// release cannot be taken back — a message sent, a page fetched — for the human
+// to release in the CRM. Asked of the agent that staged it, it stops the loop
+// that needs nobody: stage, release, re-issue. Asked of a connected credential,
+// it stops the same loop run on two credentials the human lent once each.
+//
+// sameAgent, not passport equality: a credential that rotates its token is the
+// same agent afterwards. A credential the human minted by hand still releases
+// another credential's proposal, because minting it took the human's session.
+func agentReleasesNoIrreversibleProposal(p principal.Principal, a row) error {
+	if sameAgent(a, p) {
+		return fmt.Errorf("this credential proposed the action, and what it does cannot be taken back once "+
+			"released — a sent message stays sent — so the contact it acts for releases it in the CRM: %w",
+			apperrors.ErrPermissionDenied)
+	}
+	if p.ConnectionID != ids.Nil {
+		return fmt.Errorf("a connected credential does not release an action another credential staged "+
+			"when what it does cannot be taken back — the contact releases it in the CRM, or on a "+
+			"credential they minted themselves: %w", apperrors.ErrPermissionDenied)
 	}
 	return nil
 }

@@ -261,3 +261,42 @@ func (e *revocationEnv) connectOAuthWithClient(t *testing.T, consenter Identity,
 	}
 	return out
 }
+
+func TestOneHumanDisconnectingLeavesAColleaguesConnectionAlive(t *testing.T) {
+	e := setupRevocationEnv(t, "oauth-disconnect-cross-human")
+
+	clientID := fmt.Sprintf("https://client.example/%s/oauth-client-metadata", ids.NewV7())
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO oauth_client (client_id, client_name, redirect_uris, created_via)
+		VALUES ($1, 'metadata-document client', ARRAY['https://client.example/cb'], 'cimd')`,
+		clientID); err != nil {
+		t.Fatalf("recording the metadata-document client: %v", err)
+	}
+	adminConnection := e.connectOAuthWithClient(t, e.admin, clientID)
+	memberConnection := e.connectOAuthWithClient(t, e.member, clientID)
+	adminPassport := e.mintUnderGrantFor(t, adminConnection.grantID, e.admin)
+	memberPassport := e.mintUnderGrantFor(t, memberConnection.grantID, e.member)
+
+	for _, seat := range []struct {
+		who  Identity
+		want ids.PassportID
+	}{{e.admin, adminPassport}, {e.member, memberPassport}} {
+		rows, err := e.svc.ListPassports(e.wsCtx(seat.who), seat.who)
+		if err != nil {
+			t.Fatalf("listing: %v", err)
+		}
+		if len(rows) != 1 || rows[0].ID != seat.want {
+			t.Fatalf("%s lists %d rows, want only their own connection", seat.who.UserID, len(rows))
+		}
+	}
+
+	if err := e.svc.RevokePassport(e.wsCtx(e.member), e.member, memberPassport); err != nil {
+		t.Fatalf("member disconnecting: %v", err)
+	}
+	if e.grantLive(t, memberConnection.grantID) {
+		t.Fatal("the member's own connection must end when they disconnect it")
+	}
+	if !e.grantLive(t, adminConnection.grantID) {
+		t.Fatal("a colleague disconnecting the same client must not end this human's connection")
+	}
+}

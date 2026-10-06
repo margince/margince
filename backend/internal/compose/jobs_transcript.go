@@ -49,21 +49,20 @@ func (TranscriptProposeArgs) Kind() string { return "transcript_propose" }
 // workspace and work in another.
 func (a TranscriptProposeArgs) WorkspaceID() ids.UUID { return a.Workspace }
 
-// transcriptProposeInsertOpts routes the job to its own queue and deduplicates
-// by args, only while a job is still active: the read id is unique per
+// transcriptProposeInsertOpts deduplicates the job by args, only while a job
+// is still active: the read id is unique per
 // reading, so a re-submitted enqueue of the SAME reading collapses while a
 // fresh reading always queues — and a reading rearmIfAbandoned hands back
 // after a dead worker carries the same id as the job that finished without
 // it, for the reason documentExtractInsertOpts gives.
 func transcriptProposeInsertOpts() *river.InsertOpts {
-	return &river.InsertOpts{
-		Queue: transcriptReadQueue,
+	return jobs.QueuedAs[TranscriptProposeArgs](&river.InsertOpts{
 		// One-off: a rep asked for this recording to be read and nothing
 		// re-asks, so the ladder carries the blob-store blip and the unreadable
 		// transcript alone — the same reading document_extract is sized for.
 		MaxAttempts: oneOffJobMaxAttempts,
 		UniqueOpts:  river.UniqueOpts{ByArgs: true, ByState: activeSweepStates},
-	}
+	})
 }
 
 // withTranscriptReader stamps the principal every write of this reading is

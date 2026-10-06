@@ -1,0 +1,42 @@
+name: nl_search_counts_a_record_nobody_contacted_as_quiet
+task: nl_search
+site: filter_propose
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5-5
+fixture:
+  resource: company
+  text: companies with no activity in the last 45 days
+  today: '2026-09-30'
+  lang: en
+  fields:
+  - {name: name, type: text, operators: [eq, neq, in, contains, exists]}
+  - {name: country, type: text, operators: [eq, neq, in, contains, exists]}
+  - {name: city, type: text, operators: [eq, neq, in, contains, exists]}
+  - {name: industry, type: text, operators: [eq, neq, in, contains, exists]}
+  - {name: lifecycle, type: picklist, operators: [eq, neq, in, exists], options: [unknown, target, prospect, opportunity,
+      customer, former_customer, disqualified]}
+  - {name: size_band, type: picklist, operators: [eq, neq, in, exists], options: [1-10, 11-50, 51-200, 201-500,
+      501-1000, 1001-5000, 5000+]}
+  - {name: created_at, type: date, operators: [eq, neq, gt, gte, lt, lte, exists]}
+  - {name: last_activity_at, type: date, operators: [eq, neq, gt, gte, lt, lte, exists]}
+  - {name: owner_id, type: id, operators: [eq, neq, in, exists]}
+expect:
+  outcome: accepted
+  answer:
+    filter:
+      or:
+      - field: last_activity_at
+        op: lt
+        value:
+          days_ago: 45
+      - field: last_activity_at
+        op: exists
+        value: false
+    unsupported: 0
+  bands:
+    certified_min: 80
+    degraded_min: 60
+    floor: 50
+  rubric: The passing filter is last_activity_at before 45 days ago OR last_activity_at empty, as a relative date
+    (days_ago 45) and never a fixed calendar date. A company nobody ever contacted has no activity in the last 45
+    days too, so a filter reading only the date comparison leaves those out and fails.

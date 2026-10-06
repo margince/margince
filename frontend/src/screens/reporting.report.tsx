@@ -1,15 +1,21 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
+import type { components } from "../api/schema";
 import { useCan, useCanWrite } from "../app/capability";
 import { navigate } from "../app/router";
-import { Button, Disclosure } from "../design-system/atoms";
+import { Button, Disclosure, OverflowMenu } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { DataTable } from "../design-system/datatable";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
-import { BarList } from "../design-system/readings";
+import { Select } from "../design-system/select";
 import { formatDateTime, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { QueryGate, throwProblem } from "./common";
@@ -17,19 +23,22 @@ import { ReportingCharts } from "./reporting.charts";
 import { ReportingComparison } from "./reporting.comparison";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import { ReportingExecutions } from "./reporting.executions";
+import { ReportingExportButton } from "./reporting.export";
 import {
+  editionLabel,
+  editionStatus,
+  executionLabel,
+  type ReportAction,
   type ReportingEvidenceRef,
   type ReportingReport,
-  reportingAmount,
 } from "./reporting.model";
 import { SaveReportingDialog } from "./reporting.save";
 import { ReportingScheduleDialog } from "./reporting.schedule";
 
-type ReportAction = {
-  kind: "duplicate" | "archive" | "freeze";
-  report: ReportingReport;
-  key: string;
-};
+function firstPage(): string | undefined {
+  return undefined;
+}
+
 export function ReportingReportDetail({
   reportId,
   editionId,
@@ -37,12 +46,15 @@ export function ReportingReportDetail({
   const t = useT();
   const { locale } = useLocale();
   const client = useQueryClient();
-  const [cursor, setCursor] = useState<string>();
   const [evidence, setEvidence] = useState<ReportingEvidenceRef | null>(null);
   const [scheduleId, setScheduleId] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [archiving, setArchiving] = useState(false);
   const [comparing, setComparing] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [capturePending, setCapturePending] = useState<boolean | undefined>(
+    undefined,
+  );
   const [requestKey, setRequestKey] = useState(() => crypto.randomUUID());
   const canEdit = useCanWrite("report_definition", "update");
   const canCreate = useCanWrite("report_definition", "create");
@@ -84,10 +96,14 @@ export function ReportingReportDetail({
       return data;
     },
   });
-  const editions = useQuery({
+  const editions = useInfiniteQuery({
     enabled: canReadEditions,
-    queryKey: ["reporting-editions", reportId, cursor],
-    queryFn: async () => {
+    queryKey: ["reporting-editions", reportId],
+    initialPageParam: firstPage(),
+    getNextPageParam: (
+      lastPage: components["schemas"]["ReportingEditionList"],
+    ) => lastPage.next_cursor,
+    queryFn: async ({ pageParam: cursor }) => {
       const { data, error } = await api.GET(
         "/analytics/reports/{id}/editions",
         { params: { path: { id: reportId }, query: { cursor, limit: 5 } } },
@@ -114,7 +130,7 @@ export function ReportingReportDetail({
         case "duplicate": {
           const { data, error } = await api.POST("/analytics/reports", {
             body: {
-              name: action.report.name,
+              name: (action.name ?? action.report.name).slice(0, 160),
               audience: "private",
               selection: action.report.selection,
             },
@@ -141,7 +157,8 @@ export function ReportingReportDetail({
         }
       }
     },
-    onSuccess: async (result) => {
+    onSuccess: async (result, action) => {
+      if (action.kind === "freeze") setCapturePending(true);
       await client.invalidateQueries({ queryKey: ["reporting-reports"] });
       await client.invalidateQueries({
         queryKey: ["reporting-executions", reportId],
@@ -150,11 +167,79 @@ export function ReportingReportDetail({
       navigate({ screen: "analytics", id: "reports", id2: result.reportId });
     },
   });
+  const allEditions = editions.data?.pages.flatMap((page) => page.data) ?? [];
+  const canManage = report.data?.can_manage === true;
+  const canEditReport = canEdit && canManage;
+  const canArchiveReport = canArchive && canManage;
+  const canScheduleReport = canSchedule && canManage;
+  const canFreezeReport = canFreeze && canReadEditions && canManage;
+  const canCompare = allEditions.length >= 2;
   const evaluation = editionId ? edition.data?.evaluation : live.data;
+  const evidencePanel =
+    evidence && evaluation ? (
+      <ReportingEvidenceDrawer
+        key={`${editionId}:${JSON.stringify(evidence)}`}
+        evaluation={evaluation}
+        reference={evidence}
+        editionId={editionId}
+        onClose={() => setEvidence(null)}
+      />
+    ) : null;
   const openEdition = (id?: string) => {
     setEvidence(null);
     navigate({ screen: "analytics", id: "reports", id2: reportId, id3: id });
   };
+  const snapshotOptions = [
+    { value: "live", label: t("reporting.live") },
+    ...(edition.data &&
+    !allEditions.some((item) => item.id === edition.data?.id)
+      ? [edition.data, ...allEditions]
+      : allEditions
+    ).map((item) => ({
+      value: item.id,
+      label: editionLabel(item, locale),
+    })),
+  ];
+  const showHistory =
+    historyOpen ||
+    editions.isError ||
+    schedules.isError ||
+    capturePending === true;
+  const reportActions = (report: ReportingReport) =>
+    (canEditReport || canCreate || canArchiveReport) && (
+      <OverflowMenu label={t("reporting.actions")}>
+        {canEditReport && (
+          <Button variant="ghost" onClick={() => setEditing(true)}>
+            {t("reporting.edit")}
+          </Button>
+        )}
+        {canCreate && (
+          <Button
+            variant="ghost"
+            disabled={write.isPending}
+            onClick={() =>
+              write.mutate({
+                kind: "duplicate",
+                report,
+                key: requestKey,
+                name: t("reporting.copyName", { name: report.name }),
+              })
+            }
+          >
+            {t("reporting.duplicate")}
+          </Button>
+        )}
+        {canArchiveReport && (
+          <Button
+            variant="ghost"
+            disabled={write.isPending}
+            onClick={() => setArchiving(true)}
+          >
+            {t("reporting.archive")}
+          </Button>
+        )}
+      </OverflowMenu>
+    );
   return (
     <QueryGate query={report} pendingLabel={t("reporting.reports")}>
       {(report) => (
@@ -164,50 +249,38 @@ export function ReportingReportDetail({
               <Heading as="h2" size="large">
                 {report.name}
               </Heading>
-              <p>
-                {t("reporting.revision", {
-                  revision: formatNumber(report.revision, locale),
-                })}{" "}
-                · {t(`reporting.${report.audience}`)}
+              <p className="t-caption">
+                {report.selection.scope.label} ·{" "}
+                {t(`reporting.${report.selection.period}`)} ·{" "}
+                {t(`reporting.${report.audience}`)}
               </p>
             </div>
             <div className="reporting-header-actions">
-              <Button variant="ghost" onClick={() => openEdition()}>
-                {t("reporting.live")}
-              </Button>
-              {canEdit && report.can_manage && (
-                <Button variant="ghost" onClick={() => setEditing(true)}>
-                  {t("reporting.edit")}
-                </Button>
-              )}
-              {canCreate && (
-                <Button
-                  variant="ghost"
-                  disabled={write.isPending}
-                  onClick={() =>
-                    write.mutate({ kind: "duplicate", report, key: requestKey })
+              {canReadEditions && (
+                <Select
+                  aria-label={t("reporting.editions")}
+                  value={editionId ?? "live"}
+                  options={snapshotOptions}
+                  onChange={(value) =>
+                    openEdition(value === "live" ? undefined : value)
                   }
-                >
-                  {t("reporting.duplicate")}
-                </Button>
+                />
               )}
-              {canArchive && report.can_manage && (
-                <Button
-                  variant="ghost"
-                  disabled={write.isPending}
-                  onClick={() => setArchiving(true)}
-                >
-                  {t("reporting.archive")}
-                </Button>
+              {evaluation && (
+                <ReportingExportButton
+                  evaluation={evaluation}
+                  editionId={editionId}
+                />
               )}
-              {canSchedule && report.can_manage && (
+              {reportActions(report)}
+              {canScheduleReport && (
                 <Button variant="ghost" onClick={() => setScheduleId("new")}>
                   {t("reporting.schedule")}
                 </Button>
               )}
-              {canFreeze && report.can_manage && (
+              {canFreezeReport && (
                 <Button
-                  disabled={write.isPending}
+                  disabled={write.isPending || capturePending !== false}
                   onClick={() =>
                     write.mutate({ kind: "freeze", report, key: requestKey })
                   }
@@ -232,134 +305,8 @@ export function ReportingReportDetail({
             <ErrorLine error={write.error} />
           </ConfirmModal>
           <ErrorLine error={write.error} />
-          {canReadSchedules && (
-            <QueryGate query={schedules} pendingLabel={t("reporting.schedule")}>
-              {(result) => (
-                <>
-                  {result.data.map((schedule) => (
-                    <p key={schedule.id}>
-                      <Button
-                        variant="link"
-                        onClick={() => setScheduleId(schedule.id)}
-                        disabled={!canSchedule}
-                      >
-                        {t(`reporting.${schedule.definition.frequency}`)} ·{" "}
-                        {t("reporting.revision", {
-                          revision: formatNumber(
-                            schedule.definition.report_revision,
-                            locale,
-                          ),
-                        })}
-                      </Button>{" "}
-                      ·{" "}
-                      {schedule.definition.enabled
-                        ? t("reporting.nextRun", {
-                            at: formatDateTime(
-                              schedule.next_due_at,
-                              locale,
-                              schedule.timezone,
-                            ),
-                          })
-                        : t("reporting.pause")}{" "}
-                      · {schedule.timezone} · {schedule.last_status}
-                    </p>
-                  ))}
-                </>
-              )}
-            </QueryGate>
-          )}
-          {canReadEditions && (
-            <Panel title={t("reporting.editions")}>
-              <PanelBody>
-                <QueryGate
-                  query={editions}
-                  pendingLabel={t("reporting.editions")}
-                  empty={(result) => result.data.length === 0}
-                >
-                  {(result) => (
-                    <>
-                      <BarList
-                        label={t("reporting.editions")}
-                        onSelect={openEdition}
-                        rows={result.data.flatMap((edition) => {
-                          const reading = edition.evaluation.metrics.find(
-                            (metric) => metric.id === "bookings_won",
-                          );
-                          return reading?.value == null
-                            ? []
-                            : [
-                                {
-                                  key: edition.id,
-                                  label: formatDateTime(
-                                    edition.intended_due_at,
-                                    locale,
-                                    edition.evaluation.context.timezone,
-                                  ),
-                                  value: reading.value,
-                                  amount: reportingAmount(
-                                    reading.value,
-                                    reading.unit,
-                                    edition.evaluation.context.currency,
-                                    locale,
-                                  ),
-                                },
-                              ];
-                        })}
-                      />
-                      <DataTable
-                        label={t("reporting.editions")}
-                        rows={result.data}
-                        rowKey={(edition) => edition.id}
-                        columns={[
-                          {
-                            key: "date",
-                            header: t("reporting.period"),
-                            render: (edition) => (
-                              <Button
-                                variant="link"
-                                onClick={() => openEdition(edition.id)}
-                              >
-                                {formatDateTime(
-                                  edition.intended_due_at,
-                                  locale,
-                                  edition.evaluation.context.timezone,
-                                )}
-                              </Button>
-                            ),
-                          },
-                          {
-                            key: "version",
-                            header: t("reporting.details"),
-                            render: (edition) =>
-                              t("reporting.revision", {
-                                revision: formatNumber(
-                                  edition.report_revision,
-                                  locale,
-                                ),
-                              }),
-                          },
-                        ]}
-                      />
-                      {result.next_cursor && (
-                        <Button
-                          variant="ghost"
-                          onClick={() => setCursor(result.next_cursor)}
-                        >
-                          {t("reporting.next")}
-                        </Button>
-                      )}
-                      <Button
-                        variant="ghost"
-                        onClick={() => setComparing(true)}
-                        disabled={result.data.length < 2}
-                      >
-                        {t("reporting.compare")}
-                      </Button>
-                    </>
-                  )}
-                </QueryGate>
-              </PanelBody>
-            </Panel>
+          {capturePending && (
+            <p role="status">{t("reporting.capturePending")}</p>
           )}
           {editionId ? (
             <QueryGate query={edition} pendingLabel={t("reporting.frozen")}>
@@ -372,14 +319,7 @@ export function ReportingReportDetail({
                       locale,
                       edition.evaluation.context.timezone,
                     )}{" "}
-                    ·{" "}
-                    {edition.expired
-                      ? t("reporting.expired")
-                      : edition.redacted
-                        ? t("reporting.redacted")
-                        : edition.withheld
-                          ? t("reporting.withheld")
-                          : edition.name}
+                    · {editionStatus(edition, t)}
                   </p>
                   <ReportingCharts
                     editionId={editionId}
@@ -403,20 +343,129 @@ export function ReportingReportDetail({
               )}
             </QueryGate>
           )}
-          {canReadEditions && (
-            <Disclosure summary={t("reporting.executions")}>
-              <ReportingExecutions reportId={reportId} canRetry={canFreeze} />
-            </Disclosure>
-          )}
-          {evidence && evaluation && (
-            <ReportingEvidenceDrawer
-              key={`${editionId}:${JSON.stringify(evidence)}`}
-              evaluation={evaluation}
-              reference={evidence}
-              editionId={editionId}
-              onClose={() => setEvidence(null)}
-            />
-          )}
+          <Disclosure
+            summary={t("reporting.history")}
+            open={showHistory}
+            onToggle={setHistoryOpen}
+          >
+            {canReadSchedules && (
+              <QueryGate
+                query={schedules}
+                pendingLabel={t("reporting.schedule")}
+              >
+                {(result) => (
+                  <>
+                    {result.data.map((schedule) => (
+                      <p key={schedule.id}>
+                        <Button
+                          variant="link"
+                          onClick={() => setScheduleId(schedule.id)}
+                          disabled={!canSchedule}
+                        >
+                          {t(`reporting.${schedule.definition.frequency}`)} ·{" "}
+                          {t("reporting.revision", {
+                            revision: formatNumber(
+                              schedule.definition.report_revision,
+                              locale,
+                            ),
+                          })}
+                        </Button>{" "}
+                        ·{" "}
+                        {schedule.definition.enabled
+                          ? t("reporting.nextRun", {
+                              at: formatDateTime(
+                                schedule.next_due_at,
+                                locale,
+                                schedule.timezone,
+                              ),
+                            })
+                          : t("reporting.pause")}{" "}
+                        · {schedule.timezone} ·{" "}
+                        {executionLabel(schedule.last_status, t)}
+                      </p>
+                    ))}
+                  </>
+                )}
+              </QueryGate>
+            )}
+            {canReadEditions && (
+              <Panel title={t("reporting.editions")}>
+                <PanelBody>
+                  <QueryGate
+                    query={editions}
+                    pendingLabel={t("reporting.editions")}
+                    empty={(result) =>
+                      result.pages.every((page) => page.data.length === 0)
+                    }
+                  >
+                    {() => (
+                      <>
+                        <DataTable
+                          label={t("reporting.editions")}
+                          rows={allEditions}
+                          rowKey={(edition) => edition.id}
+                          columns={[
+                            {
+                              key: "date",
+                              header: t("reporting.period"),
+                              render: (edition) => (
+                                <Button
+                                  variant="link"
+                                  onClick={() => openEdition(edition.id)}
+                                >
+                                  {editionLabel(edition, locale)}
+                                </Button>
+                              ),
+                            },
+                            {
+                              key: "version",
+                              header: t("reporting.details"),
+                              render: (edition) =>
+                                t("reporting.revision", {
+                                  revision: formatNumber(
+                                    edition.report_revision,
+                                    locale,
+                                  ),
+                                }),
+                            },
+                          ]}
+                        />
+                        {editions.hasNextPage && (
+                          <Button
+                            variant="ghost"
+                            pending={editions.isFetchingNextPage}
+                            onClick={() => editions.fetchNextPage()}
+                          >
+                            {t("reporting.loadOlder")}
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          onClick={() => setComparing(true)}
+                          disabled={!canCompare}
+                        >
+                          {t("reporting.compare")}
+                        </Button>
+                      </>
+                    )}
+                  </QueryGate>
+                </PanelBody>
+              </Panel>
+            )}
+            {canReadEditions && (
+              <Panel title={t("reporting.executions")}>
+                <PanelBody>
+                  <ReportingExecutions
+                    reportId={reportId}
+                    canRetry={canFreeze}
+                    key={requestKey}
+                    onPendingChange={setCapturePending}
+                  />
+                </PanelBody>
+              </Panel>
+            )}
+          </Disclosure>
+          {evidencePanel}
           {editing && (
             <SaveReportingDialog
               report={report}
@@ -437,7 +486,10 @@ export function ReportingReportDetail({
           )}
           {comparing && (
             <ReportingComparison
-              editions={editions.data?.data ?? []}
+              editions={allEditions}
+              hasMore={editions.hasNextPage}
+              loadingMore={editions.isFetchingNextPage}
+              onLoadMore={() => editions.fetchNextPage()}
               onClose={() => setComparing(false)}
             />
           )}

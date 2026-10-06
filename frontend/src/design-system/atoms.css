@@ -3,169 +3,6 @@
  * layer beneath it, loaded once by app.css, is base.css.
  * Colours read tokens only; the conformance gate enforces it. */
 
-.badge {
-  /* Small body at regular weight; the rest of the type inherits. */
-  font: var(--fontBodySmall);
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  /* One line, never two: beside a title that filled a panel's head band
-     "AI-assisted" came out as two lines. A label longer than its container
-     truncates inside `.badge-label` instead of overflowing it.
-
-     No `flex` of its own. The initial `0 1 auto` is what lets a badge give way
-     in a row too narrow for it, and a container that must not squeeze its
-     badge says so itself — `.panel-head` does, at zero specificity, and a
-     declaration here would fight it on sheet order. The zero minimum is what
-     lets it shrink below its label at all. */
-  white-space: nowrap;
-  box-sizing: border-box;
-  min-inline-size: 0;
-  max-inline-size: 100%;
-  min-block-size: 20px;
-  padding: 0 8px;
-  /* Every variant reserves the edge; soft draws it in its tone and primary
-     leaves it transparent, so a row of mixed variants shares one height. */
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-full);
-  corner-shape: round;
-  background: var(--bgChip);
-}
-.badge-label {
-  min-inline-size: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.badge > svg {
-  flex: none;
-}
-/* The status tints are TRANSLUCENT by canon, so a badge painted with one
-   takes its contrast from whatever it lands on: --success on --successBg read
-   4.54:1 over --bgElevated and failed AA at 4.05:1 over a PanelPlate's
-   --bgCard. So each status tone paints its *Surface token — the same tint
-   already laid over --bgElevated, as one opaque colour — and reads the same on
-   every surface. The ink is the Text token, never the base hue, which on its
-   own tint at 12px is nowhere near 4.5:1. */
-/* `info` is the neutral report and work still in flight — a row a job has not
-   finished writing, a step that is only telling the reader something. It is a
-   status like the four below it and is painted the same way; what makes it the
-   quiet one is the hue, not a different anatomy. */
-.badge-info {
-  background: var(--infoSurface);
-  border-color: var(--infoBorder);
-  color: var(--infoText);
-}
-.badge-success {
-  background: var(--successSurface);
-  border-color: var(--successBorder);
-  color: var(--successText);
-}
-.badge-warning {
-  background: var(--warningSurface);
-  border-color: var(--warningBorder);
-  color: var(--warningText);
-}
-.badge-danger {
-  background: var(--dangerSurface);
-  border-color: var(--dangerBorder);
-  color: var(--dangerText);
-}
-.badge-ai {
-  background: var(--aiLight);
-  border-color: var(--aiMed);
-  color: var(--aiText);
-}
-.badge-accent {
-  background: var(--accentLight);
-  border-color: var(--accentMed);
-  color: var(--accentText);
-}
-/* `discovery` — something NEW — is painted the way the statuses above are, on
-   its own opaque Surface and lettered in its own Text ink, for the same reason:
-   the tint has to read the same on a card, a plate and the rail. */
-.badge-discovery {
-  background: var(--discoverySurface);
-  border-color: var(--discoveryBorder);
-  color: var(--discoveryText);
-}
-
-/* The PRIMARY variant: the same tone as a solid fill, for the one status a
- * surface must not let a reader miss. A filled status control's ground is the
- * tone's Text token and never its base hue — no ink clears AA on the base —
- * and its ink is the one that flips with the theme. The neutral fill is the
- * page's own ink, lettered in the page's ground. Every pair is measured in
- * tokens.test.ts, so each rule names its ink rather than inheriting one. */
-.badge-primary {
-  background: var(--textPrimary);
-  border-color: transparent;
-  color: var(--bgPage);
-}
-.badge-primary.badge-info {
-  background: var(--infoText);
-  color: var(--textOnStatusControl);
-}
-.badge-primary.badge-success {
-  background: var(--successText);
-  color: var(--textOnStatusControl);
-}
-.badge-primary.badge-warning {
-  background: var(--warningText);
-  color: var(--textOnStatusControl);
-}
-.badge-primary.badge-danger {
-  background: var(--dangerText);
-  color: var(--textOnStatusControl);
-}
-.badge-primary.badge-accent {
-  background: var(--accent);
-  color: var(--textOnAccentControl);
-}
-.badge-primary.badge-discovery {
-  background: var(--discoveryText);
-  color: var(--textOnStatusControl);
-}
-/* --ai does not lift in dark, so its ink is --textOnAccent, the light ink
- * shared by every fill that stays put: the dark --textOnAccentControl would
- * read 3.26:1 on it. */
-.badge-primary.badge-ai {
-  background: var(--ai);
-  color: var(--textOnAccent);
-}
-
-/* The LIVE mark: a dot that breathes, for a status true as the page is read
- * rather than one the record remembers. `currentColor`, so it says what the
- * label says, in either variant — and the only moving thing in this
- * vocabulary. */
-.badge-live-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: var(--r-full);
-  corner-shape: round;
-  background: currentColor;
-  flex: none;
-  animation: badge-live-breathe 2.2s var(--ease-in-out) infinite;
-}
-@keyframes badge-live-breathe {
-  0%,
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.4;
-    transform: scale(0.72);
-  }
-}
-/* Like `.skeleton` above, this animation never ends, so a reader who asked for
-   less motion cannot wait it out. It stops at the resting dot rather than at
-   nothing: the dot is what marks the state as current, and a badge that lost it
-   under reduced motion would say something different from the one beside it. */
-@media (prefers-reduced-motion: reduce) {
-  .badge-live-dot {
-    animation: none;
-  }
-}
 .card {
   background: var(--bgElevated);
   border: 1px solid var(--borderSubtle);
@@ -218,115 +55,6 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-}
-
-/* The chip's own chrome. Its SIZE is a rung below, never here: four rendered
-   sizes — 20, 28, 44 and 76 — already existed in three different stylesheets
-   for a component whose prop surface admitted two, so the scale is declared
-   once and picked by the `size` prop rather than by whatever context a caller
-   happened to drop the chip into. */
-.avatar {
-  border-radius: var(--r-full);
-  corner-shape: round;
-  background: var(--accentMed);
-  color: var(--accentText);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: none;
-  /* The monogram is two letters standing in for a record, not prose, so it
-     takes the heading face at its smallest rung — declared HERE rather than per
-     rung, because a chip that changed its type with its diameter would tell a
-     reader the same two letters were two different kinds of thing. Inheriting
-     was not neutral either: the initials wore whatever the row around them was
-     set in, so the same contact was one size in a list and another in a card. */
-  font: var(--fontHeadingXXSmall);
-}
-
-/* The smallest rung, and the default: every list row, every name a chip sits
-   beside, the account block in the rail. A dense list table draws its chips
-   smaller still, and does it from its own sheet — see `.lt-table.dense .avatar`
-   in listtable.css — because density is the table's decision and not a rung of
-   this scale. */
-.avatar-sm {
-  width: 28px;
-  height: 28px;
-}
-/* A record header. */
-.avatar-md {
-  width: 44px;
-  height: 44px;
-}
-/* A WIDE record header, where the chip is the page's own mark rather than a
-   marker beside a name. Sized to sit beside the name rather than to tower over
-   it: the record's name is the largest thing on the page, and a mark that
-   outweighs it makes the page look like a profile picture with a caption. */
-.avatar-lg {
-  width: 46px;
-  height: 46px;
-}
-/* The mark of a record PAGE: the one picture in the head, beside a name set
-   at the record rung. Sized to the reference's 72, which reads as the page's
-   own mark rather than as a large list avatar — at 56 beside a 44px name it
-   was the smaller of the two things naming the record. Round like every other
-   rung: a company and a contact are one kind of chip. */
-.avatar-xl {
-  width: 72px;
-  height: 72px;
-}
-
-/* An avatar beside its label on one line — a list cell, a search hit, a node
-   row. The label keeps the baseline it had before the mark joined it. */
-/* display:flex, not inline-flex. An inline flex box takes its baseline from its
- * first item, and a chip showing a logo has no text in it — so its baseline is
- * its bottom edge, which pushed the label up and grew the row. Out of the inline
- * formatting context the row centres and every row is the same height. */
-.avatar-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-width: 0;
-}
-
-/* The record's own ground: blob B over blob A over a base tint, each blob
-   fading to nothing, placed and sized by the numbers Avatar passes inline. It
-   comes AFTER the base rule, which it overrides at the same specificity. */
-.avatar-mesh {
-  background:
-    radial-gradient(
-      calc(var(--avatar-b-size) * 1%) calc(var(--avatar-b-size) * 1%) at
-        calc(var(--avatar-bx) * 1%) calc(var(--avatar-by) * 1%),
-      var(--avatarBlobB),
-      transparent
-    ),
-    radial-gradient(
-      calc(var(--avatar-a-size) * 1%) calc(var(--avatar-a-size) * 1%) at
-        calc(var(--avatar-ax) * 1%) calc(var(--avatar-ay) * 1%),
-      var(--avatarBlobA),
-      transparent
-    ),
-    var(--avatarGround);
-  color: var(--avatarInk);
-}
-
-/* A resolved logo sits ON the chip, on a neutral ground and never on a mesh:
-   the initials wait there until the logo paints, and a wide wordmark then
-   letterboxes inside the same circle — `contain` plus the inset keeps the mark
-   padded and never stretched. */
-.avatar-has-logo {
-  position: relative;
-  background: var(--bgCard);
-  color: var(--textSecondary);
-}
-
-.avatar-img {
-  position: absolute;
-  inset: 2px;
-  width: calc(100% - 4px);
-  height: calc(100% - 4px);
-  object-fit: contain;
-  border-radius: var(--r-full);
-  corner-shape: round;
 }
 
 .skeleton {
@@ -459,7 +187,8 @@
 .empty-body p + p {
   margin-top: var(--space-2);
 }
-.empty-action {
+/* A step past the card's gap: the verb stands apart from the sentence above. */
+.empty-instructional > .empty-action {
   margin-top: var(--space-1);
 }
 
@@ -669,6 +398,17 @@
 .modal-drawer-split {
   width: clamp(360px, 62vw, 1040px);
 }
+/* A body stack between the split drawer and its two columns passes on the
+   height the columns claim. */
+.modal-drawer-split > .form-stack {
+  flex: 1 1 auto;
+  min-block-size: 0;
+}
+/* In a dialog the stack's gap is the only space between its rows; a row's own
+   margin would add to it. Declared before `.modal .actions`, so its margin wins. */
+.modal .form-stack > * {
+  margin-block: 0;
+}
 
 /* The zero padding above belongs to the head/body/foot split: those three
    bands pay their own, so the drawer must not pay it twice. A wide drawer
@@ -846,6 +586,11 @@
   to {
     transform: translateX(calc(100% + var(--space-4)));
   }
+}
+
+/* Outside a dialog nothing else spaces an action row from the stack above it. */
+.form-stack + .actions {
+  margin-top: var(--space-3);
 }
 
 /* The row wraps rather than running off a narrow dialog, and only between the
@@ -1927,15 +1672,8 @@ span.error-line {
 .overflow-menu-items .t-caption {
   padding-inline: 9px;
 }
-/* One left x for every LABEL, in a menu whose items are mixed. An item leading
-   with a glyph starts its words a glyph-and-a-gap in; an item without one
-   starts them at the inset — so the words run down two columns and the menu
-   reads as ragged. The glyph-less rows reserve the same column, empty, and
-   only in a panel that actually holds a glyph: reserving it unconditionally
-   would indent every label in every menu for an icon none of them has.
-
-   A glyph is a Button's FIRST child by construction — the atom draws icons
-   leading — so the test is simply whether the row carries one. */
+/* One left x for every label while an item is in flight: a pending Button
+   leads with its busy mark, so the other rows reserve that column, empty. */
 .overflow-menu-items:has(.btn > svg) .btn:not(:has(> svg))::before {
   content: "";
   flex: none;
@@ -2292,15 +2030,8 @@ span.error-line {
   border-radius: inherit;
   background: var(--success);
 }
-/* A reading whose figure carries a tone carries it into the bar too, in the
-   SAME token: the bar is the same claim at a glance, and a bar a shade off the
-   figure above it is the card disagreeing with itself about how it went. A
-   reading with no tone is not a neutral reading, it is one that is fine, so the
-   untoned bar takes --success with the toned ones (`.stat-card-meter-fill`
-   above) — a row of identical grey tracks made the reader compare lengths to
-   find the one that is wrong, when the colour already knows. The brand accent
-   said the same thing in the colour of a primary action, which is how a bar
-   that reports came to look like one a reader could press. */
+/* The bar reads its figure's state in the base token; an untoned bar reads
+   --success, because a reading nobody toned is one that is fine. */
 .stat-card-warning ~ .stat-card-meter .stat-card-meter-fill {
   background: var(--warning);
 }
@@ -2315,26 +2046,24 @@ span.error-line {
 }
 
 /* The four tones a reading's figure can carry, and the ONE place each is
-   spelled: the figure and its bar read the same token, so the two parts of one
-   claim cannot come out two colours. The BASE status token and not its Text
-   sibling: this is a 17-20px display figure and a 4px bar, which is the role
-   the base hue is for — the Text tokens are the ink for anything smaller. */
+   spelled. A figure is read, so it takes its state's Text ink, which clears
+   4.5:1; the bar is only seen, and keeps the base. */
 .stat-card-success {
-  color: var(--success);
+  color: var(--successText);
 }
 
 /* The reading a job has not finished writing — a figure still being counted,
    a lane the read has not reached. */
 .stat-card-info {
-  color: var(--info);
+  color: var(--infoText);
 }
 
 .stat-card-warning {
-  color: var(--warning);
+  color: var(--warningText);
 }
 
 .stat-card-danger {
-  color: var(--danger);
+  color: var(--dangerText);
 }
 
 /* The whole-tile variant: the slot itself is bad news, not just its figure —

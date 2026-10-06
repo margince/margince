@@ -31,6 +31,11 @@ type bulkOutcome struct {
 	ID          openapi_types.UUID  `json:"id"`
 	Version     int64               `json:"version"`
 	OwnerBefore *openapi_types.UUID `json:"owner_before,omitempty"`
+	// TaskID and TaskVersion are the task create_task filed under the record.
+	TaskID      *openapi_types.UUID `json:"task_id,omitempty"`
+	TaskVersion int64               `json:"task_version,omitempty"`
+	// TaggableID is the tag assignment add_tag made on the record.
+	TaggableID *openapi_types.UUID `json:"taggable_id,omitempty"`
 }
 
 // bulkResult is bulk_operation.result. A skip keeps its reason and code but
@@ -49,7 +54,7 @@ func recordBulkOperation(ctx context.Context, tx pgx.Tx, batchID ids.UUID, chang
 	if err != nil {
 		return err
 	}
-	params, err := json.Marshal(bulkParams{OwnerID: change.ownerID, ListID: change.listID})
+	params, err := json.Marshal(bulkParams{OwnerID: change.ownerID, ListID: change.listID, TagID: change.tagID, Task: change.task})
 	if err != nil {
 		return fmt.Errorf("record the change's parameters: %w", err)
 	}
@@ -99,10 +104,12 @@ func storedResult(run bulkRun) bulkResult {
 }
 
 // bulkParams is bulk_operation.params: the verb's parameters as the caller
-// sent them — the new owner, or the Shortlist.
+// sent them — the new owner, the Shortlist, the tag or the task.
 type bulkParams struct {
-	OwnerID *ids.UUID `json:"owner_id,omitempty"`
-	ListID  *ids.UUID `json:"list_id,omitempty"`
+	OwnerID *ids.UUID              `json:"owner_id,omitempty"`
+	ListID  *ids.UUID              `json:"list_id,omitempty"`
+	TagID   *ids.UUID              `json:"tag_id,omitempty"`
+	Task    *crmcontracts.BulkTask `json:"task,omitempty"`
 }
 
 // bulkOperation is one bulk_operation row as its readers need it.
@@ -112,6 +119,8 @@ type bulkOperation struct {
 	verb         crmcontracts.BulkVerb
 	ownerID      *ids.UUID
 	listID       *ids.UUID
+	tagID        *ids.UUID
+	task         *crmcontracts.BulkTask
 	requester    batchRequester
 	changedCount int
 	result       bulkResult
@@ -145,7 +154,7 @@ func readBulkOperation(ctx context.Context, tx pgx.Tx, id ids.UUID) (bulkOperati
 	if err := json.Unmarshal(params, &named); err != nil {
 		return bulkOperation{}, fmt.Errorf("read bulk change %s parameters: %w", id, err)
 	}
-	op.ownerID, op.listID = named.OwnerID, named.ListID
+	op.ownerID, op.listID, op.tagID, op.task = named.OwnerID, named.ListID, named.TagID, named.Task
 	if err := json.Unmarshal(result, &op.result); err != nil {
 		return bulkOperation{}, fmt.Errorf("read bulk change %s result: %w", id, err)
 	}
@@ -194,7 +203,8 @@ func (e *bulkEngine) Status(ctx context.Context, id ids.UUID) (crmcontracts.Bulk
 	}
 	return crmcontracts.BulkOperation{
 		BatchId: openapi_types.UUID(op.id), RecordType: op.recordType, Verb: op.verb,
-		OwnerId: wireOwner(op.ownerID), ListId: wireOwner(op.listID), Changed: op.changedCount, Skipped: skipped, LeftBehind: leftBehind,
+		OwnerId: wireOwner(op.ownerID), ListId: wireOwner(op.listID), TagId: wireOwner(op.tagID), Task: op.task,
+		Changed: op.changedCount, Skipped: skipped, LeftBehind: leftBehind,
 		UndoOf: wireOwner(op.undoOf), UndoneBy: wireOwner(op.undoneBy), CreatedAt: op.createdAt,
 	}, nil
 }

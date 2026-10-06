@@ -28,7 +28,7 @@ func TestABoundedSourceSaysMoreRatherThanATotal(t *testing.T) {
 	}
 	day := crmcontracts.Attention{AsOf: rankInstant, Notices: &notices}
 
-	got := (&Service{}).worklistFrom(t.Context(), day, "all", "", 50, waitingRead{}, leadRead{}, worklistCursor{}, nil)
+	got := (&Service{}).worklistFrom(t.Context(), day, "all", "", 50, waitingRead{}, worklistCursor{}, nil)
 
 	for _, reach := range got.Reach {
 		if reach.Source != "notice" {
@@ -51,7 +51,7 @@ func TestASourceUnderItsBoundClaimsNoMore(t *testing.T) {
 	notices := []crmcontracts.AttentionItem{item("only", "notice")}
 	day := crmcontracts.Attention{AsOf: rankInstant, Notices: &notices}
 
-	got := (&Service{}).worklistFrom(t.Context(), day, "all", "", 50, waitingRead{}, leadRead{}, worklistCursor{}, nil)
+	got := (&Service{}).worklistFrom(t.Context(), day, "all", "", 50, waitingRead{}, worklistCursor{}, nil)
 
 	for _, reach := range got.Reach {
 		if reach.Source == "notice" && reach.MoreAvailable {
@@ -73,7 +73,7 @@ func TestAFoldedGroupIsCountedAgainstTheSourcesItStandsFor(t *testing.T) {
 	}
 	day := crmcontracts.Attention{AsOf: rankInstant, AutomationHealth: &failures}
 
-	got := (&Service{}).worklistFrom(t.Context(), day, "all", "", 50, waitingRead{}, leadRead{}, worklistCursor{}, nil)
+	got := (&Service{}).worklistFrom(t.Context(), day, "all", "", 50, waitingRead{}, worklistCursor{}, nil)
 
 	for _, reach := range got.Reach {
 		if reach.Source != "automation_run" {
@@ -97,8 +97,8 @@ func TestReachIsOrderedTheSameWayTwice(t *testing.T) {
 	bounces := []crmcontracts.AttentionItem{item("b", "bounce")}
 	day := crmcontracts.Attention{AsOf: rankInstant, Notices: &notices, Bounces: &bounces}
 
-	first := (&Service{}).worklistFrom(t.Context(), day, "all", "", 50, waitingRead{}, leadRead{}, worklistCursor{}, nil)
-	second := (&Service{}).worklistFrom(t.Context(), day, "all", "", 50, waitingRead{}, leadRead{}, worklistCursor{}, nil)
+	first := (&Service{}).worklistFrom(t.Context(), day, "all", "", 50, waitingRead{}, worklistCursor{}, nil)
+	second := (&Service{}).worklistFrom(t.Context(), day, "all", "", 50, waitingRead{}, worklistCursor{}, nil)
 
 	if len(first.Reach) != len(second.Reach) {
 		t.Fatalf("two reads gave %d and %d sources", len(first.Reach), len(second.Reach))
@@ -127,7 +127,7 @@ func TestReachUnderMineCountsNothingOfAColleaguesWork(t *testing.T) {
 	atRisk := []crmcontracts.AttentionItem{theirs}
 	day := crmcontracts.Attention{AsOf: rankInstant, AtRisk: &atRisk}
 
-	got := (&Service{}).worklistFrom(ctx, day, "mine", "", 50, waitingRead{}, leadRead{}, worklistCursor{}, nil)
+	got := (&Service{}).worklistFrom(ctx, day, "mine", "", 50, waitingRead{}, worklistCursor{}, nil)
 
 	for _, reach := range got.Reach {
 		if reach.Source == "deal_at_risk" && reach.Considered > 0 {
@@ -155,7 +155,7 @@ func TestEveryBoundedLaneReportsItsTruncation(t *testing.T) {
 		AsOf: rankInstant, Planned: planned, AtRisk: &atRisk, RelationshipDecay: &decay,
 	}
 
-	got := (&Service{}).worklistFrom(t.Context(), day, "all", "", 500, waitingRead{}, leadRead{}, worklistCursor{}, nil)
+	got := (&Service{}).worklistFrom(t.Context(), day, "all", "", 500, waitingRead{}, worklistCursor{}, nil)
 
 	marked := map[crmcontracts.WorklistReachSource]bool{}
 	for _, reach := range got.Reach {
@@ -175,7 +175,7 @@ func TestASourceReadAndFoundEmptyStillAppears(t *testing.T) {
 	none := []crmcontracts.AttentionItem{}
 	day := crmcontracts.Attention{AsOf: rankInstant, Notices: &none}
 
-	got := (&Service{}).worklistFrom(t.Context(), day, "all", "", 50, waitingRead{}, leadRead{}, worklistCursor{}, nil)
+	got := (&Service{}).worklistFrom(t.Context(), day, "all", "", 50, waitingRead{}, worklistCursor{}, nil)
 
 	for _, reach := range got.Reach {
 		if reach.Source == "notice" {
@@ -197,7 +197,7 @@ func TestNarrowingKeepsTheOtherSourcesInReach(t *testing.T) {
 	notices := []crmcontracts.AttentionItem{item("n1", "notice")}
 	day := crmcontracts.Attention{AsOf: rankInstant, Planned: planned, Notices: &notices}
 
-	got := (&Service{}).worklistFrom(t.Context(), day, "all", "system", 50, waitingRead{}, leadRead{}, worklistCursor{}, nil)
+	got := (&Service{}).worklistFrom(t.Context(), day, "all", "system", 50, waitingRead{}, worklistCursor{}, nil)
 
 	for _, reach := range got.Reach {
 		if reach.Source != "task" {
@@ -212,4 +212,41 @@ func TestNarrowingKeepsTheOtherSourcesInReach(t *testing.T) {
 		return
 	}
 	t.Fatal("narrowing erased the task source from reach — it reads as no tasks at all")
+}
+
+// Reading `all` says which sources did not widen with it: `all` reaches every
+// shared record the reader may see PLUS their own personal queue, and a short
+// personal lane is otherwise indistinguishable from a quiet team.
+func TestReachSaysWhichSourcesDidNotWidenWithAll(t *testing.T) {
+	notices := []crmcontracts.AttentionItem{item("n1", "notice")}
+	day := crmcontracts.Attention{
+		AsOf:        rankInstant,
+		Notices:     &notices,
+		ThisMorning: []crmcontracts.AttentionItem{item("t1", "task")},
+	}
+
+	got := (&Service{}).worklistFrom(t.Context(), day, "all", "", 50, waitingRead{}, worklistCursor{}, nil)
+
+	seen := map[crmcontracts.WorklistReachSource]*bool{}
+	for _, reach := range got.Reach {
+		seen[reach.Source] = reach.Personal
+	}
+	notice, ok := seen["notice"]
+	if !ok {
+		t.Fatal("the notice source is absent from reach")
+	}
+	if notice == nil || !*notice {
+		t.Error("notices did not say they answer for the actor only — a reader asking for `all` is " +
+			"shown their own unread notices and told nothing that distinguishes them from the " +
+			"team's")
+	}
+	task, ok := seen["task"]
+	if !ok {
+		t.Fatal("the task source is absent from reach")
+	}
+	if task == nil || *task {
+		t.Error("tasks claimed to answer for the actor only, but the task lane takes a scope and an " +
+			"owner and widens with them — saying otherwise tells a reader their `all` did less " +
+			"than it did")
+	}
 }

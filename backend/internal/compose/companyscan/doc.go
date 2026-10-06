@@ -20,6 +20,13 @@
 // must not re-read the account on every message, and a reader who never
 // opens an account never pays for it.
 //
+// AND THE GRANTS ARE RECHECKED ON REPLAY, because a finding is stored by the
+// read that produced it and served unchanged on every open afterwards, so it
+// outlives them. Retraction drops one whose cited record no longer stands for
+// this reader; withholding blanks the subject and the quote of one whose words
+// their audience no longer admits. The advice survives the second — knowing a
+// message is there is not reading it.
+//
 // THE RULES ARE THE FLOOR. The 360's own advice runs on every read and is
 // merged with the model's stored findings under one fingerprint vocabulary,
 // so a dismissal holds across both and a deployment with no lane still gets

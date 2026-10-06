@@ -11,8 +11,7 @@ import {
 } from "./story-utils";
 
 // CompanyScreen reads through the api client on mount — fixtures mirror
-// companies.test.tsx's `company` plus the dormant-strength default the Overview
-// tab always fires.
+// companies.test.tsx's `company`.
 const meta: Meta = {
   title: "Records/Company 360/Page",
   parameters: { layout: "padded" },
@@ -35,13 +34,6 @@ const company = {
   // line formats an unreadable date and the whole page renders as nothing.
   created_at: "2026-06-01T08:00:00Z",
   updated_at: "2026-06-01T08:00:00Z",
-};
-
-const dormantStrength = {
-  score: 0,
-  bucket: "none",
-  factors: { recency: 0, frequency: 0, reciprocity: 0, direction: 0 },
-  last_interaction: null,
 };
 
 // Confirmed profile fields (B5) and site-read facts (B6) — evidence-or-omit:
@@ -269,7 +261,6 @@ const overviewRoutes = {
         },
       ],
     }),
-  "GET /companies/o-1/strength": () => jsonResponse(dormantStrength),
   "GET /activities": () => jsonResponse({ data: [] }),
   "GET /signals": () => jsonResponse({ data: [], page: emptyPage }),
   "GET /relationships": () => jsonResponse({ data: [], page: emptyPage }),

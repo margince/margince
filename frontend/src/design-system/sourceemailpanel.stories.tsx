@@ -59,7 +59,10 @@ export default meta;
 // bare `StoryObj` rather than `StoryObj<typeof meta>`, which would require the
 // args the render replaces. `emailentry.stories.tsx` types its own the same way.
 
-/** The ordinary case: the message a task was read out of, in the task. */
+/**
+ * The ordinary case: the message a task was read out of, in the task, under
+ * its envelope. The sender resolved to a contact, so their name is a link.
+ */
 export const Readable: StoryObj = {
   render: () => {
     installFetchStub({
@@ -67,6 +70,19 @@ export const Readable: StoryObj = {
         jsonResponse(
           presentation({
             body: "Dear Lars,\n\nWe would like to invite you to Vietnam 360.\n\nBest regards\nNhật Minh Nguyễn",
+            from: [
+              {
+                address: "minh@example.com",
+                display_name: "Nhật Minh Nguyễn",
+                contact_id: "22222222-2222-4222-8222-222222222222",
+              },
+            ],
+            to: [{ address: "lars@example.com", display_name: "Lars" }],
+            cc: [
+              { address: "anna@example.com", display_name: "Anna Weber" },
+              { address: "events@example.com", display_name: null },
+            ],
+            bcc_withheld: true,
           }),
         ),
     });

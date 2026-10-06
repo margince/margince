@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"sort"
 	"strings"
+	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -29,7 +30,7 @@ import (
 // FOLDED BEFORE CUT. One background job writes one audit row per record it
 // touched; the page shows the job once, with a count, and cutting at the line
 // limit first would have counted a hundred of twelve hundred.
-func linesOf(entries []entry, limit int) (lines []crmcontracts.MagicLine, housekeeping int) {
+func linesOf(mask imageMask, entries []entry, capped map[string]bool, limit int) (lines []crmcontracts.MagicLine, housekeeping int) {
 	sort.Slice(entries, func(a, b int) bool {
 		if !entries[a].OccurredAt.Equal(entries[b].OccurredAt) {
 			return entries[a].OccurredAt.After(entries[b].OccurredAt)
@@ -42,7 +43,7 @@ func linesOf(entries []entry, limit int) (lines []crmcontracts.MagicLine, housek
 	// contact count it once: the count reads "N records", not N audit rows.
 	records := map[int]map[ids.UUID]bool{}
 	for _, e := range entries {
-		line, key, ok := lineOf(e)
+		line, key, ok := lineOf(mask, e)
 		if !ok {
 			housekeeping++
 			continue
@@ -63,6 +64,13 @@ func linesOf(entries []entry, limit int) (lines []crmcontracts.MagicLine, housek
 		}
 		group[key] = len(out)
 		records[len(out)] = map[ids.UUID]bool{e.EntityID: true}
+		if capped[armOfEntry(e)] {
+			// Its arm was cut, so this line's records were counted out of a
+			// partial read: what it shows is the floor, whether it ends up
+			// standing for one record or five thousand.
+			floor := true
+			line.CountIsFloor = &floor
+		}
 		out = append(out, line)
 	}
 	if len(out) > limit {
@@ -77,7 +85,7 @@ func linesOf(entries []entry, limit int) (lines []crmcontracts.MagicLine, housek
 // A row this build cannot describe is refused rather than shown with a blank
 // or generic sentence: "A record was updated" about no named record is noise,
 // and noise on this page hides the lines that matter.
-func lineOf(e entry) (crmcontracts.MagicLine, string, bool) {
+func lineOf(mask imageMask, e entry) (crmcontracts.MagicLine, string, bool) {
 	d, ok := describe(e)
 	if !ok {
 		return crmcontracts.MagicLine{}, "", false
@@ -112,15 +120,30 @@ func lineOf(e entry) (crmcontracts.MagicLine, string, bool) {
 		on := openapi_types.UUID(*e.OnBehalfOf)
 		line.Actor.OnBehalfOf = &on
 	}
-	line.Before = fieldsOf(e.Before)
-	line.After = fieldsOf(e.After)
+	// A create's image is the whole new record and an archive's is empty;
+	// neither says more than the line's sentence and the record's name.
+	if !bulkActions[e.Action] {
+		line.Before = mask.withheldFrom(e.EntityType, fieldsOf(e.Before))
+		line.After = mask.withheldFrom(e.EntityType, fieldsOf(e.After))
+	}
 	return line, groupKey(e, d), true
+}
+
+// groupKeyOf answers what lineOf would group this row under, without dressing
+// the line: the members read wants the key and nothing else, and a line it
+// discards would need a reader's mask to be built at all.
+func groupKeyOf(e entry) (string, bool) {
+	d, ok := describe(e)
+	if !ok {
+		return "", false
+	}
+	return groupKey(e, d), true
 }
 
 // groupKey is what two lines must share to be one line with a count: the same
 // job, doing the same thing, for the same reason, to the same kind of record.
 func groupKey(e entry, d description) string {
-	parts := []string{e.ActorID, e.Action, e.EntityType, sentenceKey(d.summary), "", ""}
+	parts := []string{e.ActorID, e.Action, e.EntityType, sentenceKey(d.summary), "", "", ""}
 	if d.reason != nil {
 		parts[4] = sentenceKey(*d.reason)
 		if many, perRecord := manyReasons[d.reason.Key]; perRecord {
@@ -132,6 +155,11 @@ func groupKey(e entry, d description) string {
 	// would name only one of them.
 	if e.OnBehalfOf != nil {
 		parts[5] = e.OnBehalfOf.String()
+	}
+	// A bulk verb folds per day: "created 2,146 contacts" is one line for the
+	// day it happened, and an import that ran over a week reads as seven.
+	if bulkActions[e.Action] {
+		parts[6] = e.OccurredAt.UTC().Format(time.DateOnly)
 	}
 	return strings.Join(parts, "\x00")
 }

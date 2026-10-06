@@ -366,9 +366,14 @@ function SelectPopup({
   animate: boolean;
 }>) {
   return (
+    // The scroller is the listbox, so it takes no tab stop. Divs, as ul/li
+    // would announce twice; no name, as the combobox is named.
     <div
       ref={listbox.popup}
       className="select-popup"
+      id={listbox.listboxId}
+      role="listbox"
+      aria-multiselectable={multiselectable}
       // Reduced motion resolves in one place — the hook, not a second media
       // query in the stylesheet — so the decision is assertable by the suite
       // rather than only visible in a browser.
@@ -378,17 +383,7 @@ function SelectPopup({
       // `contentSizedPopupBox` and the cap in select.css.
       style={contentSizedPopupBox(frame)}
     >
-      {/* Divs rather than ul/li: `role="listbox"` and `role="option"` are the
-          semantics, and a list element that also claims an interactive role is
-          announced twice over. The listbox carries no name of its own either —
-          the combobox that owns it is named, and a second name on the popup is
-          read out on top of it. */}
-      <div
-        className="select-list"
-        id={listbox.listboxId}
-        role="listbox"
-        aria-multiselectable={multiselectable}
-      >
+      <div className="select-list">
         {options.map((option, index) => (
           // biome-ignore lint/a11y/useKeyWithClickEvents: the keyboard path is the combobox trigger's own keydown handling
           // biome-ignore lint/a11y/useFocusableInteractive: an option in an aria-activedescendant listbox must NOT be focusable — focus stays on the combobox, which is what makes typeahead and Escape work

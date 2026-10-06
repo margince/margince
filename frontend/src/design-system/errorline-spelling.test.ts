@@ -6,11 +6,9 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
-import { selectorList } from "../../scripts/lib/css-rules";
+import { appStylesheets, selectorList } from "../../scripts/lib/css-rules";
 import {
   extensionFrontendFiles,
-  extensionLayers,
-  filesMatching,
   filesUnder,
   parseSource,
   sourceFileAt,
@@ -424,16 +422,10 @@ function shown(finding: Located): string {
 
 /** Every stylesheet, core and extension tier alike. */
 function sheets(): Sheet[] {
-  return filesMatching(sourceRoot, /\.css$/)
-    .concat(
-      extensionLayers(extensionsRoot).flatMap((layer) =>
-        filesMatching(layer, /\.css$/),
-      ),
-    )
-    .map((path) => ({
-      where: fromRepo(path),
-      text: readFileSync(path, "utf8"),
-    }));
+  return appStylesheets(frontendRoot).map((path) => ({
+    where: fromRepo(path),
+    text: readFileSync(path, "utf8"),
+  }));
 }
 
 function spellings() {

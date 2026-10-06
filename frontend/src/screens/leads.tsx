@@ -95,6 +95,7 @@ export { terminalBadge } from "./leadstanding";
 
 import { AddToShortlistAction } from "./addtoshortlist";
 import { leadKey, leadScoreKey, leadWriteKeys } from "./leadkeys";
+import { RecordListsPanel } from "./recordlists";
 
 export { LeadsScreen } from "./leads.list";
 
@@ -763,19 +764,9 @@ type PromotionRecord = {
  * every other one rather than fetching a history nothing renders.
  */
 function usePromotionRecord(id: string, promoted: boolean): PromotionRecord {
-  // ONE row, asked for by verb. The history endpoint takes an `action` filter
-  // now (#1611), so the promotion is the answer to the read rather than
-  // something found by walking towards it.
-  //
-  // What that replaced is worth remembering, because it was a real wrong
-  // answer and not merely a slow one: the trail is 20 rows to a page, so a lead
-  // worked long enough to collect other audit rows carried its promotion on a
-  // later page, and a reader that took the first page reported the outcome as
-  // unknowable on exactly the leads somebody had worked hardest. Paging on
-  // until it turned up fixed the answer and cost a round trip per page.
-  //
-  // A filtered read has at most one promote row — a lead is promoted once —
-  // so there is no page after the first and nothing to walk.
+  // ONE row, asked for by verb: the history read filtered by `action` answers
+  // with the promotion itself, wherever in a long trail it sits. A lead is
+  // promoted once, so there is no page after the first and nothing to walk.
   const history = useRecordHistory("lead", id, promoted, "promote");
   // `page?.data` for the same reason getNextPageParam needs it: a 200 with no
   // body is a shape the contract permits, and this read runs on every promoted
@@ -859,18 +850,16 @@ function DemoteAction({ id }: Readonly<{ id: string }>) {
         pending={demote.isPending}
         error={demote.isError ? problemMessageOf(demote.error, t) : undefined}
       >
-        <div className="lead-stack">
-          <p className="t-body">{t("lead.demoteExplain")}</p>
-          <Field label={t("lead.demoteReason")} required>
-            {(control) => (
-              <Textarea
-                {...control}
-                value={reason}
-                onChange={(event) => setReason(event.target.value)}
-              />
-            )}
-          </Field>
-        </div>
+        <p className="t-body">{t("lead.demoteExplain")}</p>
+        <Field label={t("lead.demoteReason")} required>
+          {(control) => (
+            <Textarea
+              {...control}
+              value={reason}
+              onChange={(event) => setReason(event.target.value)}
+            />
+          )}
+        </Field>
       </ConfirmModal>
     </>
   );
@@ -1019,7 +1008,6 @@ function LeadOverviewPane({
   promotion,
   terminalReasonId,
   thread,
-  onReply,
   onOpenEmail,
 }: Readonly<{
   lead: Lead;
@@ -1030,10 +1018,6 @@ function LeadOverviewPane({
   // The lead's unfiltered timeline read, which the thread under the call is
   // drawn from — the whole read, so its failure reaches the call too.
   thread: RecordTimeline;
-  // The "Answer" row's own verb: opens the SAME composer the header's Email
-  // verb opens, owned by LeadRecord so both controls answer to one open
-  // state rather than each mounting its own copy of it.
-  onReply: () => void;
   // The page's one email drawer, for the thread under the call.
   onOpenEmail: (activityId: string) => void;
 }>) {
@@ -1064,15 +1048,7 @@ function LeadOverviewPane({
       <RecordReading>
         <LeadCall lead={lead} thread={thread} onOpenEmail={onOpenEmail} />
         <TodayPanel onOpenTasks={onOpenTasks} tasksLabel={t("today.workQueue")}>
-          {leadTodoRows(
-            lead,
-            t,
-            locale,
-            recordZone,
-            onReply,
-            onOpenTasks,
-            writer.readOnly ? terminalReasonId : undefined,
-          )}
+          {leadTodoRows(lead, t, locale, recordZone, onOpenTasks)}
         </TodayPanel>
         {/* Full width, in sequence, rather than side by side (RecordReadingPair):
             the score card is one line and the signals form is tall, and a
@@ -1095,6 +1071,7 @@ function LeadOverviewPane({
             />
           </PanelBody>
         </Panel>
+        <RecordListsPanel entityType="lead" entityId={id} />
       </RecordReading>
     </div>
   );
@@ -1517,7 +1494,6 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
             terminalReasonId={terminalReasonId}
             thread={threadQuery}
             onOpenEmail={setOpenEmail}
-            onReply={() => setComposing(true)}
           />
         )}
         {tab === "deals" && (

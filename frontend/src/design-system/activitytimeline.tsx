@@ -13,11 +13,9 @@ import {
 import type { TimelineEntry } from "./composed";
 import {
   type ContactOn,
-  contactNamedBy,
   contactsOn,
   type NameOf,
   namesOf,
-  type RecordContact,
   withWhom,
 } from "./participants";
 
@@ -89,15 +87,13 @@ function dealChip(activity: Activity, nameOf: NameOf): ReactNode {
   return name ? <span className="tl-about">{name}</span> : undefined;
 }
 
-// With no name resolved, the server's phrase, keyed on the record it names
-// when that is the contact the list is about; left absent otherwise, and the
-// row keys the phrase on itself.
-function phraseContact(
-  activity: Activity,
-  about: RecordContact | undefined,
-): ContactOn[] | undefined {
+// With no name resolved, the server's phrase — keyed on the CONTACT the server
+// says it names, so one contact draws one face wherever the phrase differs.
+// Absent when the far side resolved to no contact, and the row then keys the
+// phrase on itself, which is all the words can honestly key.
+function phraseContact(activity: Activity): ContactOn[] | undefined {
   const name = activity.email_summary?.counterparty?.trim();
-  const key = name && contactNamedBy(name, activity.links, about);
+  const key = activity.email_summary?.counterparty_contact_id;
   return name && key ? [{ key, name }] : undefined;
 }
 
@@ -120,8 +116,6 @@ export function activityTimeline(
     t: ReturnType<typeof useT>;
     locale: Locale;
   }>,
-  // The contact whose page this is, which a message's phrase may name.
-  about?: RecordContact,
 ): TimelineEntry[] {
   return (activities ?? []).map((activity) => {
     // Resolved once: the phrase the row shows and the names a thread counts
@@ -146,7 +140,7 @@ export function activityTimeline(
           : undefined,
       counterpartContacts: contacts?.length
         ? contacts
-        : phraseContact(activity, about),
+        : phraseContact(activity),
       // What this exchange was ABOUT, when it is filed against a deal. A
       // chronology of an account runs several deals through one list, and the
       // row that does not say which one is a row a reader has to open to place.

@@ -35,6 +35,8 @@ type InstallationSettings struct {
 	// it calls dead work a problem. The full count stays a report figure; this
 	// bounds the one that is styled as an alarm.
 	DeadWorkBannerHours int
+	// OAuthAccessTokenTTLMinutes is how long a connector's access token lives.
+	OAuthAccessTokenTTLMinutes int
 	// ForecastForwardMeasure is which remaining-pipeline reading a projected
 	// landing is built from. A string here rather than a values.ForwardMeasure
 	// because this struct is what the setting STORED, and reporting it as the
@@ -58,19 +60,33 @@ type InstallationSettings struct {
 // them are *string and a transposed pair would write a language into the
 // currency row and pass the type checker.
 type InstallationPatch struct {
-	Name                   *string
-	Timezone               *string
-	BaseCurrency           *string
-	BaseLanguage           *string
-	DateFormat             *string
-	TimeFormat             *string
-	FiscalYearStartMonth   *int
-	DeadWorkBannerHours    *int
-	ForecastForwardMeasure *string
+	Name                 *string
+	Timezone             *string
+	BaseCurrency         *string
+	BaseLanguage         *string
+	DateFormat           *string
+	TimeFormat           *string
+	FiscalYearStartMonth *int
+	DeadWorkBannerHours  *int
+	// OAuthAccessTokenTTLMinutes reaches the next token minted, never one
+	// already issued.
+	OAuthAccessTokenTTLMinutes *int
+	ForecastForwardMeasure     *string
 	// EnabledOidcProviders replaces the whole list. A nil pointer leaves it
 	// unchanged; a pointer to an empty slice is a real choice — offer password
 	// only — so the two cannot be collapsed.
 	EnabledOidcProviders *[]string
+	// RequireSSO switches the password path off for ordinary members (admins
+	// keep it as break-glass). A nil pointer leaves the policy unchanged.
+	RequireSSO *bool
+	// RequireMFA makes a second factor mandatory. A nil pointer leaves it
+	// unchanged.
+	RequireMFA *bool
+	// OidcGroupRoleMap replaces the whole group→role grant map. A nil pointer
+	// leaves it unchanged; a pointer to an empty map is a real choice — no
+	// group grants anything — so the two cannot be collapsed, exactly like
+	// EnabledOidcProviders above.
+	OidcGroupRoleMap *map[string]string
 }
 
 // pendingWrite is one field of a sparse patch, already reduced to the two
@@ -149,6 +165,10 @@ func (s *InstallationSettingsStore) GetInstallation(ctx context.Context) (Instal
 	if err != nil {
 		return InstallationSettings{}, err
 	}
+	tokenTTL, err := settings.Get(ctx, s.settings, OAuthAccessTokenTTLMinutes)
+	if err != nil {
+		return InstallationSettings{}, err
+	}
 	measure, err := settings.Get(ctx, s.settings, ForecastForwardMeasure)
 	if err != nil {
 		return InstallationSettings{}, err
@@ -167,46 +187,13 @@ func (s *InstallationSettingsStore) GetInstallation(ctx context.Context) (Instal
 	}
 	return InstallationSettings{
 		Name: name, Timezone: zone, BaseCurrency: currency, BaseLanguage: language, DateFormat: dateFormat, TimeFormat: timeFormat,
-		FiscalYearStartMonth:   fiscalStart,
-		DeadWorkBannerHours:    bannerHours,
-		ForecastForwardMeasure: measure,
-		BaseCurrencyLocked:     locked, BaseCurrencyLockedReason: why,
+		FiscalYearStartMonth:       fiscalStart,
+		DeadWorkBannerHours:        bannerHours,
+		OAuthAccessTokenTTLMinutes: tokenTTL,
+		ForecastForwardMeasure:     measure,
+		BaseCurrencyLocked:         locked, BaseCurrencyLockedReason: why,
 		EnabledOidcProviders: providers,
 	}, nil
-}
-
-// signInPolicyReadActor names the entry read this projection performs after it
-// has already admitted the caller. A SYSTEM actor for the same reason the login
-// screen's read uses one: the question is what this INSTALLATION offers, not
-// what this reader may see, and the reader's own authority was settled one line
-// above.
-const signInPolicyReadActor = "system:sign_in_policy_read"
-
-// SignInPolicy answers which sign-in providers the installation offers, gated on
-// `authentication_policy` rather than on the settings aggregate around it.
-//
-// THE GATE HERE IS THE WHOLE SECURITY OF THIS READ. The entry itself is defined
-// on installation_settings — moving it would make every read of the aggregate
-// demand this grant and take the name, timezone and currency with it, which
-// every role is meant to read — so this checks the caller first and then reads
-// the entry as the installation. A system principal bypasses object RBAC
-// entirely, so removing or weakening the Require below does not merely widen
-// this endpoint, it removes its only gate.
-func (s *InstallationSettingsStore) SignInPolicy(ctx context.Context) ([]string, error) {
-	if err := auth.Require(ctx, authenticationPolicyObject, principal.ActionRead); err != nil {
-		return nil, err
-	}
-	// Only after the caller is admitted. The workspace and correlation id ride
-	// from the request so the read stays attributable to the trace that asked.
-	readCtx := principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem,
-		ID:   signInPolicyReadActor,
-	})
-	chosen, err := settings.Get(readCtx, s.settings, EnabledOidcProviders)
-	if err != nil {
-		return nil, fmt.Errorf("identity: reading the sign-in policy: %w", err)
-	}
-	return chosen, nil
 }
 
 // baseCurrencyLock asks the entry's own probe, so the answer the read reports
@@ -268,6 +255,10 @@ func encodeInstallationPatch(in InstallationPatch) ([]pendingWrite, error) {
 	if err != nil {
 		return nil, err
 	}
+	tokenTTL, err := encodePatchField(OAuthAccessTokenTTLMinutes, in.OAuthAccessTokenTTLMinutes)
+	if err != nil {
+		return nil, err
+	}
 	measure, err := encodePatchField(ForecastForwardMeasure, in.ForecastForwardMeasure)
 	if err != nil {
 		return nil, err
@@ -284,7 +275,19 @@ func encodeInstallationPatch(in InstallationPatch) ([]pendingWrite, error) {
 	if err != nil {
 		return nil, err
 	}
-	return []pendingWrite{name, zone, currency, language, fiscal, bannerHours, measure, providers, dateFormat, timeFormat}, nil
+	requireSSO, err := encodePatchField(RequireSSO, in.RequireSSO)
+	if err != nil {
+		return nil, err
+	}
+	requireMFA, err := encodePatchField(RequireMFA, in.RequireMFA)
+	if err != nil {
+		return nil, err
+	}
+	groupRoleMap, err := encodePatchField(OidcGroupRoleMap, in.OidcGroupRoleMap)
+	if err != nil {
+		return nil, err
+	}
+	return []pendingWrite{name, zone, currency, language, fiscal, bannerHours, tokenTTL, measure, providers, dateFormat, timeFormat, requireSSO, requireMFA, groupRoleMap}, nil
 }
 
 // UpdateInstallation applies a sparse patch. Named for the same reason as

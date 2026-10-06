@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { screen, userEvent } from "storybook/test";
 import { SaveReportingDialog } from "./reporting.save";
 import {
   reportingStoryEvaluation,
@@ -29,6 +30,19 @@ export const Default: Story = {
       <StoryProviders>
         <Preview />
       </StoryProviders>
+    );
+  },
+  play: async () => {
+    await screen.findByRole("dialog");
+  },
+};
+
+export const Customize: Story = {
+  ...Default,
+  play: async () => {
+    await screen.findByRole("dialog");
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Customize report" }),
     );
   },
 };

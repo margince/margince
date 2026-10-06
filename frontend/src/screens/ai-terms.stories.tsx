@@ -42,7 +42,7 @@ function Terms() {
 }
 
 const meta: Meta<typeof Terms> = {
-  title: "Settings/AI/Models and routing/Terms",
+  title: "Settings/AI/AI models/Terms",
   component: Terms,
 };
 export default meta;

@@ -138,6 +138,10 @@ func (h HiddenWork) Clear() bool {
 
 // WaitingCustomer is one message nobody has answered.
 type WaitingCustomer struct {
+	// EarlierRequests counts the conversation's earlier unanswered requests
+	// folded into this card; FirstAskedAt is when the first arrived.
+	EarlierRequests int
+	FirstAskedAt    time.Time
 	// ActivityID is the message itself — what a reply would be drafted to.
 	ActivityID ids.UUID
 	// EmailSummary is the canonical email row, present exactly when this wait
@@ -215,7 +219,13 @@ func (s *Service) waitingCustomers(
 	if s.waiting == nil {
 		return waitingRead{}, nil
 	}
-	rows, cut, err := s.waiting.Unanswered(ctx, asOf)
+	var rows []WaitingCustomer
+	var cut bool
+	err := s.degradable(ctx, func(ctx context.Context) error {
+		var err error
+		rows, cut, err = s.waiting.Unanswered(ctx, asOf)
+		return err
+	})
 	switch {
 	case errors.Is(err, apperrors.ErrPermissionDenied):
 		return waitingRead{}, &crmcontracts.WorklistSourceUnavailable{

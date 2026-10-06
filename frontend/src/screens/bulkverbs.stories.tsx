@@ -28,20 +28,40 @@ const roster = {
   page: { next_cursor: null, has_more: false },
 };
 
+const tags = {
+  data: [
+    { id: "t-key", name: "Key account", version: 1 },
+    { id: "t-launch", name: "Launch reference", version: 1 },
+  ],
+  page: { has_more: false },
+};
+
 const rows = [
   { id: "c-1", version: 3, label: "Anna Weber" },
   { id: "c-2", version: 7, label: "Ben Ott" },
 ];
 
-function Bar({ locale }: Readonly<{ locale?: "en" | "de" | "vi" }>) {
+function Bar({
+  locale,
+  shortlist,
+}: Readonly<{
+  locale?: "en" | "de" | "vi";
+  shortlist?: Readonly<{ id: string; name: string }>;
+}>) {
   installFetchStub({
     "GET /me": meRoute({}),
     "GET /users": () => jsonResponse(roster),
+    "GET /tags": () => jsonResponse(tags),
   });
   return (
     <StoryProviders locale={locale}>
       <div className="lt-bulkbar">
-        <BulkVerbs recordType="contact" rows={rows} onDone={() => {}} />
+        <BulkVerbs
+          recordType="contact"
+          rows={rows}
+          shortlist={shortlist}
+          onDone={() => {}}
+        />
       </div>
     </StoryProviders>
   );
@@ -51,3 +71,8 @@ export const Selected: Story = { render: () => <Bar /> };
 
 // German, whose owner verb is the longest of the three catalogs.
 export const German: Story = { render: () => <Bar locale="de" /> };
+
+// On a Shortlist's own page the bar also takes the rows off that Shortlist.
+export const OnAShortlist: Story = {
+  render: () => <Bar shortlist={{ id: "l-1", name: "Launch references" }} />,
+};

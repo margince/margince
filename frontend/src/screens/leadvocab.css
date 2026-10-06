@@ -97,12 +97,3 @@
   flex: 1 1 auto;
   min-width: 0;
 }
-
-/* The target's refusal, under the box it is about. The row above it owns the
-   label and the rule; this is only what went wrong with the value typed in, so
-   it lays out in the same column as the control rather than beside it. */
-.lead-handling-target {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}

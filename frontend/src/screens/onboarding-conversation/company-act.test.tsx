@@ -147,7 +147,7 @@ it("carries no chat-style composer during manual entry — typed fields are the 
   // The manual form's own fields are real textboxes, asked one at a time —
   // never a free-text message composed and sent.
   expect(screen.queryAllByRole("textbox").length).toBeGreaterThan(0);
-  expect(document.querySelector(".mw-composer")).toBeNull();
+  expect(screen.queryByRole("button", { name: /^send\b/i })).toBeNull();
 });
 
 // The rail's to-do list during co.review: it must name exactly what the

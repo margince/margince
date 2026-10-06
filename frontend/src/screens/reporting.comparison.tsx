@@ -1,18 +1,18 @@
+import "./reporting.css";
 import { useQuery } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Button, Field } from "../design-system/atoms";
+import { DataTable } from "../design-system/datatable";
 import { Heading } from "../design-system/heading";
 import { Modal } from "../design-system/modal";
-import { Panel, PanelBody } from "../design-system/panel";
-import { GroupedBars } from "../design-system/report-charts";
 import { Select } from "../design-system/select";
-import { formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { QueryGate, throwProblem } from "./common";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import {
+  editionLabel,
   metricLabel,
   type ReportingEdition,
   type ReportingEvidenceRef,
@@ -22,12 +22,30 @@ import {
 export function ReportingComparison({
   editions,
   onClose,
-}: Readonly<{ editions: readonly ReportingEdition[]; onClose: () => void }>) {
+  hasMore,
+  loadingMore,
+  onLoadMore,
+}: Readonly<{
+  editions: readonly ReportingEdition[];
+  onClose: () => void;
+  hasMore?: boolean;
+  loadingMore?: boolean;
+  onLoadMore?: () => void;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   const title = useId();
-  const [left, setLeft] = useState(editions[1]?.id ?? "");
-  const [right, setRight] = useState(editions[0]?.id ?? "");
+  const firstPair = editions.flatMap((before) =>
+    editions
+      .filter((after) => adjacentEditions(before, after))
+      .map((after) => ({ before, after })),
+  )[0];
+  const [selection, setSelection] = useState<{
+    left: string;
+    right: string;
+  } | null>(null);
+  const left = selection?.left ?? firstPair?.before.id ?? editions[1]?.id ?? "";
+  const right = selection?.right ?? firstPair?.after.id ?? "";
   const [evidence, setEvidence] = useState<{
     edition: ReportingEdition;
     reference: ReportingEvidenceRef;
@@ -45,26 +63,30 @@ export function ReportingComparison({
   });
   const options = editions.map((edition) => ({
     value: edition.id,
-    label: formatDateTime(
-      edition.intended_due_at,
-      locale,
-      edition.evaluation.context.timezone,
-    ),
+    label: editionLabel(edition, locale),
   }));
   return (
     <Modal open onClose={onClose} labelledBy={title} size="wide">
-      <div className="reporting-dialog">
-        <Heading as="h2" size="medium" id={title}>
-          {t("reporting.compare")}
-        </Heading>
-        <div className="reporting-toolbar">
+      <Heading size="large" id={title} className="t-h2 modal-title">
+        {t("reporting.compare")}
+      </Heading>
+      <div className="form-stack">
+        <p>{t("reporting.comparisonHelp")}</p>
+        {hasMore && (
+          <Button variant="ghost" pending={loadingMore} onClick={onLoadMore}>
+            {t("reporting.loadOlder")}
+          </Button>
+        )}
+        <div className="form-row">
           <Field label={t("reporting.left")}>
             {(field) => (
               <Select
                 {...field}
                 value={left}
                 options={options}
-                onChange={setLeft}
+                onChange={(value) => {
+                  setSelection({ left: value, right: "" });
+                }}
               />
             )}
           </Field>
@@ -73,8 +95,16 @@ export function ReportingComparison({
               <Select
                 {...field}
                 value={right}
-                options={options}
-                onChange={setRight}
+                options={options.filter((option) => {
+                  const before = editions.find(
+                    (edition) => edition.id === left,
+                  );
+                  const after = editions.find(
+                    (edition) => edition.id === option.value,
+                  );
+                  return before && after && adjacentEditions(before, after);
+                })}
+                onChange={(value) => setSelection({ left, right: value })}
               />
             )}
           </Field>
@@ -90,14 +120,12 @@ export function ReportingComparison({
                     {comparison.reason ?? t("reporting.noComparison")}
                   </p>
                 )}
-                {comparison.left.evaluation.metrics.map((before) => (
-                  <ComparisonMetric
-                    key={before.id}
+                {comparison.compatible && (
+                  <ComparisonMetrics
                     comparison={comparison}
-                    before={before}
                     onEvidence={setEvidence}
                   />
-                ))}
+                )}
               </>
             )}
           </QueryGate>
@@ -120,126 +148,112 @@ type EvidenceSelection = {
   edition: ReportingEdition;
   reference: ReportingEvidenceRef;
 };
-function ComparisonMetric({
+function ComparisonMetrics({
   comparison,
-  before,
-  onEvidence: setEvidence,
+  onEvidence,
 }: Readonly<{
   comparison: components["schemas"]["ReportingComparison"];
-  before: components["schemas"]["ReportingMetric"];
   onEvidence: (selection: EvidenceSelection) => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const after = comparison.right.evaluation.metrics.find(
-    (metric) => metric.id === before.id,
-  );
-  if (!after) return null;
-  const delta = comparison.compatible
-    ? comparison.deltas.find((delta) => delta.metric === before.id)
-    : undefined;
-  const format = (value: number | null | undefined) =>
-    reportingAmount(
-      value,
-      before.unit,
-      comparison.left.evaluation.context.currency,
-      locale,
+  const rows = comparison.left.evaluation.metrics.flatMap((before) => {
+    const after = comparison.right.evaluation.metrics.find(
+      (metric) => metric.id === before.id,
     );
+    return after
+      ? [
+          {
+            before,
+            after,
+            delta: comparison.deltas.find(
+              (delta) => delta.metric === before.id,
+            ),
+          },
+        ]
+      : [];
+  });
+  const amount = (
+    value: number | null | undefined,
+    unit: string,
+    edition: ReportingEdition,
+  ) =>
+    reportingAmount(value, unit, edition.evaluation.context.currency, locale);
   return (
-    <Panel title={metricLabel(before.id, t)}>
-      <PanelBody>
-        {before.unit === after.unit &&
-        (before.unit !== "money" ||
-          comparison.left.evaluation.context.currency ===
-            comparison.right.evaluation.context.currency) ? (
-          <GroupedBars
-            label={metricLabel(before.id, t)}
-            dataLabel={t("reporting.data")}
-            valueLabel={formatDateTime(
-              comparison.left.captured_at,
-              locale,
-              comparison.left.evaluation.context.timezone,
-            )}
-            comparisonLabel={formatDateTime(
-              comparison.right.captured_at,
-              locale,
-              comparison.right.evaluation.context.timezone,
-            )}
-            readings={[
-              {
-                key: before.id,
-                label: metricLabel(before.id, t),
-                value: before.value,
-                amount: format(before.value),
-                comparison: after.value,
-                comparisonAmount: format(after.value),
-              },
-            ]}
-            onSelect={(key) =>
-              setEvidence(
-                key.endsWith(":comparison")
-                  ? {
-                      edition: comparison.right,
-                      reference: after.evidence,
-                    }
-                  : {
-                      edition: comparison.left,
-                      reference: before.evidence,
-                    },
-              )
-            }
-          />
-        ) : (
-          <div className="reporting-comparison-values">
+    <DataTable
+      label={t("reporting.compare")}
+      rows={rows}
+      rowKey={(row) => row.before.id}
+      columns={[
+        {
+          key: "metric",
+          header: t("reporting.metrics"),
+          render: (row) => metricLabel(row.before.id, t),
+        },
+        {
+          key: "before",
+          header: t("reporting.left"),
+          render: (row) => (
             <Button
               variant="link"
               onClick={() =>
-                setEvidence({
+                onEvidence({
                   edition: comparison.left,
-                  reference: before.evidence,
+                  reference: row.before.evidence,
                 })
               }
             >
-              {formatDateTime(
-                comparison.left.captured_at,
-                locale,
-                comparison.left.evaluation.context.timezone,
-              )}{" "}
-              · {format(before.value)}
+              {amount(row.before.value, row.before.unit, comparison.left)}
             </Button>
+          ),
+        },
+        {
+          key: "after",
+          header: t("reporting.right"),
+          render: (row) => (
             <Button
               variant="link"
               onClick={() =>
-                setEvidence({
+                onEvidence({
                   edition: comparison.right,
-                  reference: after.evidence,
+                  reference: row.after.evidence,
                 })
               }
             >
-              {formatDateTime(
-                comparison.right.captured_at,
-                locale,
-                comparison.right.evaluation.context.timezone,
-              )}{" "}
-              ·{" "}
-              {reportingAmount(
-                after.value,
-                after.unit,
-                comparison.right.evaluation.context.currency,
-                locale,
-              )}
+              {amount(row.after.value, row.after.unit, comparison.right)}
             </Button>
-          </div>
-        )}
-        {delta && (
-          <p className="t-num">
-            {format(delta.absolute)}
-            {delta.percentage == null
-              ? ""
-              : ` · ${reportingAmount(delta.percentage, "percent", comparison.left.evaluation.context.currency, locale)}`}
-          </p>
-        )}
-      </PanelBody>
-    </Panel>
+          ),
+        },
+        {
+          key: "change",
+          header: t("reporting.change"),
+          render: (row) =>
+            row.delta ? (
+              <span className="t-num">
+                {row.delta.absolute != null && row.delta.absolute > 0
+                  ? "+"
+                  : ""}
+                {amount(row.delta.absolute, row.before.unit, comparison.left)}
+                {row.delta.percentage == null
+                  ? ""
+                  : ` · ${row.delta.percentage > 0 ? "+" : ""}${reportingAmount(row.delta.percentage, "percent", "", locale)}`}
+              </span>
+            ) : (
+              "—"
+            ),
+        },
+      ]}
+    />
+  );
+}
+
+function adjacentEditions(
+  before: ReportingEdition,
+  after: ReportingEdition,
+): boolean {
+  return (
+    before.id !== after.id &&
+    Date.parse(before.evaluation.context.interval.end_at) ===
+      Date.parse(after.evaluation.context.interval.start_at)
   );
 }

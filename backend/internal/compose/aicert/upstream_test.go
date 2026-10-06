@@ -54,7 +54,7 @@ func TestThePreflightAsksEachBindingOnceBeforeTheCorpus(t *testing.T) {
 	tasks := []ai.Task{ai.TaskSummarize, ai.TaskColdStart}
 	t.Run("healthy", func(t *testing.T) {
 		candidate, judge := ai.NewFakeClient(), ai.NewFakeClient()
-		if err := preflight(wsContext(t), cfg, tasks, fakeHooks(candidate, judge), quietLogger()); err != nil {
+		if _, err := preflight(wsContext(t), cfg, tasks, fakeHooks(candidate, judge), quietLogger()); err != nil {
 			t.Fatalf("a servable pair failed its pre-flight: %v", err)
 		}
 		if len(candidate.Calls()) != 1 || len(judge.Calls()) != 1 {
@@ -73,7 +73,7 @@ func TestThePreflightAsksEachBindingOnceBeforeTheCorpus(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			err := preflight(wsContext(t), cfg, tasks, fakeHooks(tc.candidate, tc.judge), quietLogger())
+			_, err := preflight(wsContext(t), cfg, tasks, fakeHooks(tc.candidate, tc.judge), quietLogger())
 			if err == nil {
 				t.Fatal("an unservable binding passed its pre-flight")
 			}
@@ -124,8 +124,8 @@ func TestAnEUHostedBrokerCandidateMustPinAnEURegion(t *testing.T) {
 		refused   bool
 	}{
 		"unpinned under eu_hosted":      {broker(nil), ai.ProfileEUHosted, true},
-		"a non-EU pin under eu_hosted":  {broker(&ai.OpenRouterRouting{Only: []string{"mistral"}}), ai.ProfileEUHosted, true},
-		"pinned to the EU":              {broker(&ai.OpenRouterRouting{Only: []string{"mistral/eu"}}), ai.ProfileEUHosted, false},
+		"a non-EU pin under eu_hosted":  {broker(&ai.OpenRouterRouting{Provider: ai.OpenRouterProvider{Only: []string{"mistral"}}}), ai.ProfileEUHosted, true},
+		"pinned to the EU":              {broker(&ai.OpenRouterRouting{Provider: ai.OpenRouterProvider{Only: []string{"mistral/eu"}}}), ai.ProfileEUHosted, false},
 		"unpinned under cloud_frontier": {broker(nil), ai.ProfileCloudFrontier, false},
 	} {
 		t.Run(name, func(t *testing.T) {

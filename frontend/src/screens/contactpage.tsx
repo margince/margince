@@ -32,12 +32,14 @@ import { BriefQueue } from "./brief.queue";
 import { provenanceOf, throwProblem, useViewerId } from "./common";
 import { ComposeModal } from "./compose";
 import { intentAbout } from "./compose.intent";
+import { useWaitingDraftBand } from "./composewaitingdraft";
 import { ContactActions } from "./contactactions";
 import { ContactDealsTab } from "./contactdeals";
 import { ContactResearchDrawer } from "./contactdrawers";
 import { ContactFilesTab } from "./contactfiles";
 import { ContactMeetingsTab } from "./contactmeetings";
 import { ContactNetworkTab } from "./contactnetwork";
+import { ContactOpening } from "./contactopening";
 import { BRIEF_ANCHOR, ContactOverview } from "./contactoverview";
 import {
   BRIEF_PARAM,
@@ -386,10 +388,15 @@ export function ContactPageV2({
     notYours: t("contact.notYoursToChange"),
   });
   const refusedReasonId = readOnlyReason ? readOnlyReasonId : undefined;
+  const band = useWaitingDraftBand({
+    anchor: { type: "contact", id },
+    composerOpen: drawer === "composer",
+    onOpen: () => openComposer(""),
+    readOnlyReason,
+    readOnlyReasonId,
+  });
 
-  if (view.isLoading) {
-    return <div className="wrap">{t("contact.page.loading")}</div>;
-  }
+  if (view.isLoading) return <ContactOpening id={id} />;
   if (view.isError || !view.data) {
     return <div className="wrap">{t("contact.page.notOpened")}</div>;
   }
@@ -477,17 +484,8 @@ export function ContactPageV2({
             actionsInline
             zone={recordZone}
             // Stated ONCE for the page, where both columns and every tab can see
-            // it. Every control the record refuses points at this element by id.
-            // Absent while the contact takes changes: a line always reserved
-            // would read as a record with something to say about itself and
-            // nothing said.
-            band={
-              readOnlyReason ? (
-                <p id={readOnlyReasonId} className="t-caption">
-                  {readOnlyReason}
-                </p>
-              ) : undefined
-            }
+            // it. Every control the record refuses points at its reason by id.
+            band={band}
             tabs={
               <RecordTabs
                 options={CONTACT_TABS}

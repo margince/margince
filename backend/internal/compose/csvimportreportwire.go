@@ -30,6 +30,9 @@ func toContractImportReport(run migration.Run) crmcontracts.ImportRunReport {
 	}
 	if run.Mapping != nil {
 		out.SourceKeyUsed = run.Mapping.SourceKey
+		if fields := run.Mapping.Fields; fields != nil {
+			out.Mapping = &fields
+		}
 	}
 
 	// Predicted counts and actual ones are never summed: a finished run reports

@@ -177,7 +177,7 @@ type API interface {
 	SentFolderID(ctx context.Context, accessToken string) (string, error)
 	// ListFolders returns the mailbox's folders — what an owner may pick from
 	// to keep one out of capture.
-	ListFolders(ctx context.Context, accessToken string) ([]connector.NamedContainer, error)
+	ListFolders(ctx context.Context, accessToken string) ([]connector.NamedContainer, bool, error)
 
 	// SendMIME transmits one complete RFC822 message as the signed-in user.
 	// Microsoft acknowledges the submission without naming a message id, so
@@ -200,6 +200,9 @@ type API interface {
 type MessageRef struct {
 	ID             string
 	ParentFolderID string
+	// ReceivedAt is Graph's receivedDateTime: when Exchange says the message
+	// reached this mailbox. Zero when the listing carried none.
+	ReceivedAt time.Time
 }
 
 // OAuthConfig wires the OAuth client. Tenant defaults to "common";
@@ -366,7 +369,7 @@ func (a *httpAPI) ListAfter(ctx context.Context, accessToken string, after time.
 	if u == "" {
 		q := url.Values{
 			paramFilter: {receivedAfterFilter(after)},
-			paramSelect: {"id,parentFolderId"},
+			paramSelect: {"id,parentFolderId,receivedDateTime"},
 			paramTop:    {strconv.Itoa(pageSize)},
 		}
 		u = a.base + "/me/messages?" + q.Encode()
@@ -375,8 +378,9 @@ func (a *httpAPI) ListAfter(ctx context.Context, accessToken string, after time.
 	}
 	var out struct {
 		Value []struct {
-			ID             string `json:"id"`
-			ParentFolderID string `json:"parentFolderId"` //nolint:tagliatelle // Microsoft's wire format; must match to decode
+			ID             string    `json:"id"`
+			ParentFolderID string    `json:"parentFolderId"`   //nolint:tagliatelle // Microsoft's wire format; must match to decode
+			ReceivedAt     time.Time `json:"receivedDateTime"` //nolint:tagliatelle // Microsoft's wire format; must match to decode
 		} `json:"value"`
 		NextLink string `json:"@odata.nextLink"` //nolint:tagliatelle // Microsoft's wire format; must match to decode
 	}
@@ -394,7 +398,7 @@ func (a *httpAPI) ListAfter(ctx context.Context, accessToken string, after time.
 			// really did produce. Refusing the page keeps both off the table.
 			return nil, "", fmt.Errorf("graph: message %s listed without a parent folder: %w", m.ID, ErrUnreachable)
 		}
-		msgs = append(msgs, MessageRef{ID: m.ID, ParentFolderID: m.ParentFolderID})
+		msgs = append(msgs, MessageRef{ID: m.ID, ParentFolderID: m.ParentFolderID, ReceivedAt: m.ReceivedAt.UTC()})
 	}
 	return msgs, out.NextLink, nil
 }

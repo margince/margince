@@ -4,8 +4,8 @@ import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { useCan } from "../../app/capability";
+import { AiRuntimeChip } from "../../design-system/airuntimechip";
 import type { MarginceCoreState } from "../../design-system/margince-core";
-import { AiRuntimeChip } from "../../design-system/margince-workbench";
 import {
   OnboardingStage,
   type StageProgress,
@@ -20,8 +20,8 @@ import { isDetour, railStops, stopState } from "./rail";
 // board, the rail. Acts supply only what differs — the question, the scene that
 // answers it, and the way onward.
 //
-// Not MarginceWorkbench's chat rail beside an artifact pane: a reader crossing
-// from the gate into the journey would change rooms halfway through one setup.
+// Not a chat rail beside an artifact pane: a reader crossing from the gate into
+// the journey would change rooms halfway through one setup.
 
 type AiRunSummary = components["schemas"]["AiRunSummary"];
 type AiProfile = components["schemas"]["AiProfile"];
@@ -241,8 +241,7 @@ export function ConversationWorkbench({
         coreStateLabel={status}
         aside={
           // The band's right slot, and the reason this screen can be trusted
-          // about what it costs: the same disclosure the workbench carries,
-          // in the one room onboarding has.
+          // about what it costs.
           <AiRuntimeChip
             runtime={runtime ?? setupRuntime}
             configured={configured}
@@ -261,7 +260,6 @@ export function ConversationWorkbench({
               chip: t("ob.ai.runtimeChip"),
               answering: t("ob.ai.answeringNow"),
               scope: t("ob.ai.runScope"),
-              tokensShort: t("ob.rail.tokensUnit"),
             }}
           />
         }

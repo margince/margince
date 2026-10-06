@@ -8,7 +8,6 @@ package compose
 
 import (
 	"context"
-	"errors"
 	"log/slog"
 	"time"
 
@@ -45,22 +44,17 @@ func (AccountScanArgs) Kind() string { return "account_scan" }
 // WorkspaceID binds this scan to its tenant (jobs.WorkspaceScoped).
 func (a AccountScanArgs) WorkspaceID() ids.UUID { return a.Workspace }
 
-// accountScanQueue is the pool a reader is watching the page for: the
-// transcript reading's, for the reason api/jobs.yaml gives.
-const accountScanQueue = "transcript_read"
-
-// accountScanInsertOpts routes the job and deduplicates it by args, only
+// accountScanInsertOpts deduplicates the job by args, only
 // while a job is still active — for the reason documentExtractInsertOpts
 // gives. The scan reaches that trap through a retry inside the lease: it
 // declines the claim and returns, the job completes while the row stays
 // live, and the re-arm's enqueue under the same scan id must not collapse
 // against it.
 func accountScanInsertOpts() *river.InsertOpts {
-	return &river.InsertOpts{
-		Queue:       accountScanQueue,
+	return jobs.QueuedAs[AccountScanArgs](&river.InsertOpts{
 		MaxAttempts: sweptJobMaxAttempts,
 		UniqueOpts:  river.UniqueOpts{ByArgs: true, ByState: activeSweepStates},
-	}
+	})
 }
 
 // WithAccountScan enables the scan on the api role: ensure queues the read
@@ -111,8 +105,8 @@ func newAccountScanWorker(pool *pgxpool.Pool, brain completer, routingVersion fu
 	}
 }
 
-// Work reads the scan under the reader's own authority. A budget deferral
-// snoozes the job until the window the router named; any other outcome is
+// Work reads the scan under the reader's own authority. A deferral
+// snoozes the job until the moment the router named; any other outcome is
 // on the row, which the page and the rail read.
 func (w *accountScanWorker) Work(ctx context.Context, job *river.Job[AccountScanArgs]) error {
 	wsCtx, err := workspaceJobCtx(ctx, job.Args)
@@ -124,9 +118,9 @@ func (w *accountScanWorker) Work(ctx context.Context, job *river.Job[AccountScan
 		return jobs.FaultContext(ctx, err)
 	}
 	err = w.svc.Run(runCtx, job.Args.ScanID, ids.From[ids.CompanyKind](job.Args.CompanyID))
-	var deferral *ai.BudgetDeferralError
-	if !errors.As(err, &deferral) {
+	until, deferred := ai.DeferredUntil(err)
+	if !deferred {
 		return jobs.FaultContext(ctx, err)
 	}
-	return river.JobSnooze(max(time.Until(deferral.NextAttemptAt), 0))
+	return river.JobSnooze(max(time.Until(until), 0))
 }

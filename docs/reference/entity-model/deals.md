@@ -32,6 +32,7 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `close_date_run_cursor_is_whole` — `CHECK (((cursor_created_at IS NULL) = (cursor_id IS NULL)))`
 - `close_date_run_finish_matches_status` — `CHECK (((status = 'running') = (finished_at IS NULL)))`
 - `close_date_run_status_check` — `CHECK ((status = ANY (ARRAY['running', 'complete', 'incomplete'])))`
+- `close_date_run_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
@@ -70,7 +71,7 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 ## deal
 
-44 columns · primary key `(id)` · referenced by 22 foreign keys
+43 columns · primary key `(id)` · referenced by 22 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -112,7 +113,6 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `captured_by` | `text` | yes | Server-stamped from the authenticated principal (human:<uuid> \| agent:<id> \| connector:<name>); never client-supplied. |
 | `created_at` | `timestamp with time zone` | yes | When the row was created. Set once. |
 | `legal_hold` | `boolean` | yes | True while a litigation or investigation hold is preserving this record. |
-| `raw` | `jsonb` |  | The unparsed upstream payload the row was built from, kept for replay and debugging. |
 | `search_tsv` | `tsvector` |  | Computed by the database. It cannot be written directly. |
 | `source` | `text` | yes | Which internal channel the record arrived by. |
 | `source_system` | `text` |  | The outside system the record came from, when it came from one. |
@@ -136,11 +136,13 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 **Rules**
 
+- `deal_amount_minor_js_safe` — `CHECK (((amount_minor >= '-9007199254740991'::bigint) AND (amount_minor <= '9007199254740991'::bigint)))`
 - `deal_closed_at` — `CHECK (((status = 'open') OR (closed_at IS NOT NULL)))`
 - `deal_closed_fx` — `CHECK (((status = 'open') OR (amount_minor IS NULL) OR (fx_rate_to_base IS NOT NULL)))`
 - `deal_commercial_motion_check` — `CHECK (((commercial_motion IS NULL) OR (commercial_motion = ANY (ARRAY['new_business', 'renewal', 'upsell', 'cross_sell', 'expansion', 'existing_business']))))`
 - `deal_currency_check` — `CHECK (((currency IS NULL) OR (currency ~ '^[A-Z]{3}$')))`
 - `deal_description_bounded` — `CHECK (((description IS NULL) OR (length(description) <= 20000)))`
+- `deal_expected_arr_minor_js_safe` — `CHECK (((expected_arr_minor >= '-9007199254740991'::bigint) AND (expected_arr_minor <= '9007199254740991'::bigint)))`
 - `deal_expected_arr_nonnegative` — `CHECK (((expected_arr_minor IS NULL) OR (expected_arr_minor >= 0)))`
 - `deal_forecast_category_check` — `CHECK (((forecast_category IS NULL) OR (forecast_category = ANY (ARRAY['commit', 'best_case', 'pipeline', 'omitted']))))`
 - `deal_lost_reason` — `CHECK (((status <> 'lost') OR (lost_reason IS NOT NULL)))`
@@ -149,8 +151,9 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `deal_partner_attribution_check` — `CHECK (((partner_attribution IS NULL) OR (partner_attribution = ANY (ARRAY['sourced', 'influenced']))))`
 - `deal_partner_attribution_pairing` — `CHECK (((partner_company_id IS NULL) = (partner_attribution IS NULL)))`
 - `deal_priority_check` — `CHECK (((priority IS NULL) OR (priority = ANY (ARRAY['low', 'medium', 'high']))))`
-- `deal_source_author_needs_a_source` — `CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL))) NOT VALID`
+- `deal_source_author_needs_a_source` — `CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))`
 - `deal_status_check` — `CHECK ((status = ANY (ARRAY['open', 'won', 'lost'])))`
+- `deal_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 - `deal_won_without_contract_detail` — `CHECK (((won_without_contract_reason IS DISTINCT FROM 'other') OR ((won_without_contract_detail IS NOT NULL) AND (btrim(won_without_contract_detail) <> ''))))`
 - `deal_won_without_contract_only_when_won` — `CHECK (((won_without_contract_reason IS NULL) OR (status = 'won')))`
 - `deal_won_without_contract_reason` — `CHECK (((won_without_contract_reason IS NULL) OR (won_without_contract_reason = ANY (ARRAY['imported', 'purchase_order', 'verbal', 'renewal_by_email', 'other']))))`
@@ -202,6 +205,7 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `deal_acquisition_source_key_key` — `UNIQUE (key)`
 - `deal_acquisition_source_key_shape` — `CHECK (((key = lower(key)) AND (length(btrim(key)) > 0)))`
 - `deal_acquisition_source_label_present` — `CHECK ((length(btrim(label)) > 0))`
+- `deal_acquisition_source_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
@@ -252,11 +256,11 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `deal_correction_moves_something` — `CHECK ((cardinality(fields) > 0))`
 - `deal_correction_reversal_is_whole` — `CHECK (((reversed_at IS NULL) = (reversed_by IS NULL)))`
 - `deal_correction_tier_check` — `CHECK ((correction = ANY (ARRAY['auto_apply', 'provisional_confirm', 'downgrade_and_review'])))`
+- `deal_correction_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
 - `deal_correction_audit_once` — `unique, btree (audit_log_id)`
-- `deal_correction_by_audit` — `btree (audit_log_id)`
 - `deal_correction_live` — `btree (deal_id, applied_at DESC) WHERE (reversed_at IS NULL)`
 - `deal_correction_pkey` — `unique, btree (id)`
 - `deal_correction_reversed` — `btree (deal_id, reversed_at DESC) WHERE (reversed_at IS NOT NULL)`
@@ -378,6 +382,7 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `deal_stage_evidence_refutation_whole` — `CHECK (((refuted_at IS NULL) = (refuted_by IS NULL)))`
 - `deal_stage_evidence_snippet_len` — `CHECK (((snippet IS NULL) OR (length(snippet) <= 500)))`
 - `deal_stage_evidence_source_type_check` — `CHECK ((source_type = ANY (ARRAY['activity', 'contract'])))`
+- `deal_stage_evidence_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
@@ -435,7 +440,6 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `deal_stage_history_deal_id_id_key` — `unique, btree (deal_id, id)`
 - `deal_stage_history_pkey` — `unique, btree (id)`
 - `idx_deal_stage_history_changed` — `btree (changed_at)`
-- `idx_dsh_deal` — `btree (deal_id, changed_at)`
 - `reporting_stage_events` — `btree (deal_id, changed_at, id)`
 
 ## deal_suggestion
@@ -487,6 +491,7 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `deal_suggestion_money_pair` — `CHECK (((proposed_amount_minor IS NULL) = (currency IS NULL)))`
 - `deal_suggestion_name_hint_check` — `CHECK ((name_hint = ANY (ARRAY['proposal_sent', 'opportunity_signalled', 'meeting_held'])))`
 - `deal_suggestion_state_check` — `CHECK ((state = ANY (ARRAY['open', 'accepted', 'dismissed', 'superseded'])))`
+- `deal_suggestion_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 - `uq_deal_suggestion_fingerprint` — `UNIQUE (fingerprint)`
 
 **Indexes**
@@ -562,7 +567,6 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 - `fx_rate_pair_day` — `unique, btree (from_currency, to_currency, rate_date)`
 - `fx_rate_pkey` — `unique, btree (id)`
-- `idx_fx_rate_lookup` — `btree (from_currency, to_currency, rate_date)`
 
 ## offer
 
@@ -583,7 +587,7 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `issuer_snapshot` | `jsonb` |  | Seller legal block captured at send time. |
 | `net_minor` | `bigint` | yes | Σ line nets — derived, never client-set. |
 | `offer_number` | `text` | yes | Human-facing Angebot number, minted server-side, unique per workspace (with revision). |
-| `pdf_asset_ref` | `text` |  | Rendered PDF ref, set by renderOffer (B-E03.22/WP7). |
+| `pdf_asset_ref` | `text` |  | Rendered PDF ref, set by renderOffer. |
 | `revision` | `integer` | yes | Bumped when a sent offer is regenerated; the prior revision becomes superseded. |
 | `status` | `text` | yes | One of `draft`, `sent`, `accepted`, `rejected`, `expired`, `superseded`. |
 | `tax_minor` | `bigint` | yes | Σ line taxes — derived, never client-set. |
@@ -610,10 +614,14 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `offer_accepted_at` — `CHECK (((status <> 'accepted') OR (accepted_at IS NOT NULL)))`
 - `offer_currency_check` — `CHECK ((currency ~ '^[A-Z]{3}$'))`
 - `offer_deal_id_id_key` — `UNIQUE (deal_id, id)`
+- `offer_gross_is_net_plus_tax` — `CHECK ((gross_minor = (net_minor + tax_minor)))`
+- `offer_gross_minor_js_safe` — `CHECK (((gross_minor >= '-9007199254740991'::bigint) AND (gross_minor <= '9007199254740991'::bigint)))`
+- `offer_net_minor_js_safe` — `CHECK (((net_minor >= '-9007199254740991'::bigint) AND (net_minor <= '9007199254740991'::bigint)))`
 - `offer_number_rev_unique` — `UNIQUE (offer_number, revision)`
 - `offer_revision_check` — `CHECK ((revision >= 1))`
 - `offer_status_check` — `CHECK ((status = ANY (ARRAY['draft', 'sent', 'accepted', 'rejected', 'expired', 'superseded'])))`
-- `uq_offer_ws_id` — `UNIQUE (id)`
+- `offer_tax_minor_js_safe` — `CHECK (((tax_minor >= '-9007199254740991'::bigint) AND (tax_minor <= '9007199254740991'::bigint)))`
+- `offer_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
@@ -623,7 +631,6 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `offer_deal_id_id_key` — `unique, btree (deal_id, id)`
 - `offer_number_rev_unique` — `unique, btree (offer_number, revision)`
 - `offer_pkey` — `unique, btree (id)`
-- `uq_offer_ws_id` — `unique, btree (id)`
 
 **Triggers**
 
@@ -671,6 +678,8 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `offer_line_item_tax_rate_check` — `CHECK ((tax_rate >= (0)::numeric))`
 - `offer_line_item_ungrounded_price_zero` — `CHECK ((price_grounded OR (unit_price_minor = 0)))`
 - `offer_line_item_unit_price_minor_check` — `CHECK ((unit_price_minor >= 0))`
+- `offer_line_item_unit_price_minor_js_safe` — `CHECK (((unit_price_minor >= '-9007199254740991'::bigint) AND (unit_price_minor <= '9007199254740991'::bigint)))`
+- `offer_line_item_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 - `oli_billing_interval_check` — `CHECK (((billing_interval_months IS NULL) OR (billing_interval_months = ANY (ARRAY[1, 3, 6, 12]))))`
 - `oli_billing_model_check` — `CHECK (((billing_model IS NULL) OR (billing_model = ANY (ARRAY['one_time', 'recurring']))))`
 - `oli_billing_shape` — `CHECK ((((billing_model IS NULL) AND (billing_interval_months IS NULL) AND (interval_count IS NULL)) OR ((NOT (billing_model IS DISTINCT FROM 'one_time')) AND (billing_interval_months IS NULL) AND (interval_count IS NULL)) OR ((NOT (billing_model IS DISTINCT FROM 'recurring')) AND (billing_interval_months IS NOT NULL))))`
@@ -679,7 +688,6 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 **Indexes**
 
-- `idx_oli_offer` — `btree (offer_id, "position")`
 - `offer_line_item_pkey` — `unique, btree (id)`
 - `uq_oli_position` — `unique, btree (offer_id, "position")`
 
@@ -706,16 +714,14 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 **Rules**
 
-- `offer_template_name_unique` — `UNIQUE (name)`
-- `uq_offer_template_ws_id` — `UNIQUE (id)`
+- `offer_template_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
 - `idx_offer_template_search` — `gin (search_tsv)`
-- `offer_template_name_unique` — `unique, btree (name)`
+- `offer_template_name_unique` — `unique, btree (name) WHERE (archived_at IS NULL)`
 - `offer_template_pkey` — `unique, btree (id)`
 - `uq_offer_template_default` — `unique, btree (locale) WHERE (is_default AND (archived_at IS NULL))`
-- `uq_offer_template_ws_id` — `unique, btree (id)`
 
 **Triggers**
 
@@ -738,11 +744,11 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 **Rules**
 
-- `pipeline_name_unique` — `UNIQUE (name)`
+- `pipeline_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
-- `pipeline_name_unique` — `unique, btree (name)`
+- `pipeline_name_unique` — `unique, btree (name) WHERE (archived_at IS NULL)`
 - `pipeline_pkey` — `unique, btree (id)`
 - `uq_pipeline_default` — `unique, btree ((true)) WHERE (is_default AND (archived_at IS NULL))`
 
@@ -783,7 +789,8 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `product_currency_check` — `CHECK ((currency ~ '^[A-Z]{3}$'))`
 - `product_default_tax_rate_check` — `CHECK ((default_tax_rate >= (0)::numeric))`
 - `product_unit_price_minor_check` — `CHECK ((unit_price_minor >= 0))`
-- `uq_product_ws_id` — `UNIQUE (id)`
+- `product_unit_price_minor_js_safe` — `CHECK (((unit_price_minor >= '-9007199254740991'::bigint) AND (unit_price_minor <= '9007199254740991'::bigint)))`
+- `product_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
@@ -791,7 +798,6 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `idx_product_search` — `gin (search_tsv)`
 - `product_pkey` — `unique, btree (id)`
 - `uq_product_sku` — `unique, btree (sku) WHERE ((sku IS NOT NULL) AND (archived_at IS NULL))`
-- `uq_product_ws_id` — `unique, btree (id)`
 
 **Triggers**
 
@@ -825,6 +831,7 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `stage_id_pipeline_unique` — `UNIQUE (id, pipeline_id)`
 - `stage_semantic_check` — `CHECK ((semantic = ANY (ARRAY['open', 'won', 'lost'])))`
 - `stage_terminal_prob` — `CHECK ((((semantic = 'won') AND (win_probability = 100)) OR ((semantic = 'lost') AND (win_probability = 0)) OR (semantic = 'open')))`
+- `stage_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 - `stage_win_probability_check` — `CHECK (((win_probability >= 0) AND (win_probability <= 100)))`
 
 **Indexes**
@@ -870,6 +877,7 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `stage_exit_criterion_kind_check` — `CHECK ((kind = ANY (ARRAY['buyer_confirmed', 'event_held', 'document_signed', 'role_identified', 'terms_accepted', 'custom'])))`
 - `stage_exit_criterion_label_len` — `CHECK (((length(label) >= 1) AND (length(label) <= 120)))`
 - `stage_exit_criterion_position_check` — `CHECK (("position" >= 0))`
+- `stage_exit_criterion_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
@@ -922,6 +930,7 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `stage_progression_outcome_kind` — `CHECK ((outcome = ANY (ARRAY['proposed', 'approved_clean', 'approved_edited', 'rejected', 'auto_applied', 'reversed', 'expired', 'superseded'])))`
 - `stage_progression_outcome_reason_is_a_rejections` — `CHECK (((rejection_reason IS NULL) OR (outcome = 'rejected')))`
 - `stage_progression_outcome_reversal_is_timed` — `CHECK (((reversed_by IS NULL) OR (reversed_at IS NOT NULL)))`
+- `stage_progression_outcome_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
@@ -976,6 +985,7 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `stage_progression_policy_mode` — `CHECK ((mode = ANY (ARRAY['propose', 'auto'])))`
 - `stage_progression_policy_suspension_whole` — `CHECK (((suspended_at IS NULL) = (suspended_reason IS NULL)))`
 - `stage_progression_policy_thresholds_are_shares` — `CHECK (((clean_acceptance_threshold >= (0)::numeric) AND (clean_acceptance_threshold <= (1)::numeric) AND (correction_reversal_threshold >= (0)::numeric) AND (correction_reversal_threshold <= (1)::numeric)))`
+- `stage_progression_policy_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 - `stage_progression_policy_volume_is_a_bar` — `CHECK (((min_reviewed > 0) AND (min_observation_days > 0) AND (window_days > 0) AND (undo_window_hours > 0)))`
 
 **Indexes**

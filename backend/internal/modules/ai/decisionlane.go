@@ -47,9 +47,9 @@ func ValidateDecisionsLane(profile Profile, lane DecisionsConfig) error {
 	if strings.TrimSpace(lane.Model) == "" {
 		return fmt.Errorf("ai: routing config: the decisions lane names no model")
 	}
-	if defaulted(lane.BaseURL, d.defaultEndpoint) == "" {
-		return fmt.Errorf("ai: routing config: the decisions lane binds %s, which has no default endpoint; set base_url "+
-			"to the full decision endpoint URL, e.g. %s or %s", d.name, exampleBrokerDecisionEndpoint, exampleSelfHostedDecisionEndpoint)
+	if decisionHostMissing(lane.Provider, lane.BaseURL) {
+		return missingHostError{provider: d.name, reason: fmt.Sprintf("ai: routing config: the decisions lane binds %s, which has no default endpoint; set base_url "+
+			"to the full decision endpoint URL, e.g. %s or %s", d.name, exampleBrokerDecisionEndpoint, exampleSelfHostedDecisionEndpoint)}
 	}
 	if profile == ProfileSovereign {
 		if !d.local && !d.localByEndpoint {

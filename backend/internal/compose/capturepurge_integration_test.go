@@ -385,6 +385,15 @@ func seedRequestAgainstLawyer(t *testing.T, e *integration.Env, status, resoluti
 	t.Helper()
 	const address = "anwalt@kanzlei.example"
 	evidence := seedPurgeableMail(t, e, address, "Mandat", e.Rep1)
+	seedRequestFor(t, e, address, status, resolution)
+	return evidence
+}
+
+// seedRequestFor gives an address a subject and a request in the named state,
+// without any mail of its own: the timed personal sweep seeds its own message
+// with the verdict and backdating that sweep needs.
+func seedRequestFor(t *testing.T, e *integration.Env, address, status, resolution string) {
+	t.Helper()
 	subject := e.SeedContact(t, "Der Mandant", nil)
 	owner := integration.OwnerConn(t)
 	if _, err := owner.Exec(context.Background(), `
@@ -401,7 +410,6 @@ func seedRequestAgainstLawyer(t *testing.T, e *integration.Env, status, resoluti
 		ids.NewV7(), status, subject, nullIfEmpty(resolution)); err != nil {
 		t.Fatalf("seeding the %s request: %v", status, err)
 	}
-	return evidence
 }
 
 // nullIfEmpty writes SQL NULL for a resolution an open request must not carry.

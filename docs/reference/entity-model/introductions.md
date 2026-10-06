@@ -67,5 +67,5 @@ The 1 table owned by `introductions`, as the migrations build them. [Back to the
 - `intro_request_awaiting_decision` — `btree (introducer_user_id, due_at) WHERE ((status = 'requested') AND (archived_at IS NULL))`
 - `intro_request_due` — `btree (due_at) WHERE ((status = ANY (ARRAY['requested', 'accepted', 'name_drop_approved'])) AND (archived_at IS NULL))`
 - `intro_request_for_contact` — `btree (contact_id, requested_at DESC)`
-- `intro_request_open_route` — `unique, btree (contact_id, introducer_user_id, COALESCE(through_contact_id, '00000000-0000-0000-0000-000000000000'::uuid)) WHERE ((status = ANY (ARRAY['requested', 'accepted', 'name_drop_approved'])) AND (archived_at IS NULL))`
+- `intro_request_open_route` — `unique, btree (contact_id, introducer_user_id, through_contact_id) NULLS NOT DISTINCT WHERE ((status = ANY (ARRAY['requested', 'accepted', 'name_drop_approved'])) AND (archived_at IS NULL))`
 - `intro_request_pkey` — `unique, btree (id)`

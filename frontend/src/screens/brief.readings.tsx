@@ -6,6 +6,7 @@ import { navigate } from "../app/router";
 import { StatCard } from "../design-system/atoms";
 import { StatStrip } from "../design-system/statstrip";
 import { useTooltip } from "../design-system/tooltip";
+import { floorFigure, readsAsFloor } from "../format/figure";
 import {
   formatDateTime,
   formatMoneyCompact,
@@ -25,17 +26,14 @@ import {
   sourceComplete,
 } from "./brief.facts";
 import {
-  boundedCategories,
   DECISIONS,
   decisionsBlocking,
-  LEADS,
+  floorTest,
+  scopeWasCut,
+  TASKS,
 } from "./brief.readings.honesty";
 import { WORKLIST_FILTER_PARAM } from "./worklist";
-import type {
-  Worklist,
-  WorklistFilter,
-  WorklistItem,
-} from "./worklist.queries";
+import type { Worklist, WorklistFilter } from "./worklist.queries";
 
 // The day's readings, on one dense plate.
 //
@@ -145,11 +143,9 @@ function LaneReading({
 }: Reading) {
   const t = useT();
   const { locale } = useLocale();
-  // A FLOOR OF NONE IS NOT A FLOOR. `0+` says "at least nothing", which is
-  // true of every number there has ever been — so the mark goes on a figure
-  // that counts something and nowhere else. A bounded read that found none of
-  // a kind is a reading of zero, and the `+` was noise on it.
-  const marked = floor === true && count !== null && count > 0;
+  // The figure and the tip that explains its `+` ask the one rule: a floor of
+  // none is not a floor (`readsAsFloor`).
+  const marked = readsAsFloor(floor === true, count ?? 0);
   // A DOOR INTO NOTHING IS NOT REASSURANCE, it is a trip. A topic's confirmed
   // zero has no rows behind it, so its door lands the reader in an empty lane
   // framed by the urgent counts of every other slot — which reads as a filter
@@ -176,7 +172,7 @@ function LaneReading({
   const card = (
     <StatCard
       label={label}
-      value={readingFigure(figure, marked)}
+      value={floorFigure(figure, marked, count ?? 0)}
       tone={warning ? "warning" : undefined}
       // The basis says what the figure was taken over. With no figure there was
       // nothing to take it over, so the line says what failed instead.
@@ -214,12 +210,9 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
   // the server maps a source to its lane. Re-deriving that here would be a
   // second copy of it, so an unavailable lane marks the whole strip — which
   // over-marks rather than calling a figure exact over work nobody could see.
-  const bounded = boundedCategories(day);
-  const unread = day.sources_unavailable.length > 0;
-  const floorOf = (category: string): boolean =>
-    day.sources_unavailable.some(
-      (entry) => entry.category === category || !entry.category,
-    ) || bounded.has(category);
+  const scopeCut = scopeWasCut(day);
+  const unread = day.sources_unavailable.length > 0 || scopeCut;
+  const floorOf = floorTest(day);
   return (
     <section className="brief-readings" aria-label={t("brief.readings.label")}>
       <StatStrip testId="brief-readings">
@@ -259,6 +252,7 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
           // it begins. The count of meetings itself is neither good nor bad.
           warning={meetings.unready !== null && meetings.unready > 0}
           floor={
+            scopeCut ||
             day.reach?.find((entry) => entry.source === "meeting")
               ?.more_available ||
             day.sources_unavailable.some(
@@ -273,13 +267,11 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
           scope={day.scope}
           label={t("brief.readings.leads")}
           count={
-            day.sources_unavailable.some(
-              (entry) => entry.source === "lead_response",
-            )
+            day.sources_unavailable.some((entry) => entry.source === "task")
               ? null
               : readings.prospecting
           }
-          floor={floorOf(LEADS)}
+          floor={floorOf(TASKS)}
           // The deadline is the fact that changes what a reader does before
           // lunch, and NULL rather than a guess where the page cannot honestly
           // compute one.
@@ -360,7 +352,7 @@ function meetingsDetail(
 // its plain basis line, which is what the meetings slot does with readiness for
 // the same reason.
 function soonestLeadDeadline(day: Worklist): string | null {
-  const entry = day.counts.find((count) => count.category === LEADS);
+  const entry = day.counts.find((count) => count.category === TASKS);
   if (entry === undefined) {
     // No lead was read at all: nothing to be nearest, and nothing missing.
     return null;
@@ -370,34 +362,15 @@ function soonestLeadDeadline(day: Worklist): string | null {
   }
   let soonest: string | null = null;
   for (const item of day.queue) {
-    const at = item.category === LEADS ? replyDueAt(item) : undefined;
+    const at =
+      item.source === "task" && item.subject?.type === "lead"
+        ? (item.due_at ?? undefined)
+        : undefined;
     if (at !== undefined && (soonest === null || at < soonest)) {
       soonest = at;
     }
   }
   return soonest;
-}
-
-// When this row says a reply is due, or nothing.
-//
-// The moment is read off the at-risk reason BY NAME rather than by taking
-// whatever date the row carries. An overdue lead has already missed its moment,
-// so it is not the next one due — and no test here can hold that distinction,
-// because a breached lead's other reason (`waiting_days`) carries a DAYS value,
-// which a filter reading "any date value" would skip anyway. The kind check is
-// what keeps this right when a lead row grows a second date-valued reason, a
-// first-contact date or a routing moment, that would otherwise read as a reply
-// deadline.
-function replyDueAt(item: WorklistItem): string | undefined {
-  for (const because of item.because) {
-    if (
-      because.kind === "response_due_soon" &&
-      because.value?.kind === "date"
-    ) {
-      return because.value.date;
-    }
-  }
-  return undefined;
 }
 
 type MeetingsReading = Readonly<{
@@ -436,10 +409,6 @@ function meetingsReading(day: Worklist): MeetingsReading {
   };
 }
 
-function readingFigure(value: string, lowerBound: boolean) {
-  return lowerBound ? `${value}+` : value;
-}
-
 // This value describes the same scoped work as the rest of the brief.
 function RiskReading({ day }: Readonly<{ day: Worklist }>) {
   const t = useT();
@@ -467,9 +436,10 @@ function RiskReading({ day }: Readonly<{ day: Worklist }>) {
       label={t("brief.readings.risk")}
       value={
         amount != null && currency
-          ? readingFigure(
+          ? floorFigure(
               formatMoneyCompact(amount, currency, locale),
               incomplete,
+              amount,
             )
           : t(
               nothingFlagged

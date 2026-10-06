@@ -371,11 +371,14 @@ type UpdateOfferInput struct {
 	IfVersion      *int64
 }
 
-func (s *Store) UpdateOffer(ctx context.Context, id ids.OfferID, in UpdateOfferInput) (crmcontracts.Offer, error) {
+// UpdateOffer also answers the rendering a buyer change retired, nil when none
+// was, so the caller can reclaim an object the committed row no longer names.
+func (s *Store) UpdateOffer(ctx context.Context, id ids.OfferID, in UpdateOfferInput) (crmcontracts.Offer, *string, error) {
 	if err := auth.Require(ctx, "offer", principal.ActionUpdate); err != nil {
-		return crmcontracts.Offer{}, err
+		return crmcontracts.Offer{}, nil, err
 	}
 	var out crmcontracts.Offer
+	var retired *string
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
 		current, _, err := visibleOfferLocked(ctx, tx, id, storekit.LiveOnly)
 		if err != nil {
@@ -384,31 +387,17 @@ func (s *Store) UpdateOffer(ctx context.Context, id ids.OfferID, in UpdateOfferI
 		if err := ensureDraft(current); err != nil {
 			return err
 		}
-
-		p := storekit.NewPatch()
+		// Refused before anything is built. The patch is a statement of what
+		// the edit changes, and a currency this draft may not take is not a
+		// field to record — it is a request to turn down.
 		if in.Currency != nil {
-			p.Set("currency", current.Currency, *in.Currency)
-		}
-		if in.BuyerCompanyID != nil {
-			if err := auth.EnsureLinkTarget(ctx, tx, "company", in.BuyerCompanyID.UUID); err != nil {
+			if err := refuseRepricingByCurrency(ctx, tx, current, *in.Currency); err != nil {
 				return err
 			}
-			p.Set("buyer_company_id", current.BuyerCompanyId, *in.BuyerCompanyID)
 		}
-		if in.ValidUntil != nil {
-			p.Set("valid_until", current.ValidUntil, *in.ValidUntil)
-		}
-		if in.IntroText != nil {
-			p.Set("intro_text", current.IntroText, *in.IntroText)
-		}
-		if in.TermsText != nil {
-			p.Set("terms_text", current.TermsText, *in.TermsText)
-		}
-		if in.TemplateID != nil {
-			if err := resolveOfferTemplateRef(ctx, tx, in.TemplateID); err != nil {
-				return err
-			}
-			p.Set("template_id", current.TemplateId, *in.TemplateID)
+		p, dropped, err := offerHeaderPatch(ctx, tx, current, in)
+		if err != nil {
+			return err
 		}
 		if p.Empty() {
 			out, err = readOfferWithLines(ctx, tx, id, storekit.LiveOnly)
@@ -423,9 +412,46 @@ func (s *Store) UpdateOffer(ctx context.Context, id ids.OfferID, in UpdateOfferI
 		if out, err = readOfferWithLines(ctx, tx, id, storekit.LiveOnly); err != nil {
 			return fmt.Errorf("read updated offer: %w", err)
 		}
+		retired = dropped
 		return nil
 	})
-	return out, err
+	if err != nil {
+		return crmcontracts.Offer{}, nil, err
+	}
+	return out, retired, nil
+}
+
+// offerHeaderPatch is the patch UpdateOffer applies to the offer's header, with
+// the rendering a buyer change retired.
+func offerHeaderPatch(ctx context.Context, tx pgx.Tx, current crmcontracts.Offer, in UpdateOfferInput) (*storekit.Patch, *string, error) {
+	p := storekit.NewPatch()
+	var retired *string
+	if in.Currency != nil {
+		p.Set("currency", current.Currency, *in.Currency)
+	}
+	if in.BuyerCompanyID != nil {
+		if err := auth.EnsureLinkTarget(ctx, tx, "company", in.BuyerCompanyID.UUID); err != nil {
+			return nil, nil, err
+		}
+		p.Set("buyer_company_id", current.BuyerCompanyId, *in.BuyerCompanyID)
+		retired = retireRenderingOnBuyerChange(p, current, *in.BuyerCompanyID)
+	}
+	if in.ValidUntil != nil {
+		p.Set("valid_until", current.ValidUntil, *in.ValidUntil)
+	}
+	if in.IntroText != nil {
+		p.Set("intro_text", current.IntroText, *in.IntroText)
+	}
+	if in.TermsText != nil {
+		p.Set("terms_text", current.TermsText, *in.TermsText)
+	}
+	if in.TemplateID != nil {
+		if err := resolveOfferTemplateRef(ctx, tx, in.TemplateID); err != nil {
+			return nil, nil, err
+		}
+		p.Set("template_id", current.TemplateId, *in.TemplateID)
+	}
+	return p, retired, nil
 }
 
 func (s *Store) ArchiveOffer(ctx context.Context, id ids.OfferID) (crmcontracts.Offer, error) {

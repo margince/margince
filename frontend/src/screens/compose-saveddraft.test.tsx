@@ -55,6 +55,7 @@ const SAVED: MailDraft = {
   body: "Half written before lunch",
   html_body: "<p>Half written before lunch</p>",
   version: 3,
+  agent_drafted: false,
   created_at: "2026-09-20T09:00:00Z",
   updated_at: "2026-09-20T09:05:00Z",
 };

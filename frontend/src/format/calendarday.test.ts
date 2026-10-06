@@ -9,6 +9,7 @@ import {
   isRealCalendarDay,
   localDateTimeValue,
   middayInstant,
+  sameCalendarDay,
   today,
 } from "./calendarday";
 import { viewerZone } from "./timezone";
@@ -38,6 +39,16 @@ describe("calendarDay", () => {
     const later = calendarDay(new Date("2026-07-05T12:00:00Z"), "UTC");
     expect(earlier).toBe("2026-07-04");
     expect(earlier < later).toBe(true);
+  });
+});
+
+describe("sameCalendarDay", () => {
+  it("asks on the given zone's clock, where UTC's day can disagree", () => {
+    // 23:30 and 00:30 in Berlin: one UTC day, two of the reader's.
+    const tonight = new Date("2026-09-13T21:30:00Z");
+    const pastMidnight = new Date("2026-09-13T22:30:00Z");
+    expect(sameCalendarDay(tonight, pastMidnight, "UTC")).toBe(true);
+    expect(sameCalendarDay(tonight, pastMidnight, "Europe/Berlin")).toBe(false);
   });
 });
 

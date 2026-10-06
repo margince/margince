@@ -125,6 +125,11 @@ func (h Handlers) GetForecast(
 		}
 		out = ReadingsToWire(period, scope, readings, baseCurrency, at)
 		out.ScopeLimited = &limited
+		refs, err := h.store.SnapshotRefsTx(ctx, tx, period, scope, baseCurrency)
+		if err != nil {
+			return err
+		}
+		out.Snapshots = snapshotRefsToWire(refs)
 
 		// A standing call is an assertion about ONE named population. The
 		// managed-teams reading covers several, so there is no call to look up

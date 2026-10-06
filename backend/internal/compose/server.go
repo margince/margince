@@ -61,7 +61,16 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	// Bootstrap happens at boot from deployment configuration
 	// (EnsureInstallation, A107/ADR-0061) — the HTTP surface only ever
 	// serves the already-bound singleton company.
-	identitySvc := identity.NewService(pool)
+	// The login path reads the enforced-SSO policy fresh per attempt, so an
+	// admin turning the mode on or off takes effect without a restart. A
+	// dedicated settings-store handle rather than the one the settings HANDLERS
+	// hold: both are stateless readers over the same rows, and the login service
+	// is composed here while that store is assembled elsewhere.
+	authPolicy := identity.NewInstallationSettings(InstallationDB(pool), NewSettingsStore(pool))
+	identitySvc := identity.NewService(pool).
+		WithRequireSSO(authPolicy.SSOEnforced).
+		WithRequireMFA(authPolicy.MFARequired).
+		WithGroupRoleMap(authPolicy.GroupRoleMap)
 	// The standing-grant edge: identity mints the credential, agents/runner
 	// stores the answer, and neither may import the other. Both halves of one
 	// fact, committed in one transaction — agentgrantseam.go says why.
@@ -86,10 +95,6 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	}
 	srv.applySendPath(pool)
 	srv.publishListsAvailability(pool)
-	srv.authHandlers = srv.WithReportingAvailable(srv.reportingEnabled)
-	if srv.reportingEnabled {
-		srv.reportMetrics = srv.service
-	}
 	// The tool registry is built HERE, after the options, on the Server that is
 	// actually served — so every engine an option installed is one the tools can
 	// reach. The rebuild each option performs keeps a half-configured Server
@@ -119,9 +124,15 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	// with its own 307 before any registered handler runs, and that redirect
 	// echoes the cleaned path — credential segment and all — into a Location
 	// header. Mounted deeper, the middleware never saw those answers.
+	//
+	// ResolveClientIP sits just inside the panic guard and outside everything
+	// else, so every per-IP limiter behind it — /v1, /oauth, /mcp, the
+	// webhooks, the extension inbound routes — keys on the one address it
+	// decided rather than on whichever proxy the request happened to arrive by.
 	return httpserver.RecoverPanics(log,
-		httpserver.LimitBodies(bodyCeilingFor(uploadCeilings(srv.uploadLimits)),
-			httpserver.SecureHeaders(noStoreOnCredentialPaths(mux))))
+		httpserver.ResolveClientIP(srv.trustedProxies,
+			httpserver.LimitBodies(bodyCeilingFor(uploadCeilings(srv.uploadLimits)),
+				httpserver.SecureHeaders(noStoreOnCredentialPaths(mux)))))
 }
 
 // newServer assembles the module handler sets. Every cross-module edge is
@@ -167,7 +178,8 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// deliberately left unbounded here.
 		searchHandlers: search.NewHandlers(
 			InstallationDB(pool).Bounded(database.CallerPredicateBudget),
-			collections.CountTagReachBatch, activities.EmailSummariesByIDBatch, contacts.LivePartnerCompaniesBatch),
+			collections.CountTagReachBatch, activities.EmailSummariesByIDBatch, contacts.LivePartnerCompaniesBatch,
+			contacts.CompanyLogoURLsBatch),
 		// Constructed, not merely embedded: the handler carries no nil-pool
 		// branch, so the zero value would panic on the first authenticated
 		// read rather than answer anything at all.

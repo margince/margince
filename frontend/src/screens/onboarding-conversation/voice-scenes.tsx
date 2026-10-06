@@ -118,9 +118,9 @@ export function VoiceScene({
  * sub already say the CRM drafts mail in the reader's words; this band adds
  * the two things that make that credible — where the voice comes from, and
  * that it stays theirs alone — without repeating either sentence. The Core
- * sits at the size the brand line uses (`mw-core`'s pattern), not the hero
- * size the build scene reaches for, because this is context beside copy, not
- * the scene's own subject.
+ * sits at the size a brand line uses, not the hero size the build scene
+ * reaches for, because this is context beside copy, not the scene's own
+ * subject.
  */
 // Why the step is worth doing, one press away. It answers a fair question, but
 // it answers it for the reader who stops to ask — a permanently open band of

@@ -34,7 +34,7 @@ func Interval(selection crmcontracts.ReportingSelection, calendar Calendar, at t
 	start := time.Date(day.Year(), day.Month(), 1, 0, 0, 0, 0, zone)
 	end := at
 	switch selection.Period {
-	case "this_month":
+	case reportingThisMonth:
 	case "last_month":
 		end = start
 		start = start.AddDate(0, -1, 0)
@@ -45,14 +45,23 @@ func Interval(selection crmcontracts.ReportingSelection, calendar Calendar, at t
 		start = quarterStart(day, calendar.FiscalStartMonth)
 	case "custom":
 		if selection.Interval == nil {
-			return crmcontracts.ReportingWindow{}, invalid("choose the reporting interval")
+			return crmcontracts.ReportingWindow{}, intervalError("choose the reporting interval")
 		}
 		start, end = selection.Interval.StartAt.In(zone), selection.Interval.EndAt.In(zone)
 	default:
-		return crmcontracts.ReportingWindow{}, invalid("choose a supported reporting period")
+		return crmcontracts.ReportingWindow{}, invalid("choose a supported reporting period: this_month, last_month, last_week, this_quarter or custom")
 	}
-	if !end.After(start) || end.After(at) || end.After(start.AddDate(1, 0, 0)) {
-		return crmcontracts.ReportingWindow{}, invalid("choose a past interval of no more than twelve months")
+	if !end.After(start) {
+		return crmcontracts.ReportingWindow{}, intervalError("choose an end date after the start date")
+	}
+	if end.After(start.AddDate(1, 0, 0)) {
+		return crmcontracts.ReportingWindow{}, intervalError("choose an interval of no more than twelve months")
+	}
+	if !start.Before(at) {
+		return crmcontracts.ReportingWindow{}, intervalError("choose a start date before the reporting cutoff")
+	}
+	if end.After(at) {
+		end = at
 	}
 	return crmcontracts.ReportingWindow{StartAt: start, EndAt: end}, nil
 }
@@ -77,7 +86,7 @@ func TargetWindow(interval crmcontracts.ReportingWindow, basis string, calendar 
 		start = quarterStart(day, calendar.FiscalStartMonth)
 		months = 3
 	default:
-		return crmcontracts.ReportingWindow{}, invalid("choose month or fiscal quarter for targets")
+		return crmcontracts.ReportingWindow{}, invalid("choose target_basis month or fiscal_quarter; it is required even when you read no target")
 	}
 	return crmcontracts.ReportingWindow{StartAt: start, EndAt: start.AddDate(0, months, 0)}, nil
 }

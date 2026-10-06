@@ -15,6 +15,7 @@ package assurance
 
 import (
 	"context"
+	"errors"
 	"os"
 	"testing"
 	"time"
@@ -24,6 +25,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/testdb"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -35,6 +37,11 @@ type scanEnv struct {
 	ws      ids.UUID
 	wsTyped ids.WorkspaceID
 	rep     ids.UUID
+	// The pipeline and stage a seeded deal needs, minted once per env: the
+	// deal's own columns are NOT NULL and the sweep under test reads the deal
+	// row, so a subject id with no row behind it would prove nothing.
+	pipeline ids.UUID
+	stage    ids.UUID
 }
 
 func setupScan(t *testing.T) *scanEnv {
@@ -449,5 +456,294 @@ func TestAFindingWhoseSourceWentUnreadStaysOpen(t *testing.T) {
 	if status != ExceptionConditionCleared {
 		t.Errorf("after a checked night with the buyer answering, the finding is %q, "+
 			"want %q", status, ExceptionConditionCleared)
+	}
+}
+
+// seedDeal writes a real OPEN deal row, because the departed sweep asks the
+// DEAL what it is rather than trusting the set a pass happened to walk. A
+// subject leaves the eligible set through depart, which is the transition
+// these tests are about; seeding one already gone would skip it.
+func (e *scanEnv) seedDeal(t *testing.T) string {
+	t.Helper()
+	ctx := context.Background()
+	if e.pipeline == ids.Nil {
+		e.pipeline, e.stage = ids.NewV7(), ids.NewV7()
+		if _, err := e.owner.Exec(ctx,
+			// Named for this env: pipeline names are unique estate-wide and
+			// these tests run in parallel against one database.
+			`INSERT INTO pipeline (id, name) VALUES ($1, $2)`,
+			e.pipeline, "Assurance "+e.pipeline.String()); err != nil {
+			t.Fatalf("seeding the pipeline: %v", err)
+		}
+		if _, err := e.owner.Exec(ctx,
+			`INSERT INTO stage (id, pipeline_id, name, "position") VALUES ($1, $2, 'Qualified', 1)`,
+			e.stage, e.pipeline); err != nil {
+			t.Fatalf("seeding the stage: %v", err)
+		}
+	}
+	id := ids.NewV7()
+	if _, err := e.owner.Exec(ctx, `
+		INSERT INTO deal (id, name, status, owner_id, pipeline_id, stage_id, source, captured_by)
+		VALUES ($1, 'Assurance subject', 'open', $2, $3, $4, 'seed', 'test')`,
+		id, e.rep, e.pipeline, e.stage); err != nil {
+		t.Fatalf("seeding an open deal: %v", err)
+	}
+	return id.String()
+}
+
+// depart moves a deal out of the eligible set the way a rep does.
+func (e *scanEnv) depart(t *testing.T, dealID string) {
+	t.Helper()
+	if _, err := e.owner.Exec(context.Background(),
+		// closed_at travels with the status: deal_closed_at holds a won deal to
+		// having one, which is the same invariant the sweep leans on.
+		`UPDATE deal SET status = 'won', closed_at = now() WHERE id = $1`, dealID); err != nil {
+		t.Fatalf("winning the deal: %v", err)
+	}
+}
+
+// rejoin puts a deal back in the eligible set, the way a reopen or a restore
+// does.
+func (e *scanEnv) rejoin(t *testing.T, dealID string) {
+	t.Helper()
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE deal SET status = 'open', closed_at = NULL, archived_at = NULL WHERE id = $1`, dealID); err != nil {
+		t.Fatalf("reopening the deal: %v", err)
+	}
+}
+
+// A DEAL THAT COMES BACK GETS ITS FINDING BACK.
+//
+// Departure is not an answer anybody gave, so the scan that closed the finding
+// may open it again — the same reading that reopens a cleared condition. Left
+// closed, a restored deal carries a permanently invisible finding: the queue
+// never shows it, and the nightly pass re-detects the condition every night
+// without being able to say so.
+func TestAFindingReopensWhenItsDealRejoinsTheEligibleSet(t *testing.T) {
+	t.Parallel()
+	e := setupScan(t)
+	ctx := e.as()
+
+	past := time.Now().UTC().AddDate(0, 0, -10)
+	dealID := e.seedDeal(t)
+	subject := Subject{
+		DealID: dealID, Owner: e.rep.String(), ExpectedClose: &past,
+		Category: "commit", HasNextStep: true, HasEconomicBuyer: true,
+	}
+	subjects := []Subject{subject}
+	scanner := NewScanner(e.store,
+		func(context.Context, pgx.Tx) ([]Subject, error) { return subjects, nil },
+		checkedCoverage, DefaultConfig())
+	if _, err := scanner.Scan(ctx, time.Now().UTC(), nil); err != nil {
+		t.Fatal(err)
+	}
+
+	e.depart(t, dealID)
+	subjects = nil
+	if _, err := scanner.Scan(ctx, time.Now().UTC(), nil); err != nil {
+		t.Fatal(err)
+	}
+	if got := e.statusOf(t, dealID); got != ExceptionSubjectDeparted {
+		t.Fatalf("the departed deal's finding is %q, want %q before the reopen", got, ExceptionSubjectDeparted)
+	}
+
+	e.rejoin(t, dealID)
+	subjects = []Subject{subject}
+	if _, err := scanner.Scan(ctx, time.Now().UTC(), nil); err != nil {
+		t.Fatal(err)
+	}
+	if got := e.statusOf(t, dealID); got != "open" {
+		t.Errorf("the finding is %q after its deal rejoined the eligible set, want open — "+
+			"a closing nobody answered must not outlive the fact that caused it", got)
+	}
+}
+
+// A deal that LEAVES the eligible set closes its findings, and says which fact
+// that was.
+//
+// Won, lost or archived, the deal stops being read by the pass — so the
+// clearing beside this one never sees it again and deliberately says nothing:
+// absence is a claim about what was walked. Left there, the finding stays open
+// forever, and the queue carries a row nobody can act on with a count that is
+// wrong by however many deals closed this quarter.
+//
+// The status is asserted, not just the closure: `resolved` would forge an
+// answer nobody gave and `condition_cleared` would claim the condition went
+// when what went is the record.
+func TestAFindingWhoseDealLeftTheEligibleSetIsClosedAsDeparted(t *testing.T) {
+	t.Parallel()
+	e := setupScan(t)
+	ctx := e.as()
+
+	past := time.Now().UTC().AddDate(0, 0, -10)
+	departingID := e.seedDeal(t)
+	stayingID := e.seedDeal(t)
+	subject := func(id string) Subject {
+		return Subject{
+			DealID: id, Owner: e.rep.String(), ExpectedClose: &past,
+			Category: "commit", HasNextStep: true, HasEconomicBuyer: true,
+		}
+	}
+	subjects := []Subject{subject(departingID), subject(stayingID)}
+	scanner := NewScanner(e.store,
+		func(context.Context, pgx.Tx) ([]Subject, error) { return subjects, nil },
+		checkedCoverage, DefaultConfig())
+
+	if _, err := scanner.Scan(ctx, time.Now().UTC(), nil); err != nil {
+		t.Fatal(err)
+	}
+
+	// The rep wins it, so it leaves the set the pass reads.
+	e.depart(t, departingID)
+	subjects = []Subject{subject(stayingID)}
+	if _, err := scanner.Scan(ctx, time.Now().UTC(), nil); err != nil {
+		t.Fatal(err)
+	}
+
+	if got := e.statusOf(t, departingID); got != ExceptionSubjectDeparted {
+		t.Errorf("the won deal's finding is %q, want %q — left open it sits in the queue with "+
+			"nothing a reader can do about it", got, ExceptionSubjectDeparted)
+	}
+	// The deal still in the set is untouched: its condition is still true.
+	if got := e.statusOf(t, stayingID); got != "open" {
+		t.Errorf("a deal still in the eligible set was closed as %q — the sweep has just closed "+
+			"a finding somebody still owes", got)
+	}
+}
+
+// A pass that read NO deals closes nothing as departed.
+//
+// The sweep asks each finding's own deal rather than taking the complement of
+// the set the pass walked. Complement would make a read that returned nothing —
+// or half — look like every deal in the installation leaving at once, which is
+// the one direction this must not fail in.
+func TestAPassThatReadNoDealsClosesNothingAsDeparted(t *testing.T) {
+	t.Parallel()
+	e := setupScan(t)
+	ctx := e.as()
+
+	past := time.Now().UTC().AddDate(0, 0, -10)
+	liveID := e.seedDeal(t)
+	subjects := []Subject{{
+		DealID: liveID, Owner: e.rep.String(), ExpectedClose: &past,
+		Category: "commit", HasNextStep: true, HasEconomicBuyer: true,
+	}}
+	scanner := NewScanner(e.store,
+		func(context.Context, pgx.Tx) ([]Subject, error) { return subjects, nil },
+		checkedCoverage, DefaultConfig())
+	if _, err := scanner.Scan(ctx, time.Now().UTC(), nil); err != nil {
+		t.Fatal(err)
+	}
+
+	subjects = nil
+	if _, err := scanner.Scan(ctx, time.Now().UTC(), nil); err != nil {
+		t.Fatal(err)
+	}
+	if got := e.statusOf(t, liveID); got != "open" {
+		t.Errorf("a still-open deal's finding is %q after a pass that read nothing — an empty "+
+			"read is not evidence that the deal left", got)
+	}
+}
+
+// statusOf reads one deal's close-past finding back.
+func (e *scanEnv) statusOf(t *testing.T, dealID string) string {
+	t.Helper()
+	var status string
+	if err := e.store.InTx(e.as(), func(ctx context.Context, tx pgx.Tx) error {
+		return tx.QueryRow(ctx,
+			`SELECT status FROM assurance_exception WHERE subject_id = $1 AND type = $2`,
+			dealID, TypeClosePast).Scan(&status)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	return status
+}
+
+// readOnly is the same rep without the forecast UPDATE grant: they may look at
+// the queue and may not change what is in it.
+func (e *scanEnv) readOnly() context.Context {
+	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + e.rep.String(), UserID: e.rep,
+		Permissions: principal.Permissions{
+			RoleKeys: []string{"rep"},
+			Objects:  map[string]principal.ObjectGrant{"forecast": {Read: true}},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+}
+
+// Closing a finding is an UPDATE of the forecast, whichever sweep does it.
+//
+// Both sweeps close rows nobody answered, so a caller who may only read the
+// queue must not reach either. The sentinel is what says so: a permitted sweep
+// over a deal that is still open closes nothing either, so a row count cannot
+// tell a refusal from a pass with nothing to do.
+func TestNeitherClosingSweepRunsForAReaderWhoMayNotUpdate(t *testing.T) {
+	t.Parallel()
+	e := setupScan(t)
+
+	past := time.Now().UTC().AddDate(0, 0, -10)
+	dealID := e.seedDeal(t)
+	subjects := []Subject{{
+		DealID: dealID, Owner: e.rep.String(), ExpectedClose: &past,
+		Category: "commit", HasNextStep: true, HasEconomicBuyer: true,
+	}}
+	scanner := NewScanner(e.store,
+		func(context.Context, pgx.Tx) ([]Subject, error) { return subjects, nil },
+		checkedCoverage, DefaultConfig())
+	if _, err := scanner.Scan(e.as(), time.Now().UTC(), nil); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := e.store.InTx(e.readOnly(), func(ctx context.Context, tx pgx.Tx) error {
+		if _, err := e.store.CloseDeparted(ctx, tx); !errors.Is(err, apperrors.ErrPermissionDenied) {
+			t.Errorf("CloseDeparted answered %v, want %v", err, apperrors.ErrPermissionDenied)
+		}
+		if _, err := e.store.CloseCleared(ctx, tx, []string{TypeClosePast}, []string{dealID}, nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
+			t.Errorf("CloseCleared answered %v, want %v", err, apperrors.ErrPermissionDenied)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	// The deal is still open, so nothing else in this database can close its
+	// finding: CloseDeparted reaches only departed subjects, and CloseCleared
+	// only the subject ids its caller names.
+	if got := e.statusOf(t, dealID); got != "open" {
+		t.Errorf("the finding is %q after a refused sweep, want it untouched at open", got)
+	}
+}
+
+// A sweep with nothing to sweep over closes nothing and says so without a
+// statement: an empty type or subject list is a pass that evaluated nothing,
+// and `= ANY('{}')` would match no row anyway — the early answer is what keeps
+// "nothing to do" from reading as "everything cleared".
+func TestClearingWithoutTypesOrSubjectsClosesNothing(t *testing.T) {
+	t.Parallel()
+	e := setupScan(t)
+
+	dealID := e.seedDeal(t)
+	if err := e.store.InTx(e.as(), func(ctx context.Context, tx pgx.Tx) error {
+		for _, c := range []struct {
+			name     string
+			types    []string
+			subjects []string
+		}{
+			{"no types", nil, []string{dealID}},
+			{"no subjects", []string{TypeClosePast}, nil},
+		} {
+			closed, err := e.store.CloseCleared(ctx, tx, c.types, c.subjects, nil)
+			if err != nil {
+				t.Errorf("%s: %v", c.name, err)
+			}
+			if closed != 0 {
+				t.Errorf("%s: closed %d finding(s), want none", c.name, closed)
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
 	}
 }

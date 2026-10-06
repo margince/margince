@@ -36,8 +36,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"maps"
-	"slices"
 	"strings"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -93,16 +91,6 @@ type offerDraftProduct struct {
 	Name           string `json:"name"`
 	UnitPriceMinor int64  `json:"unit_price_minor"`
 	Currency       string `json:"currency"`
-}
-
-// offerDraftExpectedLine is one line as the corpus asserts it: the price the
-// staged line must carry and whether the ladder must have grounded it. Both,
-// because they are different claims — a scenario pinning only the number would
-// pass a draft that guessed it, and price_grounded is what the offer shows a
-// human as the difference between an evidenced price and a placeholder.
-type offerDraftExpectedLine struct {
-	UnitPriceMinor int64 `json:"unit_price_minor"`
-	PriceGrounded  bool  `json:"price_grounded"`
 }
 
 // offerDraftCases serves the one site that drafts priced offer lines.
@@ -211,64 +199,6 @@ func refuseUndraftableDeal(f offerDraftFixture) error {
 		}
 	}
 	return nil
-}
-
-// refuseUnstageableExpectation names an expectation this site's own gate could
-// never let a draft satisfy: a citation the context does not carry is dropped on
-// every reply, an ungrounded line is priced at zero on every reply, and a
-// grounded price is only ever the one the cited evidence states or the one a
-// rate-card product in the offer's currency charges. Each would measure nothing
-// for as long as it stayed in the corpus. Naming it here costs a parse; finding
-// it later costs a paid run.
-//
-// Sorted so an expectation with two offences names the same one every time.
-func refuseUnstageableExpectation(
-	want map[string]offerDraftExpectedLine,
-	dealContext []dealContextItem,
-	catalog []crmcontracts.Product,
-	currency string,
-) error {
-	captured := make(map[string]string, len(dealContext))
-	for _, item := range dealContext {
-		captured[item.SourceID] = item.Snippet
-	}
-	for _, sourceID := range slices.Sorted(maps.Keys(want)) {
-		line := want[sourceID]
-		snippet, known := captured[sourceID]
-		switch {
-		case !known:
-			return fmt.Errorf(
-				"%s: the scenario expects a line citing %q, which the fixture never captures",
-				offerDraftSite, sourceID)
-		case !line.PriceGrounded && line.UnitPriceMinor != 0:
-			return fmt.Errorf(
-				"%s: the scenario expects %q priced %d and ungrounded, and the ladder prices every ungrounded line at zero",
-				offerDraftSite, sourceID, line.UnitPriceMinor)
-		case line.PriceGrounded && !groundablePrice(line.UnitPriceMinor, snippet, catalog, currency):
-			return fmt.Errorf(
-				"%s: the scenario expects %q grounded at %d, which neither the cited context states nor any %s "+
-					"rate-card product charges", offerDraftSite, sourceID, line.UnitPriceMinor, currency)
-		}
-	}
-	return nil
-}
-
-// groundablePrice asks the ladder's own question of a scenario: is there a rung
-// that could reach this price at all? The conversation rung needs the amount
-// inside the text a line cites — and a cited snippet is a substring of that
-// text, so the price appearing nowhere in the item means it appears in no
-// citation of it — and the rate-card rung needs a live product charging it in
-// the offer's own currency.
-func groundablePrice(priceMinor int64, snippet string, catalog []crmcontracts.Product, currency string) bool {
-	if priceEvidencedInSnippet(snippet, priceMinor, currency) {
-		return true
-	}
-	for _, product := range catalog {
-		if product.Currency == currency && product.UnitPriceMinor == priceMinor {
-			return true
-		}
-	}
-	return false
 }
 
 // mintOfferDraftCatalog turns the fixture's rate card into the products the
@@ -445,51 +375,4 @@ func offerLineName(candidate offerLineCandidate, index int) string {
 		return fmt.Sprintf("the line %q", description)
 	}
 	return fmt.Sprintf("line %d, which describes nothing", index+1)
-}
-
-// disagreements names every expected line the staged draft does not carry. All
-// of them, not the first: a draft that priced one line right and two wrong is
-// not the near miss one line would read as.
-//
-// A line is identified by the context item it cites, and ANY staged line citing
-// that item can satisfy the scenario — every staged line reaches the offer, so
-// there is no first-wins rule to mirror here.
-//
-// Sorted so a run with two disagreements names them in the same order every time.
-func (c *offerDraftCase) disagreements(staged []deals.StagedOfferLineInput) []string {
-	var out []string
-	for _, sourceID := range slices.Sorted(maps.Keys(c.expected)) {
-		want := c.expected[sourceID]
-		var priced []string
-		satisfied := false
-		for _, line := range staged {
-			switch {
-			case line.Evidence.SourceID != sourceID:
-			case line.UnitPriceMinor == want.UnitPriceMinor && line.PriceGrounded == want.PriceGrounded:
-				satisfied = true
-			default:
-				priced = append(priced, offerPriceLine(line.UnitPriceMinor, line.PriceGrounded))
-			}
-		}
-		switch {
-		case satisfied:
-		case len(priced) == 0:
-			out = append(out, fmt.Sprintf("no staged line cites %q, which the scenario expects priced %s",
-				sourceID, offerPriceLine(want.UnitPriceMinor, want.PriceGrounded)))
-		default:
-			out = append(out, fmt.Sprintf("the line citing %q is priced %s where the scenario expects %s",
-				sourceID, strings.Join(priced, " and "), offerPriceLine(want.UnitPriceMinor, want.PriceGrounded)))
-		}
-	}
-	return out
-}
-
-// offerPriceLine renders a price for a human reading a disagreement, in the
-// minor units the offer stores and the ladder's own two words for where the
-// number came from.
-func offerPriceLine(priceMinor int64, grounded bool) string {
-	if grounded {
-		return fmt.Sprintf("%d minor units, grounded", priceMinor)
-	}
-	return fmt.Sprintf("%d minor units, ungrounded", priceMinor)
 }

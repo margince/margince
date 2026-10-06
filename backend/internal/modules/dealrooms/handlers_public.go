@@ -300,7 +300,7 @@ func (h Handlers) ReplyBuyerRoomThread(w http.ResponseWriter, r *http.Request, t
 		httperr.Write(w, r, err)
 		return
 	}
-	thread, err := h.store.ReplyAsBuyer(r.Context(), sess, ids.UUID(threadID), body, source)
+	thread, err := h.store.ReplyAsBuyer(r.Context(), sess, ids.UUID(threadID), body, source, optionalUUID(req.RequestId))
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

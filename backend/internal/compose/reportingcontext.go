@@ -16,7 +16,6 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -47,6 +46,10 @@ func reportingCalendar(ctx context.Context, tx pgx.Tx) (reporting.Calendar, erro
 	}
 	out.FiscalStartMonth, err = identity.FiscalYearStartMonthOf(ctx, tx)
 	return out, err
+}
+
+func errUnsupportedCloseWindow() error {
+	return fmt.Errorf("choose a supported expected-close window, all_open or fiscal_quarter: %w", apperrors.ErrInvalidArgument)
 }
 
 func reportingContext(ctx context.Context, tx pgx.Tx, selection crmcontracts.ReportingSelection, framework crmcontracts.ReportingFramework, at time.Time) (crmcontracts.ReportingContext, error) {
@@ -82,7 +85,7 @@ func reportingContext(ctx context.Context, tx pgx.Tx, selection crmcontracts.Rep
 		}
 		out.CloseInterval = &closeWindow
 	default:
-		return out, fmt.Errorf("choose a supported expected-close window: %w", apperrors.ErrInvalidArgument)
+		return out, errUnsupportedCloseWindow()
 	}
 	members, memberErr := reportingMembers(ctx, tx, out.Scope)
 	err = memberErr
@@ -119,5 +122,5 @@ func reportingMemberStrings(frame crmcontracts.ReportingContext) []string {
 
 func newReportingService(pool *pgxpool.Pool, now func() time.Time) *reporting.Service {
 	db := InstallationDB(pool)
-	return reporting.NewService(db, metricEvaluator{forecast: forecasting.NewStore(db)}, reportingAuthority{users: identity.NewService(pool)}, reportingCalendar, now)
+	return reporting.NewService(db, metricEvaluator{forecast: newForecastStore(db)}, reportingAuthority{users: identity.NewService(pool)}, reportingCalendar, now)
 }

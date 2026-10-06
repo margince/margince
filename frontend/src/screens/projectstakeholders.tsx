@@ -30,7 +30,6 @@ import {
   type RecordPickerCandidate,
 } from "../design-system/recordpicker";
 import { Select } from "../design-system/select";
-import { Stack } from "../design-system/stack";
 import { useT } from "../i18n";
 import { problemMessageOf, throwProblem } from "./common";
 import { projectRoleLabel } from "./record360";
@@ -148,35 +147,32 @@ export function AddProjectStakeholder({
         pending={seat.isPending}
         error={seat.isError ? problemMessageOf(seat.error, t) : null}
       >
-        <Stack gap="2">
-          {/* Says what a second seating does before anybody tries it: the same
-              contact named again is a re-role, not a duplicate row. */}
-          <p className="t-caption">{t("project.stakeholders.addHint")}</p>
-          <RecordPicker
-            label={t("project.stakeholders.searchLabel")}
-            searchTargets={searchContacts}
-            onPick={setContact}
-            selected={contact}
-            disabled={seat.isPending}
-          />
-          <Field label={t("rel.role")}>
-            {(control) => (
-              <Select
-                {...control}
-                value={role}
-                onChange={(value) => {
-                  if (isStakeholderRole(value)) {
-                    setRole(value);
-                  }
-                }}
-                options={PROJECT_STAKEHOLDER_ROLES.map((value) => ({
-                  value,
-                  label: projectRoleLabel(value, t),
-                }))}
-              />
-            )}
-          </Field>
-        </Stack>
+        {/* Seating a contact again re-roles them rather than adding a row. */}
+        <p className="t-caption">{t("project.stakeholders.addHint")}</p>
+        <RecordPicker
+          label={t("project.stakeholders.searchLabel")}
+          searchTargets={searchContacts}
+          onPick={setContact}
+          selected={contact}
+          disabled={seat.isPending}
+        />
+        <Field label={t("rel.role")}>
+          {(control) => (
+            <Select
+              {...control}
+              value={role}
+              onChange={(value) => {
+                if (isStakeholderRole(value)) {
+                  setRole(value);
+                }
+              }}
+              options={PROJECT_STAKEHOLDER_ROLES.map((value) => ({
+                value,
+                label: projectRoleLabel(value, t),
+              }))}
+            />
+          )}
+        </Field>
       </ConfirmModal>
     </>
   );

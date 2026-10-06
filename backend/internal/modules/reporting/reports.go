@@ -98,7 +98,7 @@ func (s *Service) ListReports(ctx context.Context, after *ids.UUID, limit int, s
 		}
 		where += " AND d.archived_at IS NULL"
 		if scheduled {
-			where += " AND EXISTS(SELECT 1 FROM report_schedule scheduled WHERE scheduled.report_id=d.id AND scheduled.enabled)"
+			where += " AND EXISTS(SELECT 1 FROM report_schedule scheduled WHERE scheduled.report_id=d.id)"
 		}
 		if after != nil {
 			where += " AND d.id>" + b.add(*after)

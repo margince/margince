@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { screen, userEvent, within } from "storybook/test";
 import { ReportingReportDetail } from "./reporting.report";
 import {
   reportingEditions,
@@ -70,14 +70,24 @@ export const Expired: Story = {
   },
 };
 
-export const RunFailures: Story = {
+export const CapturingAndFailures: Story = {
   render: () => {
     installFetchStub({
       ...reportingStoryRoutes(),
       "GET /analytics/reports/report/schedules": () =>
         jsonResponse({ data: [reportingSchedule] }),
       "GET /analytics/reports/report/executions": () =>
-        jsonResponse({ data: reportingExecutions }),
+        jsonResponse({
+          data: [
+            {
+              ...reportingExecutions[0],
+              id: "queued",
+              status: "pending",
+              edition_id: undefined,
+            },
+            ...reportingExecutions,
+          ],
+        }),
     });
     return (
       <StoryProviders>
@@ -92,6 +102,11 @@ export const ArchiveConfirmation: Story = {
   play: async ({ canvasElement }) => {
     await userEvent.click(
       await within(canvasElement).findByRole("button", {
+        name: "Report actions",
+      }),
+    );
+    await userEvent.click(
+      await screen.findByRole("button", {
         name: "Archive report",
       }),
     );

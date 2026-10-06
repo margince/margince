@@ -475,5 +475,42 @@ const (
 	// in list_member_event. The list ids go into the archive's own audit
 	// evidence, which an un-archive reads to put the memberships back; no
 	// reader is handed one, so there is no list scope to apply.
-	modulesTierUnscopedCeiling = 109
+	//
+	// 110, 111: collections.Store.compareSnapshot's two statements write a Live
+	// List's entered and left events under the system checker, which has to see
+	// every record for the history to be whole. They hand the caller counts,
+	// never a reference, and every read of the events they write applies the
+	// reader's current row scope (observedVisibleClause).
+	//
+	// 112: collections.lastChecks reads the latest check of lists its caller
+	// already found through their sharing (ListLists, GetList); it answers only
+	// for the ids it was handed, so it names no list the reader could not find.
+	//
+	// 113: contacts.nameDomainClaimant is the dedupe ladder's rival for a company
+	// named after a domain, the sibling of exactCompanyByDomain above it and
+	// unscoped for the same reason: the ladder scores every company in the
+	// installation, and the id it finds becomes a review row, never a response.
+	//
+	// 114: contacts.OpenDuplicateCompanyPairsTx is system-only and hands Deal
+	// Scout the open company pairs, so it can withdraw a suggestion raised twice
+	// for one business. The ids select suggestions to supersede; a rep sees a
+	// suggestion only through deals' visibility clause.
+	//
+	// 115: capture.AutoEnrichStore.ParkedEnrichments is the operator recovery's
+	// list of companies whose enrichment an outage exhausted. System-only, no
+	// seat to narrow to, and the ids go straight into the reopen of each
+	// company's own backoff cursor; nothing returns one to a reader, and the
+	// sweep that then re-reads them applies its own eligibility.
+	//
+	// 116: consent.revokeOverrideAdmittedTx asks whether the vouch being revoked
+	// belongs to the contact named or to the survivor a merge folded it into. A
+	// vouch chain spans records by construction (a merge copies the vouch
+	// onto the survivor and leaves the original on the predecessor, linked by
+	// carried_from), so the lookup reaches
+	// contact_id across several rows and no single row scope can bound it.
+	// auth.EnsureRetractable has already been taken on both the named contact
+	// and its survivor in the same transaction, so the caller was shown to reach
+	// every record the question can resolve to. The read hands back no
+	// reference: the only row returned is the FOR UPDATE row's decided_by_level.
+	modulesTierUnscopedCeiling = 116
 )

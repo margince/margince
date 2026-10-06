@@ -41,17 +41,7 @@ func ParseBounce(raw []byte) (connector.BounceReport, bool) {
 	if err != nil {
 		return connector.BounceReport{}, false
 	}
-	contentType, params, err := reader.Header.ContentType()
-	if err != nil || contentType != "multipart/report" || !strings.EqualFold(params["report-type"], "delivery-status") {
-		return connector.BounceReport{}, false
-	}
-	// Only the message-transport system reports a delivery outcome. The From
-	// is attacker-writable, so this is a bar and not a proof — what makes a
-	// forged report inert is the recipient and mailbox-owner match the store
-	// applies — but an ordinary correspondent's mail must never reach the
-	// bounce path at all.
-	fromList, _ := reader.Header.AddressList("From")
-	if !isDeliverySystemSender(firstAddress(fromList)) {
+	if !isDeliveryReport(reader.Header) {
 		return connector.BounceReport{}, false
 	}
 
@@ -224,4 +214,26 @@ func RecordIfBounce(ctx context.Context, raw []byte, sink connector.BounceSink) 
 		return nil
 	}
 	return sink.RecordBounce(ctx, report)
+}
+
+// isDeliveryReport answers whether a message IS a delivery-status notification,
+// by the shape RFC 3464 defines one by: `multipart/report` carrying
+// `report-type=delivery-status`.
+//
+// THE SENDER IS NOT PART OF THE TEST. RFC 3464 puts no requirement on the From,
+// and real reporters use their own domains — a bar on mailer-daemon-shaped
+// localparts reads a convention as a rule and misses every reporter that does
+// not follow it, which is a bounce the workspace never learns about.
+//
+// It is not a proof of origin either, and does not need to be: the From is
+// attacker-writable whatever it says, and what makes a forged report inert is
+// the recipient and mailbox-owner match the store applies afterwards. The shape
+// is what decides whether this is a report at all.
+func isDeliveryReport(header mail.Header) bool {
+	contentType, params, err := header.ContentType()
+	if err != nil {
+		return false
+	}
+	return contentType == "multipart/report" &&
+		strings.EqualFold(params["report-type"], "delivery-status")
 }

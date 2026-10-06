@@ -131,19 +131,35 @@ func linkFederatedIdentity(ctx context.Context, tx pgx.Tx, userID ids.UserID, pr
 	return wasRelink, nil
 }
 
-// LoginViaFederatedIdentity resolves a verified (provider, subject, email)
-// tuple to a session, mirroring Service.Login's shape: mint the token first,
-// then one transaction that links/resolves, mints the session row, and
-// audits — the same unexported session helpers Login already uses, no
+// LoginViaFederatedIdentity resolves the verified (provider, subject, email)
+// tuple read off the claims to a session, mirroring Service.Login's shape: mint
+// the token first, then one transaction that links/resolves, mints the session
+// row, and audits — the same unexported session helpers Login already uses, no
 // parallel implementation. Sessions carry no workspace column (ADR-0091 §8),
 // so unlike Login this needs no bound installation context.
-func (s *Service) LoginViaFederatedIdentity(ctx context.Context, provider, subject, email string) (string, error) {
+//
+// The token's groups grant mapped roles (grouprolesync.go) in the same
+// transaction as the session, so a member never holds a session that predates
+// the grant their sign-in earned. Its given name fills an empty greeting name
+// on the first link only.
+func (s *Service) LoginViaFederatedIdentity(ctx context.Context, provider string, claims OIDCClaims) (string, error) {
+	subject, email, groups := claims.Subject, claims.Email, claims.Groups
 	rawToken, tokenHash, err := mintSessionToken()
 	if err != nil {
 		return "", fmt.Errorf("identity: mint session token: %w", err)
 	}
 
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+		// A mapped grant is a role_assignment write and serializes with every
+		// other one, so an admin's re-role cannot interleave with a sign-in
+		// granting the role they just took away. Ahead of every row lock below,
+		// or the order inverts against ChangeUserRole's; a groupless token
+		// grants nothing and so takes nothing.
+		if len(groups) > 0 {
+			if err := lockAuthorization(ctx, tx); err != nil {
+				return err
+			}
+		}
 		userID, firstLink, resolveErr := s.resolveFederatedUser(ctx, tx, provider, subject, email)
 		if resolveErr != nil {
 			return resolveErr
@@ -151,6 +167,22 @@ func (s *Service) LoginViaFederatedIdentity(ctx context.Context, provider, subje
 		wasRelink, linkErr := linkFederatedIdentity(ctx, tx, userID, provider, subject, email)
 		if linkErr != nil {
 			return linkErr
+		}
+		if err := fillGreetingNameFromProvider(ctx, tx, userID, provider, claims.GivenName,
+			firstLink && !wasRelink); err != nil {
+			return err
+		}
+		// The map is read HERE, inside the transaction the grant commits in and
+		// only once the member is admitted: a pre-transaction read could grant
+		// from an entry whose removal committed before this login did, and a
+		// refused sign-in never pays for the read at all. Groupless tokens still
+		// read nothing (mappedRoleKeys).
+		mappedRoles, mapErr := s.mappedRoleKeys(ctx, tx, groups)
+		if mapErr != nil {
+			return mapErr
+		}
+		if grantErr := s.grantMappedRoles(ctx, tx, userID, mappedRoles); grantErr != nil {
+			return grantErr
 		}
 		if insErr := insertSession(ctx, tx, userID, tokenHash); insErr != nil {
 			return fmt.Errorf("identity: insert session: %w", insErr)

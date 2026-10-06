@@ -52,10 +52,8 @@ The 2 tables owned by `migration`, as the migrations build them. [Back to the en
 
 - `import_run_connector_check` — `CHECK ((connector = ANY (ARRAY['csv', 'salesforce'])))`
 - `import_run_status_check` — `CHECK ((status = ANY (ARRAY['pending', 'validating', 'awaiting_approval', 'running', 'complete', 'failed', 'undoing', 'undone'])))`
-- `uq_import_run` — `UNIQUE (id)`
 
 **Indexes**
 
 - `idx_import_run_status` — `btree (status)`
 - `import_run_pkey` — `unique, btree (id)`
-- `uq_import_run` — `unique, btree (id)`

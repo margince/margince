@@ -12,6 +12,8 @@ package integration
 import (
 	"context"
 	"errors"
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
@@ -75,6 +77,41 @@ func TestAListIsFoundByItsSharing(t *testing.T) {
 				t.Errorf("%s does not find %q: %v", who, name, got)
 			}
 		}
+	}
+}
+
+func TestTheLibraryNarrowsToTheSharingAsked(t *testing.T) {
+	e := Setup(t)
+	store := collections.NewStore(e.DB())
+	rep1 := e.As(e.Rep1, []ids.UUID{e.Team1}, listPerms())
+	for name, sharing := range map[string]string{"Mine": "private", "Ours": "team", "Everyone's": "workspace"} {
+		if _, err := store.CreateList(rep1, collections.CreateListInput{
+			Name: name, EntityType: "contact", Sharing: sharing,
+		}); err != nil {
+			t.Fatalf("create %s: %v", name, err)
+		}
+	}
+	for asked, want := range map[string][]string{
+		"private":        {"Mine"},
+		"team,workspace": {"Everyone's", "Ours"},
+	} {
+		lists, _, err := store.ListLists(rep1, collections.ListFilter{
+			Sharing: strings.Split(asked, ","), Archived: storekit.LiveOnly,
+		})
+		if err != nil {
+			t.Fatalf("%s: %v", asked, err)
+		}
+		var got []string
+		for _, l := range lists {
+			got = append(got, l.Name)
+		}
+		if !slices.Equal(got, want) {
+			t.Errorf("sharing %s finds %v, want %v", asked, got, want)
+		}
+	}
+	var bad *collections.BadInputError
+	if _, _, err := store.ListLists(rep1, collections.ListFilter{Sharing: []string{"everyone"}}); !errors.As(err, &bad) {
+		t.Fatalf("an unknown sharing answered %v, want a refusal naming it", err)
 	}
 }
 
@@ -183,7 +220,7 @@ func TestALiveListExportHoldsOnlyTheRowsItsReaderMaySee(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		result, err := compose.NewFilteredExportWriter(e.Pool).WriteListExport(tc.reader, engine, src.Predicate, "json", list.ID)
+		result, err := compose.NewFilteredExportWriter(e.Pool).WriteListExport(tc.reader, engine, src, "json", list.ID)
 		if err != nil || result.RowCount != tc.want {
 			t.Errorf("%s exported %d rows (%v), want %d", who, result.RowCount, err, tc.want)
 		}

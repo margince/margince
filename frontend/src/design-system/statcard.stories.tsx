@@ -10,11 +10,8 @@ import { IconAction } from "./iconaction";
 
 // StatCard — one reading with the basis it was drawn from.
 //
-// Split out of `atoms.stories.tsx`, where its frames sat among two dozen
-// unrelated atoms: this is the one control in that file whose whole argument is
-// COMPARISON — every tile the same size, in the same face, with its figure in
-// the same place — and that argument is only readable when the frames are read
-// as a set rather than found one at a time down a page of chips and badges.
+// Its frames argue by COMPARISON — every tile the same size, in the same face,
+// with its figure in the same place — so they are read together, as a set.
 //
 // Read every frame in BOTH themes with the toolbar's Theme control. Each tone
 // and the alert tint are `color-mix()`es of canonical tokens, so a tile can be

@@ -9,8 +9,16 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { en } from "../i18n/en";
+import { FiltersScreen } from "./filters";
 import { ListLibrary } from "./listlibrary";
-import { listsMe, liveList, shortlist } from "./lists.fixtures";
+import {
+  listsMe,
+  liveList,
+  OTHER_OWNER_ID,
+  shortlist,
+  TEAM_ID,
+  teamsPage,
+} from "./lists.fixtures";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 afterEach(() => {
@@ -27,7 +35,29 @@ function library() {
   );
 }
 
-describe("the team's lists", () => {
+describe("the shared views", () => {
+  it("is called Shared views, beside My views", async () => {
+    installFetchStub({
+      "GET /me": listsMe(true),
+      "GET /lists": () => jsonResponse({ data: [], page: { has_more: false } }),
+    });
+    render(
+      <StoryProviders>
+        <FiltersScreen id="lists" />
+      </StoryProviders>,
+    );
+    expect(en["lists.section.lists"]).toBe("Shared views");
+    expect(
+      await screen.findByRole("heading", { name: "Shared views" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Shared views" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: en["lists.section.views"] }),
+    ).toBeInTheDocument();
+  });
+
   it("names each list with its kind, count, steward and a steward that is missing", async () => {
     installFetchStub({
       "GET /me": listsMe(true),
@@ -51,6 +81,78 @@ describe("the team's lists", () => {
       within(chosen).getByText(en["lists.health.ownerless"]),
     ).toBeInTheDocument();
     expect(within(chosen).getByText(en["lists.noSteward"])).toBeInTheDocument();
+  });
+
+  it("shows what a Live List gained and lost since the last visit, and nothing on a quiet or first-visited list", async () => {
+    installFetchStub({
+      "GET /me": listsMe(true),
+      "GET /lists": () =>
+        jsonResponse({
+          data: [
+            liveList,
+            {
+              ...liveList,
+              id: "01a0f000-0000-7000-8000-000000000009",
+              name: "Quiet list",
+              since_last_visit: {
+                since: "2026-09-28T17:00:00Z",
+                entered: 0,
+                left: 0,
+              },
+            },
+            shortlist,
+          ],
+          page: { has_more: false },
+        }),
+    });
+    library();
+    const live = (await screen.findByText(liveList.name)).closest(
+      "tr",
+    ) as HTMLElement;
+    expect(within(live).getByText("+3 / −1")).toBeInTheDocument();
+    expect(
+      within(live).getByText("3 joined and 1 left since your last visit"),
+    ).toBeInTheDocument();
+    for (const quiet of ["Quiet list", shortlist.name]) {
+      const row = screen.getByText(quiet).closest("tr") as HTMLElement;
+      expect(within(row).queryByText(/since your last visit/)).toBeNull();
+    }
+  });
+
+  it("says who can find each list: a named team, the owner's teams, everyone", async () => {
+    installFetchStub({
+      "GET /me": listsMe(true, [TEAM_ID]),
+      "GET /teams": () => jsonResponse(teamsPage),
+      "GET /lists": () =>
+        jsonResponse({
+          data: [
+            { ...liveList, id: "named", name: "Named", team_id: TEAM_ID },
+            { ...liveList, id: "mine", name: "Mine" },
+            {
+              ...liveList,
+              id: "theirs",
+              name: "Theirs",
+              owner_id: OTHER_OWNER_ID,
+            },
+            { ...shortlist, id: "all", name: "Launch deck" },
+          ],
+          page: { has_more: false },
+        }),
+    });
+    library();
+    const audienceOf = async (name: string) =>
+      ((await screen.findByText(name)).closest("tr") as HTMLElement)
+        .textContent;
+    await vi.waitFor(async () =>
+      expect(await audienceOf("Named")).toContain("Team Germany"),
+    );
+    expect(await audienceOf("Mine")).toContain(en["lists.audience.yourTeams"]);
+    expect(await audienceOf("Theirs")).toContain(
+      en["lists.audience.ownerTeams"],
+    );
+    expect(await audienceOf("Launch deck")).toContain(
+      en["lists.sharing.workspace"],
+    );
   });
 
   it("asks the server again when the reader searches or narrows by kind", async () => {
@@ -81,6 +183,37 @@ describe("the team's lists", () => {
         asked.some((q) => q.includes("q=K5") && q.includes("list_type=static")),
       ).toBe(true),
     );
+  });
+
+  it("starts a Shortlist shared with the team the reader picked", async () => {
+    const posted: unknown[] = [];
+    installFetchStub({
+      "GET /me": listsMe(true, [TEAM_ID]),
+      "GET /teams": () => jsonResponse(teamsPage),
+      "GET /lists": () => jsonResponse({ data: [], page: { has_more: false } }),
+      "POST /lists": (body) => {
+        posted.push(body);
+        return jsonResponse({ ...shortlist, id: "new-list" }, 201);
+      },
+    });
+    const user = userEvent.setup();
+    library();
+    await user.click(
+      await screen.findByRole("button", { name: en["lists.newShortlist"] }),
+    );
+    await user.type(
+      screen.getByRole("textbox", { name: en["lists.name"] }),
+      "Dinner",
+    );
+    await user.click(
+      screen.getByRole("combobox", { name: en["lists.teamLabel"] }),
+    );
+    await user.click(
+      await screen.findByRole("option", { name: "Team Germany" }),
+    );
+    await user.click(screen.getByRole("button", { name: en["lists.create"] }));
+    await vi.waitFor(() => expect(posted).toHaveLength(1));
+    expect(posted[0]).toMatchObject({ sharing: "team", team_id: TEAM_ID });
   });
 
   it("starts a Shortlist of the chosen record type and opens it", async () => {
@@ -123,5 +256,54 @@ describe("the team's lists", () => {
       purpose: "October",
       sharing: "team",
     });
+  });
+
+  it("reads only the lists shared with a team or everyone", async () => {
+    const asked: string[] = [];
+    installFetchStub({
+      "GET /me": listsMe(true),
+      "GET /lists": () => jsonResponse({ data: [], page: { has_more: false } }),
+    });
+    const inner = globalThis.fetch;
+    globalThis.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = input instanceof Request ? input.url : String(input);
+      if (url.includes("/lists")) {
+        asked.push(new URL(url, "https://x.local").search);
+      }
+      return inner(input, init);
+    };
+    library();
+    expect(
+      await screen.findByText(en["lists.library.empty"]),
+    ).toBeInTheDocument();
+    expect(asked).not.toHaveLength(0);
+    for (const search of asked) {
+      const sharing = new URLSearchParams(search).getAll("sharing");
+      expect(sharing.sort()).toEqual(["team", "workspace"]);
+    }
+  });
+
+  it("says a Live List uses a retired field", async () => {
+    installFetchStub({
+      "GET /me": listsMe(true),
+      "GET /lists": () =>
+        jsonResponse({
+          data: [
+            {
+              ...liveList,
+              health: "retired_field",
+              retired_fields: ["cf_last_touch"],
+            },
+          ],
+          page: { has_more: false },
+        }),
+    });
+    library();
+    const row = (await screen.findByText(liveList.name)).closest(
+      "tr",
+    ) as HTMLElement;
+    expect(
+      within(row).getByText(en["lists.health.retiredField"]),
+    ).toBeInTheDocument();
   });
 });

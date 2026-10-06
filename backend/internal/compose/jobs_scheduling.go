@@ -28,7 +28,7 @@ func (MeetingDeliveryArgs) Kind() string { return "meeting_delivery" }
 
 // InsertOpts uses the job catalog’s retry and queue policy.
 func (MeetingDeliveryArgs) InsertOpts() river.InsertOpts {
-	return river.InsertOpts{Queue: river.QueueDefault, MaxAttempts: 1, UniqueOpts: river.UniqueOpts{ByState: activeSweepStates}}
+	return *jobs.QueuedAs[MeetingDeliveryArgs](&river.InsertOpts{MaxAttempts: 1, UniqueOpts: river.UniqueOpts{ByState: activeSweepStates}})
 }
 
 type meetingDeliveryWorker struct {

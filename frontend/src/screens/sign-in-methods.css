@@ -1,0 +1,26 @@
+/* Layout for the group→role grant editor on the sign-in methods card. Layout
+   only — the design system carries the look of the input, the role picker and
+   the remove verb; what is left here is one row's line and the stack between
+   rows, the same row idiom the custom-field options editor draws. */
+
+.group-grants {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.group-grant-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.group-grant-row {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.group-grant-row .input {
+  flex: 1;
+}

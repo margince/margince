@@ -11,6 +11,7 @@ import {
 } from "./customfields.form";
 
 const BOOL_LABELS = { yes: "Yes", no: "No" };
+const TOO_PRECISE = (currency: string) => `Finer than ${currency}`;
 
 // A minimal active CustomField for one object; only the fields the form
 // derivation reads are set — the rest is filler the helpers never touch.
@@ -39,6 +40,7 @@ describe("customFieldToFormField", () => {
         type: "date",
       }),
       BOOL_LABELS,
+      TOO_PRECISE,
     );
     expect(field.key).toBe("cf_renewal_date");
     expect(field.labelText).toBe("Renewal date");
@@ -49,7 +51,8 @@ describe("customFieldToFormField", () => {
 
   it("maps number to a number control", () => {
     expect(
-      customFieldToFormField(cf({ type: "number" }), BOOL_LABELS).type,
+      customFieldToFormField(cf({ type: "number" }), BOOL_LABELS, TOO_PRECISE)
+        .type,
     ).toBe("number");
   });
 
@@ -57,6 +60,7 @@ describe("customFieldToFormField", () => {
     const field = customFieldToFormField(
       cf({ type: "picklist", options: ["Direct", "Reseller", "Tender"] }),
       BOOL_LABELS,
+      TOO_PRECISE,
     );
     expect(field.type).toBe("select");
     expect(field.options).toEqual([
@@ -67,7 +71,11 @@ describe("customFieldToFormField", () => {
   });
 
   it("renders a boolean as a Yes/No select using the supplied labels", () => {
-    const field = customFieldToFormField(cf({ type: "boolean" }), BOOL_LABELS);
+    const field = customFieldToFormField(
+      cf({ type: "boolean" }),
+      BOOL_LABELS,
+      TOO_PRECISE,
+    );
     expect(field.type).toBe("select");
     expect(field.options).toEqual([
       { value: "true", label: "Yes" },
@@ -79,12 +87,31 @@ describe("customFieldToFormField", () => {
     const field = customFieldToFormField(
       cf({ type: "currency", currency: "EUR" }),
       BOOL_LABELS,
+      TOO_PRECISE,
     );
     expect(field.type).toBe("number");
     // stored as bigint minor units; the form edits major units.
     expect(field.toInput?.(1250)).toBe("12.5");
     expect(field.toInput?.(null)).toBe("");
     expect(field.toInput?.(undefined)).toBe("");
+  });
+
+  it("refuses an amount finer than the field's currency, by the currency's scale", () => {
+    const euro = customFieldToFormField(
+      cf({ type: "currency", currency: "EUR" }),
+      BOOL_LABELS,
+      TOO_PRECISE,
+    );
+    const yen = customFieldToFormField(
+      cf({ type: "currency", currency: "JPY" }),
+      BOOL_LABELS,
+      TOO_PRECISE,
+    );
+    expect(euro.validate?.("12.34")).toBeUndefined();
+    expect(euro.validate?.("")).toBeUndefined();
+    expect(euro.validate?.("12.345")).toBe("Finer than EUR");
+    expect(yen.validate?.("12")).toBeUndefined();
+    expect(yen.validate?.("12.5")).toBe("Finer than JPY");
   });
 });
 
@@ -342,7 +369,7 @@ it("round-trips multiple choices with punctuation and distinguishes unchanged fr
     options: ["Fit, scope", "C++"],
     column_name: "cf_choices",
   });
-  const control = customFieldToFormField(field, BOOL_LABELS);
+  const control = customFieldToFormField(field, BOOL_LABELS, TOO_PRECISE);
   const selected = ["Fit, scope", "C++"];
   const input = control.toInput?.(selected);
   expect(input).toBe(JSON.stringify(selected));

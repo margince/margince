@@ -1,0 +1,50 @@
+# CASE 50 — What moved my quarter.
+#
+# forecast_movement explains the difference between two forecast freezes as named
+# causes that add up exactly, which two readings subtracted by hand cannot do. It
+# takes two snapshot ids and forecast_readings lists them, so the question a
+# manager asks — "what changed since last week" — has one honest route: read the
+# freezes, then ask for the movement between the oldest and the newest.
+#
+# THE SEEDED WORLD holds two freezes a week apart, and between them two deals
+# changed: Vorort Systeme Ausbau was repriced from EUR 31,000 to EUR 26,000, and
+# valantic Migrationsprojekt (EUR 9,500) had its close date moved to a later quarter,
+# which takes it out of the quarter. The tool books the first as an amount change
+# and the second as a deal that left the quarter, and says so; the case is that
+# the answer reports those, deal by deal, and does not describe a slip as a loss.
+name: case50_what_moved_my_quarter
+criteria: [1, 2, 3]
+
+# WRITES: the author's own statement that this case changes the world. It is not
+# what decides the reset — the runner rebuilds whenever the LAST run dirtied the
+# world, because the assistant is offered the whole server and any run can write
+# regardless of what its file says. TestEveryWritingScenarioDeclaresThatItWrites
+# holds this line against the tools the case names.
+writes: false
+
+prompt: |
+  My manager wants to know why this quarter's open pipeline is lower than at last
+  week's forecast freeze. What moved it, deal by deal, and by how much?
+
+must_call:
+  - forecast_readings
+  - forecast_movement
+may_call:
+  - search_records
+  - read_record
+  - list_records
+  - resolve_entities
+  - query_workspace
+  - forecast_input_checks
+
+must_mention:
+  - "Vorort"
+  - "valantic"
+
+judge:
+  - "Criterion 1. The answer says the Vorort Systeme Ausbau deal was repriced down, by EUR 5,000 (from EUR 31,000 to EUR 26,000). Answer no if it names a different change for that deal, a different amount, or leaves the deal out."
+  - "Criterion 2. The answer says the valantic Migrationsprojekt deal (EUR 9,500) left this quarter's pipeline — slipped out or moved to a later date — and does not call it lost, closed or won. Answer no if it calls it lost or won, gives a different cause, or leaves the deal out."
+  - "Criterion 3. The answer gives the opening and closing open-pipeline figures (EUR 179,000 and EUR 164,500) and the causes add up to the difference between them, as the tool reports them. Answer no if it gives figures that do not match those, names causes that are not in the tool's answer, or says it cannot explain the change."
+
+runs: 3
+pass_at: 2

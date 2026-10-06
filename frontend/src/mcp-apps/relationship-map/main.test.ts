@@ -24,14 +24,43 @@ describe("the relationship map renders what it was given", () => {
       "Ravi Bhatt",
       "Mira Lindqvist",
     ]);
-    expect(texts(el, ".rank")).toEqual(["#1", "#2", "#3"]);
+    expect(texts(el, ".panel-row > .figure")).toEqual(["1", "2", "3"]);
+  });
+
+  it("draws each colleague's chip on the mesh keyed by their user id", () => {
+    // The app keys a colleague's chip on the seat's user id, so the same
+    // colleague is one chip in the app and in a host's panel.
+    const el = root();
+    render(el, relationshipMapFixture.data, []);
+    const chip = el.querySelector<HTMLElement>(".avatar-mesh");
+    expect(chip?.textContent).toBe("DO");
+    expect(chip?.style.getPropertyValue("--avatar-hue-a")).not.toBe("");
+    expect(chip?.getAttribute("aria-hidden")).toBe("true");
+  });
+
+  it("speaks the product's strength words over the seam's bands", () => {
+    // who_knows answers high / medium / none; every other surface a reader
+    // meets says strong / moderate / no contact, with the Routes panel's bars.
+    const el = root();
+    render(el, relationshipMapFixture.data, []);
+    const meters = [...el.querySelectorAll<HTMLElement>(".strength-meter")];
+    expect(meters.map((m) => m.dataset.band)).toEqual([
+      "strong",
+      "moderate",
+      "none",
+    ]);
+    expect(meters.map((m) => m.textContent)).toEqual([
+      "strong",
+      "moderate",
+      "no contact",
+    ]);
   });
 
   it("renders the empty state when nobody here has spoken to the contact", () => {
     const el = root();
     render(el, { contact_id: "p-1", colleagues: [] }, []);
     expect(el.querySelector(".empty")).not.toBeNull();
-    expect(el.querySelectorAll(".row")).toHaveLength(0);
+    expect(el.querySelectorAll(".panel-row")).toHaveLength(0);
   });
 
   it("shows a never-spoken colleague as absent rather than as a strength of zero", () => {
@@ -39,27 +68,29 @@ describe("the relationship map renders what it was given", () => {
     // as 0 would tell a rep a relationship decayed when none ever existed.
     const el = root();
     render(el, relationshipMapFixture.data, []);
-    const cold = el.querySelector(".band-none");
-    expect(cold).not.toBeNull();
-    expect(cold?.textContent).toBe("none");
-    expect(cold?.textContent).not.toContain("0");
+    const cold = el.querySelectorAll(".panel-row")[2];
+    expect(cold?.textContent).toContain("no interactions in 90 days");
+    expect(cold?.textContent).not.toContain("score");
   });
 
   it("says the list is not the whole network when the sweep stopped at its bound", () => {
     const el = root();
     render(el, relationshipMapFixture.data, [{ code: "sweep_truncated" }]);
-    expect(el.querySelector(".meta")?.textContent).toMatch(
+    expect(el.querySelector(".intro")?.textContent).toMatch(
       /not the whole network/i,
+    );
+    expect(el.querySelector(".panel-head")?.textContent).toContain(
+      "at least 3",
     );
   });
 
   it("claims warmest-first only when the ranking is complete", () => {
     const el = root();
     render(el, relationshipMapFixture.data, []);
-    expect(el.querySelector(".meta")?.textContent).toMatch(/warmest first/i);
+    expect(el.querySelector(".intro")?.textContent).toMatch(/warmest first/i);
   });
 
-  it("renders a band the seam has not published yet without colouring it wrongly", () => {
+  it("renders a band the seam has not published yet in its own word, with no meter", () => {
     // The vocabulary belongs to the seam. A view that refused an unknown value
     // would go blank the first time one was added.
     const el = root();
@@ -71,13 +102,13 @@ describe("the relationship map renders what it was given", () => {
       },
       [],
     );
-    expect(el.querySelector(".band-scorching")).toBeNull();
+    expect(el.querySelector(".strength-meter")).toBeNull();
     expect(el.textContent).toContain("scorching");
   });
 
   it("does not read a band name off the prototype chain", () => {
     // A bucket of "constructor" finds a truthy value on any plain object, and a
-    // lookup that trusted it would emit a class this stylesheet does not have.
+    // lookup that trusted it would draw a meter for a band that does not exist.
     const el = root();
     render(
       el,
@@ -87,7 +118,7 @@ describe("the relationship map renders what it was given", () => {
       },
       [],
     );
-    expect(el.querySelector(".band-constructor")).toBeNull();
+    expect(el.querySelector(".strength-meter")).toBeNull();
   });
 
   it("names a colleague by user id when the seam answered no display name", () => {
@@ -128,6 +159,73 @@ describe("the relationship map renders what it was given", () => {
     render(el, null, []);
     expect(el.querySelector(".empty")?.textContent).toMatch(
       /no structured result/i,
+    );
+  });
+});
+
+describe("the panel says who it is about", () => {
+  const anchor = "01a0148e-3f66-7206-a206-685f2e40b606";
+
+  it("names the contact instead of printing the id the product calls them", () => {
+    const el = root();
+    render(
+      el,
+      {
+        contact_id: anchor,
+        contact_name: "Marta Vogel",
+        colleagues: [{ display_name: "Sam", strength_bucket: "low" }],
+      },
+      [],
+    );
+    expect(el.querySelector(".intro")?.textContent).toContain("Marta Vogel");
+    expect(el.textContent).not.toContain(anchor);
+  });
+
+  it("says this contact rather than falling back to the id", () => {
+    const el = root();
+    render(
+      el,
+      {
+        contact_id: anchor,
+        colleagues: [{ display_name: "Sam", strength_bucket: "low" }],
+      },
+      [],
+    );
+    expect(el.querySelector(".intro")?.textContent).toContain("this contact");
+    expect(el.textContent).not.toContain(anchor);
+  });
+
+  it("counts one colleague in copy rather than a placeholder", () => {
+    const el = root();
+    render(
+      el,
+      {
+        contact_id: anchor,
+        colleagues: [{ display_name: "Sam", strength_bucket: "low" }],
+      },
+      [],
+    );
+    const head = el.querySelector(".panel-head")?.textContent ?? "";
+    expect(head).toContain("1 colleague");
+    expect(head).not.toContain("colleagues");
+    expect(head).not.toContain("colleague(s)");
+  });
+
+  it("counts several colleagues in the plural", () => {
+    const el = root();
+    render(
+      el,
+      {
+        contact_id: anchor,
+        colleagues: [
+          { display_name: "Sam", strength_bucket: "low" },
+          { display_name: "Ada", strength_bucket: "low" },
+        ],
+      },
+      [],
+    );
+    expect(el.querySelector(".panel-head")?.textContent ?? "").toContain(
+      "2 colleagues",
     );
   });
 });

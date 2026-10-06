@@ -195,29 +195,7 @@
   padding-block-start: var(--space-4);
 }
 
-/*
- * A surface fills the pane even when its content does not.
- *
- * The foot bar is STICKY, which only pins it while there is more surface below
- * it to pin against. On a short act — the voice corpus with nothing attached
- * yet, an empty section — the surface ended a few hundred pixels down and the
- * bar came to rest there, a full-bleed rule with its fill drawn straight across
- * the middle of an otherwise empty column, and the pane's ground below it
- * reading as a screen that had failed to finish rendering.
- *
- * Three links in one chain, because the bar is three levels down and an `auto`
- * margin only pushes inside a flex column: the pane's surface fills the pane,
- * the scene fills the surface, the board fills the scene. Where the content is
- * already taller than the pane none of this binds — `min-block-size` and
- * `flex: 1` are both floors, not sizes.
- */
-.mw-artifact > .ob-conv-artifact {
-  display: flex;
-  min-block-size: 100%;
-  flex-direction: column;
-}
-
-.mw-artifact > .ob-conv-artifact > .ob-scene,
+/* The triage board fills its scene, so its continue bar rests at the foot. */
 .ob-scene > .ob-conv-confirm.ob-triage {
   flex: 1;
 }
@@ -2615,20 +2593,6 @@
   to {
     transform: rotate(360deg);
   }
-}
-
-/* The rail's composer, one size smaller than the split variant's: a single
-   input line, and a hint that stays one line — ellipsized, with the full
-   sentence still readable by title and by assistive tech. */
-.ob-conv-page .mw-composer textarea {
-  min-height: 38px;
-  padding: var(--space-2) var(--space-3);
-}
-
-.ob-conv-page .mw-composer > small {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 /* A finding the narration or a jump just landed on lights up unmistakably —

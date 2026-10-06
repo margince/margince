@@ -1,0 +1,7 @@
+{
+  "verdict": "no",
+  "reason": "The answer states that all four companies needed sign-off, but the criterion requires naming only Emsland Ventilbau as the company whose change needed the user's sign-off.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 3. The answer names Emsland Ventilbau, and only Emsland Ventilbau, as the company whose change needed the user's sign-off. Saying why — a person had already set its lifecycle — is welcome and not required. Answer no if the answer names a different company as the one that needed sign-off, says none of them needed it, or says all four did.",
+  "answer": "All four companies needed your sign-off — Margince held each lifecycle change for approval. As agreed, I approved all four: Kieler Pumpenwerk, Rhön Hydraulik, Altmark Fördertechnik and Emsland Ventilbau are now prospects."
+}

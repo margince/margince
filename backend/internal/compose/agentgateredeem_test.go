@@ -54,6 +54,8 @@ func (*countingRedeemer) StageVolumeRelease(context.Context, agents.VolumeReleas
 	return ids.ApprovalID{}, false, nil
 }
 
+func (*countingRedeemer) ReleasableByCaller(context.Context, agents.StageRequest) bool { return false }
+
 func (*countingRedeemer) StageCall(context.Context, agents.StageRequest) (ids.ApprovalID, bool, error) {
 	return ids.New[ids.ApprovalKind](), false, nil
 }

@@ -7,6 +7,8 @@ import type { components } from "../api/schema";
 import { viewerZone } from "../format/timezone";
 import type { AnalyticsSelection } from "./analytics.context";
 import { ForecastView, SharedForecastView } from "./analytics.forecast";
+import { forecastEvaluation } from "./reporting.scenarios";
+import { reportingStoryRoutes } from "./reporting.story-fixtures";
 import {
   installFetchStub,
   jsonResponse,
@@ -79,7 +81,8 @@ function readings(over: Partial<Readings> = {}): Readings {
 // answer rather than its failure, and it is the ordinary state of a story.
 function routes(data: Readings): RouteMap {
   return {
-    "GET /me": meRoute({}),
+    ...reportingStoryRoutes(forecastEvaluation),
+    "GET /me": meRoute({ report_definition: ["read"] }),
     "GET /forecast": () => jsonResponse(data),
     "GET /forecast/assurance": () => jsonResponse({}, 404),
     "GET /forecast/assurance/preview": () =>
@@ -144,7 +147,7 @@ export const RecordingACall: Story = {
   play: async ({ canvasElement }) => {
     await userEvent.click(
       await within(canvasElement).findByRole("button", {
-        name: "Update call",
+        name: "Update forecast",
       }),
     );
   },

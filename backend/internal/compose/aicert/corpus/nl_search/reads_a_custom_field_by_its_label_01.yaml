@@ -1,0 +1,39 @@
+name: nl_search_reads_a_custom_field_by_its_label
+task: nl_search
+site: filter_propose
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5-5
+fixture:
+  resource: deal
+  text: deals in the DACH sales region worth more than 50,000 euros
+  today: '2026-09-30'
+  lang: en
+  fields:
+  - {name: name, type: text, operators: [eq, neq, in, contains, exists]}
+  - {name: amount, type: currency, operators: [eq, neq, gt, gte, lt, lte, in, exists], currency: EUR}
+  - {name: expected_close_date, type: date, operators: [eq, neq, gt, gte, lt, lte, exists]}
+  - {name: status, type: picklist, operators: [eq, neq, in, exists], options: [open, won, lost]}
+  - {name: company_industry, type: text, operators: [eq, neq, in, exists]}
+  - {name: last_activity_at, type: date, operators: [eq, neq, gt, gte, lt, lte, exists]}
+  - {name: cf_sales_region, type: picklist, operators: [eq, neq, in, exists], options: [DACH, Nordics, Benelux,
+      UK & Ireland], custom: true, label: Sales region}
+  - {name: cf_renewal, type: boolean, operators: [eq, neq, exists], custom: true, label: Renewal}
+expect:
+  outcome: accepted
+  answer:
+    filter:
+      and:
+      - field: cf_sales_region
+        op: eq
+        value: DACH
+      - field: amount
+        op: gt
+        value: 5000000
+    unsupported: 0
+  bands:
+    certified_min: 80
+    degraded_min: 60
+    floor: 50
+  rubric: The passing filter is the custom field cf_sales_region (labelled 'Sales region') equal to DACH, AND amount
+    greater than 50,000 euros. The amount clause must state 50000 in major units; the server scales it. Reading
+    'DACH' as a country or a company industry fails.

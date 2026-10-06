@@ -23,13 +23,20 @@ func (s *Store) ListsPage(ctx context.Context, filter ListFilter) (crmcontracts.
 	if err != nil {
 		return crmcontracts.ListListResponse{}, err
 	}
-	data := make([]crmcontracts.List, 0, len(lists))
+	summaries := make([]*listSummary, 0, len(lists))
 	for _, l := range lists {
 		summary, err := s.summarize(ctx, l)
 		if err != nil {
 			return crmcontracts.ListListResponse{}, err
 		}
-		data = append(data, wireList(summary))
+		summaries = append(summaries, &summary)
+	}
+	if err := s.observedFor(ctx, summaries); err != nil {
+		return crmcontracts.ListListResponse{}, err
+	}
+	data := make([]crmcontracts.List, 0, len(summaries))
+	for _, summary := range summaries {
+		data = append(data, wireList(*summary))
 	}
 	return crmcontracts.ListListResponse{Data: data, Page: crmcontracts.PageInfo{HasMore: truncated}}, nil
 }
@@ -48,6 +55,19 @@ func (s *Store) view(ctx context.Context, l listRow) (crmcontracts.List, error) 
 	summary, err := s.summarize(ctx, l)
 	if err != nil {
 		return crmcontracts.List{}, err
+	}
+	if err := s.observedFor(ctx, []*listSummary{&summary}); err != nil {
+		return crmcontracts.List{}, err
+	}
+	if summary.Joined, err = s.joinedSinceVisit(ctx, l); err != nil {
+		return crmcontracts.List{}, err
+	}
+	changes, found, err := s.changesSinceVisit(ctx, l)
+	if err != nil {
+		return crmcontracts.List{}, err
+	}
+	if found {
+		summary.Changes = &changes
 	}
 	if summary.Dependencies, err = s.Dependencies(ctx, l.ID); err != nil {
 		return crmcontracts.List{}, err
@@ -82,15 +102,27 @@ func (s *Store) SetArchivedView(ctx context.Context, id ids.ListID, archive bool
 	return s.view(ctx, l)
 }
 
-// MembersPage answers one page of a list's members.
-func (s *Store) MembersPage(ctx context.Context, id ids.ListID, limit int, cursor string) (crmcontracts.ListMemberListResponse, error) {
-	members, page, err := s.ListMembers(ctx, id, limit, cursor)
+// MembersPage answers one members read, naming who added each Shortlist member.
+func (s *Store) MembersPage(ctx context.Context, id ids.ListID, read MemberRead) (crmcontracts.ListMemberListResponse, error) {
+	members, page, err := s.readMembers(ctx, id, read)
+	if err != nil {
+		return crmcontracts.ListMemberListResponse{}, err
+	}
+	actors := make([]string, 0, len(members))
+	for _, m := range members {
+		actors = append(actors, m.AddedBy)
+	}
+	names, err := s.actorNames(ctx, actors)
 	if err != nil {
 		return crmcontracts.ListMemberListResponse{}, err
 	}
 	data := make([]crmcontracts.ListMember, 0, len(members))
 	for _, m := range members {
-		data = append(data, wireMember(m))
+		member := wireMember(m)
+		if name, ok := names[m.AddedBy]; ok {
+			member.AddedByName = &name
+		}
+		data = append(data, member)
 	}
 	return crmcontracts.ListMemberListResponse{Data: data, Page: wirePage(page)}, nil
 }
@@ -102,6 +134,17 @@ func (s *Store) AddMemberView(ctx context.Context, id ids.ListID, change MemberC
 		return crmcontracts.ListMember{}, err
 	}
 	return wireMember(m), nil
+}
+
+// VisitView records the caller's visit and answers it.
+func (s *Store) VisitView(ctx context.Context, id ids.ListID) (crmcontracts.ListVisit, error) {
+	visit, err := s.VisitList(ctx, id)
+	if err != nil {
+		return crmcontracts.ListVisit{}, err
+	}
+	return crmcontracts.ListVisit{
+		ListId: openapi_types.UUID(id.UUID), VisitedAt: visit.VisitedAt, PreviousVisitAt: visit.Previous,
+	}, nil
 }
 
 // ExplainView answers why a record is or is not on a list.
@@ -164,20 +207,66 @@ func wireList(l listSummary) crmcontracts.List {
 	if len(l.Definition) > 0 {
 		out.Definition = &l.Definition
 	}
+	if len(l.RetiredFields) > 0 {
+		out.RetiredFields = &l.RetiredFields
+	}
 	if l.TeamID != nil {
 		team := openapi_types.UUID(l.TeamID.UUID)
 		out.TeamId = &team
 	}
+	if l.LastCheck != nil {
+		out.LastCheck = &crmcontracts.ListCheck{
+			CheckedAt: l.LastCheck.CheckedAt, Outcome: crmcontracts.ListCheckOutcome(l.LastCheck.Outcome),
+		}
+	}
+	if l.Pulse != nil {
+		out.SinceLastVisit = &crmcontracts.ListPulse{Since: l.Pulse.Since, Entered: l.Pulse.Entered, Left: l.Pulse.Left}
+	}
+	if l.Joined != nil {
+		joined := make([]openapi_types.UUID, 0, len(l.Joined))
+		for _, id := range l.Joined {
+			joined = append(joined, openapi_types.UUID(id))
+		}
+		out.JoinedSinceVisit = &joined
+	}
 	if l.Dependencies != nil {
 		deps := make([]crmcontracts.ListDependency, 0, len(l.Dependencies))
 		for _, d := range l.Dependencies {
-			deps = append(deps, crmcontracts.ListDependency{
-				Kind: crmcontracts.ListDependencyKind(d.Kind), OccurredAt: d.OccurredAt, Actor: d.Actor,
-			})
+			deps = append(deps, wireDependency(d))
 		}
 		out.Dependencies = &deps
 	}
+	if l.Changes != nil {
+		out.ChangesSinceVisit = &crmcontracts.ListChangeSummary{
+			Since: l.Changes.Since, FilterChanges: l.Changes.FilterChanges,
+			Joined: wireChangeGroup(l.Changes.Joined), Left: wireChangeGroup(l.Changes.Left),
+		}
+	}
 	return out
+}
+
+func wireDependency(d listDependency) crmcontracts.ListDependency {
+	out := crmcontracts.ListDependency{
+		Kind: crmcontracts.ListDependencyKind(d.Kind), OccurredAt: d.OccurredAt, Actor: d.Actor,
+	}
+	if d.Rule == nil {
+		return out
+	}
+	role := crmcontracts.ListDependencyRole(d.Rule.Role)
+	out.Role = &role
+	if d.Rule.Name != "" {
+		id := openapi_types.UUID(d.Rule.ID)
+		out.AutomationId, out.AutomationName = &id, &d.Rule.Name
+	}
+	return out
+}
+
+func wireChangeGroup(g changeGroup) crmcontracts.ListChangeGroup {
+	records := make([]crmcontracts.ListChangedRecord, 0, len(g.Records))
+	for _, r := range g.Records {
+		records = append(records, crmcontracts.ListChangedRecord{EntityId: openapi_types.UUID(r.ID), Name: r.Name})
+	}
+	return crmcontracts.ListChangeGroup{Count: g.Count, Records: records}
 }
 
 func userUUID(id *ids.UserID) *openapi_types.UUID {
@@ -199,11 +288,18 @@ func wireMember(m memberRow) crmcontracts.ListMember {
 	if !m.CreatedAt.IsZero() {
 		out.CreatedAt = &m.CreatedAt
 	}
+	if m.Values != nil {
+		values := make(map[string]crmcontracts.ListFieldValue, len(m.Values))
+		for field, v := range m.Values {
+			values[field] = crmcontracts.ListFieldValue{Value: v.Value, Hidden: v.Hidden, Label: v.Label}
+		}
+		out.Values = &values
+	}
 	return out
 }
 
 func wireVerdict(n storekit.ExplainNode) crmcontracts.ListClauseVerdict {
-	out := crmcontracts.ListClauseVerdict{Result: n.Result, Value: n.Value}
+	out := crmcontracts.ListClauseVerdict{Result: n.Result, Value: n.Value, ValueLabel: n.ValueLabel}
 	if n.Join != "" {
 		join := crmcontracts.ListClauseVerdictJoin(n.Join)
 		children := make([]crmcontracts.ListClauseVerdict, 0, len(n.Children))
@@ -226,7 +322,7 @@ func wireHistory(e HistoryEntry, names map[string]string) crmcontracts.ListHisto
 	out := crmcontracts.ListHistoryEntry{
 		Id: openapi_types.UUID(e.ID), Kind: crmcontracts.ListHistoryEntryKind(e.Kind),
 		OccurredAt: e.OccurredAt, Actor: e.Actor, EntityType: e.EntityType, Note: e.Note,
-		Version: e.Version, Name: e.Name, Sharing: e.Sharing,
+		DefinitionVersion: e.DefinitionVersion, Version: e.Version, Name: e.Name, Sharing: e.Sharing,
 	}
 	if name, ok := names[e.Actor]; ok {
 		out.ActorName = &name

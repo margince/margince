@@ -80,6 +80,7 @@ const openThePlan = async ({
   await user.click(
     await canvas.findByRole("button", { name: "Review current plan" }),
   );
+  await within(canvasElement.ownerDocument.body).findByRole("dialog");
 };
 
 const meta: Meta<typeof TeamPlanReview> = {

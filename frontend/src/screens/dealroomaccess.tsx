@@ -291,7 +291,7 @@ function IssuedLink({ issued }: Readonly<{ issued: Issued }>) {
     remedy: t("access.issued.copyFailed"),
   });
   return (
-    <div className="access-issued">
+    <div className="form-stack">
       <IssuedNotice queued={issued.queued} email={issued.participant.email} />
       <Field label={t("access.issued.linkLabel")}>
         {(control) => <TextInput {...control} readOnly value={link} />}
@@ -343,7 +343,7 @@ function InviteDialog({
       return data;
     },
     onSuccess: (data) => {
-      refreshSeats(queryClient, room.id);
+      void refreshSeats(queryClient, room.id);
       if (data) {
         setIssued(data);
       }
@@ -447,7 +447,7 @@ function ReissueDialog({
       return data;
     },
     onSuccess: (data) => {
-      refreshSeats(queryClient, room.id);
+      void refreshSeats(queryClient, room.id);
       if (data) {
         setIssued(data);
       }
@@ -505,7 +505,7 @@ function RevokeDialog({
       }
     },
     onSuccess: () => {
-      refreshSeats(queryClient, room.id);
+      void refreshSeats(queryClient, room.id);
       onClose();
     },
   });
@@ -561,7 +561,7 @@ function CapabilityDialog({
       }
     },
     onSuccess: () => {
-      refreshSeats(queryClient, room.id);
+      void refreshSeats(queryClient, room.id);
       onClose();
     },
   });

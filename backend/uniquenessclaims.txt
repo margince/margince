@@ -34,7 +34,6 @@
 ../desktop/launcher/console.go#func say
 ../desktop/launcher/main.go#type stack
 ../desktop/launcher/postgres.go#type cluster.connArgs
-cmd/api/configitems.go#const oauthAccessTokenTTLEnv
 cmd/api/resetruntime.go#func newResetLane
 cmd/worker/boot.go#func workerModelPathSpec
 gates/aiactivitycatalogparity_test.go#func producedKinds
@@ -187,7 +186,6 @@ internal/compose/jobs_integration_test.go#const awaitBudget
 internal/compose/jobs_transcript.go#func withTranscriptReader
 internal/compose/jobs_transcript.go#type TranscriptProposeArgs.RequestedBy
 internal/compose/jobschedule.go#func operatorIntervals
-internal/compose/jobtimeoutwiring_test.go#func configFieldsRead
 internal/compose/license.go#func correctTheToken
 internal/compose/linkedinrematch.go#method linkedInRematchWorker.systemContext
 internal/compose/meetingbrief/doc.go#package meetingbrief
@@ -468,8 +466,8 @@ internal/modules/privacy/legalholdarms_test.go#func activityHoldSelectors
 internal/modules/privacy/recordhistory.go#const block at const actorTypeAgent
 internal/modules/privacy/restrictedlist.go#type RestrictedRecord
 internal/modules/privacy/retention_floor.go#func correspondenceFloorPredicate
-internal/modules/privacy/retentionactions.go#func ActionsForScope
 internal/modules/privacy/retentionactions.go#var retentionActions
+internal/modules/privacy/retentionauthorable.go#func ActionsForScope
 internal/modules/privacy/retentionpolicystore.go#const fieldAction
 internal/modules/privacy/retentionpolicystore.go#const fieldRetainDays
 internal/modules/privacy/retentionscope.go#func AuthorableScopes

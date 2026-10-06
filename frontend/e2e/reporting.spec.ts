@@ -23,7 +23,6 @@ for (const colorScheme of ["light", "dark"] satisfies ("light" | "dark")[]) {
         route.fulfill({
           json: meFixture({
             rowScope: "all",
-            settingsAvailability: { reporting: true },
             allow: {
               deal: ["read"],
               forecast: ["read"],
@@ -75,11 +74,11 @@ for (const colorScheme of ["light", "dark"] satisfies ("light" | "dark")[]) {
       );
       await page.goto("/#/analytics");
       const graph = page.getByRole("figure", {
-        name: "Bookings progress",
+        name: "Sales won over time",
       });
       await expect(graph).toBeVisible();
-      await expect(page.locator(".reporting-headline").first()).toHaveText(
-        "€216,000.00",
+      await expect(page.locator(".stat-card-value").first()).toHaveText(
+        "€216k",
       );
       const bounds = await page
         .locator(".report-chart-line")

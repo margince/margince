@@ -22,6 +22,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -41,6 +42,13 @@ func breachedLeadEvent(t *testing.T, e *integration.Env, owner *pgx.Conn) (ids.U
 	if _, err := owner.Exec(context.Background(),
 		`INSERT INTO lead (id, full_name, status, source, captured_by, owner_id)
 		 VALUES ($1, 'Overdue Lead', 'new', 'inbound', 'human:x', $2)`, lead, e.Rep1); err != nil {
+		t.Fatal(err)
+	}
+	_, _, err := activities.NewStore(e.DB()).LogActivity(e.Admin(), activities.LogActivityInput{
+		Kind: "email", Subject: leadTestPtr("Incoming enquiry"), Direction: leadTestPtr("inbound"),
+		Links: []activities.ActivityLinkInput{{EntityType: "lead", EntityID: lead}},
+	})
+	if err != nil {
 		t.Fatal(err)
 	}
 	deadline := time.Date(2026, 8, 18, 9, 0, 0, 0, time.UTC)

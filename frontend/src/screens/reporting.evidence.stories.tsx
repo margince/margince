@@ -10,11 +10,24 @@ import { installFetchStub, StoryProviders } from "./story-utils";
 const meta: Meta = { title: "Records/Reports/Analytics/Evidence" };
 export default meta;
 type Story = StoryObj;
-function Preview() {
+function Preview({
+  earlierDefinition = false,
+}: Readonly<{ earlierDefinition?: boolean }>) {
   const [open, setOpen] = useState(true);
   return open ? (
     <ReportingEvidenceDrawer
-      evaluation={reportingStoryEvaluation}
+      evaluation={
+        earlierDefinition
+          ? {
+              ...reportingStoryEvaluation,
+              metrics: reportingStoryEvaluation.metrics.map((metric) => ({
+                ...metric,
+                version: "1",
+              })),
+            }
+          : reportingStoryEvaluation
+      }
+      editionId={earlierDefinition ? "old" : undefined}
       reference={{ metric: "bookings_won", context_id: "interval" }}
       onClose={() => setOpen(false)}
     />
@@ -28,6 +41,21 @@ export const Default: Story = {
     return (
       <StoryProviders>
         <Preview />
+      </StoryProviders>
+    );
+  },
+};
+
+export const EarlierDefinition: Story = {
+  render: () => {
+    const routes = reportingStoryRoutes();
+    installFetchStub({
+      ...routes,
+      "GET /analytics/editions/old/evidence": routes["GET /analytics/evidence"],
+    });
+    return (
+      <StoryProviders>
+        <Preview earlierDefinition />
       </StoryProviders>
     );
   },

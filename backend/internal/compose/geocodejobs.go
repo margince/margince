@@ -92,8 +92,7 @@ type geocodeEnqueuer interface {
 // shares. One pending lookup per company is all that is ever useful, because
 // the worker reads the address when it RUNS rather than from the args.
 func geocodeInsertOpts() *river.InsertOpts {
-	return &river.InsertOpts{
-		Queue: geocodeQueue,
+	return jobs.QueuedAs[GeocodeCompanyArgs](&river.InsertOpts{
 		// ByArgs across every ACTIVE state. River requires the unique set to
 		// include pending and running and refuses a narrower one outright —
 		// "UniqueOpts.ByState must contain all required states" — which the
@@ -113,7 +112,7 @@ func geocodeInsertOpts() *river.InsertOpts {
 		// stops caring, spending the installation's shared rate on a lookup
 		// AddressForGeocode already refuses.
 		MaxAttempts: geocodeMaxAttempts,
-	}
+	})
 }
 
 // geocodeQueue is declared in api/jobs.yaml at one worker; the name is spelled

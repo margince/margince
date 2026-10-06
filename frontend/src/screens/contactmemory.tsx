@@ -8,10 +8,7 @@ import { Avatar, Badge, Button } from "../design-system/atoms";
 import { EmailEntry } from "../design-system/emailentry";
 import { FilterPills } from "../design-system/filterpills";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
-import {
-  contactNamedBy,
-  type RecordContact,
-} from "../design-system/participants";
+import type { RecordContact } from "../design-system/participants";
 import {
   formatDayMonth,
   formatNumber,
@@ -316,7 +313,11 @@ function whoFor(
 ): Row["who"] {
   const counterparty = activity?.email_summary?.counterparty;
   if (!counterparty) return { name: contact.full_name, key: contact.id };
-  const named = contactNamedBy(counterparty, activity?.links, contact);
+  // The server's own answer for which contact the phrase names. Matching the
+  // phrase against this page's contact by NAME is what this replaces: it missed
+  // a contact renamed since capture, and could not tell two contacts sharing a
+  // name apart.
+  const named = activity?.email_summary?.counterparty_contact_id;
   return { name: counterparty, key: named ?? counterparty };
 }
 

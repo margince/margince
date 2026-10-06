@@ -63,6 +63,10 @@ it("uses a common scale and keeps a zero target distinct from an absent target",
     container.querySelectorAll(".report-chart-bullet-target"),
   ).toHaveLength(1);
   expect(container.innerHTML).not.toMatch(/NaN|Infinity/);
+  expect(
+    screen.getByRole("button", { name: "Maya: €100; Target: €0" }),
+  ).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Sam: €50" })).toBeTruthy();
 });
 it("does not draw suppressed stage-age observations", () => {
   const { container } = render(

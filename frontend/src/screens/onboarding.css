@@ -65,7 +65,7 @@
   flex: none;
 }
 .urlnote.err {
-  color: var(--danger);
+  color: var(--dangerText);
 }
 .urlnote.ok {
   color: var(--successText);
@@ -106,7 +106,7 @@
 }
 .readfail.warning .rfi {
   background: var(--warningBg);
-  color: var(--warning);
+  color: var(--warningText);
 }
 
 .readfail .rfi svg {
@@ -347,75 +347,14 @@
   margin-top: var(--space-2);
 }
 
-/* The workbench is Margince's reusable interaction pattern: identity and
-   runtime stay fixed while conversation and the reviewable artifact move.
-   During setup it is full-bleed — see margince-workbench.css for why a centred
-   card would misframe the surface as a dismissible dialog. */
+/* Full-bleed during setup: a centred card would frame the room as a dialog
+   the reader could dismiss. */
 .ob-workbench-panel {
   display: block;
   width: 100%;
 }
-/* The conversation column's body. `min-height: 0` lets it shrink: a flex item
-   in a column otherwise floors at its content height and the column overflows. */
-.mw-thread {
-  display: flex;
-  flex: 1;
-  min-height: 0;
-  flex-direction: column;
-  gap: var(--space-4);
-  /* `clip`, not `hidden`, and given the column's gutter as slack. Hidden is a
-     scroll container with its bars turned off, and it cuts at the border box —
-     which cut off the two scroll shadows this box carries (see
-     margince-workbench.css) exactly at the transcript's edges, so the hint that
-     the COLUMN continues stopped a gutter short of the column. Clip is not a
-     scroll container at all, and the margin lets the shadows out while still
-     fencing the turns. */
-  overflow: clip;
-  overflow-clip-margin: var(--mw-gutter, 0px);
-}
-/* Below 900px margince-workbench.css makes the page the scroller, so the body
-   grows with its turns instead of fencing them inside a bounded height. */
-@media (max-width: 900px) {
-  .mw-thread {
-    flex: none;
-    min-height: auto;
-    overflow: visible;
-  }
-}
-/* Flattened onto the conversation column, which is a LIGHT panel: the dialog
-   keeps none of its glass here, so it keeps none of the rail's inks either. */
-.mw-conversation .ob-core-dialog {
-  --ob-dialog-ink: var(--textPrimary);
-  --ob-dialog-ink-quiet: var(--textSecondary);
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-  backdrop-filter: none;
-}
-.mw-conversation .ob-core-dialog:not(.ob-manual-question) h1 {
-  display: none;
-}
-.mw-conversation .ob-core-dialog:not(.ob-manual-question) > p {
-  display: none;
-}
-.mw-conversation .ob-manual-question h1 {
-  margin-top: var(--space-2);
-}
-.mw-conversation .ob-manual-question > p {
-  margin: var(--space-1) 0 var(--space-3);
-}
-.mw-conversation .ob-core-dialog > .btn {
-  /* ds:ignore the workbench draws that same dialog tighter */
-  margin-top: var(--space-2);
-}
-/* The manual interview card renders inside the workbench artifact pane
- * (.ob-conv-artifact), a light panel rather than the dark scene backdrop
- * .ob-core-dialog is built for — unlike .mw-conversation above, it stays a
- * visible card here, so it takes the card's ground and the content inks that
- * read on it. The ink pair is the whole of that second half: the heading, the
- * hint, the back link and the footnote follow it without a rule each. */
+/* On the light artifact surface the dialog stays a visible card, and its ink
+   pair carries the heading, hint, back link and footnote with it. */
 .ob-conv-artifact .ob-core-dialog {
   --ob-dialog-ink: var(--textPrimary);
   --ob-dialog-ink-quiet: var(--textSecondary);
@@ -423,41 +362,6 @@
   background: var(--bgCard);
   box-shadow: var(--shadow-rest);
   backdrop-filter: none;
-}
-/* Pinned to the bottom of the conversation column: `flex: none` so a long
-   thread scrolls behind it instead of squeezing the place you type. */
-.mw-composer {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: var(--space-3);
-  flex: none;
-  margin-top: var(--space-3);
-  padding-top: var(--space-5);
-  border-top: 1px solid var(--borderSubtle);
-}
-.mw-composer textarea {
-  min-height: 54px;
-  padding: var(--space-3);
-  color: var(--textPrimary);
-  border: 1px solid var(--borderStrong);
-  border-radius: var(--r-md);
-  outline: 0;
-  background: var(--bgPage);
-  resize: none;
-}
-.mw-composer textarea:focus {
-  border-color: var(--ai);
-  box-shadow: var(--focus-glow-ai);
-}
-/* The send verb keeps the square .btn-icon draws it, pinned to the FOOT of the
-   composer's row: a grid item stretches by default, and stretching an icon-only
-   button is the one thing that can take its square away. The foot is where a
-   send verb belongs beside a box that grows downward as it is typed into. */
-.mw-composer .btn {
-  align-self: end;
-}
-.mw-composer > small {
-  grid-column: 1 / -1;
 }
 .mw-review-heading {
   padding: var(--space-2) var(--space-1) var(--space-3);

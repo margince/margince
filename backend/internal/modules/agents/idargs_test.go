@@ -308,7 +308,7 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 		return crmcontracts.Project360{}, errSeamReached
 	})
 	RegisterNetworkTools(r,
-		func(context.Context, ids.UUID) ([]KnownColleague, bool, error) { return nil, false, errSeamReached },
+		func(context.Context, ids.UUID) (WhoKnowsReading, error) { return WhoKnowsReading{}, errSeamReached },
 		func(context.Context, ids.UUID) (DealCoverageAnswer, error) {
 			return DealCoverageAnswer{}, errSeamReached
 		},
@@ -321,7 +321,7 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 	RegisterBulkTool(r, seamProbeLifecycle{})
 	RegisterQueryTool(r, seamProbeProvider{}, func(context.Context, json.RawMessage) (QueryAnswer, error) {
 		return QueryAnswer{}, errSeamReached
-	}, nil)
+	})
 	RegisterVocabularyTool(r, seamProbeVocabulary{})
 	RegisterReportVocabularyTool(r, seamProbeReportVocabulary{})
 	RegisterRecordFieldsTool(r, RecordFieldsResource{})

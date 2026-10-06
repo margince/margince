@@ -165,6 +165,9 @@ export function useRecordTimeline(
   options: Readonly<{
     filters?: TimelineFilters;
     firstPage?: ActivityPage;
+    // False while the record's own read has not yet said the reader may see
+    // its activities: a read asked before that only collects a refusal.
+    enabled?: boolean;
   }> = {},
 ): RecordTimeline {
   const filters = options.filters ?? NO_TIMELINE_FILTERS;
@@ -194,7 +197,7 @@ export function useRecordTimeline(
     ],
     // With a seed the first page is already on screen: nothing is fetched
     // until the reader asks, and `fetchNextPage` fetches regardless of this.
-    enabled: !seed,
+    enabled: !seed && (options.enabled ?? true),
     initialPageParam: seedCursor,
     getNextPageParam: (last: ActivityPage) =>
       last.page.has_more ? (last.page.next_cursor ?? undefined) : undefined,
@@ -217,23 +220,26 @@ export function useRecordTimeline(
       return page;
     },
   });
+  // A read the caller has switched off answers nothing, cached pages included:
+  // what was readable a moment ago may since have been withheld.
+  const on = options.enabled ?? true;
   const fetched = query.data?.pages ?? [];
-  const activities = [
-    ...(seed?.data ?? []),
-    ...fetched.flatMap((page) => page.data),
-  ];
+  const activities = on
+    ? [...(seed?.data ?? []), ...fetched.flatMap((page) => page.data)]
+    : [];
   // Before the first Load more there is no fetched page to ask, so the seed
   // answers for the edge; the query's own flag is false while it holds no data.
   const hasNextPage =
-    fetched.length > 0 ? query.hasNextPage : Boolean(seed?.page.has_more);
+    on &&
+    (fetched.length > 0 ? query.hasNextPage : Boolean(seed?.page.has_more));
   return {
     activities,
     hasNextPage,
     isFetchingNextPage: query.isFetching,
-    fetchNextPage: () => query.fetchNextPage(),
+    fetchNextPage: () => (on ? query.fetchNextPage() : undefined),
     isPending: seed ? false : query.isPending,
     isSuccess: seed ? true : query.isSuccess,
     isError: query.isError,
-    refetch: () => query.refetch(),
+    refetch: () => (on ? query.refetch() : undefined),
   };
 }

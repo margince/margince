@@ -109,9 +109,11 @@ func (c weeklyPlanCapacity) ForWeek(
 			      -- connector imported is still this rep's time, and reading
 			      -- the capturer alone left it out of the capacity they plan
 			      -- against — the emptier the calendar looks, the more they
-			      -- commit to.
+			      -- commit to. An imported row naming a source author is
+			      -- not its importer's: with no host, nobody here held it.
 			      AND (m.host_user_id = $4
-			           OR (m.host_user_id IS NULL AND m.captured_by = $3))
+			           OR (m.host_user_id IS NULL AND m.captured_by = $3
+			               AND m.source_author_id IS NULL AND m.source_author_name IS NULL))
 			      AND m.occurred_at >= $1 AND m.occurred_at < $2),
 			  (SELECT count(*) FROM activity t
 			    WHERE t.kind = 'task' AND t.archived_at IS NULL

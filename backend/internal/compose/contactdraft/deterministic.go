@@ -84,7 +84,7 @@ func deterministicBody(in Input) string {
 }
 
 func greeting(in Input) string {
-	return draftfloor.Greeting(in.Envelope.Lang(), in.Envelope.Band(), in.Recipient.FirstName)
+	return in.Envelope.Greeting(in.Recipient.FirstName, in.Recipient.LastName)
 }
 
 // The one sentence of substance, from the highest-ranked input that has

@@ -14,6 +14,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -50,6 +52,22 @@ func (n noticesNotifier) Notify(
 		// A firing that named no record writes no target: the zero EntityRef
 		// carries an empty type, and Target.Named() is what the store asks.
 		Target: notices.Target{Type: string(target.Type), ID: target.ID},
+	})
+	return err
+}
+
+// NotifyTx writes an automation notice on the caller's transaction, for a
+// notice that must commit with the change it announces: a rule pausing itself.
+func (n noticesNotifier) NotifyTx(
+	ctx context.Context, tx pgx.Tx, recipient ids.UUID, subject, body string, target datasource.EntityRef, dedupe string,
+) error {
+	_, err := n.store.CreateTx(ctx, tx, notices.NewNotice{
+		Recipient: ids.From[ids.UserKind](recipient),
+		Kind:      noticeKindAutomation,
+		DedupeKey: dedupe,
+		Subject:   subject,
+		Body:      body,
+		Target:    notices.Target{Type: string(target.Type), ID: target.ID},
 	})
 	return err
 }

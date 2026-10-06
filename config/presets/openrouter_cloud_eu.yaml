@@ -3,10 +3,11 @@
 # Mistral's EU endpoint.
 #
 # The `eu_hosted` profile this preset declares is a promise, and
-# TestAResidencyPresetPinsEveryLaneToAnEURegion holds it: every lane here must name an EU-region endpoint in `only:`. A lane
-# that inherits the product default or writes `routing: {}` lets the broker serve
-# the model from any region — including a model with no EU endpoint at all, which
-# it then serves from somewhere else without failing.
+# TestAResidencyPresetPinsEveryLaneToAnEURegion holds it: every lane here must be
+# served under an EU-region endpoint in `only:`, which the provider's `upstream`
+# names once for all of them. Without it the broker serves a model from any
+# region — including a model with no EU endpoint at all, which it then serves
+# from somewhere else without failing.
 #
 # The sibling openrouter_cloud.yaml picks the best model per tier and lets the
 # broker choose a host. This file inverts that: the host is fixed first, and the
@@ -51,13 +52,23 @@ version: 1
 seeds:
   ai_routing:
     profile: eu_hosted
+    # The pin is the provider's: every lane on the broker, embeddings included,
+    # is served from an EU-region host or not at all. It reads every document
+    # the chat tiers do, so a lane left to the broker's choice of region would
+    # be the one place the preset's promise did not reach.
+    providers:
+      openai_compatible:
+        base_url: https://openrouter.ai/api
+        upstream:
+          provider:
+            only: [mistral/eu]
     tiers:
       # Every tier writes `routing:` out rather than inheriting the product
       # default, and the reason is not style. That default filters on
       # `quantizations: [fp16, bf16]`, and Mistral's first-party endpoints
       # declare their precision as `unknown` — so inheriting it would leave the
       # candidate set EMPTY and every call would fail to route. A tier here
-      # states the pin and nothing about precision.
+      # says nothing about precision; the pin comes from the provider.
       #
       # No `sort:` either: the pin leaves exactly one endpoint, so an ordering
       # preference would have nothing to order and would disable the broker's
@@ -65,10 +76,9 @@ seeds:
       local_small:
         provider: openai_compatible
         model: mistralai/ministral-8b-2512
-        base_url: https://openrouter.ai/api
         routing:
-          only: [mistral/eu]
-          require_parameters: true
+          provider:
+            require_parameters: true
       # A DIFFERENT model from the rung above it, and that is the point rather
       # than an accident of shopping. mistral-small-2603 answers better here —
       # ministral-14b breaks a multi-paragraph email body across JSON string
@@ -84,29 +94,21 @@ seeds:
       cheap_cloud:
         provider: openai_compatible
         model: mistralai/ministral-14b-2512
-        base_url: https://openrouter.ai/api
         routing:
-          only: [mistral/eu]
-          require_parameters: true
+          provider:
+            require_parameters: true
       premium:
         provider: openai_compatible
         model: mistralai/mistral-medium-3-5
-        base_url: https://openrouter.ai/api
         routing:
-          only: [mistral/eu]
-          require_parameters: true
+          provider:
+            require_parameters: true
       frontier:
         provider: openai_compatible
         model: mistralai/mistral-small-2603
-        base_url: https://openrouter.ai/api
         routing:
-          only: [mistral/eu]
-          require_parameters: true
-    # The embeddings lane carries the same pin. It reads every document the
-    # chat tiers do, so a lane left to the broker's choice of region would be
-    # the one place the preset's promise did not reach. Only the host-selection
-    # fields are legal on this lane; the pin is all it needs.
-    #
+          provider:
+            require_parameters: true
     # KNOWN GAP: like its sibling, this preset cannot serve document_extract.
     # That task sends a PDF, and the OpenAI-compatible wire's declarable
     # carriage is text and image only — the adapter refuses the attachment
@@ -115,9 +117,6 @@ seeds:
     embeddings:
       provider: openai_compatible
       model: mistralai/mistral-embed-2312
-      base_url: https://openrouter.ai/api
       dimensions: 1024
-      routing:
-        only: [mistral/eu]
     # No `decisions:` lane: eu_hosted refuses an OpenRouter or TypeSafe decision
     # endpoint, since neither can be pinned to an EU host.

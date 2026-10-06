@@ -152,7 +152,8 @@ func relationshipBand(bucket string) *crmcontracts.AttentionRelationshipFactsStr
 // a facts object with every field empty says less than its absence.
 func dealFacts(deal RiskyDeal) *crmcontracts.AttentionDealFacts {
 	if deal.StageID == nil && deal.OwnerID == nil && deal.AmountMinor == nil &&
-		deal.Currency == nil && deal.NoChampion == nil && deal.CloseDateProvisional == nil && deal.ForecastCategory == nil {
+		deal.Currency == nil && deal.NoChampion == nil && deal.CloseDateProvisional == nil && deal.ForecastCategory == nil &&
+		!deal.NoNextStep && !deal.ChampionUnknown {
 		return nil
 	}
 	facts := &crmcontracts.AttentionDealFacts{
@@ -161,10 +162,15 @@ func dealFacts(deal RiskyDeal) *crmcontracts.AttentionDealFacts {
 		ForecastCategory:     deal.ForecastCategory,
 		Currency:             deal.Currency,
 		// A finding or nothing, the same rule the worklist projection applies:
-		// `false` is never sent, so a covered committee reaches the wire absent
-		// alongside the unreadable and the seatless one. Both sides of this
-		// field spell one rule, so they share the helper that holds it.
+		// `false` is never sent. Both sides of this field spell one rule, so
+		// they share the helper that holds it.
 		NoChampion: aFindingOnly(deal.NoChampion),
+	}
+	if deal.NoNextStep {
+		facts.NoNextStep = &deal.NoNextStep
+	}
+	if deal.ChampionUnknown && facts.NoChampion == nil {
+		facts.ChampionUnknown = &deal.ChampionUnknown
 	}
 	if deal.StageID != nil {
 		stage := openapi_types.UUID(*deal.StageID)

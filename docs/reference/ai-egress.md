@@ -60,7 +60,7 @@ here so it can be answered for.
 | `draft_reply` | `cheap_cloud` → `premium` | no | no | no | — | shipped |
 | `enrich` | `local_small` → `cheap_cloud` | no | no | no | — | shipped |
 | `growth_fit` | `cheap_cloud` → `premium` | no | no | no | — | shipped |
-| `nl_search` | `cheap_cloud` → `premium` | no | no | no | — | planned |
+| `nl_search` | `cheap_cloud` → `premium` | no | no | no | — | shipped |
 | `offer_draft` | `cheap_cloud` → `premium` | no | no | no | — | shipped |
 | `owed_verdict` | `local_small` → `cheap_cloud` | no | yes | no | — | shipped |
 | `propose_roles` | `cheap_cloud` → `premium` | no | no | no | — | shipped |
@@ -119,7 +119,7 @@ a processing record can be written from the rows marked yes.
 | Google Calendar or Microsoft Graph | yes | attendee addresses, meeting title, description, time, location and a guest management link; calendar queries identify the host and requested time window | the host connects a calendar and authorizes scheduling; disconnecting its credential prevents further calls |
 | Google's OAuth token endpoint | yes | the signing-in user's authorization code | the Google sign-in method |
 | Nominatim / OpenStreetMap | yes | a postal address, which on a contact record is somebody's | the geocoding provider setting |
-| a model vendor's public catalogue | no | — | asked once per installation during setup |
+| OpenRouter's and models.dev's public model catalogues | no | — | Settings → AI → Model prices: turning Auto-sync daily off stops the daily read; Refresh model prices still reads on demand |
 | an OAuth client's published metadata document | no | — | the OAuth client registration that names it |
 | any site a captured or entered URL names | yes | the URL itself, which can name a contact's own page | the site-read rollout setting |
 | certificate-transparency logs (crt.sh) | no | — | the domain-discovery setting |

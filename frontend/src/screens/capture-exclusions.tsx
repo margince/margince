@@ -417,6 +417,21 @@ function ExcludeDialog({
           folders.options.length === 0 && (
             <p>{t("captureExclusions.noContainers")}</p>
           )}
+        {/* A list that stopped short is still worth showing, and saying so is
+            what keeps a missing folder from reading as a folder that does not
+            exist. The hand-typed fallback beneath it is the way out. */}
+        {picking &&
+          !folders.isPending &&
+          !folders.isError &&
+          folders.truncated && (
+            <Callout
+              tone="warning"
+              kind="outcome"
+              title={t("captureExclusions.containersPartial")}
+            >
+              {t("captureExclusions.containersPartialBody")}
+            </Callout>
+          )}
         {refused && <p id={denialId}>{t("captureSettings.adminOnly")}</p>}
         {add.isError && (
           <Callout

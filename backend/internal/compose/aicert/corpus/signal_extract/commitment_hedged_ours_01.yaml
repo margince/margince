@@ -1,0 +1,32 @@
+name: we_might_circle_back_some_time
+task: signal_extract
+site: thread_events
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  - direction: inbound
+    subject: 'Re: integration questions'
+    sent: '2026-09-07'
+    body: |
+      Hi Lars,
+
+      one more thing: which connector version are you running these days?
+
+      Ines
+  - direction: outbound
+    subject: 'Re: integration questions'
+    sent: '2026-09-07'
+    body: |
+      Hi Ines,
+
+      Good question. I'll try to circle back on that at some point.
+
+      Lars
+expect:
+  outcome: accepted
+  answer: []
+  judge: none
+  judge_none_reason: >
+    "I'll try to circle back at some point" names no thing owed and no day, so
+    the right answer is no event, and the check fails any event the reply
+    reports. A promise this soft must never reach the task rule at all.

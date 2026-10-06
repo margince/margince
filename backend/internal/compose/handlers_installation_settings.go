@@ -67,7 +67,7 @@ func (h installationSettingsHandlers) GetAuthenticationPolicy(w http.ResponseWri
 		httperr.Write(w, r, err)
 		return
 	}
-	chosen, err := h.store.SignInPolicy(r.Context())
+	policy, err := h.store.SignInPolicy(r.Context())
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -75,8 +75,18 @@ func (h installationSettingsHandlers) GetAuthenticationPolicy(w http.ResponseWri
 	// The SAME resolver the aggregate renders and the login screen is served
 	// from, so a reader cannot be told a different answer by asking a different
 	// surface.
+	// A never-written map reads back nil, and the contract requires an object:
+	// {} is the honest spelling of "no group grants anything", where null would
+	// hand every client a second absent-shape to branch on.
+	groupRoleMap := policy.GroupRoleMap
+	if groupRoleMap == nil {
+		groupRoleMap = map[string]string{}
+	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.AuthenticationPolicy{
-		SignInProviders: h.signInProviders(chosen),
+		SignInProviders:  h.signInProviders(policy.Providers),
+		RequireSso:       policy.RequireSSO,
+		RequireMfa:       policy.RequireMFA,
+		OidcGroupRoleMap: groupRoleMap,
 	})
 }
 
@@ -131,6 +141,7 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 	// Same again: the entry's own validator holds the 1..168 bound and names
 	// this field when it refuses, so a second check here would say less.
 	patch.DeadWorkBannerHours = req.DeadWorkBannerHours
+	patch.OAuthAccessTokenTTLMinutes = req.OauthAccessTokenTtlMinutes
 	// Same reasoning as the month above: the entry validates against the shared
 	// kernel's set, so an unknown measure comes back naming this field and
 	// quoting the value. Converted to a plain string because the patch carries
@@ -146,6 +157,15 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 	// that is already harmless, and would make an admin's saved choice depend on
 	// which providers happened to be wired the day they saved it.
 	patch.EnabledOidcProviders = req.EnabledOidcProviders
+	// A bool the admin either set or omitted; the entry itself needs no
+	// validation, and an admin can never strand the installation because the
+	// break-glass admin exemption is enforced at login, not stored here.
+	patch.RequireSSO = req.RequireSso
+	patch.RequireMFA = req.RequireMfa
+	// The entry's validator holds the bounds and the role vocabulary, so a
+	// refusal names the setting and quotes the group or role it refused —
+	// the same division of labour as the fiscal month above.
+	patch.OidcGroupRoleMap = req.OidcGroupRoleMap
 	s, err := h.store.UpdateInstallation(r.Context(), patch)
 	if err != nil {
 		httperr.Write(w, r, err)
@@ -171,9 +191,10 @@ func (h installationSettingsHandlers) toContract(s identity.InstallationSettings
 		DeadWorkBannerHours:  s.DeadWorkBannerHours,
 		ForecastForwardMeasure: crmcontracts.InstallationSettingsForecastForwardMeasure(
 			s.ForecastForwardMeasure),
-		BaseCurrencyLocked: s.BaseCurrencyLocked,
-		MaxUploadBytes:     h.maxUploadBytes,
-		SignInProviders:    h.signInProviders(s.EnabledOidcProviders),
+		OauthAccessTokenTtlMinutes: s.OAuthAccessTokenTTLMinutes,
+		BaseCurrencyLocked:         s.BaseCurrencyLocked,
+		MaxUploadBytes:             h.maxUploadBytes,
+		SignInProviders:            h.signInProviders(s.EnabledOidcProviders),
 	}
 	dateFormat := crmcontracts.InstallationSettingsDateFormat(s.DateFormat)
 	timeFormat := crmcontracts.InstallationSettingsTimeFormat(s.TimeFormat)

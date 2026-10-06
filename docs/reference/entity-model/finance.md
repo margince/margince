@@ -29,6 +29,7 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 **Rules**
 
 - `finance_connection_status_check` — `CHECK ((status = ANY (ARRAY['connecting', 'active', 'error', 'disconnected'])))`
+- `finance_connection_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
@@ -63,6 +64,10 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 |---|---|---|
 | `company_id` | `company` | the parent cannot be deleted while this row points at it |
 | `connection_id` | `finance_connection` | the parent cannot be deleted while this row points at it |
+
+**Rules**
+
+- `finance_customer_link_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
@@ -102,6 +107,7 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 **Rules**
 
 - `finance_external_customer_connection_id_extern_key` — `UNIQUE (connection_id, external_customer_id)`
+- `finance_external_customer_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
@@ -162,8 +168,13 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 - `finance_invoice_credits_not_self` — `CHECK (((credits_invoice_id IS NULL) OR (credits_invoice_id <> id)))`
 - `finance_invoice_currency_check` — `CHECK ((currency ~ '^[A-Z]{3}$'))`
 - `finance_invoice_fx_pair` — `CHECK (((fx_rate_to_base IS NULL) = (fx_rate_date IS NULL)))`
+- `finance_invoice_gross_minor_js_safe` — `CHECK (((gross_minor >= '-9007199254740991'::bigint) AND (gross_minor <= '9007199254740991'::bigint)))`
+- `finance_invoice_net_minor_js_safe` — `CHECK (((net_minor >= '-9007199254740991'::bigint) AND (net_minor <= '9007199254740991'::bigint)))`
+- `finance_invoice_open_minor_js_safe` — `CHECK (((open_minor >= '-9007199254740991'::bigint) AND (open_minor <= '9007199254740991'::bigint)))`
 - `finance_invoice_paid_status` — `CHECK (((fully_paid_at IS NULL) OR (status = ANY (ARRAY['paid', 'credited', 'void']))))`
 - `finance_invoice_status_check` — `CHECK ((status = ANY (ARRAY['draft', 'open', 'partially_paid', 'paid', 'overdue', 'disputed', 'credited', 'void'])))`
+- `finance_invoice_tax_minor_js_safe` — `CHECK (((tax_minor >= '-9007199254740991'::bigint) AND (tax_minor <= '9007199254740991'::bigint)))`
+- `finance_invoice_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 - `finance_invoice_void_agrees` — `CHECK (((void_at IS NULL) = (status <> 'void')))`
 
 **Indexes**
@@ -211,8 +222,10 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 
 **Rules**
 
+- `finance_payment_amount_minor_js_safe` — `CHECK (((amount_minor >= '-9007199254740991'::bigint) AND (amount_minor <= '9007199254740991'::bigint)))`
 - `finance_payment_connection_id_external_id_key` — `UNIQUE (connection_id, external_id)`
 - `finance_payment_currency_check` — `CHECK ((currency ~ '^[A-Z]{3}$'))`
+- `finance_payment_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 

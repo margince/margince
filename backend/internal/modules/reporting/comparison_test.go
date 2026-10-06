@@ -44,3 +44,19 @@ func TestComparisonDoesNotTurnStateOrTargetReadingsIntoPeriodDeltas(t *testing.T
 		t.Fatalf("partial pricing produced deltas: %+v", got)
 	}
 }
+
+func TestComparisonIgnoresPresentationOrderButKeepsMetricSet(t *testing.T) {
+	start := time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)
+	left := crmcontracts.ReportingEdition{Evaluation: crmcontracts.ReportingEvaluation{Context: crmcontracts.ReportingContext{Timezone: "UTC", Currency: "EUR", DefinitionVersion: "1", Interval: crmcontracts.ReportingWindow{StartAt: start, EndAt: start.AddDate(0, 1, 0)}}, Selection: crmcontracts.ReportingSelection{Metrics: []crmcontracts.ReportingMetricID{"bookings_won", "meetings_held"}, Blocks: []crmcontracts.ReportingBlockKind{"bookings_trend", "sdr_outcomes"}}}}
+	right := left
+	right.Evaluation.Context.Interval = crmcontracts.ReportingWindow{StartAt: start.AddDate(0, 1, 0), EndAt: start.AddDate(0, 2, 0)}
+	right.Evaluation.Selection.Metrics = []crmcontracts.ReportingMetricID{"meetings_held", "bookings_won"}
+	right.Evaluation.Selection.Blocks = []crmcontracts.ReportingBlockKind{"sdr_outcomes", "bookings_trend"}
+	if reason := comparisonReason(left, right); reason != "" {
+		t.Fatalf("presentation order refused a comparable period: %s", reason)
+	}
+	right.Evaluation.Selection.Metrics = []crmcontracts.ReportingMetricID{"meetings_held"}
+	if reason := comparisonReason(left, right); reason == "" {
+		t.Fatal("different metric sets were comparable")
+	}
+}

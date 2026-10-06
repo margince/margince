@@ -197,11 +197,10 @@ func overduePromiseMoment(ctx context.Context, now time.Time, page *crmcontracts
 // (internal/compose/contact360/moments_test.go), which fail if either source
 // stops reaching the card.
 //
-// A UNION, NOT A JOIN. Nothing writes conversation_claim.task_activity_id, so
-// an extracted commitment and a task about the same thing are two unlinked
-// rows here. A reader who filed a task for a promise an extractor also read
-// may therefore see both, which is the honest answer until that link is
-// written — the alternative is guessing which pairs mean one promise.
+// A claim that became a task is left to its task, so the promise is counted
+// once. A task a rep typed for a promise an extractor also read stays a second
+// row: nothing links the two, and guessing which pairs mean one promise would
+// be this card inventing a fact.
 func owedPromises(page *crmcontracts.Contact360) []owedwork.Item {
 	var items []owedwork.Item
 	if page.NextSteps != nil {
@@ -228,7 +227,7 @@ func owedPromises(page *crmcontracts.Contact360) []owedwork.Item {
 	if page.Claims != nil {
 		for _, claim := range *page.Claims {
 			if claim.Kind != crmcontracts.ConversationClaimKindCommitmentOurs ||
-				claim.Status != crmcontracts.ConversationClaimStatusOpen {
+				claim.Status != crmcontracts.ConversationClaimStatusOpen || claim.TaskActivityId != nil {
 				continue
 			}
 			items = append(items, owedwork.Item{

@@ -95,7 +95,7 @@ func (s *Store) updateContactInTx(
 	if err := refuseUnreadableResult(current, in); err != nil {
 		return out, err
 	}
-	if err := ensureHandedOnOwnerAssignable(ctx, tx, current.OwnerId, in.OwnerID); err != nil {
+	if err := auth.EnsureOwnerHandOn(ctx, tx, (*ids.UUID)(current.OwnerId), in.OwnerID); err != nil {
 		return out, err
 	}
 	in.Clear = storekit.CoreFieldClears(in.Clear, active, in.CustomFields)

@@ -38,6 +38,7 @@ import {
   publishAgentEdge,
 } from "./agent-edge-signal";
 import { type AgentFault, useAgentFault } from "./agent-fault";
+import { modelText } from "./agentrail.model";
 import { RUNNING } from "./agentrail-copy";
 import { EdgeLightSetting } from "./agentrail-edgelight";
 import { RailLine } from "./agentrail-line";
@@ -174,22 +175,6 @@ function agoFor(
   const size =
     seconds < 60 ? 1 : seconds < 3600 ? 60 : seconds < 86_400 ? 3600 : 86_400;
   return format.format(Math.max(0, Math.floor(seconds / size)));
-}
-
-/**
- * What the model row prints: the model the last call was SERVED by — not the
- * configured one, because a fallback ladder makes those differ exactly when it
- * matters — or the reason there is none.
- */
-function modelText(
-  read: Readonly<{ allowed: boolean; calls: readonly AiCall[] }>,
-  t: Translator,
-): string {
-  const latest = read.calls[0];
-  if (latest) {
-    return `${latest.provider}/${latest.served_model}`;
-  }
-  return t(read.allowed ? "agent.fact.noCalls" : "agent.fact.hidden");
 }
 
 /**

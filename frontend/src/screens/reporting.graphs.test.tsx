@@ -1,13 +1,13 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
-import { pickOption } from "../design-system/select-testing";
 import { ReportingCharts } from "./reporting.charts";
 import { ReportingForecastGraphs } from "./reporting.forecast";
 import { forecastEvaluation, sdrEvaluation } from "./reporting.scenarios";
 import {
+  reportingStoryEvaluation,
   reportingStoryRoutes,
   reportingStoryScope,
 } from "./reporting.story-fixtures";
@@ -76,11 +76,10 @@ it("renders forecast support and reconciled movement with boundary evidence", as
     context_id: "movement_delta",
     group_key: "new",
   });
-  expect(screen.getByText(/Manager call/)).toBeVisible();
+  expect(screen.getByText(/Manager forecast/)).toBeVisible();
 });
 
-it("changes forecast pipeline context and removes whole-scope snapshot sharing", async () => {
-  const user = userEvent.setup({ delay: null });
+it("labels snapshot selection as sharing and keeps the forecast at one quarterly scope", async () => {
   installFetchStub(reportingStoryRoutes(forecastEvaluation));
   const fetch = vi.spyOn(globalThis, "fetch");
   render(
@@ -89,32 +88,17 @@ it("changes forecast pipeline context and removes whole-scope snapshot sharing",
     </StoryProviders>,
   );
   expect(
-    await screen.findByRole("combobox", { name: "Frozen edition" }),
+    await screen.findByRole("combobox", { name: "Snapshot to share" }),
   ).toBeVisible();
-  await pickOption(
-    user,
-    screen.getByRole("combobox", { name: "Pipeline" }),
-    "Sales",
-  );
-  await waitFor(() =>
-    expect(
-      fetch.mock.calls.some(
-        ([input]) =>
-          input instanceof Request && input.url.includes("pipeline_id=sales"),
-      ),
-    ).toBe(true),
-  );
   expect(
-    screen.queryByRole("combobox", { name: "Frozen edition" }),
+    screen.queryByRole("combobox", { name: "Pipeline" }),
   ).not.toBeInTheDocument();
-  await pickOption(
-    user,
-    screen.getByRole("combobox", { name: "Pipeline" }),
-    "All pipelines",
-  );
   expect(
-    await screen.findByRole("combobox", { name: "Frozen edition" }),
-  ).toBeVisible();
+    fetch.mock.calls.some(
+      ([input]) =>
+        input instanceof Request && input.url.includes("period=this_quarter"),
+    ),
+  ).toBe(true);
 });
 
 it("shows missing capture history as unavailable instead of drawing a fabricated bridge", () => {
@@ -192,34 +176,148 @@ it.each(["Capture failed; retry the scheduled capture", undefined])(
         <ReportingCharts evaluation={evaluation} onEvidence={() => {}} />
       </StoryProviders>,
     );
-    expect(screen.getByRole("status")).toHaveTextContent(
-      failure ?? "Unavailable",
-    );
+    if (failure) expect(screen.getByRole("status")).toHaveTextContent(failure);
+    else expect(screen.queryByRole("status")).not.toBeInTheDocument();
   },
 );
 
-it("opens the at-risk worklist from stage age while frozen editions remain historical", async () => {
+it("opens the stage-age chart evidence context", async () => {
   const user = userEvent.setup({ delay: null });
-  installFetchStub(reportingStoryRoutes(forecastEvaluation));
-  const view = render(
+  const evidence = vi.fn();
+  const evaluation = {
+    ...forecastEvaluation,
+    charts: forecastEvaluation.charts.filter(
+      (chart) => chart.kind === "stage_age",
+    ),
+  };
+  installFetchStub(reportingStoryRoutes(evaluation));
+  render(
     <StoryProviders>
-      <ReportingCharts evaluation={forecastEvaluation} onEvidence={() => {}} />
-    </StoryProviders>,
-  );
-  await user.click(
-    screen.getByRole("button", { name: /Review at-risk deals/ }),
-  );
-  expect(window.location.hash).toContain("deals_at_risk");
-  view.rerender(
-    <StoryProviders>
-      <ReportingCharts
-        evaluation={forecastEvaluation}
-        editionId="frozen"
-        onEvidence={() => {}}
-      />
+      <ReportingCharts evaluation={evaluation} onEvidence={evidence} />
     </StoryProviders>,
   );
   expect(
-    screen.queryByRole("button", { name: /Review at-risk deals/ }),
+    screen.queryByRole("button", { name: /Open my worklist/ }),
   ).not.toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "View records" }));
+  expect(evidence).toHaveBeenCalledWith({
+    metric: evaluation.charts[0].metric,
+    context_id: evaluation.charts[0].context_id,
+  });
+});
+
+it("shows accepted handoffs alone and hides targets without an allocation", async () => {
+  const evaluation = {
+    ...sdrEvaluation,
+    metrics: sdrEvaluation.metrics.filter(
+      (metric) => metric.id === "accepted_opportunities",
+    ),
+    charts: sdrEvaluation.charts
+      .filter((chart) => chart.metric === "accepted_opportunities")
+      .map((chart) => ({
+        ...chart,
+        points: chart.points.map((point) => ({ ...point, target: undefined })),
+      })),
+  };
+  installFetchStub(reportingStoryRoutes(evaluation));
+  render(
+    <StoryProviders>
+      <ReportingCharts evaluation={evaluation} onEvidence={() => {}} />
+    </StoryProviders>,
+  );
+  expect(
+    screen.getByRole("heading", { name: "Accepted handoffs" }),
+  ).toBeVisible();
+  expect(
+    document.querySelectorAll(".report-chart-column").length,
+  ).toBeGreaterThan(0);
+  expect(screen.queryByText("Progress against target")).not.toBeInTheDocument();
+});
+
+it.each([
+  { actual: 21600000, label: "€84k remaining" },
+  { actual: 34000000, label: "€40k above target" },
+])("shows target attainment with $label", ({ actual, label }) => {
+  const evaluation = {
+    ...reportingStoryEvaluation,
+    metrics: [
+      {
+        ...reportingStoryEvaluation.metrics[0],
+        target: 30000000,
+        target_actual: actual,
+      },
+    ],
+  };
+  installFetchStub(reportingStoryRoutes(evaluation));
+  render(
+    <StoryProviders>
+      <ReportingCharts evaluation={evaluation} onEvidence={() => {}} />
+    </StoryProviders>,
+  );
+  expect(screen.getByText(label, { exact: false })).toBeVisible();
+});
+
+it("omits unassigned target columns for SDR outcomes", async () => {
+  const user = userEvent.setup({ delay: null });
+  const evaluation = {
+    ...sdrEvaluation,
+    charts: sdrEvaluation.charts.map((chart) => ({
+      ...chart,
+      points: chart.points.map((point) => ({ ...point, target: undefined })),
+    })),
+    metrics: sdrEvaluation.metrics.map((metric) => ({
+      ...metric,
+      target: undefined,
+      target_actual: undefined,
+    })),
+  };
+  installFetchStub(reportingStoryRoutes(evaluation));
+  render(
+    <StoryProviders>
+      <ReportingCharts evaluation={evaluation} onEvidence={() => {}} />
+    </StoryProviders>,
+  );
+  await user.click(screen.getByText("All metrics"));
+  expect(
+    screen.queryByRole("columnheader", { name: "Target" }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.getByText("34", { selector: ".stat-card-value" }),
+  ).toBeVisible();
+});
+
+it("withholds stage-age marks for a small cohort without printing zero days", async () => {
+  const user = userEvent.setup({ delay: null });
+  const evaluation = {
+    ...reportingStoryEvaluation,
+    charts: reportingStoryEvaluation.charts
+      .filter((chart) => chart.kind === "stage_age")
+      .map((chart) => ({
+        ...chart,
+        points: chart.points.slice(0, 1).map((point) => ({
+          ...point,
+          value: null,
+          upper: null,
+          observations: 2,
+          status: "insufficient_sample",
+        })),
+      })),
+  } satisfies typeof reportingStoryEvaluation;
+  installFetchStub(reportingStoryRoutes(evaluation));
+  const { container } = render(
+    <StoryProviders>
+      <ReportingCharts evaluation={evaluation} onEvidence={() => {}} />
+    </StoryProviders>,
+  );
+  expect(
+    screen.getByRole("button", {
+      name: /Discovery: Median days —; 75th percentile —/,
+    }),
+  ).toBeVisible();
+  expect(container.querySelector(".report-chart-range-dot")).toBeNull();
+  expect(container.querySelector(".report-chart-range-band")).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Sample details" }));
+  expect(
+    screen.getByText(/Observations: 2 · Too few observations/),
+  ).toBeVisible();
 });

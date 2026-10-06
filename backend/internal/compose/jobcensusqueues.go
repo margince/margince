@@ -39,7 +39,7 @@ func (c *JobCensus) everyDeclaredQueueIsBuiltWithItsDeclaredBound() []string {
 		config, exists := built[name]
 		if !exists {
 			findings = append(findings, fmt.Sprintf(
-				"queue %q is declared but jobQueues() builds no such pool — a fan-out child is inserted on its DECLARED queue, so its rows would sit runnable with no client working them; build it, or retire the declaration", name))
+				"queue %q is declared but jobQueues() builds no such pool — every insert takes its queue from the declaration (jobs.QueuedAs), so its rows would sit runnable with no client working them; build it, or retire the declaration", name))
 			continue
 		}
 		if config.MaxWorkers != declared[name] {

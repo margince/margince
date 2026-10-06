@@ -103,7 +103,21 @@ func (g *GraphEdgeGen) projectionContext(ctx context.Context, env events.Envelop
 // both sides, so the old pair is refolded too — and, having lost its
 // evidence, deleted.
 func (g *GraphEdgeGen) onActivity(ctx context.Context, env events.Envelope, activityID ids.UUID) error {
-	switch env.Type {
+	if !refoldsActivity(env.Type) {
+		return nil
+	}
+	return g.store.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := RecomputeEdgesForActivities(ctx, tx, []ids.UUID{activityID}); err != nil {
+			return fmt.Errorf("graph-edge: %s: %w", env.Type, err)
+		}
+		return nil
+	})
+}
+
+// refoldsActivity names the activity events that change what the projection
+// folds.
+func refoldsActivity(eventType string) bool {
+	switch eventType {
 	// The catalog's activity types, in full. Naming one that does not exist
 	// is a branch that never runs and a projection that silently never
 	// updates — which is exactly how the erasure hole above survived review.
@@ -115,42 +129,50 @@ func (g *GraphEdgeGen) onActivity(ctx context.Context, env events.Envelope, acti
 	// the arithmetic and — being written as a delete — left a surviving pair's
 	// counts stale whenever the activity was not its last evidence.
 	case "activity.captured", "activity.updated", "activity.archived", "retention.applied":
+		return true
 	default:
-		return nil
+		return false
 	}
-	return g.store.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := RecomputeEdgesForActivities(ctx, tx, []ids.UUID{activityID}); err != nil {
-			return fmt.Errorf("graph-edge: %s: %w", env.Type, err)
-		}
-		return nil
-	})
 }
 
 // onContact refolds or drops the edges to one contact.
 func (g *GraphEdgeGen) onContact(ctx context.Context, env events.Envelope, contactID ids.UUID) error {
 	return g.store.db.Tx(ctx, func(tx pgx.Tx) error {
-		switch env.Type {
-		case "contact.merged":
-			// The source's edges belong to the survivor now. Dropping the
-			// source and refolding it is enough: the merge already repointed
-			// the activity links, so refolding the SOURCE id finds nothing and
-			// the survivor is refolded when its own event arrives. Both are
-			// refolded here rather than relying on that ordering, because a
-			// projection that is only correct if two events arrive in order is
-			// not correct on an at-least-once bus.
-			if err := DropEdgesForContact(ctx, tx, contactID); err != nil {
-				return err
-			}
-			if target := mergeTarget(env); target != ids.Nil {
-				return RecomputeEdgesForContact(ctx, tx, target)
-			}
-			return nil
-		case "contact.archived", "contact.restored", "contact.updated", "contact.created", "retention.applied":
-			return RecomputeEdgesForContact(ctx, tx, contactID)
-		default:
-			return nil
-		}
+		return refoldContact(ctx, tx, env, contactID)
 	})
+}
+
+// refoldContact is onContact's effect inside a caller's transaction.
+func refoldContact(ctx context.Context, tx pgx.Tx, env events.Envelope, contactID ids.UUID) error {
+	var t edgeTargets
+	if err := t.addContactEvent(ctx, tx, env, contactID); err != nil {
+		return err
+	}
+	return t.apply(ctx, tx)
+}
+
+// addContactEvent gathers what one contact event refolds or drops, so a batch
+// can fold the activities and every contact event as one set.
+func (t *edgeTargets) addContactEvent(ctx context.Context, tx pgx.Tx, env events.Envelope, contactID ids.UUID) error {
+	switch env.Type {
+	case "contact.merged":
+		// The source's edges belong to the survivor now. Dropping the
+		// source and refolding it is enough: the merge already repointed
+		// the activity links, so refolding the SOURCE id finds nothing and
+		// the survivor is refolded when its own event arrives. Both are
+		// refolded here rather than relying on that ordering, because a
+		// projection that is only correct if two events arrive in order is
+		// not correct on an at-least-once bus.
+		t.dropped = append(t.dropped, contactID)
+		if target := mergeTarget(env); target != ids.Nil {
+			return t.addContact(ctx, tx, target)
+		}
+		return nil
+	case "contact.archived", "contact.restored", "contact.updated", "contact.created", "retention.applied":
+		return t.addContact(ctx, tx, contactID)
+	default:
+		return nil
+	}
 }
 
 // mergeTarget reads the surviving contact from a merge envelope. An absent or

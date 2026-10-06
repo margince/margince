@@ -35,8 +35,8 @@ import (
 // does not — a projection store, and the brief engine plus the identity service
 // — not because they are gated differently: the gating is the same nothing, and
 // that is why they belong here rather than behind a condition of their own.
-func addDatabaseOnlySweepJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Logger, briefMail BriefMailConfig, reportingEnabled bool) {
-	addDeclaredWorker[ReportScheduleSweepArgs](reg, &reportScheduleSweepWorker{pool: pool, now: time.Now, enabled: reportingEnabled})
+func addDatabaseOnlySweepJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Logger, briefMail BriefMailConfig) {
+	addDeclaredWorker[ReportScheduleSweepArgs](reg, &reportScheduleSweepWorker{pool: pool, now: time.Now})
 	addDeclaredWorker[CloseDateSweepArgs](reg, &closeDateSweepWorker{pool: pool, corrector: NewCloseDateCorrector(pool, log)})
 	addDeclaredWorker[FollowUpReconcileArgs](reg, &followUpReconcileWorker{pool: pool, reconciler: NewFollowUpReconciler(pool, log)})
 	assuranceSweep := &assuranceSweepWorker{
@@ -50,8 +50,7 @@ func addDatabaseOnlySweepJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Lo
 	// fired must not be able to differ in what they do.
 	addDeclaredWorker[AssuranceRunArgs](reg, &assuranceRunWorker{sweep: assuranceSweep})
 	addDeclaredWorker[ForecastSnapshotSweepArgs](reg, &forecastSnapshotSweepWorker{
-		reportingEnabled: reportingEnabled,
-		pool:             pool, now: func() time.Time { return time.Now().UTC() }, log: log,
+		pool: pool, now: func() time.Time { return time.Now().UTC() }, log: log,
 	})
 	addDeclaredWorker[RiskVerdictSweepArgs](reg, newRiskVerdictSweepWorker(
 		pool, func() time.Time { return time.Now().UTC() }, log))

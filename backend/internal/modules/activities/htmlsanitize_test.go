@@ -6,8 +6,6 @@ package activities
 import (
 	"strings"
 	"testing"
-
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // What a formatted business email is made of survives intact. A sanitiser that
@@ -189,17 +187,12 @@ func TestEmptyMarkupStaysEmpty(t *testing.T) {
 // the sanitizer's output: a tracking pixel in the caller's markup is gone, and
 // the sign-off that arrives after it is intact.
 func TestTheFilterRunsBeforeAnythingOfOursIsAdded(t *testing.T) {
-	store := (&Store{}).WithSignature(&stubSignature{body: "Marek Janetzke"})
-
 	safe, err := SanitizeOutboundHTML(
 		`<p>Words</p><img src="https://track.test/o.gif">`)
 	if err != nil {
 		t.Fatalf("sanitizing failed: %v", err)
 	}
-	got, err := store.signedHTML(humanCtx(ids.NewV7()), safe, sendDeliverability{})
-	if err != nil {
-		t.Fatalf("signing the markup failed: %v", err)
-	}
+	got := signedHTML(safe, SignOff{Text: "Marek Janetzke", Kind: SignOffSignature}, sendDeliverability{})
 	if strings.Contains(got, "track.test") {
 		t.Fatalf("a tracking pixel reached the signed body: %q", got)
 	}

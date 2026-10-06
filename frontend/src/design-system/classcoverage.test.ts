@@ -6,9 +6,9 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
+import { appStylesheets } from "../../scripts/lib/css-rules";
 import {
   extensionFrontendFiles,
-  extensionLayers,
   filesMatching,
   filesUnder,
   parseSource,
@@ -52,12 +52,7 @@ function fromFrontend(path: string): string {
  * walk found the tree rather than a corner of it.
  */
 function sheets(): string[] {
-  const units = extensionLayers(extensionsRoot).flatMap((layer) =>
-    filesMatching(layer, /\.css$/),
-  );
-  return filesMatching(sourceRoot, /\.css$/)
-    .concat(units)
-    .map(fromFrontend);
+  return appStylesheets(frontendRoot).map(fromFrontend);
 }
 
 /**

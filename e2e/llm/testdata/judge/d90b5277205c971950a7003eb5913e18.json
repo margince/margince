@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer names valantic Migrationsprojekt (EUR 9,500), states it left the quarter, explains the cause as a close-date move to February (a later date), and explicitly denies it was lost or won.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 2. The answer says the valantic Migrationsprojekt deal (EUR 9,500) left this quarter's pipeline — slipped out or moved to a later date — and does not call it lost, closed or won. Answer no if it calls it lost or won, gives a different cause, or leaves the deal out.",
+  "answer": "Open pipeline went from EUR 179,000 at last week's freeze to EUR 164,500, down EUR 14,500, and two deals account for all of it. Vorort Systeme Ausbau was repriced down by EUR 5,000, from EUR 31,000 to EUR 26,000. valantic Migrationsprojekt (EUR 9,500) left the quarter: its close date moved to February, so it is no longer in this quarter's open number. Nothing was lost or won."
+}

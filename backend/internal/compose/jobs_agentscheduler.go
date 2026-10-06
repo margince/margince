@@ -106,11 +106,10 @@ func (AgentSchedulerArgs) Kind() string { return "agent_scheduler" }
 // and a backing-off row suppresses that tick. Held equal to the declaration by
 // TestArgsOwnedAttemptCapsMatchTheirDeclaration.
 func (AgentSchedulerArgs) InsertOpts() river.InsertOpts {
-	return river.InsertOpts{
-		Queue:       agentSchedulerQueue,
+	return *jobs.QueuedAs[AgentSchedulerArgs](&river.InsertOpts{
 		MaxAttempts: 1,
 		UniqueOpts:  river.UniqueOpts{ByState: activeSweepStates},
-	}
+	})
 }
 
 // agentSchedulerWorker seeds and executes the due jobs.

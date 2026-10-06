@@ -24,7 +24,7 @@ describe("the pipeline review renders what it was given", () => {
       "Globex platform expansion",
       "Initech pilot",
     ]);
-    expect(texts(el, ".rank")).toEqual(["#1", "#2", "#3"]);
+    expect(texts(el, ".rank")).toEqual(["1", "2", "3"]);
   });
 
   it("shows every evidence line, with the field it was read off", () => {
@@ -65,7 +65,7 @@ describe("the pipeline review renders what it was given", () => {
       },
       [],
     );
-    const [euro, yen] = texts(el, ".score");
+    const [euro, yen] = texts(el, ".figure");
     expect(euro).toContain("240,000");
     // JPY has no minor digits: 1234 stored units means 1,234, not 12.34.
     expect(yen).toContain("1,234");
@@ -75,9 +75,19 @@ describe("the pipeline review renders what it was given", () => {
   it("shows an unpriced deal as absent rather than as a currency zero", () => {
     const el = root();
     render(el, pipelineReviewFixture.data, []);
-    const amounts = texts(el, ".score");
+    const amounts = texts(el, ".figure");
     expect(amounts[2]).toBe("—");
     expect(amounts[2]).not.toContain("0");
+  });
+
+  it("draws the review as the app's panel, one ruled row per deal", () => {
+    const el = root();
+    render(el, pipelineReviewFixture.data, []);
+    expect(el.querySelector(".panel .panel-title")?.textContent).toBe(
+      "Slipping this week",
+    );
+    expect(el.querySelectorAll(".panel-row")).toHaveLength(3);
+    expect(el.querySelector(".figure-absent")?.textContent).toBe("—");
   });
 
   it("renders a currency Intl does not know as absent rather than throwing", () => {
@@ -98,7 +108,7 @@ describe("the pipeline review renders what it was given", () => {
         [],
       ),
     ).not.toThrow();
-    expect(el.querySelector(".score")?.textContent).toBe("—");
+    expect(el.querySelector(".figure")?.textContent).toBe("—");
   });
 
   it("says a deal arrived with no evidence rather than showing a rank with no reason", () => {
@@ -107,20 +117,20 @@ describe("the pipeline review renders what it was given", () => {
     // presenting the ranking as an oracle.
     const el = root();
     render(el, { deals: [{ name: "Unexplained", evidence: [] }] }, []);
-    expect(el.querySelector(".state")?.textContent).toMatch(/no evidence/i);
+    expect(el.querySelector(".evidence")?.textContent).toMatch(/no evidence/i);
   });
 
   it("counts what is SHOWN rather than claiming to be the whole risk set", () => {
     const el = root();
     render(el, pipelineReviewFixture.data, []);
-    expect(el.querySelector(".meta")?.textContent).toMatch(/3 deal\(s\) shown/);
+    expect(el.querySelector(".panel-head")?.textContent).toContain("3 shown");
   });
 
   it("renders the empty state when nothing can be evidenced", () => {
     const el = root();
     render(el, { deals: [] }, []);
     expect(el.querySelector(".empty")).not.toBeNull();
-    expect(el.querySelectorAll(".row")).toHaveLength(0);
+    expect(el.querySelectorAll(".panel-row")).toHaveLength(0);
   });
 
   it("falls to the empty state on a payload of the wrong shape rather than throwing", () => {
@@ -157,7 +167,7 @@ describe("the pipeline review renders what it was given", () => {
       },
       [],
     );
-    expect(el.querySelector(".rank")?.textContent).toBe("#4");
+    expect(el.querySelector(".rank")?.textContent).toBe("4");
   });
 
   it("says so when the host sent no structured result at all", () => {

@@ -432,7 +432,7 @@ function MergeDialog({
   if (result) {
     return (
       <Modal open onClose={onClose} labelledBy="tagadmin-merged">
-        <div className="tagadmin-merged">
+        <div className="form-stack">
           <Heading size="large" id="tagadmin-merged">
             {t("tagAdmin.mergedTitle")}
           </Heading>

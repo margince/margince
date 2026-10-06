@@ -66,10 +66,13 @@ func workflowEngineWithDrafter(db *database.DB, drafter activities.EmailDrafter)
 		// The notify transport is the durable notice row (noticesseam.go):
 		// recording one is delivering one, so the engine's success record
 		// is finally a true sentence rather than a skipped run.
-		Notifier: noticesNotifier{store: notices.NewStore(db)},
-		Claims:   automation.NewEffectClaims(db),
-		Language: installationLanguage(db.Pool()),
+		Notifier:  noticesNotifier{store: notices.NewStore(db)},
+		Claims:    automation.NewEffectClaims(db),
+		Language:  installationLanguage(db.Pool()),
+		Lists:     NewListRules(db.Pool()),
+		Authority: identity.NewService(db.Pool()),
 	}
+	engine.WithRulePauses(noticesNotifier{store: notices.NewStore(db)}, ex.Lists)
 	for _, handler := range automation.StarterWorkflows(ex) {
 		engine.RegisterWorkflow(handler)
 	}

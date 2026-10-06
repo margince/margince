@@ -11,6 +11,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -29,6 +30,8 @@ func newBulkEngine(db *database.DB, gate *auth.Gate) *bulkEngine {
 		targets: bulkTargets(contacts.NewStore(db), deals.NewStore(db, DealsInstallation())),
 		gate:    gate,
 		now:     func() time.Time { return time.Now().UTC() },
+		tags:    NewCollectionsStore(db.Pool()),
+		tasks:   activities.NewStore(db),
 	}
 }
 
@@ -53,7 +56,7 @@ func (h bulkHandlers) PreviewBulkChange(w http.ResponseWriter, r *http.Request) 
 	}
 	out, err := h.engine.Preview(r.Context(), bulkChange{
 		recordType: body.RecordType, verb: body.Verb, items: body.Items, ownerID: bulkOwner(body.OwnerId),
-		listID: bulkOwner(body.ListId), note: body.Note,
+		listID: bulkOwner(body.ListId), note: body.Note, tagID: bulkOwner(body.TagId), task: body.Task,
 	})
 	if err != nil {
 		httperr.Write(w, r, err)
@@ -72,7 +75,7 @@ func (h bulkHandlers) ExecuteBulkChange(w http.ResponseWriter, r *http.Request, 
 	}
 	change := bulkChange{
 		recordType: body.RecordType, verb: body.Verb, items: body.Items, ownerID: bulkOwner(body.OwnerId),
-		listID: bulkOwner(body.ListId), note: body.Note,
+		listID: bulkOwner(body.ListId), note: body.Note, tagID: bulkOwner(body.TagId), task: body.Task,
 	}
 	if body.ConfirmToken != nil {
 		change.confirmToken = *body.ConfirmToken

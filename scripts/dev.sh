@@ -50,6 +50,9 @@ esac
 
 cd "$(git rev-parse --show-toplevel)"
 
+# shellcheck source=scripts/lib-diskspace.sh
+source "$PWD/scripts/lib-diskspace.sh"
+
 # The revision both halves of the stack are stamped with. It is the commit
 # because that is what CI passes to both images, and a local stack should
 # exercise the same comparison rather than a permanently-disabled one. Export it
@@ -1064,6 +1067,10 @@ up)
   # A bound port must still stop the boot: binding would fail silently and
   # wait_ready would then read "ready" off the OLD server. (Vite without
   # --strictPort would not even fail — it would walk to a port we never poll.)
+  # A stack that boots onto a full disk fails as Postgres being unreachable,
+  # which reads as the database being broken rather than the machine being out
+  # of room (lib-diskspace.sh).
+  require_disk_headroom "a dev stack" || exit 1
   for _p in "$api_port" "$fe_port"; do
     if [[ -n "$(port_listeners "$_p")" ]]; then
       echo "FAIL: port :${_p} already in use — is $label already running?" >&2
@@ -1150,7 +1157,8 @@ up)
   # BYOK: the real model powers the /coldstart read-back when a cloud key is in
   # the environment, the offline fake otherwise. Secrets ride the ENVIRONMENT —
   # the api resolves each provider's key from its conventional env var
-  # (GEMINI_API_KEY / OPENAI_API_KEY / ANTHROPIC_API_KEY / OPENAI_COMPATIBLE_API_KEY)
+  # (GEMINI_API_KEY / GEMINI_VERTEX_SA_JSON / OPENAI_API_KEY / ANTHROPIC_API_KEY /
+  # OPENAI_COMPATIBLE_API_KEY / TYPESAFE_API_KEY)
   # at boot; the routing file names only providers, never a key. Sourcing
   # .env.local exports those vars, and the api/worker started below inherit them —
   # no key ever lands in a config file. Seed .env.local from the tracked template
@@ -1178,6 +1186,7 @@ up)
       anthropic)         _env="ANTHROPIC_API_KEY" ;;
       openai)            _env="OPENAI_API_KEY" ;;
       gemini)            _env="GEMINI_API_KEY" ;;
+      gemini_vertex)     _env="GEMINI_VERTEX_SA_JSON" ;;
       openai_compatible) _env="OPENAI_COMPATIBLE_API_KEY" ;;
       jev)               _env="TYPESAFE_API_KEY" ;;
     esac

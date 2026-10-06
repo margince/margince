@@ -275,11 +275,40 @@ func (s *Service) RejectedChangesFor(ctx context.Context, kind string, targetID 
 // lock to close. A concurrent Decide blocks on these rows until the caller
 // commits.
 func (s *Service) RejectedChangesForTx(ctx context.Context, tx pgx.Tx, kind string, targetID ids.UUID) ([]json.RawMessage, error) {
+	offers, err := s.OffersForTx(ctx, tx, kind, targetID)
+	if err != nil {
+		return nil, err
+	}
+	var out []json.RawMessage
+	for _, offer := range offers {
+		if offer.Status == approvalStatusRejected {
+			out = append(out, offer.Change)
+		}
+	}
+	return out, nil
+}
+
+// Offer is one proposal of a kind against a target, as staged.
+type Offer struct {
+	Status string
+	Change json.RawMessage
+}
+
+// Pending reports whether the offer still waits for a human. An offer past its
+// expiry reads as expired, as the inbox shows it.
+func (o Offer) Pending() bool { return o.Status == statusPending }
+
+// Rejected reports whether a human turned the offer down.
+func (o Offer) Rejected() bool { return o.Status == approvalStatusRejected }
+
+// OffersForTx reads the offers of this kind against this target, LOCKED, for
+// a caller that must not act around one still waiting as well as one refused.
+func (s *Service) OffersForTx(ctx context.Context, tx pgx.Tx, kind string, targetID ids.UUID) ([]Offer, error) {
 	// EVERY offer is locked, not only the already-rejected ones: a pending row
 	// is exactly the one a human is about to reject, and leaving it unlocked
 	// would reopen the gap this closes.
 	rows, err := tx.Query(ctx, `
-		SELECT status, proposed_change FROM approval
+		SELECT status, proposed_change, expires_at FROM approval
 		 WHERE kind = $1 AND target_entity_id = $2
 		 `+lockOrder+`
 		 FOR UPDATE`, kind, targetID)
@@ -288,19 +317,17 @@ func (s *Service) RejectedChangesForTx(ctx context.Context, tx pgx.Tx, kind stri
 	}
 	defer rows.Close()
 
-	var out []json.RawMessage
+	now := s.now()
+	var out []Offer
 	for rows.Next() {
-		var status string
-		var change json.RawMessage
-		if err := rows.Scan(&status, &change); err != nil {
-			return nil, fmt.Errorf("read the declined offers for this proposal: %w", err)
+		held := row{Kind: kind}
+		if err := rows.Scan(&held.Status, &held.ProposedChange, &held.ExpiresAt); err != nil {
+			return nil, fmt.Errorf("read the offers for this proposal: %w", err)
 		}
-		if status == approvalStatusRejected {
-			out = append(out, change)
-		}
+		out = append(out, Offer{Status: held.effectiveStatus(now), Change: held.ProposedChange})
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("read the declined offers for this proposal: %w", err)
+		return nil, fmt.Errorf("read the offers for this proposal: %w", err)
 	}
 	return out, nil
 }

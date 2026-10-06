@@ -2,6 +2,7 @@
   display: grid;
   grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
   gap: var(--gapCards);
+  align-items: start;
 }
 .reporting-panel {
   min-width: 0;
@@ -36,11 +37,6 @@
   display: grid;
   gap: var(--space-5);
   padding: var(--padPanel);
-}
-.reporting-dialog-actions {
-  display: flex;
-  justify-content: end;
-  gap: var(--gapActions);
 }
 .reporting-panel-sdr_outcomes {
   grid-column: 1 / -1;
@@ -78,4 +74,43 @@
 .reporting-comparison-values {
   display: grid;
   gap: var(--gapActions);
+}
+
+.reporting-context {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+.reporting-panel-pipeline_movement {
+  grid-column: 1 / -1;
+}
+.reporting-dialog fieldset {
+  display: grid;
+  gap: var(--space-3);
+}
+.reporting-period-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.reporting-controlbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+.reporting-controlbar .reporting-toolbar {
+  margin: 0;
+}
+.reporting-controlbar .reporting-header-actions {
+  margin-inline-start: auto;
+}
+
+.reporting-results {
+  display: grid;
+  gap: var(--gapCards);
 }

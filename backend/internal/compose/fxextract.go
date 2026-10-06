@@ -26,7 +26,7 @@ Return ONLY a JSON object: {"pairs":[{"from_currency":code,"to_currency":code,"r
 
 Each pair is a rate the page states as "1 <from_currency> = <rate> <to_currency>". from_currency and to_currency are 3-letter ISO 4217 codes (e.g. "USD","EUR"). rate is a plain decimal STRING (e.g. "1.08","0.9259"); never a number, never a range, never with a currency symbol. Report the direction the page shows - do NOT convert or invert. confidence is a STRING "0.0"-"1.0". OMIT a pair entirely if the page does not state its rate - never guess a rate.
 
-Cite the passage id that grounds each pair in "evidence".`
+Cite the passage id that grounds each pair in "evidence": the bracketed id before that passage, such as "s0" or "s1" - never the name inside a boundary marker.`
 
 // fxExtractSystemFor names THIS call's data boundary; see promptfence.Fence.Rule.
 func fxExtractSystemFor(fence promptfence.Fence) string {

@@ -40,6 +40,18 @@ function withDiagnostics(allow: GrantSpec, health: unknown = HEALTH) {
     async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = input instanceof Request ? input.url : String(input);
       if (url.includes("/ai/status")) return jsonResponse(status);
+      if (url.includes("/ai/task-overrides")) return jsonResponse({});
+      if (url.includes("/ai/call-stats/flow")) {
+        return jsonResponse({
+          task: feature.task,
+          window: "7d",
+          total: 0,
+          unanswered: 0,
+          steps: [],
+        });
+      }
+      if (url.includes("/ai/call-stats"))
+        return jsonResponse({ window: "7d", group: "task", rows: [] });
       if (url.includes("/ai/health")) {
         return health === null
           ? new Promise<Response>(() => {})
@@ -66,6 +78,45 @@ describe("AiTasksCard", () => {
     // The hedge that said this was only the policy's pick is gone: the row is
     // the resolved chain.
     expect(screen.queryByText(/does not show provider status/i)).toBeNull();
+  });
+
+  it("names each task's tier, and its sheet links to that task's calls", async () => {
+    vi.stubGlobal("fetch", withDiagnostics(EVERYTHING));
+    const user = userEvent.setup();
+    render(<AiTasksCard />);
+
+    const row = (await screen.findByText(feature.display_name)).closest("tr");
+    if (!row) throw new Error("the task has no row");
+    expect(within(row).getByText(feature.leading_tier)).toBeTruthy();
+    expect(within(row).queryByText("Custom")).toBeNull();
+    await user.click(within(row).getByRole("button", { name: /^Edit/ }));
+    const sheet = await screen.findByRole("dialog");
+    expect(
+      within(sheet)
+        .getByRole("link", { name: "View these calls →" })
+        .getAttribute("href"),
+    ).toBe(`#/settings/model-calls?task=${feature.task}`);
+  });
+
+  it("marks a task an admin customised", async () => {
+    vi.stubGlobal("fetch", withDiagnostics(EVERYTHING));
+    const custom = {
+      ...status,
+      features: [{ ...feature, overrides: { thinking: "high" as const } }],
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = input instanceof Request ? input.url : String(input);
+        if (url.includes("/ai/status")) return jsonResponse(custom);
+        return withDiagnostics(EVERYTHING)(input, init);
+      }),
+    );
+    render(<AiTasksCard />);
+
+    const row = (await screen.findByText(feature.display_name)).closest("tr");
+    if (!row) throw new Error("the task has no row");
+    expect(within(row).getByText("Custom")).toBeTruthy();
   });
 
   // `/ai/status` answers an empty task list to a seat without routing read,

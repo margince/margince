@@ -83,6 +83,8 @@ export type ListColumn<Row> = {
    * in, and a verb the reader can only half read is a verb they cannot use.
    */
   verbs?: boolean;
+  /** Starts unticked in the Display menu: offered rather than drawn. */
+  initiallyHidden?: boolean;
 };
 
 export type ListSelection<Row> = {
@@ -110,8 +112,6 @@ function RowSelect<Row>({
   rowKey: (row: Row) => string;
   selection?: ListSelection<Row>;
 }>) {
-  // No `identity` flag any more: only the identity cell renders this, and a
-  // prop that is true at its one call site is a claim the caller can get wrong.
   if (!selection || selection.selectable?.(row) === false) {
     return null;
   }
@@ -481,11 +481,8 @@ export function ListTable<Row>({
    * The count sentence for a body that owns its own paging.
    *
    * The SLOT is the same either way — a reader looks for "how much is here" in
-   * one place, beside the page's name — and only who can compute it changes: a
-   * paged grid's range is the table's arithmetic, a board's total is the
-   * board's. Without this the board's count was a line of its own under the
-   * toolbar, which read as a caption about the dials above it. Ignored unless
-   * `bodyOwnsPaging`, since otherwise the table's own range is the truth.
+   * one place, beside the page's name — and only who can compute it changes.
+   * Ignored unless `bodyOwnsPaging`: otherwise the table's own range is true.
    */
   bodyCount?: ReactNode;
   onRowClick?: (row: Row) => void;
@@ -630,7 +627,9 @@ export function ListTable<Row>({
   saveView?: ReactNode;
 }>) {
   const t = useT();
-  const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set());
+  const [hidden, setHidden] = useState<ReadonlySet<string>>(
+    () => new Set(columns.flatMap((c) => (c.initiallyHidden ? [c.key] : []))),
+  );
   const [dense, setDense] = useState(false);
   const [widths, setWidths] = useState<Readonly<Record<string, number>>>(() =>
     readWidths(widthsKey),

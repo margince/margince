@@ -301,45 +301,60 @@ func (s *Store) ArchiveActivity(ctx context.Context, id ids.ActivityID, ifVersio
 	}
 	var out crmcontracts.Activity
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		held, err := lockActivityForWrite(ctx, tx, id.UUID)
-		if err != nil {
-			return err
-		}
-		if err := auth.EnsureActivityWritableIn(ctx, tx, id.UUID, !held); err != nil {
-			return err
-		}
-		if err := refuseActiveInvitationPatch(ctx, tx, id.UUID); err != nil {
-			return err
-		}
-		p := storekit.NewPatch()
-		p.Set("archived_at", nil, time.Now().UTC())
-		// held drops the filter AND the pin: the filter lets the UPDATE reach
-		// activity_refuse_restricted_mutation instead of a LiveOnly clause
-		// hiding the row again, and the pin — a CAS by WHERE clause that never
-		// reaches the trigger on a mismatch — would otherwise answer stale
-		// version skew (409) instead of the reachable 423 on a row nothing
-		// can write to regardless of version. Dropping it is safe: this
-		// transaction already holds the row FOR UPDATE via
-		// lockActivityForWrite, the guard an unpinned ApplyGuardedIn falls
-		// back to.
-		pin := ifVersion
-		if held {
-			pin = nil
-		}
-		if err := p.ApplyGuardedIn(ctx, tx, "activity", id.UUID, pin, activityArchivedFilter(held)); err != nil {
-			return err
-		}
-		auditID, err := storekit.Audit(ctx, tx, "archive", "activity", id.UUID, nil, nil)
-		if err != nil {
-			return err
-		}
-		if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventActivityArchived{}); err != nil {
-			return err
-		}
-		out, err = readActivity(ctx, tx, id, storekit.IncludeArchived)
+		var err error
+		out, err = archiveActivityInTx(ctx, tx, id, ifVersion)
 		return err
 	})
 	return out, err
+}
+
+// ArchiveActivityTx is ArchiveActivity inside a caller-opened transaction, for
+// a bulk undo that retires the tasks its change filed in one commit.
+func (s *Store) ArchiveActivityTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, ifVersion *int64) error {
+	if err := auth.Require(ctx, "activity", principal.ActionDelete); err != nil {
+		return err
+	}
+	_, err := archiveActivityInTx(ctx, tx, id, ifVersion)
+	return err
+}
+
+func archiveActivityInTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, ifVersion *int64) (crmcontracts.Activity, error) {
+	held, err := lockActivityForWrite(ctx, tx, id.UUID)
+	if err != nil {
+		return crmcontracts.Activity{}, err
+	}
+	if err := auth.EnsureActivityWritableIn(ctx, tx, id.UUID, !held); err != nil {
+		return crmcontracts.Activity{}, err
+	}
+	if err := refuseActiveInvitationPatch(ctx, tx, id.UUID); err != nil {
+		return crmcontracts.Activity{}, err
+	}
+	p := storekit.NewPatch()
+	p.Set("archived_at", nil, time.Now().UTC())
+	// held drops the filter AND the pin: the filter lets the UPDATE reach
+	// activity_refuse_restricted_mutation instead of a LiveOnly clause
+	// hiding the row again, and the pin — a CAS by WHERE clause that never
+	// reaches the trigger on a mismatch — would otherwise answer stale
+	// version skew (409) instead of the reachable 423 on a row nothing
+	// can write to regardless of version. Dropping it is safe: this
+	// transaction already holds the row FOR UPDATE via
+	// lockActivityForWrite, the guard an unpinned ApplyGuardedIn falls
+	// back to.
+	pin := ifVersion
+	if held {
+		pin = nil
+	}
+	if err := p.ApplyGuardedIn(ctx, tx, "activity", id.UUID, pin, activityArchivedFilter(held)); err != nil {
+		return crmcontracts.Activity{}, err
+	}
+	auditID, err := storekit.Audit(ctx, tx, "archive", "activity", id.UUID, nil, nil)
+	if err != nil {
+		return crmcontracts.Activity{}, err
+	}
+	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventActivityArchived{}); err != nil {
+		return crmcontracts.Activity{}, err
+	}
+	return readActivity(ctx, tx, id, storekit.IncludeArchived)
 }
 
 // activityUpdatedChangedFields projects the patch's touched/untouched decisions

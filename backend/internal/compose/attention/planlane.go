@@ -46,7 +46,12 @@ func (s *Service) readingPlan(ctx context.Context, now time.Time) (*Service, *cr
 	if s.taskScope == TasksVisible {
 		return &scoped, &crmcontracts.WorklistSourceUnavailable{Source: sourceWeeklyCommitment, Reason: crmcontracts.WorklistSourceUnavailableReasonWithheld}
 	}
-	entries, err := s.weeklyPlans.DuePlan(ctx, s.taskOwner, now)
+	var entries []PlanWork
+	err := s.degradable(ctx, func(ctx context.Context) error {
+		var err error
+		entries, err = s.weeklyPlans.DuePlan(ctx, s.taskOwner, now)
+		return err
+	})
 	if err != nil {
 		reason := crmcontracts.WorklistSourceUnavailableReasonFailed
 		if errors.Is(err, apperrors.ErrPermissionDenied) {

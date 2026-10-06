@@ -38,7 +38,7 @@ func TestReportingMovementUsesTheDailyTeamPipelineProducer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	worker := &forecastSnapshotSweepWorker{reportingEnabled: true, pool: e.Pool, now: now, log: slog.New(slog.DiscardHandler)}
+	worker := &forecastSnapshotSweepWorker{pool: e.Pool, now: now, log: slog.New(slog.DiscardHandler)}
 	if err := worker.snapshotWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatal(err)
 	}

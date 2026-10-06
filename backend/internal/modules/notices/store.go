@@ -15,6 +15,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -300,8 +301,8 @@ const notTheReadersOwnStageMove = `NOT coalesce(
 	  (recipient_user_id::text, 'human:' || recipient_user_id::text), false)`
 
 // inTheReadersLane is what the product may put in front of a reader without
-// being asked: not a stage move they made themselves, and not a class they
-// switched off.
+// being asked: not a stage move they made themselves, not a class they switched
+// off, and not a line whose subject stopped being answerable.
 //
 // ONE FRAGMENT because every lane reader composes both halves — the Worklist's
 // unread query, the notification centre's badge, and the figure the bulk settle
@@ -317,7 +318,7 @@ const notTheReadersOwnStageMove = `NOT coalesce(
 // The muted kinds arrive as one text[] argument rather than a rendered list, so
 // nothing off a preference row is ever formatted into a statement.
 func inTheReadersLane(mutedAt int) string {
-	return notTheReadersOwnStageMove + fmt.Sprintf(" AND kind <> ALL($%d)", mutedAt)
+	return notTheReadersOwnStageMove + fmt.Sprintf(" AND kind <> ALL($%d) AND retracted_at IS NULL", mutedAt) + " AND (kind <> 'lead_sla' OR NOT EXISTS (SELECT 1 FROM lead ld WHERE target_type = 'lead' AND ld.id = target_id AND NOT (" + auth.LiveLeadInquiryClause("ld") + ")))"
 }
 
 // UnreadFor answers the CALLING contact's own unread notices, newest first,
@@ -434,4 +435,25 @@ func truncate(s string, n int) string {
 		return string(runes[:n])
 	}
 	return s
+}
+
+// Retract takes back every seat's copy of one announcement: the thing it asked
+// for was settled by somebody else, so it leaves the lanes that interrupt a
+// reader while staying in the history that says they were told.
+//
+// Keyed by the DEDUPE KEY, which is what already names one announcement across
+// its recipients — the producer composes it from the subject's own id, so a
+// caller that can name the thing can retract it without knowing who was told.
+//
+// Idempotent, and it has to be: the consumer that calls this is fed by an
+// at-least-once bus, so the second delivery matches no unretracted row and the
+// FIRST retraction's instant stands rather than being moved by a replay.
+func (s *Store) Retract(ctx context.Context, tx pgx.Tx, dedupeKey string) (int64, error) {
+	tag, err := tx.Exec(ctx, `
+		UPDATE notice SET retracted_at = now()
+		 WHERE dedupe_key = $1 AND retracted_at IS NULL`, dedupeKey)
+	if err != nil {
+		return 0, fmt.Errorf("notices: taking back an announcement: %w", err)
+	}
+	return tag.RowsAffected(), nil
 }

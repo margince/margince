@@ -3,8 +3,6 @@
 package compose
 
 import (
-	"time"
-
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/platform/jobs"
@@ -13,12 +11,12 @@ import (
 // jobContractHash is the sha256 of api/jobs.yaml this file was generated
 // from — the same fingerprint jobs.JobContractHash carries, so a stale
 // half of the pair is visible without diffing the two tables.
-const jobContractHash = "33efc4ca3323fac76de9d4eb03d2e78125239efc06b1ab9b5bcec2a11721ee08"
+const jobContractHash = "91c96dc81733c21366eb50d407fca8d50c086c8121958d8cb05e0923121ac5fc"
 
 // declaredJobArgs is every args type api/jobs.yaml declares, and nothing
 // else. A job kind the file has never heard of cannot satisfy it, so it
-// cannot be passed to either registration function below — and those two
-// are how the runner registers, so an undeclared kind does not compile.
+// cannot be passed to the registration function below — and that is how
+// the runner registers, so an undeclared kind does not compile.
 //
 // A union rather than a marker interface, because a marker is something a
 // new type can declare for itself: the set has to be the file's to state.
@@ -31,6 +29,7 @@ type declaredJobArgs interface {
 		AIActivityReconcileArgs |
 		AIActivityRetentionArgs |
 		AIBudgetResumeArgs |
+		AIPriceSyncSweepArgs |
 		ApprovalAutoApplyArgs |
 		ApprovalExpiryArgs |
 		AssuranceRunArgs |
@@ -77,6 +76,7 @@ type declaredJobArgs interface {
 		KnowledgeIngestArgs |
 		LinkReconcileArgs |
 		LinkedInRematchArgs |
+		ListEvaluateArgs |
 		MailDraftRetentionArgs |
 		MeetingDeliveryArgs |
 		NotificationDigestArgs |
@@ -116,22 +116,7 @@ type declaredJobArgs interface {
 // unexported, so the registry is the only thing that can tell MustBeTotal
 // what this build registered.
 func addDeclaredWorker[T declaredJobArgs](reg *jobRegistry, w jobs.WorkOnly[T]) {
-	addGovernedWorker[T](reg, w, 0)
-}
-
-// addDeclaredWorkerWithTimeout serves the kinds whose timeout is an
-// operator's to set, and so is computed at boot rather than stated in
-// api/jobs.yaml. Every other kind takes its wall clock from the file and
-// registers through addDeclaredWorker; jobtimeoutwiring_test.go derives
-// which is which from the declared TimeoutPolicy rather than a list.
-//
-// The mark it leaves lets the census check that same claim against the
-// wiring it built rather than against the source: passing through here is
-// the only way a kind's wall clock comes from anywhere but the file.
-func addDeclaredWorkerWithTimeout[T declaredJobArgs](reg *jobRegistry, w jobs.WorkOnly[T], supplied time.Duration) {
-	addGovernedWorker[T](reg, w, supplied)
-	var zero T
-	reg.markOperatorSupplied(zero.Kind())
+	addGovernedWorker[T](reg, w)
 }
 
 // The FLEET-WIDE kinds: a row of one carries no tenant. A dispatcher
@@ -139,6 +124,7 @@ func addDeclaredWorkerWithTimeout[T declaredJobArgs](reg *jobRegistry, w jobs.Wo
 // (ADR-0103). Both own no workspace, which is what the marker asserts.
 var (
 	_ jobs.FleetWide = AIBudgetResumeArgs{}
+	_ jobs.FleetWide = AIPriceSyncSweepArgs{}
 	_ jobs.FleetWide = AssuranceSweepArgs{}
 	_ jobs.FleetWide = BriefGenerateArgs{}
 	_ jobs.FleetWide = CaptureAutoEnrichSweepArgs{}
@@ -165,6 +151,7 @@ var (
 	_ jobs.FleetWide = IdempotencyRetentionArgs{}
 	_ jobs.FleetWide = LinkReconcileArgs{}
 	_ jobs.FleetWide = LinkedInRematchArgs{}
+	_ jobs.FleetWide = ListEvaluateArgs{}
 	_ jobs.FleetWide = NotificationDigestArgs{}
 	_ jobs.FleetWide = OwedVerdictArgs{}
 	_ jobs.FleetWide = ParticipantBackfillArgs{}

@@ -8,7 +8,6 @@ import {
   confidenceLevel,
   EvidenceChip,
   FieldDiff,
-  PassportChip,
   ProvenanceTag,
   StagingCard,
 } from "./trust";
@@ -101,61 +100,6 @@ export const Signals: Story = {
             </Specimen>
           );
         })}
-      </div>
-    </div>
-  ),
-};
-
-const DEMO_USERS: Record<string, string> = { usr_7f2: "Carol Wagner" };
-
-// Every shape `captured_by` can take, including the two the tag exists to keep
-// apart: a value the reader typed themselves and one a colleague typed. Both
-// used to read as the reader's own handiwork, which is a false statement about
-// who to ask. The unattributed row says so plainly rather than guessing, and it
-// says it about NOBODY else — a buyer has a source, so it has its own arm.
-export const Provenance: Story = {
-  render: () => (
-    <div style={stack}>
-      <div style={row}>
-        <ProvenanceTag provenance={{ kind: "agent", agent: "capture" }} />
-        <PassportChip id="psp_7Q3fa91" />
-        {/* The same kind with nothing to name: a passport call stamps an opaque
-            id, and no lookup here turns it into a word, so the tag says what the
-            wire said and prints no identifier. */}
-        <ProvenanceTag provenance={{ kind: "agent" }} />
-      </div>
-      <div style={row}>
-        <ProvenanceTag provenance={{ kind: "connector", connector: "gmail" }} />
-      </div>
-      {/* A job the installation ran itself. Beside the agent row on purpose:
-          these two are what a reader most needs told apart, and only the
-          wording and the ground say which is which. */}
-      <div style={row}>
-        <ProvenanceTag
-          provenance={{ kind: "system", job: "contact_auto_enrich" }}
-        />
-        <ProvenanceTag provenance={{ kind: "system" }} />
-      </div>
-      <div style={row}>
-        <ProvenanceTag provenance={{ kind: "human", self: true }} />
-        <ProvenanceTag
-          provenance={{ kind: "human", self: false, userId: "usr_7f2" }}
-          renderUser={(userId) => (
-            <strong>{DEMO_USERS[userId] ?? userId}</strong>
-          )}
-        />
-        {/* No renderUser: the design system has no record lookups, so the tag
-            says a contact entered it without claiming which one. */}
-        <ProvenanceTag
-          provenance={{ kind: "human", self: false, userId: "usr_7f2" }}
-        />
-      </div>
-      {/* A contact from outside the company, beside the unattributed row
-          on purpose: reading a buyer as "source not recorded" was the defect,
-          and both are the neutral badge, so only the wording tells them apart. */}
-      <div style={row}>
-        <ProvenanceTag provenance={{ kind: "buyer" }} />
-        <ProvenanceTag provenance={{ kind: "unknown" }} />
       </div>
     </div>
   ),

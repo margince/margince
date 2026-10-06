@@ -1,7 +1,8 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { appStylesheets } from "../../scripts/lib/css-rules";
 import { withoutComments } from "../testing/css";
 
 // `Card` is the one card surface, and a hand-rolled one is a second card the
@@ -28,18 +29,6 @@ const designSystem = join(frontendRoot, "src", "design-system");
 // judged like any screen: a second card here is the same defect and harder to
 // see, because it sits beside the real one.
 const cardSource = join(designSystem, "atoms.css");
-
-function stylesheets(dir: string): string[] {
-  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const path = join(dir, entry.name);
-    if (entry.isDirectory()) {
-      return entry.name === "node_modules" || entry.name === "dist"
-        ? []
-        : stylesheets(path);
-    }
-    return entry.name.endsWith(".css") ? [path] : [];
-  });
-}
 
 /** One `selector { … }` rule, as written. */
 type Rule = Readonly<{ selector: string; body: string }>;
@@ -137,7 +126,7 @@ function longhand(declaration: string): readonly string[] {
 }
 
 describe("one card surface", () => {
-  const sheets = stylesheets(join(frontendRoot, "src"));
+  const sheets = appStylesheets(frontendRoot);
 
   it("finds stylesheets to judge", () => {
     // A census that read nothing certifies nothing, and this one is a census of

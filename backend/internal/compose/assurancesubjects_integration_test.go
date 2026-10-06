@@ -58,16 +58,16 @@ func dressedDeal(t *testing.T, e *integration.Env) ids.UUID {
 	integration.LinkActivity(t, owner, task, "deal", deal)
 
 	if _, err := owner.Exec(ctx, `
-		INSERT INTO offer (deal_id, offer_number, status, currency, gross_minor, source, captured_by)
-		VALUES ($1, 'O-1', 'sent', 'EUR', 4300000, 'manual', 'test')`, deal); err != nil {
+		INSERT INTO offer (deal_id, offer_number, status, currency, net_minor, gross_minor, source, captured_by)
+		VALUES ($1, 'O-1', 'sent', 'EUR', 4300000, 4300000, 'manual', 'test')`, deal); err != nil {
 		t.Fatalf("seeding the sent offer: %v", err)
 	}
 	// A second, newer offer in another currency must NOT become the total: a
 	// USD minor count next to an EUR deal amount is not a discrepancy, it is an
 	// exchange rate.
 	if _, err := owner.Exec(ctx, `
-		INSERT INTO offer (deal_id, offer_number, status, currency, gross_minor, source, captured_by, updated_at)
-		VALUES ($1, 'O-2', 'sent', 'USD', 9900000, 'manual', 'test', now() + interval '1 minute')`,
+		INSERT INTO offer (deal_id, offer_number, status, currency, net_minor, gross_minor, source, captured_by, updated_at)
+		VALUES ($1, 'O-2', 'sent', 'USD', 9900000, 9900000, 'manual', 'test', now() + interval '1 minute')`,
 		deal); err != nil {
 		t.Fatalf("seeding the foreign-currency offer: %v", err)
 	}

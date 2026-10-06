@@ -38,6 +38,7 @@ Return ONLY a JSON object: {"objective":{"text":"...","evidence":[{"entity_type"
 Write every word from the briefing and from nothing else. Never invent a fact, a name, a date or a number. If the briefing does not say it, do not write it.
 Quote what contacts actually asked for. A question that would read the same about any other company is worthless — name the thing this account said, in their words where the briefing has them.
 Cite the ids the briefing gave you, in evidence only. An id must never appear in the text a reader sees.
+"opening" has the same shape as "objective", and every "evidence" list in every field holds objects shaped exactly as in "objective" — {"entity_type":...,"entity_id":...} — never a bare id string.
 Do not write the unknowns: the briefing lists what the record does not say, and that list is not yours to add to.
 At most five likely asks, five questions and three scenarios. Three good questions beat five ordinary ones.
 Never open with "Absolutely", "Great question", "I'd be happy to", "Based on the provided context", or any greeting. No exclamation marks. No praise.

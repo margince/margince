@@ -28,10 +28,13 @@ seeds:
     # serves each one from wherever its routing lands. openrouter_cloud_eu.yaml
     # is the EU-pinned one.
     profile: cloud_frontier     # eu_hosted | sovereign | cloud_frontier
+    # A provider's host is written once, here, and every lane on it reads it.
+    # base_url is the host root with NO version segment — the adapter appends
+    # /v1. openai_compatible fails closed without one.
+    providers:
+      openai_compatible:
+        base_url: https://openrouter.ai/api
     tiers:
-      # base_url is the host root with NO version segment — the adapter appends
-      # /v1. openai_compatible fails closed without one.
-      #
       # Every tier below omits `routing:`, which means it inherits the product
       # default: sort: throughput, quantizations: [fp16, bf16],
       # require_parameters: true — reliability over price. Write `routing: {}` on
@@ -40,15 +43,12 @@ seeds:
       local_small:
         provider: openai_compatible
         model: openai/gpt-oss-120b
-        base_url: https://openrouter.ai/api
       cheap_cloud:
         provider: openai_compatible
         model: openai/gpt-oss-120b
-        base_url: https://openrouter.ai/api
       premium:
         provider: openai_compatible
         model: mistralai/mistral-medium-3-5
-        base_url: https://openrouter.ai/api
         # `{}` is load-bearing, not decoration: the inherited default filters
         # on `quantizations: [fp16, bf16]`, and Mistral's first-party endpoints
         # declare their precision as `unknown`. Inheriting it empties the
@@ -69,13 +69,13 @@ seeds:
       frontier:
         provider: openai_compatible
         model: anthropic/claude-sonnet-4.6
-        base_url: https://openrouter.ai/api
         routing:
-          # A frontier answer is worth waiting for, so this tier does not sort
-          # for speed. What it does refuse is a quantized serving of a model
-          # bound for its quality.
-          quantizations: [fp16, bf16, fp32]
-          require_parameters: true
+          provider:
+            # A frontier answer is worth waiting for, so this tier does not sort
+            # for speed. What it does refuse is a quantized serving of a model
+            # bound for its quality.
+            quantizations: [fp16, bf16, fp32]
+            require_parameters: true
     # KNOWN GAP: this preset cannot serve document_extract, which sends a PDF.
     # On the OpenAI-compatible wire the carriage is the operator's `input:`
     # declaration, and that vocabulary is text and image only — there is no way
@@ -85,17 +85,18 @@ seeds:
     # a provider whose wire carries PDFs (gemini does, and is what the committed
     # record for that task uses) if a deployment needs it.
     #
-    # The embed lane takes no `routing:` — the parser refuses one. An embedding
-    # is a single forward pass, so it has no latency tail to bound, and no embed
-    # model is served at fp4-versus-bf16 stakes.
+    # The embed lane takes no serving preferences — the parser refuses them. An
+    # embedding is a single forward pass, so it has no latency tail to bound, and
+    # no embed model is served at fp4-versus-bf16 stakes.
     embeddings:
       provider: openai_compatible
       model: mistralai/mistral-embed-2312
-      base_url: https://openrouter.ai/api
       dimensions: 1024
     # The decision model, opt-in: uncomment to have a decision site asked
     # OpenRouter's Jev endpoint before its ladder. JEV_COMPATIBLE_API_KEY takes
     # your OpenRouter key (the same one as OPENAI_COMPATIBLE_API_KEY above).
+    # A lane's base_url is lifted onto its provider when the provider names
+    # none, so this block works uncommented as one step.
     # decisions:
     #   provider: jev_compatible
     #   model: typesafe/jev-1.13

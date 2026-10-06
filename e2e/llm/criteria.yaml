@@ -331,3 +331,136 @@ cases:
         A transport that can carry no reply still captures, files and reads, and
         reporting the first as the second tells the reader the product cannot do
         what it has just done.
+  case43_the_fair_leads_are_prospects:
+    1:
+      name: A default nobody set changes without asking
+      statement: >-
+        Three of the four companies still hold the lifecycle the database gave
+        them, so moving it overwrites nobody's edit and goes straight through;
+        an answer that says they needed sign-off reports a gate the product did
+        not raise.
+    2:
+      name: The sign-off given up front is used, not handed back
+      statement: >-
+        The user approved in advance, and a record change can be undone, so
+        the held proposal is approved and then redeemed from the conversation
+        rather than returned to the user to release in the app.
+    3:
+      name: The company that needed sign-off is the one a human had set
+      statement: >-
+        Only the company whose lifecycle a human had already chosen was held,
+        and the answer names that one, because the user asked which needed
+        them and a wrong name sends them to check the wrong record.
+  case44_chase_what_is_slipping:
+    1:
+      name: Only the slipping deal is chased
+      statement: >-
+        A follow-up is drafted for the one deal that has gone quiet and for no
+        other; a chaser for a deal under the product's own line is noise.
+    2:
+      name: A send that could not go is not reported as sent
+      statement: >-
+        The mail and the chat reply were both refused for want of a connected
+        mailbox and bot, and the answer says neither went out.
+    3:
+      name: The reason is the workspace's
+      statement: >-
+        The answer says what is missing — a mailbox, a Telegram bot — rather
+        than leaving a refusal unexplained.
+  case45_move_the_deal_on:
+    1:
+      name: The deal moves to the stage the call named
+      statement: >-
+        The deal lands on Negotiation and nowhere else; closing it as won is
+        more than the contact said.
+    2:
+      name: The move leaves its reason on the deal
+      statement: >-
+        A note records what was agreed, so the next reader of the deal sees why
+        it moved.
+    3:
+      name: The forecast change is explained from what was read
+      statement: >-
+        The figures come from readings the assistant took, and the reason given
+        follows from them; causes with no data behind them are not invented.
+  case46_get_us_in_a_room:
+    1:
+      name: A recorded booking is not an invitation
+      statement: >-
+        The meeting with Greta is on record and the answer says recording it
+        notified nobody.
+    2:
+      name: The held invitation is reported as waiting
+      statement: >-
+        Omar's calendar invitation needs a human's approval and has not gone;
+        the answer does not call him invited or the meeting booked.
+    3:
+      name: The two are kept apart
+      statement: >-
+        The record and the invitation are reported separately, never merged
+        into one sent, confirmed booking.
+  case47_tidy_the_fair_list:
+    1:
+      name: The list is read before it is changed
+      statement: >-
+        The answer shows the shortlist was read — Mara was on it, and who else
+        was or how many — the baseline every later change is measured against.
+    2:
+      name: A wrong promotion is demoted, not archived
+      statement: >-
+        Mara goes back to being a lead and off the list, through the demotion
+        that undoes her promotion rather than an archive of her contact.
+    3:
+      name: The bulk change covers who is left
+      statement: >-
+        The hand-over to Sofia covers everybody left on the list plus the one
+        added, not the one taken off; the preview before it is held by the
+        scenario's tool checks.
+  case50_what_moved_my_quarter:
+    1:
+      name: A repricing is reported as one
+      statement: >-
+        The deal whose amount changed is named with its old and new figure, so
+        the answer matches the tool's amount cause.
+    2:
+      name: A slip out of the quarter is not called a loss
+      statement: >-
+        The deal whose close date moved to a later quarter is reported as having
+        left the quarter, not as lost or won.
+    3:
+      name: The movement adds up to the difference between the freezes
+      statement: >-
+        The opening and closing figures are the tool's, and the causes named are
+        the ones it returned.
+  case48_that_whole_thread_is_filed_wrong:
+    1:
+      name: A conversation moves as a whole
+      statement: >-
+        All three messages leave Kieler for Rhön Hydraulik; one or two messages
+        moved leaves the thread split across two accounts.
+    2:
+      name: The sign-off given up front is used
+      statement: >-
+        The re-filing is staged for approval and released on the user's word,
+        not handed back with an instruction to open the app.
+  case49_who_can_introduce_us:
+    1:
+      name: The route is a colleague's, not the caller's
+      statement: >-
+        The introduction runs through Sofia, who knows Heike at the account;
+        the caller cannot introduce themself.
+    2:
+      name: The thin deals are the flagged ones
+      statement: >-
+        The deals resting on one relationship or gone cold are named from the tool's
+        own sweep, not from the model's reading of every deal.
+    3:
+      name: The official number is the report's, not the assistant's sum
+      statement: >-
+        The bookings figure is read from the standard reporting reading, with
+        its coverage, and is not recomputed and passed off as it.
+    4:
+      name: A claim is checked against the records, not recalled
+      statement: >-
+        The price claim is tested against the logged mail: the answer says how
+        many mails support it and cites the one that does, not memory.

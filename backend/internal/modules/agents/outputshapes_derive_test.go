@@ -127,8 +127,9 @@ func TestEveryResultTypeSatisfiesTheSchemaDerivedFromIt(t *testing.T) {
 	record := wireRecord{RecordType: "deal", ID: id, Fields: json.RawMessage(`{"name":"Acme"}`), Version: 3}
 
 	for name, value := range map[string]any{
-		"SearchRecordsResult":  SearchRecordsResult{Records: []wireRecord{record}, NextCursor: "cursor"},
-		"SearchRecordsEmpty":   SearchRecordsResult{Records: []wireRecord{}},
+		"SearchRecordsResult":  SearchRecordsResult{Records: []recordWithOwner{{wireRecord: record, Owner: &RecordOwner{ID: id, Name: "Sofia Meier"}}}, NextCursor: "cursor"},
+		"SearchRecordsEmpty":   SearchRecordsResult{Records: []recordWithOwner{}},
+		"recordWithOwner":      recordWithOwner{wireRecord: record},
 		"wireRecord":           record,
 		"ArchiveResult":        ArchiveResult{Archived: true, RecordType: "contact", ID: id},
 		"PromoteLeadResult":    PromoteLeadResult{Merged: true, Contact: record},

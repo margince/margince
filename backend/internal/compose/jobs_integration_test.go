@@ -167,19 +167,24 @@ func TestRiverCloseDateSweepAppliesTheSameProvisionalAsDirectSweep(t *testing.T)
 	}
 	// Idempotent, so the deferred call is a safety net for the paths that
 	// return before the explicit stop below rather than a second shutdown.
+	// It answers the error rather than reporting it: the deferred caller is past
+	// every assertion and can only say so, while the explicit one below must not
+	// read a row the workers it failed to drain may still be writing.
 	stopped := false
-	stopRunner := func() {
+	stopRunner := func() error {
 		if stopped {
-			return
+			return nil
 		}
 		stopped = true
 		stopCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
-		if err := runner.Stop(stopCtx); err != nil {
+		return runner.Stop(stopCtx)
+	}
+	defer func() {
+		if err := stopRunner(); err != nil {
 			t.Errorf("Stop: %v", err)
 		}
-	}
-	defer stopRunner()
+	}()
 
 	// RunOnStart enqueues both periodic dispatchers at boot; wait for the
 	// close-date pass to complete, then assert the same outcome the direct
@@ -195,7 +200,11 @@ func TestRiverCloseDateSweepAppliesTheSameProvisionalAsDirectSweep(t *testing.T)
 	// after it — so a second pass landing between the event and the read would
 	// be asserted against without anything saying one had run. Stopping first
 	// makes the four assertions below describe one settled row.
-	stopRunner()
+	// Fatal because a drain that overran leaves workers holding the very rows
+	// the assertions read, so each verdict below would be a race.
+	if err := stopRunner(); err != nil {
+		t.Fatalf("Stop: %v — the workers were still running, so the row below is not settled", err)
+	}
 
 	swept := e.readSwept(t, id)
 	if swept.expectedClose == nil || swept.expectedClose.Before(today()) {

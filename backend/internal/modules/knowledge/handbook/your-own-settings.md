@@ -46,7 +46,7 @@ Also called: my name, profile name, rename myself.
 To add an email signature in Margince, open Settings → **Account** and choose **Edit signature** in the **Email signature** row.
 1. Type your sign-off in **Sign-off**, in plain text.
 2. Choose **Save**.
-The signature is added below every message you send, above the unsubscribe footer. Leave it empty to send without one; the row then says **No sign-off set**.
+The signature is added below every email you send yourself, above the unsubscribe footer. Leave it empty and your emails close with a short greeting and your name instead, in the message's language (the installation's language, then English, when the message is too short to tell); the row then says **No sign-off set**. An email an agent sends carries no sign-off.
 AI drafts never add a sign-off, so this is the one that goes out.
 Also called: email footer, sign-off, signature block.
 
@@ -90,6 +90,11 @@ page. Dates beyond that horizon cannot be booked; extend it here to offer later
 dates. All-day events marked busy are respected. In the booking form,
 **Find next available times** searches the rest of your booking horizon.
 
+**Add a video call link to new meetings** is on by default. Your calendar
+creates the link: Google Meet for Google Calendar, and Outlook's default, usually
+Microsoft Teams, for Outlook. You can turn it off for a single meeting while
+booking. If the calendar adds no link, the invitation is still sent.
+
 **My booking link** remains the place to copy a reusable public link for your
 email signature, preview it, pause it or replace it. Opening meeting settings
 from a booking draft opens another tab; returning refreshes the saved setup.
@@ -113,6 +118,8 @@ URL, so update any signatures or pages where you shared it.
 Open the contact’s **Meetings** tab and choose **Book a meeting**. Propose two or three times and review
 the email before sending, share a personal booking link, or send an invitation
 for a time already agreed. Personal links expire and can book one meeting.
+Proposals and personal links still waiting on a reply are listed on the same
+tab; **Withdraw** stops a link working before the guest uses it.
 
 Calendar availability includes private and internal busy time without copying
 those details into Margince. Bookable hours, notice and buffers are checked by

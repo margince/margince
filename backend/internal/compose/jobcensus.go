@@ -76,10 +76,9 @@ func (c *JobCensus) Validate() error {
 		c.everyDeclaredKindIsWiredAndBack(),
 		c.everyKindIsWorkedByItsDeclaredArgsType(),
 		c.everyDerivedTimeoutStillEqualsItsConstant(),
-		c.exactlyTheOperatorKindsSupplyTheirTimeout(),
 		c.everyArgsFieldIsDeclaredAndBack(),
 		c.everyFanOutChildCarriesItsUnitKey(),
-		c.everyArgsOwnedKindInsertsOnItsDeclaredQueue(),
+		c.everyArgsOwnedKindCarriesItsOwnInsertOpts(),
 		c.noArgsTypeAnswersToASecondKind(),
 		c.everyDeclaredQueueIsBuiltWithItsDeclaredBound(),
 		everyDeclaredPostureIsHonoured(),
@@ -188,6 +187,7 @@ func (c *JobCensus) everyKindIsWorkedByItsDeclaredArgsType() []string {
 func derivedTimeoutConstants() map[string]time.Duration {
 	return map[string]time.Duration{
 		"agentSchedulerPassTimeout":   agentSchedulerPassTimeout,
+		"deepReadTimeout":             deepReadTimeout,
 		"privacyRetentionPassTimeout": privacyRetentionPassTimeout,
 		"telegramPollJobTimeout":      telegramPollJobTimeout,
 		"voiceBuildTimeout":           voiceBuildTimeout,
@@ -196,7 +196,7 @@ func derivedTimeoutConstants() map[string]time.Duration {
 }
 
 // everyDerivedTimeoutStillEqualsItsConstant keeps a transcribed duration tied
-// to the arithmetic it was transcribed from. Three of the five are expressions
+// to the arithmetic it was transcribed from. Four of the six are expressions
 // over another module's own limit (privacy.MaxPassDuration and friends), which
 // moves when that module's batch bounds do; the other two are spent by code
 // that has to agree with the wall clock (a reclaim grace, a long-poll budget).
@@ -232,51 +232,16 @@ func (c *JobCensus) everyDerivedTimeoutStillEqualsItsConstant() []string {
 	return findings
 }
 
-// exactlyTheOperatorKindsSupplyTheirTimeout checks the one input a policy test
-// cannot reach. An operator-supplied TimeoutPolicy returns whatever it is
-// handed, so registering such a kind through the plain addDeclaredWorker
-// compiles, reads as the ordinary case, and hands River a zero — the silent
-// one-minute default this contract exists to remove. The converse matters too:
-// a computed expression at a kind whose policy never reads it says a budget
-// governs something when it governs nothing.
-func (c *JobCensus) exactlyTheOperatorKindsSupplyTheirTimeout() []string {
-	var findings []string
-	operatorKinds := 0
-	for kind, spec := range jobs.Declared() {
-		entry, wired := c.wired[kind]
-		if !wired {
-			continue // already reported by the totality check.
-		}
-		switch {
-		case spec.Timeout.FromOperator():
-			operatorKinds++
-			if !entry.operatorSupplied {
-				findings = append(findings,
-					kind+" declares an operator-supplied timeout but registers through addDeclaredWorker, which supplies nothing — it would run at River's one-minute default; register through addDeclaredWorkerWithTimeout")
-			}
-		case entry.operatorSupplied:
-			findings = append(findings,
-				kind+" is registered with a supplied timeout its declared policy never reads — only a {operator: …} kind takes addDeclaredWorkerWithTimeout")
-		}
-	}
-	if operatorKinds == 0 {
-		findings = append(findings,
-			"no {operator: …} kind was checked — site_deep_read is the one kind this check exists for, and it matched nothing")
-	}
-	return findings
-}
-
-// everyArgsOwnedKindInsertsOnItsDeclaredQueue closes the one ownership level
-// the file can only CHECK. A fan-out child's queue is supplied from the
-// declaration, so drift is impossible; a caller-owned kind's is documentation
-// the runtime never reads. Between them sits opts_owner: args, where the kind's
-// own InsertOpts() decides and the declaration publishes a number a metric will
-// be read against — so the two are compared here.
+// everyArgsOwnedKindCarriesItsOwnInsertOpts holds the half of opts_owner: args
+// that supplying the queue cannot.
 //
-// An InsertOpts that names no queue is River's own default, not an absence:
-// that is the queue such a row actually lands on, and it is what the
-// declaration has to say.
-func (c *JobCensus) everyArgsOwnedKindInsertsOnItsDeclaredQueue() []string {
+// The queue itself is no longer compared: jobs.QueuedAs stamps it from the
+// declaration at every insert, so the two can no longer disagree and an arm
+// comparing them would pass whatever anyone wrote. What is still worth
+// refusing is a kind that declares its args own the options and carries none —
+// nothing then owns its uniqueness or its attempt cap, and River takes its own
+// defaults for both.
+func (c *JobCensus) everyArgsOwnedKindCarriesItsOwnInsertOpts() []string {
 	var findings []string
 	checked := 0
 	for kind, spec := range jobs.Declared() {
@@ -287,21 +252,12 @@ func (c *JobCensus) everyArgsOwnedKindInsertsOnItsDeclaredQueue() []string {
 		if !wired {
 			continue // already reported by the totality check.
 		}
-		withOpts, owns := entry.args.(river.JobArgsWithInsertOpts)
-		if !owns {
+		if _, owns := entry.args.(river.JobArgsWithInsertOpts); !owns {
 			findings = append(findings, fmt.Sprintf(
-				"%s declares opts_owner: args but %s has no InsertOpts() — nothing then owns its queue or its uniqueness, and River takes its own defaults", kind, spec.GoType))
+				"%s declares opts_owner: args but %s has no InsertOpts() — nothing then owns its uniqueness or its attempt cap, and River takes its own defaults", kind, spec.GoType))
 			continue
 		}
 		checked++
-		queue := withOpts.InsertOpts().Queue
-		if queue == "" {
-			queue = river.QueueDefault
-		}
-		if queue != spec.Queue {
-			findings = append(findings, fmt.Sprintf(
-				"%s declares queue %q but its own InsertOpts() inserts on %q — the declaration is what the fleet surfaces publish, and this kind's rows would not be there", kind, spec.Queue, queue))
-		}
 	}
 	if checked == 0 {
 		findings = append(findings,

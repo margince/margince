@@ -303,7 +303,7 @@ func TestApplySignatureFieldsLetsTheNewerStatementWinAndKeepsWhatItReplaced(t *t
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
 			INSERT INTO contact_phone (contact_id, phone, phone_type, is_primary, position, source, captured_by, observed_at)
-			VALUES ($1, '+49 30 9999999', 'work', true, 0, 'manual', 'human:test', now() - interval '30 days')`, contactID)
+			VALUES ($1, '+49309999999', 'work', true, 0, 'manual', 'human:test', now() - interval '30 days')`, contactID)
 		return err
 	}); err != nil {
 		t.Fatal(err)
@@ -330,7 +330,7 @@ func TestApplySignatureFieldsLetsTheNewerStatementWinAndKeepsWhatItReplaced(t *t
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if live != "+49301234567" || archived != "+49 30 9999999" {
+	if live != "+49301234567" || archived != "+49309999999" {
 		t.Fatalf("live = %q, archived = %q — the newer number rings and the older one stays recoverable", live, archived)
 	}
 

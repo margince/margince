@@ -46,6 +46,7 @@ import {
   looksStructural,
   slug,
 } from "./customfields.logic";
+import { RetireFieldConfirm } from "./customfields.retire";
 import "./customfields.css";
 import { stable } from "../format/collate";
 
@@ -134,128 +135,120 @@ export function FieldBuilder({
   };
 
   return (
-    <div className="cf-builder">
-      <div className="cf-builder-head">
-        <p className="cf-hint">{t("cf.builder.intro")}</p>
-        <Badge>{t("cf.builder.noCode")}</Badge>
-      </div>
-
-      <div className="cf-grid">
-        <Field label={t("cf.label")}>
-          {(control) => (
-            <TextInput
-              {...control}
-              value={label}
-              onChange={(event) => setLabel(event.target.value)}
-            />
-          )}
-        </Field>
-        <Field label={t("cf.apiKey")} hint={t("cf.apiKeyHint")}>
-          {(control) => (
-            <TextInput
-              {...control}
-              value={apiKey(object, label)}
-              disabled
-              readOnly
-            />
-          )}
-        </Field>
-      </div>
-
-      {/* One closed set of options, all visible at once — the definition of
-          SegmentedControl. It replaced a six-tile icon grid that was the same
-          `aria-pressed` button in a third chrome, and whose glyphs were
-          aria-hidden decoration the accessible name never carried. Losing them
-          costs the reader nothing; the type still reads on every row of the
-          table above, where it names a field rather than a choice. */}
-      <div className="field">
-        <span className="t-label">{t("cf.typeLabel")}</span>
-        <SegmentedControl
-          label={t("cf.typeLabel")}
-          options={CF_TYPES}
-          value={type}
-          onChange={setType}
-          labels={typeLabels(t)}
-        />
-      </div>
-
-      {type === "currency" && (
-        <Field label={t("cf.currencyCode")} hint={t("cf.currencyHint")}>
-          {(control) => (
-            <TextInput
-              {...control}
-              value={currency}
-              maxLength={3}
-              onChange={(event) =>
-                setCurrency(event.target.value.toUpperCase())
-              }
-            />
-          )}
-        </Field>
-      )}
-
-      {(type === "picklist" || type === "multiselect") && (
-        <div className="field">
-          <span className="t-label">{t("cf.options")}</span>
-          <div className="cf-options">
-            {options.map((option, idx) => (
-              // Option rows have no stable id (they are user-typed values that
-              // may repeat), so the row index is the only honest key here.
-              // biome-ignore lint/suspicious/noArrayIndexKey: option rows are positional, not identity-keyed
-              <div className="cf-option-row" key={idx}>
-                <TextInput
-                  aria-label={t("cf.optionPlaceholder")}
-                  placeholder={t("cf.optionPlaceholder")}
-                  value={option}
-                  onChange={(event) => setOptionAt(idx, event.target.value)}
-                />
-                <Button
-                  iconOnly
-                  aria-label={t("cf.removeOption")}
-                  onClick={() => removeOption(idx)}
-                >
-                  <X aria-hidden="true" />
-                </Button>
-              </div>
-            ))}
-          </div>
-          <Button onClick={() => setOptions((current) => [...current, ""])}>
-            {t("cf.addOption")}
-          </Button>
+    <>
+      <div className="form-stack">
+        <div className="cf-builder-head">
+          <p className="cf-hint">{t("cf.builder.intro")}</p>
+          <Badge>{t("cf.builder.noCode")}</Badge>
         </div>
-      )}
 
-      {structural && (
-        <Callout tone="danger" kind="standing" title={t("cf.refuse.title")}>
-          <p>{t("cf.refuse.body")}</p>
-          <p>{t("cf.refuse.route")}</p>
+        <div className="cf-grid">
+          <Field label={t("cf.label")}>
+            {(control) => (
+              <TextInput
+                {...control}
+                value={label}
+                onChange={(event) => setLabel(event.target.value)}
+              />
+            )}
+          </Field>
+          <Field label={t("cf.apiKey")} hint={t("cf.apiKeyHint")}>
+            {(control) => (
+              <TextInput
+                {...control}
+                value={apiKey(object, label)}
+                disabled
+                readOnly
+              />
+            )}
+          </Field>
+        </div>
+
+        <div className="field">
+          <span className="t-label">{t("cf.typeLabel")}</span>
+          <SegmentedControl
+            label={t("cf.typeLabel")}
+            options={CF_TYPES}
+            value={type}
+            onChange={setType}
+            labels={typeLabels(t)}
+          />
+        </div>
+
+        {type === "currency" && (
+          <Field label={t("cf.currencyCode")} hint={t("cf.currencyHint")}>
+            {(control) => (
+              <TextInput
+                {...control}
+                value={currency}
+                maxLength={3}
+                onChange={(event) =>
+                  setCurrency(event.target.value.toUpperCase())
+                }
+              />
+            )}
+          </Field>
+        )}
+
+        {(type === "picklist" || type === "multiselect") && (
+          <div className="field">
+            <span className="t-label">{t("cf.options")}</span>
+            <div className="cf-options">
+              {options.map((option, idx) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: option rows are positional, not identity-keyed
+                <div className="cf-option-row" key={idx}>
+                  <TextInput
+                    aria-label={t("cf.optionPlaceholder")}
+                    placeholder={t("cf.optionPlaceholder")}
+                    value={option}
+                    onChange={(event) => setOptionAt(idx, event.target.value)}
+                  />
+                  <Button
+                    iconOnly
+                    aria-label={t("cf.removeOption")}
+                    onClick={() => removeOption(idx)}
+                  >
+                    <X aria-hidden="true" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+            <Button onClick={() => setOptions((current) => [...current, ""])}>
+              {t("cf.addOption")}
+            </Button>
+          </div>
+        )}
+
+        {structural && (
+          <Callout tone="danger" kind="standing" title={t("cf.refuse.title")}>
+            <p>{t("cf.refuse.body")}</p>
+            <p>{t("cf.refuse.route")}</p>
+          </Callout>
+        )}
+
+        {/* `warning`: confirmed unread, the column lands on every record. */}
+        <Callout
+          tone="warning"
+          kind="standing"
+          title={
+            <>
+              <AutonomyDot tier="confirm" /> {t("cf.gate.title")}
+            </>
+          }
+        >
+          <p>{t("cf.gate.body", { object: t(`cf.obj.${object}`) })}</p>
+          <code className="cf-ddl t-caption">
+            {ddlPreview(object, label, type, currency)}
+          </code>
         </Callout>
-      )}
-
-      {/* `warning`: nothing is wrong yet, and something will be if the reader
-          confirms unread — the column goes live on every record of this object.
-          The dot rides in the title, so tier and sentence are one line. */}
-      <Callout
-        tone="warning"
-        kind="standing"
-        title={
-          <>
-            <AutonomyDot tier="confirm" /> {t("cf.gate.title")}
-          </>
-        }
-      >
-        <p>{t("cf.gate.body", { object: t(`cf.obj.${object}`) })}</p>
-        <code className="cf-ddl t-caption">
-          {ddlPreview(object, label, type, currency)}
-        </code>
-      </Callout>
+      </div>
 
       {/* Cancel first, then the verb that writes — the order every dialog in
           this tree uses, so the destructive-looking half is never where the
           reader's hand expects the safe one. Reset went with the disclosure
           this form used to live in: closing the dialog discards the draft, so
           a control that empties the inputs in place has nothing left to do. */}
-      <div className="cf-actions">
+      <div className="actions">
         <Button variant="ghost" onClick={onCancel}>
           {t("deals.cancel")}
         </Button>
@@ -263,7 +256,7 @@ export function FieldBuilder({
           {t("cf.confirm")}
         </Button>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -574,6 +567,7 @@ export function CustomFieldsAdmin() {
   const [object, setObject] = useState<CfObject>("deal");
   const toast = useToast();
   const [renaming, setRenaming] = useState<CustomField | null>(null);
+  const [retiring, setRetiring] = useState<CustomField | null>(null);
   const [renameLabel, setRenameLabel] = useState("");
   // The dialog stays MOUNTED so it can animate out, so `addSeq` is what gives
   // each open a builder of its own: it re-keys the form, which discards a
@@ -689,25 +683,6 @@ export function CustomFieldsAdmin() {
     },
   });
 
-  const archive = useMutation({
-    mutationFn: async (field: CustomField) => {
-      const { data, error } = await api.POST("/custom-fields/{id}/retire", {
-        params: { path: { id: field.id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-    onSuccess: (_data, field) => {
-      invalidate();
-      toast.show(t("cf.archived", { label: field.label }));
-    },
-    onError: (error) => {
-      toast.show(problemMessageOf(error, t), { tone: "danger" });
-    },
-  });
-
   const startRename = (field: CustomField) => {
     setRenaming(field);
     setRenameLabel(field.label);
@@ -782,7 +757,7 @@ export function CustomFieldsAdmin() {
                       canEdit={canEdit}
                       meUserId={meUserId}
                       onRename={startRename}
-                      onArchive={(field) => archive.mutate(field)}
+                      onArchive={setRetiring}
                     />
                   )}
                 </QueryGate>
@@ -846,6 +821,16 @@ export function CustomFieldsAdmin() {
         />
       </Modal>
 
+      <RetireFieldConfirm
+        field={retiring}
+        onClose={() => setRetiring(null)}
+        onRetired={(field) => {
+          invalidate();
+          toast.show(t("cf.archived", { label: field.label }));
+          setRetiring(null);
+        }}
+      />
+
       <Modal
         open={renaming !== null}
         onClose={() => setRenaming(null)}
@@ -871,7 +856,7 @@ export function CustomFieldsAdmin() {
             />
           )}
         </Field>
-        <div className="cf-actions">
+        <div className="actions">
           <Button variant="ghost" onClick={() => setRenaming(null)}>
             {t("deals.cancel")}
           </Button>

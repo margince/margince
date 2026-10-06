@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { currentParams, replaceParams, useUrlParams } from "../app/urlstate";
 import { throwProblem } from "./common";
 
 export type AnalyticsContext = components["schemas"]["AnalyticsContext"];
@@ -49,7 +50,10 @@ export function useAnalyticsContext() {
  * showing the previous population's numbers under the new label.
  */
 export function useAnalyticsSelection(context: AnalyticsContext | undefined) {
-  const [chosen, setChosen] = useState<AnalyticsScope | null>(null);
+  const [params] = useUrlParams();
+  const chosen = context?.allowed_scopes.find(
+    (scope) => scopeKey(scope) === params.get("scope"),
+  );
 
   const selection = useMemo<AnalyticsSelection | null>(() => {
     if (!context) {
@@ -59,7 +63,9 @@ export function useAnalyticsSelection(context: AnalyticsContext | undefined) {
   }, [context, chosen]);
 
   const selectScope = useCallback((scope: AnalyticsScope) => {
-    setChosen(scope);
+    const next = new Map(currentParams());
+    next.set("scope", scopeKey(scope));
+    replaceParams(next);
   }, []);
 
   return { selection, selectScope };

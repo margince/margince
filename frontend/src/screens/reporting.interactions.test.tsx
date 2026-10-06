@@ -13,6 +13,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { RecordZoneProvider } from "../app/recordzone";
 import { pickOption } from "../design-system/select-testing";
+import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import { ReportingOverview } from "./reporting.overview";
 import { ReportingReportDetail } from "./reporting.report";
 import { SaveReportingDialog } from "./reporting.save";
@@ -57,6 +58,12 @@ it("saves the full selected graph layout and context", async () => {
     await screen.findByRole("textbox", { name: "Report name" }),
     "Friday review",
   );
+  expect(
+    screen.queryByRole("combobox", { name: "Metrics" }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.getByRole("button", { name: "Customize report" }),
+  ).toHaveAttribute("aria-expanded", "false");
   await user.click(screen.getByRole("button", { name: "Save report" }));
   await waitFor(() => expect(saved).toHaveBeenCalledOnce());
   expect(write).toHaveBeenCalledWith(
@@ -76,7 +83,7 @@ it("opens keyboard-selected evidence with its receipt and restores focus", async
       <ReportingOverview scope={reportingStoryScope} />
     </StoryProviders>,
   );
-  await screen.findByRole("heading", { name: "Bookings progress" });
+  await screen.findByRole("heading", { name: "Sales won over time" });
   const point = container.querySelector<HTMLButtonElement>(
     ".report-chart-point",
   );
@@ -109,7 +116,7 @@ it("uses local inclusive custom dates without querying an incomplete range", asy
   );
   await pickOption(
     user,
-    await screen.findByRole("combobox", { name: "Event period" }),
+    await screen.findByRole("combobox", { name: "Date range" }),
     "Custom interval",
   );
   const before = fetch.mock.calls.length;
@@ -159,10 +166,10 @@ it("does not request editions or schedules without their read grants", async () 
     ),
   ).toBe(false);
   expect(
-    screen.queryByRole("button", { name: "Capture edition" }),
+    screen.queryByRole("button", { name: "Save snapshot" }),
   ).not.toBeInTheDocument();
 });
-it("preserves the sales pipeline when returning from SDR outcomes", async () => {
+it("preserves the sales pipeline after changing the SDR date range", async () => {
   const user = userEvent.setup({ delay: null });
   installFetchStub(reportingStoryRoutes());
   render(
@@ -176,7 +183,15 @@ it("preserves the sales pipeline when returning from SDR outcomes", async () => 
   expect(
     screen.queryByRole("combobox", { name: "Pipeline" }),
   ).not.toBeInTheDocument();
+  await pickOption(
+    user,
+    screen.getByRole("combobox", { name: "Date range" }),
+    "Last month",
+  );
   await user.click(screen.getByRole("button", { name: "Sales" }));
+  expect(
+    screen.getByRole("combobox", { name: "Date range" }),
+  ).toHaveTextContent("Last month");
   expect(screen.getByRole("combobox", { name: "Pipeline" })).toHaveTextContent(
     "Sales",
   );
@@ -195,22 +210,104 @@ it("requires confirmation before archiving and explains the schedule effect", as
     </StoryProviders>,
   );
   await user.click(
+    await screen.findByRole("button", { name: "Report actions" }),
+  );
+  await user.click(
     await screen.findByRole("button", { name: "Archive report" }),
   );
   const dialog = await screen.findByRole("dialog");
   expect(
     within(dialog).getByText(
-      "Archive this report and pause its schedules? Saved editions remain available.",
+      "Archive this report and pause its schedules? Saved snapshots remain available.",
     ),
   ).toBeVisible();
   expect(archive).not.toHaveBeenCalled();
   await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
   expect(archive).not.toHaveBeenCalled();
-  await user.click(screen.getByRole("button", { name: "Archive report" }));
+  await user.click(
+    await screen.findByRole("button", { name: "Archive report" }),
+  );
   await user.click(
     within(await screen.findByRole("dialog")).getByRole("button", {
       name: "Archive report",
     }),
   );
   await waitFor(() => expect(archive).toHaveBeenCalledOnce());
+});
+
+it("restores the selected period and close window after reopening performance", async () => {
+  const user = userEvent.setup({ delay: null });
+  installFetchStub(reportingStoryRoutes());
+  const first = render(
+    <StoryProviders>
+      <ReportingOverview scope={reportingStoryScope} />
+    </StoryProviders>,
+  );
+  await pickOption(
+    user,
+    await screen.findByRole("combobox", { name: "Date range" }),
+    "Last month",
+  );
+  await pickOption(
+    user,
+    screen.getByRole("combobox", { name: "Open pipeline · expected close" }),
+    "Fiscal quarter",
+  );
+  first.unmount();
+  render(
+    <StoryProviders>
+      <ReportingOverview scope={reportingStoryScope} />
+    </StoryProviders>,
+  );
+  expect(
+    await screen.findByRole("combobox", { name: "Date range" }),
+  ).toHaveTextContent("Last month");
+  expect(
+    screen.getByRole("combobox", { name: "Open pipeline · expected close" }),
+  ).toHaveTextContent("Fiscal quarter");
+});
+
+it("derives the target period from the business period despite an old bookmark", async () => {
+  window.location.hash =
+    "#/analytics/performance?period=this_quarter&target=month";
+  installFetchStub(reportingStoryRoutes());
+  const fetch = vi.spyOn(globalThis, "fetch");
+  render(
+    <StoryProviders>
+      <ReportingOverview scope={reportingStoryScope} />
+    </StoryProviders>,
+  );
+  await screen.findByRole("heading", { name: "Sales won over time" });
+  const requests = fetch.mock.calls.flatMap(([input]) =>
+    input instanceof Request && input.url.includes("/analytics/evaluate?")
+      ? [new URL(input.url)]
+      : [],
+  );
+  expect(requests.length).toBeGreaterThan(0);
+  expect(requests.at(-1)?.searchParams.get("target_basis")).toBe(
+    "fiscal_quarter",
+  );
+});
+
+it("labels a frozen pipeline drill-down with its historical state date", async () => {
+  installFetchStub(reportingStoryRoutes());
+  const evaluation = {
+    ...reportingStoryEvaluation,
+    context: {
+      ...reportingStoryEvaluation.context,
+      state_at: "2025-01-10T12:00:00Z",
+    },
+  };
+  render(
+    <StoryProviders>
+      <ReportingEvidenceDrawer
+        evaluation={evaluation}
+        reference={{ metric: "open_pipeline", context_id: "state" }}
+        editionId="old-snapshot"
+        onClose={() => {}}
+      />
+    </StoryProviders>,
+  );
+  expect(screen.getByText("10/01/2025, 13:00")).toBeVisible();
+  expect(screen.queryByText("Open pipeline today")).not.toBeInTheDocument();
 });

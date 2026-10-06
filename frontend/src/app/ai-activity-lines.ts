@@ -240,7 +240,7 @@ export const ACTIVITY_LINE: Readonly<
     "declared in api/ai-tasks.yaml and not built: no site runs it, so nothing reports it yet",
   ),
   nl_search: notDisplayed(
-    "declared in api/ai-tasks.yaml and not built: no site runs it, so nothing reports it yet",
+    "a plain-words filter answers in the builder the reader pressed it from, under their own eyes; a rail line would announce a result already on screen",
   ),
   transcript: notDisplayed(
     "declared in api/ai-tasks.yaml and not built: no site runs it, so nothing reports it yet",

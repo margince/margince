@@ -4,6 +4,7 @@ import { meFixture } from "../src/app/mefixture";
 import { de } from "../src/i18n/de";
 import type { MessageKey } from "../src/i18n/en";
 import { SETTINGS_PAGES } from "../src/screens/settingscatalog";
+import { copy } from "./copy";
 import { anna, mockApi } from "./seed";
 import { pageOverflow, textsOf } from "./waits";
 
@@ -32,12 +33,6 @@ import { pageOverflow, textsOf } from "./waits";
  * outlives the guard fails here, naming itself, rather than being measured
  * mid-flight.
  */
-// How long a finite animation is given to land before the assertions read the
-// page. Longer than the design system's own arrivals — the Select's open is
-// ~140ms, the longest here — and short enough that a PERPETUAL animation is
-// still reported by the assertion below rather than hidden by the wait.
-const ANIMATION_LANDING_MS = 500;
-
 async function settleAnimations(page: Page) {
   await page.emulateMedia({ reducedMotion: "reduce" });
   // Reduced motion stops the NEXT animation; it cannot call off one already in
@@ -47,27 +42,34 @@ async function settleAnimations(page: Page) {
   // animation the media query has no say over, and CSS `animation: none` does
   // not govern a WAAPI one the way it governs a keyframe.
   //
-  // So the in-flight ones are given a moment to LAND, at their resting frame,
-  // which is what a settled page means. The race is the bound: a perpetual
-  // animation never resolves `finished`, and waiting on one would turn the
-  // finding below into a timeout that names nothing. What survives this wait is
-  // exactly what the assertion is about.
+  // So the in-flight ones are awaited to their resting frame, which is what a
+  // settled page means — and each is asked whether it HAS one rather than being
+  // raced against a clock. A perpetual animation never resolves `finished`, so
+  // it is left for the finding below to name; a finite one always resolves, so
+  // waiting on it needs no budget.
+  //
+  // That distinction is the whole of this wait. A wall-clock budget cannot tell
+  // "perpetual" from "slow", so on a loaded runner it expired while the page's
+  // own boot arrivals were still landing and handed the assertion four running
+  // animations to report — the settle returning early, dressed as a finding.
+  // The animation's own timing can tell them apart on any machine at any load.
   //
   // allSettled rather than all: a cancelled animation REJECTS `finished`, and
   // that is a settled outcome here — the animation is over, which is all this
   // waits for.
-  await page.evaluate(async (budgetMs) => {
-    const landing = document
-      .getAnimations()
-      .filter((animation) => animation.playState === "running")
-      .map((animation) => animation.finished);
-    await Promise.race([
-      Promise.allSettled(landing),
-      new Promise((resolve) => {
-        window.setTimeout(resolve, budgetMs);
-      }),
-    ]);
-  }, ANIMATION_LANDING_MS);
+  await page.evaluate(async () => {
+    const lands = (animation: Animation) =>
+      Number.isFinite(
+        animation.effect?.getComputedTiming().activeDuration ?? Infinity,
+      );
+    await Promise.allSettled(
+      document
+        .getAnimations()
+        .filter((animation) => animation.playState === "running")
+        .filter(lands)
+        .map((animation) => animation.finished),
+    );
+  });
   const motion = await page.evaluate(() => {
     const describe = (element: Element) =>
       `${element.tagName.toLowerCase()}.${element.className}`;
@@ -428,7 +430,9 @@ test("features/10 §7: the account menu holds the settings door, the appearance 
   await expect(
     menu.getByRole("menuitem", { name: "Einstellungen" }),
   ).toHaveAttribute("href", "#/settings");
-  await expect(menu.getByRole("menuitem", { name: de["scheduling.myLink"] })).toHaveAttribute("href", "#/book");
+  await expect(
+    menu.getByRole("menuitem", { name: de["scheduling.myLink"] }),
+  ).toHaveAttribute("href", "#/settings/meetings");
   await expect(menu.locator("a[href]")).toHaveCount(2);
   await expect(menu.getByRole("menuitem", { name: "Abmelden" })).toBeVisible();
 
@@ -994,11 +998,17 @@ test("AC-inbox: the staged decision is on the day's queue", async ({
   ).toBeVisible();
 });
 
-test("AC-book: the reusable booking link is available for sharing and signatures", async ({ page }) => {
+test("AC-book: the reusable booking link is available for sharing and signatures", async ({
+  page,
+}) => {
   await page.goto("/#/book");
   await expect(page.locator("nav.rail")).toHaveCount(0);
-  await expect(page.getByRole("textbox", { name: de["scheduling.myLink"] })).toHaveValue("https://crm.example.test/#/book/host-1");
-  await expect(page.getByRole("button", { name: de["scheduling.copyLink"] })).toBeEnabled();
+  await expect(
+    page.getByRole("textbox", { name: de["scheduling.myLink"] }),
+  ).toHaveValue("https://crm.example.test/#/book/host-1");
+  await expect(
+    page.getByRole("button", { name: de["scheduling.copyLink"] }),
+  ).toBeEnabled();
 });
 
 test("AC-automations-1 (B-EP09.15): create from the catalog arrives paused; enable is the deliberate second step", async ({
@@ -1133,20 +1143,39 @@ test("AC-settings: the passport list is metadata-only and strikes revoked rows",
   await expect(page.getByText(/mgp_/)).toHaveCount(0);
 });
 
-test("AC-book-public: consent gates calendar invitation and its wording passes through verbatim", async ({ page }) => {
+// The public page opens on the current month, so these pin the clock to the
+// month the fixture's free times fall in.
+test("AC-book-public: consent gates calendar invitation and its wording passes through verbatim", async ({
+  page,
+}) => {
+  await page.clock.setFixedTime(new Date("2026-07-01T06:00:00Z"));
   await page.goto("/#/book/host-1");
   await expect(page.locator("nav.rail")).toHaveCount(0);
-  const submit = page.getByRole("button", { name: de["scheduling.book"] });
+  await page.locator(".bookguest-times .meeting-slots button").first().click();
+  const submit = page.getByRole("button", {
+    name: copy(de["scheduling.confirmAt"]),
+  });
   await expect(submit).toBeDisabled();
-  await page.getByRole("button", { name: /06\.07\.2026/ }).first().click();
-  await page.getByRole("textbox", { name: de["book.name"], exact: true }).fill("Jonas Beispiel");
-  await page.getByRole("textbox", { name: de["book.email"] }).fill("jonas@beispiel.example");
+  await page
+    .getByRole("textbox", { name: de["book.name"], exact: true })
+    .fill("Jonas Beispiel");
+  await page
+    .getByRole("textbox", { name: de["book.email"] })
+    .fill("jonas@beispiel.example");
   await expect(submit).toBeDisabled();
-  const consent = page.getByRole("checkbox", { name: de["book.consentWording"] });
+  const consent = page.getByRole("checkbox", {
+    name: de["book.consentWording"],
+  });
   await consent.check();
   await expect(submit).toBeEnabled();
-  const shownWording = await page.getByText(de["book.consentWording"], { exact: true }).textContent();
-  const requestPromise = page.waitForRequest((request) => request.method() === "POST" && request.url().includes("/public/booking/host-1"));
+  const shownWording = await page
+    .getByText(de["book.consentWording"], { exact: true })
+    .textContent();
+  const requestPromise = page.waitForRequest(
+    (request) =>
+      request.method() === "POST" &&
+      request.url().includes("/public/booking/host-1"),
+  );
   await submit.click();
   const request = await requestPromise;
   const body = request.postDataJSON();
@@ -1155,19 +1184,32 @@ test("AC-book-public: consent gates calendar invitation and its wording passes t
   expect(body.consent.purpose_id).toBeUndefined();
   expect(request.headers()["idempotency-key"]).toMatch(/^[0-9a-f-]{36}$/);
   await expect(page).toHaveURL(/#\/book\/manage-guest-booking$/);
-  await expect(page.getByRole("heading", { name: de["scheduling.pending"] })).toBeVisible();
-  await expect(page.getByRole("heading", { name: de["scheduling.confirmed"] })).toHaveCount(0);
+  await expect(page.getByRole("status")).toContainText(
+    de["scheduling.pending"],
+  );
+  await expect(page.getByText(de["scheduling.confirmed"])).toHaveCount(0);
 });
 
-test("AC-book-public-409: a taken slot degrades honestly — no fabricated confirmation", async ({ page }) => {
+test("AC-book-public-409: a taken slot degrades honestly — no fabricated confirmation", async ({
+  page,
+}) => {
+  await page.clock.setFixedTime(new Date("2026-07-01T06:00:00Z"));
   await page.goto("/#/book/host-1");
-  await page.getByRole("textbox", { name: de["book.name"], exact: true }).fill("Jonas Beispiel");
-  await page.getByRole("textbox", { name: de["book.email"] }).fill("jonas@beispiel.example");
+  await page.getByRole("button", { name: /^12:00$/ }).click();
+  await page
+    .getByRole("textbox", { name: de["book.name"], exact: true })
+    .fill("Jonas Beispiel");
+  await page
+    .getByRole("textbox", { name: de["book.email"] })
+    .fill("jonas@beispiel.example");
   await page.getByRole("checkbox").check();
-  await page.getByRole("button", { name: /12:00/ }).click();
-  await page.getByRole("button", { name: de["scheduling.book"] }).click();
+  await page
+    .getByRole("button", {
+      name: copy(de["scheduling.confirmAt"], { time: "12:00" }),
+    })
+    .click();
   await expect(page.getByText("slot no longer available")).toBeVisible();
-  await expect(page.getByRole("heading", { name: de["scheduling.confirmed"] })).toHaveCount(0);
+  await expect(page.getByText(de["scheduling.confirmed"])).toHaveCount(0);
 });
 
 test("AC-onboarding-1: onboarding is the rail-less conversational shell", async ({
@@ -1697,6 +1739,83 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe), the agent's panel at 390px in dark"
   });
 });
 
+// The ignition is reached only by binding a model on a fresh installation, so
+// no route in the sweeps above ever draws it.
+test.describe("WCAG 2.2 AA (axe), the cold start's ignition at 390px", () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+  const schemes: readonly ("light" | "dark")[] = ["light", "dark"];
+  for (const colorScheme of schemes) {
+    test(`no AA violations once the model is bound (${colorScheme})`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme, reducedMotion: "reduce" });
+      await mockApi(page, { journey: "unconfigured" });
+      await page.clock.install();
+      await page.goto("/#/onboarding");
+      await page.getByLabel(de["firstRun.ai.key"]).fill("AIza-not-a-real-key");
+      await page.getByRole("button", { name: de["firstRun.continue"] }).click();
+      // By tag rather than role, so a list that lost its role still reaches
+      // the scan and axe's own listitem rule is what refuses it.
+      const can = page.locator("ul").filter({
+        hasText: de["firstRun.ignite.canNow"],
+      });
+      await expect(can.locator("li")).toHaveCount(3);
+      // Past the Core's last timed beat, so the scan reads the settled room.
+      await page.clock.runFor(4000);
+      await settleAnimations(page);
+      await expectNoAaViolations(
+        page,
+        `onboarding — the ignition (390px, ${colorScheme})`,
+      );
+    });
+  }
+});
+
+// A phone at 200% text holds a question taller than the room, and the board is
+// the one box that scrolls: a keyboard reader has to be able to land on it.
+test.describe("the cold start's board on a phone at 200% text", () => {
+  test.use({ viewport: { width: 320, height: 568 } });
+
+  // The board a keyboard lands on, named after its question, inside the
+  // window, and holding nothing wider than itself that it would clip.
+  async function expectBoardReachable(page: Page) {
+    const question = await page.locator(".ob-stage-title").innerText();
+    const board = page.getByRole("region", { name: question });
+    await expect(board).toHaveClass(/ob-stage-board/);
+    await expect(board).toHaveAttribute("tabindex", "0");
+    const box = await board.evaluate((element) => {
+      const { left, right } = element.getBoundingClientRect();
+      return {
+        left,
+        right,
+        window: document.documentElement.clientWidth,
+        held: element.scrollWidth,
+        shown: element.clientWidth,
+      };
+    });
+    expect(box.left).toBeGreaterThanOrEqual(0);
+    expect(box.right).toBeLessThanOrEqual(box.window);
+    expect(box.held).toBeLessThanOrEqual(box.shown);
+  }
+
+  test("is a tab stop named after its question, inside the window", async ({
+    page,
+  }) => {
+    await mockApi(page, { journey: "unconfigured" });
+    await page.goto("/#/onboarding");
+    await page.getByLabel(de["firstRun.ai.key"]).fill("AIza-not-a-real-key");
+    await page.evaluate(() => {
+      document.documentElement.style.fontSize = "200%";
+    });
+    await expectBoardReachable(page);
+    // The ignition is the widest step: the sealed badge and the capability
+    // lines are the lines that outgrew the board.
+    await page.getByRole("button", { name: de["firstRun.continue"] }).click();
+    await expect(page.locator(".ob-ig-can li")).toHaveCount(3);
+    await expectBoardReachable(page);
+  });
+});
+
 /**
  * The AA sweep of one page: assert what axe DECIDED, report what it could not.
  *
@@ -1985,8 +2104,9 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
       .fill("brandt");
     // Wait on the hits, not on a duration: the live arm is what adds the rows
     // this sweep exists to judge.
+    // Exact: a contact found through the company carries its name too.
     await expect(
-      page.getByRole("button", { name: /Brandt Automotive/ }),
+      page.getByRole("button", { name: "Brandt Automotive", exact: true }),
     ).toBeVisible();
     await settleAnimations(page);
     await expectNoAaViolations(page, "brief — the command palette open");
@@ -1997,7 +2117,7 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
   test("no AA violations with a report row's explain drawer open", async ({
     page,
   }) => {
-    await page.goto("/#/analytics/performance");
+    await page.goto("/#/analytics/pipeline");
     await page.waitForLoadState("networkidle");
     await expectShellRendered(page);
     await page
@@ -2553,17 +2673,18 @@ test.describe("ADR-0076: the unauthenticated surface", () => {
 // means the same thing on an idle laptop and on a CI box running six other jobs,
 // which no reading of a clock does.
 //
-// This case bounds `GET /contacts/{id}`, and the title says so because that is the
-// read it holds. The heading itself comes from `/contacts/{id}/360` — a record
-// head that draws before ITS own read returns is the wider claim, and #2864
-// carries it, product half first.
+// This case holds the read the heading itself comes from. A record route carries
+// an id and not a name, so the head is seeded from the list row the open was
+// clicked from (`useCachedRecordName`) and draws before `/contacts/{id}/360`
+// answers. Holding the plain `/contacts/{id}` instead would leave the case green
+// over a page that waits, because that is not the request the heading depends on.
 //
 // The perceived BUDGET is not asserted here at all. One wall-clock sample says
 // how busy the runner was, and this lane shares its machine with six integration
 // shards. `make bench-mobile` owns the 300ms figure as a p95 over 20 samples on
 // a throttled Fast-3G profile — the harder of the two conditions, so a budget
 // that holds there holds unthrottled by construction.
-test("PERF-1: a record's heading does not wait on GET /contacts/{id}", async ({
+test("PERF-1: a record opens on its route's identity, not on its read", async ({
   page,
 }) => {
   // Held, not slowed: the read cannot have answered when the assertion below
@@ -2579,7 +2700,7 @@ test("PERF-1: a record's heading does not wait on GET /contacts/{id}", async ({
   // itself. `readStarted` is what tells the two apart.
   let readStarted = false;
   let readAnswered = false;
-  await page.route("**/contacts/p-anna", async (route) => {
+  await page.route("**/contacts/p-anna/360", async (route) => {
     readStarted = true;
     await new Promise((settle) => setTimeout(settle, READ_HELD_MS));
     readAnswered = true;

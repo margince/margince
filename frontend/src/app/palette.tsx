@@ -1,4 +1,4 @@
-import { CornerDownLeft, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Badge,
@@ -11,7 +11,6 @@ import { Callout } from "../design-system/callout";
 import { liveDialogs, useDialogFocus } from "../design-system/dialogfocus";
 import { usePresence } from "../design-system/presence";
 import { useLocale, useT } from "../i18n";
-import type { MessageKey } from "../i18n/en";
 import { SCHEDULED_SCREEN } from "../screens/scheduledsends";
 import type { SettingsPageId } from "../screens/settingscatalog";
 import { useVisibleSettingsPages } from "../screens/settingsnav";
@@ -23,6 +22,7 @@ import {
   resolveCustomLabel,
 } from "./custom";
 import { CREATE_ID, NAV } from "./nav";
+import { PaletteRow } from "./paletterow";
 import { SEARCH_PENDING_DELAY_MS, useSearchCommands } from "./palettesearch";
 import { navigate, type Route } from "./router";
 import { openAsk } from "./urlstate";
@@ -41,6 +41,17 @@ export type Command = {
   // older word must not be told the screen does not exist.
   keywords?: readonly string[];
   type: "screen" | "action" | "record";
+  // The heading the row is drawn under, already translated. A record hit names
+  // its kind here rather than in a badge, so a list holding a company and three
+  // emails reads as two groups and not as four rows saying "Record".
+  group?: string;
+  // A message, drawn as the product's one citation of an email (subject and
+  // date) in place of the label and second line. The date arrives formatted:
+  // the caller owns the reader's timezone.
+  cite?: Readonly<{ subject: string | null | undefined; occurredAt: string }>;
+  // A contact's or a company's mark, drawn in place of the row's glyph: the
+  // same chip the record wears everywhere else, keyed on its id.
+  mark?: Readonly<{ identity: string; name: string; logo?: string | null }>;
   // Where the row goes. Absent on a row that opens something OVER the page
   // instead of leaving it — asking does that, and a route it never follows
   // would be a claim about where the reader ends up that is simply untrue.
@@ -196,12 +207,6 @@ export function useBuiltinCommands(): Command[] {
   }, [t, visible, locale, isAdmin]);
 }
 
-const TYPE_KEY: Record<Command["type"], MessageKey> = {
-  screen: "palette.typeScreen",
-  action: "palette.typeAction",
-  record: "palette.typeRecord",
-};
-
 export function CommandPalette({
   open,
   onClose,
@@ -213,7 +218,9 @@ export function CommandPalette({
 }>) {
   const t = useT();
   const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState(0);
+  // The row the reader moved to with the arrows; null until they do, which
+  // leaves Enter to defaultSelection.
+  const [picked, setPicked] = useState<number | null>(null);
   const panel = useRef<HTMLDivElement>(null);
   const overlay = useRef<HTMLDivElement>(null);
 
@@ -238,7 +245,7 @@ export function CommandPalette({
   useEffect(() => {
     if (open) {
       setQuery("");
-      setSelected(0);
+      setPicked(null);
     }
   }, [open]);
 
@@ -258,8 +265,9 @@ export function CommandPalette({
   }, [commands, query]);
 
   // RS-1: live record hits from /search, plus a "see all" row that lands
-  // on the full results screen. Row order: builtin matches, then records,
-  // then see-all, then the Ask-AI row last.
+  // on the full results screen. Row order: builtin matches, then see-all,
+  // then records, so the row Enter takes on a half-typed name is one arrow
+  // above the hits it summarises.
   const search = useSearchCommands(query);
   const seeAll: Command | null = query.trim()
     ? {
@@ -276,9 +284,10 @@ export function CommandPalette({
   // then hunt past every screen whose name happened to match it, so the row sat
   // last on the one journey it exists for. It carries the query when there is
   // one and opens an empty box when there is not; either way it goes nowhere.
-  const rows = [...filtered, ...search.commands, ...(seeAll ? [seeAll] : [])];
+  const rows = [...filtered, ...(seeAll ? [seeAll] : []), ...search.commands];
   const clamp = (index: number) =>
     Math.max(0, Math.min(index, rows.length - 1));
+  const selected = picked ?? defaultSelection(rows, filtered.length, query);
 
   const run = (command: Command) => {
     onClose();
@@ -341,7 +350,7 @@ export function CommandPalette({
             aria-label={t("palette.aria")}
             onChange={(event) => {
               setQuery(event.target.value);
-              setSelected(0);
+              setPicked(null);
             }}
             onKeyDown={(event) => {
               // No Escape arm here: `useDialogFocus` answers it for the whole
@@ -350,10 +359,10 @@ export function CommandPalette({
               // put a reader — did nothing at all.
               if (event.key === "ArrowDown") {
                 event.preventDefault();
-                setSelected((index) => clamp(index + 1));
+                setPicked(clamp(selected + 1));
               } else if (event.key === "ArrowUp") {
                 event.preventDefault();
-                setSelected((index) => clamp(index - 1));
+                setPicked(clamp(selected - 1));
               } else if (event.key === "Enter" && rows[selected]) {
                 run(rows[selected]);
               }
@@ -415,37 +424,37 @@ export function CommandPalette({
             <EmptyState>{t("palette.empty")}</EmptyState>
           )}
           {rows.map((command, index) => (
-            <button
+            <PaletteRow
               key={command.id}
-              type="button"
-              className={
-                index === selected
-                  ? "palette-row t-body selected"
-                  : "palette-row t-body"
-              }
-              onClick={() => run(command)}
-              ref={(element) => {
-                if (index === selected) {
-                  element?.scrollIntoView?.({ block: "nearest" });
-                }
-              }}
-            >
-              {command.id === "ask-ai" ? (
-                <Sparkles aria-hidden />
-              ) : (
-                <CornerDownLeft aria-hidden />
-              )}
-              <span className="label">{command.label}</span>
-              {command.subtitle && (
-                <span className="sub t-caption">{command.subtitle}</span>
-              )}
-              <Badge>{t(TYPE_KEY[command.type])}</Badge>
-            </button>
+              command={command}
+              previous={rows[index - 1]}
+              selected={index === selected}
+              onRun={run}
+            />
           ))}
         </div>
       </div>
     </div>
   );
+}
+
+// Where Enter lands before the reader picks a row. A destination the words
+// matched keeps it: typing "pipeline" means going to Deals. A record found by
+// search does not, because half a name is still a search: Enter takes the
+// see-all row, which then leads the list, unless the words name a record whole.
+function defaultSelection(
+  rows: readonly Command[],
+  destinations: number,
+  query: string,
+): number {
+  if (destinations > 0) {
+    return 0;
+  }
+  const needle = query.trim().toLowerCase();
+  const named = rows.findIndex(
+    (row) => row.type === "record" && row.label.toLowerCase() === needle,
+  );
+  return Math.max(named, 0);
 }
 
 // Global ⌘K / Ctrl+K binding (AC-shell-3).

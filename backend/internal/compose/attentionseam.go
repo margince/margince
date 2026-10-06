@@ -288,6 +288,9 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		// When the contact a row names last wrote to us and when we last wrote
 		// to them, from the same reader the contact's own page uses.
 		WithContactTouch(attentionContactTouch{pool: pool}).
+		// Which account a meeting row's contact works for, from the employer
+		// read every contact page carries.
+		WithContactEmployers(contacts.NewStore(db)).
 		// The step a deal row suggests, decided ONCE by the deal's own status
 		// card and read here. The queue does not reason about next steps: it
 		// reads what that card already worked out, so the row and the deal page
@@ -311,13 +314,6 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		// dropped this would present as a Team Lead unable to open their own
 		// rep's day rather than as one able to open a stranger's.
 		WithWeeklyPlans(attentionWeeklyPlan{store: weeklyPlanStore(pool), pool: pool}).WithNamedTeams(newTeammatesSeam(pool)).WithTeammates(newTeammatesSeam(pool)).
-		// The inbound leads still owed a first reply. The store answers the
-		// ordering and the state; this lane only ranks them against the rest of
-		// the day.
-		WithLeadResponses(attentionLeadResponses{
-			store:     contacts.NewStore(db),
-			teammates: newTeammatesSeam(pool),
-		}).
 		// How many promises each teammate has already missed, for the team
 		// board. Counted rather than listed, because the task lane above stops
 		// at a dozen and a board built from it would call every loaded rep
@@ -419,6 +415,12 @@ type attentionSnapshots struct{ pool *pgxpool.Pool }
 
 func (a attentionSnapshots) InSnapshot(ctx context.Context, fn func(context.Context) error) error {
 	return database.WithWorkspaceSnapshot(ctx, a.pool, fn)
+}
+
+func (a attentionSnapshots) Degradable(
+	ctx context.Context, budget time.Duration, fn func(context.Context) error,
+) error {
+	return database.WithDegradableRead(ctx, budget, fn)
 }
 
 func (a attentionSnapshots) Detached(ctx context.Context) context.Context {

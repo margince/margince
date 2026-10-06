@@ -27,7 +27,7 @@ func comparisonReason(left, right crmcontracts.ReportingEdition) string {
 		return "Reporting definitions or context differ"
 	}
 	sa, sb := left.Evaluation.Selection, right.Evaluation.Selection
-	if sa.Scope.Kind != sb.Scope.Kind || !sameID(sa.Scope.Id, sb.Scope.Id) || sa.TargetBasis != sb.TargetBasis || sa.CloseWindow != sb.CloseWindow || !slices.Equal(sa.Metrics, sb.Metrics) || !slices.Equal(sa.Blocks, sb.Blocks) {
+	if sa.Scope.Kind != sb.Scope.Kind || !sameID(sa.Scope.Id, sb.Scope.Id) || sa.TargetBasis != sb.TargetBasis || sa.CloseWindow != sb.CloseWindow || !slices.Equal(slices.Sorted(slices.Values(sa.Metrics)), slices.Sorted(slices.Values(sb.Metrics))) {
 		return "Saved report selections differ"
 	}
 	return comparisonPeriodsAndMetrics(left, right)

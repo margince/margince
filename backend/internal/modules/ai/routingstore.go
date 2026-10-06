@@ -11,9 +11,14 @@ package ai
 // binding nobody vetted, or one stored and never served.
 
 import (
+	"cmp"
 	"context"
+	"errors"
+	"log/slog"
+	"maps"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -43,11 +48,21 @@ type RoutingStore struct {
 	// benchmark rather than by a stored binding. Optional: absent it, that
 	// vendor answers not_published like any adapter this build does not carry.
 	catalogue *ModelCatalogue
+	// selectBrain builds the client every vendor read and save-time probe
+	// calls through; the zero value is SelectBrain.
+	selectBrain brainSelector
+	// log hears a save admitted unchecked; nil is slog.Default.
+	log *slog.Logger
+	// now dates what a Vertex location was found to serve; nil is time.Now.
+	now func() time.Time
+	// served holds, per Vertex location, which models it was found to serve.
+	// Shared by the copies the With* builders make; nil asks every time.
+	served *servedAtLocation
 }
 
 // NewRoutingStore builds the store over the settings catalog.
 func NewRoutingStore(s *settings.Store, keys config.Lookup) *RoutingStore {
-	return &RoutingStore{settings: s, keys: keys}
+	return &RoutingStore{settings: s, keys: keys, served: &servedAtLocation{}}
 }
 
 // WithVault returns a store that can resolve a sealed credential.
@@ -87,41 +102,185 @@ func (s *RoutingStore) resolvedKeys(ctx context.Context) config.Lookup {
 	return SealedKeys(ctx, s.vault, workspace, refs, s.keys)
 }
 
-// Get reads the stored binding. An installation that has bound nothing reads as
-// the zero config rather than an error — that is a state, not a fault.
+// Get reads the stored binding as canonical, so a row stored in the per-lane
+// shape every document had before providers held hosts reads as its lifted
+// twin. An installation that has bound nothing reads as the zero config rather
+// than an error — that is a state, not a fault.
 func (s *RoutingStore) Get(ctx context.Context) (RoutingConfig, error) {
 	if err := auth.Require(ctx, routingSettingsObject, principal.ActionRead); err != nil {
 		return RoutingConfig{}, err
 	}
-	return settings.Get(ctx, s.settings, Routing)
+	stored, err := settings.Get(ctx, s.settings, Routing)
+	if err != nil {
+		return RoutingConfig{}, err
+	}
+	return stored.canonical(), nil
 }
 
 // Replace stores a whole binding, having held it to the bar the file loader
 // applies. The write is audit-only (EVT-NOEVT-3): the settings store stamps the
 // audit row, and the closed event catalog defines no routing verb.
 //
-// It returns the FINALIZED config — defaults applied, version computed — rather
-// than what the caller sent, because that is what will be served, and because
-// the version is what a caller re-pointing a lane needs to see change.
+// It returns the document as stored, as Get reads it (see write).
 func (s *RoutingStore) Replace(ctx context.Context, next RoutingConfig) (RoutingConfig, error) {
 	return s.ReplaceIfVersion(ctx, next, "")
 }
 
-// Revision identifies the editable binding independently of credentials.
-func (cfg RoutingConfig) Revision() string { return cfg.bindingDigest() }
+// probedWrite runs a write that must not store a Vertex binding Google was not
+// asked about. The probe runs before the lock, because a network call must not
+// hold it, and the write stores only if the document under the lock is the one
+// probed: one another write moved meanwhile is probed again, and a document
+// that keeps moving is refused as stale.
+func (s *RoutingStore) probedWrite(ctx context.Context, probe func(stored RoutingConfig) error, settle func(current RoutingConfig) (stored, served RoutingConfig, err error)) (RoutingConfig, error) {
+	for range probeAttempts {
+		stored, err := settings.Get(ctx, s.settings, Routing)
+		if err != nil {
+			return RoutingConfig{}, err
+		}
+		if err := probe(stored); err != nil {
+			return RoutingConfig{}, err
+		}
+		probed := stored.Revision()
+		written, err := s.write(ctx, func(current RoutingConfig) (RoutingConfig, RoutingConfig, error) {
+			if current.Revision() != probed {
+				return RoutingConfig{}, RoutingConfig{}, errProbedStale
+			}
+			return settle(current)
+		})
+		if !errors.Is(err, errProbedStale) {
+			return written, err
+		}
+	}
+	return RoutingConfig{}, apperrors.ErrVersionSkew
+}
+
+// probeAttempts bounds how often a save re-probes a document other writes keep
+// moving before it gives up as stale.
+const probeAttempts = 3
+
+var errProbedStale = errors.New("ai: routing: the document changed while its bindings were being probed")
+
+// probeProviderSettings asks Google about each Vertex binding that one
+// provider's new settings would move, as probeCandidate does for a whole
+// document.
+func (s *RoutingStore) probeProviderSettings(ctx context.Context, stored RoutingConfig, provider string, next ProviderSettings) error {
+	_, candidate, err := stored.withProviderSettings(provider, next)
+	if err != nil {
+		return err
+	}
+	if err := candidate.ResidencyGap(); err != nil {
+		return invalidRouting(err)
+	}
+	if err := s.probeVertexBindings(ctx, stored, candidate); err != nil {
+		return invalidRouting(err)
+	}
+	return nil
+}
+
+// probeCandidate holds next to the bar the write will, then asks Google about
+// what it adds or changes over stored.
+func (s *RoutingStore) probeCandidate(ctx context.Context, stored, next RoutingConfig) error {
+	_, candidate, err := next.replacing(stored)
+	if err != nil {
+		return err
+	}
+	// The probe is a call to the bound location, so a location the profile
+	// refuses is refused before it is asked anything.
+	if err := candidate.ResidencyGap(); err != nil {
+		return invalidRouting(err)
+	}
+	if err := s.probeVertexBindings(ctx, stored, candidate); err != nil {
+		return invalidRouting(err)
+	}
+	return nil
+}
+
+func invalidRouting(err error) error {
+	var faults routingFaults
+	if errors.As(err, &faults) {
+		return faults
+	}
+	return settings.InvalidValue{Setting: RoutingKey, Code: settings.CodeInvalidValue, Reason: err.Error()}
+}
+
+func (s *RoutingStore) logger() *slog.Logger {
+	if s.log == nil {
+		return slog.Default()
+	}
+	return s.log
+}
+
+// Revision identifies the editable document independently of credentials. It
+// digests canonical(), providers included, so editing a provider entry no lane
+// binds still moves the ETag while the routing version stays put.
+func (cfg RoutingConfig) Revision() string { return digestJSON(cfg.canonical()) }
 
 // ReplaceIfVersion checks a supplied version under the same lock as the write.
 // An empty version preserves the existing unconditional API for legacy clients.
 //
-// A lane that arrives with no upstream preferences keeps the ones stored for
-// the same binding (see keepingStoredUpstream), read under that lock too, so a
-// concurrent write cannot hand it another binding's pins.
+// The document is settled against the stored one under that lock too, so a
+// concurrent write cannot hand a lane another binding's serving preferences or
+// another provider entry: see replacing.
 func (s *RoutingStore) ReplaceIfVersion(ctx context.Context, next RoutingConfig, expected string) (RoutingConfig, error) {
 	if err := auth.Require(ctx, routingSettingsObject, principal.ActionUpdate); err != nil {
 		return RoutingConfig{}, err
 	}
-	var refused error
-	if err := s.settings.WriteTx(ctx, func(tx pgx.Tx) error {
+	settle := func(current RoutingConfig) (RoutingConfig, RoutingConfig, error) {
+		if expected != "" && current.Revision() != expected {
+			return RoutingConfig{}, RoutingConfig{}, apperrors.ErrVersionSkew
+		}
+		return next.replacing(current)
+	}
+	// A save that names no gemini_vertex lane reads and asks nothing, and a
+	// stale one is refused as stale before Google is asked.
+	if next.Unconfigured() || len(vertexProbesOf(next)) == 0 {
+		return s.write(ctx, settle)
+	}
+	return s.probedWrite(ctx, func(stored RoutingConfig) error {
+		if expected != "" && stored.Revision() != expected {
+			return apperrors.ErrVersionSkew
+		}
+		return s.probeCandidate(ctx, stored, next)
+	}, settle)
+}
+
+// SetProviderSettings replaces one provider's entry and re-validates the whole
+// document under the routing lock, so no If-Match is needed: nothing else in
+// the document changes. A zero entry removes it. A provider this build does not
+// know is not found.
+//
+// It returns the document as stored, as Replace does.
+func (s *RoutingStore) SetProviderSettings(ctx context.Context, provider string, next ProviderSettings) (RoutingConfig, error) {
+	if err := auth.Require(ctx, routingSettingsObject, principal.ActionUpdate); err != nil {
+		return RoutingConfig{}, err
+	}
+	if !knownProvider(provider) {
+		return RoutingConfig{}, apperrors.ErrNotFound
+	}
+	settle := func(current RoutingConfig) (RoutingConfig, RoutingConfig, error) {
+		return current.withProviderSettings(provider, next)
+	}
+	// Only a Vertex provider moves a Vertex binding.
+	if provider != providerGeminiVertex {
+		return s.write(ctx, settle)
+	}
+	return s.probedWrite(ctx, func(stored RoutingConfig) error {
+		return s.probeProviderSettings(ctx, stored, provider, next)
+	}, settle)
+}
+
+// write runs one routing write under the setting's row lock: settle derives the
+// document to store from the current one, having held the binding it serves to
+// the bar. The write is audit-only (EVT-NOEVT-3) — the settings store stamps the
+// audit row — and SetTx re-runs the entry's validator, residency included.
+//
+// It answers with the document as stored, which is what Get reads back: its
+// Revision is the next If-Match, and its tier routing is what was written. The
+// served binding carries the product default, which a client writing the
+// answer back would freeze into every tier.
+func (s *RoutingStore) write(ctx context.Context, settle func(current RoutingConfig) (stored, served RoutingConfig, err error)) (RoutingConfig, error) {
+	var written RoutingConfig
+	err := s.settings.WriteTx(ctx, func(tx pgx.Tx) error {
 		if err := settings.LockForWrite(ctx, tx, RoutingKey); err != nil {
 			return err
 		}
@@ -129,69 +288,123 @@ func (s *RoutingStore) ReplaceIfVersion(ctx context.Context, next RoutingConfig,
 		if err != nil {
 			return err
 		}
-		if expected != "" && current.Revision() != expected {
-			return apperrors.ErrVersionSkew
+		stored, _, err := settle(current)
+		if err != nil {
+			return err
 		}
-		// Unconfigured is a legitimate destination: an operator unbinding every
-		// model is choosing to run without AI, and it is the state a fresh
-		// installation is already in.
-		if !next.Unconfigured() {
-			if next, err = next.keepingStoredUpstream(current).finalize(); err != nil {
-				refused = settings.InvalidValue{Setting: RoutingKey, Code: settings.CodeInvalidValue, Reason: err.Error()}
-				return refused
-			}
-		}
-		// The residency bar is the entry's own validator (validateStoredRouting),
-		// which SetTx runs and answers with the same InvalidValue.
-		return settings.SetTx(ctx, s.settings, tx, Routing, next)
-	}); err != nil {
-		if refused != nil {
-			return RoutingConfig{}, refused
-		}
+		written = stored
+		return settings.SetTx(ctx, s.settings, tx, Routing, stored)
+	})
+	if err != nil {
 		return RoutingConfig{}, err
 	}
-	return next, nil
+	return written, nil
 }
 
-// keepingStoredUpstream carries each stored lane's upstream preferences and
+// replacing settles a whole document written over current. Lane fields an old
+// client still writes are reconciled with the providers (see
+// reconcileLaneProviderFields), and a lane that arrives with no serving
+// preferences keeps the ones stored for the same binding (keepingStoredUpstream).
+func (cfg RoutingConfig) replacing(current RoutingConfig) (stored, served RoutingConfig, err error) {
+	reconciled, err := cfg.reconcileLaneProviderFields(current)
+	if err != nil {
+		return RoutingConfig{}, RoutingConfig{}, err
+	}
+	return reconciled.keepingStoredUpstream(current).settle()
+}
+
+// withProviderSettings settles the document with one provider entry replaced.
+func (cfg RoutingConfig) withProviderSettings(provider string, next ProviderSettings) (stored, served RoutingConfig, err error) {
+	cfg = cfg.canonical()
+	providers := maps.Clone(cfg.Providers)
+	if providers == nil {
+		providers = map[string]ProviderSettings{}
+	}
+	if next == (ProviderSettings{}) {
+		delete(providers, provider)
+	} else {
+		providers[provider] = ProviderSettings{BaseURL: next.BaseURL, Upstream: next.Upstream.clone(), Location: next.Location}
+	}
+	if len(providers) == 0 {
+		providers = nil
+	}
+	cfg.Providers = providers
+	return cfg.settle()
+}
+
+// settle is what a write stores — the canonical document, so what a lane does
+// not state stays unstated (an absent `routing` is not frozen into the product
+// default) — and the finalized binding it serves.
+//
+// Unconfigured is a legitimate destination: an operator unbinding every model
+// is choosing to run without AI, and it is the state a fresh installation is
+// already in. Nothing is finalized for it; the entry's validator decides.
+func (cfg RoutingConfig) settle() (stored, served RoutingConfig, err error) {
+	stored = cfg.canonical()
+	if cfg.Unconfigured() {
+		return stored, stored, nil
+	}
+	if served, err = cfg.finalize(); err != nil {
+		return RoutingConfig{}, RoutingConfig{}, cfg.routingRefusal(err)
+	}
+	return stored, served, nil
+}
+
+// keepingStoredUpstream carries each stored lane's serving preferences and
 // thinking level onto the same lane of next when next declares none and binds
-// the same provider, host and model. A value next declares always wins.
+// the same provider and model. A value next declares always wins.
 //
 // A write that omits them — a client that predates the contract's `routing` or
-// `thinking_level` field, or a settings seed — would otherwise drop an `only:`
-// residency pin, and the broker would go back to serving that lane from any
-// region. The routing editor applies the same rule from its side (rebind in
-// frontend/src/screens/ai-routing-fields.tsx). Keyed on the model as well as
-// the host because a pin names hosts that serve ONE model, and a level is
-// refused on a model that predates it — carried onto another, either would
-// fail the lane with nothing in the form able to lift it.
+// `thinking_level` field, or a settings seed — would otherwise reset how the
+// lane's model is served. The routing editor applies the same rule from its
+// side (rebind in frontend/src/screens/ai-routing-fields.tsx). Keyed on the
+// model because a preference or a level is refused on a model that predates
+// it, and carried onto another it would fail the lane with nothing in the form
+// able to lift it.
+//
+// Both documents are read lifted, so the pins — the provider's — are never
+// carried onto a lane, and the host is the provider's rather than part of the
+// key. Preferences are carried only where next still serves the lane at the
+// broker, and the embeddings lane, the one with a server of its own, keeps
+// them only on the same server.
 //
 // A thinking level of thinkingLevelDefault is the explicit clear, as an empty
 // `routing` object is for upstream preferences: it is stored as no level.
-func (next RoutingConfig) keepingStoredUpstream(stored RoutingConfig) RoutingConfig {
-	carry := func(lane, kept ProviderConfig) ProviderConfig {
+func (cfg RoutingConfig) keepingStoredUpstream(stored RoutingConfig) RoutingConfig {
+	next, kept := cfg.canonical(), stored.canonical()
+	carry := func(lane, keptLane ProviderConfig, prefsApply bool) ProviderConfig {
 		cleared := lane.ThinkingLevel == thinkingLevelDefault
 		if cleared {
 			lane.ThinkingLevel = ""
 		}
-		if lane.Provider != kept.Provider || !sameEndpoint(lane.BaseURL, kept.BaseURL) || lane.Model != kept.Model {
+		if lane.Provider != keptLane.Provider || lane.Model != keptLane.Model {
 			return lane
 		}
-		if lane.Routing == nil {
-			lane.Routing = kept.Routing
+		if lane.Routing == nil && prefsApply {
+			lane.Routing = keptLane.Routing.clone()
 		}
 		if lane.ThinkingLevel == "" && !cleared {
-			lane.ThinkingLevel = kept.ThinkingLevel
+			lane.ThinkingLevel = keptLane.ThinkingLevel
 		}
 		return lane
 	}
-	tiers := make(map[Tier]ProviderConfig, len(next.Tiers))
-	for tier, binding := range next.Tiers {
-		tiers[tier] = carry(binding, stored.Tiers[tier])
+	tiers := make(map[Tier]ProviderConfig, len(cfg.Tiers))
+	for tier, binding := range cfg.Tiers {
+		tiers[tier] = carry(binding, kept.Tiers[tier], next.servedAtBroker(next.Tiers[tier]))
 	}
-	next.Tiers = tiers
-	next.Embeddings.ProviderConfig = carry(next.Embeddings.ProviderConfig, stored.Embeddings.ProviderConfig)
-	return next
+	cfg.Tiers = tiers
+	embeddings := next.Embeddings.ProviderConfig
+	sameServer := sameEndpoint(embeddings.BaseURL, kept.Embeddings.BaseURL)
+	cfg.Embeddings.ProviderConfig = carry(cfg.Embeddings.ProviderConfig, kept.Embeddings.ProviderConfig,
+		sameServer && next.servedAtBroker(embeddings))
+	return cfg
+}
+
+// servedAtBroker is whether a lane of this lifted document is served at
+// OpenRouter: at its own server when it names one, else at its provider's.
+func (cfg RoutingConfig) servedAtBroker(lane ProviderConfig) bool {
+	host := cmp.Or(lane.BaseURL, cfg.Providers[lane.Provider].BaseURL)
+	return UpstreamPreferencesApply(ProviderConfig{Provider: lane.Provider, BaseURL: host})
 }
 
 // sameEndpoint reports whether two base URLs name one endpoint, ignoring the

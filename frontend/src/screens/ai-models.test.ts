@@ -4,10 +4,12 @@
 import { describe, expect, it } from "vitest";
 import type { components } from "../api/schema";
 import {
+  offeredModels,
   suggestionsFor,
   type VendorCatalogue,
   type VendorModel,
   vendorSuggestions,
+  withBorrowedRows,
 } from "./ai-models";
 
 type ModelRate = components["schemas"]["AiModelRate"];
@@ -31,6 +33,7 @@ function rate(
     cache_read_per_mtok: "0",
     cache_write_per_mtok: "0",
     effective_date: "2026-08-01",
+    source: "seed",
   };
 }
 
@@ -175,5 +178,86 @@ describe("vendorSuggestions", () => {
   // publishes nothing: the field is a plain text box and the admin types an id.
   it("is empty when the vendor never answered", () => {
     expect(vendorSuggestions(undefined, SHEET, "gemini", "en")).toEqual([]);
+  });
+});
+
+// A list asked of the place a model runs is the whole answer there: a model
+// the price sheet names beside it is one that place does not serve, so it is
+// not offered. An ordinary vendor list stays merged with the sheet, which
+// keeps a model the vendor shipped after the list was read.
+describe("offeredModels", () => {
+  const sheet = [
+    rate("gemini_vertex", "gemini-3.5-flash", "chat"),
+    rate("gemini_vertex", "gemini-2.5-pro", "chat"),
+  ];
+
+  it("offers only the listed models when the list is complete", () => {
+    const offered = offeredModels(
+      {
+        provider: "gemini_vertex",
+        models: [{ id: "gemini-2.5-pro", lane: "chat" }],
+        complete: true,
+      },
+      sheet,
+      "gemini_vertex",
+      "chat",
+      "en",
+    );
+    expect(offered.map((s) => s.value)).toEqual(["gemini-2.5-pro"]);
+  });
+
+  it("adds the sheet's other models beside a list that is not complete", () => {
+    const offered = offeredModels(
+      {
+        provider: "gemini_vertex",
+        models: [{ id: "gemini-2.5-pro", lane: "chat" }],
+      },
+      sheet,
+      "gemini_vertex",
+      "chat",
+      "en",
+    );
+    expect(offered.map((s) => s.value)).toEqual([
+      "gemini-2.5-pro",
+      "gemini-3.5-flash",
+    ]);
+  });
+});
+
+// A provider priced by another is read with the rows it borrows, under its own
+// name, by every lane and picker — the same fallback the server prices with.
+describe("withBorrowedRows", () => {
+  it("lends the pricing provider's rows the borrower has no price for", () => {
+    const sheet = [
+      rate("gemini", "gemini-2.5-pro", "chat", "1.25"),
+      rate("gemini", "gemini-3.5-flash", "chat", "1.50"),
+      rate("gemini_vertex", "gemini-3.5-flash", "chat", "1.60"),
+    ];
+    const read = withBorrowedRows(sheet, [
+      { provider: "gemini_vertex", priced_by: "gemini" },
+      { provider: "gemini" },
+    ]);
+    const vertex = (read ?? [])
+      .filter((r) => r.provider === "gemini_vertex")
+      .map((r) => `${r.model_id}@${r.input_per_mtok}`)
+      .sort();
+    expect(vertex).toEqual(["gemini-2.5-pro@1.25", "gemini-3.5-flash@1.60"]);
+  });
+
+  it("lends no row for a model the borrower prices on any lane, as the server bills it", () => {
+    const sheet = [
+      rate("gemini", "gemini-3.5-flash", "chat", "1.50"),
+      rate("gemini_vertex", "gemini-3.5-flash", "embeddings", "1.60"),
+    ];
+    const read = withBorrowedRows(sheet, [
+      { provider: "gemini_vertex", priced_by: "gemini" },
+    ]);
+    const vertex = (read ?? []).filter((r) => r.provider === "gemini_vertex");
+    expect(vertex.map((r) => r.input_per_mtok)).toEqual(["1.60"]);
+  });
+
+  it("leaves the sheet as it is with no provider priced by another", () => {
+    const sheet = [rate("gemini", "gemini-2.5-pro", "chat")];
+    expect(withBorrowedRows(sheet, [{ provider: "gemini" }])).toEqual(sheet);
   });
 });

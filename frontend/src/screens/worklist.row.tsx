@@ -1,16 +1,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type ReactNode, useId, useRef, useState } from "react";
+import { type ReactNode, useRef, useState } from "react";
 import { useRecordZone } from "../app/recordzone";
-import { Badge, Button, Modal } from "../design-system/atoms";
-import { Heading } from "../design-system/heading";
+import { Badge, Button } from "../design-system/atoms";
 import { PanelRow } from "../design-system/panel";
 import { useToast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
-import { ApprovalRow } from "./approvalrow";
+import { ApprovalDecisionDrawer } from "./approvaldrawer";
 import { useMe } from "./common";
 import { hasMoveControl, MoveButton } from "./movebutton";
 import {
@@ -25,7 +24,6 @@ import {
   BriefSetAsides,
   useBriefAnswer,
 } from "./worklist.briefverbs";
-import { ApprovalBundleReview } from "./worklist.bundle";
 import {
   comparisonText,
   consequenceText,
@@ -43,10 +41,10 @@ import { WaitingEmailLine } from "./worklist.emailtitle";
 import { conditionOf, eyebrowKeyFor, kindClass } from "./worklist.eyebrow";
 import { leadFactsText } from "./worklist.leadfacts";
 import { MeetingOutcome } from "./worklist.meetingoutcome";
+import { hostText } from "./worklist.meetingparties";
 import { lastTouch } from "./worklist.pane";
 import { PlanWorkActions } from "./worklist.plan";
 import {
-  useApproval,
   useNudgeDismissal,
   type WorklistItem,
   worklistKey,
@@ -205,6 +203,7 @@ export function WorklistRow({
     ? undefined
     : aboutRecord(item, emailOpener !== undefined);
   const touch = lastTouch(touchOf(item, framed), t, locale, zone);
+  const host = hostText(item, viewer?.id, t);
   // Whether the day put a state on this row — overdue, or a meeting with
   // nothing prepared. They ride on the title line, which is why it is drawn on
   // a row that has no title of its own to draw.
@@ -233,6 +232,7 @@ export function WorklistRow({
     sample,
     zone,
     about,
+    host,
     touch,
   });
   const named = conditionOf(item);
@@ -421,6 +421,7 @@ function RowText({
       <VerdictLine verdict={item.verdict} zone={zone} />
       <RowCaptions
         about={readings.about}
+        host={readings.host}
         touch={readings.touch}
         when={when}
         facts={facts}
@@ -747,12 +748,6 @@ function RowDecision({ item }: Readonly<{ item: WorklistItem }>) {
   const t = useT();
   const [open, setOpen] = useState(false);
   const opener = useRef<HTMLButtonElement>(null);
-  const titleId = useId();
-  // Fetched only once the reader asks. A queue of decisions would otherwise
-  // fire one read per row on arrival to fill cards nobody has opened, and the
-  // row above needs none of it to draw its button.
-  const approval = useApproval(item.id, open);
-  const usable = approval.data?.kind ? approval.data : undefined;
   return (
     // A TEST ID rather than a class: which rows offer a decision is what a
     // screen journey counts, and nothing draws this wrapper.
@@ -765,36 +760,12 @@ function RowDecision({ item }: Readonly<{ item: WorklistItem }>) {
       >
         {t("worklist.verb.decide")}
       </Button>
-      <Modal
+      <ApprovalDecisionDrawer
+        approvalId={item.id}
         open={open}
         onClose={() => setOpen(false)}
-        labelledBy={titleId}
-        placement="right"
-        size="wide"
         returnFocusTo={() => opener.current}
-      >
-        <Heading size="large" id={titleId} className="modal-title">
-          {t("worklist.decision.title")}
-        </Heading>
-        {usable?.bundle_id ? (
-          <ApprovalBundleReview approval={usable} />
-        ) : usable ? (
-          <ApprovalRow
-            approval={usable}
-            extraInvalidateKeys={[worklistKey]}
-            onAlreadyDecided={() => setOpen(false)}
-          />
-        ) : (
-          // The read has not landed, or landed unusable. Said rather than left
-          // blank: a drawer that opens onto nothing reads as a broken button,
-          // and the reader has already committed a tap to get here.
-          <p>
-            {approval.isPending
-              ? t("worklist.decision.loading")
-              : t("worklist.decision.unavailable")}
-          </p>
-        )}
-      </Modal>
+      />
     </div>
   );
 }

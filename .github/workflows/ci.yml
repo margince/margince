@@ -469,7 +469,7 @@ jobs:
         working-directory: .
         run: make test-desktop-launcher LAUNCHER_COVER_OUT=desktop/launcher/coverage.out
       - name: Upload launcher coverage
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: ./.github/actions/upload-artifact-retried
         with:
           name: go-coverage-launcher
           path: desktop/launcher/coverage.out
@@ -548,7 +548,7 @@ jobs:
         working-directory: .
         run: make -C backend test-extensions EXT_COVER_OUT="$PWD/backend/coverage-extensions.out"
       - name: Upload extension coverage
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: ./.github/actions/upload-artifact-retried
         with:
           name: go-coverage-extensions
           path: backend/coverage-extensions.out

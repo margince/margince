@@ -16,7 +16,7 @@ The 1 table owned by `comms`, as the migrations build them. [Back to the entity 
 | `attempts` | `integer` | yes | Required `integer`, defaulting to `0`. |
 | `bcc` | `jsonb` |  | Optional `jsonb`. |
 | `body` | `text` | yes | Required `text`. |
-| `bounce_kind` | `text` |  | Optional `text`. |
+| `bounce_kind` | `text` |  | One of `hard`, `soft`. |
 | `bounce_reason` | `text` |  | Optional `text`. |
 | `bounce_recipient` | `text` |  | Optional `text`. |
 | `bounced_at` | `timestamp with time zone` |  | Optional `timestamp with time zone`. |
@@ -63,9 +63,9 @@ The 1 table owned by `comms`, as the migrations build them. [Back to the entity 
 **Rules**
 
 - `comms_outbound_attachments_shape` — `CHECK (comms_outbound_attachments_well_formed(attachments))`
-- `comms_outbound_bounce_is_stated` — `CHECK ((((bounced_at IS NULL) = (bounce_kind IS NULL)) AND ((bounce_reason IS NULL) OR (bounced_at IS NOT NULL)))) NOT VALID`
-- `comms_outbound_bounce_kind_named` — `CHECK (((bounce_kind IS NULL) OR (bounce_kind = ANY (ARRAY['hard', 'soft'])))) NOT VALID`
-- `comms_outbound_bounce_recipient_stated` — `CHECK (((bounce_recipient IS NULL) OR (bounced_at IS NOT NULL))) NOT VALID`
+- `comms_outbound_bounce_is_stated` — `CHECK ((((bounced_at IS NULL) = (bounce_kind IS NULL)) AND ((bounce_reason IS NULL) OR (bounced_at IS NOT NULL))))`
+- `comms_outbound_bounce_kind_named` — `CHECK (((bounce_kind IS NULL) OR (bounce_kind = ANY (ARRAY['hard', 'soft']))))`
+- `comms_outbound_bounce_recipient_stated` — `CHECK (((bounce_recipient IS NULL) OR (bounced_at IS NOT NULL)))`
 - `comms_outbound_cc_array` — `CHECK ((jsonb_typeof(cc) = 'array'))`
 - `comms_outbound_execution_authority` — `CHECK ((execution_authority = ANY (ARRAY['supported', 'instruction'])))`
 - `comms_outbound_inflight_cannot_detect_prior_send` — `CHECK (((inflight_at IS NULL) OR (channel_user_id IS NOT NULL) OR (sender_kind = 'controller')))`

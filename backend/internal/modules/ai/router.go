@@ -79,8 +79,9 @@ type Router struct {
 	// the generated certification table, except on the certification lane's
 	// own DB-less router (WithEveryDecisionCertified).
 	decisionCertified func(DecisionCertKey) bool
-	// decisionTimeout bounds one decision call (DecisionCallTimeout).
-	decisionTimeout time.Duration
+	// overrides is the admin's per-task thinking level and deadlines
+	// (ai.task_overrides), republished by the routing watcher.
+	overrides atomic.Pointer[TaskOverrides]
 }
 
 // installConfigSnapshot computes and stores this Router's config-snapshot
@@ -140,7 +141,6 @@ func assembleRouter(clients map[Tier]model.Client, embedder model.Client, profil
 		metrics:           sharedCallMetrics,
 		now:               time.Now,
 		decisionCertified: decisionIsCertified,
-		decisionTimeout:   DecisionCallTimeout,
 	}
 	r.install(binding{clients: clients, embedder: embedder, profile: profile, routeMeta: meta})
 	return r
@@ -215,10 +215,15 @@ func (r *Router) serveAttempt(ctx context.Context, lc *logicalCall, task Task, l
 	// existing. striprecorder.go says why that matters.
 	strips := newStripRecorder(req.SecretStripper)
 	req.SecretStripper = strips
+	req = r.withTaskThinking(lc, task, req)
 	key, keyErr := cacheKey(wsID, task, req)
 	if keyErr == nil {
 		// The site's own defect, found with the key's: before any provider.
 		req, keyErr = withSiteThinking(req, task)
+	}
+	if downErr := r.blockedUnlessCached(b, task, ladder, key, wsID, keyErr); downErr != nil {
+		// Like a budget deferral: no call was made, so nothing is traced.
+		return model.Response{}, RouteInfo{}, downErr
 	}
 
 	// Every terminal from here on is traced — the budget-read and cache-key
@@ -230,6 +235,9 @@ func (r *Router) serveAttempt(ctx context.Context, lc *logicalCall, task Task, l
 	start := r.now()
 	trace := r.newAttemptTrace(ctx, task, key, reason, req)
 	defer func() {
+		if refusedUncalled(err) {
+			return
+		}
 		// BEFORE finalize, which is what buffers the row: a field set after it
 		// would be written to a copy nobody reads.
 		trace.SecretsRemoved, trace.SecretKinds = strips.report()
@@ -403,7 +411,8 @@ func cacheKey(wsID ids.WorkspaceID, task Task, req model.Request) (string, error
 		ContextFingerprint string                     `json:"context_fingerprint"`
 		Site               string                     `json:"site,omitempty"`
 		ThinkingFloor      string                     `json:"thinking_floor,omitempty"`
-	}{req.Model, req.System, req.Messages, req.Tools, req.MaxTokens, req.ResponseSchema, req.Attachments, req.ProviderOptions, req.ContextScopes, req.ContextFingerprint, req.Site, req.ThinkingFloor})
+		ThinkingLevel      string                     `json:"thinking_level,omitempty"`
+	}{req.Model, req.System, req.Messages, req.Tools, req.MaxTokens, req.ResponseSchema, req.Attachments, req.ProviderOptions, req.ContextScopes, req.ContextFingerprint, req.Site, req.ThinkingFloor, req.ThinkingLevel})
 	if err != nil {
 		// A ProviderOptions namespace carrying invalid JSON would otherwise
 		// marshal to nil and collapse every such request onto one cache key —

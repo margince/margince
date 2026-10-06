@@ -70,7 +70,7 @@ func writeAuditRow(ctx context.Context, tx pgx.Tx, action, entityType string, en
 	if err != nil {
 		return ids.Nil, err
 	}
-	evidence, err = withExtensionAttribution(ctx, evidence)
+	evidence, err = withExtensionAttribution(ctx, withReversalLink(ctx, entityType, entityID, evidence))
 	if err != nil {
 		return ids.Nil, err
 	}

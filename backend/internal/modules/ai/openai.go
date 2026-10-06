@@ -25,6 +25,7 @@ import (
 // which the chat-completions shape expresses. stdlib HTTP only, mirroring
 // anthropic.go; no vendor SDK.
 type openaiClient struct {
+	model.NoHealth
 	http         *http.Client
 	baseURL      string
 	apiKey       string
@@ -245,6 +246,13 @@ func (c *openaiClient) post(ctx context.Context, path string, req model.Request,
 	effort, err := openaiReasoningEffort(req.ProviderOptions)
 	if err != nil {
 		return nil, err
+	}
+	if def, reasons := openaiDefaultEffort(wire.Model); effort == "" && reasons && req.ThinkingLevel != "" {
+		effort = req.ThinkingLevel
+		// The floor's own rule: a none-default family does not take minimal.
+		if def == effortNone && effort == effortMinimal {
+			effort = effortLow
+		}
 	}
 	if effort == "" {
 		effort = openaiEffortFor(wire.Model, req.ThinkingFloor)

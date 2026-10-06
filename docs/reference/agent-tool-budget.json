@@ -30,10 +30,10 @@
   ],
   "catalog": {
     "tools": 81,
-    "system_frame_tokens": 516,
-    "tokens": 27439,
-    "median_tool_tokens": 278,
-    "mean_tool_tokens": 338
+    "system_frame_tokens": 586,
+    "tokens": 28684,
+    "median_tool_tokens": 293,
+    "mean_tool_tokens": 353
   },
   "agents": [
     {
@@ -47,11 +47,11 @@
         "read_record"
       ],
       "of_served_tools": 81,
-      "tokens": 3551,
-      "listing_tokens": 1746,
+      "tokens": 3765,
+      "listing_tokens": 1890,
       "step_schema_tokens": 1288,
-      "percent_of_ceiling": 10,
-      "headroom_tokens": 19659,
+      "percent_of_ceiling": 11,
+      "headroom_tokens": 19445,
       "dangling_cross_references": [],
       "temptation_weight": 5
     },
@@ -68,11 +68,11 @@
         "whats_slipping_this_week"
       ],
       "of_served_tools": 81,
-      "tokens": 4908,
-      "listing_tokens": 2585,
-      "step_schema_tokens": 1807,
-      "percent_of_ceiling": 14,
-      "headroom_tokens": 18302,
+      "tokens": 5138,
+      "listing_tokens": 2737,
+      "step_schema_tokens": 1814,
+      "percent_of_ceiling": 15,
+      "headroom_tokens": 18072,
       "dangling_cross_references": [
         "at_risk_relationships → intro_path_to",
         "at_risk_relationships → who_knows",
@@ -88,31 +88,39 @@
   "tool_cost": [
     {
       "name": "run_report",
-      "tokens": 1014
+      "tokens": 1023
     },
     {
       "name": "send_company_email",
       "tokens": 823
     },
     {
-      "name": "send_email",
-      "tokens": 754
+      "name": "list_records",
+      "tokens": 794
     },
     {
       "name": "compose_analytics_report",
-      "tokens": 743
+      "tokens": 772
+    },
+    {
+      "name": "send_email",
+      "tokens": 754
     },
     {
       "name": "preview_import",
       "tokens": 725
     },
     {
-      "name": "list_records",
-      "tokens": 721
+      "name": "bulk_update_records",
+      "tokens": 720
+    },
+    {
+      "name": "read_lists",
+      "tokens": 699
     },
     {
       "name": "log_activity",
-      "tokens": 677
+      "tokens": 685
     },
     {
       "name": "send_message",
@@ -123,23 +131,27 @@
       "tokens": 592
     },
     {
+      "name": "create_record",
+      "tokens": 586
+    },
+    {
       "name": "update_record",
       "tokens": 581
     },
     {
-      "name": "bulk_update_records",
-      "tokens": 548
-    },
-    {
-      "name": "read_lists",
-      "tokens": 528
-    },
-    {
       "name": "forecast_readings",
-      "tokens": 509
+      "tokens": 553
+    },
+    {
+      "name": "query_workspace",
+      "tokens": 530
     },
     {
       "name": "read_reporting",
+      "tokens": 506
+    },
+    {
+      "name": "run_analytics_query",
       "tokens": 506
     },
     {
@@ -151,28 +163,24 @@
       "tokens": 493
     },
     {
-      "name": "query_workspace",
-      "tokens": 484
-    },
-    {
-      "name": "create_record",
-      "tokens": 481
-    },
-    {
-      "name": "run_analytics_query",
-      "tokens": 476
-    },
-    {
-      "name": "forecast_movement",
-      "tokens": 453
+      "name": "search_records",
+      "tokens": 456
     },
     {
       "name": "advance_deal",
       "tokens": 446
     },
     {
+      "name": "forecast_movement",
+      "tokens": 443
+    },
+    {
       "name": "annotate_brief",
       "tokens": 417
+    },
+    {
+      "name": "advance_project_phase",
+      "tokens": 416
     },
     {
       "name": "review_commitments",
@@ -187,8 +195,8 @@
       "tokens": 390
     },
     {
-      "name": "search_records",
-      "tokens": 383
+      "name": "draft_email",
+      "tokens": 385
     },
     {
       "name": "describe_report_vocabulary",
@@ -215,12 +223,12 @@
       "tokens": 342
     },
     {
-      "name": "advance_project_phase",
-      "tokens": 340
-    },
-    {
       "name": "search_report_evidence",
       "tokens": 335
+    },
+    {
+      "name": "decide_approval",
+      "tokens": 332
     },
     {
       "name": "forecast_input_checks",
@@ -235,8 +243,16 @@
       "tokens": 304
     },
     {
+      "name": "relink_activity",
+      "tokens": 303
+    },
+    {
       "name": "merge_records",
       "tokens": 293
+    },
+    {
+      "name": "read_record",
+      "tokens": 292
     },
     {
       "name": "archive_record",
@@ -247,20 +263,8 @@
       "tokens": 286
     },
     {
-      "name": "draft_email",
-      "tokens": 278
-    },
-    {
-      "name": "relink_activity",
-      "tokens": 276
-    },
-    {
       "name": "draft_follow_ups_for",
       "tokens": 273
-    },
-    {
-      "name": "decide_approval",
-      "tokens": 272
     },
     {
       "name": "list_approvals",
@@ -276,7 +280,11 @@
     },
     {
       "name": "invite_meeting",
-      "tokens": 256
+      "tokens": 264
+    },
+    {
+      "name": "relink_activities",
+      "tokens": 259
     },
     {
       "name": "company_coverage",
@@ -285,6 +293,14 @@
     {
       "name": "describe_report_blocks",
       "tokens": 245
+    },
+    {
+      "name": "relink_thread",
+      "tokens": 240
+    },
+    {
+      "name": "commit_import",
+      "tokens": 236
     },
     {
       "name": "decide_approval_bundle",
@@ -301,10 +317,6 @@
     {
       "name": "create_task",
       "tokens": 221
-    },
-    {
-      "name": "read_record",
-      "tokens": 220
     },
     {
       "name": "whats_slipping_this_week",
@@ -327,10 +339,6 @@
       "tokens": 205
     },
     {
-      "name": "relink_activities",
-      "tokens": 205
-    },
-    {
       "name": "update_tag",
       "tokens": 205
     },
@@ -343,10 +351,6 @@
       "tokens": 197
     },
     {
-      "name": "relink_thread",
-      "tokens": 196
-    },
-    {
       "name": "data_coverage",
       "tokens": 195
     },
@@ -357,10 +361,6 @@
     {
       "name": "list_pipelines",
       "tokens": 191
-    },
-    {
-      "name": "commit_import",
-      "tokens": 187
     },
     {
       "name": "intro_path_to",

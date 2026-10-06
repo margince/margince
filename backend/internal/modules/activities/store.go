@@ -112,12 +112,17 @@ type Store struct {
 	// clock reads the current instant. Injected so the scheduling suites can
 	// pin a due moment and a missed window without sleeping (P3).
 	clock func() time.Time
+	// horizons remembers the waiting horizon per workspace: an hour
+	// for a measurement, five minutes for the compiled stand-in for one that
+	// timed out (waitinghorizoncache.go). A POINTER, so every With* copy of one store
+	// shares one memory rather than each clone re-measuring a year of answers.
+	horizons *horizonCache
 }
 
 // NewStore opens this module's store on a handle already bound to the
 // workspace it serves.
 func NewStore(db *database.DB) *Store {
-	return &Store{db: db}
+	return &Store{db: db, horizons: newHorizonCache()}
 }
 
 // WithHeldNotifier returns a store that tells a rep when their scheduled
@@ -173,6 +178,12 @@ func (s *Store) WithBlobstore(blob blobstore.Store) *Store {
 
 func (s *Store) tx(ctx context.Context, fn func(pgx.Tx) error) error {
 	return s.db.Tx(ctx, fn)
+}
+
+// txRetryingLockCycles is tx for a write that files under shared records and
+// has no effect outside its transaction, so a deadlock victim is run again.
+func (s *Store) txRetryingLockCycles(ctx context.Context, fn func(pgx.Tx) error) error {
+	return storekit.RetryLockCycles(ctx, func() error { return s.db.Tx(ctx, fn) })
 }
 
 // sprintf keeps SQL assembly lines readable; arguments are always

@@ -363,13 +363,21 @@ func writeStaleCauses(page *strings.Builder, doc aiCertDoc) {
 	// task ships, so it appears once per site here — summing rows reported 95
 	// case-changed records against a tree holding a fraction of that, which is
 	// the kind of inflated figure this page exists to not print.
+	//
+	// rows is carried into the sentence for the reader's sake: the JSON beside
+	// this page holds one entry per site, so its stale_cause count is larger,
+	// and a reader comparing the two cannot otherwise tell a deliberate dedupe
+	// from the page understating stale certification — the one direction a
+	// certification summary must never be read as failing in.
 	type recordKey struct{ task, provider, model, env string }
 	cause := map[recordKey]staleCause{}
+	rows := 0
 	for _, site := range doc.Sites {
 		for _, rec := range site.Records {
 			if rec.StaleCause == nil {
 				continue
 			}
+			rows++
 			key := recordKey{site.Task, rec.Binding.Provider, rec.Binding.Model, rec.Binding.Env}
 			seen := cause[key]
 			seen.CaseChanged = append(seen.CaseChanged, rec.StaleCause.CaseChanged...)
@@ -399,8 +407,10 @@ func writeStaleCauses(page *strings.Builder, doc aiCertDoc) {
 	}
 	page.WriteString("#### Why the stale records went stale\n\n")
 	fmt.Fprintf(page, "Counted per record — one (task, binding) pair — over the %d stale record(s) "+
-		"this build can attribute. A record appears on more than one row when a change moved a case "+
-		"and the prompt built from it together.\n\n", len(cause))
+		"this build can attribute. A record covers every site its task ships, so the JSON beside this "+
+		"page carries it once per site: its %d `stale_cause` entries are these %d records. A record "+
+		"appears on more than one row below when a change moved a case and the prompt built from it "+
+		"together.\n\n", len(cause), rows, len(cause))
 	page.WriteString("| What moved | Records | What it means |\n|---|---:|---|\n")
 	fmt.Fprintf(page, "| the case | %d | Somebody rewrote the test. Re-certify: the old number "+
 		"measured a different question. |\n", cases)

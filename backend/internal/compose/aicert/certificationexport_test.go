@@ -48,6 +48,9 @@ const (
 // the page reads to say which model answers a feature and which one it falls to.
 type BoundRung = boundRung
 
+// RecordMeasures is the one rule for which record grades a rung.
+var RecordMeasures = recordMeasures
+
 func RungsBound(routing ai.RoutingConfig, task ai.Task) []BoundRung {
 	return boundLadder(routing, task)
 }

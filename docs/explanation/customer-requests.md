@@ -106,11 +106,18 @@ exactly one eligible importing seat directly addressed in the captured envelope.
 Mailbox delivery alone does not prove responsibility. The task is personal,
 undated, and does not invent a deadline.
 
-Older requests, conflicting labels, and ambiguous recipients remain reviewable.
-Age affects ranking, not whether a recognized obligation exists. Old scheduling
-and commitment candidates remain eligible for the classifier, which drains its
-bounded backlog across passes. This reconciles missed work without creating a
-task for every historical message.
+Conflicting labels and ambiguous recipients remain reviewable inside the horizon.
+**Past the waiting horizon a request leaves the Worklist**, whatever the
+classifier said and whether or not an open deal is linked: the queue holds
+current work, and old mail stays on the record's timeline. The one exception is
+a request a human holds, meaning an open reminder a human wrote, by taking the
+request or by editing the reminder the system filed. Each pass also archives the
+reminders it filed itself once their request passes the horizon untouched;
+archiving rather than completing, because an aged request is not an answered
+one. A request that aged out within the last year is counted under the
+past-horizon figure in `/worklist/hidden`, which counts conversations rather
+than single requests; older ones are not counted. Its record still offers
+**Create task** to take it back.
 
 The deal offers **Create task** for a request awaiting acceptance. Both task and
 activity creation accept `request_activity_id`: the server checks readable source

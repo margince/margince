@@ -56,3 +56,15 @@ type OverdueLoad interface {
 type PromiseLoad interface {
 	DuePerOwner(ctx context.Context, owners []ids.UUID, by time.Time) (map[ids.UUID]int, error)
 }
+
+// degradableRoster is the roster read for a page that names its failure: the
+// team scope reports a refused roster as unavailable, so the read must not
+// abort the snapshot on its way to saying so.
+func (s *Service) degradableRoster(ctx context.Context) (roster []TeamMember, cut bool, err error) {
+	err = s.degradable(ctx, func(ctx context.Context) error {
+		var err error
+		roster, cut, err = s.teammates.LiveTeammatesOfCaller(ctx)
+		return err
+	})
+	return roster, cut, err
+}

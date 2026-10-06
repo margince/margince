@@ -58,10 +58,12 @@ const (
 // as their third argument, which is what makes one predicate serve both.
 var lockOrderDoors = map[string]bool{"LockRow": true, "LockPair": true}
 
-// lockOrderRoots is where the two writers live. Scoped to the contacts module
-// because lead and contact are its rows: Scope proves that claim by sweeping
-// everything outside it for the same sites.
-var lockOrderRoots = []string{"internal/modules/contacts"}
+// lockOrderRoots is where the writers that take these locks live: the contacts module,
+// because lead and contact are its rows, and the privacy module, because the erasure
+// holds a subject's contact too. Privacy is judged here rather than exempted, so a lead
+// lock added beside that one is a finding rather than a file nobody asks about. Scope
+// proves the claim by sweeping everything outside both roots for the same sites.
+var lockOrderRoots = []string{"internal/modules/contacts", "internal/modules/privacy"}
 
 // promoteTakesTheOldOrder ratifies the one path still going lead -> contact.
 //

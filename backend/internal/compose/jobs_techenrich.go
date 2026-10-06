@@ -70,11 +70,10 @@ func (TechnicalEnrichBackfillArgs) Kind() string { return "technical_enrich_back
 // InsertOpts carries the attempt cap the declaration publishes, because the
 // periodic insert supplies uniqueness and no attempt policy of its own.
 func (TechnicalEnrichBackfillArgs) InsertOpts() river.InsertOpts {
-	return river.InsertOpts{
-		Queue:       technicalLookupQueue,
+	return *jobs.QueuedAs[TechnicalEnrichBackfillArgs](&river.InsertOpts{
 		MaxAttempts: 3,
 		UniqueOpts:  river.UniqueOpts{ByState: activeSweepStates},
-	}
+	})
 }
 
 // technicalInsertOpts is what a per-company lookup is queued with.
@@ -83,15 +82,14 @@ func (TechnicalEnrichBackfillArgs) InsertOpts() river.InsertOpts {
 // a company the sweep just nominated joins that lookup rather than starting a
 // second one against the same three services.
 func technicalInsertOpts() *river.InsertOpts {
-	return &river.InsertOpts{
-		Queue: technicalLookupQueue,
+	return jobs.QueuedAs[TechnicalEnrichCompanyArgs](&river.InsertOpts{
 		// Swept: technical_enrich_backfill re-nominates a company whose lookup
 		// did not land, and the three services this asks are small ones running
 		// on goodwill — a long ladder would keep asking them about a company
 		// the next pass is going to ask about anyway.
 		MaxAttempts: sweptJobMaxAttempts,
 		UniqueOpts:  river.UniqueOpts{ByArgs: true, ByState: activeSweepStates},
-	}
+	})
 }
 
 // technicalBackfillOpts is technicalInsertOpts with the sweep's own PRIORITY.

@@ -39,6 +39,7 @@ func (f *fakeCallStore) EnsureConfig(_ context.Context, snap ConfigSnapshot) err
 
 // stubClient returns a fixed response or error.
 type stubClient struct {
+	model.NoHealth
 	resp model.Response
 	err  error
 }

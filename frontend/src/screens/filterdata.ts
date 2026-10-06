@@ -180,8 +180,14 @@ export function fieldLabel(
   if (key) {
     return t(key);
   }
-  const bare = field.custom ? field.name.replace(/^cf_/, "") : field.name;
-  return bare.replaceAll("_", " ");
+  return field.custom
+    ? customColumnLabel(field.name)
+    : field.name.replaceAll("_", " ");
+}
+
+/** A custom column's `cf_` name read as words, as `fieldLabel` reads it. */
+export function customColumnLabel(column: string): string {
+  return column.replace(/^cf_/, "").replaceAll("_", " ");
 }
 
 /** The wire shape a caller hands the preview, for tests that assert the body. */

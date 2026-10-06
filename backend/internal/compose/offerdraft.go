@@ -88,6 +88,7 @@ Return ONLY a JSON object: {"lines":[{"description":...,"quantity":"1","tax_rate
 - description, quantity, tax_rate, evidence_snippet, source_id are required for every line.
 - evidence_snippet MUST be text copied VERBATIM from the numbered context items below, and source_id MUST be that item's id.
 - conversation_price_minor is an INTEGER count of minor currency units (e.g. cents) and is set ONLY when the evidence itself states a price the customer discussed — omit it otherwise.
+- conversation_price_minor is the price of ONE unit of the line's quantity; the line's total is quantity × conversation_price_minor.
 - product_id is set ONLY when a rate-card product below is the clear match for the line — omit it otherwise.
 - Never invent a price: a line with neither a conversation price nor a matching product is still returned, just without either field.
 - OMIT any line you cannot evidence — never guess a line into existence.`

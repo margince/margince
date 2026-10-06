@@ -71,7 +71,7 @@ export const FigureWithItsBar: Story = {
             },
             {
               key: "value",
-              header: "Unweighted",
+              header: "Deal value",
               align: "end",
               grow: true,
               render: (row: DemoRow) => (

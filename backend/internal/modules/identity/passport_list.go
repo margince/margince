@@ -11,14 +11,12 @@ package identity
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // PassportRow is one passport's metadata for the Settings list. The
@@ -78,9 +76,9 @@ type PassportConnectionRow struct {
 // outer ORDER BY restores newest-first, and it stays a total order (id breaks
 // the tie on identical timestamps) so paging over it cannot repeat or skip.
 //
-// %s is the row-scope predicate, never caller data: a user sees their own
-// passports, the admin role the workspace's — the same authority split
-// RevokePassport enforces.
+// The scope is the caller's own passports, with no widening for any role:
+// a connection is personal — which clients act for this human — and the
+// Settings page that reads it is the human's own.
 const listPassportsSQL = `
 	SELECT id, label, scopes, created_at, expires_at, revoked_at,
 	       client_id, client_name, connected_at, renewable
@@ -92,28 +90,24 @@ const listPassportsSQL = `
 		FROM passport p
 		LEFT JOIN oauth_grant g ON g.id = p.oauth_grant_id
 		LEFT JOIN oauth_client c ON c.client_id = g.client_id
-		WHERE %s
+		WHERE p.on_behalf_of = $1
 		ORDER BY p.oauth_grant_id IS NULL, COALESCE(p.oauth_grant_id, p.id), p.created_at DESC, p.id DESC
 	) newest_per_connection
 	ORDER BY created_at DESC, id DESC` // #nosec G101 -- a SELECT over passport metadata; it reads no token column
 
-// ListPassports enumerates passports as metadata: a user sees their own; a
-// member administrator sees the workspace's (the same authority split
-// RevokePassport enforces).
-//
-// The widening is a READ of member administration, not the ability to revoke:
-// seeing which agents act for whom is what an operator answering "why did this
-// happen" needs, and it is a strictly smaller authority than cutting one off.
+// ListPassports enumerates the caller's own passports as metadata. An
+// administrator included: their authority to REVOKE a colleague's passport
+// (RevokePassport) is offboarding, and does not make the list a directory of
+// whose agents act for whom.
 func (s *Service) ListPassports(ctx context.Context, id Identity) ([]PassportRow, error) {
-	ctx = actorCtx(ctx, id)
-	scope, args := "p.on_behalf_of = $1", []any{id.UserID}
-	if auth.Require(ctx, objectUserAdmin, principal.ActionRead) == nil {
-		scope, args = "true", nil
+	// Asked of the caller as bound, before actorCtx restamps it as human.
+	if err := auth.RequireHuman(ctx); err != nil {
+		return nil, err
 	}
-	query := fmt.Sprintf(listPassportsSQL, scope)
+	ctx = actorCtx(ctx, id)
 	var out []PassportRow
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, query, args...)
+		rows, err := tx.Query(ctx, listPassportsSQL, id.UserID)
 		if err != nil {
 			return err
 		}

@@ -252,6 +252,12 @@ func TestContactRenameAcceptsThePreviouslyShippedContent(t *testing.T) {
 
 // Every recorded equivalent digest is admitted only for its exact source and
 // namespace. Unrelated applied content and later source edits remain errors.
+//
+// Asked of BOTH doors at once. assertContentMatches is what a migrate runs and
+// ContentAdmitted is what the test-database head probe asks, and a probe
+// stricter than the migrator is not a safer probe — it calls a template the
+// migrator would reuse not-at-head and rebuilds it. They share one reader of
+// the list; this is what says so.
 func TestEquivalentContentIsAdmittedAndNothingElseIs(t *testing.T) {
 	t.Parallel()
 	for _, m := range loadNamespaceMigrations(t, "core") {
@@ -263,12 +269,20 @@ func TestEquivalentContentIsAdmittedAndNothingElseIs(t *testing.T) {
 					t.Errorf("a database holding applied-but-equivalent content refused: %v — it reached the "+
 						"schema this source builds and has nowhere else to go", err)
 				}
+				if !ContentAdmitted("core", m, admitted) {
+					t.Error("the probe's door refused content the migrator admits, so a reusable template " +
+						"is reported not-at-head and rebuilt for nothing")
+				}
 
 				// Some OTHER applied content on the same version is still a mismatch.
 				stranger := "bb" + strings.Repeat("0", 62)
 				if err := assertContentMatches("core", map[string]appliedRow{version: {name: m.Name, digest: &stranger}}, m); err == nil {
 					t.Error("applied content that is not the recorded one was admitted — an entry excuses one " +
 						"known byte sequence, not every database on this version")
+				}
+				if ContentAdmitted("core", m, stranger) {
+					t.Error("the probe's door admitted content the migrator refuses, so a template the " +
+						"migrator would rebuild is reported at head and reused")
 				}
 
 				// And the entry must expire when the SOURCE changes again. Without this the

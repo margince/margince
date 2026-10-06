@@ -1,5 +1,6 @@
 // The pipeline review: whats_slipping_this_week's ranked deals, worst first,
-// each with the evidence its risk claim rests on.
+// each with the evidence its risk claim rests on — drawn as the app draws a
+// queue, a rank chip per row and the amount at its far end.
 //
 // WHY THE EVIDENCE IS ON THE ROW AND NOT BEHIND A DISCLOSURE. The rank is a
 // judgement, and the tool's whole contract is that a deal whose risk cannot be
@@ -11,7 +12,8 @@
 // off a tool that already answers, which is what every `render_*` name on this
 // surface is.
 
-import { count, el, heading, money, onResult } from "../bridge";
+import { ABSENT, count, el, money, onResult } from "../bridge";
+import { panel, panelFoot, panelRow } from "../parts";
 import { asList, asRecord, asText, type Warning } from "../types";
 import "../view.css";
 
@@ -24,7 +26,7 @@ type SlippingDeal = {
 
 /**
  * known narrows the untrusted payload, filtering BEFORE anything is counted so
- * the meta line describes what is actually shown.
+ * the head describes what is actually shown.
  */
 function known(data: Record<string, unknown>): SlippingDeal[] {
   return asList(data.deals)
@@ -50,25 +52,41 @@ function evidenceOf(entry: unknown): { source: string; snippet: string } {
   return { source: asText(evidence.source), snippet: asText(evidence.snippet) };
 }
 
+/** evidenceLine is one reason, followed by the field it was read off: the
+ *  field is the proof, so it is shown rather than summarized away. */
+function evidenceLine(evidence: {
+  source: string;
+  snippet: string;
+}): HTMLElement {
+  const line = el("div", "meta evidence", evidence.snippet);
+  if (evidence.source !== "") {
+    line.append(" · ", el("span", "source", evidence.source));
+  }
+  return line;
+}
+
 function dealRow(deal: SlippingDeal): HTMLElement {
-  const row = el("div", "row");
-  const head = el("div", "row-head");
-  head.appendChild(el("span", "rank", `#${deal.rank}`));
-  head.appendChild(el("span", "name", deal.name));
-  head.appendChild(el("span", "score", deal.amount));
-  row.appendChild(head);
+  const row = panelRow("item");
+  row.appendChild(el("span", "rank", deal.rank));
+  const main = el("div");
+  main.appendChild(el("div", "name", deal.name));
   if (deal.evidence.length === 0) {
     // The tool does not answer an unevidenced deal, so this is a payload that
     // did not come from it. Saying so beats rendering a rank with no reason.
-    row.appendChild(el("div", "state", "no evidence was sent for this deal"));
-    return row;
+    main.appendChild(
+      el("div", "meta evidence", "no evidence was sent for this deal"),
+    );
   }
-  for (const evidence of deal.evidence) {
-    const line = el("div", "factors");
-    line.appendChild(el("span", "factor", evidence.snippet));
-    line.appendChild(el("span", "source", evidence.source));
-    row.appendChild(line);
-  }
+  for (const evidence of deal.evidence)
+    main.appendChild(evidenceLine(evidence));
+  row.appendChild(main);
+  row.appendChild(
+    el(
+      "span",
+      deal.amount === ABSENT ? "figure figure-absent" : "figure",
+      deal.amount,
+    ),
+  );
   return row;
 }
 
@@ -80,7 +98,11 @@ export function render(
   root.replaceChildren();
   if (data === null || data === undefined) {
     root.appendChild(
-      el("div", "empty", "The host sent no structured result for this review."),
+      el(
+        "div",
+        "empty empty-alone",
+        "The host sent no structured result for this review.",
+      ),
     );
     return;
   }
@@ -91,38 +113,43 @@ export function render(
   // payload could not be read.
   if (!Array.isArray(answer.deals)) {
     root.appendChild(
-      el("div", "empty", "The host sent no readable pipeline review."),
+      el(
+        "div",
+        "empty empty-alone",
+        "The host sent no readable pipeline review.",
+      ),
     );
     return;
   }
   const deals = known(answer);
-  root.appendChild(heading("xlarge", "Pipeline review"));
-  root.appendChild(
-    el(
-      "p",
-      "meta",
-      // "shown", not "at risk": the caller may have asked for a capped set,
-      // and this document cannot tell a top-five from the whole answer. The
-      // number describes the panel, which is a claim it can keep.
-      `${deals.length} deal(s) shown, worst first — each with the field its risk was read off`,
-    ),
-  );
+  // "shown", not "at risk": the caller may have asked for a capped set, and
+  // this document cannot tell a top-five from the whole answer. The number
+  // describes the panel, which is a claim it can keep.
+  const review = panel("Slipping this week", {
+    level: "h1",
+    action: el("span", "meta", `${deals.length} shown`),
+  });
   if (deals.length === 0) {
-    root.appendChild(
+    review.appendChild(
       el(
-        "div",
+        "p",
         "empty",
         "No deal's risk can be evidenced from its own fields. " +
           "That is the answer, not a gap.",
       ),
     );
+    root.appendChild(review);
     return;
   }
-  const rows = el("div", "rows");
-  for (const deal of deals) {
-    rows.appendChild(dealRow(deal));
-  }
-  root.appendChild(rows);
+  for (const deal of deals) review.appendChild(dealRow(deal));
+  const foot = panelFoot();
+  // No count here: the head already says how many are SHOWN, and a count in the
+  // foot would read as how many are at risk, which a capped answer cannot say.
+  foot.appendChild(
+    el("p", "meta", "Worst first. Each risk names the field it was read from."),
+  );
+  review.appendChild(foot);
+  root.appendChild(review);
 }
 
 onResult((data, warnings) => {

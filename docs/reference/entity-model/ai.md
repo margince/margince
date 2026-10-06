@@ -59,6 +59,8 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 
 **Rules**
 
+- `ai_call_cache_write_tokens_js_safe` — `CHECK (((cache_write_tokens >= '-9007199254740991'::bigint) AND (cache_write_tokens <= '9007199254740991'::bigint)))`
+- `ai_call_cached_tokens_js_safe` — `CHECK (((cached_tokens >= '-9007199254740991'::bigint) AND (cached_tokens <= '9007199254740991'::bigint)))`
 - `ai_call_context_bytes_check` — `CHECK ((context_bytes >= 0))`
 - `ai_call_context_fingerprint_check` — `CHECK (((context_fingerprint = '') OR (context_fingerprint ~ '^[0-9a-f]{64}$')))`
 - `ai_call_context_scopes_check` — `CHECK ((context_scopes <@ ARRAY['identity', 'positioning', 'sales', 'offer', 'market', 'proof', 'administrative']))`
@@ -66,11 +68,14 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 - `ai_call_decision_answer_kind` — `CHECK (((decision_choice IS NULL) OR (kind = 'decision')))`
 - `ai_call_decision_answer_shape` — `CHECK (((decision_choice IS NULL) = (decision_confidence IS NULL)))`
 - `ai_call_kind_check` — `CHECK ((kind = ANY (ARRAY['completion', 'embedding', 'decision'])))`
+- `ai_call_latency_ms_js_safe` — `CHECK (((latency_ms >= '-9007199254740991'::bigint) AND (latency_ms <= '9007199254740991'::bigint)))`
+- `ai_call_reasoning_tokens_js_safe` — `CHECK (((reasoning_tokens >= '-9007199254740991'::bigint) AND (reasoning_tokens <= '9007199254740991'::bigint)))`
 - `ai_call_schema_downgrade_check` — `CHECK ((schema_downgrade = ANY (ARRAY['', 'relaxed', 'unenforced', 'dropped'])))`
 - `ai_call_secrets_removed_check` — `CHECK ((secrets_removed >= 0))`
 - `ai_call_source_check` — `CHECK ((served_identity_source = ANY (ARRAY['response', 'echo', 'configured'])))`
 - `ai_call_subject_shape` — `CHECK (((subject_type IS NULL) = (subject_id IS NULL)))`
-- `uq_ai_call_ws_id` — `UNIQUE (id)`
+- `ai_call_tokens_in_js_safe` — `CHECK (((tokens_in >= '-9007199254740991'::bigint) AND (tokens_in <= '9007199254740991'::bigint)))`
+- `ai_call_tokens_out_js_safe` — `CHECK (((tokens_out >= '-9007199254740991'::bigint) AND (tokens_out <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
@@ -81,7 +86,6 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 - `idx_ai_call_agent_run` — `btree (agent_run_id)`
 - `idx_ai_call_correlation` — `btree (correlation_id)`
 - `idx_ai_call_occurred` — `btree (occurred_at DESC)`
-- `uq_ai_call_ws_id` — `unique, btree (id)`
 
 ## ai_call_config
 
@@ -153,16 +157,16 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 - `ai_feedback_subject_type_check` — `CHECK ((subject_type = ANY (ARRAY['company', 'contact', 'deal', 'lead'])))`
 - `ai_feedback_subject_type_subject_id_claim_kind_key` — `UNIQUE (subject_type, subject_id, claim_kind, claim_key)`
 - `ai_feedback_verdict_check` — `CHECK ((verdict = ANY (ARRAY['corrected', 'suppressed', 'confirmed'])))`
+- `ai_feedback_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
 - `ai_feedback_pkey` — `unique, btree (id)`
 - `ai_feedback_subject_type_subject_id_claim_kind_key` — `unique, btree (subject_type, subject_id, claim_kind, claim_key)`
-- `idx_ai_feedback_subject` — `btree (subject_type, subject_id)`
 
 ## ai_model_rate
 
-10 columns · primary key `(id)` · referenced by 0 foreign keys
+11 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -176,6 +180,7 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 | `output_per_mtok_microusd` | `bigint` | yes | Required `bigint`. |
 | `provider` | `text` | yes | Required `text`. |
 | `created_at` | `timestamp with time zone` | yes | When the row was created. Set once. |
+| `source` | `text` | yes | Who wrote this price. |
 
 **Rules**
 
@@ -185,6 +190,7 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 - `ai_model_rate_key` — `UNIQUE (provider, model_id, effective_date)`
 - `ai_model_rate_lane_check` — `CHECK ((lane = ANY (ARRAY['chat', 'embeddings', 'decisions'])))`
 - `ai_model_rate_output_per_mtok_microusd_check` — `CHECK ((output_per_mtok_microusd >= 0))`
+- `ai_model_rate_source_check` — `CHECK ((source = ANY (ARRAY['manual', 'catalogue', 'seed'])))`
 
 **Indexes**
 
@@ -207,6 +213,15 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 | `tier` | `text` | yes | Required `text`. |
 | `tokens_in` | `bigint` | yes | Required `bigint`, defaulting to `0`. |
 | `tokens_out` | `bigint` | yes | Required `bigint`, defaulting to `0`. |
+
+**Rules**
+
+- `ai_usage_cache_write_tokens_js_safe` — `CHECK (((cache_write_tokens >= '-9007199254740991'::bigint) AND (cache_write_tokens <= '9007199254740991'::bigint)))`
+- `ai_usage_cached_tokens_js_safe` — `CHECK (((cached_tokens >= '-9007199254740991'::bigint) AND (cached_tokens <= '9007199254740991'::bigint)))`
+- `ai_usage_calls_js_safe` — `CHECK (((calls >= '-9007199254740991'::bigint) AND (calls <= '9007199254740991'::bigint)))`
+- `ai_usage_reasoning_tokens_js_safe` — `CHECK (((reasoning_tokens >= '-9007199254740991'::bigint) AND (reasoning_tokens <= '9007199254740991'::bigint)))`
+- `ai_usage_tokens_in_js_safe` — `CHECK (((tokens_in >= '-9007199254740991'::bigint) AND (tokens_in <= '9007199254740991'::bigint)))`
+- `ai_usage_tokens_out_js_safe` — `CHECK (((tokens_out >= '-9007199254740991'::bigint) AND (tokens_out <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
@@ -259,6 +274,7 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 - `voice_build_stage_check` — `CHECK ((stage = ANY (ARRAY['snapshot', 'extract', 'evaluate', 'activate'])))`
 - `voice_build_status_check` — `CHECK ((status = ANY (ARRAY['queued', 'deferred', 'running', 'succeeded', 'failed'])))`
 - `voice_build_status_code_check` — `CHECK ((status_code = ANY (ARRAY['budget_deferred', 'model_unavailable', 'invalid_output', 'quality_regression', 'material_drift', 'internal'])))`
+- `voice_build_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
@@ -312,6 +328,7 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 - `voice_corpus_source_kind_check` — `CHECK ((kind = ANY (ARRAY['email', 'linkedin', 'proposal', 'transcript', 'document', 'other'])))`
 - `voice_corpus_source_origin_check` — `CHECK ((origin = ANY (ARRAY['manual', 'capture', 'draft_signal'])))`
 - `voice_corpus_source_register_check` — `CHECK ((register = ANY (ARRAY['email', 'social', 'long_form', 'spoken', 'general'])))`
+- `voice_corpus_source_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 - `voice_corpus_source_weight_check` — `CHECK (((weight >= (0)::numeric) AND (weight <= (2)::numeric)))`
 - `voice_corpus_source_word_count_check` — `CHECK ((word_count >= 0))`
 
@@ -321,7 +338,6 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 - `uq_voice_corpus_source_ref` — `unique, btree (voice_profile_id, source_ref)`
 - `voice_corpus_source_manifest` — `btree (voice_profile_id, created_at DESC, id DESC) WHERE (archived_at IS NULL)`
 - `voice_corpus_source_pkey` — `unique, btree (id)`
-- `voice_corpus_source_profile_fk` — `btree (voice_profile_id)`
 
 ## voice_learning_signal
 
@@ -363,6 +379,7 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 - `voice_learning_signal_profile_version_check` — `CHECK ((profile_version >= 1))`
 - `voice_learning_signal_qualifies_check` — `CHECK (((NOT qualifies_as_source) OR ((outcome = 'edited_sent') AND (final_text IS NOT NULL) AND (final_captured_by ~~ 'human:%'))))`
 - `voice_learning_signal_similarity_check` — `CHECK (((similarity >= (0)::numeric) AND (similarity <= (1)::numeric)))`
+- `voice_learning_signal_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
@@ -409,6 +426,7 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 - `voice_profile_scope_check` — `CHECK ((scope = ANY (ARRAY['user', 'team', 'workspace'])))`
 - `voice_profile_scope_owner_check` — `CHECK ((((scope = 'user') AND (owner_id IS NOT NULL) AND (team_id IS NULL)) OR ((scope = 'team') AND (owner_id IS NULL) AND (team_id IS NOT NULL)) OR ((scope = 'workspace') AND (owner_id IS NULL) AND (team_id IS NULL))))`
 - `voice_profile_status_check` — `CHECK ((status = ANY (ARRAY['collecting', 'ready', 'stale'])))`
+- `voice_profile_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 - `voice_profile_version_nonnegative` — `CHECK ((profile_version >= 0))`
 
 **Indexes**
@@ -456,7 +474,6 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 - `uq_voice_profile_delta_version` — `unique, btree (voice_profile_id, to_version)`
 - `voice_profile_delta_history` — `btree (voice_profile_id, created_at DESC, id DESC) WHERE (archived_at IS NULL)`
 - `voice_profile_delta_pkey` — `unique, btree (id)`
-- `voice_profile_delta_profile_fk` — `btree (voice_profile_id)`
 
 ## voice_profile_version
 
@@ -499,18 +516,16 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 **Rules**
 
 - `uq_voice_profile_version_number` — `UNIQUE (voice_profile_id, profile_version)`
-- `uq_voice_profile_version_profile_number` — `UNIQUE (voice_profile_id, profile_version)`
 - `voice_profile_version_predecessor_version_check` — `CHECK ((predecessor_version >= 1))`
 - `voice_profile_version_profile_version_check` — `CHECK ((profile_version >= 1))`
 - `voice_profile_version_reason_check` — `CHECK ((reason = ANY (ARRAY['onboarding', 'manual', 'automatic', 'rollback'])))`
 - `voice_profile_version_source_count_check` — `CHECK ((source_count >= 0))`
 - `voice_profile_version_status_check` — `CHECK ((status = ANY (ARRAY['candidate', 'active', 'superseded', 'rejected'])))`
+- `voice_profile_version_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
 - `uq_voice_profile_version_number` — `unique, btree (voice_profile_id, profile_version)`
-- `uq_voice_profile_version_profile_number` — `unique, btree (voice_profile_id, profile_version)`
 - `voice_profile_version_history` — `btree (voice_profile_id, created_at DESC, id DESC) WHERE (archived_at IS NULL)`
 - `voice_profile_version_one_active` — `unique, btree (voice_profile_id) WHERE (status = 'active')`
 - `voice_profile_version_pkey` — `unique, btree (id)`
-- `voice_profile_version_profile_fk` — `btree (voice_profile_id)`

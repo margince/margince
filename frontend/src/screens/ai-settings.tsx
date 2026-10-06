@@ -3,13 +3,12 @@ import { useCan } from "../app/capability";
 import { StatCard } from "../design-system/atoms";
 import { formatMoney, formatNumber } from "../format/format";
 import { formatElapsed, useNow } from "../format/now";
-import { formatTokens } from "../format/tokens";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { useProviderKeys } from "./ai-provider-keys";
+import { useProviderKeys } from "./ai-provider-key-hooks";
 import { boundProviders, useRouting } from "./ai-routing-query";
 import { type LastCall, useLastCallAt } from "./aicalls";
-import { bandTone, currentMonth, useAiUsage } from "./aiusage";
+import { currentMonth, useAiUsage } from "./aiusage";
 import "./ai-settings.css";
 
 // The company's AI as ONE page with five bodies, read in the order the
@@ -43,83 +42,52 @@ import "./ai-settings.css";
 // Exported rather than moved so the queries, the locale formatting and the
 // withheld-reading behaviour stay in one file with the cards that share them.
 
-// What this month has cost, in the denomination the runtime actually meters:
-// tokens against the monthly ceiling, with the priced estimate under it.
+// The month's priced estimate, drawn inside the allowance card under the token
+// meter it qualifies.
 //
 // Tokens are the budget and the money is the estimate, in that order, because
 // that is which of the two the runtime enforces — the band that degrades a lane
 // is drawn on tokens, and a lane never stops because a dollar figure was reached.
 // The estimate is priced on read from the workspace's sheet and a call outside it
-// carries no price at all, so the money line is absent rather than short when
-// nothing in the month priced.
-export function SpendStat() {
+// carries no price at all, so a month nothing priced says so in words: an absent
+// line there reads as a month that cost nothing.
+export function SpendEstimate() {
   const t = useT();
   const { locale } = useLocale();
   // The same gate the endpoint behind `useAiUsage` asks for
-  // (ai/usage.go: ai_diagnostics.read). Asking `automation.update` here read
-  // the header as withheld for a holder the server would have answered, and
-  // rendered the number for an automation editor it would have refused.
+  // (ai/usage.go: ai_diagnostics.read). A seat without it still has the
+  // allowance card; only this line is withheld, and says so — an absent
+  // estimate would read as a month that cost nothing.
   const canSee = useCan("ai_diagnostics", "read");
-  // The current month, fixed: the header reads "this month" while the Usage tab
-  // below it lets a reader step back through earlier ones, and a header that
-  // followed the stepper would stop answering the question it asks.
+  // The current month, fixed: the usage card below lets a reader step back
+  // through earlier ones, and an estimate that followed the stepper would stop
+  // answering "this month".
   const [month] = useState(currentMonth);
   const query = useAiUsage(month, canSee);
-
   if (!canSee) {
-    return (
-      <StatCard
-        label={t("aiSettings.spend.label")}
-        value={t("aiSettings.withheld")}
-      />
-    );
+    return <p>{t("aiSettings.withheld")}</p>;
   }
   const budget = query.data?.budget;
   if (!budget) {
-    return (
-      <StatCard
-        label={t("aiSettings.spend.label")}
-        value={readingState(query.isError, t)}
-      />
-    );
+    return <p>{readingState(query.isError, t)}</p>;
   }
-  const priced = (query.data?.days ?? []).reduce(
-    (sum, day) =>
-      sum +
-      day.tasks.reduce(
-        (dayTotal, task) => dayTotal + (task.cost_est_minor ?? 0),
-        0,
-      ),
+  const tasks = (query.data?.days ?? []).flatMap((day) => day.tasks);
+  const priced = tasks.reduce(
+    (sum, task) => sum + (task.cost_est_minor ?? 0),
     0,
   );
-  const anyPriced = (query.data?.days ?? []).some((day) =>
-    day.tasks.some((task) => task.cost_est_minor !== undefined),
-  );
+  const anyPriced = tasks.some((task) => task.cost_est_minor !== undefined);
+  // In FULL, unlike the token figures: a month's estimate is a handful of
+  // dollars as often as it is thousands, and the compact formatter carries no
+  // fraction below ten thousand — it would print forty cents as "US$0".
   return (
-    <StatCard
-      label={t("aiSettings.spend.label")}
-      value={t("aiSettings.spend.value", {
-        spent: formatTokens(budget.spent_tokens, locale),
-        budget: formatTokens(budget.monthly_tokens, locale),
-      })}
-      tone={bandTone(budget.band)}
-      meter={{ filled: budget.spent_tokens, total: budget.monthly_tokens }}
-      // The money is the ESTIMATE under the budget, and a month nothing priced
-      // says so in words: an absent line there reads as a month that cost
-      // nothing.
-      detail={
-        anyPriced
-          ? t("aiSettings.spend.estimated", {
-              // In FULL, unlike the token figures above it. A month's estimate
-              // is a handful of dollars as often as it is thousands, and the
-              // compact formatter carries no fraction below ten thousand — it
-              // would print forty cents of real spend as "US$0", which is the
-              // one claim this product must never make by accident.
-              amount: formatMoney(priced, budget.currency ?? "USD", locale),
-            })
-          : t("aiSettings.spend.notPriced")
-      }
-    />
+    <p>
+      {anyPriced
+        ? t("aiSettings.spend.estimated", {
+            amount: formatMoney(priced, budget.currency ?? "USD", locale),
+          })
+        : t("aiSettings.spend.notPriced")}
+    </p>
   );
 }
 

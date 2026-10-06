@@ -1,120 +1,23 @@
 /** @vitest-environment happy-dom */
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { type GrantSpec, meFixture } from "../app/mefixture";
-import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { CaptureExclusionsCard } from "./capture-exclusions";
-
-// The two scopes this card draws are two different permissions, and that is the
-// whole subject: a rule that binds only the reader is theirs to write, while one
-// that binds the company is admin/ops work. So every case below fixes the
-// grant and asks what the card offers.
-const CAPTURE_EDITOR: GrantSpec = { capture_settings: ["read", "update"] };
-const READER: GrantSpec = { capture_settings: ["read"] };
-
-const RULES = [
-  { id: "cx-1", scope: "user", kind: "address", value: "ex@partner.test" },
-  { id: "cx-2", scope: "workspace", kind: "domain", value: "recruiter.test" },
-];
-
-type Call = { method: string; url: string; body: unknown };
-
-function backend(
-  allow: GrantSpec,
-  rules: unknown[] = RULES,
-  connectedProvider = "gmail",
-) {
-  const calls: Call[] = [];
-  const fetchMock = vi.fn(
-    async (input: RequestInfo | URL, init?: RequestInit) => {
-      // Built as a Request rather than read off `init`: openapi-fetch may pass a
-      // Request with no init at all, and a mock that read the method from init
-      // would answer every write as if it were a read.
-      const request =
-        input instanceof Request ? input : new Request(String(input), init);
-      const url = request.url;
-      const method = request.method;
-      calls.push({
-        method,
-        url,
-        body: method === "GET" ? undefined : await request.clone().json(),
-      });
-      if (url.endsWith("/v1/me")) {
-        return new Response(JSON.stringify(meFixture({ allow })), {
-          headers: { "Content-Type": "application/json" },
-        });
-      }
-      // The seat's own connections: the picker asks WHICH mailbox's folders
-      // it is offering, so a fixture without one offers nothing.
-      if (url.includes("/connectors") && !url.includes("/containers")) {
-        return new Response(
-          JSON.stringify({
-            data: [
-              {
-                id: "conn-1",
-                provider: connectedProvider,
-                status: "connected",
-                scopes: [],
-              },
-            ],
-            providers: [],
-          }),
-          { headers: { "Content-Type": "application/json" } },
-        );
-      }
-      if (url.includes("/containers")) {
-        return new Response(
-          JSON.stringify({
-            containers: url.includes("/graph/")
-              ? [{ id: "AAMk-privat", name: "Posteingang/Privat" }]
-              : [{ id: "Label_7", name: "Privat" }],
-          }),
-          { headers: { "Content-Type": "application/json" } },
-        );
-      }
-      if (method === "POST") {
-        return new Response(JSON.stringify({ id: "cx-3" }), {
-          status: 201,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
-      return new Response(JSON.stringify({ data: rules }), {
-        headers: { "Content-Type": "application/json" },
-      });
-    },
-  );
-  return { fetchMock, calls };
-}
-
-function Providers({ children }: { children: ReactNode }) {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  return (
-    <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">{children}</LocaleProvider>
-    </QueryClientProvider>
-  );
-}
+import {
+  backend,
+  CAPTURE_EDITOR,
+  openForm,
+  Providers,
+  READER,
+  RULES,
+  removeVerb,
+} from "./capture-exclusions.testkit";
 
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
 });
-
-// The header verb that opens the form, named by its catalog key: the dialog's
-// own submit says "Exclude", so matching on that would find the wrong control.
-const openForm = () =>
-  screen.getByRole("button", { name: en["captureExclusions.addOpen"] });
-
-const removeVerb = (value: string) =>
-  screen.getByRole("button", {
-    name: en["captureExclusions.remove"].replace("{value}", value),
-  }) as HTMLButtonElement;
 
 describe("CaptureExclusionsCard", () => {
   it("lists each rule with the scope and kind it binds by", async () => {
@@ -269,135 +172,6 @@ describe("CaptureExclusionsCard", () => {
     expect(submit.disabled).toBe(true);
     await user.click(submit);
     expect(calls.some((call) => call.method === "POST")).toBe(false);
-  });
-});
-
-describe("the container kind", () => {
-  // The whole point of the picker: a rule names a provider's own token, and
-  // the reader chooses a name they recognise.
-  it("offers the mailbox's folders by name and stores the provider's token", async () => {
-    const user = userEvent.setup();
-    const { fetchMock, calls } = backend(CAPTURE_EDITOR);
-    vi.stubGlobal("fetch", fetchMock);
-    render(
-      <Providers>
-        <CaptureExclusionsCard />
-      </Providers>,
-    );
-
-    await waitFor(() =>
-      expect(screen.getByText("ex@partner.test")).toBeTruthy(),
-    );
-    await user.click(
-      screen.getByRole("button", { name: en["captureExclusions.addOpen"] }),
-    );
-    await user.click(
-      screen.getByRole("button", {
-        name: en["captureExclusions.kind.container"],
-      }),
-    );
-
-    // The NAME is what the reader sees and picks.
-    const picker = await screen.findByRole("combobox");
-    await user.click(picker);
-    await user.click(await screen.findByRole("option", { name: "Privat" }));
-    await user.click(
-      screen.getByRole("button", { name: en["captureExclusions.add"] }),
-    );
-
-    await waitFor(() =>
-      expect(calls.some((call) => call.method === "POST")).toBe(true),
-    );
-    const posted = calls.find((call) => call.method === "POST");
-    // The provider-qualified TOKEN is stored, never the display name: a
-    // rename must not silently re-point a rule. And the scope is the
-    // reader's own, because a label means nothing in anybody else's mailbox.
-    expect(posted?.body).toMatchObject({
-      kind: "container",
-      value: "gmail:Label_7",
-      scope: "user",
-    });
-  });
-
-  // A mailbox that reports no folders is told so, rather than left with a
-  // picker that looks broken. The server refuses a container rule it has no
-  // token for anyway, so an empty picker would be a dead control.
-  it("says so when the mailbox reports no folders", async () => {
-    const user = userEvent.setup();
-    const { fetchMock } = backend(CAPTURE_EDITOR);
-    // Answer the containers read with an empty list.
-    const empty = vi.fn(
-      async (input: RequestInfo | URL, init?: RequestInit) => {
-        const request =
-          input instanceof Request ? input : new Request(String(input), init);
-        if (request.url.includes("/containers")) {
-          return new Response(JSON.stringify({ containers: [] }), {
-            headers: { "Content-Type": "application/json" },
-          });
-        }
-        return fetchMock(input, init);
-      },
-    );
-    vi.stubGlobal("fetch", empty);
-    render(
-      <Providers>
-        <CaptureExclusionsCard />
-      </Providers>,
-    );
-
-    await waitFor(() =>
-      expect(screen.getByText("ex@partner.test")).toBeTruthy(),
-    );
-    await user.click(
-      screen.getByRole("button", { name: en["captureExclusions.addOpen"] }),
-    );
-    await user.click(
-      screen.getByRole("button", {
-        name: en["captureExclusions.kind.container"],
-      }),
-    );
-
-    expect(
-      await screen.findByText(en["captureExclusions.noContainers"]),
-    ).toBeTruthy();
-  });
-
-  // A label lives in ONE mailbox, so there is no workspace choice to offer —
-  // the database refuses that rule, and showing the control would offer a
-  // scope the write cannot take.
-  it("offers no scope choice, because a label is the reader's own", async () => {
-    const user = userEvent.setup();
-    const { fetchMock } = backend(CAPTURE_EDITOR);
-    vi.stubGlobal("fetch", fetchMock);
-    render(
-      <Providers>
-        <CaptureExclusionsCard />
-      </Providers>,
-    );
-
-    await waitFor(() =>
-      expect(screen.getByText("ex@partner.test")).toBeTruthy(),
-    );
-    await user.click(
-      screen.getByRole("button", { name: en["captureExclusions.addOpen"] }),
-    );
-    // The scope control is there for an address rule...
-    expect(
-      screen.queryByRole("button", {
-        name: en["captureExclusions.scope.workspace"],
-      }),
-    ).toBeTruthy();
-    await user.click(
-      screen.getByRole("button", {
-        name: en["captureExclusions.kind.container"],
-      }),
-    );
-    // ...and gone for a container one.
-    expect(
-      screen.queryByRole("button", {
-        name: en["captureExclusions.scope.workspace"],
-      }),
-    ).toBeNull();
   });
 });
 

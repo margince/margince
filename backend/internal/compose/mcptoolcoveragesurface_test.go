@@ -33,6 +33,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -164,15 +165,25 @@ func extensionTools(dir string) ([]unitTool, error) {
 	return tools, nil
 }
 
-// lanePassportScopes are the scopes scripts/e2e-llm.sh mints its passport with.
+// lanePassportScopes are the scopes scripts/e2e-llm.sh mints its passports with,
+// keyed by what a scenario's `passport:` line says: absent for the default, and
+// "wide" for the one that adds the draft and send scopes.
 //
 // It is the LANE'S OWN CHOICE, restated here because the page's central claim is
-// about the surface that passport is served, and a claim about a caller must
-// name the caller. If the lane widens its passport, this list is what must move
-// with it — TestTheLaneCanReachEveryToolACaseRequires fails until it does.
-var lanePassportScopes = map[principal.Scope]bool{
-	principal.ScopeRead:  true,
-	principal.ScopeWrite: true,
+// about the surface a passport is served, and a claim about a caller must name
+// the caller. If the lane widens a passport, this table is what must move with
+// it — TestTheLaneCanReachEveryToolACaseRequires fails until it does.
+var lanePassportScopes = map[string]map[principal.Scope]bool{
+	"": {
+		principal.ScopeRead:  true,
+		principal.ScopeWrite: true,
+	},
+	"wide": {
+		principal.ScopeRead:  true,
+		principal.ScopeWrite: true,
+		principal.ScopeDraft: true,
+		principal.ScopeSend:  true,
+	},
 }
 
 // TestTheCoveragePageCountsTheSurfaceItNames is the census.
@@ -238,20 +249,32 @@ func TestTheLaneCanReachEveryToolACaseRequires(t *testing.T) {
 
 	required := 0
 	for _, c := range cases {
+		held, minted := lanePassportScopes[c.Passport]
+		if !minted {
+			t.Errorf("case %s asks for passport %q, which the lane does not mint", c.Name, c.Passport)
+			continue
+		}
+		// A one-of group holds when ANY member can be offered: the case lets the
+		// model take either door, so a member outside the passport's scopes
+		// narrows the choice and does not make the case unpassable.
+		reachable := func(tool string) bool {
+			want, known := scope[tool]
+			return known && held[want]
+		}
 		for _, tool := range c.Requires {
 			required++
-			want, known := scope[tool]
-			if !known {
-				t.Errorf("case %s requires %s and the served catalog has no such tool — the case "+
-					"can never pass, and it fails looking like a model that chose not to call it",
-					c.Name, tool)
-				continue
+			if !reachable(tool) {
+				t.Errorf("case %s requires %s, which is not in the listing its passport is shown "+
+					"(scopes %v) or not in the catalog at all — every run of this case is paid for "+
+					"and lost, and it fails looking like a model that chose not to call it",
+					c.Name, tool, sortedScopes(held))
 			}
-			if !lanePassportScopes[want] {
-				t.Errorf("case %s requires %s, which needs scope %q — the lane's passport carries "+
-					"only %v, so the tool is never in the listing the assistant is shown. Every run "+
-					"of this case is paid for and lost.",
-					c.Name, tool, want, sortedScopes())
+		}
+		for _, set := range c.RequiresOneOf {
+			required++
+			if !slices.ContainsFunc(set, reachable) {
+				t.Errorf("case %s requires one of %v and none is in the listing its passport is "+
+					"shown (scopes %v)", c.Name, set, sortedScopes(held))
 			}
 		}
 	}
@@ -263,9 +286,9 @@ func TestTheLaneCanReachEveryToolACaseRequires(t *testing.T) {
 	}
 }
 
-func sortedScopes() []string {
-	out := make([]string, 0, len(lanePassportScopes))
-	for s := range lanePassportScopes {
+func sortedScopes(held map[principal.Scope]bool) []string {
+	out := make([]string, 0, len(held))
+	for s := range held {
 		out = append(out, string(s))
 	}
 	sort.Strings(out)

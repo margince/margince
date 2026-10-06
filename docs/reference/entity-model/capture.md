@@ -76,7 +76,7 @@ The 22 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## capture_backfill
 
-23 columns · primary key `(id)` · referenced by 1 foreign key
+25 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -90,6 +90,7 @@ The 22 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `contacts_created` | `integer` | yes | Required `integer`, defaulting to `0`. |
 | `cursor` | `jsonb` |  | Optional `jsonb`. |
 | `dedupe_candidates` | `integer` | yes | Required `integer`, defaulting to `0`. |
+| `failed` | `integer` | yes | Required `integer`, defaulting to `0`. |
 | `inflight_captured` | `integer` | yes | Required `integer`, defaulting to `0`. |
 | `inflight_scanned` | `integer` | yes | Required `integer`, defaulting to `0`. |
 | `inflight_skipped` | `integer` | yes | Required `integer`, defaulting to `0`. |
@@ -101,6 +102,7 @@ The 22 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `total_estimate` | `integer` |  | Optional `integer`. |
 | `total_estimate_is_floor` | `boolean` | yes | Required `boolean`, defaulting to `false`. |
 | `window_months` | `integer` | yes | Required `integer`. |
+| `window_restarts` | `integer` | yes | Required `integer`, defaulting to `0`. |
 | `created_at` | `timestamp with time zone` | yes | When the row was created. Set once. |
 | `updated_at` | `timestamp with time zone` | yes | When the row last changed. Refreshed on every write. |
 
@@ -190,7 +192,6 @@ The 22 tables owned by `capture`, as the migrations build them. [Back to the ent
 - `capture_connection_provider_check` — `CHECK ((provider = ANY (ARRAY['gmail', 'gcal', 'imap', 'graph', 'graphcal', 'whatsapp', 'telegram', 'offline_demo', 'test_mailbox'])))`
 - `capture_connection_status_check` — `CHECK ((status = ANY (ARRAY['connected', 'disconnected', 'error', 'reauth_required'])))`
 - `capture_connection_unique` — `UNIQUE (user_id, provider)`
-- `uq_capture_connection_ws_id` — `UNIQUE (id)`
 
 **Indexes**
 
@@ -198,7 +199,6 @@ The 22 tables owned by `capture`, as the migrations build them. [Back to the ent
 - `connector_connection_pkey` — `unique, btree (id)`
 - `idx_capture_connection` — `btree (provider, status) WHERE (archived_at IS NULL)`
 - `idx_capture_watch_renew` — `btree (watch_expires_at) WHERE ((watch_expires_at IS NOT NULL) AND (status = 'connected'))`
-- `uq_capture_connection_ws_id` — `unique, btree (id)`
 
 ## capture_counterparty_hold
 
@@ -228,7 +228,6 @@ The 22 tables owned by `capture`, as the migrations build them. [Back to the ent
 **Indexes**
 
 - `capture_counterparty_hold_pkey` — `unique, btree (id)`
-- `capture_counterparty_hold_user_idx` — `btree (user_id, kind)`
 - `capture_counterparty_hold_user_value_key` — `unique, btree (user_id, kind, value)`
 
 ## capture_digest
@@ -291,7 +290,7 @@ The 22 tables owned by `capture`, as the migrations build them. [Back to the ent
 - `capture_exclusion_pkey` — `unique, btree (id)`
 - `idx_capture_exclusion_user` — `btree (user_id)`
 - `idx_capture_exclusion_value` — `btree (kind, value)`
-- `uq_capture_exclusion` — `unique, btree (scope, COALESCE(user_id, '00000000-0000-0000-0000-000000000000'::uuid), kind, value)`
+- `uq_capture_exclusion` — `unique, btree (scope, user_id, kind, value) NULLS NOT DISTINCT`
 
 ## capture_freemail_domain
 
@@ -323,7 +322,7 @@ The 22 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## capture_import
 
-8 columns · primary key `(id)` · referenced by 0 foreign keys
+9 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -331,6 +330,7 @@ The 22 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `activity_id` | `uuid` | yes | Points at `activity.id` — deleting the parent deletes this row. |
 | `imported_at` | `timestamp with time zone` | yes | Required `timestamp with time zone`, defaulting to `now()`. |
 | `posture_at_import` | `text` |  | One of `shared`, `classified`, `held`. |
+| `provider_received_at` | `timestamp with time zone` |  | Optional `timestamp with time zone`. |
 | `user_id` | `uuid` | yes | Points at `app_user.id` — the parent cannot be deleted while this row points at it. |
 | `verdict_reason` | `text` |  | Optional `text`. |
 | `verdict_reasons` | `text[]` |  | Optional `text[]`. |
@@ -637,7 +637,7 @@ The 22 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 - `capture_trace_counterparty` — `btree (counterparty) WHERE (counterparty IS NOT NULL)`
 - `capture_trace_message` — `btree (source_system, source_id)`
-- `capture_trace_natural_key` — `unique, btree (COALESCE(user_id, '00000000-0000-0000-0000-000000000000'::uuid), source_system, source_id, stage, outcome)`
+- `capture_trace_natural_key` — `unique, btree (user_id, source_system, source_id, stage, outcome) NULLS NOT DISTINCT`
 - `capture_trace_pkey` — `unique, btree (id)`
 - `capture_trace_user_window` — `btree (user_id, occurred_at DESC)`
 - `capture_trace_window` — `btree (occurred_at DESC)`
@@ -671,6 +671,7 @@ The 22 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 - `channel_connection_provider_check` — `CHECK ((provider = 'telegram'))`
 - `channel_connection_status_check` — `CHECK ((status = ANY (ARRAY['connected', 'disconnected', 'error', 'reauth_required'])))`
+- `channel_connection_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 

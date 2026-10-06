@@ -1,0 +1,7 @@
+{
+  "verdict": "no",
+  "reason": "The answer reports the deal as closed to Won stage, not moved to Negotiation as the criterion requires.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 1. The answer reports the Rheinufer Netzmodernisierung deal as moved to the Negotiation stage, and says nothing that puts it on Won, Lost or any other stage. Answer no if it reports a different stage, says the move is waiting for approval, or does not report a move.",
+  "answer": "Done — the Rheinufer Netzmodernisierung deal is closed as Won. The forecast went from EUR 17,900 to EUR 30,400 weighted since the full EUR 12,500 now counts as booked."
+}

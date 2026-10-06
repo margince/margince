@@ -113,3 +113,41 @@ func TestAnEmptyCapturedFileCannotBeSentBackOut(t *testing.T) {
 		t.Fatalf("a file WITH content was refused too, so the rule is not about content: %v", err)
 	}
 }
+
+// A file kept from private mail by name only has a size and no bytes. The send
+// refuses it when it is created, naming the file, rather than at delivery.
+func TestAWithheldFileCannotBeSentBackOut(t *testing.T) {
+	e := setupSend(t)
+	anchor := e.seedAnchor(t, "", "")
+	ctx := principal.WithCorrelationID(
+		principal.WithActor(principal.WithWorkspaceID(context.Background(), e.ws),
+			principal.Principal{
+				Type: principal.PrincipalSystem, ID: "connector:imap",
+				Permissions: principal.Permissions{
+					Objects: map[string]principal.ObjectGrant{"activity": {Create: true, Read: true, Update: true}},
+				},
+			}), ids.NewV7())
+	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
+	if err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+		return store.RecordWithheldFiles(ctx, tx, anchor, CapturedFileSource{
+			System: "imap", MessageID: "private-" + anchor.String(),
+			CapturedBy: "connector:imap", Category: "email_attachment",
+		}, []WithheldFile{{PartID: "1", Filename: "payslip.pdf", ContentType: "application/pdf", ByteSize: 4096}})
+	}); err != nil {
+		t.Fatalf("recording the withheld file: %v", err)
+	}
+	var withheld ids.UUID
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT id FROM attachment WHERE entity_id = $1 AND filename = 'payslip.pdf'`, anchor).Scan(&withheld); err != nil {
+		t.Fatalf("reading back the withheld file: %v", err)
+	}
+
+	in := soloSendInput("transactional")
+	in.AttachmentIDs = []ids.UUID{withheld}
+	_, err := e.store(stubUnsubscribeLinker{}).SendEmail(
+		e.as(principal.RowScopeAll), FromActivity(anchor), in, stubConsentGate{}, &recordingStager{})
+	var refused *WithheldAttachmentError
+	if !errors.As(err, &refused) || refused.Filename != "payslip.pdf" {
+		t.Fatalf("sending a withheld file → %v, want WithheldAttachmentError naming payslip.pdf", err)
+	}
+}

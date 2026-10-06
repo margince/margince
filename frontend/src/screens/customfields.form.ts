@@ -13,7 +13,7 @@ import type { components } from "../api/schema";
 import { formatMoneyOrAbsent } from "../format/format";
 import { toMajorUnits, toMinorUnits } from "../format/minorunits";
 import { webUrl } from "../format/weburl";
-import { type Locale, useT } from "../i18n";
+import { type Locale, useLocale, useT } from "../i18n";
 import {
   type CreateField,
   joinMultiselectValue,
@@ -30,6 +30,7 @@ export type BooleanLabels = { yes: string; no: string };
 export function customFieldToFormField(
   field: CustomField,
   boolLabels: BooleanLabels,
+  tooPrecise: (currency: string) => string,
 ): CreateField {
   const base = { key: field.column_name, labelText: field.label };
   switch (field.type) {
@@ -42,6 +43,13 @@ export function customFieldToFormField(
         ...base,
         type: "number",
         toInput: (raw) => customFieldFormValue(field, raw),
+        validate: (value) => {
+          const code = field.currency ?? "";
+          return value.trim() !== "" &&
+            Number.isNaN(toMinorUnits(Number(value), code))
+            ? tooPrecise(code)
+            : undefined;
+        },
       };
     case "multiselect":
       return {
@@ -149,20 +157,11 @@ function coerceWrite(field: CustomField, raw: string): unknown {
   }
   switch (field.type) {
     case "currency": {
-      // An unusable amount is OMITTED, not sent. toMinorUnits answers NaN for a
-      // figure finer than its currency or too large to scale exactly, and NaN
-      // serialises to null — which on a PATCH means "clear this column". A
-      // typo would then DELETE a stored price instead of being refused, which
-      // is the one outcome worse than a wrong figure.
+      // NaN is never sent: it serialises to null, and a null PATCH clears the
+      // column. The control's validate refuses such a figure before it gets
+      // here; past it, the typed text goes and the store drops the key.
       const minor = toMinorUnits(Number(value), field.currency ?? "");
       if (Number.isNaN(minor)) {
-        // Sent as the typed TEXT rather than omitted. Omitting protected the
-        // stored value but said nothing: the reader watched their edit vanish
-        // on save with no error. The column is a bigint, so the server refuses
-        // a non-integer by name and the reader is told which field and why —
-        // the same posture as documentextraction, which sends an unconvertible
-        // figure as typed "so the server refuses it by name, rather than being
-        // silently rounded into something plausible".
         return value;
       }
       return minor;
@@ -224,8 +223,8 @@ export function customFieldsToPatch(
   return body;
 }
 
-// One field's display string for the read-only 360, or null when the record
-// carries no value (evidence-or-omit: an empty field is absent, never guessed).
+// One field's reading on either record surface, or null when the record carries
+// no value to read.
 export function customFieldDisplay(
   field: CustomField,
   raw: unknown,
@@ -252,6 +251,16 @@ export function customFieldDisplay(
       // avoid a timezone shift a datetime formatter would introduce).
       return String(raw);
   }
+}
+
+// customFieldDisplay in this reader's locale and Yes/No words, for either record
+// surface that reads a custom field.
+export function useCustomFieldDisplay() {
+  const t = useT();
+  const { locale } = useLocale();
+  const boolLabels = { yes: t("field.yes"), no: t("field.no") };
+  return (field: CustomField, raw: unknown) =>
+    customFieldDisplay(field, raw, { locale, boolLabels });
 }
 
 // Where a displayed value may be followed to, or null when it is only text.
@@ -324,7 +333,9 @@ export function useObjectCustomFields(object: CfObject): ObjectCustomFields {
   const boolLabels = { yes: t("field.yes"), no: t("field.no") };
 
   const controls = fields.map((field) =>
-    customFieldToFormField(field, boolLabels),
+    customFieldToFormField(field, boolLabels, (currency) =>
+      t("record.amountTooPrecise", { currency }),
+    ),
   );
   const formFields: CreateField[] =
     controls.length === 0

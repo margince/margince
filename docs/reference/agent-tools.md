@@ -84,8 +84,22 @@ Columns:
   stage's semantic (`open` → 🟢, won/lost → 🟡), and the three relink verbs
   (`relink_activity`, `relink_thread`, `relink_activities` — the table below
   lists the first) read the destination record type (filing under a project is
-  🟡 — it classifies every named activity as commercial correspondence, which is
-  write-once and cannot be undone by relinking away).
+  🟡 — it classifies every named activity as commercial correspondence). A thread
+  or a named set cannot pin a version, so a named set always stages. The thread
+  form never stages and never runs for an assistant: `relink_thread` refuses at
+  every destination, however it is called, because a thread key is re-read at
+  the retry, and sends the caller to `relink_activities`, whose approval binds
+  the exact ids. A credential may release its own staged relink with
+  `decide_approval` on an attended call, but only when the same checks the
+  decision applies pass for it (the decision grants and the target's own
+  visibility) and the change can be put back. A filing under a project is taken
+  back by a member with *Undo filing*, a human-only decision with a written
+  reason that is never the credential's, so a project relink is releasable only
+  while that undo could still apply: not when the activity is restricted,
+  archived, linked to a record under a legal hold, covered by an open erasure
+  request, or kept by another basis such as a won deal, a sent offer or a
+  controller's pin. Such a relink is released by a member in the CRM. A credential's
+  release is recorded as the member's own decision, given through the agent.
   **🟢 / 🟡** means the tier depends on the record type the call names: 🟢 for
   the seven the tool enumerates, 🟡 for `custom_field` and
   `webhook_subscription`, which the contract still declares confirm-first.
@@ -226,7 +240,7 @@ Counts are of the core catalog above; an enabled unit's SERVED verbs
 | Scope | Tools it unlocks | What it means |
 |---|---|---|
 | `read` | 17 | Reads only. It is also the sole scope that makes a tool `readOnlyHint: true`, and the only scope a **read seat** may spend at all. |
-| `draft` | 2 | Proposes text. Not read-only: `draft_email` returns a proposal and writes nothing, while `draft_follow_ups_for` persists a draft activity on the deal's timeline. |
+| `draft` | 2 | Proposes text. Not read-only: `draft_email` leaves a first message in the saved drafts of the human it acts for (never on a timeline, and a reply it writes nowhere), while `draft_follow_ups_for` persists a draft activity on the deal's timeline. |
 | `write` | 12 | Creates, patches, archives, advances, merges, promotes, disqualifies, re-links — every change that stays inside the workspace. |
 | `send` | 3 | The three egress verbs. All three are 🟡, so the scope buys the right to *ask*, never the right to send unattended. |
 | `enrich` | 1 | `enrich` — the one verb that fetches from a third party. 🟡 and `Egress: true`, like the `send` three: the cap buys the right to ask. |

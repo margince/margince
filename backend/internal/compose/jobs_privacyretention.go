@@ -108,11 +108,10 @@ func (PrivacyRetentionArgs) Kind() string { return "privacy_retention" }
 // periodic insert supplies uniqueness and no attempt policy of its own. Held
 // equal to api/jobs.yaml by TestArgsOwnedAttemptCapsMatchTheirDeclaration.
 func (PrivacyRetentionArgs) InsertOpts() river.InsertOpts {
-	return river.InsertOpts{
-		Queue:       privacyRetentionQueue,
+	return *jobs.QueuedAs[PrivacyRetentionArgs](&river.InsertOpts{
 		MaxAttempts: 3,
 		UniqueOpts:  river.UniqueOpts{ByState: activeSweepStates},
-	}
+	})
 }
 
 // privacyRetentionWorker evaluates the policies and acts on what is due.

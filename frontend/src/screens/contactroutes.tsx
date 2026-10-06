@@ -13,6 +13,7 @@ import { useCallback } from "react";
 import type { components } from "../api/schema";
 import { Avatar, Badge, Button } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
+import { StrengthMeter } from "../design-system/strengthmeter";
 import { formatNumber } from "../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import { useViewerId } from "./common";
@@ -170,6 +171,7 @@ function RouteRow({
   const { locale } = useLocale();
   const mine = useOwnRoute()(route);
   const blocked = availabilityLabel(route.availability, t);
+  const band = route.strength_bucket ?? "none";
   return (
     <div
       className={blocked ? "pn-route-line pn-route-blocked" : "pn-route-line"}
@@ -191,7 +193,7 @@ function RouteRow({
           {evidenceSentence(route.evidence, t, plural, locale)}
         </p>
       </div>
-      <StrengthMeter bucket={route.strength_bucket} />
+      <StrengthMeter band={band} label={t(`contact.band.${band}`)} />
       {/* A route that cannot be asked for offers no button. Rendering one that
           answers 409 would be a control that exists to fail — and the reader's
           own route is the same kind of button: the server refuses an ask whose
@@ -205,28 +207,6 @@ function RouteRow({
         </Button>
       ) : null}
     </div>
-  );
-}
-
-/**
- * StrengthMeter draws the score's bucket as filled bars, with the bucket's
- * word beside them: the bars are for a reader scanning the column, the word
- * is the fact, so colour and height never carry it alone.
- */
-function StrengthMeter({
-  bucket,
-}: Readonly<{ bucket: RouteCandidate["strength_bucket"] }>) {
-  const t = useT();
-  const band = bucket ?? "none";
-  return (
-    <span className="pn-meter" data-band={band}>
-      <span className="pn-meter-bars" aria-hidden="true">
-        <i />
-        <i />
-        <i />
-      </span>
-      {t(`contact.band.${band}`)}
-    </span>
   );
 }
 

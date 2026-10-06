@@ -165,7 +165,7 @@ func (s *Store) LogActivity(ctx context.Context, in LogActivityInput) (crmcontra
 	}
 	var out crmcontracts.Activity
 	created := true
-	err := s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.txRetryingLockCycles(ctx, func(tx pgx.Tx) error {
 		var err error
 		out, created, err = s.logActivityAndReadTranscript(ctx, tx, in)
 		return err
@@ -255,9 +255,25 @@ func taskAssignee(ctx context.Context, in LogActivityInput) *ids.UserID {
 // meeting somebody logs with no host named is almost always their own; a system
 // or agent principal has no week to count it into and leaves it null rather
 // than inventing one.
+//
+// A meeting that names its source author was not logged by the caller: an
+// import writes another system's history, and the caller is whoever ran it.
+// Defaulting to the caller there makes the importer host of every imported
+// meeting, which fills their own "upcoming meetings". The host is then the
+// author's seat when the source names one — RefuseUnknownSeat refuses the write
+// before the insert if it is no seat here — and nobody when the source names
+// only an author with no seat. Same rule as stampLoggedParticipants. The host
+// claims no slot either way: claims_host_slot stays the booking doors' alone.
 func meetingHost(ctx context.Context, in LogActivityInput) *ids.UserID {
 	if in.HostUserID != nil || in.Kind != KindMeeting {
 		return in.HostUserID
+	}
+	if in.Author.AuthorID != nil {
+		host := ids.From[ids.UserKind](*in.Author.AuthorID)
+		return &host
+	}
+	if in.Author.AuthorName != nil {
+		return nil
 	}
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID == ids.Nil {
@@ -396,7 +412,7 @@ func writeActivitySatellites(
 	// Who was in it (ACT-DDL-3). After the links, because the counterparty is
 	// whichever contact they name — and they have just been through the
 	// row-scope gate, so nothing here needs to re-check them.
-	if err := stampLoggedParticipants(ctx, tx, id, in.Kind, in.Direction, in.Links); err != nil {
+	if err := stampLoggedParticipants(ctx, tx, id, in); err != nil {
 		return err
 	}
 	if err := recordImportedProvenance(ctx, tx, id, in, by); err != nil {

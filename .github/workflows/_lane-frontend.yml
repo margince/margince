@@ -90,7 +90,7 @@ jobs:
       # therefore reads as success.
       - run: make fe-quality FE_COVERAGE=1
       - name: Upload the unit screens' coverage
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: ./.github/actions/upload-artifact-retried
         with:
           name: fe-coverage-ext
           path: frontend/coverage-ext/lcov.info
@@ -157,7 +157,7 @@ jobs:
       # the tree its tests happened to load and is not a measurement of anything
       # on its own; the fan-in turns the four into one.
       - name: Upload FE blob report
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: ./.github/actions/upload-artifact-retried
         with:
           name: fe-blob-${{ matrix.shard }}
           path: frontend/.vitest-reports/
@@ -276,7 +276,7 @@ jobs:
           path: frontend/.vitest-reports
       - run: make fe-unit-merge
       - name: Upload FE coverage
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: ./.github/actions/upload-artifact-retried
         with:
           name: fe-coverage
           path: frontend/coverage/lcov.info

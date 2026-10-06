@@ -21,10 +21,12 @@ import (
 // source could show.
 
 // FilterSource is a resolved export filter: the closed resource key the
-// predicate engine is looked up by, plus the canonical predicate tree.
+// predicate engine is looked up by, plus the canonical predicate tree — or,
+// for a Shortlist, the narrowing to its chosen members instead.
 type FilterSource struct {
 	Resource  string
 	Predicate storekit.Predicate
+	Members   storekit.ListMemberFilter
 }
 
 // viewResourceToEngine maps a saved view's resource (the contract's plural
@@ -83,21 +85,18 @@ func (s *Store) SavedViewFilterSource(ctx context.Context, id ids.SavedViewID) (
 	return FilterSource{Resource: resource, Predicate: pred}, nil
 }
 
-// ListFilterSource resolves a dynamic list to its export filter. It reads
-// the list through GetList, so the export is bounded by the list's own
-// row-scope gate. A static list has explicit members rather than a filter,
-// so it is rejected here (its rows are exported through its members
-// endpoint, not the predicate engine).
+// ListFilterSource resolves a list to its export filter. It reads the list
+// through GetList, so the export is bounded by the list's own row-scope gate.
+// A Live List exports what its definition matches; a Shortlist its chosen
+// members, through the narrowing the record lists read its list_id with.
 func (s *Store) ListFilterSource(ctx context.Context, id ids.ListID) (FilterSource, error) {
 	list, err := s.GetList(ctx, id)
 	if err != nil {
 		return FilterSource{}, err
 	}
 	if list.ListType != listTypeDynamic {
-		return FilterSource{}, &BadInputError{
-			Field:  "list_id",
-			Reason: "a static list carries explicit members, not a filter; export it through its members",
-		}
+		members, err := s.MemberFilter(ctx, list.ID.UUID, list.EntityType)
+		return FilterSource{Resource: list.EntityType, Members: members}, err
 	}
 	pred, err := predicateFromDefinition(list.Definition)
 	if err != nil {

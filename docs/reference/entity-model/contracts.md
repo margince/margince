@@ -51,6 +51,7 @@ The 1 table owned by `contracts`, as the migrations build them. [Back to the ent
 
 **Rules**
 
+- `contract_arr_minor_js_safe` — `CHECK (((arr_minor >= '-9007199254740991'::bigint) AND (arr_minor <= '9007199254740991'::bigint)))`
 - `contract_arr_nonnegative` — `CHECK (((arr_minor IS NULL) OR (arr_minor >= 0)))`
 - `contract_cancellation_order` — `CHECK (((cancellation_notice_on IS NULL) OR (cancellation_effective_on IS NULL) OR (cancellation_effective_on >= cancellation_notice_on)))`
 - `contract_cancellation_within_term` — `CHECK (((cancellation_effective_on IS NULL) OR (ends_on IS NULL) OR (cancellation_effective_on <= ends_on)))`
@@ -63,6 +64,8 @@ The 1 table owned by `contracts`, as the migrations build them. [Back to the ent
 - `contract_supersedes_not_self` — `CHECK (((superseded_by_id IS NULL) OR (superseded_by_id <> id)))`
 - `contract_term_order` — `CHECK (((starts_on IS NULL) OR (ends_on IS NULL) OR (ends_on >= starts_on)))`
 - `contract_value_basis_check` — `CHECK ((value_basis = ANY (ARRAY['total', 'annualized_12m'])))`
+- `contract_value_minor_js_safe` — `CHECK (((value_minor >= '-9007199254740991'::bigint) AND (value_minor <= '9007199254740991'::bigint)))`
+- `contract_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 

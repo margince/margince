@@ -59,7 +59,7 @@ type queueDef struct {
 	Reason     string `yaml:"reason"`
 }
 
-// timeoutDef is a kind's whole-job wall clock in the four forms the tree
+// timeoutDef is a kind's whole-job wall clock in the three forms the tree
 // actually takes. Exactly one form per entry.
 type timeoutDef struct {
 	// Fixed is the resolved duration Govern hands River. It is set for a
@@ -70,16 +70,13 @@ type timeoutDef struct {
 	// the census can prove the two still agree when that constant moves. A
 	// bare literal would silently stop tracking it.
 	Derived string
-	// Operator names the JobRunnerConfig field the value is computed from at
-	// registration; the duration is then not knowable here at all.
-	Operator string
 	// None declares a deliberate absence: the pass is bounded by a backlog
 	// rather than a wall clock, and River's rescuer must leave it alone.
 	None   bool
 	Reason string
 }
 
-// UnmarshalYAML accepts a bare duration alongside the three mapping forms, so
+// UnmarshalYAML accepts a bare duration alongside the two mapping forms, so
 // the common case — a kind whose timeout is just a number — stays one token.
 func (t *timeoutDef) UnmarshalYAML(node *yaml.Node) error {
 	if node.Kind == yaml.ScalarNode {
@@ -91,16 +88,15 @@ func (t *timeoutDef) UnmarshalYAML(node *yaml.Node) error {
 		return nil
 	}
 	var raw struct {
-		Derived  string `yaml:"derived"`
-		Value    string `yaml:"value"`
-		Operator string `yaml:"operator"`
-		None     bool   `yaml:"none"`
-		Reason   string `yaml:"reason"`
+		Derived string `yaml:"derived"`
+		Value   string `yaml:"value"`
+		None    bool   `yaml:"none"`
+		Reason  string `yaml:"reason"`
 	}
 	if err := decodeMapping(node, &raw); err != nil {
 		return fmt.Errorf("timeout: %w", err)
 	}
-	t.Derived, t.Operator, t.None, t.Reason = raw.Derived, raw.Operator, raw.None, raw.Reason
+	t.Derived, t.None, t.Reason = raw.Derived, raw.None, raw.Reason
 	if raw.Value != "" {
 		d, err := time.ParseDuration(raw.Value)
 		if err != nil {

@@ -424,11 +424,9 @@ describe("the header's writing verb", () => {
   });
 });
 
-// The seam the meeting brief regressed at: the page decides WHICH meeting the
-// drawer briefs. Mounting the tab alone proves only that a callback fires with
-// an id — the page could still ignore it and ask for the next meeting, which
-// is exactly the bug the drawer used to have. So this asserts the URL that
-// actually goes out.
+// The page decides WHICH meeting the drawer briefs. The tab mounted alone proves
+// only that a callback fires; the page could still ask for the next meeting, the
+// drawer's old bug. So this asserts the URL that actually goes out.
 describe("which meeting the brief drawer asks about", () => {
   const heldMeeting = {
     id: "a-held",
@@ -476,6 +474,7 @@ describe("which meeting the brief drawer asks about", () => {
       "GET /contacts/p-1/consent/guard": () =>
         jsonResponse({ contact_id: "p-1", entries: [] }),
       "GET /channel-providers": () => jsonResponse({ data: [] }),
+      "GET /activities": () => jsonResponse(withMeetings.activities),
       "GET /activities/a-held/meeting-brief": brief("a-held"),
       "GET /activities/a-booked/meeting-brief": brief("a-booked"),
     };
@@ -490,7 +489,8 @@ describe("which meeting the brief drawer asks about", () => {
       </StoryProviders>,
     );
 
-    const actions = await screen.findAllByRole("button", {
+    await screen.findByText("Depot walkthrough");
+    const actions = screen.getAllByRole("button", {
       name: en["contact.meeting.brief"],
     });
     // The booked meeting leads the tab and the held one follows it, so the

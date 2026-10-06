@@ -6,8 +6,10 @@ import type { components } from "../api/schema";
 import { navigate } from "../app/router";
 import { Badge, Button, TextInput } from "../design-system/atoms";
 import { useClipboardCopy } from "../design-system/clipboardcopy";
+import { CompanyLogo } from "../design-system/companylogo";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { ErrorLine } from "../design-system/errorline";
+import { FactList } from "../design-system/factlist";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useT } from "../i18n";
@@ -145,6 +147,7 @@ function ProfileForm({
           {!profile.enabled && !profile.provider && (
             <p className="t-caption">{t("scheduling.calendarSetupNeeded")}</p>
           )}
+          {embedded && <BookingIdentity profile={profile} />}
           <ConfirmModal
             open={replace}
             onClose={() => setReplace(false)}
@@ -168,5 +171,39 @@ function ProfileForm({
         <a href="#/settings/meetings">{t("scheduling.openSettings")}</a>
       )}
     </div>
+  );
+}
+
+// Where the booking page's name and branding come from, since neither is
+// edited here. The company shows as the guest's page draws it: the logo when
+// there is one, else the name.
+function BookingIdentity({ profile }: Readonly<{ profile: Profile }>) {
+  const t = useT();
+  const company = profile.company_name;
+  return (
+    <FactList
+      facts={[
+        {
+          key: "name",
+          term: t("scheduling.hostName"),
+          value: profile.host_name || t("field.unset"),
+          note: <a href="#/settings/account">{t("settings.tab.account")}</a>,
+        },
+        {
+          key: "company",
+          term: t("scheduling.brand"),
+          value: company ? (
+            <CompanyLogo
+              name={company}
+              src={profile.logo_url}
+              fallback={company}
+            />
+          ) : (
+            t("field.unset")
+          ),
+          note: <a href="#/settings/company">{t("settings.companyTitle")}</a>,
+        },
+      ]}
+    />
   );
 }

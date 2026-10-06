@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useCan } from "../app/capability";
+import { useState } from "react";
+import { useCan, useCanWrite } from "../app/capability";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { useT } from "../i18n";
-import {
-  AiFeaturesWithheldPanel,
-  AiFeatureTable,
-  useAiStatus,
-} from "./ai-admin";
+import { AiFeaturesWithheldPanel, useAiStatus } from "./ai-admin";
+import { AiFeatureTable } from "./ai-feature-table";
 import { useAiHealth } from "./ai-health";
+import { TaskSheet } from "./ai-task-sheet";
 import { PanelTitle } from "./ai-terms";
 import { QueryGate } from "./common";
 
@@ -21,6 +20,8 @@ import { QueryGate } from "./common";
 // their say — rather than with the policy's first pick.
 export function AiTasksCard() {
   const t = useT();
+  const canManage = useCanWrite("ai_routing", "update");
+  const [opened, setOpened] = useState<string | null>(null);
   const canDiagnose = useCan("ai_diagnostics", "read");
   const canBudget = useCan("ai_budget", "read");
   const canRoute = useCan("ai_routing", "read");
@@ -30,6 +31,7 @@ export function AiTasksCard() {
   // there is no payload, and without routing read its task list is empty —
   // either way the withheld panel says so, rather than drawing a table that
   // reads as "no tasks".
+  const route = status.data?.features.find((f) => f.task === opened);
   if (!canDiagnose || !canBudget || !canRoute) {
     return <AiFeaturesWithheldPanel />;
   }
@@ -39,9 +41,24 @@ export function AiTasksCard() {
         <PanelIntro>{t("aiTasks.intro")}</PanelIntro>
         <QueryGate query={status} pendingLabel={t("aiTasks.title")}>
           {(current) => (
-            <AiFeatureTable rows={current.features} health={health} />
+            <AiFeatureTable
+              rows={current.features}
+              health={health}
+              canTrace={canDiagnose}
+              onEdit={(row) => setOpened(row.task)}
+            />
           )}
         </QueryGate>
+        {/* Outside the gate, from the last good read: a failed refetch
+            behind an open sheet must not take the draft in it away. */}
+        {route ? (
+          <TaskSheet
+            route={route}
+            canManage={canManage}
+            canSeeCalls={canDiagnose}
+            onClose={() => setOpened(null)}
+          />
+        ) : null}
       </PanelBody>
     </Panel>
   );

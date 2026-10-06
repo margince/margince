@@ -11,6 +11,7 @@ import (
 	"github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // applyDealLinkPatches sets the fields that point at another record. They are
@@ -37,11 +38,12 @@ func applyDealLinkPatches(ctx context.Context, tx pgx.Tx,
 		p.Set("company_id", current.CompanyId, *in.CompanyID)
 	}
 	if in.OwnerID != nil {
-		// A named owner is an assignment, and the destination is checked the
-		// same way a lead's is: an active human seat inside the caller's own
-		// write scope. Without it a deal could be handed to a suspended seat
-		// or out of the assigner's reach, which the FK alone does not refuse.
-		if err := auth.EnsureAssignee(ctx, tx, in.OwnerID.UUID); err != nil {
+		// Handing the deal on is an assignment, and the destination is checked
+		// the same way a lead's is: an active human seat inside the caller's
+		// own write scope. Without it a deal could be handed to a suspended
+		// seat or out of the assigner's reach, which the FK alone does not
+		// refuse.
+		if err := auth.EnsureOwnerHandOn(ctx, tx, (*ids.UUID)(current.OwnerId), in.OwnerID); err != nil {
 			return err
 		}
 		p.Set(ownerColumn, current.OwnerId, *in.OwnerID)

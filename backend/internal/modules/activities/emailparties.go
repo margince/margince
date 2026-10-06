@@ -11,6 +11,8 @@ package activities
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -138,31 +140,72 @@ func readEmailParties(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (emailP
 			out.bcc = append(out.bcc, party)
 		}
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return emailParties{}, err
+	}
+	if len(out.from) == 0 {
+		sender, err := receivedFromTx(ctx, tx, id)
+		if err != nil {
+			return emailParties{}, err
+		}
+		if sender != "" {
+			out.from = append(out.from, crmcontracts.EmailParty{Address: sender})
+		}
+	}
+	return out, nil
+}
+
+// receivedFromTx is the sender of a received message whose capture recorded
+// no sender participant: older captures dropped an address the seat held,
+// which left the drawer with no From line at all. On a received message the
+// counterparty IS the sender, so it answers rather than a gap.
+func receivedFromTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (string, error) {
+	var sender string
+	err := tx.QueryRow(ctx, `
+		SELECT coalesce(counterparty_email, '') FROM activity
+		 WHERE id = $1 AND archived_at IS NULL AND direction = 'inbound'`, id).Scan(&sender)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("activities: reading who sent %s: %w", id, err)
+	}
+	return sender, nil
 }
 
 // counterpartyOf names the other side for a row: the first party the caller
-// can name, and how many more there were. A message whose participants all
-// resolve to nothing gets no counterparty rather than an invented stranger.
-func counterpartyOf(parties []crmcontracts.EmailParty) *string {
+// can name, how many more there were, and WHICH CONTACT supplied the name.
+//
+// The id travels beside the phrase because the phrase cannot be turned back
+// into a record. A client keying a face on the words alone has to guess which
+// contact they mean, and guesses wrong in both directions: a contact renamed
+// since capture stops matching and draws a second colour, and two contacts
+// sharing a name cannot be told apart at all. It is the id of the party the
+// name came FROM, not of the row — a message names one far side and the ` +N`
+// counts the rest.
+//
+// A message whose participants all resolve to nothing gets no counterparty
+// rather than an invented stranger, and an unresolved address names no contact.
+func counterpartyOf(parties []crmcontracts.EmailParty) (*string, *openapi_types.UUID) {
 	if len(parties) == 0 {
-		return nil
+		return nil, nil
 	}
 	var named string
+	var namedBy *openapi_types.UUID
 	for _, p := range parties {
 		if p.DisplayName != nil && strings.TrimSpace(*p.DisplayName) != "" {
-			named = *p.DisplayName
+			named, namedBy = *p.DisplayName, p.ContactId
 			break
 		}
 		if named == "" && p.Address != "" {
-			named = p.Address
+			named, namedBy = p.Address, p.ContactId
 		}
 	}
 	if named == "" {
-		return nil
+		return nil, nil
 	}
 	if extra := len(parties) - 1; extra > 0 {
 		named += " +" + strconv.Itoa(extra)
 	}
-	return &named
+	return &named, namedBy
 }

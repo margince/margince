@@ -120,12 +120,15 @@ type googleOIDCVerifierAdapter struct {
 	matchIdentity func(oidcClaims) error
 }
 
-func (a googleOIDCVerifierAdapter) Verify(ctx context.Context, idToken string) (email, sub string, emailVerified bool, err error) {
+func (a googleOIDCVerifierAdapter) Verify(ctx context.Context, idToken string) (identity.OIDCClaims, error) {
 	claims, err := a.v.verifyAs(ctx, idToken, a.matchIdentity)
 	if err != nil {
-		return "", "", false, err
+		return identity.OIDCClaims{}, err
 	}
-	return claims.Email, claims.Sub, claims.EmailVerified, nil
+	return identity.OIDCClaims{
+		Email: claims.Email, Subject: claims.Sub, EmailVerified: claims.EmailVerified,
+		Groups: claims.Groups, GivenName: claims.GivenName,
+	}, nil
 }
 
 // googleSignInSource resolves the provider for one flow: the client from the

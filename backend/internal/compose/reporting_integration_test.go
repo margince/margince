@@ -50,7 +50,7 @@ func reportingWrittenClose(t *testing.T, e *forecastEnv) (crmcontracts.Deal, *de
 	return closed, store, ctx
 }
 
-func TestReportingBookingsRetainClosingOwnerAfterTransfer(t *testing.T) {
+func TestReportingBookingsFollowCurrentOwnerAfterTransfer(t *testing.T) {
 	e := setupForecast(t)
 	closed, store, writer := reportingWrittenClose(t, e)
 	if closed.ClosedAt == nil {
@@ -63,34 +63,34 @@ func TestReportingBookingsRetainClosingOwnerAfterTransfer(t *testing.T) {
 	at := closed.ClosedAt.Add(2 * time.Hour)
 	service := newReportingService(e.Pool, func() time.Time { return at })
 	interval := crmcontracts.ReportingWindow{StartAt: closed.ClosedAt.Add(-time.Hour), EndAt: closed.ClosedAt.Add(time.Hour)}
-	selection := crmcontracts.ReportingSelection{Scope: crmcontracts.ReportingScope{Kind: "owner", Id: ptrUUID(e.Rep1)}, Period: "custom", Interval: &interval, TargetBasis: "month", CloseWindow: "all_open", Metrics: []crmcontracts.ReportingMetricID{"bookings_won"}, Blocks: []crmcontracts.ReportingBlockKind{"bookings_trend", "owner_attainment"}}
+	selection := crmcontracts.ReportingSelection{Scope: crmcontracts.ReportingScope{Kind: "owner", Id: ptrUUID(e.Rep3)}, Period: "custom", Interval: &interval, TargetBasis: "month", CloseWindow: "all_open", Metrics: []crmcontracts.ReportingMetricID{"bookings_won"}, Blocks: []crmcontracts.ReportingBlockKind{"bookings_trend", "owner_attainment"}}
 	result, err := service.Evaluate(reportingActor(e), selection)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(result.Metrics) != 1 || result.Metrics[0].Value == nil || *result.Metrics[0].Value != 21600000 {
-		t.Fatalf("closing credit moved with ownership: %+v", result.Metrics)
+		t.Fatalf("sales did not follow current ownership: %+v", result.Metrics)
 	}
 	evidence, err := service.Evidence(reportingActor(e), selection, "bookings_won", "interval", "", nil, nil, 50, reporting.EvidenceExpectation{Key: result.EvaluationKey, At: result.Context.EvaluatedAt, FrameworkRevision: result.Context.FrameworkRevision})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(evidence.Rows) != 1 || evidence.Rows[0].SourceId == nil || *evidence.Rows[0].SourceId != closed.Id || evidence.Rows[0].OwnerId == nil || ids.UUID(*evidence.Rows[0].OwnerId) != e.Rep1 {
-		t.Fatalf("wrong closing evidence: %+v", evidence.Rows)
+	if len(evidence.Rows) != 1 || evidence.Rows[0].SourceId == nil || *evidence.Rows[0].SourceId != closed.Id || evidence.Rows[0].OwnerId == nil || ids.UUID(*evidence.Rows[0].OwnerId) != e.Rep3 {
+		t.Fatalf("wrong current-owner evidence: %+v", evidence.Rows)
 	}
-	selection.Scope.Id = ptrUUID(e.Rep3)
+	selection.Scope.Id = ptrUUID(e.Rep1)
 	other, err := service.Evaluate(reportingActor(e), selection)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if other.Metrics[0].Value == nil || *other.Metrics[0].Value != 0 {
-		t.Fatalf("new owner received old credit: %+v", other.Metrics)
+		t.Fatalf("previous owner retained reassigned sales: %+v", other.Metrics)
 	}
 	amount := int64(9900000)
 	if _, err := store.UpdateDeal(writer, ids.From[ids.DealKind](ids.UUID(closed.Id)), deals.UpdateDealInput{AmountMinor: &amount}); err != nil {
 		t.Fatal(err)
 	}
-	selection.Scope.Id = ptrUUID(e.Rep1)
+	selection.Scope.Id = ptrUUID(e.Rep3)
 	_, err = service.Evidence(reportingActor(e), selection, "bookings_won", "interval", "", nil, nil, 50, reporting.EvidenceExpectation{Key: result.EvaluationKey, At: result.Context.EvaluatedAt, FrameworkRevision: result.Context.FrameworkRevision})
 	if !errors.Is(err, apperrors.ErrVersionSkew) {
 		t.Fatalf("changed evidence must refresh the reading: %v", err)

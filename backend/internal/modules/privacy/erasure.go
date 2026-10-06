@@ -329,7 +329,7 @@ func anonymizeSubjectRows(
 	}
 	if _, err := tx.Exec(ctx, fmt.Sprintf(`
 		UPDATE contact SET first_name = NULL, last_name = NULL, full_name = $2,
-		  title = NULL, raw = NULL, photo_object_key = NULL, photo_origin = NULL,
+		  title = NULL, photo_object_key = NULL, photo_origin = NULL,
 		  address_line1 = NULL, address_line2 = NULL, address_city = NULL,
 		  address_region = NULL, address_postal_code = NULL, address_country = NULL,
 		  source_author_name = NULL,
@@ -369,6 +369,12 @@ func anonymizeSubjectRows(
 	}
 	// The Shortlists they and those leads were chosen for, with the notes.
 	if err := deleteSubjectListMemberships(ctx, tx, contactID, wiped); err != nil {
+		return nil, err
+	}
+	// The duplicate-pair snapshots naming either end, which hold the name,
+	// address and phone number as the detector read them. Both ends, because a
+	// promoted subject is a contact AND the lead twins just wiped.
+	if err := scrubDedupeEvidence(ctx, tx, []ids.UUID{contactID.UUID}, wiped); err != nil {
 		return nil, err
 	}
 	if err := purgeContactDerivedRows(ctx, tx, contactID, subjects); err != nil {

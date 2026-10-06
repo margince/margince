@@ -106,9 +106,16 @@ Two outcomes are expected rather than wrong:
   only, so the adapter refuses the PDF rather than dropping it. The run's other
   tasks still write their records. Tracked as a gap, not a regression; the
   preset's own README states it.
-- **Neither sweep measures the `frontier` rung.** A routed run certifies the
-  LEADING bound rung per task, and no shipped task's ladder leads at frontier —
-  so a preset can bind a frontier model that the sweep never reaches.
+- **A sweep measures each task's fallback too.** A routed run certifies every
+  distinct model a task's ladder binds, so a preset whose tiers bind different
+  models costs about twice a single-model one. `frontier` is on no shipped
+  task's ladder, so a model bound only there is never reached.
+- **A sweep skips what is already current** (`STALE_ONLY`, on by default). A
+  tree-wide change leaves records stale, so they run anyway; `STALE_ONLY=0` is
+  for re-sampling current ones, such as a same-prompt variance check.
+- **`make e2e-ai-report` ends with a table per preset**: each task's first rung
+  and fallback with its record's state, `same model` or `none`. A fallback
+  `absent` there is the gap a buyer meets on the first failed call.
 
 ## 3. Analyse before you call anything a regression
 

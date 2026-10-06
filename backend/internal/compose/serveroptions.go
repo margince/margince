@@ -90,19 +90,6 @@ func WithMCPResource(resource string) Option {
 	}
 }
 
-// WithOAuthAccessTokenTTL shortens the passport the OAuth handshake mints —
-// the code exchange and every rotation alike. Without it a connector's access
-// token keeps the passport default (30 days), which is the posture every
-// deployment ran before this knob existed; with it an operator can take that to
-// connector norms (minutes plus refresh) without a code change, and the refresh
-// machinery is what makes that cheap. cmd passes it from
-// --oauth-access-token-ttl / MARGINCE_OAUTH_ACCESS_TOKEN_TTL.
-func WithOAuthAccessTokenTTL(ttl time.Duration) Option {
-	return func(s *Server, _ *pgxpool.Pool) {
-		s.authHandlers = s.WithOAuthAccessTokenTTL(ttl)
-	}
-}
-
 // WithMCPConnector turns the remote MCP connector on: the /mcp transport,
 // the OAuth authorization server and both discovery documents are mounted
 // together. Without it none of those routes exists — an installation that
@@ -204,6 +191,10 @@ func WithBlobstore(store blobstore.Store) Option {
 func WithKeyvault(vault keyvault.Vault) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		s.vault = vault
+		// The MFA endpoints seal each member's TOTP secret here — but only once
+		// the challenge signer exists too; armMFAEnrolment holds the coupling and
+		// mutates the one identity service the auth handlers already hold.
+		s.armMFAEnrolment()
 		// Backfilled for the same reason the object store is: WithDataReset may
 		// have already run, and a reset that cannot reach the vault leaves the
 		// sealed credentials of the installation it just wiped resident.
@@ -228,6 +219,11 @@ func WithKeyvault(vault keyvault.Vault) Option {
 		// the panic that says so at boot rather than at the read.
 		if s.aiRoutingHandlers.store != nil {
 			s.aiRoutingHandlers.store = s.aiRoutingHandlers.store.WithVault(vault)
+		}
+		// The sync lists each vendor's models with the key sealed here; guarded
+		// like the store above, for a role that composed no AI surface.
+		if s.priceCatalogues.broker != nil {
+			s.voiceHandlers = s.WithPriceSync(newAIPriceSync(pool, vault, config.FromOS, s.log, s.priceCatalogues))
 		}
 		// The connector OAuth apps ride the same reasoning: each client SECRET is
 		// sealed, so the surface exists only where there is somewhere to seal it.
@@ -415,5 +411,13 @@ func WithSendAuthority(authority activities.SendAuthority) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		s.send.SendAuthority = authority
 		s.rebuildToolRegistry(pool)
+	}
+}
+
+// WithFilterProposals binds the lane that reads a list described in plain
+// words into filter clauses. Unbound, the endpoint answers 409 ai_not_configured.
+func WithFilterProposals(brain completer) Option {
+	return func(s *Server, _ *pgxpool.Pool) {
+		s.filterProposalHandlers = s.withFilterProposalLane(brain)
 	}
 }

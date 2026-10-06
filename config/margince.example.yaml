@@ -266,9 +266,17 @@ bootstrap_admin:
 # The number is matched against the offered windows (3, 6, 12, 24, 36, 60, 84,
 # 120), so the connect dialog offers only what it admits and a start above it is
 # refused at the door as well as at the preview.
+#
+# skip_reserved_domain_proposals keeps senders on RFC 2606 reserved names
+# (example.com, example.net, example.org and their subdomains, and anything
+# under .test, .example, .invalid or .localhost) out of the contact review
+# queue. Their mail is still captured and shown; only the "is this a contact
+# worth keeping?" proposal is not raised. ON unless you set it to false, which
+# you would do only for an installation that deliberately runs a test mailbox.
 # capture:
 #   trace_payloads: false
 #   max_backfill_months: 24
+#   skip_reserved_domain_proposals: false
 
 # Rates & costs "Refresh from sources" (worker role): an admin triggers an async
 # FX refresh that stages confirm-first proposals into the approvals inbox; a
@@ -313,11 +321,11 @@ mcp:
 company_context:
   rollout: onboarding
 
-# Live Lists and Shortlists: named, shared sets of one record type. Off until an
-# operator switches them on; while off, the /lists routes answer 404, no agent
-# tool reaches them and no screen offers them.
+# Live Lists and Shortlists: named, shared sets of one record type. On by
+# default. Set enabled: false to hide them: the /lists routes answer 404, no
+# agent tool reaches them and no screen offers them. No list is deleted.
 lists:
-  enabled: false
+  enabled: true
 
 # Ops kill switches (OPS-CFG-9): capabilities this installation turns on
 # deliberately, in the file the deployment reviews. The whole section is
@@ -345,7 +353,20 @@ lists:
 #   # a worse failure than the capability merely existing.
 #   allow_test_mailbox: false
 
-# Enable the governed Performance, saved reports, targets and daily capture contexts.
-# Pilot rollout and durable schedule pause: docs/how-to/operate-reporting.md.
-analytics:
-  performance_enabled: false
+# The RFC 9116 security.txt this installation publishes (optional).
+#
+# The contact belongs to whoever OPERATES this installation, the party a finder
+# should tell about a hole in it, so nothing is compiled in. With the block absent,
+# /.well-known/security.txt is a 404. With it set, the api serves the file, so
+# the ingress must route that exact path to the api (docs/deployment.md,
+# Routing). Every contact is a mailto:, https: or tel: URI; expires is required,
+# in RFC 3339. The api warns at boot when expires has passed or is more than a
+# year out, and keeps serving the file either way.
+# web:
+#   security_txt:
+#     contact:
+#       - mailto:security@example.org
+#       - https://example.org/report-a-vulnerability
+#     expires: "2030-01-01T00:00:00Z"
+#     policy: https://example.org/disclosure-policy   # optional, https: only
+#     preferred_languages: [en, de]                   # optional

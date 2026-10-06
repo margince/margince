@@ -203,7 +203,7 @@ func fullRegistry(t *testing.T) *Registry {
 		return crmcontracts.Project360{}, nil
 	})
 	RegisterNetworkTools(r,
-		func(context.Context, ids.UUID) ([]KnownColleague, bool, error) { return nil, false, nil },
+		func(context.Context, ids.UUID) (WhoKnowsReading, error) { return WhoKnowsReading{}, nil },
 		func(context.Context, ids.UUID) (DealCoverageAnswer, error) { return DealCoverageAnswer{}, nil },
 		func(context.Context, ids.UUID) ([]IntroRoute, bool, error) { return nil, false, nil },
 		func(context.Context) (AtRiskReport, error) { return AtRiskReport{}, nil })
@@ -213,7 +213,7 @@ func fullRegistry(t *testing.T) *Registry {
 	RegisterBulkTool(r, inertLifecycle{})
 	RegisterQueryTool(r, nil, func(context.Context, json.RawMessage) (QueryAnswer, error) {
 		return QueryAnswer{Coverage: CoverageCompleteExact}, nil
-	}, nil)
+	})
 	RegisterVocabularyTool(r, inertVocabulary{})
 	// The REAL resource, over the probe catalog. Nothing about the report
 	// vocabulary needs a pool or a seam, so a stub here would put a test double

@@ -36,6 +36,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
@@ -124,12 +125,14 @@ type Server struct {
 	captureOwnerIdentityHandlers
 	captureCounterpartyHoldHandlers
 	claimHandlers
+	dealCommitmentHandlers
 	importHandlers
 	channelHandlers
 	traceHandlers
 	pipelineTraceHandlers
 	filteredExportHandlers
 	filterPreviewHandlers
+	filterProposalHandlers
 	exportBundleHandlers
 	companyRollupHandlers
 	strengthHandlers
@@ -244,6 +247,11 @@ type Server struct {
 	// credential to carry over an untrusted network. See gateMetrics in
 	// routes.go.
 	metricsToken string
+	// trustedProxies are the direct peers whose X-Forwarded-For names the
+	// client every per-IP limiter keys on, injected by WithTrustedProxies from
+	// --trusted-proxies. The zero value trusts nobody and keys on the TCP peer.
+	trustedProxies httpserver.TrustedProxies
+
 	// metricsOpen serves /metrics to any caller, set by WithOpenMetrics from an
 	// explicit --metrics-access=open for a deployment whose network boundary
 	// already contains the port.
@@ -294,6 +302,19 @@ type Server struct {
 	// it feeds a /readyz probe and backs the capture connector-credential
 	// path; nil means a role that resolves no stored connector credentials.
 	vault keyvault.Vault
+	// priceCatalogues are shared by the routing picker and the price sync, so
+	// WithKeyvault can rebuild the sync over the vault on the same caches.
+	priceCatalogues aiPriceCatalogues
+
+	// mfaSigner and mfaSignerUnusable carry WithMFAChallengeSigner's outcome so
+	// armMFAEnrolment can couple it with the vault in either option order: TOTP
+	// enrolment turns on only when BOTH the seal and a usable challenge signer
+	// exist, because a factor whose login challenge cannot be signed is a
+	// lockout, not a factor. mfaSignerUnusable distinguishes "the key was
+	// configured but too short/absent" (worth an ERROR when a vault is present)
+	// from "this role never declared MFA at all" (silence is correct).
+	mfaSigner         identity.MFAChallengeSigner
+	mfaSignerUnusable bool
 
 	// The three parts of the lane the installation's own mail rides, each
 	// supplied by a different option (WithOperatorMail, WithPublicBaseURL,
@@ -432,6 +453,8 @@ type Server struct {
 	// reason company360Svc is: the relationship brief is assembled from THIS gated
 	// read rather than a second one that could drift from what the page shows.
 	contact360Svc *contact360.Service
+	// firstDrafts are the composer's drafting engines, which draft_email reaches too.
+	firstDrafts firstMessageEngines
 	// meetingBriefSvc is held so an option can bind its model lane after the
 	// handler sets are built.
 	meetingBriefSvc *meetingbrief.Service
@@ -464,8 +487,11 @@ type Server struct {
 	resetRuntime ResetRuntime
 
 	// listsEnabled is the deployment's lists.enabled (WithListsEnabled).
-	listsEnabled     bool
-	reportingEnabled bool
+	listsEnabled bool
+
+	// securityTxt is the rendered web.security_txt (WithSecurityTxt); empty
+	// leaves /.well-known/security.txt unmounted.
+	securityTxt string
 }
 
 var _ crmcontracts.ServerInterface = Server{}

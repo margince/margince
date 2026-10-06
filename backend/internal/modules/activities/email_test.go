@@ -104,6 +104,11 @@ func (r *recordingDraftOutcome) RecordSendOutcomeTx(_ context.Context, _ pgx.Tx,
 // spelled like one and would pass a shape test alone; an imported email's
 // source_id is opaque and would pass a kind test alone. Emitting either as
 // In-Reply-To produces a header no mail client can resolve.
+//
+// A stored key can also be SCOPED to the seat that filed it, which a mailbox
+// does when it can prove nothing about a row already holding the shared
+// Message-ID. Which seat holds the row says nothing about which message it is,
+// so the identity behind such a key is the message's own.
 func TestOnlyAMailActivitysWellFormedIdentityThreadsAMessage(t *testing.T) {
 	for _, tc := range []struct {
 		name, kind, value string
@@ -116,6 +121,16 @@ func TestOnlyAMailActivitysWellFormedIdentityThreadsAMessage(t *testing.T) {
 		{"an identity with two at-signs", "email", "a@b@buyer.test", ""},
 		{"an empty local part", "email", "@buyer.test", ""},
 		{"no identity at all", "email", "", ""},
+		{
+			"a key scoped to the seat that filed it", "email",
+			connector.SeatScopedMailKey("parent@buyer.test", "0199c0de-0000-7000-8000-000000000001"),
+			"parent@buyer.test",
+		},
+		{
+			"a scoped key on a meeting, which is still not mail", "meeting",
+			connector.SeatScopedMailKey("parent@buyer.test", "0199c0de-0000-7000-8000-000000000001"),
+			"",
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			if got := messageIdentity(tc.kind, tc.value); got != tc.want {

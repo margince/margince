@@ -14,7 +14,7 @@ type BulkChangePreview = components["schemas"]["BulkChangePreview"];
 type BulkChangeResult = components["schemas"]["BulkChangeResult"];
 
 // The one request body both halves send. The preview and the execute must name
-// the same selection, verb and owner, or the server refuses the confirm token.
+// the same selection, verb and parameters, or the server refuses the confirm token.
 function bulkBody(request: BulkChangeRequest) {
   return {
     record_type: request.recordType,
@@ -25,6 +25,8 @@ function bulkBody(request: BulkChangeRequest) {
     })),
     owner_id: request.verb === "reassign_owner" ? request.ownerId : undefined,
     list_id: request.list?.id,
+    tag_id: request.tag?.id,
+    task: request.verb === "create_task" ? request.task : undefined,
   };
 }
 

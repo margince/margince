@@ -61,9 +61,12 @@ type workerLanes struct {
 	logger *slog.Logger
 }
 
-// laneJoinWindow bounds join(). The same window the job drain gets, because it
-// is the same promise being kept — nothing this process started is still
-// running when it closes what that thing writes through.
+// laneJoinWindow bounds join(). It keeps the same promise the job drain keeps —
+// nothing this process started is still running when it closes what that thing
+// writes through — but it is not a term of the ordinary shutdown budget: the
+// lanes' context is cancelled by the same signal that starts the job drain, so
+// by the time join() runs they have had the whole drain to return. Only a lane
+// that ignores cancellation waits here.
 const laneJoinWindow = 30 * time.Second
 
 // join ends the lanes and waits for the handler each is in. It is what makes the

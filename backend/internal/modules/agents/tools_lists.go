@@ -40,6 +40,7 @@ type ListRead struct {
 	RecordID   *ids.UUID      `json:"record_id"`
 	EntityType string         `json:"entity_type"`
 	Query      string         `json:"query"`
+	Sharing    []string       `json:"sharing"`
 	Definition map[string]any `json:"definition"`
 	Limit      int            `json:"limit"`
 	Cursor     string         `json:"cursor"`
@@ -109,6 +110,7 @@ func (t readLists) Spec() mcp.ToolSpec {
 			"record_id":{"type":"string","format":"uuid","description":"For why: the record to explain"},
 			"entity_type":{"type":"string","enum":["contact","company","deal","lead","project"],"description":"For find (optional) and preview (required)"},
 			"query":{"type":"string","description":"For find: matches name or purpose"},
+			"sharing":{"type":"array","items":{"type":"string","enum":["private","team","workspace"]},"description":"For find (optional): only lists with one of these sharing settings; private alone is the caller's own private lists"},
 			"definition":{"type":"object","description":"For preview: a filter tree, as a Live List stores it","properties":{"and":{"type":"array","items":{"type":"object","properties":{"and":{"type":"array"},"or":{"type":"array"},"field":{"type":"string"},"op":{"type":"string"},"value":{}}}},"or":{"type":"array","items":{"type":"object","properties":{"and":{"type":"array"},"or":{"type":"array"},"field":{"type":"string"},"op":{"type":"string"},"value":{}}}},"field":{"type":"string"},"op":{"type":"string","enum":["eq","neq","gt","lt","gte","lte","in","contains","exists"]},"value":{"description":"A value, a list for in, true or false for exists, or {\"days_ago\": N} for a date"}}},
 			"limit":{"type":"integer","minimum":1,"maximum":100},
 			"cursor":{"type":"string","description":"For members and history: the next_cursor a page answered"}},

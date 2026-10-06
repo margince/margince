@@ -51,16 +51,18 @@ var anonymousOutbound = gatekit.Waive(map[string]string{
 	"internal/compose/integration/apptest/appenv.go:func Call": "drives a server the test itself started, in the same process tree, for the length of one test",
 	"internal/compose/integration/apptest/mcp.go:func rpc":     "drives a server the test itself started, in the same process tree, for the length of one test",
 
-	// The model providers. Each call carries the customer's own API key, which
-	// is the account the provider bills, rate-limits and revokes; an agent
-	// beside it names software the provider has no lever over.
-	"internal/modules/ai/anthropic.go:func send":          "carries the customer's own provider key, which is the identity that provider bills and throttles",
-	"internal/modules/ai/gemini.go:func post":             "carries the customer's own provider key, which is the identity that provider bills and throttles",
-	"internal/modules/ai/ollama.go:func post":             "reaches a model runner the operator runs themselves, on a host they configured — they already know what is calling it",
-	"internal/modules/ai/openai.go:func postRaw":          "carries the customer's own provider key, which is the identity that provider bills and throttles",
-	"internal/modules/ai/openaicompat.go:func post":       "carries the customer's own provider key, which is the identity that provider bills and throttles",
-	"internal/modules/ai/decisionwire.go:func Decide":     "carries the customer's own provider key to a decision endpoint, or reaches a decision runner the operator runs on a host they configured — either way the other end already knows what is calling it",
-	"internal/modules/ai/decisionprobe.go:func wireProbe": "the key test's empty decision request: the same caller as Decide, carrying the customer's own key to the endpoint they bound, or reaching a runner they configured",
+	// The model providers. Each call carries the customer's own credential — an
+	// API key, or a service account's signed assertion — which is the account
+	// the provider bills, rate-limits and revokes; an agent beside it names
+	// software the provider has no lever over.
+	"internal/modules/ai/anthropic.go:func send":            "carries the customer's own provider key, which is the identity that provider bills and throttles",
+	"internal/modules/ai/gemini.go:func post":               "carries the customer's own provider key, which is the identity that provider bills and throttles",
+	"internal/modules/ai/ollama.go:func post":               "reaches a model runner the operator runs themselves, on a host they configured — they already know what is calling it",
+	"internal/modules/ai/openai.go:func postRaw":            "carries the customer's own provider key, which is the identity that provider bills and throttles",
+	"internal/modules/ai/openaicompat.go:func post":         "carries the customer's own provider key, which is the identity that provider bills and throttles",
+	"internal/modules/ai/decisionwire.go:func Decide":       "carries the customer's own provider key to a decision endpoint, or reaches a decision runner the operator runs on a host they configured — either way the other end already knows what is calling it",
+	"internal/modules/ai/decisionprobe.go:func wireProbe":   "the key test's empty decision request: the same caller as Decide, carrying the customer's own key to the endpoint they bound, or reaching a runner they configured",
+	"internal/modules/ai/vertexcredential.go:func exchange": "presents an assertion signed by the customer's own service account, which is the identity Google checks",
 	// One builder for all five vendors' model-list endpoint, on the same ground
 	// as their completion calls above: the request that asks a vendor what it
 	// serves carries the same credential as the request that then calls it.
@@ -69,9 +71,9 @@ var anonymousOutbound = gatekit.Waive(map[string]string{
 	// The capture connectors. Every one of these is an OAuth or token session
 	// the contact themselves granted, so the provider knows the grant, the app
 	// it was granted to, and the account it was granted on.
-	"internal/modules/capture/gmail/client.go:func Watch":           "runs inside an OAuth grant the contact made to this app, which names the caller to the provider more precisely than an agent could",
-	"internal/modules/capture/gmail/client.go:func get":             "runs inside an OAuth grant the contact made to this app, which names the caller to the provider more precisely than an agent could",
-	"internal/modules/capture/gmail/send.go:func postJSON":          "runs inside an OAuth grant the contact made to this app, which names the caller to the provider more precisely than an agent could",
+	"internal/modules/capture/gmail/client.go:func watchOnce":       "runs inside an OAuth grant the contact made to this app, which names the caller to the provider more precisely than an agent could",
+	"internal/modules/capture/gmail/client.go:func getOnce":         "runs inside an OAuth grant the contact made to this app, which names the caller to the provider more precisely than an agent could",
+	"internal/modules/capture/gmail/send.go:func postJSONOnce":      "runs inside an OAuth grant the contact made to this app, which names the caller to the provider more precisely than an agent could",
 	"internal/modules/capture/googleconn/googleconn.go:func Get":    "runs inside an OAuth grant the contact made to this app, which names the caller to the provider more precisely than an agent could",
 	"internal/modules/capture/graph/client.go:func GetMIME":         "runs inside an OAuth grant the contact made to this app, which names the caller to the provider more precisely than an agent could",
 	"internal/modules/capture/graph/transport.go:func get":          "runs inside an OAuth grant the contact made to this app, which names the caller to the provider more precisely than an agent could",

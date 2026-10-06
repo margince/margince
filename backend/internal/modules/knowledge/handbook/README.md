@@ -29,6 +29,7 @@ Settings in Margince, by page:
 - How do I connect my mailbox or calendar? → [Connecting your mailbox and calendar](connecting-mail-and-calendars.md)
 - My mailbox stopped syncing, or emails stopped coming in: what do I do? → [Connecting your mailbox and calendar](connecting-mail-and-calendars.md)
 - How do I invite a colleague or change a role? → [Seats, roles and who can see what](seats-roles-and-access.md)
+- How do I add an AI provider's key, connect OpenRouter, or choose a Vertex location? → [AI providers](ai-providers.md)
 
 Records, deals and mail in Margince, by page:
 - How do I create a contact or company, merge, archive or tag one? → [Contacts, companies, leads, deals and projects](records.md)
@@ -37,6 +38,7 @@ Records, deals and mail in Margince, by page:
 - How do I edit a deal, lead or project, change its value, close date or owner? → [Leads, deals and projects](leads-deals-and-projects.md)
 - How do I search, filter or sort a list, or see only my records? → [Lists, filters and views](lists-filters-and-views.md)
 - How do I save a view, select several records, or reassign them in bulk? → [Lists, filters and views](lists-filters-and-views.md)
+- How do I make a Live List or a Shortlist, share it, or see who joined and left? → [Lists, filters and views](lists-filters-and-views.md)
 - How do I move a deal, or close it won or lost? → [The pipeline](the-pipeline.md)
 - How do I create and send an offer (a quote)? → [Offers and the rate card](offers-and-products.md)
 - How do I set up a partner, or credit and pay a partner's commission? → [Partners and commission](partners.md)
@@ -68,8 +70,10 @@ Records, deals and mail in Margince, by page:
 - **[Lists, filters and views](lists-filters-and-views.md)** — working the
   list screens: searching, filtering by owner, company, stage or tag, sorting,
   table and board, showing archived records, saving and opening views, bulk
-  selection and bulk reassign, detailed filters on Filters and views, and
-  exporting what a filter finds.
+  selection and bulk reassign, detailed filters on Filters and views, filters
+  proposed from plain words, Live Lists and Shortlists (sharing, stewards, why a
+  record is on a list, the 15-minute check, acting on members, automations),
+  and exporting what a filter or a list finds.
 - **[The pipeline](the-pipeline.md)** — stages and what they mean, moving a deal,
   what closing does and what winning requires, the outcome review, where a deal
   came from, reopening, the 60-day stalled rule, stage automation, and how to
@@ -105,6 +109,9 @@ Records, deals and mail in Margince, by page:
 - **[What the AI does, and what it does not](what-the-ai-does.md)** — what the
   AI produces for you: drafts, document reads, the overnight brief, and how
   every derived claim carries its evidence.
+- **[AI providers](ai-providers.md)** — what each provider needs: a key, a
+  host for an OpenAI-compatible service or decision model, OpenRouter's hosts
+  for EU residency, and a location for Gemini on Vertex AI.
 - **[Agents, passports and what they may do](agents-and-passports.md)** — the
   two tiers and where the line actually falls, why sending is not held behind a
   confirmation and what protects it instead, the rule that human edits win field

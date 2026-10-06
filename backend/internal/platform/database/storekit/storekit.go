@@ -47,17 +47,18 @@ func CapturedBy(ctx context.Context) (string, error) {
 	return p.ID, nil
 }
 
-// OwnerOrActor answers the owner_id a manual create stamps: the one the
-// caller named, else the human behind the call. A record someone creates by
-// hand is theirs until they hand it on — an ownerless row would be every
-// seat's to change (the write arm admits a null owner) and, under an own
-// scope on a commercial table, invisible to the very contact who made it.
-// A principal with no human behind it (system, a bare connector) leaves the
-// row ownerless, which is the honest answer for a row no contact made.
-func OwnerOrActor(ctx context.Context, owner *ids.UserID) *ids.UserID {
-	if owner != nil {
-		return owner
-	}
+// OwnerOrActor answers the owner_id a manual create stamps when the caller
+// named nobody: the human behind the call. A record someone creates by hand is
+// theirs until they hand it on — an ownerless row would be every seat's to
+// change (the write arm admits a null owner) and, under an own scope on a
+// commercial table, invisible to the very contact who made it. A principal
+// with no human behind it (system, a bare connector) leaves the row ownerless,
+// which is the honest answer for a row no contact made.
+//
+// It takes no owner to pass through, so a create that DOES name one cannot
+// reach the default without NewRecordOwner — which is where the named owner is
+// checked, and the reason this signature is the shape it is.
+func OwnerOrActor(ctx context.Context) *ids.UserID {
 	p, ok := principal.Actor(ctx)
 	if !ok || p.UserID == ids.Nil {
 		return nil

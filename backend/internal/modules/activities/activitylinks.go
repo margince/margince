@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -94,8 +95,8 @@ func (e *TooManyLinksError) FieldFault() (field, code, message string) {
 //
 // A PROJECT link additionally requires activity.UPDATE, which the create grant
 // alone does not confer. Filing under a project classifies the correspondence
-// as commercial (D5), and that classification is write-once in the database and
-// is not lifted by unfiling — so it is a heavier act than creating a row, and
+// as commercial (D5), and relinking away does not lift that classification —
+// only the undo of a project filing does — so it is a heavier act than creating a row, and
 // the capture ladder already refuses it on exactly these terms
 // (capture/sinkproject.go: "a principal that may create captured mail but not
 // change it attributes nothing"). Two doors onto one act must not disagree
@@ -103,6 +104,12 @@ func (e *TooManyLinksError) FieldFault() (field, code, message string) {
 func insertActivityLinks(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, kind string, links []ActivityLinkInput) error {
 	if len(links) > maxActivityLinks {
 		return &TooManyLinksError{Count: len(links)}
+	}
+	// The whole reach locked once, before the first probe: sorting the links
+	// below orders the firings, but not what each firing reaches through a
+	// contact or a deal, nor the probe's share the trigger then upgrades.
+	if err := storekit.LockLastActivityTargets(ctx, tx, lastActivityTargets(links)); err != nil {
+		return err
 	}
 	// SORTED, and the order is the one the last-activity trigger locks in.
 	//
@@ -172,6 +179,26 @@ func insertActivityLinks(ctx context.Context, tx pgx.Tx, activityID ids.Activity
 	return nil
 }
 
+// lastActivityTargets groups the links by the record types a last-activity
+// trigger moves. A type outside them reaches no clock, and an unknown one is
+// refused by the insert loop.
+func lastActivityTargets(links []ActivityLinkInput) storekit.LastActivityTargets {
+	var targets storekit.LastActivityTargets
+	for _, link := range links {
+		switch link.EntityType {
+		case linkEntityContact:
+			targets.Contacts = append(targets.Contacts, link.EntityID)
+		case linkEntityDeal:
+			targets.Deals = append(targets.Deals, link.EntityID)
+		case linkEntityCompany:
+			targets.Companies = append(targets.Companies, link.EntityID)
+		case linkEntityProject:
+			targets.Projects = append(targets.Projects, link.EntityID)
+		}
+	}
+	return targets
+}
+
 // refuseACompanyMeeting answers the company link on a meeting or a call the way
 // a caller can act on.
 //
@@ -236,9 +263,9 @@ func (e *InvalidLinkTypeError) FieldFault() (field, code, message string) {
 // an EXISTING activity — reaches its own writer rather than this one.
 //
 // Filing under a project classifies an activity as commercial correspondence:
-// write-once in the database, monotonic, and removable only by a named contact
-// giving a written reason. relink_activity was raised to confirm-first for a
-// project destination for exactly that reason. The create path reaches the same
+// removable only by a named member giving a written reason (UndoProjectFiling).
+// relink_activity was raised to confirm-first for a project destination for
+// exactly that reason. The create path reaches the same
 // write and five tools ride it — log_activity, create_task, book_meeting,
 // draft_email, send_company_email — every one of them auto-execute. A passport
 // holding activity:update could call any of them in a loop and mint one mark
@@ -271,9 +298,8 @@ func refuseAnUnattendedFiling(ctx context.Context) error {
 type UnattendedProjectFilingError struct{}
 
 func (e *UnattendedProjectFilingError) Error() string {
-	return "filing an activity under a project marks it as commercial correspondence, which is " +
-		"write-once and removable only by a named contact giving a written reason — not a mark this " +
-		"call may write unattended"
+	return "filing an activity under a project marks it as commercial correspondence, which only a " +
+		"named member can take back, with a written reason — not a mark this call may write unattended"
 }
 
 // FieldFault names the array to change and the verb that files under a project
