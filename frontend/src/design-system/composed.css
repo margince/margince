@@ -393,7 +393,11 @@
 .deal-card .deal-head .deal-company {
   color: inherit;
 }
+/* Above the stretched link, like the company, or the pointer never reaches the
+   mark and its name tip never opens. */
 .deal-card .deal-owner {
+  position: relative;
+  z-index: 1;
   margin-left: auto;
   flex: none;
   display: flex;

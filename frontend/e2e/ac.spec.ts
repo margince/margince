@@ -940,6 +940,20 @@ test("AC-pipeline-10: the bar under the pointer is the one that lights", async (
     });
 });
 
+// Whose deal it is reads the same in both views: the card's mark names the
+// owner on hover, and the table gives the owner a column of its own.
+test("AC-pipeline-11: both views name a deal's owner", async ({ page }) => {
+  await page.goto("/#/deals");
+  const card = page.locator('[data-deal="d-fleet"]');
+  // Playwright refuses to hover an element another one covers, so this also
+  // holds the mark above the deal's link, which is stretched over the card.
+  await card.getByRole("img", { name: "Lena Fischer" }).hover();
+  await expect(page.getByRole("tooltip")).toHaveText("Lena Fischer");
+  await page.getByRole("button", { name: "Tabelle" }).click();
+  const row = page.getByRole("row", { name: /Fleet retrofit/ });
+  await expect(row.getByRole("cell", { name: "Lena Fischer" })).toBeVisible();
+});
+
 test("AC-deal-6: a terminal-stage drop is a 🟡 confirm — nothing runs before Confirm", async ({
   page,
 }) => {
