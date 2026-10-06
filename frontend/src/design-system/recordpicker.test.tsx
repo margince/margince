@@ -340,6 +340,49 @@ describe("RecordPicker", () => {
     ).toBeNull();
   });
 
+  it("never submits an enclosing form when Enter is pressed in its search box", async () => {
+    const submit = vi.fn();
+    rtlRender(
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          submit();
+        }}
+      >
+        <RecordPicker
+          label="Search…"
+          searchTargets={vi.fn().mockResolvedValue(candidates)}
+          onPick={vi.fn()}
+        />
+        <button type="submit">Open request</button>
+      </form>,
+    );
+
+    const user = userEvent.setup();
+    await user.type(screen.getByRole("searchbox"), "anna{Enter}");
+    expect(submit).not.toHaveBeenCalled();
+  });
+
+  it("leaves an IME's Enter alone, so the composed candidate still commits", () => {
+    rtlRender(
+      <RecordPicker
+        label="Search…"
+        searchTargets={vi.fn().mockResolvedValue(candidates)}
+        onPick={vi.fn()}
+      />,
+    );
+    const search = screen.getByRole("searchbox");
+
+    // fireEvent answers false when the handler cancelled the key.
+    expect(fireEvent.keyDown(search, { key: "Enter" })).toBe(false);
+    expect(fireEvent.keyDown(search, { key: "Enter", isComposing: true })).toBe(
+      true,
+    );
+    expect(fireEvent.keyDown(search, { key: "Enter", keyCode: 229 })).toBe(
+      true,
+    );
+  });
+
   it("takes its name from a Field's label, once, and from its own label standing alone", () => {
     rtlRender(
       <>

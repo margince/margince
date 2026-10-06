@@ -39,12 +39,6 @@
   flex-wrap: wrap;
 }
 
-.retention-actions {
-  display: flex;
-  gap: var(--gapActions);
-  flex-wrap: wrap;
-}
-
 /* The pin form in the row under the restricted-records table: an id and the
    verb that submits it on one line, wrapping rather than overflowing — the row
    owns the naming and the hint, so nothing here draws a label. */

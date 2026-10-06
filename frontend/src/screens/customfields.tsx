@@ -797,15 +797,9 @@ export function CustomFieldsAdmin() {
         )}
       </PanelBody>
 
-      {/* `wide` is the variant's stated case: the builder carries the pending
-          DDL, and a 440px dialog wraps
-          `ALTER company ADD COLUMN cf_contract_end_date (date)` into an
-          unreadable stack — the one line a reader is meant to check before
-          confirming a live schema change. It also keeps the label and the API
-          key derived from it side by side. */}
       <Modal
         open={adding}
-        size="wide"
+        intent="form"
         onClose={() => setAdding(false)}
         labelledBy={addId}
       >
@@ -835,39 +829,40 @@ export function CustomFieldsAdmin() {
         open={renaming !== null}
         onClose={() => setRenaming(null)}
         labelledBy={renameId}
+        intent="form"
       >
-        {/* A dialog is its own region, so its title starts the outline at
-            level 2, matching ConfirmModal. `.section-header` went with the h3:
-            it is the flex row that carries a card section's title, subtitle and
-            actions, and a dialog title is none of those — inside the modal it
-            only contributed a page-flow top margin that pushed the title off
-            the modal's own padding. `.modal-title` is the catalog's own name for
-            the interval under a dialog title, so the twelve pixels are declared
-            once for every dialog rather than typed in here. */}
         <Heading size="large" id={renameId} className="t-h2 modal-title">
           {t("cf.edit")}
         </Heading>
-        <Field label={t("cf.renamePrompt")}>
-          {(control) => (
-            <TextInput
-              {...control}
-              value={renameLabel}
-              onChange={(event) => setRenameLabel(event.target.value)}
-            />
-          )}
-        </Field>
+        <form
+          id={`${renameId}-form`}
+          className="form-stack"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (renaming && !rename.isPending && renameLabel.trim() !== "") {
+              rename.mutate({ field: renaming, label: renameLabel.trim() });
+            }
+          }}
+        >
+          <Field label={t("cf.renamePrompt")}>
+            {(control) => (
+              <TextInput
+                {...control}
+                value={renameLabel}
+                onChange={(event) => setRenameLabel(event.target.value)}
+              />
+            )}
+          </Field>
+        </form>
         <div className="actions">
           <Button variant="ghost" onClick={() => setRenaming(null)}>
             {t("deals.cancel")}
           </Button>
           <Button
+            type="submit"
+            form={`${renameId}-form`}
             variant="primary"
             disabled={rename.isPending || renameLabel.trim().length === 0}
-            onClick={() => {
-              if (renaming && renameLabel.trim().length > 0) {
-                rename.mutate({ field: renaming, label: renameLabel.trim() });
-              }
-            }}
           >
             {t("trust.save")}
           </Button>
