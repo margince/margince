@@ -7,7 +7,7 @@ import { PageAsideToggle, usePageAside } from "../app/pageaside";
 import { usePageName } from "../app/pagemeta";
 import { useRecordZone } from "../app/recordzone";
 import { scrollPageToTop } from "../app/reveal";
-import { navigate, useRoute } from "../app/router";
+import { navigate } from "../app/router";
 import {
   Avatar,
   Badge,
@@ -102,12 +102,7 @@ import { CompanyProfileForm } from "./companyprofiletab";
 import { CompanyProjectsPanel } from "./companyprojects";
 import { CompanyRail, SignalsSection } from "./companyrail";
 import { wholeCount } from "./companyrailshared";
-import {
-  COMPANY_TABS,
-  type CompanyTab,
-  companyTabRoute,
-  isCompanyTab,
-} from "./companytab";
+import { COMPANY_TABS, type CompanyTab } from "./companytab";
 import { TechnicalProfilePanel } from "./companytechnical";
 import { Company360Call, NeedsList, useTodayReading } from "./companytoday";
 import { hasWorkInFlight, sinceLastVisitFooter } from "./companywork";
@@ -166,7 +161,9 @@ import { groupChronology } from "./timelinegroups";
 // for its own sake, so this file renders unstyled anywhere else.
 import "./company360.css";
 import { useAccountScan } from "./accountscan";
+import { useAddressedTab } from "./recordtab";
 import { invalidateRecord } from "./recordwritekeys";
+import { WorklistReturnLink } from "./worklist.return";
 
 // Companies list + company 360 (B-EP09.10a/b). Firmographics render
 // evidence-or-omit: a field with no stored value is absent, never guessed.
@@ -663,38 +660,8 @@ function companyTabsFor(
     : COMPANY_TABS.filter((id) => !drop.has(id));
 }
 
-// useCompanyTab is scoped to the ACCOUNT being read, the same reason the
-// chronology filter is (useChronologyFilter): the route swaps one company
-// for another without ever unmounting this component, so a reader who opened
-// Partner on one account met it again on the next — and companyTabsFor's own
-// carveout (a reader mid-way through setting up a programme keeps the tab
-// while `tab === "partner"`) has no way to tell "still this account" from
-// "a different one" unless something resets it at the boundary.
-function useCompanyTab(
-  recordId: string,
-): [CompanyTab, (next: CompanyTab) => void] {
-  const route = useRoute();
-  // Read off the ADDRESS rather than held beside it, so the tab a reader is on
-  // is the tab the URL names — and the per-record reset this used to do by
-  // hand is gone with it: a tab belongs to the account it is addressed with,
-  // so swapping accounts cannot carry one along.
-  const addressed =
-    route.screen === "companies" && route.id === recordId
-      ? route.id2
-      : undefined;
-  return [
-    isCompanyTab(addressed) ? addressed : "overview",
-    // A PUSH, so Back steps between the tabs a reader opened rather than
-    // leaving the account altogether — the same thing the contact page's strip
-    // does. The per-record reset this used to hold is now the address's: a tab
-    // belongs to the account it names, so moving to another account cannot
-    // carry one along.
-    (next: CompanyTab) => navigate(companyTabRoute(recordId, next)),
-  ];
-}
-
 // openTaskId is scoped to the ACCOUNT being read, the same reason
-// useCompanyTab is: the route swaps one company for another without ever
+// the tab is: the route swaps one company for another without ever
 // unmounting this component, so a task detail modal opened on one account
 // would keep rendering over the next one.
 //
@@ -741,7 +708,14 @@ function useOpenTaskId(
 // roster behind the owner picker, and the record slice they prefill.
 export function CompanyScreen({ id }: Readonly<{ id: string }>) {
   const t = useT();
-  const [tab, setTab] = useCompanyTab(id);
+  // The tab is scoped to the ACCOUNT being read, the same reason the
+  // chronology filter is (useChronologyFilter): the route swaps one company
+  // for another without ever unmounting this component, so a reader who opened
+  // Partner on one account met it again on the next — and companyTabsFor's own
+  // carveout (a reader mid-way through setting up a programme keeps the tab
+  // while `tab === "partner"`) has no way to tell "still this account" from
+  // "a different one" unless something resets it at the boundary.
+  const [tab, setTab] = useAddressedTab("companies", id, COMPANY_TABS);
   const view = useCompany360(id);
   // Only an assembled 360 counts as a visit: a page that never rendered the
   // account is not one the reader saw.
@@ -1262,6 +1236,7 @@ function CompanyPage({
   return (
     <div className="record-sheet">
       <RecordView
+        back={<WorklistReturnLink />}
         name={company.display_name}
         identity={company.id}
         avatarSrc={company.logo_url}
