@@ -49,7 +49,7 @@ The 3 tables owned by `knowledge`, as the migrations build them. [Back to the en
 | `default_ask` | `boolean`, default `false` | yes | The corpus the command palette's ask lands on. |
 | `description` | `text` |  |  |
 | `managed_source` | `text` |  |  |
-| `min_similarity` | `double precision`, default `0.35` | yes | The grounding floor: the cosine a passage must reach before it may be cited at all. |
+| `min_similarity` | `double precision` |  | The grounding floor in force: the cosine a passage must reach before it may be cited at all. |
 | `name` | `text` | yes |  |
 | `reindexing` | `boolean`, default `false` | yes | A re-embed is in flight; every ask answers not_ready until it finishes. |
 | `topic_statement` | `text` | yes | What this corpus covers, in the workspace's own words. |

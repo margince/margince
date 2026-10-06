@@ -32,6 +32,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 	"text/tabwriter"
 	"unicode/utf8"
@@ -51,7 +52,8 @@ type aiTaskRetrieveFlags struct {
 	question  string
 	page      string
 	modelSpec string
-	floor     float64
+	// floor overrides the binding's measured floor; nil takes it.
+	floor *float64
 
 	workDir string
 	outPath string
@@ -71,8 +73,11 @@ func aiTaskRetrieveFlagSet() (*flag.FlagSet, *aiTaskRetrieveFlags, *cliflags.Env
 	fs.StringVar(&cfg.question, "q", "", "short form of --question")
 	fs.StringVar(&cfg.page, "page", "", "restrict the corpus to one handbook page (e.g. records.md); empty ranks the whole handbook")
 	fs.StringVar(&cfg.modelSpec, "model", "", "embedding model, provider:model (e.g. mistral:mistral-embed)")
-	fs.Float64Var(&cfg.floor, "floor", compose.CorpusProbeFloor,
-		"the grounding floor a passage must reach to be citable; a corpus row carries its own, this is the shipped default")
+	fs.Func("floor", "override the grounding floor a passage must reach to be citable; unset ranks by the floor measured for the bound model", func(v string) error {
+		f, err := strconv.ParseFloat(v, 64)
+		cfg.floor = &f
+		return err
+	})
 	env.String(fs, &cfg.workDir, "work-dir", "MARGINCE_AITASK_DIR", workDirDefault,
 		"gitignored directory the captured fixture and the vector cache live in")
 	fs.StringVar(&cfg.outPath, "out", "", "write the fixture here instead of the work directory")
@@ -107,8 +112,8 @@ func (c aiTaskRetrieveFlags) validate() error {
 		return errors.New("aitask retrieve needs --question (or -q): a blank question retrieves nothing and proves nothing")
 	case c.modelSpec == "":
 		return errors.New("aitask retrieve needs --model provider:model: ranking means nothing unless the question and the corpus are embedded by one binding")
-	case c.floor < 0 || c.floor > 1:
-		return fmt.Errorf("aitask retrieve: --floor is a cosine and lives in [0,1], got %v", c.floor)
+	case c.floor != nil && (*c.floor < 0 || *c.floor > 1):
+		return fmt.Errorf("aitask retrieve: --floor is a cosine and lives in [0,1], got %v", *c.floor)
 	case c.outPath == "-":
 		return errors.New("aitask retrieve writes a report and a file, so --out names a file rather than '-'")
 	}
@@ -160,7 +165,7 @@ func writeRetrieval(w io.Writer, cfg aiTaskRetrieveFlags, result compose.CorpusP
 	}
 	if _, err := fmt.Fprintf(w,
 		"\ncorpus    %s, %d embedded passage(s)\nquestion  %s\nfloor     %.3f (the closest %d are ranked, then the floor is applied)\noutcome   %s\n\n",
-		scope, result.Embedded, cfg.question, cfg.floor, compose.CorpusProbeLimit, outcome); err != nil {
+		scope, result.Embedded, cfg.question, result.Floor, compose.CorpusProbeLimit, outcome); err != nil {
 		return err
 	}
 	if len(passages) == 0 {
