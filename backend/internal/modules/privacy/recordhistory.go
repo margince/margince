@@ -81,6 +81,9 @@ type RecordHistoryEntry struct {
 	// been reversed says so through its undoability answer, computed for the
 	// whole record rather than for one page.
 	UndidAuditLogID *ids.UUID
+	// LeftBehind names what a restore of an archive could not bring back with
+	// the record, so the answer to pressing Put back says so.
+	LeftBehind []storekit.LeftBehind
 	// Edge is the LINK this entry changed, with the other end named. Nil on
 	// every row that changed a field of the record itself, which is what a
 	// reader needs to tell the two apart: an edge line has no field diff to
