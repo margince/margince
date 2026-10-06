@@ -18219,9 +18219,10 @@ export interface paths {
         put?: never;
         /**
          * Set an FX rate effective today or later (append-forward).
-         * @description Admin/ops-only. Appends one effective-dated rate; same UTC day corrects in
-         *     place, a past date is refused (422). `to` is resolved to the workspace base
-         *     currency server-side; `from == base` is refused. Human session only
+         * @description Admin/ops-only. Appends one effective-dated rate; the same day in the
+         *     installation's zone corrects in place, a past date is refused (422). `to`
+         *     is resolved to the workspace base currency server-side; `from == base` is
+         *     refused. Human session only
          *     (x-agent-access: human-only) — an agent never sets a rate directly.
          */
         post: operations["setFxRate"];

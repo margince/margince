@@ -221,6 +221,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `contractproducers_test.go` | H2 | A field the contract PROMISES and nobody WRITES is invisible. |
 | `contractrefs_test.go` | H3 | Contract $ref pre-flight as a fitness function. |
 | `contributorwiring_test.go` | H1 | What a contributor arriving from outside is promised, in the files they meet on the way in. |
+| `datecolumncalendars_test.go` | H2 | Every `date` column states whose calendar it is a day in. |
 | `dealreaders_test.go` | H2 | `deal` is an RBAC object, and until this gate nothing held the object half of that anywhere outside the module that owns it. |
 | `dealtargettype_test.go` | H2 | Every deal-scoped staging names its target type through one constant. |
 | `decisioncoverage_test.go` | H2 | A message that reaches the send queue carries a decision saying why, written in the transaction that staged it. |
