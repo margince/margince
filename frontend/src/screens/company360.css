@@ -1935,3 +1935,10 @@
 .co-rollup-note {
   margin-top: var(--space-2);
 }
+
+/* The lifecycle button on the name's own line, centred against the name. The
+   compact head sets that row on a shared baseline for the caption text other
+   records put there; a button on that baseline sits visibly low. */
+.co-name-control {
+  align-self: center;
+}

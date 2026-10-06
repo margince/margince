@@ -14,7 +14,8 @@ import {
   CompanyRelationshipBadges,
 } from "./companyheader";
 import { CompanyIdentityFacts } from "./companyheaderfacts";
-import { CompanyLifecycleControl } from "./companylifecycle";
+import { CompanyLifecycleControl, CompanyNameLine } from "./companylifecycle";
+import { CompanyMarks } from "./companymarks";
 
 // Who wrote the record and the record's own verbs are pinned in
 // companyheaderfacts.test.tsx and companyheaderactions.test.tsx: the two
@@ -629,6 +630,100 @@ describe("the lifecycle control beside the name", () => {
     expect(control.getAttribute("aria-invalid")).toBe("true");
   });
 
+  it("drops a refused pick once the stage is saved from somewhere else", async () => {
+    stubPatch(409);
+    const user = userEvent.setup();
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const at = (company: Company) => (
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">
+          <CompanyLifecycleControl company={company} />
+        </LocaleProvider>
+      </QueryClientProvider>
+    );
+    const { rerender } = render(at(COMPANY));
+    const control = await screen.findByRole("combobox", { name: "Lifecycle" });
+    await user.click(control);
+    await user.click(screen.getByRole("option", { name: "Prospect" }));
+    await screen.findByText("Someone else changed this account.");
+    // The Details grid saved a different stage; the record refetched with it.
+    rerender(at({ ...COMPANY, lifecycle: "former_customer", version: 2 }));
+    expect(control.textContent).toContain("Former customer");
+    expect(screen.queryByText("Someone else changed this account.")).toBeNull();
+    expect(control.getAttribute("aria-invalid")).not.toBe("true");
+  });
+
+  it("does not draw a late refusal over a stage saved meanwhile", async () => {
+    let refuse: (response: Response) => void = () => {};
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((request: Request) => {
+        if (new URL(request.url).pathname.endsWith("/me")) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                user: { id: "u-reader", display_name: "The Reader" },
+                ...READER,
+              }),
+              { status: 200, headers: { "content-type": "application/json" } },
+            ),
+          );
+        }
+        if (request.method === "PATCH") {
+          return new Promise<Response>((resolve) => {
+            refuse = resolve;
+          });
+        }
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              data: [],
+              page: { has_more: false, next_cursor: null },
+            }),
+            { status: 200, headers: { "content-type": "application/json" } },
+          ),
+        );
+      }),
+    );
+    const user = userEvent.setup();
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const at = (company: Company) => (
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">
+          <CompanyLifecycleControl company={company} />
+        </LocaleProvider>
+      </QueryClientProvider>
+    );
+    const { rerender } = render(at(COMPANY));
+    const control = await screen.findByRole("combobox", { name: "Lifecycle" });
+    await user.click(control);
+    await user.click(screen.getByRole("option", { name: "Prospect" }));
+    // While the header's write is out, the Details grid saves another stage.
+    rerender(at({ ...COMPANY, lifecycle: "former_customer", version: 2 }));
+    refuse(
+      new Response(
+        JSON.stringify({
+          title: "Conflict",
+          status: 409,
+          detail: "Someone else changed this account.",
+        }),
+        {
+          status: 409,
+          headers: { "content-type": "application/problem+json" },
+        },
+      ),
+    );
+    await waitFor(() =>
+      expect(control.getAttribute("aria-busy")).not.toBe("true"),
+    );
+    expect(screen.queryByText("Someone else changed this account.")).toBeNull();
+    expect(control.textContent).toContain("Former customer");
+  });
+
   it("shows the stage, with no control, to a reader who may not change it", async () => {
     stubPatch(200);
     renderInApp(
@@ -636,5 +731,38 @@ describe("the lifecycle control beside the name", () => {
     );
     expect(await screen.findByText("Customer")).toBeTruthy();
     expect(screen.queryByRole("combobox", { name: "Lifecycle" })).toBeNull();
+  });
+});
+
+// The name's own line carries the name and its stage only; what the account
+// is and the way in lead the marks row under it.
+describe("the header's two lines", () => {
+  const withSite: Company = { ...COMPANY, industry: "Automotive" };
+
+  it("keeps the subtitle off the name's line", async () => {
+    stub([]);
+    const { container } = render(
+      <QueryClientProvider client={new QueryClient()}>
+        <LocaleProvider initial="en">
+          <CompanyNameLine company={withSite} />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+    await screen.findByRole("combobox", { name: "Lifecycle" });
+    expect(container.querySelector(".record-sub-inline")).toBeNull();
+  });
+
+  it("reads what the account is on the marks row", () => {
+    stub([]);
+    const { container } = render(
+      <QueryClientProvider client={new QueryClient()}>
+        <LocaleProvider initial="en">
+          <CompanyMarks company={withSite} />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+    expect(container.querySelector(".record-sub-inline")?.textContent).toBe(
+      "Automotive",
+    );
   });
 });
