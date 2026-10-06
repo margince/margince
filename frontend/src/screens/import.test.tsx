@@ -150,7 +150,7 @@ const RUN_PAGE = "#/settings/import/run";
 // this seat may import at all, so the verb is waited for rather than looked up.
 async function openWizard(user: UserEvent) {
   await user.click(await screen.findByRole("button", { name: "Start import" }));
-  await screen.findByRole("link", { name: "Back to Data import" });
+  await screen.findByRole("link", { name: "Back to data import" });
 }
 
 async function upload(
@@ -854,7 +854,7 @@ describe("the import page", () => {
     render(tabContent("import", route));
 
     expect(
-      await screen.findByRole("link", { name: "Back to Data import" }),
+      await screen.findByRole("link", { name: "Back to data import" }),
     ).toBeInTheDocument();
   });
 
@@ -867,7 +867,7 @@ describe("the import page", () => {
       await screen.findByRole("button", { name: "Choose file" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: "Back to Data import" }),
+      screen.getByRole("link", { name: "Back to data import" }),
     ).toHaveAttribute("href", "#/settings/import");
     expect(screen.queryByRole("button", { name: "Start import" })).toBeNull();
   });

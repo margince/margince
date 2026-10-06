@@ -88,7 +88,7 @@ async function profileAFile(user: ReturnType<typeof userEvent.setup>) {
 }
 
 async function leaveForTheRow(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getByRole("link", { name: "Back to Data import" }));
+  await user.click(screen.getByRole("link", { name: "Back to data import" }));
   await waitFor(() => expect(window.location.hash).toBe("#/settings/import"));
 }
 

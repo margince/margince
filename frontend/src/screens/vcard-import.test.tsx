@@ -85,7 +85,7 @@ describe("VCardImport", () => {
     // The link that opened the page is gone, so the title holds focus.
     expect(title).toHaveFocus();
     expect(
-      screen.getByRole("link", { name: "Back to Contacts" }),
+      screen.getByRole("link", { name: "Back to contacts" }),
     ).toHaveAttribute("href", "#/contacts");
   });
 
