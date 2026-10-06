@@ -1342,6 +1342,20 @@ function HealthStat({
   }
   const days = health.days_since_last_inbound;
   const share = health.reply_balance;
+  // The rating reads meetings as well as mail. Where it says the account is in
+  // touch, a headline read off the inbox alone would contradict the verdict
+  // under it, so the headline takes the rating's reason instead.
+  const silentInbox = days == null || days > HEALTH_QUIET_DAYS;
+  if (dimension && dimension.rating !== "at_risk" && silentInbox) {
+    return (
+      <StatCard
+        onOpen={onOpen}
+        value={t("co.strip.healthActive")}
+        detail={healthReason(dimension)}
+        {...slot}
+      />
+    );
+  }
   if (days == null) {
     const silence = silenceReading(
       touchWithheld,
@@ -1368,7 +1382,7 @@ function HealthStat({
         onOpen={onOpen}
         value={t("co.strip.healthQuiet")}
         tone="warning"
-        detail={noReply(days, locale, t)}
+        detail={dimension ? healthReason(dimension) : noReply(days, locale, t)}
         {...slot}
       />
     );
