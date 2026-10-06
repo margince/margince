@@ -156,7 +156,7 @@ export const CarryingAnUndo: Story = {
       label="Remove access"
       message="Access removed for Jana Brandt."
       options={{
-        action: { label: "Undo", onAct: () => {} },
+        action: { kind: "undo", label: "Undo", onAct: () => {} },
       }}
     />
   ),
@@ -172,7 +172,7 @@ export const AVerbOutranksAReport: Story = {
     <Bench
       label="Archive"
       message="Contract archived."
-      options={{ action: { label: "Undo", onAct: () => {} } }}
+      options={{ action: { kind: "undo", label: "Undo", onAct: () => {} } }}
       extra={<QueuedBehind />}
     />
   ),
@@ -197,7 +197,7 @@ export const LongContent: Story = {
     <Bench
       label="Archive a long one"
       message="Archived “Nordwest Maschinenbau Vertriebsgesellschaft mbH & Co. KG — Rahmenvertrag 2026”."
-      options={{ action: { label: "Undo", onAct: () => {} } }}
+      options={{ action: { kind: "undo", label: "Undo", onAct: () => {} } }}
     />
   ),
 };

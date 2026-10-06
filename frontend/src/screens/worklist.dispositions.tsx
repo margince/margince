@@ -214,6 +214,7 @@ export function usePutDown(item: WorklistItem) {
         onSuccess: () =>
           toast.show(doneText(disposition, until, t, locale), {
             action: {
+              kind: "undo",
               label: t("worklist.disposition.undo"),
               // A failed undo needs saying. The toast dismisses itself the
               // moment the action is pressed, so without this the row stays

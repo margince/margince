@@ -436,7 +436,7 @@ function MemberRow({
       // A true inverse, and both halves are already on this row: `reactivate`
       // restores exactly what `deactivate` took away, with nothing to re-supply.
       toast.show(t("users.deactivated", { name: member.email }), {
-        action: { label: t("common.undo"), onAct: () => reactivate.mutate() },
+        action: { kind: "undo", label: t("common.undo"), onAct: () => reactivate.mutate() },
       });
     },
     onError,

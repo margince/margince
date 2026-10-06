@@ -135,6 +135,7 @@ export function useStageOrder(): Reorder {
       const previous = stageIdsOf(move.before);
       toast.show(t("pipeline.orderSaved"), {
         action: {
+          kind: "undo",
           label: t("common.undo"),
           // The pipeline as it stands when Undo is pressed, not as it stood at
           // the save: its version has moved since, and the way back is drawn
@@ -202,6 +203,7 @@ export function usePipelineOrder(): CatalogReorder {
         .map((each) => each.id);
       toast.show(t("pipeline.orderSaved"), {
         action: {
+          kind: "undo",
           label: t("common.undo"),
           onAct: () =>
             run(

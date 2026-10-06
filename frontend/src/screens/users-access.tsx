@@ -220,6 +220,7 @@ export function TeamsCard() {
       qc.invalidateQueries({ queryKey: ["teams"] });
       toast.show(t("users.teamArchived", { name }), {
         action: {
+          kind: "undo",
           label: t("common.undo"),
           onAct: () => restore.mutate({ id, name }),
         },

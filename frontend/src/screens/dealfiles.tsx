@@ -290,7 +290,7 @@ function useFileVerbs(dealId: string, attachmentId: string) {
       // Undo is the whole of the way back rather than a second write that
       // approximates one.
       toast.show(t("dealfiles.hidden"), {
-        action: { label: t("common.undo"), onAct: () => unhide.mutate() },
+        action: { kind: "undo", label: t("common.undo"), onAct: () => unhide.mutate() },
       });
     },
   });

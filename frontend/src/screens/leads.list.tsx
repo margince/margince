@@ -1,7 +1,7 @@
 // The leads list: the queue a rep works from, as a table or a board. The
 // page a row opens lives in leads.tsx; the presentation both share sits in
 // leadpresentation.tsx.
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { usePageName } from "../app/pagemeta";
@@ -11,7 +11,7 @@ import { currentParams, useUrlParams } from "../app/urlstate";
 import { Badge, SegmentedControl } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { CellStrip } from "../design-system/listtable";
-import { useToast } from "../design-system/toast";
+import { type ToastId, useToast } from "../design-system/toast";
 import { formatDateAbbrev, formatNumber } from "../format/format";
 import { leadIdentityName } from "../format/leadname";
 import { useLocale, useT } from "../i18n";
@@ -262,6 +262,7 @@ function LeadsWorkbench({
   // showing — a successful assign out of "Mine" must never look like nothing
   // happened (or like a failure).
   const toast = useToast();
+  const assignedAway = useRef<ToastId | null>(null);
   const showingMine = state.query.filters.owner_id === viewerId;
   // Only ids the list currently holds count as selected: a row that left the
   // result set (refetched away, paged out, filtered out) must not linger as
@@ -481,7 +482,10 @@ function LeadsWorkbench({
                 );
                 // Each run says its own thing; a sentence about the last one
                 // must not stand beside this one's rows.
-                toast.dismiss();
+                if (assignedAway.current !== null) {
+                  toast.dismiss(assignedAway.current);
+                  assignedAway.current = null;
+                }
                 const moved = outcomes.filter((o) => !o.error);
                 if (
                   action.kind === "assign" &&
@@ -494,13 +498,14 @@ function LeadsWorkbench({
                   // ground rather than a `Button` hand-placed on the toast's
                   // dark plate, and the region withdraws the message once it
                   // has been pressed.
-                  toast.show(
+                  assignedAway.current = toast.show(
                     t("lead.assignedAway", {
                       names: moved.map((o) => o.name).join(", "),
                       owner: action.ownerName,
                     }),
                     {
                       action: {
+                        kind: "open",
                         label: t("list.showAll"),
                         onAct: () =>
                           state.setQuery((q) => {

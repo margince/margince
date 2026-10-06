@@ -8,6 +8,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -39,14 +40,19 @@ import "./toast.css";
  * `label` arrives translated, like all copy in this tier. The toast withdraws
  * itself once `onAct` has run: a message still offering an action it has already
  * taken is a second press waiting to happen.
- *
- * A toast carrying one gets the longer `ACTION_TOAST_MS`, held like any toast
- * while hovered or focused, so a reader reaching for Undo does not lose it.
  */
 export type ToastAction = Readonly<{
+  /**
+   * `undo` takes back the write the message reports: it lives `ACTION_TOAST_MS`
+   * and a newer undo replaces it. `open` leads somewhere and stays until dismissed.
+   */
+  kind: "undo" | "open";
   label: string;
   onAct: () => void;
 }>;
+
+/** Names one `show`, so a caller can withdraw its own message and no other. */
+export type ToastId = number;
 
 /** How long a confirmation stays before it withdraws itself. */
 const TOAST_MS = 3500;
@@ -76,7 +82,7 @@ export type ToastTone = (typeof TOAST_TONES)[number];
 
 type ToastMessage = Readonly<{
   /** Per `show`, so a message replacing one with the same text re-arrives. */
-  id: number;
+  id: ToastId;
   node: ReactNode;
   tone: ToastTone;
   /** Kept until something dismisses it. */
@@ -103,8 +109,9 @@ export type ToastOptions = Readonly<{
 }>;
 
 export type Toast = Readonly<{
-  show: (message: ReactNode, options?: ToastOptions) => void;
-  dismiss: () => void;
+  show: (message: ReactNode, options?: ToastOptions) => ToastId;
+  /** Withdraws the message `id` names, or the one on screen when none is given. */
+  dismiss: (id?: ToastId) => void;
 }>;
 
 /**
@@ -129,24 +136,28 @@ const ToastQueueContext = createContext<readonly ToastMessage[]>([]);
  * provider and the region to one file each, the way `UnsavedGuard` is held to
  * `App.tsx`.
  */
-const NO_REGION: Toast = { show: () => {}, dismiss: () => {} };
+const NO_REGION: Toast = { show: () => 0, dismiss: () => {} };
 
 /**
  * The queue, and the one rule that shapes it.
  *
  * A confirmation carrying a verb is not interchangeable with one that only
- * reports: the second is a courtesy, the first is the reader's only route back
- * from something they may not have meant. So a message that only reports QUEUES
- * BEHIND a message with an action rather than replacing it. Otherwise the newest
- * message wins — a newer action replaces an older one, because a reader pressing
- * Done on three tasks wants the latest Undo, not three identical toasts to close.
+ * reports: an undo is the reader's only route back from something they may not
+ * have meant. So while a message with an action is on screen, anything else
+ * arriving QUEUES BEHIND IT. The one exception is a newer undo, which takes the
+ * older undo's place: a reader pressing Done on three tasks wants the latest
+ * Undo, not three identical toasts to close. Otherwise the newest message wins.
  */
 export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [queue, setQueue] = useState<readonly ToastMessage[]>([]);
   const nextId = useRef(0);
 
-  const dismiss = useCallback(() => {
-    setQueue((waiting) => waiting.slice(1));
+  const dismiss = useCallback((id?: ToastId) => {
+    setQueue((waiting) =>
+      id === undefined
+        ? waiting.slice(1)
+        : waiting.filter((message) => message.id !== id),
+    );
   }, []);
 
   const show = useCallback((message: ReactNode, options?: ToastOptions) => {
@@ -156,16 +167,11 @@ export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
       id: nextId.current,
       node: message,
       tone: options?.tone ?? "success",
-      sticky: options?.sticky ?? false,
+      sticky: options?.sticky ?? action?.kind === "open",
       action,
     };
-    setQueue((waiting) => {
-      const shown = waiting[0];
-      if (shown !== undefined && shown.action !== null && action === null) {
-        return [...waiting, arriving];
-      }
-      return [arriving, ...waiting.slice(1)];
-    });
+    setQueue((waiting) => enqueue(waiting, arriving));
+    return arriving.id;
   }, []);
 
   const controls = useMemo(() => ({ show, dismiss }), [show, dismiss]);
@@ -176,6 +182,33 @@ export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
       </ToastQueueContext.Provider>
     </ToastControlsContext.Provider>
   );
+}
+
+function enqueue(
+  waiting: readonly ToastMessage[],
+  arriving: ToastMessage,
+): readonly ToastMessage[] {
+  const isUndo = (message: ToastMessage) => message.action?.kind === "undo";
+  if (isUndo(arriving) && waiting.some(isUndo)) {
+    return waiting.map((message) => (isUndo(message) ? arriving : message));
+  }
+  const shown = waiting[0];
+  if (shown === undefined || shown.action === null) {
+    return [arriving, ...waiting.slice(1)];
+  }
+  return [...waiting, arriving];
+}
+
+type ToastControl = "act" | "close";
+
+/** Which of the toast's own controls holds focus inside `output`, if any. */
+function focusedControl(output: HTMLElement): ToastControl | null {
+  const active = document.activeElement;
+  if (!(active instanceof HTMLElement) || !output.contains(active)) {
+    return null;
+  }
+  const control = active.dataset.toastControl;
+  return control === "act" || control === "close" ? control : null;
 }
 
 /** What a screen calls to say something landed. */
@@ -207,20 +240,53 @@ export function ToastRegion() {
   const queue = useContext(ToastQueueContext);
   const { dismiss } = useToast();
   const shown = queue[0] ?? null;
-  // WHICH message the reader is holding, rather than a bare flag. WCAG 2.2.1
-  // asks for a way to extend a time limit, and for a passive surface the honest
-  // one is that reading it stops the clock — but a flag would carry from the
-  // message that was hovered onto the one that replaced it, freezing a
-  // confirmation the pointer was never near. Naming the message makes the reset
-  // fall out of the comparison instead of needing an effect to undo it.
-  const [heldMessage, setHeldMessage] = useState<ToastMessage | null>(null);
-  const held = shown !== null && heldMessage === shown;
+  const shownId = shown?.id ?? null;
+  // WCAG 2.2.1 asks for a way to extend a time limit, and for a passive surface
+  // the honest one is that reading it stops the clock. The hold belongs to the
+  // REGION, so a message replacing another under a resting pointer is held too.
+  const [pointerInside, setPointerInside] = useState(false);
+  const [focusInside, setFocusInside] = useState(false);
+  const held = pointerInside || focusInside;
   // The node in STATE rather than in a ref, so the effect below can depend on
   // the thing it actually attaches to. A ref is invisible to the dependency
   // array: the region is mounted and unmounted as messages come and go, and an
   // effect that could not see that ran once against a node that did not exist
   // yet and never again.
   const [region, setRegion] = useState<HTMLDivElement | null>(null);
+  // An unmounted region hears no pointerleave or blur, so leaving resets both.
+  const attachRegion = useCallback((node: HTMLDivElement | null) => {
+    setRegion(node);
+    if (node === null) {
+      setPointerInside(false);
+      setFocusInside(false);
+    }
+  }, []);
+  // The control focused in a message that a replacement is about to remount.
+  // A ref cleanup runs before React removes the node, while focus is still there.
+  const refocus = useRef<ToastControl | null>(null);
+  const watchOutput = useCallback((output: HTMLOutputElement | null) => {
+    if (output === null) {
+      return;
+    }
+    return () => {
+      refocus.current = focusedControl(output);
+    };
+  }, []);
+
+  useLayoutEffect(() => {
+    const control = refocus.current;
+    refocus.current = null;
+    if (shownId === null || region === null) {
+      return;
+    }
+    if (control !== null) {
+      const same = region.querySelector<HTMLElement>(
+        `[data-toast-control="${control}"]`,
+      );
+      (same ?? region.querySelector<HTMLElement>("[data-toast-control]"))?.focus();
+    }
+    setFocusInside(region.contains(document.activeElement));
+  }, [shownId, region]);
 
   // Escape belongs to the REGION, and it is attached to the node rather than
   // written as a JSX handler on a static element.
@@ -253,7 +319,7 @@ export function ToastRegion() {
       return;
     }
     const life = shown.action === null ? TOAST_MS : ACTION_TOAST_MS;
-    const timer = setTimeout(dismiss, life);
+    const timer = setTimeout(() => dismiss(shown.id), life);
     // The cleanup one of the three hand-copied toasts was missing. A timer
     // belongs to the tree that started it: left running, it fires a state update
     // into a component that is no longer mounted.
@@ -269,25 +335,26 @@ export function ToastRegion() {
   const act = shown.action;
   return createPortal(
     <div
-      ref={setRegion}
+      ref={attachRegion}
       className="toast-region"
-      onPointerEnter={() => setHeldMessage(shown)}
-      onPointerLeave={() => setHeldMessage(null)}
-      onFocusCapture={() => setHeldMessage(shown)}
-      onBlurCapture={() => setHeldMessage(null)}
+      onPointerEnter={() => setPointerInside(true)}
+      onPointerLeave={() => setPointerInside(false)}
+      onFocusCapture={() => setFocusInside(true)}
+      onBlurCapture={() => setFocusInside(false)}
     >
       {/* `.arrive` (enter.css): it rises into place from below, which is the
           direction it comes from — the region is anchored to the bottom edge. */}
-      <output key={shown.id} className="toast arrive">
+      <output key={shown.id} ref={watchOutput} className="toast arrive">
         <span className={`dot toast-dot-${shown.tone}`} />
         <span className="toast-said">{shown.node}</span>
         {act !== null && (
           <button
             type="button"
             className="toast-action"
+            data-toast-control="act"
             onClick={() => {
               act.onAct();
-              dismiss();
+              dismiss(shown.id);
             }}
           >
             {act.label}
@@ -297,8 +364,9 @@ export function ToastRegion() {
           <button
             type="button"
             className="toast-dismiss"
+            data-toast-control="close"
             aria-label={t("common.close")}
-            onClick={dismiss}
+            onClick={() => dismiss(shown.id)}
           >
             <X size={14} aria-hidden />
           </button>
