@@ -8,8 +8,6 @@
      that one interval said twice. */
   margin: 0;
   padding: 0;
-  max-height: 18rem;
-  overflow-y: auto;
 }
 
 .vcard-import-report li {

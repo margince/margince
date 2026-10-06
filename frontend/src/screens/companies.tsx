@@ -18,6 +18,7 @@ import {
   Skeleton,
 } from "../design-system/atoms";
 import type { TimelineEntry, TimelineGroup } from "../design-system/composed";
+import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
 import type { ListChip } from "../design-system/listsurface";
 import { CellStrip } from "../design-system/listtable";
@@ -1379,29 +1380,28 @@ function CompanyPage({
           open={auditOpen}
           onClose={() => setAuditOpen(false)}
           labelledBy="co-audit-title"
-          size="wide"
+          intent="drawer-reading"
         >
-          <Heading
-            size="large"
-            id="co-audit-title"
-            className="t-h2 modal-title"
-          >
-            {t("record.fullHistory")}
-          </Heading>
-          {/* Mounted only while open: the two history reads behind it are the
-            page's most expensive, and nobody who never opens the panel should
-            pay for them. */}
-          {auditOpen && (
-            <RecordHistoryTab
-              kind="company"
-              id={company.id}
-              restore={{
-                version: company.version,
-                onRestored: () =>
-                  invalidateRecord(queryClient, "company", company.id),
-              }}
-            />
-          )}
+          <DrawerHead>
+            <Heading size="large" id="co-audit-title" className="t-h2">
+              {t("record.fullHistory")}
+            </Heading>
+          </DrawerHead>
+          <DrawerBody>
+            {/* Mounted only while open: the two history reads behind it are
+              the page's most expensive, and only a reader who opens it pays. */}
+            {auditOpen && (
+              <RecordHistoryTab
+                kind="company"
+                id={company.id}
+                restore={{
+                  version: company.version,
+                  onRestored: () =>
+                    invalidateRecord(queryClient, "company", company.id),
+                }}
+              />
+            )}
+          </DrawerBody>
         </Modal>
       </RecordView>
     </div>

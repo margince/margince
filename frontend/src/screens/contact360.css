@@ -737,6 +737,14 @@
   gap: var(--gapActions);
 }
 
+/* On a phone the verbs drop under the disclosure rather than past the edge. */
+.pe-research-foot {
+  flex-wrap: wrap;
+}
+.pe-research-foot > .pe-drawer-actions {
+  margin-inline-start: auto;
+}
+
 /* Research: the staged notice is the whole promise of the drawer — nothing
    here has touched the record — so it reads as a statement, not a hint. */
 .pe-staged-notice {
