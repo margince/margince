@@ -232,6 +232,36 @@ func TestATeammateReadLateGetsOnlyWhatIsLeftOfTheTeamsBudget(t *testing.T) {
 	}
 }
 
+// rosterAsks counts how many times the page asked for the reader's roster.
+type rosterAsks struct {
+	roster
+	asks *int
+}
+
+func (r rosterAsks) LiveTeammatesOfCaller(ctx context.Context) ([]TeamMember, bool, error) {
+	*r.asks++
+	return r.roster.LiveTeammatesOfCaller(ctx)
+}
+
+func TestATeamPageAsksForItsRosterWhereTheScopeResolvesAndReusesIt(t *testing.T) {
+	t.Parallel()
+	asks := 0
+	svc := teamPlanService(rosterAsks{roster: theTeam, asks: &asks}, plansByOwner{})
+	ctx := meetingPrepReader()
+	reader, err := svc.readerFor(ctx, scopeTeam, ids.UUID{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	reader.keepTeams(ctx, nil)
+	scoped, _ := reader.readingPlan(ctx, scopeTeam, rankInstant)
+	if asks != 1 {
+		t.Fatalf("the scope filter and the plan lane asked again: %d roster reads, want the scope's one", asks)
+	}
+	if len(scoped.planCoverage.Members) != len(theTeam) {
+		t.Fatalf("the plan lane must cover the roster the scope read: %+v", scoped.planCoverage)
+	}
+}
+
 func TestATeamWithMixedRefusalsNamesThePlansFailedWhateverTheRosterOrder(t *testing.T) {
 	t.Parallel()
 	denied, broken := apperrors.ErrPermissionDenied, errors.New("plan read failed")

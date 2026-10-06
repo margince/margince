@@ -60,10 +60,20 @@ type PromiseLoad interface {
 	DuePerOwner(ctx context.Context, owners []ids.UUID, by time.Time) (map[ids.UUID]int, error)
 }
 
+// rosterRead is one roster answer: its members, and whether it stopped at its cap.
+type rosterRead struct {
+	members []TeamMember
+	cut     bool
+}
+
 // degradableRoster is the roster read for a page that names its failure: the
 // team scope reports a refused roster as unavailable, so the read must not
-// abort the snapshot on its way to saying so.
+// abort the snapshot on its way to saying so. A page whose scope already read
+// it reuses that answer.
 func (s *Service) degradableRoster(ctx context.Context) (roster []TeamMember, cut bool, err error) {
+	if s.teamRoster != nil {
+		return s.teamRoster.members, s.teamRoster.cut, nil
+	}
 	err = s.degradable(ctx, laneBudget, func(ctx context.Context) error {
 		var err error
 		roster, cut, err = s.teammates.LiveTeammatesOfCaller(ctx)

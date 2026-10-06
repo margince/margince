@@ -377,8 +377,7 @@ func (s *Service) narrowToScope(
 // "my team". resolveOwner refuses to open that same contact's queue by name,
 // so the page contradicted the door beside it.
 //
-// Membership is asked per page, not per row (a query per task); the plan lane
-// reads it again inside the same snapshot, so it sees the same roster.
+// Membership is the roster forNoticeTeam read for the page, never a query per row.
 //
 // It fails CLOSED. Without the membership reader there is no team to answer
 // for, and a queue that handed back every row it had read would be widening a
@@ -485,14 +484,14 @@ func (s *Service) forNoticeTeam(ctx context.Context) (*Service, error) {
 	if s.teammates == nil {
 		return &narrowed, nil
 	}
-	// The cap is not reported from here. This narrows the notice lane over the
-	// SAME roster read, under the same bound, that narrowToScope reads for the
-	// page — and on scope=team the page always narrows, so the admission is
-	// already made once where every other short answer is collected.
-	roster, _, err := s.teammates.LiveTeammatesOfCaller(ctx)
+	// The cap is not reported from here: the read rides the copy, narrowToScope
+	// and the plan lane answer from it, and the page admits the cut where every
+	// other short answer is collected.
+	roster, cut, err := s.teammates.LiveTeammatesOfCaller(ctx)
 	if err != nil {
 		return nil, err
 	}
+	narrowed.teamRoster = &rosterRead{members: roster, cut: cut}
 	for _, member := range roster {
 		narrowed.noticeOwners = append(narrowed.noticeOwners, member.UserID)
 	}

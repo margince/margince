@@ -11,7 +11,8 @@ import { DayUnread } from "./worklist.unread";
 // read that covered every plan says so quietly, because that line is what tells
 // a lead an empty week is empty rather than unasked.
 //
-// Read every frame in BOTH themes with the toolbar's Theme control.
+// The last frame PINS the dark theme: a frame nobody flips is a frame the
+// render gate draws in one theme only. The others take the toolbar's control.
 
 const teammates = ["Lena Fischer", "Marc Weber", "Sofia Ruiz", "Ana Novak"];
 
@@ -84,4 +85,11 @@ export const ASourceAndAPlanUnreadCutShort: Story = {
       />
     </StoryProviders>
   ),
+};
+
+/** The fullest notice in the dark theme, where the callout's warning tone sits
+ *  on a different ground. */
+export const ASourceAndAPlanUnreadDark: Story = {
+  ...ASourceAndAPlanUnreadCutShort,
+  globals: { theme: "dark" },
 };

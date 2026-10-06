@@ -230,6 +230,9 @@ type Service struct {
 	taskOwner ids.UUID
 	// noticeOwners is a team roster; nil leaves the visible agenda unrestricted.
 	noticeOwners []ids.UUID
+	// teamRoster is the roster scope=team resolved with, which degradableRoster
+	// answers from rather than asking again; nil under every other scope.
+	teamRoster *rosterRead
 }
 
 // forOwner returns a copy that reads one named contact's queue. Same
