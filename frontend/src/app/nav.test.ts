@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { describe, expect, it } from "vitest";
-import { NAV, RAIL_LESS_SCREENS, railTrail } from "./nav";
+import { NAV, RAIL_LESS_SCREENS, railTrail, recordKindOf } from "./nav";
 import { parseHash, routeHash } from "./router";
 
 describe("the rail and a composed unit", () => {
@@ -130,6 +130,31 @@ describe("a row that leads to a record instead of being one", () => {
   it("is the page again on the list that record was opened from", () => {
     const [primary] = railTrail({ screen: "contacts" });
     expect(primary.ancestor).toBe(false);
+  });
+
+  it("is the page on the import page, which is no record", () => {
+    const [primary] = railTrail(parseHash("#/contacts/import"));
+    expect(primary.activeId).toBe("contacts");
+    expect(primary.ancestor).toBe(false);
+  });
+});
+
+// A reserved segment read as an id is a fetch for a contact called "import"
+// and a trail reporting that its name could not load.
+describe("the segments a screen reserves", () => {
+  it.each([
+    ["#/contacts/import", undefined],
+    ["#/contacts/import/overview", undefined],
+    ["#/deals/new", undefined],
+    ["#/contacts/c-1", "contact"],
+    ["#/deals/d-1", "deal"],
+    // Each word is reserved on its own screen only.
+    ["#/leads/import", "lead"],
+    ["#/leads/new", "lead"],
+    ["#/contacts/new", "contact"],
+    ["#/deals/import", "deal"],
+  ])("reads %s as record kind %s", (hash, kind) => {
+    expect(recordKindOf(parseHash(hash))).toBe(kind);
   });
 });
 

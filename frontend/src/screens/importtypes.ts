@@ -18,6 +18,10 @@ export type ImportUndoReport = components["schemas"]["ImportUndoReport"];
 // nothing else.
 export const DONT_IMPORT = "";
 
+export function isImportObject(value: unknown): value is ImportObject {
+  return value === "lead" || value === "company" || value === "contact";
+}
+
 // identifyingFieldFor names the field a run recognizes a row by, per object.
 // The same defaults the server applies, stated here so the screen can say which
 // column will identify a row BEFORE the server has to refuse a mapping that

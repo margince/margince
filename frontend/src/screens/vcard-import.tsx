@@ -2,12 +2,17 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useId, useState } from "react";
+import { useState } from "react";
 import type { components } from "../api/schema";
-import { Button, Modal } from "../design-system/atoms";
+import { IMPORT_ID } from "../app/nav";
+import { navigate, routeHash } from "../app/router";
+import { useUnsavedGuard } from "../app/unsaved";
+import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { FileDropzone } from "../design-system/filedropzone";
 import { Heading } from "../design-system/heading";
+import { Panel, PanelBody } from "../design-system/panel";
+import { RecordBack } from "../design-system/recordview";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, throwProblem } from "./common";
@@ -78,50 +83,50 @@ function useImportVCards() {
 }
 
 /**
- * VCardImport is the button a contact presses to import address cards, and the
- * report of what became of each one.
- *
- * A handed-over card is first-party data — the contact gave it — which is what
- * justifies storing their details, and a human pressing this is what makes the
- * import WRITE rather than stage. So the verb lives on the contact list beside
- * the other ways a contact comes to exist, not in a settings page.
+ * The button a contact presses to import address cards. A handed-over card is
+ * first-party data — the contact gave it — which is what justifies storing their
+ * details, and a human pressing this is what makes the import WRITE rather than
+ * stage. So the verb lives on the contact list beside the other ways a contact
+ * comes to exist, not in a settings page.
  */
-export function VCardImport() {
+export function VCardImportAction() {
+  const t = useT();
+  return (
+    <Button
+      data-testid="vcard-import"
+      onClick={() => navigate({ screen: "contacts", id: IMPORT_ID })}
+    >
+      {t("vcardImport.action")}
+    </Button>
+  );
+}
+
+/** The import page at `#/contacts/import`, and the report of what became of
+ * each card. Leaving discards the file and the report. */
+export function VCardImportPage() {
   const t = useT();
   const importer = useImportVCards();
-  const [open, setOpen] = useState(false);
   const [picked, setPicked] = useState<File | undefined>(undefined);
-  const titleId = useId();
-
-  function close() {
-    setOpen(false);
-    setPicked(undefined);
-    importer.reset();
-  }
+  // Leaving mid-flight does not stop the write, it only loses the report that
+  // says what the write did.
+  useUnsavedGuard(importer.isPending);
 
   return (
-    <>
-      {/* `small`, like every other verb in a list header: the two ways of
-          creating a contact beside it are `CreateAction`s, which are small, and
-          one control a rung taller in a row of three reads as a different kind
-          of thing. */}
-      <Button data-testid="vcard-import" onClick={() => setOpen(true)}>
-        {t("vcardImport.action")}
-      </Button>
-      <Modal open={open} onClose={close} labelledBy={titleId} intent="form">
-        <Heading size="large" id={titleId} className="t-h2 modal-title">
-          {t("vcardImport.title")}
-        </Heading>
-        {/* One stack owns every interval in this dialog, so the dropzone, a
-            refusal and the report do not each set a margin of their own — the
-            report is drawn whether or not the refusal above it is. */}
-        <div className="form-stack">
+    <div className="wrap narrow">
+      <RecordBack
+        href={routeHash({ screen: "contacts" })}
+        label={t("vcardImport.back")}
+      />
+      <Heading size="xlarge" className="t-display vcard-import-title">
+        {t("vcardImport.title")}
+      </Heading>
+      <Panel>
+        <PanelBody className="form-stack">
           <div data-testid="vcard-import-file">
             {/* Withdrawn while an import is running. A second file chosen mid-
-                flight would start a second write, and this dialog holds ONE
+                flight would start a second write, and this page holds ONE
                 report — so one set of contact changes would land with nothing
-                on screen saying what happened to it. Taking the control away is
-                honest; leaving it live and dropping the pick would not be. */}
+                on screen saying what happened to it. */}
             {importer.isPending ? (
               <p className="t-sub">{t("vcardImport.working")}</p>
             ) : (
@@ -150,14 +155,9 @@ export function VCardImport() {
             </div>
           )}
           {importer.isSuccess && <ImportReport report={importer.data} />}
-        </div>
-        <div className="actions">
-          <Button variant="ghost" onClick={close}>
-            {t("vcardImport.done")}
-          </Button>
-        </div>
-      </Modal>
-    </>
+        </PanelBody>
+      </Panel>
+    </div>
   );
 }
 

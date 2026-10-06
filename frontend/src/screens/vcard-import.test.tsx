@@ -6,8 +6,9 @@ import { cleanup, render as rtlRender, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { UnsavedGuard, useHasUnsavedChanges } from "../app/unsaved";
 import { LocaleProvider } from "../i18n";
-import { VCardImport } from "./vcard-import";
+import { VCardImportAction, VCardImportPage } from "./vcard-import";
 
 // The report is the point. An import that says "done" while three cards went
 // nowhere is worse than one that refuses, because nobody can tell WHO is
@@ -40,15 +41,22 @@ function vcardFile() {
   );
 }
 
-async function openAndUpload(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getByTestId("vcard-import"));
+async function upload(user: ReturnType<typeof userEvent.setup>) {
   const input = screen
     .getByTestId("vcard-import-file")
     .querySelector("input[type=file]");
   if (!(input instanceof HTMLInputElement)) {
-    throw new Error("the dialog rendered no file input");
+    throw new Error("the page rendered no file input");
   }
   await user.upload(input, vcardFile());
+}
+
+function UnsavedProbe() {
+  return (
+    <output data-testid="unsaved">
+      {useHasUnsavedChanges() ? "dirty" : "clean"}
+    </output>
+  );
 }
 
 describe("VCardImport", () => {
@@ -58,6 +66,62 @@ describe("VCardImport", () => {
   afterEach(() => {
     cleanup();
     vi.unstubAllGlobals();
+    window.location.hash = "";
+  });
+
+  it("opens the import as a page of its own under contacts", async () => {
+    const user = userEvent.setup();
+    window.location.hash = "#/contacts";
+    render(<VCardImportAction />);
+    await user.click(screen.getByTestId("vcard-import"));
+    expect(window.location.hash).toBe("#/contacts/import");
+  });
+
+  it("leads back to the contact list", () => {
+    render(<VCardImportPage />);
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+      "Import vCards",
+    );
+    expect(
+      screen.getByRole("link", { name: "Back to Contacts" }),
+    ).toHaveAttribute("href", "#/contacts");
+  });
+
+  // Leaving does not stop the write, so the guard holds exactly the window in
+  // which leaving would lose the report of it.
+  it("guards the page while an import is in flight", async () => {
+    const user = userEvent.setup();
+    let answer: (response: Response) => void = () => {};
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        () =>
+          new Promise<Response>((resolve) => {
+            answer = resolve;
+          }),
+      ),
+    );
+    render(
+      <UnsavedGuard address="#/contacts/import" onKeep={() => {}}>
+        {() => (
+          <>
+            <VCardImportPage />
+            <UnsavedProbe />
+          </>
+        )}
+      </UnsavedGuard>,
+    );
+    expect(screen.getByTestId("unsaved")).toHaveTextContent("clean");
+
+    await upload(user);
+    expect(await screen.findByText("Reading cards…")).toBeVisible();
+    expect(screen.getByTestId("unsaved")).toHaveTextContent("dirty");
+
+    answer(jsonResponse({ results: [] }));
+    expect(
+      await screen.findByText("The file contains no cards."),
+    ).toBeVisible();
+    expect(screen.getByTestId("unsaved")).toHaveTextContent("clean");
   });
 
   it("names every card and what became of it", async () => {
@@ -86,8 +150,8 @@ describe("VCardImport", () => {
       ),
     );
 
-    render(<VCardImport />);
-    await openAndUpload(user);
+    render(<VCardImportPage />);
+    await upload(user);
 
     expect(
       await screen.findByTestId("vcard-import-report"),
@@ -111,8 +175,8 @@ describe("VCardImport", () => {
     );
     vi.stubGlobal("fetch", fetchSpy);
 
-    render(<VCardImport />);
-    await openAndUpload(user);
+    render(<VCardImportPage />);
+    await upload(user);
 
     expect(
       await screen.findByText("The file contains no cards."),
@@ -145,8 +209,8 @@ describe("VCardImport", () => {
       ),
     );
 
-    render(<VCardImport />);
-    await openAndUpload(user);
+    render(<VCardImportPage />);
+    await upload(user);
 
     expect(await screen.findByTestId("vcard-import-error")).toBeInTheDocument();
     expect(screen.queryByTestId("vcard-import-report")).not.toBeInTheDocument();
@@ -165,8 +229,8 @@ describe("VCardImport", () => {
       ),
     );
 
-    render(<VCardImport />);
-    await openAndUpload(user);
+    render(<VCardImportPage />);
+    await upload(user);
 
     expect(await screen.findByText("quarantined")).toBeInTheDocument();
     expect(screen.getByText("Ada Lovelace")).toBeInTheDocument();

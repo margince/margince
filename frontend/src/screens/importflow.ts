@@ -22,7 +22,7 @@ import type {
   ImportReport,
   ImportRun,
 } from "./importtypes";
-import { DONT_IMPORT } from "./importtypes";
+import { DONT_IMPORT, isImportObject } from "./importtypes";
 
 // A mutation's answer, stamped with the flow generation it was asked in.
 type Generational<T> = Readonly<{ at: number; value: T }>;
@@ -73,10 +73,6 @@ function asProfile(payload: unknown): ImportProfile {
 
 const unreadableUpload =
   "the upload answered something this screen cannot read";
-
-function isImportObject(value: unknown): value is ImportObject {
-  return value === "lead" || value === "company" || value === "contact";
-}
 
 function isMapping(value: unknown): value is Record<string, string> {
   return (
@@ -200,7 +196,7 @@ type ValidateInput = Readonly<{
 // Three steps, each of which invalidates the ones after it: a profile from one
 // file beside a report from another is the one way this screen could lie about
 // what is being imported.
-export function useImportFlow() {
+export function useImportFlow(initialObject: ImportObject = "lead") {
   const queryClient = useQueryClient();
   // Which flow a response belongs to. A dry run over a whole file is a real
   // multi-second window, and the human can switch object or upload again inside
@@ -211,7 +207,7 @@ export function useImportFlow() {
   const generation = useRef(0);
   const current = () => generation.current;
 
-  const [object, setObject] = useState<ImportObject>("lead");
+  const [object, setObject] = useState<ImportObject>(initialObject);
   const [profile, setProfile] = useState<ImportProfile | null>(null);
   const [mapping, setMapping] = useState<Record<string, string>>({});
   // The word this run's created records are filed under. Chosen once, before

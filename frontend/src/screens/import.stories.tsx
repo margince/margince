@@ -2,7 +2,6 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
 import { ImportCard } from "./import";
 import {
   installFetchStub,
@@ -13,44 +12,29 @@ import {
 
 // Bringing a customer's file in. On the settings page the import is one row —
 // an import is an ACT, not an answer this installation holds — and the wizard
-// that performs it is the dialog behind the row's verb. So most of what this
-// card can show needs the dialog opened, which is what the `play` below does; a
-// story without one screenshots the row and nothing else.
+// that performs it is the page behind the row's verb, at #/settings/import/run.
 //
 // The flow past the wizard's first step needs a real file drop, which a story
 // cannot perform. What is catalogued here is the row, the two answers the card
 // gives before anybody chooses a file, and the one later state a story CAN
 // reach: the run an earlier visit left parked.
-function story(allow: Parameters<typeof meRoute>[0]) {
+function story(allow: Parameters<typeof meRoute>[0], subpage?: string) {
   return () => {
     // A story states its own preconditions, including the absence of one.
     // `PickedUpFromEarlier` plants a run id in storage, and storage outlives a
     // story: the capture harness drives every story through ONE page, so the
-    // next one inherits it, the card reopens the wizard for a run this story
-    // never mentioned, and the dialog portals past the canvas — leaving a story
-    // named for the row asserting against an empty one.
+    // next one inherits it and shows a run this story never mentioned.
     globalThis.localStorage.removeItem("margince.import.run");
     installFetchStub({ "GET /me": meRoute(allow) });
     return (
       <StoryProviders>
-        <ImportCard />
+        <ImportCard subpage={subpage} />
       </StoryProviders>
     );
   };
 }
 
-// Opening the wizard. The verb is the card's only button, and it is in the
-// canvas — the dialog it opens is portalled to the body, past `canvasElement`.
-const openWizard: NonNullable<Story["play"]> = async ({ canvasElement }) => {
-  // findBy, not getBy: the row is drawn once `/me` answers, and `getByRole`
-  // reads the DOM as it stands the instant `play` runs. It found an empty
-  // canvas and reported "there are no accessible roles" — which reads as the
-  // card rendering nothing rather than as the query arriving early.
-  const verb = await within(canvasElement).findByRole("button", {
-    name: /Start/,
-  });
-  await userEvent.setup().click(verb);
-};
+const RUN = "run";
 
 const OPERATOR = { import_run: ["create", "read", "update"] } as const;
 
@@ -74,10 +58,7 @@ export const Withheld: Story = {
 };
 
 // The wizard's first step: what the rows are, and the file to read them from.
-export const ChoosingAFile: Story = {
-  render: story(OPERATOR),
-  play: openWizard,
-};
+export const ChoosingAFile: Story = { render: story(OPERATOR, RUN) };
 
 // The first step in dark, and the reason it is dark rather than narrow: this
 // card's own sheet opens by declaring that every quiet line on it reads --textMeta
@@ -85,15 +66,14 @@ export const ChoosingAFile: Story = {
 // is the canonical AA small-text role — a rule written against the LIGHT palette
 // and, until this story, never looked at once both tokens re-resolved. The lines
 // under test are the object hint and the file-format sentence, sitting beside a
-// SegmentedControl whose selected segment is the loudest thing in the dialog.
+// SegmentedControl whose selected segment is the loudest thing on the page.
 //
 // A narrow variant would prove less: the flow past the first step needs a real
 // file drop, so the wide mapping table and its TableScroll box — the parts
 // that have a width problem to have — are not reachable from a story at all.
 export const ChoosingAFileDark: Story = {
   globals: { theme: "dark" },
-  render: story(OPERATOR),
-  play: openWizard,
+  render: story(OPERATOR, RUN),
 };
 
 // The one state past the first step a story CAN reach, and the reason it can is
@@ -103,15 +83,11 @@ export const ChoosingAFileDark: Story = {
 // not want reversed — the outcome, the notice saying where it came from, and the
 // undo that used to vanish the moment they navigated away.
 //
-// It carries no `play`, and that is the state under test: an operator who does
-// not know their last import stopped half-way cannot finish it, so the wizard
-// opens ITSELF for a run it picked up rather than waiting behind a verb.
-//
 // The reference it plants OUTLIVES it — storage is not per-story — so the shared
 // helper above clears it rather than every other story trusting this one to
 // leave the page as it found it.
-export const PickedUpFromEarlier: Story = {
-  render: () => {
+function parked(subpage?: string) {
+  return () => {
     globalThis.localStorage.setItem("margince.import.run", "019ff-run");
     installFetchStub({
       "GET /me": meRoute(OPERATOR),
@@ -138,8 +114,14 @@ export const PickedUpFromEarlier: Story = {
     });
     return (
       <StoryProviders>
-        <ImportCard />
+        <ImportCard subpage={subpage} />
       </StoryProviders>
     );
-  },
-};
+  };
+}
+
+export const PickedUpFromEarlier: Story = { render: parked(RUN) };
+
+// The row while that run is parked: an operator who does not know their last
+// import stopped half-way cannot finish it, so the verb says there is one.
+export const ParkedRunRow: Story = { render: parked() };

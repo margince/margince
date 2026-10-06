@@ -187,7 +187,7 @@ export {
 // and the automations the installation runs unattended. EP09 renders
 // governance; it never authors policy.
 
-export function tabContent(id: SettingsPageId): ReactNode {
+export function tabContent(id: SettingsPageId, route?: Route): ReactNode {
   switch (id) {
     // ---- me ----
     case "account":
@@ -321,7 +321,7 @@ export function tabContent(id: SettingsPageId): ReactNode {
     case "knowledge":
       return <KnowledgeCard />;
     case "import":
-      return <ImportCard />;
+      return <ImportCard subpage={route?.id2} />;
 
     // ---- ai ----
     // The five-tab strip that used to hold these is gone. Its tabs shared ONE
@@ -572,7 +572,7 @@ export function SettingsScreen({ route }: Readonly<{ route: Route }>) {
             {t("settings.readOnlyPage")}
           </Callout>
         )}
-        {tabContent(active.id)}
+        {tabContent(active.id, route)}
       </div>
     </div>
   );

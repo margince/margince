@@ -19,7 +19,7 @@ import {
   EXTENSION_SCREEN,
   findExtension,
 } from "./app/extensions";
-import { CREATE_ID } from "./app/nav";
+import { CREATE_ID, IMPORT_ID } from "./app/nav";
 import {
   CommandPalette,
   useBuiltinCommands,
@@ -446,10 +446,10 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
     // An unknown segment falls back to overview rather than rendering an
     // empty page: a mistyped link should land somewhere, not nowhere.
     contacts: ({ id, id2 }) =>
-      id ? (
+      id && id !== IMPORT_ID ? (
         <ContactPageV2 id={id} tab={isContactTab(id2) ? id2 : "overview"} />
       ) : (
-        <ContactsScreen />
+        <ContactsScreen importing={id === IMPORT_ID} />
       ),
     companies: ({ id }) =>
       id ? <CompanyScreen id={id} /> : <CompaniesScreen />,
