@@ -1406,6 +1406,8 @@ export const vi = {
   "ref.notInRoster":
     "Hiện đang được giao (không còn trong danh sách người dùng)",
   "picker.noMatch": "Không có kết quả",
+  "picker.results_one": "{count} kết quả",
+  "picker.results_other": "{count} kết quả",
 
   "app.errorTitle": "Màn hình này đã ngừng hoạt động.",
   "app.errorBody": "Hãy thử lại. Nếu vẫn tiếp tục lỗi, hãy tải lại trang.",
@@ -10925,8 +10927,6 @@ export const vi = {
   "project.assignOwner": "Giao cho một đồng nghiệp",
   "project.assignOwnerTitle": "Giao cho một đồng nghiệp",
   "project.assignOwnerSearch": "Tìm đồng nghiệp",
-  "project.assignOwnerNoneSelected": "Hãy chọn một đồng nghiệp trước",
-  "project.assignOwnerConfirm": "Giao",
   "project.assignOwnerDone": "Đã giao cho {name}",
   "project.description": "Mô tả",
   "project.targetEnd": "Ngày kết thúc dự kiến",

@@ -271,6 +271,47 @@ describe("RecordPicker", () => {
     expect(screen.queryByText("Anna Weber")).toBeNull();
   });
 
+  it("offers no candidate of an earlier term once the term moves on", async () => {
+    const searchTargets = vi.fn((term: string) =>
+      Promise.resolve([{ id: `c-${term}`, name: `Answer to ${term}` }]),
+    );
+    rtlRender(
+      <RecordPicker
+        label="Search…"
+        searchTargets={searchTargets}
+        onPick={vi.fn()}
+      />,
+    );
+    const type = (term: string) =>
+      fireEvent.change(screen.getByRole("searchbox"), {
+        target: { value: term },
+      });
+
+    vi.useFakeTimers();
+    try {
+      type("ann");
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(250);
+      });
+      expect(
+        screen.getByRole("button", { name: "Answer to ann" }),
+      ).toBeTruthy();
+
+      type("anna");
+      expect(
+        screen.queryByRole("button", { name: "Answer to ann" }),
+      ).toBeNull();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(250);
+      });
+      expect(
+        screen.getByRole("button", { name: "Answer to anna" }),
+      ).toBeTruthy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   // A NEW searchTargets is a new search SPACE, and the candidates on screen
   // answered the old one. Discarding the in-flight search is not enough: the
   // rows already rendered stay clickable through the next debounce and its
