@@ -1652,7 +1652,8 @@ overridden on `embeddings:`), and refused on any other provider.
   `eu`, `us`, `global`, or a region such as `europe-west4`. The API host follows
   from it, so no `base_url` is accepted.
 - `eu` and the EU regions keep processing in the EU; London `europe-west2`,
-  Zürich `europe-west6`, `global` and `us` do not, and no profile refuses them.
+  Zürich `europe-west6`, `global` and `us` do not. `eu_hosted` and `cloud_frontier`
+  admit every location; `sovereign` refuses `gemini_vertex` at any location.
 - Saving a `gemini_vertex` binding asks Google whether the location serves the
   model and refuses it with a 422 if not; so does moving the provider's
   location, for every bound model.

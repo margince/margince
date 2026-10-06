@@ -107,3 +107,15 @@ func TestUpstreamPreferencesOnANonBrokerBindingAreRefused(t *testing.T) {
 		t.Fatalf("err = %v, want the judge's preferences refused by name", err)
 	}
 }
+
+func TestAnUnpinnedBrokerCandidateIsAdmittedUnderEUHosted(t *testing.T) {
+	t.Parallel()
+	cfg := RunnerConfig{
+		Binding:      ai.ProviderConfig{Provider: "openai_compatible", Model: "vendor/m", BaseURL: "https://openrouter.ai/api"},
+		JudgeBinding: ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"},
+		Profile:      ai.ProfileEUHosted,
+	}
+	if err := validateBindings(cfg, []ai.Task{ai.TaskSummarize}, quietLogger()); err != nil {
+		t.Fatalf("refused: %v", err)
+	}
+}

@@ -133,6 +133,20 @@ func TestASovereignInstallationDoesNotAskGoogleForLocations(t *testing.T) {
 	}
 }
 
+func TestEUHostedAsksGoogleAboutALocationOutsideTheEU(t *testing.T) {
+	t.Parallel()
+	selector, google := googleAt(t, servedAt(t))
+	store := &RoutingStore{keys: allCloudKeys(t), selectBrain: selector}
+	got := store.availableModels(context.Background(), RoutingConfig{Profile: ProfileEUHosted},
+		AvailableModelsQuery{Provider: providerGeminiVertex, Tier: "premium", Location: "us", Model: "gemini-3.5-flash"})
+	if got.Unavailable == AvailabilityProfileForbids {
+		t.Errorf("eu_hosted refused a location outside the EU: %+v", got)
+	}
+	if google.requests.Load() == 0 {
+		t.Error("the list never reached Google")
+	}
+}
+
 func TestTheLocationListNeedsTheRoutingReadGrant(t *testing.T) {
 	t.Parallel()
 	selector, google := googleAt(t, http.NotFound)

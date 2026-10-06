@@ -160,11 +160,10 @@ embeddings:    {provider: gemini}
 - **`profile`** is the location ladder: where the model may run. `eu_hosted`
   means partner-operated EU inference, `sovereign` means zero egress by
   construction, and `cloud_frontier` means a vendor's cloud, wherever it serves.
-  It constrains and never leaks. Under `eu_hosted`, a lane on the OpenRouter
-  broker must pin EU-region hosts (`only` on the connection's `upstream`),
-  because an unpinned broker serves from any region. A `gemini_vertex` lane must
-  name an EU `location`, where Google processes the call, or the config is
-  refused.
+  Only `sovereign` constrains: it refuses a cloud provider. `eu_hosted` and
+  `cloud_frontier` are labels that refuse no binding on residency grounds; where
+  a lane is served is the connection's choice (`only` on the broker's
+  `upstream`, a Vertex `location`).
 - **No key ever lives in the binding.** A provider names only itself, and a stray
   `api_key:` is a *boot error*. Where the key comes from depends on who is
   asking. A served installation resolves it from the **key vault**. The DB-less

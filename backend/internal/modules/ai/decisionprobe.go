@@ -30,10 +30,6 @@ import (
 //   - Any other server is asked the decision POST with an empty body: a 401/403
 //     is a refused key, and a 400 says only that it answered without refusing —
 //     an unconfirmed pass. No model is named, so nothing is billed.
-//
-// A lane the profile would refuse to bind is not dialled either: testing a key
-// for a decision endpoint eu_hosted forbids answers profile_forbids, the same
-// verdict the routing validator gives.
 
 // decisionHost is which of those three a decision endpoint is.
 type decisionHost int

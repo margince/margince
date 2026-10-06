@@ -76,8 +76,8 @@ export const Default: Story = { render: story() };
 
 // A stored location the list does not name still shows, so the field never
 // holds a value it has no option for.
-export const StoredLocationOutsideTheEU: Story = {
-  render: story(LOCATIONS, "europe-west2"),
+export const StoredLocationNotInTheList: Story = {
+  render: story(LOCATIONS, "europe-west1"),
 };
 
 export const NoKey: Story = {
