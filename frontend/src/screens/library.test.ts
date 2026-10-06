@@ -14,6 +14,7 @@ import {
   pillCounts,
   sortForReader,
   visibleGroups,
+  withFound,
 } from "./library";
 import { liveList, shortlist } from "./lists.fixtures";
 import type { List } from "./lists.queries";
@@ -95,6 +96,17 @@ describe("the merged library", () => {
       "Ärzte",
       "Zebra",
     ]);
+  });
+});
+
+describe("a server search past the cap", () => {
+  it("adds what it found to the rows held, once each, and drops none of them", () => {
+    expect(withFound([mineList, liveList], [liveList, shortlist])).toEqual([
+      mineList,
+      liveList,
+      shortlist,
+    ]);
+    expect(withFound([mineList], [])).toEqual([mineList]);
   });
 });
 

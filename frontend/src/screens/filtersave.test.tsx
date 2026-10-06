@@ -9,6 +9,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
+import { translate } from "../i18n";
 import { en } from "../i18n/en";
 import type { FilterVocabulary } from "./filterdata";
 import { FiltersScreen } from "./filters";
@@ -31,6 +32,8 @@ const CONTACT_VOCAB: FilterVocabulary = {
 };
 
 const FILTER = { and: [{ field: "full_name", op: "eq", value: "ann" }] };
+const NAME = en["views.name"];
+const SAVE_VIEW = en["views.save"];
 
 afterEach(() => {
   cleanup();
@@ -81,21 +84,21 @@ describe("saving with lists switched off", () => {
 
     expect(dialog).toHaveTextContent(en["filters.saveTitle"]);
     expect(screen.queryByRole("radio")).toBeNull();
-    expect(screen.getByRole("button", { name: "Save view" })).toBeDisabled();
-    await user.type(screen.getByRole("textbox", { name: "Name" }), "   ");
-    expect(screen.getByRole("button", { name: "Save view" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: SAVE_VIEW })).toBeDisabled();
+    await user.type(screen.getByRole("textbox", { name: NAME }), "   ");
+    expect(screen.getByRole("button", { name: SAVE_VIEW })).toBeDisabled();
   });
 
   it("saves the tree as a view and opens it", async () => {
     const { written } = mount();
     const user = userEvent.setup();
     await openSave(user);
-    expect(screen.getByRole("textbox", { name: "Name" })).toHaveAttribute(
+    expect(screen.getByRole("textbox", { name: NAME })).toHaveAttribute(
       "placeholder",
       "German contacts, quiet for 45 days",
     );
-    await user.type(screen.getByRole("textbox", { name: "Name" }), "Anns");
-    await user.click(screen.getByRole("button", { name: "Save view" }));
+    await user.type(screen.getByRole("textbox", { name: NAME }), "Anns");
+    await user.click(screen.getByRole("button", { name: SAVE_VIEW }));
 
     await waitFor(() =>
       expect(window.location.hash).toBe("#/filters/contacts/v-new"),
@@ -114,21 +117,19 @@ describe("saving with lists switched off", () => {
     });
     const user = userEvent.setup();
     await openSave(user);
-    await user.type(screen.getByRole("textbox", { name: "Name" }), "Anns");
-    await user.click(screen.getByRole("button", { name: "Save view" }));
+    await user.type(screen.getByRole("textbox", { name: NAME }), "Anns");
+    await user.click(screen.getByRole("button", { name: SAVE_VIEW }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "That name is already taken.",
     );
-    expect(screen.getByRole("textbox", { name: "Name" })).toHaveValue("Anns");
+    expect(screen.getByRole("textbox", { name: NAME })).toHaveValue("Anns");
     expect(window.location.hash).toBe("");
 
     await user.click(screen.getByRole("button", { name: en["create.cancel"] }));
     await user.click(screen.getByRole("button", { name: en["filters.save"] }));
     // A reopened create offering the last name is how a duplicate gets made.
-    expect(await screen.findByRole("textbox", { name: "Name" })).toHaveValue(
-      "",
-    );
+    expect(await screen.findByRole("textbox", { name: NAME })).toHaveValue("");
     expect(screen.queryByRole("alert")).toBeNull();
   });
 });
@@ -169,7 +170,7 @@ describe("saving with lists switched on", () => {
     const user = userEvent.setup();
     await openSave(user);
     await user.click(screen.getByRole("radio", { name: /^Live List/ }));
-    await user.type(screen.getByRole("textbox", { name: "Name" }), "Anns");
+    await user.type(screen.getByRole("textbox", { name: NAME }), "Anns");
     await user.click(
       screen.getByRole("button", { name: en["filters.saveListConfirm"] }),
     );
@@ -185,7 +186,11 @@ describe("saving with lists switched on", () => {
         sharing: "team",
       },
     ]);
-    expect(screen.getByText("Live List “Anns” created")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        translate("en", "filters.listCreated", { name: "Anns" }),
+      ),
+    ).toBeInTheDocument();
   });
 
   it("sends the purpose and the team the reader picked", async () => {
@@ -193,7 +198,7 @@ describe("saving with lists switched on", () => {
     const user = userEvent.setup();
     await openSave(user);
     await user.click(screen.getByRole("radio", { name: /^Live List/ }));
-    await user.type(screen.getByRole("textbox", { name: "Name" }), "Anns");
+    await user.type(screen.getByRole("textbox", { name: NAME }), "Anns");
     await user.type(
       screen.getByRole("textbox", { name: en["filters.purpose"] }),
       "Callbacks for the fair ",
@@ -226,8 +231,8 @@ describe("saving with lists switched on", () => {
     });
     const user = userEvent.setup();
     await openSave(user);
-    await user.type(screen.getByRole("textbox", { name: "Name" }), "Anns");
-    await user.click(screen.getByRole("button", { name: "Save view" }));
+    await user.type(screen.getByRole("textbox", { name: NAME }), "Anns");
+    await user.click(screen.getByRole("button", { name: SAVE_VIEW }));
 
     // Escape reaches past the disabled Cancel; closing now would hide the
     // dialog while the view is still being made, and drop the arrival.
@@ -249,7 +254,7 @@ describe("saving with lists switched on", () => {
     const user = userEvent.setup();
     await openSave(user);
     await user.click(screen.getByRole("radio", { name: /^Live List/ }));
-    await user.type(screen.getByRole("textbox", { name: "Name" }), "Mine");
+    await user.type(screen.getByRole("textbox", { name: NAME }), "Mine");
     await user.click(
       screen.getByRole("combobox", { name: en["lists.sharingLabel"] }),
     );

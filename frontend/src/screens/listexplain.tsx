@@ -144,7 +144,10 @@ export function useFieldValueText(entityType: ListRecordType, enabled = true) {
       case "boolean":
         return raw === "true" ? t("filters.yes") : t("filters.no");
       case "currency":
-        return moneyOf(field, raw, locale) ?? raw;
+        // Minor units without their currency would read as the amount.
+        return field.currency
+          ? (moneyText(raw, field.currency, locale) ?? raw)
+          : t("filters.sentence.pendingValue");
       default:
         return field?.references === "app_user" ? userName(raw) : raw;
     }
@@ -164,16 +167,6 @@ export function vocabularyField(
   name: string | undefined,
 ): VocabularyField | undefined {
   return (vocabulary?.fields ?? []).find((f) => f.name === name);
-}
-
-function moneyOf(
-  field: VocabularyField,
-  raw: unknown,
-  locale: Locale,
-): string | undefined {
-  return field.type === "currency" && field.currency
-    ? moneyText(raw, field.currency, locale)
-    : undefined;
 }
 
 /** A calendar day ("2026-08-10") as how far it lies from today. */

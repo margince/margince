@@ -10953,7 +10953,7 @@ export const de = {
   "filters.library.shared": "Geteilt",
   "filters.library.views": "Gespeicherte Ansichten",
   "filters.library.kindView": "Gespeicherte Ansicht",
-  "filters.library.rowMore": "Mehr zu {name}",
+  "filters.library.rowMore": "Weitere Aktionen für {name}",
   "filters.library.records.contact_one": "{count} Kontakt",
   "filters.library.records.contact_other": "{count} Kontakte",
   "filters.library.records.company_one": "{count} Unternehmen",

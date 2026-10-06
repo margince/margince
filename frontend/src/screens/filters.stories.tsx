@@ -30,6 +30,13 @@ function routes(mePending = false): void {
     "GET /me": mePending
       ? () => new Promise<Response>(() => {})
       : listsMe(false),
+    "GET /filters/vocabulary": () =>
+      jsonResponse({
+        resource: "contact",
+        fields: [
+          { name: "city", type: "text", operators: ["eq"], custom: false },
+        ],
+      }),
     "GET /views": () =>
       jsonResponse({
         data: [

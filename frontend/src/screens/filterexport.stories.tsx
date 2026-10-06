@@ -45,9 +45,11 @@ function ExportMenu() {
   );
 }
 
+type User = ReturnType<typeof userEvent.setup>;
+
 /** The menu's items are portalled to the body, outside the story's root. */
-async function openMenu(canvasElement: HTMLElement) {
-  await userEvent.click(
+async function openMenu(user: User, canvasElement: HTMLElement) {
+  await user.click(
     within(canvasElement).getByRole("button", {
       name: "More for this filter",
     }),
@@ -61,7 +63,7 @@ export const Offered: Story = {
     return <ExportMenu />;
   },
   play: async ({ canvasElement }) => {
-    await openMenu(canvasElement);
+    await openMenu(userEvent.setup(), canvasElement);
   },
 };
 
@@ -85,8 +87,9 @@ export const Refused: Story = {
     return <ExportMenu />;
   },
   play: async ({ canvasElement }) => {
-    const page = await openMenu(canvasElement);
-    await userEvent.click(page.getByRole("button", { name: "Export CSV" }));
+    const user = userEvent.setup();
+    const page = await openMenu(user, canvasElement);
+    await user.click(page.getByRole("button", { name: "Export CSV" }));
     await within(canvasElement).findByRole("alert");
   },
 };

@@ -10,6 +10,7 @@ import {
   fireEvent,
   render,
   screen,
+  waitFor,
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -19,7 +20,7 @@ import { SEARCH_DEBOUNCE_MS } from "../design-system/debouncedsearch";
 import { en } from "../i18n/en";
 import { FiltersScreen } from "./filters";
 import { filterView, mountFilters, type Sent } from "./filters.testkit";
-import { liveList, shortlist } from "./lists.fixtures";
+import { liveList, liveVocabulary, shortlist } from "./lists.fixtures";
 import type { List } from "./lists.queries";
 
 // The page `#/filters` opens on: one library of every saved view and list,
@@ -59,6 +60,16 @@ const reads = (seen: readonly Sent[], path: string) =>
     .filter((url) => url.pathname.endsWith(path));
 
 const region = (name: string) => screen.getByRole("region", { name });
+
+/** Types a search and lets the pause pass that sends it to the server. */
+const searchPaused = (value: string) => {
+  vi.useFakeTimers();
+  fireEvent.change(screen.getByRole("searchbox"), { target: { value } });
+  act(() => {
+    vi.advanceTimersByTime(SEARCH_DEBOUNCE_MS);
+  });
+  vi.useRealTimers();
+};
 
 describe("before the session answers", () => {
   it("shows one pending body, and neither layout", async () => {
@@ -391,6 +402,62 @@ describe("a read the server cut short", () => {
     expect(screen.getByText(caption)).toBeInTheDocument();
     expect(uncounted()).toBeInTheDocument();
   });
+
+  it("keeps a held row its caption matches, beside what the server found", async () => {
+    // No purpose, so the row's caption is its filter, which the server never searches.
+    const accounts: List = {
+      ...liveList,
+      id: "L-accounts",
+      name: "Key accounts",
+      purpose: "",
+      definition: {
+        and: [{ field: "industry", op: "eq", value: "Manufacturing" }],
+      },
+    };
+    const partners: List = {
+      ...shortlist,
+      id: "L-partners",
+      name: "Manufacturing partners",
+    };
+    const { wrapper } = mountFilters({
+      listsOn: true,
+      lists: [accounts, partners],
+      listsCap: 1,
+      vocabularies: { company: liveVocabulary },
+    });
+    render(<FiltersScreen />, { wrapper });
+    expect(
+      await screen.findByText("Industry is Manufacturing"),
+    ).toBeInTheDocument();
+    searchPaused("manufacturing");
+    expect(await screen.findByText(partners.name)).toBeInTheDocument();
+    expect(screen.getByText(accounts.name)).toBeInTheDocument();
+  });
+
+  it("keeps the search and its way back when the server finds nothing", async () => {
+    const { client, wrapper } = mountFilters({
+      listsOn: true,
+      lists: [shortlist, liveList],
+      listsCap: 1,
+    });
+    render(<FiltersScreen />, { wrapper });
+    await screen.findByText(shortlist.name);
+    searchPaused("zzz");
+    await waitFor(() =>
+      expect(
+        client.getQueryState([
+          "lists",
+          "all",
+          { q: "zzz", includeArchived: false },
+        ])?.status,
+      ).toBe("success"),
+    );
+    expect(screen.queryByText(en["filters.library.firstRunTitle"])).toBeNull();
+    expect(screen.getByRole("searchbox")).toHaveValue("zzz");
+    expect(
+      screen.getByRole("button", { name: en["filters.library.clearSearch"] }),
+    ).toBeInTheDocument();
+  });
 });
 
 describe("archived lists", () => {
@@ -432,6 +499,37 @@ describe("archived lists", () => {
     expect(
       screen.getByRole("button", { name: en["filters.library.hideArchived"] }),
     ).toBeInTheDocument();
+  });
+
+  it("are waited for, not called nothing, when the live library is empty", async () => {
+    const old: List = {
+      ...shortlist,
+      id: "L-old",
+      name: "Old campaign",
+      archived_at: "2026-09-01T00:00:00Z",
+    };
+    let answer = () => {};
+    const { wrapper } = mountFilters({
+      listsOn: true,
+      lists: [old],
+      archivedAnswered: new Promise((resolve) => {
+        answer = resolve;
+      }),
+    });
+    const user = userEvent.setup();
+    render(<FiltersScreen />, { wrapper });
+    expect(
+      await screen.findByText(en["filters.library.firstRunTitle"]),
+    ).toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", { name: en["filters.library.showArchived"] }),
+    );
+    expect(
+      await screen.findAllByText(en["filters.library.loading"]),
+    ).not.toHaveLength(0);
+    expect(screen.queryByText(en["filters.library.firstRunTitle"])).toBeNull();
+    answer();
+    expect(await screen.findByText(old.name)).toBeInTheDocument();
   });
 });
 

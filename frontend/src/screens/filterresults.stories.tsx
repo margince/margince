@@ -123,7 +123,7 @@ export const FirstPageOfMany: Story = {
   // and the size dial asks the server again rather than paging past them.
   args: {
     ...shared,
-    preview: { ...preview(PAGE), match_count: 214 },
+    preview: { ...preview(PAGE), match_count: 214, truncated: true },
     total: 214,
     perPage: 25,
     onPerPage: () => {},

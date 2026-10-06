@@ -220,7 +220,7 @@ describe("a saved view's ⋯", () => {
     render(withToasts(<FiltersScreen />), { wrapper });
     await user.click(
       within(await rowOf(BERLIN.name)).getByRole("button", {
-        name: "More for Berlin contacts",
+        name: "More actions for Berlin contacts",
       }),
     );
     await user.click(screen.getByRole("button", { name: en["views.rename"] }));
@@ -248,7 +248,7 @@ describe("a saved view's ⋯", () => {
     render(withToasts(<FiltersScreen />), { wrapper });
     await user.click(
       within(await rowOf(BERLIN.name)).getByRole("button", {
-        name: "More for Berlin contacts",
+        name: "More actions for Berlin contacts",
       }),
     );
     await user.click(
@@ -269,6 +269,39 @@ describe("a saved view's ⋯", () => {
     await vi.waitFor(() => expect(screen.queryByRole("link")).toBeNull());
     expect(written.map((sent) => sent.method)).toEqual(["DELETE"]);
     expect(window.location.hash).toBe("");
+    const firstRun = screen.getByText(en["filters.library.viewsEmptyTitle"]);
+    await vi.waitFor(() =>
+      expect(firstRun.closest(".library-anchor")).toHaveFocus(),
+    );
+  });
+
+  it("hands focus to the saved-views group, which outlives the deleted row", async () => {
+    const potsdam = filterView("v2", "Potsdam contacts", "contacts", {
+      and: [{ field: "city", op: "eq", value: "Potsdam" }],
+    });
+    const { wrapper } = mountFilters({ views: [BERLIN, potsdam] });
+    const user = userEvent.setup();
+    render(withToasts(<FiltersScreen />), { wrapper });
+    await user.click(
+      within(await rowOf(BERLIN.name)).getByRole("button", {
+        name: "More actions for Berlin contacts",
+      }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: en["views.deleteConfirm"] }),
+    );
+    await user.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: en["views.deleteConfirm"],
+      }),
+    );
+    await vi.waitFor(() =>
+      expect(screen.queryByRole("link", { name: BERLIN.name })).toBeNull(),
+    );
+    const group = screen.getByRole("region", {
+      name: en["filters.library.views"],
+    });
+    await vi.waitFor(() => expect(group.parentElement).toHaveFocus());
   });
 });
 
@@ -282,11 +315,11 @@ describe("a list's ⋯", () => {
     render(<FiltersScreen />, { wrapper });
     const chosen = await rowOf(shortlist.name);
     expect(
-      within(chosen).queryByRole("button", { name: /^More for/ }),
+      within(chosen).queryByRole("button", { name: /^More actions for/ }),
     ).toBeNull();
     await user.click(
       within(await rowOf(liveList.name)).getByRole("button", {
-        name: `More for ${liveList.name}`,
+        name: `More actions for ${liveList.name}`,
       }),
     );
     await user.click(

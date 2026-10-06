@@ -61,8 +61,9 @@
 }
 
 /* The calm start: two ways in side by side with "or" between them, and what a
- * description could not use across the whole width under both. */
-.filters-start {
+ * description could not use across the whole width under both. It is the
+ * editor's own element, so specificity, not source order, overrides its stack. */
+.filters-editor.filters-start {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: stretch;
@@ -105,7 +106,7 @@
 }
 
 @media (max-width: 700px) {
-  .filters-start {
+  .filters-editor.filters-start {
     grid-template-columns: minmax(0, 1fr);
   }
 

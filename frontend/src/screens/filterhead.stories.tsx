@@ -64,7 +64,7 @@ export const WithFactsAndMore: Story = {
         title="Berlin contacts"
         facts="Saved view · Contacts · Only me"
         actions={
-          <OverflowMenu label="More for Berlin contacts">
+          <OverflowMenu label="More actions for Berlin contacts">
             <Button>Rename</Button>
             <Button variant="danger">Delete view</Button>
           </OverflowMenu>
@@ -88,4 +88,16 @@ export const NothingToOpen: Story = {
       sentence="This saved view was deleted or cannot be found."
     />
   ),
+};
+
+// Dark: the record-type control's selected segment on the page ground, and the
+// surface state's panel with the way back beneath it.
+export const WithControlDark: Story = {
+  ...WithControl,
+  globals: { theme: "dark" },
+};
+
+export const NothingToOpenDark: Story = {
+  ...NothingToOpen,
+  globals: { theme: "dark" },
 };

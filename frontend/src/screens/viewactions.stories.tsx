@@ -54,6 +54,13 @@ export const RenameOpen: Story = {
   },
 };
 
+// The overlay, the dialog's ground and the field on it are three elevations a
+// darker palette compresses.
+export const RenameOpenDark: Story = {
+  ...RenameOpen,
+  globals: { theme: "dark" },
+};
+
 export const DeleteOpen: Story = {
   render: () => {
     routes();

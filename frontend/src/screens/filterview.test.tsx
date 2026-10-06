@@ -48,11 +48,14 @@ const VIEW = {
 
 const ASKS = en["unsaved.title"];
 const EDIT = en["filters.editConditions"];
-const MORE = "More for Berlin contacts";
+const MORE = en["filters.library.rowMore"].replace("{name}", VIEW.name);
 
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
+  Reflect.deleteProperty(URL, "createObjectURL");
+  Reflect.deleteProperty(URL, "revokeObjectURL");
   window.location.hash = "";
 });
 
@@ -100,6 +103,35 @@ const patches = (written: readonly Sent[]) =>
 
 const saveChanges = (user: User) =>
   user.click(screen.getByRole("button", { name: en["filters.saveChanges"] }));
+
+/**
+ * The first read of `path` refused as a server that is down, and every later
+ * one answered as the kit would.
+ */
+function refuseFirst(path: string) {
+  const answered = globalThis.fetch;
+  let refused = false;
+  vi.stubGlobal("fetch", (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = input instanceof Request ? input.url : String(input);
+    if (refused || !new URL(url, "https://x.local").pathname.endsWith(path)) {
+      return answered(input, init);
+    }
+    refused = true;
+    return Promise.resolve(
+      Response.json(
+        {
+          title: "Unavailable",
+          status: 503,
+          detail: "The server is not answering.",
+        },
+        {
+          status: 503,
+          headers: { "Content-Type": "application/problem+json" },
+        },
+      ),
+    );
+  });
+}
 
 /** A promise a case resolves when it is done looking at the wait. */
 function held() {
@@ -199,6 +231,29 @@ describe("opening a saved view", () => {
       screen.getByRole("button", { name: en["filters.view.reload"] }),
     );
     await vi.waitFor(() => expect(reads()).toBe(before + 1));
+  });
+
+  it("says why the fields could not be read and reads them again, rather than open on a count", async () => {
+    window.location.hash = "#/filters/contacts/v1";
+    const { wrapper } = mountFilters({
+      views: [VIEW],
+      vocabularies: { contact: CONTACT_VOCAB },
+    });
+    refuseFirst("/filters/vocabulary");
+    render(<GuardedFilters page={viewAt} />, { wrapper });
+    const user = userEvent.setup();
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "The server is not answering.",
+    );
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Berlin contacts" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("1 condition")).toBeNull();
+    await user.click(screen.getByRole("button", { name: en["common.retry"] }));
+
+    expect(await screen.findByText("City is Berlin")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 
   it("opens on what the server holds now, not a copy kept from before a rename elsewhere", async () => {
@@ -446,12 +501,15 @@ describe("saving back over the view", () => {
     expect(
       document.querySelector(".filter-clause")?.closest("[inert]"),
     ).not.toBeNull();
+    const more = screen.getByRole("button", { name: MORE });
+    expect(more.closest("[inert]")).not.toBeNull();
     patch.release();
 
     expect(
       await screen.findByText(en["filters.changesSaved"]),
     ).toBeInTheDocument();
     expect(screen.getByText("City is Hamburg")).toBeInTheDocument();
+    expect(more.closest("[inert]")).toBeNull();
   });
 
   it("leaves a proposal that landed while the save was out open, and unsaved", async () => {
@@ -582,7 +640,7 @@ describe("keeping it some other way", () => {
     );
   });
 
-  it("deletes after asking, and leaves for the library without the guard asking", async () => {
+  it("deletes after asking, and leaves for the library's views without the guard asking", async () => {
     const { written } = open();
     const user = userEvent.setup();
     await changeCity(user, "Hamburg");
@@ -597,7 +655,9 @@ describe("keeping it some other way", () => {
       within(dialog).getByRole("button", { name: en["views.deleteConfirm"] }),
     );
 
-    expect(await screen.findByText("Arrived at #/filters")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Arrived at #/filters/views"),
+    ).toBeInTheDocument();
     expect(
       screen.getByText("View deleted: “Berlin contacts”"),
     ).toBeInTheDocument();

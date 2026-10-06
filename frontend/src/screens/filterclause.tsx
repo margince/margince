@@ -36,15 +36,19 @@ import {
  * back until they fill it in, which is the whole reason an empty value is safe to
  * put in the tree.
  *
- * `exists` is the exception, because its operand is a boolean and every boolean
- * is complete — so it starts at `true` ("has a value"), the reading its label
- * gives.
+ * A boolean operand, on `exists` or a yes/no field, is the exception: its
+ * two-way control always shows one arm pressed, and every boolean is complete.
+ * So it starts at `true`, the arm shown, and the row never shows a choice the
+ * tree does not hold.
  */
-function emptyValueFor(op: FilterOp): LeafValue {
-  if (op === "exists") {
-    return true;
+function emptyValueFor(
+  op: FilterOp,
+  type: VocabularyField["type"] | undefined,
+): LeafValue {
+  if (op === "in") {
+    return [];
   }
-  return op === "in" ? [] : "";
+  return op === "exists" || type === "boolean" ? true : "";
 }
 
 /**
@@ -72,7 +76,7 @@ export function firstClause(fields: readonly VocabularyField[]): Node {
     return newLeaf("", "eq", "");
   }
   const op = (first.operators[0] ?? "eq") as FilterOp;
-  return newLeaf(first.name, op, emptyValueFor(op));
+  return newLeaf(first.name, op, emptyValueFor(op, first.type));
 }
 
 // Deliberately not the group's props: a clause has no children, so depth would
@@ -166,7 +170,7 @@ export function ClauseRow({
       ...found,
       field: nextField,
       op: keptOp,
-      value: emptyValueFor(keptOp),
+      value: emptyValueFor(keptOp, next?.type),
     }));
   };
 
@@ -191,7 +195,7 @@ export function ClauseRow({
           edit((found) => ({
             ...found,
             op: nextOp as FilterOp,
-            value: emptyValueFor(nextOp as FilterOp),
+            value: emptyValueFor(nextOp as FilterOp, chosen?.type),
           }))
         }
         aria-label={t("filters.operator")}

@@ -106,7 +106,8 @@ export type LibraryTableGroup = LibraryGroup | "views";
  * The library's rows: one saved view or list each. The name is a real link,
  * stretched over its row, so a row opens from the keyboard and in a new tab,
  * and a press on ⋯ or inside a dialog it opened never reaches a row handler.
- * Folded to a phone's width, the facts move under the name.
+ * Folded to a phone's width, the facts move under the name. A deleted row
+ * hands focus to `returnFocusTo`, which outlives it.
  */
 export function LibraryTable({
   label,
@@ -114,12 +115,14 @@ export function LibraryTable({
   group,
   captionOf,
   folded,
+  returnFocusTo,
 }: Readonly<{
   label: string;
   items: readonly LibraryItem[];
   group: LibraryTableGroup;
   captionOf: (item: LibraryItem) => string;
   folded: boolean;
+  returnFocusTo?: () => HTMLElement | null;
 }>) {
   const t = useT();
   const audienceOf = useListAudienceLabel();
@@ -138,7 +141,9 @@ export function LibraryTable({
   const more: DataTableColumn<LibraryItem> = {
     key: "more",
     header: "",
-    render: (item) => <LibraryRowMenu item={item} />,
+    render: (item) => (
+      <LibraryRowMenu item={item} returnFocusTo={returnFocusTo} />
+    ),
   };
   const kind: DataTableColumn<LibraryItem> = {
     key: "kind",
@@ -272,7 +277,13 @@ function LibraryRecords({ item }: Readonly<{ item: LibraryItem }>) {
  * A row's own verbs: a saved view is renamed or deleted here; a Live List's
  * filter is edited by whoever may change it. A Shortlist has none.
  */
-function LibraryRowMenu({ item }: Readonly<{ item: LibraryItem }>) {
+function LibraryRowMenu({
+  item,
+  returnFocusTo,
+}: Readonly<{
+  item: LibraryItem;
+  returnFocusTo?: () => HTMLElement | null;
+}>) {
   const t = useT();
   const label = t("filters.library.rowMore", { name: nameOf(item) });
   if (item.kind === "view") {
@@ -280,7 +291,7 @@ function LibraryRowMenu({ item }: Readonly<{ item: LibraryItem }>) {
       <span className="library-more">
         <OverflowMenu label={label}>
           <RenameViewAction view={item.view} />
-          <DeleteViewAction view={item.view} />
+          <DeleteViewAction view={item.view} returnFocusTo={returnFocusTo} />
         </OverflowMenu>
       </span>
     );

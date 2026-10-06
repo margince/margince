@@ -21,6 +21,7 @@ import {
   resourceOf,
   sortForReader,
   treeOf,
+  withFound,
 } from "./library";
 import { useLists } from "./lists.queries";
 import { useAllSavedViews } from "./savedviews.queries";
@@ -62,8 +63,8 @@ export type LibraryReads = Readonly<{
 /**
  * One read of every saved view and one of every list, merged. While the lists
  * read is cut short, the search goes to the server too, once the reader pauses,
- * because the rows it would find may be past the cap; until that answer lands
- * the rows already held stay on screen.
+ * because the rows it would find may be past the cap; what it finds joins the
+ * rows already held, which stay on screen before that answer lands and after.
  */
 export function useLibraryReads(
   cut: LibraryCut,
@@ -83,25 +84,31 @@ export function useLibraryReads(
   );
   const listRead = searching && !searched.isPending ? searched : lists;
   const viewRows = views.data?.views;
+  const cappedRows = lists.data?.data;
   const listRows = listRead.data?.data;
   const items = useMemo(
     () =>
       sortForReader(
-        libraryItems(viewRows ?? [], listsOn ? (listRows ?? []) : []),
+        libraryItems(
+          viewRows ?? [],
+          listsOn ? withFound(cappedRows ?? [], listRows ?? []) : [],
+        ),
         locale,
       ),
-    [viewRows, listRows, listsOn, locale],
+    [viewRows, cappedRows, listRows, listsOn, locale],
   );
   const viewsPending = views.isPending;
   const viewsFailed = views.isError;
-  const listsPending = listsOn && listRead.isPending;
-  const listsFailed = listsOn && listRead.isError;
   const listsHeld = listsOn && lists.isPlaceholderData;
+  // Held rows stand in for the answer; with none held, the read is still out.
+  const listsPending =
+    listsOn && (listRead.isPending || (listsHeld && cappedRows?.length === 0));
+  const listsFailed = listsOn && listRead.isError;
   // Taken from the uncut reads: a search the server answered in full still
   // leaves the library itself past its cap, and a count over it would be short.
   const truncatedRows = [
     views.data?.truncated ? (viewRows?.length ?? 0) : 0,
-    listsTruncated ? (lists.data?.data.length ?? 0) : 0,
+    listsTruncated ? (cappedRows?.length ?? 0) : 0,
   ];
   const settled = !viewsPending && !listsPending;
   const failed = viewsFailed || listsFailed;

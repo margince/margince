@@ -9,7 +9,6 @@ import type { VocabularyField } from "./filterdata";
 import {
   clauseWords,
   filterSentence,
-  moneyText,
   type SentenceWords,
 } from "./filtersentence";
 import { decode, type Node, newGroup, newLeaf } from "./segmentpredicate";
@@ -109,8 +108,22 @@ describe("a filter read as one sentence", () => {
       read(newGroup("and", [newLeaf("created_at", "gte", "2026-12-31")])),
     ).toBe("Created is on or after 31 Dec 2026");
     expect(read(newGroup("and", [newLeaf("amount", "gte", 125_000)]))).toBe(
-      `Converted amount is at least ${moneyText(125_000, "EUR", "en")}`,
+      "Converted amount is at least €1,250.00",
     );
+  });
+
+  it("states no amount whose currency the reader may not learn", () => {
+    const unpriced: VocabularyField[] = [
+      { name: "amount", type: "currency", operators: ["gte"], custom: false },
+    ];
+    // Minor units without their currency would read as the amount itself.
+    expect(
+      filterSentence(
+        newGroup("and", [newLeaf("amount", "gte", 125_000)]),
+        unpriced,
+        en,
+      ),
+    ).toBe("Converted amount is at least …");
   });
 
   it("groups a quantity the way the reader writes numbers", () => {

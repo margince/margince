@@ -55,6 +55,18 @@ export function libraryItems(
   return [...fromViews, ...fromLists];
 }
 
+/**
+ * A capped read's lists, and what a server search found past the cap. The
+ * server never matches a caption, so a held row it missed may still be wanted.
+ */
+export function withFound(
+  capped: readonly List[],
+  found: readonly List[],
+): List[] {
+  const held = new Set(capped.map((list) => list.id));
+  return [...capped, ...found.filter((list) => !held.has(list.id))];
+}
+
 export function nameOf(item: LibraryItem): string {
   return item.kind === "view" ? item.view.name : item.list.name;
 }

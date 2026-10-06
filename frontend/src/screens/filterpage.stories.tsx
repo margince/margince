@@ -33,6 +33,7 @@ export default meta;
 
 type Story = StoryObj<typeof FiltersScreen>;
 type Canvas = ReturnType<typeof within>;
+type User = ReturnType<typeof userEvent.setup>;
 
 const VOCABULARY: FilterVocabulary = {
   resource: "contact",
@@ -94,25 +95,26 @@ function routes(
         typeof body === "object" && body !== null && "limit" in body
           ? Number(body.limit)
           : 25;
+      const rows = ROWS.slice(0, Math.min(matches, limit));
       return jsonResponse({
         resource: "contact",
         match_count: matches,
         columns: ["id", "full_name", "city", "last_activity_at"],
-        rows: ROWS.slice(0, Math.min(matches, limit)),
-        truncated: false,
+        rows,
+        truncated: matches > rows.length,
       });
     },
   });
 }
 
 /** One condition on City, written the way a reader writes it. */
-async function addCity(canvas: Canvas, value: string) {
+async function addCity(user: User, canvas: Canvas, value: string) {
   const adds = await canvas.findAllByRole("button", { name: "Add condition" });
-  await userEvent.click(adds[0]);
+  await user.click(adds[0]);
   const values = canvas.getAllByLabelText("Value");
   const last = values[values.length - 1];
   if (value !== "") {
-    await userEvent.type(last, value);
+    await user.type(last, value);
   }
 }
 
@@ -130,7 +132,7 @@ export const CalmStart: Story = { render: newContactFilter() };
 export const OneIncompleteCondition: Story = {
   render: newContactFilter(),
   play: async ({ canvasElement }) => {
-    await addCity(within(canvasElement), "");
+    await addCity(userEvent.setup(), within(canvasElement), "");
   },
 };
 
@@ -139,8 +141,9 @@ export const OneIncompleteCondition: Story = {
 export const OneCompleteCondition: Story = {
   render: newContactFilter(),
   play: async ({ canvasElement }) => {
+    const user = userEvent.setup();
     const canvas = within(canvasElement);
-    await addCity(canvas, "Berlin");
+    await addCity(user, canvas, "Berlin");
     await canvas.findByText("3 contacts match");
   },
 };
@@ -150,8 +153,9 @@ export const OneCompleteCondition: Story = {
 export const CompleteWithFooter: Story = {
   render: newContactFilter(),
   play: async ({ canvasElement }) => {
+    const user = userEvent.setup();
     const canvas = within(canvasElement);
-    await addCity(canvas, "Berlin");
+    await addCity(user, canvas, "Berlin");
     await canvas.findByText("Unsaved filter");
   },
 };
@@ -161,28 +165,31 @@ export const CompleteWithFooter: Story = {
 export const SaveModalOpen: Story = {
   render: newContactFilter({ listsOn: true }),
   play: async ({ canvasElement }) => {
+    const user = userEvent.setup();
     const canvas = within(canvasElement);
-    await addCity(canvas, "Berlin");
-    await userEvent.click(await canvas.findByRole("button", { name: "Save" }));
+    await addCity(user, canvas, "Berlin");
+    await user.click(await canvas.findByRole("button", { name: "Save" }));
   },
 };
 
 export const TwoConditionsAnd: Story = {
   render: newContactFilter(),
   play: async ({ canvasElement }) => {
+    const user = userEvent.setup();
     const canvas = within(canvasElement);
-    await addCity(canvas, "Berlin");
-    await addCity(canvas, "Hamburg");
+    await addCity(user, canvas, "Berlin");
+    await addCity(user, canvas, "Hamburg");
   },
 };
 
 export const ConnectorFlippedToOr: Story = {
   render: newContactFilter(),
   play: async ({ canvasElement }) => {
+    const user = userEvent.setup();
     const canvas = within(canvasElement);
-    await addCity(canvas, "Berlin");
-    await addCity(canvas, "Hamburg");
-    await userEvent.click(
+    await addCity(user, canvas, "Berlin");
+    await addCity(user, canvas, "Hamburg");
+    await user.click(
       canvas.getByRole("button", {
         name: "and: match all of these. Press to match any.",
       }),
@@ -191,15 +198,15 @@ export const ConnectorFlippedToOr: Story = {
 };
 
 /** Two conditions, then More › Add a group. */
-async function addGroup(canvasElement: HTMLElement) {
+async function addGroup(user: User, canvasElement: HTMLElement) {
   const canvas = within(canvasElement);
-  await addCity(canvas, "Berlin");
-  await addCity(canvas, "Hamburg");
-  await userEvent.click(
+  await addCity(user, canvas, "Berlin");
+  await addCity(user, canvas, "Hamburg");
+  await user.click(
     canvas.getByRole("button", { name: "More for these conditions" }),
   );
   // The menu's items are portalled to the body, outside the story's root.
-  await userEvent.click(
+  await user.click(
     await within(canvasElement.ownerDocument.body).findByRole("button", {
       name: "Add a group",
     }),
@@ -209,7 +216,7 @@ async function addGroup(canvasElement: HTMLElement) {
 export const WithAGroup: Story = {
   render: newContactFilter(),
   play: async ({ canvasElement }) => {
-    await addGroup(canvasElement);
+    await addGroup(userEvent.setup(), canvasElement);
   },
 };
 
@@ -218,11 +225,12 @@ export const WithAGroup: Story = {
 export const EmptyGroup: Story = {
   render: newContactFilter(),
   play: async ({ canvasElement }) => {
-    await addGroup(canvasElement);
+    const user = userEvent.setup();
+    await addGroup(user, canvasElement);
     const removes = within(canvasElement).getAllByRole("button", {
       name: "Remove City condition",
     });
-    await userEvent.click(removes[removes.length - 1]);
+    await user.click(removes[removes.length - 1]);
   },
 };
 
@@ -271,16 +279,17 @@ export const ProposedRowsHandMarked: Story = {
 export const ProposalBarWithFooterCount: Story = {
   render: newContactFilter(),
   play: async ({ canvasElement }) => {
+    const user = userEvent.setup();
     const canvas = within(canvasElement);
-    await addCity(canvas, "Berlin");
-    await userEvent.click(
+    await addCity(user, canvas, "Berlin");
+    await user.click(
       await canvas.findByText("Describe changes in plain words"),
     );
-    await userEvent.type(
+    await user.type(
       canvas.getByLabelText("Describe the contacts you want"),
       "in Hamburg, quiet for 45 days",
     );
-    await userEvent.click(
+    await user.click(
       canvas.getByRole("button", { name: "Propose conditions" }),
     );
     await canvas.findByText(
@@ -293,9 +302,10 @@ export const ProposalBarWithFooterCount: Story = {
 export const SwitchTypeAsks: Story = {
   render: newContactFilter(),
   play: async ({ canvasElement }) => {
+    const user = userEvent.setup();
     const canvas = within(canvasElement);
-    await addCity(canvas, "Berlin");
-    await userEvent.click(canvas.getByRole("button", { name: "Companies" }));
+    await addCity(user, canvas, "Berlin");
+    await user.click(canvas.getByRole("button", { name: "Companies" }));
   },
 };
 
@@ -304,8 +314,9 @@ export const SwitchTypeAsks: Story = {
 export const ReadSeatRefused: Story = {
   render: newContactFilter({ refused: true }),
   play: async ({ canvasElement }) => {
+    const user = userEvent.setup();
     const canvas = within(canvasElement);
-    await addCity(canvas, "Berlin");
+    await addCity(user, canvas, "Berlin");
     await canvas.findByRole("alert");
   },
 };
@@ -315,8 +326,9 @@ export const ReadSeatRefused: Story = {
 export const FirstPageOfMany: Story = {
   render: newContactFilter({ matches: 214 }),
   play: async ({ canvasElement }) => {
+    const user = userEvent.setup();
     const canvas = within(canvasElement);
-    await addCity(canvas, "Berlin");
+    await addCity(user, canvas, "Berlin");
     await canvas.findByText("214 contacts match");
   },
 };
@@ -327,4 +339,16 @@ export const Phone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
   render: newContactFilter(),
+};
+
+// Dark, before and after the first count: the start cards on the page ground,
+// then the count, the rows and the footer band, each a mix dark re-derives.
+export const CalmStartDark: Story = {
+  ...CalmStart,
+  globals: { theme: "dark" },
+};
+
+export const OneCompleteConditionDark: Story = {
+  ...OneCompleteCondition,
+  globals: { theme: "dark" },
 };

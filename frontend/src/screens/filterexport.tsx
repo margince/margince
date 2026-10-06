@@ -126,25 +126,23 @@ export function ExportFilterItems({
 /**
  * How the last export stands, beside the verbs that asked for it. The menu
  * that asked has closed, so this says a file is coming, then the server's
- * reason if it refused, and that only while the filter on screen is the one
- * it refused: the run outlives an edit that hides the band and brings it back.
+ * reason if it refused, each only while the filter on screen is the one it
+ * sent: the run outlives an edit, and its file is not the edited filter's.
  */
 export function ExportProgress({
   run,
   tree,
 }: Readonly<{ run: FilterExportRun; tree: Node }>) {
   const t = useT();
+  const sentThisTree = run.variables?.tree === tree;
   return (
     <>
-      {run.isPending && (
+      {run.isPending && sentThisTree && (
         <span className="t-caption" role="status">
           {t("filters.exporting")}
         </span>
       )}
-      <ErrorLine
-        inline
-        error={run.variables?.tree === tree ? run.error : null}
-      />
+      <ErrorLine inline error={sentThisTree ? run.error : null} />
     </>
   );
 }

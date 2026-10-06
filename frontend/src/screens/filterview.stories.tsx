@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import { en } from "../i18n/en";
 import type { FilterVocabulary } from "./filterdata";
 import { OpenedViewPage } from "./filterview";
 import { listsMe } from "./lists.fixtures";
@@ -74,7 +75,14 @@ const ROWS = Array.from({ length: 25 }, (_, index) => ({
 const problem = (status: number, code: string, detail: string) =>
   jsonResponse({ title: "Refused", status, code, detail }, status);
 
-type Answer = "view" | "held" | "gone" | "failed" | "conflict" | "readSeat";
+type Answer =
+  | "view"
+  | "held"
+  | "gone"
+  | "failed"
+  | "fieldsFailed"
+  | "conflict"
+  | "readSeat";
 
 function routes(answer: Answer = "view") {
   installFetchStub({
@@ -94,7 +102,10 @@ function routes(answer: Answer = "view") {
       answer === "conflict"
         ? problem(409, "version_skew", "The view changed since it was read.")
         : jsonResponse({ ...VIEW, version: 4 }),
-    "GET /filters/vocabulary": () => jsonResponse(VOCABULARY),
+    "GET /filters/vocabulary": () =>
+      answer === "fieldsFailed"
+        ? problem(503, "unavailable", "The server is not answering.")
+        : jsonResponse(VOCABULARY),
     "POST /filters/preview": () =>
       answer === "readSeat"
         ? problem(403, "seat_tier_insufficient", "seat tier insufficient")
@@ -103,7 +114,7 @@ function routes(answer: Answer = "view") {
             match_count: 214,
             columns: ["id", "full_name", "city", "last_activity_at"],
             rows: ROWS,
-            truncated: false,
+            truncated: true,
           }),
   });
 }
@@ -179,6 +190,15 @@ export const ReadFailed: Story = {
   },
 };
 
+// The fields that word its sentence could not be read: under the view's name,
+// why, and the read again, rather than a sentence that only counts.
+export const FieldsFailed: Story = {
+  render: opened("fieldsFailed"),
+  play: async ({ canvasElement }) => {
+    await within(canvasElement).findByRole("button", { name: "Retry" });
+  },
+};
+
 // The view's own verbs, behind the More at the end of its name's row.
 export const MoreOpen: Story = {
   render: opened(),
@@ -186,7 +206,7 @@ export const MoreOpen: Story = {
     const canvas = within(canvasElement);
     await userEvent.click(
       await canvas.findByRole("button", {
-        name: "More for Berlin contacts, quiet 45 days",
+        name: en["filters.library.rowMore"].replace("{name}", VIEW.name),
       }),
     );
     await within(canvasElement.ownerDocument.body).findByRole("button", {

@@ -109,9 +109,11 @@ function routes(answer: ExportAnswer = "file") {
   });
 }
 
+type User = ReturnType<typeof userEvent.setup>;
+
 /** More's items are portalled to the body, outside the story's root. */
-async function openMore(canvasElement: HTMLElement) {
-  await userEvent.click(
+async function openMore(user: User, canvasElement: HTMLElement) {
+  await user.click(
     within(canvasElement).getByRole("button", {
       name: "More for this filter",
     }),
@@ -132,7 +134,7 @@ export const MoreOpen: Story = {
     return <Footed />;
   },
   play: async ({ canvasElement }) => {
-    await openMore(canvasElement);
+    await openMore(userEvent.setup(), canvasElement);
   },
 };
 
@@ -143,8 +145,9 @@ export const ExportRefused: Story = {
     return <Footed />;
   },
   play: async ({ canvasElement }) => {
-    const page = await openMore(canvasElement);
-    await userEvent.click(page.getByRole("button", { name: "Export CSV" }));
+    const user = userEvent.setup();
+    const page = await openMore(user, canvasElement);
+    await user.click(page.getByRole("button", { name: "Export CSV" }));
     await within(canvasElement).findByRole("alert");
   },
 };
@@ -156,8 +159,9 @@ export const Exporting: Story = {
     return <Footed />;
   },
   play: async ({ canvasElement }) => {
-    const page = await openMore(canvasElement);
-    await userEvent.click(page.getByRole("button", { name: "Export CSV" }));
+    const user = userEvent.setup();
+    const page = await openMore(user, canvasElement);
+    await user.click(page.getByRole("button", { name: "Export CSV" }));
     await within(canvasElement).findByText("Exporting…");
   },
 };
@@ -170,7 +174,7 @@ export const SavingToAList: Story = {
     return <Footed kind="list" changed />;
   },
   play: async ({ canvasElement }) => {
-    await openMore(canvasElement);
+    await openMore(userEvent.setup(), canvasElement);
   },
 };
 

@@ -42,8 +42,8 @@ describe("Sign-out (AS-1)", () => {
         return new Response(null, { status: 404 });
       }),
     );
-    // Seed the ["me"] cache so we can observe the mutation clearing it — the
-    // gate re-probe hangs off this exact entry going away (queryClient.clear()).
+    // Seed the ["me"] cache so we can observe sign-out resetting it: the gate's
+    // re-probe hangs off this entry losing its data.
     const client = newClient();
     client.setQueryData(["me"], { user: { id: "u1", email: "ada@acme.test" } });
     window.location.hash = "#/deals";
@@ -52,9 +52,9 @@ describe("Sign-out (AS-1)", () => {
     // Sign-out lives inside the account menu, so it takes opening first.
     await user.click(screen.getByRole("button", { name: /Account$/ }));
     await user.click(screen.getByText("Sign out"));
-    // POST fired AND the whole cache was cleared — the ["me"] entry is gone,
-    // so the auth gate re-probes → 401 → login. This assertion bites: it fails
-    // if `onSuccess: () => queryClient.clear()` is removed from useLogout.
+    // POST fired and the ["me"] entry lost its data, so the auth gate
+    // re-probes → 401 → login. This bites if useLogout's onSuccess stops
+    // calling resetToSignedOut (screens/common.tsx).
     await waitFor(() => expect(loggedOut).toBe(true));
     await waitFor(() => expect(client.getQueryData(["me"])).toBeUndefined());
   });

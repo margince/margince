@@ -7,6 +7,7 @@ import "@testing-library/jest-dom/vitest";
 import { act, cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { translatePlural } from "../i18n";
 import { en } from "../i18n/en";
 import type { FilterVocabulary } from "./filterdata";
 import { FiltersScreen } from "./filters";
@@ -39,6 +40,16 @@ const COMPANY_VOCAB: FilterVocabulary = {
 
 const saveTo = en["lists.saveFilterTo"].replace("{name}", liveList.name);
 const ASKS = en["unsaved.title"];
+const DESCRIBE = en["filters.propose.label"].replace(
+  "{records}",
+  en["unit.companies"],
+);
+/** The list's facts line up to its audience, whose wording turns on the reader. */
+const FACTS_LEAD = en["filters.listFacts"]
+  .replace("{records}", en["filters.tab.companies"])
+  .split("{who}")[0];
+const LIVE_LIST = new RegExp(`^${en["lists.kind.live"]}`);
+const SAVED_VIEW = new RegExp(`^${en["filters.library.kindView"]}`);
 
 /** The list's filter with its industry changed, as the PATCH carries it. */
 const RETAIL = {
@@ -51,6 +62,7 @@ const RETAIL = {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
   window.location.hash = "";
 });
 
@@ -150,7 +162,9 @@ describe("opening a Live List's filter", () => {
         en["lists.editingTitle"].replace("{name}", liveList.name),
       ),
     ).toBeInTheDocument();
-    expect(screen.getByText(/^Live List · Companies · /)).toBeInTheDocument();
+    expect(
+      screen.getByText((text) => text.startsWith(FACTS_LEAD)),
+    ).toBeInTheDocument();
     expect(screen.getByText(en["filters.noChanges"])).toBeInTheDocument();
     expect(screen.getByRole("button", { name: saveTo })).toBeDisabled();
   });
@@ -236,7 +250,9 @@ describe("saving to the list", () => {
     expect(
       await screen.findByText(`Arrived at #/lists/${LIVE_ID}`),
     ).toBeInTheDocument();
-    expect(screen.getByText(`Saved to “${liveList.name}”`)).toBeInTheDocument();
+    expect(
+      screen.getByText(en["lists.savedTo"].replace("{name}", liveList.name)),
+    ).toBeInTheDocument();
     expect(patches(written)).toEqual([
       { version: liveList.version, definition: RETAIL },
     ]);
@@ -312,18 +328,20 @@ describe("saving to the list", () => {
     const user = userEvent.setup();
     await changeIndustry(user);
     await user.click(screen.getByText(en["filters.describeChanges"]));
-    await user.type(
-      screen.getByLabelText("Describe the companies you want"),
-      "not mining",
-    );
+    await user.type(screen.getByLabelText(DESCRIBE), "not mining");
     await user.click(
-      screen.getByRole("button", { name: "Propose conditions" }),
+      screen.getByRole("button", { name: en["filters.propose.submit"] }),
     );
     await user.click(screen.getByRole("button", { name: saveTo }));
     const dialog = await screen.findByRole("dialog");
     answer();
     expect(
-      await screen.findByText(/^Margince proposed 1 condition/),
+      await screen.findByText(
+        translatePlural("en", "filters.proposal.title", 1, {
+          count: "1",
+          text: "not mining",
+        }),
+      ),
     ).toBeInTheDocument();
 
     await user.click(
@@ -355,7 +373,7 @@ describe("saving to the list", () => {
       name: en["filters.saveTitle"],
     });
     expect(
-      within(dialog).getByRole("radio", { name: /^Saved view/ }),
+      within(dialog).getByRole("radio", { name: SAVED_VIEW }),
     ).toBeChecked();
   });
 
@@ -367,7 +385,7 @@ describe("saving to the list", () => {
     );
     expect(screen.queryByRole("button", { name: saveTo })).toBeNull();
     const dialog = await screen.findByRole("dialog");
-    await user.click(within(dialog).getByRole("radio", { name: /^Live List/ }));
+    await user.click(within(dialog).getByRole("radio", { name: LIVE_LIST }));
     await user.type(
       within(dialog).getByRole("textbox", { name: en["views.name"] }),
       "My copy",
@@ -387,6 +405,55 @@ describe("saving to the list", () => {
       list_type: "dynamic",
       definition: liveList.definition,
     });
+
+    // The copy is a list of its own now: its filter opens under its name.
+    act(() => {
+      window.location.hash = "#/filters/list/new-list";
+    });
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "My copy" }),
+    ).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Manufacturing")).toBeInTheDocument();
+  });
+
+  it("exports JSON from More as the file the server rendered, under its name", async () => {
+    const files: Blob[] = [];
+    Object.defineProperties(URL, {
+      createObjectURL: {
+        configurable: true,
+        value: (file: Blob) => {
+          files.push(file);
+          return "blob:test";
+        },
+      },
+      revokeObjectURL: { configurable: true, value: () => undefined },
+    });
+    const anchors: HTMLAnchorElement[] = [];
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      anchors.push(this);
+    });
+    const { written } = open();
+    const user = userEvent.setup();
+    await screen.findByDisplayValue("Manufacturing");
+    await user.click(
+      screen.getByRole("button", { name: en["filters.footMore"] }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: en["filters.exportJson"] }),
+    );
+
+    await vi.waitFor(() => expect(anchors).toHaveLength(1));
+    expect(
+      written.find((sent) => sent.url.includes("/exports"))?.body,
+    ).toMatchObject({ object: "company", format: "json" });
+    // Not the `company-export.json` the client falls back to.
+    expect(anchors[0]?.download).toMatch(/-slice\.json$/);
+    expect(files[0]?.type).toBe("application/json");
+    expect(JSON.parse((await files[0]?.text()) ?? "")).toEqual([
+      { id: "p1", full_name: "Ann Lee" },
+    ]);
   });
 });
 

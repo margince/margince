@@ -62,6 +62,15 @@ describe("the import walk the split gates share", () => {
     ).toEqual(["entry.ts", "mid.ts", "heavy.tsx"]);
   });
 
+  it("answers the entry alone when the entry is itself a target", () => {
+    write("heavy.tsx", 'import "./other";\n');
+    write("other.ts", 'import "./heavy";\n');
+
+    expect(
+      named(importPathTo(at("heavy.tsx"), new Set([at("heavy.tsx")]))),
+    ).toEqual(["heavy.tsx"]);
+  });
+
   it("answers null when no target is reachable", () => {
     write("entry.ts", 'import "./mid";\n');
     write("mid.ts", 'import "./entry";\n');

@@ -2042,8 +2042,8 @@ export async function mockApi(
     }
     if (path === "/views" && method === "GET") {
       // Every view, as the Filters and views library reads them: two saved
-      // filters over fields the vocabularies above hold, so the library's
-      // sweeps draw real rows and their captions name real fields.
+      // filters whose captions name fields the vocabularies above hold. Only
+      // v-fleet's is the filter the preview authors; v-owned previews empty.
       if (!url.searchParams.has("resource")) {
         return json(
           page([

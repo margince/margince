@@ -151,18 +151,21 @@ export function wireSignature(tree: Node): string {
  * The first answer this opening's read settled on, kept while later reads come
  * and go: a refetch that answers differently, or fails, must not swap the page
  * out from under the draft. A cached copy the mount is reading again does not
- * count, since it may predate a write made elsewhere and its version is the
- * one a save would be held to.
+ * count, nor one a disabled read holds, since either may predate a write made
+ * elsewhere and its version is the one a save would be held to.
  */
 export function useFirstAnswer<T>(
   read: Readonly<{
     data: T | undefined;
     fetchStatus: FetchStatus;
     isError: boolean;
+    isEnabled: boolean;
   }>,
 ): T | undefined {
-  // A failed read keeps the copy it had, which is not what it answered.
-  const settled = read.fetchStatus === "idle" && !read.isError;
+  // A failed read keeps the copy it had, which is not what it answered, and a
+  // disabled one is idle because it asked nothing.
+  const settled =
+    read.isEnabled && read.fetchStatus === "idle" && !read.isError;
   const answer = settled ? read.data : undefined;
   const [first, setFirst] = useState(answer);
   if (first === undefined && answer !== undefined) {

@@ -63,6 +63,9 @@ const FIELDS: VocabularyField[] = [
     type: "picklist",
     operators: ["eq", "neq", "in", "exists"],
     custom: true,
+    // The vocabulary always carries a picklist's values, so the capture shows
+    // the picker a real one gets rather than a box over a closed set.
+    options: ["gold", "silver", "bronze"],
   },
 ];
 

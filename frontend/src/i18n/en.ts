@@ -11086,7 +11086,7 @@ export const en = {
   "filters.library.shared": "Shared",
   "filters.library.views": "Saved views",
   "filters.library.kindView": "Saved view",
-  "filters.library.rowMore": "More for {name}",
+  "filters.library.rowMore": "More actions for {name}",
   "filters.library.records.contact_one": "{count} contact",
   "filters.library.records.contact_other": "{count} contacts",
   "filters.library.records.company_one": "{count} company",

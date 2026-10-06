@@ -87,12 +87,22 @@ export const Refused: Story = {
     return <SaveDialog />;
   },
   play: async ({ canvasElement }) => {
+    const user = userEvent.setup();
     const page = within(canvasElement.ownerDocument.body);
-    await userEvent.type(
+    await user.type(
       await page.findByRole("textbox", { name: "Name" }),
       "Berliners",
     );
-    await userEvent.click(page.getByRole("button", { name: "Save view" }));
+    await user.click(page.getByRole("button", { name: "Save view" }));
     await page.findByRole("alert");
   },
 };
+
+// Dark: the overlay, the modal ground and the choice cards are three
+// elevations a darker palette compresses, and a refusal adds its error line.
+export const LiveListChosenDark: Story = {
+  ...LiveListChosen,
+  globals: { theme: "dark" },
+};
+
+export const RefusedDark: Story = { ...Refused, globals: { theme: "dark" } };

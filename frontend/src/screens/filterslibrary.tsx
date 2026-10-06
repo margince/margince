@@ -105,38 +105,42 @@ export function FiltersLibrary({
         folded={folded}
         listsOn={listsOn}
       />
-      {firstRun && (
-        <EmptyState
-          plate
-          title={t(
-            listsOn
-              ? "filters.library.firstRunTitle"
-              : "filters.library.viewsEmptyTitle",
-          )}
-        >
-          {t(
-            listsOn
-              ? "filters.library.firstRunBody"
-              : "filters.library.viewsEmptyBody",
-          )}
-        </EmptyState>
-      )}
       {noHits && <NoHits cut={cut} />}
-      {groups.map((group) => (
+      {/* The first-run plate takes the saved-views group's place, so the group
+          a deleted last view handed focus to stays mounted and keeps it. */}
+      {(firstRun ? (["mine"] as const) : groups).map((group) => (
         <div
           key={group}
           ref={group === "mine" ? anchors.mine : anchors.shared}
           className="library-anchor"
           tabIndex={-1}
         >
-          <LibraryGroupPanel
-            group={listsOn ? group : "views"}
-            rows={shown.filter((item) => groupOf(item) === group)}
-            reads={reads}
-            narrowed={narrowed}
-            captionOf={captionOf}
-            folded={folded}
-          />
+          {firstRun ? (
+            <EmptyState
+              plate
+              title={t(
+                listsOn
+                  ? "filters.library.firstRunTitle"
+                  : "filters.library.viewsEmptyTitle",
+              )}
+            >
+              {t(
+                listsOn
+                  ? "filters.library.firstRunBody"
+                  : "filters.library.viewsEmptyBody",
+              )}
+            </EmptyState>
+          ) : (
+            <LibraryGroupPanel
+              group={listsOn ? group : "views"}
+              rows={shown.filter((item) => groupOf(item) === group)}
+              reads={reads}
+              narrowed={narrowed}
+              captionOf={captionOf}
+              folded={folded}
+              returnFocusTo={() => anchors.mine.current}
+            />
+          )}
         </div>
       ))}
       {reads.truncated && (
@@ -344,7 +348,10 @@ const GROUP_TITLE: Record<LibraryTableGroup, MessageKey> = {
   views: "filters.library.views",
 };
 
-/** One group: its rows, and what its reads have not answered yet. */
+/**
+ * One group: its rows, and what its reads have not answered yet. A deleted
+ * view hands focus to the group holding every saved view.
+ */
 function LibraryGroupPanel({
   group,
   rows,
@@ -352,6 +359,7 @@ function LibraryGroupPanel({
   narrowed,
   captionOf,
   folded,
+  returnFocusTo,
 }: Readonly<{
   group: LibraryTableGroup;
   rows: readonly LibraryItem[];
@@ -359,6 +367,7 @@ function LibraryGroupPanel({
   narrowed: boolean;
   captionOf: (item: LibraryItem) => string;
   folded: boolean;
+  returnFocusTo: () => HTMLElement | null;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -395,6 +404,7 @@ function LibraryGroupPanel({
             group={group}
             captionOf={captionOf}
             folded={folded}
+            returnFocusTo={returnFocusTo}
           />
         )}
         {pending && (

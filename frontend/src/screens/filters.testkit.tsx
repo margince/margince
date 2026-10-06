@@ -39,8 +39,6 @@ export type FiltersServer = Readonly<{
   lists?: readonly List[];
   /** Held open until it resolves: one list read by id. */
   listAnswered?: Promise<void>;
-  /** What `POST /lists` answers. */
-  created?: Partial<List>;
   /** A problem `POST /views` and `POST /lists` answer instead of a create. */
   createRefused?: Readonly<{ status: number; detail: string }>;
   /** Held open until it resolves: every `POST /views` and `POST /lists`. */
@@ -93,15 +91,31 @@ const refused = () =>
 const page = (data: readonly unknown[], hasMore: boolean) =>
   json({ data, page: { next_cursor: null, has_more: hasMore } });
 
-/** A rendered file, served under a name the client did not compose itself. */
-const exported = () =>
-  new Response("id,full_name\np1,Ann Lee\n", {
+const EXPORTED: Readonly<
+  Record<"csv" | "json", Readonly<{ type: string; bytes: string }>>
+> = {
+  csv: { type: "text/csv", bytes: "id,full_name\np1,Ann Lee\n" },
+  json: {
+    type: "application/json",
+    bytes: '[{"id":"p1","full_name":"Ann Lee"}]',
+  },
+};
+
+/**
+ * A file rendered in the format asked for, served under a name the client did
+ * not compose itself.
+ */
+const exported = (sent: Sent) => {
+  const format =
+    isRow(sent.body) && sent.body.format === "json" ? "json" : "csv";
+  return new Response(EXPORTED[format].bytes, {
     status: 200,
     headers: {
-      "Content-Type": "text/csv",
-      "Content-Disposition": 'attachment; filename="contacts-slice.csv"',
+      "Content-Type": EXPORTED[format].type,
+      "Content-Disposition": `attachment; filename="contacts-slice.${format}"`,
     },
   });
+};
 
 async function sentOf(input: RequestInfo | URL, init?: RequestInit) {
   const request = input instanceof Request ? input : null;
@@ -213,7 +227,11 @@ function viewsServer(server: FiltersServer) {
     return page(rows, server.truncated === true);
   };
   const answer = async (sent: Sent, path: string) => {
-    const id = /^\/views\/([^/]+)$/.exec(path)?.[1];
+    const address = /^\/views(?:\/([^/]+))?$/.exec(path);
+    if (address === null) {
+      return notFound();
+    }
+    const id = address[1];
     if (sent.method === "POST") {
       await server.createAnswered;
     }
@@ -225,7 +243,7 @@ function viewsServer(server: FiltersServer) {
 /** The lists catalog, honouring `q`, `include_archived` and the cap. */
 async function listsCatalog(
   server: FiltersServer,
-  lists: readonly List[],
+  lists: readonly Row[],
   sent: Sent,
 ) {
   const query = searchOf(sent);
@@ -250,14 +268,34 @@ async function listsCatalog(
 type ChangeList = (id: string, changes: Partial<List>) => void;
 
 /**
- * The lists: the catalog, one list by id, a create, and a filter written back,
- * refused as the server refuses it when the version it carries is not the
- * stored one.
+ * The lists: the catalog, one list by id with an empty history, a create a
+ * later read finds, and a filter written back, refused as the server refuses
+ * it when the version it carries is not the stored one.
  */
 function listsServer(server: FiltersServer) {
-  let lists: List[] = [...(server.lists ?? [])];
+  let lists: Row[] = [...(server.lists ?? [])];
   const change: ChangeList = (id, changes) => {
     lists = lists.map((row) => (row.id === id ? { ...row, ...changes } : row));
+  };
+  const create = (sent: Sent, path: string) => {
+    if (server.createRefused) {
+      return problem(server.createRefused);
+    }
+    // The contract's defaults under what was asked, held by whoever made it.
+    const made = {
+      id: "new-list",
+      list_type: "static",
+      sharing: "team",
+      version: 1,
+      health: "ok",
+      can_edit: true,
+      ...(isRow(sent.body) ? sent.body : {}),
+    };
+    // Only the catalog's own address makes a list; a visit posts below one.
+    if (path === "/lists") {
+      lists = [...lists, made];
+    }
+    return json(made, 201);
   };
   const update = (id: string, sent: Sent) => {
     const body = isRow(sent.body) ? sent.body : {};
@@ -272,25 +310,29 @@ function listsServer(server: FiltersServer) {
         detail: "The list changed since it was read.",
       });
     }
-    const now: List = {
+    const now = {
       ...was,
-      version: was.version + 1,
+      version: Number(was.version) + 1,
       definition: isRow(body.definition) ? body.definition : was.definition,
     };
     lists = lists.map((row) => (row.id === id ? now : row));
     return json(now);
   };
   const answer = async (sent: Sent, path: string) => {
-    const id = /^\/lists\/([^/]+)$/.exec(path)?.[1];
+    const address = /^\/lists(?:\/([^/]+)(?:\/(visit|history))?)?$/.exec(path);
+    if (address === null) {
+      return notFound();
+    }
+    const [, id, below] = address;
     if (sent.method === "POST") {
       await server.createAnswered;
-      const body = isRow(sent.body) ? sent.body : {};
-      return server.createRefused
-        ? problem(server.createRefused)
-        : json({ id: "new-list", ...body, ...server.created }, 201);
+      return create(sent, path);
     }
     if (server.listsFail) {
       return refused();
+    }
+    if (below === "history") {
+      return page([], false);
     }
     if (id !== undefined && sent.method === "PATCH") {
       return update(id, sent);
@@ -345,6 +387,11 @@ function readsServer(
         teams: Object.keys(server.teams ?? {}),
       });
     },
+    // The shell around a page: the top bar's notice bell, a list's company
+    // members and the roster that names their owners. None is asserted on.
+    "/notices": () => json({ items: [], unread_count: 0 }),
+    "/companies": () => page([], false),
+    "/users": () => page([], false),
     "/teams": () =>
       page(
         Object.entries(server.teams ?? {}).map(([id, name]) => ({ id, name })),
@@ -362,17 +409,19 @@ function readsServer(
     // for more rows hands over more than one page and reads what arrives.
     "/filters/preview": async (sent) => {
       await server.previewAnswered;
+      const rows = (server.preview?.rows ?? []).slice(0, limitOf(sent));
+      const matchCount = server.preview?.match_count ?? 0;
       return json({
         resource: "contact",
-        match_count: server.preview?.match_count ?? 0,
+        match_count: matchCount,
         columns: server.preview?.columns ?? ["id"],
-        rows: (server.preview?.rows ?? []).slice(0, limitOf(sent)),
-        truncated: false,
+        rows,
+        truncated: matchCount > rows.length,
       });
     },
-    "/exports": async () => {
+    "/exports": async (sent) => {
       await server.exportAnswered;
-      return exported();
+      return exported(sent);
     },
   };
 }
@@ -394,7 +443,8 @@ export function mountFilters(server: FiltersServer = {}) {
     if (path.startsWith("/lists")) {
       return lists.answer(sent, path);
     }
-    return reads[path]?.(sent) ?? page([], false);
+    // An address nobody registered is a request the suite did not expect.
+    return reads[path]?.(sent) ?? notFound();
   };
 
   vi.stubGlobal(

@@ -158,6 +158,11 @@ export const Populated: Story = {
   },
 };
 
+export const PopulatedDark: Story = {
+  ...Populated,
+  globals: { theme: "dark" },
+};
+
 // Nothing saved yet: one plate, and no search or pills to narrow nothing.
 export const FirstRun: Story = {
   render: () => {
@@ -229,7 +234,9 @@ export const RowMenuOpen: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "More for Berlin contacts" }),
+      await canvas.findByRole("button", {
+        name: "More actions for Berlin contacts",
+      }),
     );
   },
 };
@@ -245,6 +252,11 @@ export const TypePickerOpen: Story = {
       await canvas.findByRole("button", { name: "New filter" }),
     );
   },
+};
+
+export const TypePickerOpenDark: Story = {
+  ...TypePickerOpen,
+  globals: { theme: "dark" },
 };
 
 // At 390px the verb leads at full width, New Shortlist is one press behind

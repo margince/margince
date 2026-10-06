@@ -68,12 +68,13 @@ function routes(first: Answer | "held" | "refused", later?: "held"): void {
         typeof body === "object" && body !== null && "limit" in body
           ? Number(body.limit)
           : 25;
+      const rows = ROWS.slice(0, Math.min(first.rows, limit));
       return jsonResponse({
         resource: "contact",
         match_count: first.match_count,
         columns: ["id", "full_name", "city"],
-        rows: ROWS.slice(0, Math.min(first.rows, limit)),
-        truncated: false,
+        rows,
+        truncated: first.match_count > rows.length,
       });
     },
   });
@@ -117,14 +118,13 @@ export const Counted: Story = {
 export const Stale: Story = {
   render: story({ match_count: 214, rows: 100 }, "held"),
   play: async ({ canvasElement }) => {
+    const user = userEvent.setup();
     const canvas = within(canvasElement);
     const page = within(canvasElement.ownerDocument.body);
-    await userEvent.click(
+    await user.click(
       await canvas.findByRole("combobox", { name: "Rows per page" }),
     );
-    await userEvent.click(
-      await page.findByRole("option", { name: "50 per page" }),
-    );
+    await user.click(await page.findByRole("option", { name: "50 per page" }));
   },
 };
 
@@ -139,3 +139,9 @@ export const ShowMoreOffered: Story = {
 export const NoMatches: Story = {
   render: story({ match_count: 0, rows: 0 }),
 };
+
+// Dark: the count beside the title and the table's header band and row rules,
+// then the refusal's alert where the count would be.
+export const CountedDark: Story = { ...Counted, globals: { theme: "dark" } };
+
+export const RefusedDark: Story = { ...Refused, globals: { theme: "dark" } };

@@ -161,6 +161,50 @@ describe("a record page's lists", () => {
     expect(clause.querySelector("strong")).toBeNull();
   });
 
+  it.each([
+    ["in the currency its field names", { currency: "EUR" }, "Now: €1,250.00"],
+    ["as nothing yet when its field names no currency", {}, "Now: …"],
+  ])(
+    "reads a money value %s, never its minor units as the amount",
+    async (_, named, shown) => {
+      stub({
+        [`GET /lists/${LIVE_ID}/members/${MEMBER_ID}/why`]: () =>
+          jsonResponse({
+            ...notOnLiveWhy,
+            clauses: {
+              field: "revenue",
+              op: "gt",
+              operand: 100000,
+              result: true,
+              value: "125000",
+            },
+          }),
+        "GET /filters/vocabulary": () =>
+          jsonResponse({
+            resource: "company",
+            fields: [
+              {
+                name: "revenue",
+                type: "currency",
+                operators: ["gt"],
+                custom: false,
+                ...named,
+              },
+            ],
+          }),
+      });
+      const user = userEvent.setup();
+      await user.click(
+        await screen.findByRole("combobox", { name: en["lists.record.check"] }),
+      );
+      await user.click(
+        await screen.findByRole("option", { name: liveList.name }),
+      );
+      expect(await screen.findByText(shown)).toBeInTheDocument();
+      expect(screen.queryByText("Now: 125000")).toBeNull();
+    },
+  );
+
   it("takes the record off a Shortlist with a note", async () => {
     const removed: unknown[] = [];
     stub({

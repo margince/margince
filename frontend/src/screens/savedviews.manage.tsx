@@ -18,7 +18,9 @@ import "./savedviews.css";
 // whether to delete it. One row at a time, so two half-answered questions can
 // never stand open in the same list.
 type RowMode =
-  | Readonly<{ kind: "rename"; id: string; name: string }>
+  // The version the name was read at: a refetch while the row is open must not
+  // lend that name a newer If-Match.
+  | Readonly<{ kind: "rename"; id: string; name: string; version: number }>
   | Readonly<{ kind: "delete"; id: string }>
   | null;
 
@@ -83,7 +85,7 @@ function ManageViewsList({ views }: Readonly<{ views: readonly SavedView[] }>) {
                   return;
                 }
                 rename.mutate(
-                  { id: view.id, name, version: view.version },
+                  { id: view.id, name, version: mode.version },
                   { onSuccess: () => setMode(null) },
                 );
               }}
@@ -134,7 +136,12 @@ function ManageViewsList({ views }: Readonly<{ views: readonly SavedView[] }>) {
                 variant="ghost"
                 aria-label={t("views.renameNamed", { name: view.name })}
                 onClick={() =>
-                  ask({ kind: "rename", id: view.id, name: view.name })
+                  ask({
+                    kind: "rename",
+                    id: view.id,
+                    name: view.name,
+                    version: view.version,
+                  })
                 }
               >
                 {t("views.rename")}

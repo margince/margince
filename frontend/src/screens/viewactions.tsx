@@ -23,11 +23,15 @@ export function RenameViewAction({
   const { rename } = useSaveView();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(view.name);
+  // The version the prefilled name came from: a refetch while the dialog is
+  // open must not lend a stale name a newer If-Match.
+  const [readAt, setReadAt] = useState(view.version);
   return (
     <>
       <Button
         onClick={() => {
           setName(view.name);
+          setReadAt(view.version);
           rename.reset();
           setOpen(true);
         }}
@@ -44,7 +48,7 @@ export function RenameViewAction({
         error={rename.isError ? problemMessageOf(rename.error, t) : null}
         onConfirm={() =>
           rename.mutate(
-            { id: view.id, name: name.trim(), version: view.version },
+            { id: view.id, name: name.trim(), version: readAt },
             {
               onSuccess: (updated) => {
                 setOpen(false);
@@ -69,11 +73,19 @@ export function RenameViewAction({
   );
 }
 
-/** "Delete view": asks first, naming the view, and says no record changes. */
+/**
+ * "Delete view": asks first, naming the view, and says no record changes. A
+ * caller whose row goes with the view names where focus lands instead.
+ */
 export function DeleteViewAction({
   view,
   onDeleted,
-}: Readonly<{ view: SavedView; onDeleted?: () => void }>) {
+  returnFocusTo,
+}: Readonly<{
+  view: SavedView;
+  onDeleted?: () => void;
+  returnFocusTo?: () => HTMLElement | null;
+}>) {
   const t = useT();
   const toast = useToast();
   const { remove } = useSaveView();
@@ -95,6 +107,7 @@ export function DeleteViewAction({
         title={t("views.deleteTitle")}
         confirmLabel={t("views.deleteConfirm")}
         confirmVariant="danger"
+        returnFocusTo={returnFocusTo}
         pending={remove.isPending}
         error={remove.isError ? problemMessageOf(remove.error, t) : null}
         // mutateAsync: the refreshed read drops this row and its observer before

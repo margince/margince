@@ -179,7 +179,7 @@ describe("a first page of many", () => {
   function firstPage(onPerPage: (next: number) => void) {
     return (
       <FilterResults
-        preview={{ ...preview(PAGE), match_count: 214 }}
+        preview={{ ...preview(PAGE), match_count: 214, truncated: true }}
         fields={[TIER_FIELD]}
         named={["cf_loyalty_tier"]}
         unit="contacts"

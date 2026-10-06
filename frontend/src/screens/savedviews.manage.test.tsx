@@ -18,7 +18,8 @@ import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import type { ListQuery } from "./listquery";
 import { SaveViewAction } from "./savedviews";
-import { useSaveView } from "./savedviews.queries";
+import { ManageViewsButton } from "./savedviews.manage";
+import { type SavedView, useSaveView } from "./savedviews.queries";
 
 // A saved view the reader no longer wants, or whose name no longer says what
 // it shows, used to be permanent: a tab can be pressed and nothing else. The
@@ -156,6 +157,40 @@ describe("managing saved views", () => {
       ifMatch: "3",
       body: { name: "DACH customers" },
     });
+  });
+
+  it("holds a rename to the version its row opened on, though a newer one was read since", async () => {
+    const row: SavedView = {
+      ...VIEW,
+      resource: "companies",
+      shared_scope: "private",
+    };
+    const seen = stubServer([row]);
+    const user = userEvent.setup();
+    const { rerender } = render(<ManageViewsButton views={[row]} />, {
+      wrapper: Providers,
+    });
+
+    await user.click(screen.getByRole("button", { name: "Manage views" }));
+    await user.click(
+      screen.getByRole("button", { name: "Rename German customers" }),
+    );
+    rerender(
+      <ManageViewsButton
+        views={[{ ...row, name: "DACH customers", version: 4 }]}
+      />,
+    );
+    await user.type(screen.getByLabelText("Name"), " 2");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() =>
+      expect(seen.find((call) => call.method === "PATCH")).toEqual({
+        method: "PATCH",
+        path: "/v1/views/v-1",
+        ifMatch: "3",
+        body: { name: "German customers 2" },
+      }),
+    );
   });
 
   it("will not save an empty name", async () => {

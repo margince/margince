@@ -253,14 +253,16 @@ function scalarText(
 /**
  * An operand only its field's type can read: money in the field's currency,
  * and ids counted in their record's noun, since an id names nothing to a reader.
+ * Money whose currency this reader may not learn states none, since its minor
+ * units would read as the amount: "125,000" for €1,250.
  */
 function typedOperandText(
   operand: unknown,
   field: VocabularyField,
   { plural, locale }: SentenceWords,
 ): string | undefined {
-  if (field.type === "currency" && field.currency) {
-    return moneyText(operand, field.currency, locale);
+  if (field.type === "currency") {
+    return field.currency ? moneyText(operand, field.currency, locale) : "";
   }
   // An id not chosen yet is no id to count, so it reads as a gap to fill.
   if (!field.references || operand === "") {

@@ -24,19 +24,26 @@ import {
 const screensDir = dirname(fileURLToPath(import.meta.url));
 const srcRoot = resolve(screensDir, "..");
 
+const NOUNS = "(filter|listlibrary|savedviews|viewactions)";
+const STARTS_WITH_NOUN = new RegExp(`^${NOUNS}`);
+const NAMES_A_NOUN = new RegExp(`(^|[./_-])${NOUNS}`);
+const pages = productionModulesUnder(screensDir)
+  .filter((file) => file.endsWith(".tsx"))
+  .map((file) => relative(screensDir, file));
+
 /**
- * The filter UI modules, DERIVED from the file names that spell them rather
- * than listed, so a new page joins the gate the day it is written.
+ * The filter UI modules, DERIVED from the names that spell them rather than
+ * listed: every page whose path starts with one of the destination's nouns,
+ * whatever follows it and at any depth.
  */
-const FILTER_UI =
-  /^(filter[\w.]*|listlibrary|savedviews[\w.]*|viewactions)\.tsx$/;
 const targets = new Set(
-  productionModulesUnder(screensDir).filter(
-    (file) =>
-      dirname(file) === screensDir &&
-      FILTER_UI.test(relative(screensDir, file)),
-  ),
+  pages
+    .filter((name) => STARTS_WITH_NOUN.test(name))
+    .map((name) => join(screensDir, name)),
 );
+
+/** Pages naming a noun past the start of their name, owned by another screen. */
+const ELSEWHERE = new Set(["reporting.filters.tsx"]);
 
 const lightModules = ["filtersaddress.ts", "savedviews.queries.ts"].map(
   (name) => join(screensDir, name),
@@ -64,6 +71,18 @@ describe("the filters split holds transitively", () => {
 
   it("neither light module reaches a filter page", () => {
     expect(violations(lightModules)).toEqual([]);
+  });
+
+  // A name the prefix misses, such as `list-filter.tsx`, would leave its page
+  // unguarded and the gate green, so every page naming a noun is accounted for.
+  it("guards every page named for the destination, bar those it names", () => {
+    const named = pages.filter((name) => NAMES_A_NOUN.test(name));
+    expect(
+      named.filter(
+        (name) => !targets.has(join(screensDir, name)) && !ELSEWHERE.has(name),
+      ),
+    ).toEqual([]);
+    expect(named).toEqual(expect.arrayContaining([...ELSEWHERE]));
   });
 
   // A gate that read a smaller tree would still pass, so it has to see what

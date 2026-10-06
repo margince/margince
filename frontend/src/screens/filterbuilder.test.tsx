@@ -78,6 +78,12 @@ const VOCAB: VocabularyField[] = [
     operators: ["eq", "neq", "gt", "gte", "lt", "lte", "in", "exists"],
     custom: true,
   },
+  {
+    name: "cf_partner",
+    type: "boolean",
+    operators: ["eq", "exists"],
+    custom: true,
+  },
 ];
 
 /** Controlled, because a builder that never receives its own edits back proves
@@ -243,7 +249,6 @@ describe("what the builder offers", () => {
 describe("an id clause names a record, not a uuid", () => {
   it("offers the records the vocabulary's target points at", async () => {
     resetIDsForTest();
-    stubSeats();
     const user = userEvent.setup();
     render(
       <Harness start={newGroup("and", [newLeaf("owner_id", "eq", "")])} />,
@@ -318,7 +323,6 @@ describe("an id clause names a record, not a uuid", () => {
 
   it("names records one at a time for a list clause, and never as free text", async () => {
     resetIDsForTest();
-    stubSeats();
     const user = userEvent.setup();
     render(
       <Harness start={newGroup("and", [newLeaf("owner_id", "in", [])])} />,
@@ -532,6 +536,29 @@ describe("editing the tree", () => {
     expect(after.and[0].field).toBe("created_at");
     expect(after.and[0].op).toBe("eq");
     expect(after.and[0].value).toBe("");
+  });
+
+  it("starts a yes/no field on the arm its control shows", async () => {
+    resetIDsForTest();
+    const user = userEvent.setup();
+    render(
+      <Harness start={newGroup("and", [newLeaf("full_name", "eq", "ann")])} />,
+    );
+
+    await pickOption(
+      user,
+      screen.getByRole("combobox", { name: "Field" }),
+      "partner",
+    );
+
+    // A two-way choice always shows one arm pressed, so the clause holds that
+    // arm: a blank behind a pressed "yes" would hold the preview back unseen.
+    expect(wire()).toEqual({
+      and: [{ field: "cf_partner", op: "eq", value: true }],
+    });
+    expect(
+      screen.getByRole("button", { name: "yes" }).getAttribute("aria-pressed"),
+    ).toBe("true");
   });
 
   it("keeps half-typed numeric input rather than coercing it", async () => {

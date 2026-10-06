@@ -51,3 +51,10 @@ export const ManageViewsOpen: Story = {
     await within(document.body).findByRole("dialog");
   },
 };
+
+// Its rows, ghost buttons and the dialog's ground are all derived tokens, so
+// the list can read in light and be wrong in dark.
+export const ManageViewsOpenDark: Story = {
+  ...ManageViewsOpen,
+  globals: { theme: "dark" },
+};

@@ -5,7 +5,6 @@
 // as one sentence above what it selects, and edits in place, saving back over
 // the view held to the version it was read at.
 
-import type { QueryObserverResult } from "@tanstack/react-query";
 import { Pencil } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { navigateReplacing } from "../app/router";
@@ -47,6 +46,7 @@ import {
 } from "./filtersaddress";
 import { type SavedKind, SaveFilterModal, useLandOnSaved } from "./filtersave";
 import { filterSentence, useSentenceWords } from "./filtersentence";
+import { type Reread, useReload } from "./filterview.reload";
 import { useListsAvailable } from "./lists.queries";
 import {
   filterStateFrom,
@@ -59,8 +59,6 @@ import {
 import { type Group, type Node, rootGroup } from "./segmentpredicate";
 import { DeleteViewAction, RenameViewAction } from "./viewactions";
 import "./filters.css";
-
-type Reread = () => Promise<QueryObserverResult<SavedView>>;
 
 export function OpenedViewPage({
   tab,
@@ -86,14 +84,29 @@ export function OpenedViewPage({
       <ViewGone />
     ) : (
       <ViewUnread
+        title={t("filters.library.kindView")}
         error={read.error}
         pending={read.isFetching}
         retry={() => void read.refetch()}
+        retryLabel={t("filters.view.reload")}
       />
     );
   }
   if (opened && tree === null) {
     return <ViewGone />;
+  }
+  // Without the fields the sentence is only a count, so the page says why and
+  // reads them again. A later refetch that fails keeps the page and its draft.
+  if (vocabulary.isError && vocabulary.data === undefined && !elsewhere) {
+    return (
+      <ViewUnread
+        title={opened?.name ?? t("filters.library.kindView")}
+        error={vocabulary.error}
+        pending={vocabulary.isFetching}
+        retry={() => void vocabulary.refetch()}
+        retryLabel={t("common.retry")}
+      />
+    );
   }
   // The sentence names fields, so the page waits for both rather than reading
   // a view as wire names.
@@ -132,19 +145,26 @@ function ViewGone() {
  * the page says why and offers the read again.
  */
 function ViewUnread({
+  title,
   error,
   pending,
   retry,
-}: Readonly<{ error: unknown; pending: boolean; retry: () => void }>) {
-  const t = useT();
+  retryLabel,
+}: Readonly<{
+  title: string;
+  error: unknown;
+  pending: boolean;
+  retry: () => void;
+  retryLabel: string;
+}>) {
   return (
     <div className="wrap filters-screen">
-      <FocusedHead title={t("filters.library.kindView")} />
+      <FocusedHead title={title} />
       <ErrorLine
         error={error}
         actions={
           <Button variant="link" pending={pending} onClick={retry}>
-            {t("filters.view.reload")}
+            {retryLabel}
           </Button>
         }
       />
@@ -258,37 +278,47 @@ function OpenedView({
         title={pin.view.name}
         facts={t("filters.view.facts", { records: t(TAB_LABEL[tab]) })}
         actions={
-          <OverflowMenu
-            label={t("filters.library.rowMore", { name: pin.view.name })}
-          >
-            <RenameViewAction
-              view={pin.view}
-              onRenamed={(view) =>
-                setPin((was) => ({
-                  ...was,
-                  view: { ...was.view, name: view.name, version: view.version },
-                }))
-              }
-            />
-            {listsOn && complete && (
-              <Button
-                onClick={() => setSaving({ keep: "list", tree: draft.tree })}
-              >
-                {t("filters.view.saveAsList")}
-              </Button>
-            )}
-            {complete && (
-              <ExportFilterItems
-                run={exportRun}
-                resource={resource}
-                tree={draft.tree}
+          // Held with the rows while a save is out: a rename or delete here
+          // would race it on the version it is about to advance.
+          <div inert={saveQuery.isPending}>
+            <OverflowMenu
+              label={t("filters.library.rowMore", { name: pin.view.name })}
+            >
+              <RenameViewAction
+                view={pin.view}
+                onRenamed={(view) =>
+                  setPin((was) => ({
+                    ...was,
+                    view: {
+                      ...was.view,
+                      name: view.name,
+                      version: view.version,
+                    },
+                  }))
+                }
               />
-            )}
-            <DeleteViewAction
-              view={pin.view}
-              onDeleted={() => leave({ screen: "filters" })}
-            />
-          </OverflowMenu>
+              {listsOn && complete && (
+                <Button
+                  onClick={() => setSaving({ keep: "list", tree: draft.tree })}
+                >
+                  {t("filters.view.saveAsList")}
+                </Button>
+              )}
+              {complete && (
+                <ExportFilterItems
+                  run={exportRun}
+                  resource={resource}
+                  tree={draft.tree}
+                />
+              )}
+              <DeleteViewAction
+                view={pin.view}
+                // The library's views anchor takes focus once it has drawn, so
+                // the reader lands in the group the view was in, not on <body>.
+                onDeleted={() => leave({ screen: "filters", id: "views" })}
+              />
+            </OverflowMenu>
+          </div>
         }
       />
       <div className="filters-head-status">
@@ -403,39 +433,6 @@ function SaveProblem({
     );
   }
   return <ErrorLine inline error={failure} />;
-}
-
-/**
- * "Reload view": read the view again and start over from what it says now, or
- * learn that it is gone. Its own answer, so a refetch nobody asked for moves
- * nothing on the page.
- */
-function useReload(
-  reread: Reread,
-  onFresh: (view: SavedView, tree: Node) => void,
-) {
-  const [pending, setPending] = useState(false);
-  const [failure, setFailure] = useState<unknown>(null);
-  const [lost, setLost] = useState(false);
-  const reload = () => {
-    setPending(true);
-    setFailure(null);
-    void reread().then((answer) => {
-      setPending(false);
-      if (answer.isError && problemCodeOf(answer.error) !== "not_found") {
-        setFailure(answer.error);
-        return;
-      }
-      const view = answer.isError ? undefined : answer.data;
-      const fresh = view ? openableTree(view) : null;
-      if (!view || fresh === null) {
-        setLost(true);
-        return;
-      }
-      onFresh(view, fresh);
-    });
-  };
-  return { reload, pending, failure, lost, clear: () => setFailure(null) };
 }
 
 /**

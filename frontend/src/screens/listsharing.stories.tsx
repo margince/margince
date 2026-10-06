@@ -3,15 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { SaveFilterModal } from "./filtersave";
 import { listsMe, liveList, TEAM_ID, teamsPage } from "./lists.fixtures";
 import { ListSettingsAction } from "./listsettings";
 import { ListAudienceFields } from "./listsharing";
-import { newGroup, newLeaf } from "./segmentpredicate";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
-// Who can find a list, asked where a list is made and where it is changed. A
-// team audience also asks which team: one of the reader's, or all of them.
+// Who can find a list, and for a team audience which team: one of the reader's
+// or all of them. Saving a filter as a list asks it in "Save this filter".
 const meta: Meta = { title: "Patterns/List sharing" };
 export default meta;
 
@@ -33,26 +31,6 @@ export const TeamAudience: Story = {
           value={{ sharing: "team", teamId: TEAM_ID }}
           onChange={() => undefined}
           ownerIsReader
-        />
-      </StoryProviders>
-    );
-  },
-};
-
-// Saving a filter as a Live List asks the same question, before anything is
-// saved.
-export const SaveAsLiveList: Story = {
-  render: () => {
-    routes();
-    return (
-      <StoryProviders>
-        <SaveFilterModal
-          open
-          onClose={() => undefined}
-          tab="companies"
-          tree={newGroup("and", [newLeaf("industry", "eq", "Manufacturing")])}
-          initialKeep="list"
-          onSaved={() => undefined}
         />
       </StoryProviders>
     );

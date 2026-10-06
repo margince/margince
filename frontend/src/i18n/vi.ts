@@ -10851,7 +10851,7 @@ export const vi = {
   "filters.library.shared": "Được chia sẻ",
   "filters.library.views": "Chế độ xem đã lưu",
   "filters.library.kindView": "Chế độ xem đã lưu",
-  "filters.library.rowMore": "Thêm cho {name}",
+  "filters.library.rowMore": "Thao tác khác cho {name}",
   "filters.library.records.contact_one": "{count} liên hệ",
   "filters.library.records.contact_other": "{count} liên hệ",
   "filters.library.records.company_one": "{count} công ty",

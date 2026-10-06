@@ -43,7 +43,7 @@ function routes(list: List, listsOn = true) {
         match_count: 42,
         columns: ["id", "name", "industry"],
         rows: ROWS,
-        truncated: false,
+        truncated: true,
       }),
   });
 }
@@ -85,4 +85,16 @@ export const ListsOff: Story = { render: listFilter(liveList, false) };
 // view or a list of their own from, kept the way a new filter is.
 export const ReadOnlyList: Story = {
   render: listFilter({ ...liveList, can_edit: false }),
+};
+
+// Dark, on the two states that draw the most of the page: the notice, the
+// rows, the results, and "Save to" both waiting and ready.
+export const EditingAListFilterDark: Story = {
+  ...EditingAListFilter,
+  globals: { theme: "dark" },
+};
+
+export const ChangedDark: Story = {
+  ...Changed,
+  globals: { theme: "dark" },
 };

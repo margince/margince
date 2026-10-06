@@ -64,6 +64,10 @@ const previews = (seen: readonly Sent[]) =>
 
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+  Reflect.deleteProperty(URL, "createObjectURL");
+  Reflect.deleteProperty(URL, "revokeObjectURL");
   window.location.hash = "";
 });
 
@@ -422,12 +426,11 @@ describe("keeping and exporting", () => {
     expect(primary[0]?.textContent).toBe(SAVE);
   });
 
-  it("exports the filter on screen from More, under the name the server gave it", async () => {
-    const createObjectURL = vi.fn(() => "blob:test");
-    const revokeObjectURL = vi.fn();
+  /** A page whose export waits for `answer`, with the file it hands over caught. */
+  function mountHeldExport() {
     Object.defineProperties(URL, {
-      createObjectURL: { configurable: true, value: createObjectURL },
-      revokeObjectURL: { configurable: true, value: revokeObjectURL },
+      createObjectURL: { configurable: true, value: () => "blob:test" },
+      revokeObjectURL: { configurable: true, value: () => undefined },
     });
     const anchors: HTMLAnchorElement[] = [];
     vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (
@@ -443,15 +446,24 @@ describe("keeping and exporting", () => {
         answer = resolve;
       }),
     });
-    const user = userEvent.setup();
     render(<FiltersScreen id="contacts" />, { wrapper });
+    return { anchors, written, answer: () => answer() };
+  }
 
+  /** One complete condition, then More › Export CSV. */
+  async function exportCsv(user: ReturnType<typeof userEvent.setup>) {
     await user.click(await screen.findByRole("button", { name: ADD }));
     await user.type(screen.getByLabelText("Value"), "ann");
     await user.click(
       await screen.findByRole("button", { name: en["filters.footMore"] }),
     );
     await user.click(screen.getByRole("button", { name: "Export CSV" }));
+  }
+
+  it("exports the filter on screen from More, under the name the server gave it", async () => {
+    const { anchors, written, answer } = mountHeldExport();
+    const user = userEvent.setup();
+    await exportCsv(user);
 
     // The menu closed on the press, so the band is what says a file is coming.
     const exporting = await screen.findByText(en["filters.exporting"]);
@@ -470,6 +482,24 @@ describe("keeping and exporting", () => {
       format: "csv",
     });
     expect(anchors[0]?.download).toBe("contacts-slice.csv");
+  });
+
+  it("stops saying a file is coming once the filter on screen is not the one exported", async () => {
+    const { anchors, written, answer } = mountHeldExport();
+    const user = userEvent.setup();
+    await exportCsv(user);
+    expect(await screen.findByText(en["filters.exporting"])).toBeTruthy();
+
+    await user.type(screen.getByLabelText("Value"), "a");
+    expect(screen.getByText(en["filters.unsavedFilter"])).toBeTruthy();
+    expect(screen.queryByText(en["filters.exporting"])).toBeNull();
+
+    // The file still arrives, and it is the filter that asked for it.
+    answer();
+    await waitFor(() => expect(anchors).toHaveLength(1));
+    expect(written[0]?.body).toMatchObject({
+      filter: { and: [{ value: "ann" }] },
+    });
   });
 
   it("says so beside the footer when an export is refused", async () => {

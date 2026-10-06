@@ -58,6 +58,9 @@ export function importPathTo(
   entry: string,
   targets: ReadonlySet<string>,
 ): string[] | null {
+  if (targets.has(entry)) {
+    return [entry];
+  }
   const seen = new Set([entry]);
   const queue: string[][] = [[entry]];
   for (let trail = queue.shift(); trail; trail = queue.shift()) {
