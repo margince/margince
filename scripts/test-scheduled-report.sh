@@ -304,6 +304,24 @@ expect_split renovate RENOVATE_RESULT RENOVATE_OUTCOME quiet \
 	"the Renovate liveness check could not run" \
 	"Renovate has stopped running against main"
 
+# Renovate's measured verdict has two titles, and each is false once the other is
+# measured: a stalled bot is running, and a stopped one is not stalled. A STALLED
+# filed under "stopped" would send somebody to the Mend account over a bot that
+# works.
+renovate_open="$(printf '10\t%s\n20\t%s\n30\t%s\n' \
+	"the Renovate liveness check could not run" \
+	"Renovate has stopped running against main" \
+	"Renovate is running but opens no pull requests")"
+expect_actions "renovate/a stall retracts 'stopped' and files under its own title" \
+	"close 10,close 20,comment 30" "$renovate_open" \
+	RENOVATE_RESULT=failure RENOVATE_OUTCOME=quiet RENOVATE_STATUS=STALLED
+expect_actions "renovate/a stop retracts 'stalled' and files under its own title" \
+	"close 10,close 30,comment 20" "$renovate_open" \
+	RENOVATE_RESULT=failure RENOVATE_OUTCOME=quiet RENOVATE_STATUS=QUIET
+expect_actions "renovate/a live bot retracts all three" \
+	"close 10,close 20,close 30" "$renovate_open" \
+	RENOVATE_RESULT=success
+
 expect_split mobile MOBILE_RESULT MOBILE_OUTCOME breach \
 	"the weekly MOBILE-AC-2 run could not complete" \
 	"PERF-1's perceived budget is breaching on main"

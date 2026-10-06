@@ -190,7 +190,27 @@ elif [[ "${RENOVATE_RESULT:-}" = "success" ]] || [[ "${RENOVATE_OUTCOME:-}" = "q
   resolve "the Renovate liveness check could not run"
 fi
 
-if [[ "${RENOVATE_OUTCOME:-}" = "quiet" ]]; then
+# Two measured verdicts, two titles, because they send somebody to different
+# places: a stopped bot is a Mend account or installation question, a stalled
+# one is a question about the PRs it already opened. Each retracts the other.
+if [[ "${RENOVATE_OUTCOME:-}" = "quiet" ]] && [[ "${RENOVATE_STATUS:-}" = "STALLED" ]]; then
+  resolve "Renovate has stopped running against main"
+  report "Renovate is running but opens no pull requests" "priority: high,area: ci-tests,bug" \
+"The liveness check read \`STALLED\` on the scheduled run: $RUN_URL
+
+Renovate runs and rewrites its dashboard, but has opened no pull request within
+the budget while updates wait under **Rate-Limited** on it. Its open PRs fill
+\`prConcurrentLimit\` and none of them can merge, so nothing new is raised —
+\`lockFileMaintenance\` included, which is the only mechanism that adopts a fix
+for a lockfile-only transitive advisory.
+
+Find out why the open Renovate PRs cannot merge. A status check stuck at pending
+is the usual cause; \`renovate/stability-days\` never passes for an update with
+no release date unless \`minimumReleaseAgeBehaviour\` lets it through. A major
+never automerges and holds its slot until somebody closes or takes it."\
+    || unreported=1
+elif [[ "${RENOVATE_OUTCOME:-}" = "quiet" ]]; then
+  resolve "Renovate is running but opens no pull requests"
   report "Renovate has stopped running against main" "priority: high,area: ci-tests,bug" \
 "The liveness check read \`${RENOVATE_STATUS:-unknown}\` on the scheduled run:
 $RUN_URL
@@ -202,21 +222,19 @@ argues that at length. While the bot is quiet that mechanism is gone, and
 nothing else in this repository will say so: no lane reddens and no pull request
 is blocked.
 
-\`QUIET\` means it ran once and has not acted since. \`NO_DASHBOARD\` means it has
-never run here at all. For both, read the job history on the Mend portal
-(developer.mend.io) before anything on GitHub: jobs finishing with nothing here
-means the account is in Silent mode, no jobs means an installation problem. A bad
-\`renovate.json\` files a config-warning issue rather than going silent.
-
-\`STALLED\` means it runs but opens nothing: its open PRs fill
-\`prConcurrentLimit\` and the rest wait under Rate-Limited on the dashboard. Find
-out why those open PRs cannot merge — a status check stuck at pending is the
-usual cause.
+\`QUIET\` means it ran once and has not acted since. \`NO_DASHBOARD\` means no
+dashboard issue exists: first check that \`dependencyDashboard\` is not switched
+off in \`renovate.json\`, since that alone removes it. Otherwise, read the job
+history on the Mend portal (developer.mend.io) before anything on GitHub: jobs
+finishing with nothing here means the account is in Silent mode, no jobs means
+an installation problem. A bad \`renovate.json\` files a config-warning issue
+rather than going silent.
 
 The job log names the last act it could find and its date."\
     || unreported=1
 elif [[ "${RENOVATE_RESULT:-}" = "success" ]]; then
   resolve "Renovate has stopped running against main"
+  resolve "Renovate is running but opens no pull requests"
 fi
 
 if [[ "${LANE_RESULT:-}" = "failure" ]]; then
