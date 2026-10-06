@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
@@ -320,5 +321,140 @@ func TestAnAgentIsToldThePromiseIsTheUsersBeforeAnyWriteCheck(t *testing.T) {
 	}
 	if skip := out.Skipped[0]; skip.Code == nil || *skip.Code != "commitment_needs_the_user" {
 		t.Errorf("the promise was skipped as %+v, want commitment_needs_the_user", skip)
+	}
+}
+
+// worklistReader is Rep1 holding the given object grants at team scope.
+func worklistReader(grants map[string]principal.ObjectGrant) principal.Permissions {
+	return principal.Permissions{
+		RoleKeys: integration.SchedulerPerms.RoleKeys, Objects: grants,
+		RowScope: integration.SchedulerPerms.RowScope,
+	}
+}
+
+// An id that names no live task and no Worklist promise is left alone as
+// not_found: another kind of activity, an archived task, or nothing at all.
+func TestABulkCompletionFindsNothingThatIsNoWorklistItem(t *testing.T) {
+	e := integration.Setup(t)
+	contact := e.SeedContact(t, "Herr Vogt", &e.Rep1)
+	subject := "Thanks for the call"
+	email, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+		Kind: "email", Subject: &subject, Source: "manual",
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	archived := seedWorklistTask(t, e, contact, "Archived since")
+	if _, err := e.Activities.ArchiveActivity(e.Admin(), ids.From[ids.ActivityKind](ids.UUID(archived.Id)), nil); err != nil {
+		t.Fatal(err)
+	}
+	nothing := crmcontracts.BulkItem{Id: openapi_types.UUID(ids.NewV7()), Version: 1}
+	notATask := crmcontracts.BulkItem{Id: email.Id, Version: *email.Version}
+
+	out, err := bulkEngineFor(e).Execute(e.Admin(), completeItems(notATask, archived, nothing))
+	if err != nil || out.Changed != 0 {
+		t.Fatalf("execute → %+v, %v; want nothing changed", out, err)
+	}
+	assertReasons(t, "execute", skipReasons(out.Skipped), map[openapi_types.UUID]crmcontracts.BulkSkipReason{
+		notATask.Id: crmcontracts.BulkSkipReasonNotFound,
+		archived.Id: crmcontracts.BulkSkipReasonNotFound,
+		nothing.Id:  crmcontracts.BulkSkipReasonNotFound,
+	})
+}
+
+// A reader who may see a task or promise but not change it is told so per
+// row: one without the update grants, and a colleague in another team, who
+// reads every contact and task but changes only their team's.
+func TestABulkCompletionLeavesRowsTheReaderMayNotChange(t *testing.T) {
+	e := integration.Setup(t)
+	contact := e.SeedContact(t, "Frau Adler", &e.Rep1)
+	task := seedWorklistTask(t, e, contact, "Send the quote")
+	promise := seedWorklistPromise(t, e, contact, "Confirm the meeting")
+	engine := bulkEngineFor(e)
+
+	readOnly := e.As(e.Rep1, []ids.UUID{e.Team1}, worklistReader(map[string]principal.ObjectGrant{
+		"contact": {Read: true}, "activity": {Read: true},
+	}))
+	out, err := engine.Execute(readOnly, completeItems(task, promise))
+	if err != nil || out.Changed != 0 {
+		t.Fatalf("read-only execute → %+v, %v; want nothing changed", out, err)
+	}
+	assertReasons(t, "read-only", skipReasons(out.Skipped), map[openapi_types.UUID]crmcontracts.BulkSkipReason{
+		task.Id:    crmcontracts.BulkSkipReasonNotWritable,
+		promise.Id: crmcontracts.BulkSkipReasonNotWritable,
+	})
+
+	otherTeam := e.As(e.Rep3, []ids.UUID{e.Team2}, integration.SchedulerPerms)
+	out, err = engine.Execute(otherTeam, completeItems(task, promise))
+	if err != nil || out.Changed != 0 {
+		t.Fatalf("other team's execute → %+v, %v; want nothing changed", out, err)
+	}
+	assertReasons(t, "other team", skipReasons(out.Skipped), map[openapi_types.UUID]crmcontracts.BulkSkipReason{
+		task.Id:    crmcontracts.BulkSkipReasonNotWritable,
+		promise.Id: crmcontracts.BulkSkipReasonNotWritable,
+	})
+	if got := taskDoneState(t, e, task.Id); got != "false" {
+		t.Errorf("the task is done=%s, want it left open", got)
+	}
+}
+
+// A batch's stored skips name a task to its requester while they may read
+// activities, and stop naming it once they may not.
+func TestABatchNamesItsSkippedTasksOnlyWhileTheRequesterReadsThem(t *testing.T) {
+	e := integration.Setup(t)
+	contact := e.SeedContact(t, "Herr Lang", &e.Rep1)
+	open := seedWorklistTask(t, e, contact, "Call back")
+	finished := seedWorklistTask(t, e, contact, "Done already")
+	done := true
+	completed, err := e.Activities.UpdateActivity(e.Admin(), ids.From[ids.ActivityKind](ids.UUID(finished.Id)),
+		activities.UpdateActivityInput{IsDone: &done})
+	if err != nil {
+		t.Fatal(err)
+	}
+	finished.Version = *completed.Version
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.SchedulerPerms)
+	engine := bulkEngineFor(e)
+
+	out, err := engine.Execute(rep, completeItems(open, finished))
+	if err != nil || out.Changed != 1 {
+		t.Fatalf("execute → %+v, %v; want the open task done", out, err)
+	}
+	status, err := engine.Status(rep, ids.UUID(out.BatchId))
+	if err != nil || len(status.Skipped) != 1 || status.Skipped[0].Id != finished.Id {
+		t.Fatalf("status → %+v, %v; want the finished task named", status.Skipped, err)
+	}
+	noActivities := e.As(e.Rep1, []ids.UUID{e.Team1}, worklistReader(map[string]principal.ObjectGrant{
+		"contact": {Read: true, Update: true},
+	}))
+	status, err = engine.Status(noActivities, ids.UUID(out.BatchId))
+	if err != nil || len(status.Skipped) != 0 {
+		t.Fatalf("status without activity read → %+v, %v; want the task withheld", status.Skipped, err)
+	}
+}
+
+// The Worklist target answers a task and a promise as the rows a sample shows:
+// the task by its subject, the promise by its sentence, each at its version.
+func TestTheWorklistTargetLocksATaskAndAPromiseByTheirOwnWords(t *testing.T) {
+	e := integration.Setup(t)
+	contact := e.SeedContact(t, "Frau Keller", &e.Rep1)
+	task := seedWorklistTask(t, e, contact, "Send the quote")
+	promise := seedWorklistPromise(t, e, contact, "Confirm the delivery date")
+	target := bulkEngineFor(e).targets[crmcontracts.BulkRecordTypeWorklistItem]
+
+	for _, want := range []struct {
+		item  crmcontracts.BulkItem
+		label string
+	}{{task, "Send the quote"}, {promise, "Confirm the delivery date"}} {
+		err := e.DB().Tx(e.Admin(), func(tx pgx.Tx) error {
+			row, err := target.lock(e.Admin(), tx, ids.UUID(want.item.Id))
+			if err == nil && (row.label != want.label || row.version != want.item.Version) {
+				t.Errorf("locked %+v, want %q at version %d", row, want.label, want.item.Version)
+			}
+			return err
+		})
+		if err != nil {
+			t.Fatalf("locking %q: %v", want.label, err)
+		}
 	}
 }
