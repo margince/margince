@@ -50,14 +50,15 @@ func (h captureSettingsHandlers) UpdateCaptureSettings(w http.ResponseWriter, r 
 		return
 	}
 	settings, err := h.store.Update(r.Context(), capture.SettingsPatch{
-		AutoEnrich:           req.AutoEnrich,
-		MailSharing:          req.MailSharing,
-		SharedPostureAllowed: req.SharedPostureAllowed,
-		SignatureEnrich:      req.SignatureEnrich,
-		AutoEnrichDailyCap:   req.AutoEnrichDailyCap,
-		SiteReadMaxPages:     req.SiteReadMaxPages,
-		SiteReadMaxMiB:       req.SiteReadMaxMib,
-		SiteReadWallSeconds:  req.SiteReadWallSeconds,
+		AutoEnrich:              req.AutoEnrich,
+		MailSharing:             req.MailSharing,
+		SharedPostureAllowed:    req.SharedPostureAllowed,
+		SignatureEnrich:         req.SignatureEnrich,
+		AutoEnrichDailyCap:      req.AutoEnrichDailyCap,
+		SiteReadMaxPages:        req.SiteReadMaxPages,
+		SiteReadMaxMiB:          req.SiteReadMaxMib,
+		SiteReadWallSeconds:     req.SiteReadWallSeconds,
+		MailSyncIntervalSeconds: req.MailSyncIntervalSeconds,
 	})
 	if err != nil {
 		httperr.Write(w, r, err)
@@ -79,5 +80,6 @@ func toContractCaptureSettings(s capture.Settings) crmcontracts.CaptureSettings 
 			MaxMib:      s.SiteRead.MaxMiB,
 			WallSeconds: s.SiteRead.WallSeconds,
 		},
+		MailSyncIntervalSeconds: s.MailSyncIntervalSeconds,
 	}
 }

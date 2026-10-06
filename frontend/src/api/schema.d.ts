@@ -18982,6 +18982,7 @@ export interface components {
              *     they were issued with.
              */
             oauth_access_token_ttl_minutes: number;
+            operations: components["schemas"]["OperationSettings"];
             /**
              * @description How far back the maintenance banner looks before it calls dead work a problem, in
              *     hours. 24 by default, bounded above by River's own seven-day retention — a window
@@ -19093,6 +19094,36 @@ export interface components {
             };
             /** @description Set how long a connector's access token lives, in minutes. Reaches the next token minted. */
             oauth_access_token_ttl_minutes?: number;
+            /** @description Set the value `OperationSettings.agent_runner_interval_seconds` describes. */
+            agent_runner_interval_seconds?: number;
+            /** @description Set the value `OperationSettings.webhook_retry_interval_seconds` describes. */
+            webhook_retry_interval_seconds?: number;
+            /** @description Set the value `OperationSettings.time_scan_interval_seconds` describes. */
+            time_scan_interval_seconds?: number;
+            /** @description Set the value `OperationSettings.close_date_sweep_interval_seconds` describes. */
+            close_date_sweep_interval_seconds?: number;
+            /** @description Set the value `OperationSettings.follow_up_reconcile_interval_seconds` describes. */
+            follow_up_reconcile_interval_seconds?: number;
+            /** @description Set the value `OperationSettings.retention_sweep_interval_seconds` describes. */
+            retention_sweep_interval_seconds?: number;
+            /** @description Set the value `OperationSettings.geocode_backfill_interval_seconds` describes. */
+            geocode_backfill_interval_seconds?: number;
+            /** @description Set the value `OperationSettings.technical_backfill_interval_seconds` describes. */
+            technical_backfill_interval_seconds?: number;
+            /** @description Set the value `OperationSettings.gmail_watch_scan_interval_seconds` describes. */
+            gmail_watch_scan_interval_seconds?: number;
+            /** @description Set the value `OperationSettings.graph_watch_scan_interval_seconds` describes. */
+            graph_watch_scan_interval_seconds?: number;
+            /** @description Set the value `OperationSettings.gmail_watch_renew_within_hours` describes. */
+            gmail_watch_renew_within_hours?: number;
+            /** @description Set the value `OperationSettings.graph_watch_renew_within_hours` describes. */
+            graph_watch_renew_within_hours?: number;
+            /** @description Set the value `OperationSettings.send_rate_limit` describes. */
+            send_rate_limit?: number;
+            /** @description Set the value `OperationSettings.send_rate_window_seconds` describes. */
+            send_rate_window_seconds?: number;
+            /** @description Set the value `OperationSettings.send_max_age_hours` describes. */
+            send_max_age_hours?: number;
             /**
              * @description How far back the maintenance banner looks before it calls dead work a problem, in
              *     hours. 24 by default, bounded above by River's own seven-day retention — a window
@@ -19367,6 +19398,11 @@ export interface components {
              */
             auto_enrich_daily_cap: number;
             site_read: components["schemas"]["SiteReadLimits"];
+            /**
+             * @description How long a mailbox waits after a successful sync before the next one, in seconds.
+             *     Applies from each mailbox's next sync. Default 120.
+             */
+            mail_sync_interval_seconds: number;
             /**
              * @description The workspace's capture-sharing posture, ON by default: captured correspondence is
              *     readable by every colleague who can see the contact. Switched OFF, everything captured
@@ -20033,6 +20069,43 @@ export interface components {
             /** @description Seconds one crawl may run before it stops and extracts what it has. Default 240. */
             wall_seconds: number;
         };
+        /**
+         * @description The worker's operating values: how often each background pass runs, how far ahead a
+         *     mailbox subscription is renewed, and how fast one mailbox sends. A running worker reads
+         *     them again within a minute of a change, so none needs a restart.
+         */
+        OperationSettings: {
+            /** @description How often scheduled agents are checked for a run that is due, in seconds. Default 30. */
+            agent_runner_interval_seconds: number;
+            /** @description How often failed webhook deliveries are retried, in seconds. Default 30. */
+            webhook_retry_interval_seconds: number;
+            /** @description How often time-based automation rules are checked, in seconds. Default 3600. */
+            time_scan_interval_seconds: number;
+            /** @description How often deals whose close date has passed are flagged, in seconds. Default 86400. */
+            close_date_sweep_interval_seconds: number;
+            /** @description How often stalled deals are checked for a follow-up to propose, in seconds. Default 86400. */
+            follow_up_reconcile_interval_seconds: number;
+            /** @description How often data past its retention period is removed, in seconds. Default 86400. It cannot be switched off. */
+            retention_sweep_interval_seconds: number;
+            /** @description How often addresses without coordinates are looked up, in seconds, from 300; 0 switches the sweep off. Default 3600. */
+            geocode_backfill_interval_seconds: number;
+            /** @description How often company domains without technical facts are looked up, in seconds, from 300; 0 switches the sweep off. Default 21600. */
+            technical_backfill_interval_seconds: number;
+            /** @description How often Gmail push subscriptions are checked for renewal, in seconds. Default 21600. */
+            gmail_watch_scan_interval_seconds: number;
+            /** @description How often Microsoft 365 mail subscriptions are checked for renewal, in seconds. Default 21600. */
+            graph_watch_scan_interval_seconds: number;
+            /** @description How far ahead of expiry a Gmail push subscription is renewed, in hours. A watch lasts seven days. Default 48. */
+            gmail_watch_renew_within_hours: number;
+            /** @description How far ahead of expiry a Microsoft 365 mail subscription is renewed, in hours. A subscription lasts just under three days. Default 24. */
+            graph_watch_renew_within_hours: number;
+            /** @description How many messages one mailbox may send per window. A burst bound, not a quota. Default 30. */
+            send_rate_limit: number;
+            /** @description The window the send rate is counted over, in seconds. Default 60. */
+            send_rate_window_seconds: number;
+            /** @description How long a delivery held back by the send rate may wait before it stops with a reason, in hours. Default 24. */
+            send_max_age_hours: number;
+        };
         /** @description A sparse capture-settings patch (admin/ops). */
         UpdateCaptureSettingsRequest: {
             /** @description Toggle captured-company auto-enrichment. */
@@ -20045,6 +20118,8 @@ export interface components {
             site_read_max_mib?: number;
             /** @description Set the time limit of one website crawl, in seconds. */
             site_read_wall_seconds?: number;
+            /** @description Set how long a mailbox waits between syncs, in seconds. */
+            mail_sync_interval_seconds?: number;
             /** @description Toggle the workspace mail-sharing posture; affects correspondence captured from now on — mail, and chat on a transport whose credential belongs to one member. */
             mail_sharing?: boolean;
             /** @description Toggle the tenant-wide default for reading contact details out of captured mail — its signature and any attached vCard. A mailbox that set its own switch keeps it. */

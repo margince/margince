@@ -9440,6 +9440,68 @@ export const vi = {
   "agentConnections.ttl.refusal":
     "Nhập một số nguyên từ 5 đến 129.600 cho số phút.",
   "agentConnections.updateFailed": "Chưa thay đổi cài đặt",
+  "operations.schedules.title": "Lịch chạy nền",
+  "operations.schedules.sub":
+    "Tần suất chạy của từng tác vụ nền. Worker đang chạy nhận thay đổi trong vòng một phút: tác vụ chạy một lần ngay rồi tiếp tục theo khoảng mới.",
+  "operations.pacing.title": "Nhịp gửi thư",
+  "operations.pacing.sub":
+    "Tốc độ gửi tối đa của một hộp thư. Thay đổi áp dụng từ lần gửi tiếp theo.",
+  "operations.adminOnly":
+    "Chỉ quản trị viên hoặc vận hành mới đổi được mục này.",
+  "operations.updateFailed": "Chưa thay đổi cài đặt",
+  "operations.refusal": "Nhập một số nguyên trong khoảng đã nêu.",
+  "operations.agentRunner.label": "Lượt chạy agent (giây)",
+  "operations.agentRunner.help":
+    "Tần suất kiểm tra các agent đã lên lịch có đến lượt chạy, 10 đến 3.600.",
+  "operations.webhookRetry.label": "Thử lại webhook (giây)",
+  "operations.webhookRetry.help":
+    "Tần suất gửi lại các webhook bị lỗi, 10 đến 3.600.",
+  "operations.timeScan.label": "Tự động hóa theo thời gian (giây)",
+  "operations.timeScan.help":
+    "Tần suất kiểm tra các quy tắc kích hoạt theo thời gian, 60 đến 86.400.",
+  "operations.closeDate.label": "Ngày chốt quá hạn (giây)",
+  "operations.closeDate.help":
+    "Tần suất đánh dấu các deal đã quá ngày chốt, 3.600 đến 604.800.",
+  "operations.followUp.label": "Đề xuất follow-up (giây)",
+  "operations.followUp.help":
+    "Tần suất kiểm tra các deal bị chững lại để đề xuất follow-up, 3.600 đến 604.800.",
+  "operations.retention.label": "Lưu giữ dữ liệu (giây)",
+  "operations.retention.help":
+    "Tần suất xóa dữ liệu đã quá thời hạn lưu giữ, 3.600 đến 604.800. Không thể tắt.",
+  "operations.geocode.label": "Tra cứu địa chỉ (giây)",
+  "operations.geocode.help":
+    "Tần suất tra cứu các địa chỉ chưa có tọa độ, 300 đến 604.800, hoặc 0 để tắt.",
+  "operations.technical.label": "Tra cứu kỹ thuật (giây)",
+  "operations.technical.help":
+    "Tần suất tra cứu các tên miền công ty chưa có thông tin kỹ thuật, 300 đến 604.800, hoặc 0 để tắt.",
+  "operations.gmailWatchScan.label": "Kiểm tra push Gmail (giây)",
+  "operations.gmailWatchScan.help":
+    "Tần suất kiểm tra các đăng ký push Gmail cần gia hạn, 600 đến 43.200.",
+  "operations.graphWatchScan.label": "Kiểm tra push Microsoft 365 (giây)",
+  "operations.graphWatchScan.help":
+    "Tần suất kiểm tra các đăng ký thư Microsoft 365 cần gia hạn, 600 đến 43.200.",
+  "operations.gmailWatchRenew.label": "Gia hạn Gmail trước (giờ)",
+  "operations.gmailWatchRenew.help":
+    "Gia hạn đăng ký Gmail bao lâu trước khi hết hạn sau 7 ngày, 24 đến 144.",
+  "operations.graphWatchRenew.label": "Gia hạn Microsoft 365 trước (giờ)",
+  "operations.graphWatchRenew.help":
+    "Gia hạn đăng ký Microsoft 365 bao lâu trước khi hết hạn sau 3 ngày, 24 đến 60.",
+  "operations.sendRateLimit.label": "Số thư mỗi khung thời gian",
+  "operations.sendRateLimit.help":
+    "Số thư tối đa một hộp thư được gửi trong một khung thời gian, 1 đến 1.000.",
+  "operations.sendRateWindow.label": "Khung thời gian (giây)",
+  "operations.sendRateWindow.help":
+    "Khung thời gian dùng để đếm số thư, 10 đến 3.600.",
+  "operations.sendMaxAge.label": "Thời gian chờ tối đa (giờ)",
+  "operations.sendMaxAge.help":
+    "Thư bị giữ lại được chờ bao lâu trước khi dừng kèm lý do, 1 đến 168.",
+  "captureMailSync.title": "Đồng bộ thư",
+  "captureMailSync.sub":
+    "Tần suất kiểm tra thư mới của từng hộp thư đã kết nối.",
+  "captureMailSync.interval.label": "Khoảng đồng bộ (giây)",
+  "captureMailSync.interval.help":
+    "Thời gian giữa hai lần đồng bộ của một hộp thư, 30 đến 3.600. Thay đổi áp dụng từ lần đồng bộ tiếp theo của mỗi hộp thư.",
+  "captureMailSync.interval.refusal": "Nhập số giây nguyên từ 30 đến 3.600.",
   "captureSettings.adminOnly":
     "Chỉ quản trị viên hoặc vận hành mới đổi được mục này.",
 

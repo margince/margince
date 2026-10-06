@@ -33,6 +33,8 @@ type Settings struct {
 	SharedPostureAllowed bool
 	AutoEnrichDailyCap   int
 	SiteRead             SiteReadLimits
+	// MailSyncIntervalSeconds is how long a mailbox waits between syncs.
+	MailSyncIntervalSeconds int
 }
 
 // SiteReadLimits is what one deep read may fetch (settingssiteread.go).
@@ -49,14 +51,15 @@ type SiteReadLimits struct {
 // transposed two would compile, pass every test that does not happen to set
 // both, and silently switch mail sharing when it meant to switch enrichment.
 type SettingsPatch struct {
-	AutoEnrich           *bool
-	MailSharing          *bool
-	SharedPostureAllowed *bool
-	SignatureEnrich      *bool
-	AutoEnrichDailyCap   *int
-	SiteReadMaxPages     *int
-	SiteReadMaxMiB       *int
-	SiteReadWallSeconds  *int
+	AutoEnrich              *bool
+	MailSharing             *bool
+	SharedPostureAllowed    *bool
+	SignatureEnrich         *bool
+	AutoEnrichDailyCap      *int
+	SiteReadMaxPages        *int
+	SiteReadMaxMiB          *int
+	SiteReadWallSeconds     *int
+	MailSyncIntervalSeconds *int
 }
 
 // SettingsStore is the store over the workspace capture posture.
@@ -87,25 +90,25 @@ func (s *SettingsStore) Get(ctx context.Context) (Settings, error) {
 		}
 		*f.into = value
 	}
-	dailyCap, err := s.dailyCap(ctx)
-	if err != nil {
-		return Settings{}, err
+	for _, f := range []struct {
+		into  *int
+		entry *settings.Entry[int]
+	}{
+		{&out.AutoEnrichDailyCap, AutoEnrichDailyCap},
+		{&out.MailSyncIntervalSeconds, MailSyncIntervalSeconds},
+	} {
+		value, err := settings.Get(ctx, s.settings, f.entry)
+		if err != nil {
+			return Settings{}, fmt.Errorf("capture: reading settings: %w", err)
+		}
+		*f.into = value
 	}
 	limits, err := s.SiteReadLimits(ctx)
 	if err != nil {
 		return Settings{}, err
 	}
-	out.AutoEnrichDailyCap, out.SiteRead = dailyCap, limits
+	out.SiteRead = limits
 	return out, nil
-}
-
-// dailyCap reads the automatic-read ceiling.
-func (s *SettingsStore) dailyCap(ctx context.Context) (int, error) {
-	dailyCap, err := settings.Get(ctx, s.settings, AutoEnrichDailyCap)
-	if err != nil {
-		return 0, fmt.Errorf("capture: reading the daily read cap: %w", err)
-	}
-	return dailyCap, nil
 }
 
 // SiteReadLimits reads the per-read limits, which the deep-read worker takes
@@ -193,6 +196,7 @@ func (s *SettingsStore) Update(ctx context.Context, patch SettingsPatch) (Settin
 			{patch.SiteReadMaxPages, SiteReadMaxPages},
 			{patch.SiteReadMaxMiB, SiteReadMaxMiB},
 			{patch.SiteReadWallSeconds, SiteReadWallSeconds},
+			{patch.MailSyncIntervalSeconds, MailSyncIntervalSeconds},
 		} {
 			if f.want == nil {
 				continue
