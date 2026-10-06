@@ -7,7 +7,8 @@ import { api } from "../api/client";
 import { Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
-import { useT } from "../i18n";
+import { formatNumber, identifierNumber } from "../format/format";
+import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { CaptureNotice } from "./capture-notice";
 import { problemCodeOf, problemMessageOf, throwProblem } from "./common";
@@ -99,6 +100,7 @@ export function ImapMailboxForm({
   renderActions?: (actions: ReactNode) => ReactNode;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const formId = useId();
   const queryClient = useQueryClient();
   const [host, setHost] = useState("");
@@ -167,11 +169,15 @@ export function ImapMailboxForm({
   const ready = missing.length === 0 && outOfRange.length === 0;
   const needed = (absent: boolean) =>
     attempted && absent ? t("connectors.imapNeeded") : undefined;
-  const ranged = (fits: boolean, range: Range) =>
+  const ranged = (
+    fits: boolean,
+    range: Range,
+    written: (bound: number) => string,
+  ) =>
     attempted && !fits
       ? t("connectors.imapRange", {
-          min: String(range.min),
-          max: String(range.max),
+          min: written(range.min),
+          max: written(range.max),
         })
       : undefined;
   const refusal =
@@ -258,7 +264,7 @@ export function ImapMailboxForm({
           </Field>
           <Field
             label={t("connectors.imapPort")}
-            error={ranged(portInRange, PORT_RANGE)}
+            error={ranged(portInRange, PORT_RANGE, identifierNumber)}
           >
             {(control) => (
               <TextInput
@@ -312,7 +318,9 @@ export function ImapMailboxForm({
           </Field>
           <Field
             label={t("connectors.imapMaxMessages")}
-            error={ranged(maxInRange, MAX_MESSAGES_RANGE)}
+            error={ranged(maxInRange, MAX_MESSAGES_RANGE, (count) =>
+              formatNumber(count, locale),
+            )}
           >
             {(control) => (
               <TextInput
