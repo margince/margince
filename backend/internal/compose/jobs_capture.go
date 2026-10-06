@@ -11,6 +11,7 @@ package compose
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -23,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/platform/jobs"
+	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -497,4 +499,22 @@ type graphWatchRenewWorker struct {
 
 func (w *graphWatchRenewWorker) Work(ctx context.Context, job *river.Job[GraphWatchRenewArgs]) error {
 	return jobs.FaultContext(ctx, renewOneWatch(ctx, w.registry, job.Args, job.Args.ConnectionID, w.notificationURL))
+}
+
+// renewWithinOf reads how far ahead of expiry a watch scan renews, at the
+// start of the scan, so a changed margin applies to the next one.
+func renewWithinOf(ctx context.Context, pool *pgxpool.Pool, entry *settings.Entry[int]) (time.Duration, error) {
+	read, err := installationSettingReader(ctx, pool)
+	if err != nil {
+		return 0, err
+	}
+	raw, err := read(entry.Key())
+	if err != nil {
+		return 0, fmt.Errorf("compose: reading %s: %w", entry.Key(), err)
+	}
+	var hours int
+	if err := json.Unmarshal(raw, &hours); err != nil {
+		return 0, fmt.Errorf("compose: %s does not hold whole hours: %w", entry.Key(), err)
+	}
+	return time.Duration(hours) * time.Hour, nil
 }

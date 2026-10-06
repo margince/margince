@@ -8,21 +8,8 @@ package identity
 // the start of every delivery, so a change applies to the next send.
 
 import (
-	"fmt"
-
 	"github.com/margince/margince/backend/internal/platform/settings"
 )
-
-// boundedInt declares an installation-wide whole number held to lowest..highest.
-func boundedInt(key, unit string, def, lowest, highest int) *settings.Entry[int] {
-	return settings.Define[int](key, installationSettingsObject, "update", def,
-		func(value int) error {
-			if value < lowest || value > highest {
-				return fmt.Errorf("choose %d..%d %s, not %d", lowest, highest, unit, value)
-			}
-			return nil
-		})
-}
 
 var (
 	// The rate is a burst bound, not a quota: Gmail enforces its own daily cap

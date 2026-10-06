@@ -59,9 +59,9 @@ type operationField struct {
 	into  *int
 }
 
-// fields pairs every value with its setting. TestEveryOperationFieldIsPaired
-// holds both lists to the structs above, so a value added there cannot be
-// left unread or unsaved.
+// fields pairs every value with its setting. installationoperations_test.go
+// holds this list and writes() to the structs above, so a value added there
+// cannot be left unread or unsaved.
 func (o *OperationSettings) fields() []operationField {
 	return []operationField{
 		{AgentRunnerIntervalSeconds, &o.AgentRunnerIntervalSeconds},

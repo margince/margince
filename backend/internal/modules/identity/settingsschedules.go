@@ -22,20 +22,25 @@ import (
 	"github.com/margince/margince/backend/internal/platform/settings"
 )
 
+// boundedInt declares an installation-wide whole number held to lowest..highest.
+func boundedInt(key, unit string, def, lowest, highest int) *settings.Entry[int] {
+	return settings.Define[int](key, installationSettingsObject, "update", def, settings.Between(unit, lowest, highest))
+}
+
 // scheduleSeconds declares one pass interval in whole seconds. allowOff admits
 // zero as "switched off" beside the range.
 func scheduleSeconds(key string, def time.Duration, lowest, highest time.Duration, allowOff bool) *settings.Entry[int] {
+	inRange := settings.Between("seconds", int(lowest/time.Second), int(highest/time.Second))
 	return settings.Define[int](key, installationSettingsObject, "update", int(def/time.Second),
 		func(seconds int) error {
 			if allowOff && seconds == 0 {
 				return nil
 			}
-			if seconds < int(lowest/time.Second) || seconds > int(highest/time.Second) {
-				off := ""
+			if err := inRange(seconds); err != nil {
 				if allowOff {
-					off = ", or 0 for off"
+					return fmt.Errorf("%w, or 0 for off", err)
 				}
-				return fmt.Errorf("choose %d..%d seconds%s, not %d", int(lowest/time.Second), int(highest/time.Second), off, seconds)
+				return err
 			}
 			return nil
 		})

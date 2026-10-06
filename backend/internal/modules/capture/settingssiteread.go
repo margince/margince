@@ -11,11 +11,7 @@ package capture
 // one transaction under the one `capture_settings` gate the auto-enrich switch
 // already takes.
 
-import (
-	"fmt"
-
-	"github.com/margince/margince/backend/internal/platform/settings"
-)
+import "github.com/margince/margince/backend/internal/platform/settings"
 
 // The defaults and ceilings, exported for the readers that size something
 // against them: the deep-read job timeout is computed from the HIGHEST wall an
@@ -46,7 +42,7 @@ const (
 // not to bound cost — at 20,000 the worker pool, not this number, is the limit.
 var AutoEnrichDailyCap = settings.Define[int](
 	"capture.auto_enrich_daily_cap", captureSettingsObject, "update",
-	DefaultAutoEnrichDailyCap, between("reads a day", 1, MaxAutoEnrichDailyCap),
+	DefaultAutoEnrichDailyCap, settings.Between("reads a day", 1, MaxAutoEnrichDailyCap),
 )
 
 // SiteReadMaxPages bounds how many pages one deep read fetches. An automatic
@@ -54,7 +50,7 @@ var AutoEnrichDailyCap = settings.Define[int](
 // for may reach.
 var SiteReadMaxPages = settings.Define[int](
 	"capture.site_read_max_pages", captureSettingsObject, "update",
-	DefaultSiteReadMaxPages, between("pages", 1, MaxSiteReadMaxPages),
+	DefaultSiteReadMaxPages, settings.Between("pages", 1, MaxSiteReadMaxPages),
 )
 
 // SiteReadMaxMiB bounds the bytes one deep read holds, summed over its pages.
@@ -62,26 +58,15 @@ var SiteReadMaxPages = settings.Define[int](
 // memory for crawling.
 var SiteReadMaxMiB = settings.Define[int](
 	"capture.site_read_max_mib", captureSettingsObject, "update",
-	DefaultSiteReadMaxMiB, between("MiB", 1, MaxSiteReadMaxMiB),
+	DefaultSiteReadMaxMiB, settings.Between("MiB", 1, MaxSiteReadMaxMiB),
 )
 
 // SiteReadWallSeconds is how long one crawl may run before it stops and
 // extracts what it has.
 var SiteReadWallSeconds = settings.Define[int](
 	"capture.site_read_wall_seconds", captureSettingsObject, "update",
-	DefaultSiteReadWallSeconds, between("seconds", MinSiteReadWallSeconds, MaxSiteReadWallSeconds),
+	DefaultSiteReadWallSeconds, settings.Between("seconds", MinSiteReadWallSeconds, MaxSiteReadWallSeconds),
 )
-
-// between is the range validator the four limits share; the unit names the
-// number in the refusal an admin reads.
-func between(unit string, lowest, highest int) func(int) error {
-	return func(n int) error {
-		if n < lowest || n > highest {
-			return fmt.Errorf("choose %d..%d %s, not %d", lowest, highest, unit, n)
-		}
-		return nil
-	}
-}
 
 // MailSyncIntervalSeconds is how long a healthy mailbox connection waits
 // between polls. Push notifications, where a mailbox has them, make this the
@@ -90,7 +75,7 @@ func between(unit string, lowest, highest int) func(int) error {
 // limit, at most an hour so a mailbox without push still feels live.
 var MailSyncIntervalSeconds = settings.Define[int](
 	"capture.mail_sync_interval_seconds", captureSettingsObject, "update",
-	DefaultMailSyncIntervalSeconds, between("seconds", 30, 3600),
+	DefaultMailSyncIntervalSeconds, settings.Between("seconds", 30, 3600),
 ).MachineryApplied() // the sync applies it to the next_sync_at it writes
 
 // DefaultMailSyncIntervalSeconds is a healthy connection's poll interval when

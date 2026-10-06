@@ -10,6 +10,7 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"maps"
@@ -22,7 +23,6 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/platform/jobs"
-	"github.com/margince/margince/backend/internal/platform/settings"
 )
 
 // scheduleReadActor attributes the worker's reads of its own schedules.
@@ -85,11 +85,11 @@ func scheduleSettings() []string {
 func DefaultSchedules() *ScheduleBook {
 	values := map[string]time.Duration{}
 	for _, key := range scheduleSettings() {
-		raw, err := settingDefault(key)
+		value, err := scheduleValue(key, settingDefault)
 		if err != nil {
-			panic("compose: " + err.Error())
+			panic(err.Error())
 		}
-		values[key] = scheduleValue(key, raw)
+		values[key] = value
 	}
 	return newScheduleBook(values)
 }
@@ -121,26 +121,35 @@ func ReadSchedules(ctx context.Context, pool *pgxpool.Pool) (*ScheduleBook, erro
 }
 
 func readScheduleValues(ctx context.Context, pool *pgxpool.Pool) (map[string]time.Duration, error) {
-	ws, err := singletonWorkspace(ctx, pool)
+	read, err := installationSettingReader(ctx, pool)
 	if err != nil {
 		return nil, err
 	}
 	values := map[string]time.Duration{}
-	store := NewSettingsStore(pool)
-	readCtx := bootCtx(ctx, ws, scheduleReadActor)
 	for _, key := range scheduleSettings() {
-		var raw json.RawMessage
-		if ws.IsZero() {
-			raw, err = settingDefault(key)
-		} else {
-			raw, err = store.Raw(readCtx, key)
-		}
+		value, err := scheduleValue(key, read)
 		if err != nil {
-			return nil, fmt.Errorf("compose: reading the schedule %s: %w", key, err)
+			return nil, err
 		}
-		values[key] = scheduleValue(key, raw)
+		values[key] = value
 	}
 	return values, nil
+}
+
+// installationSettingReader reads installation settings by key as the worker,
+// on the installation's one workspace. An installation not yet provisioned has
+// no workspace to read under and answers every key with its default, which is
+// what it would read anyway.
+func installationSettingReader(ctx context.Context, pool *pgxpool.Pool) (func(key string) (json.RawMessage, error), error) {
+	ws, err := singletonWorkspace(ctx, pool)
+	if err != nil {
+		return nil, err
+	}
+	if ws.IsZero() {
+		return settingDefault, nil
+	}
+	store, readCtx := NewSettingsStore(pool), bootCtx(ctx, ws, scheduleReadActor)
+	return func(key string) (json.RawMessage, error) { return store.Raw(readCtx, key) }, nil
 }
 
 // settingDefault is a registered setting's default, by key.
@@ -150,18 +159,23 @@ func settingDefault(key string) (json.RawMessage, error) {
 			return def.DefaultJSON()
 		}
 	}
-	return nil, fmt.Errorf("api/jobs.yaml schedules from %s, which no module registers as a setting", key)
+	return nil, fmt.Errorf("compose: %s is not a registered setting", key)
 }
 
-// scheduleValue reads a schedule setting's stored whole seconds. Every schedule
+// scheduleValue reads a schedule setting's whole seconds. Every schedule
 // setting is an int of seconds, which TestEveryScheduleSettingDefaultsToWholeSeconds
-// and each setting's validator hold.
-func scheduleValue(key string, raw json.RawMessage) time.Duration {
+// and each setting's validator hold, so a value that does not decode is a
+// stored row nobody wrote through the settings surface.
+func scheduleValue(key string, read func(string) (json.RawMessage, error)) (time.Duration, error) {
+	raw, err := read(key)
+	if err != nil {
+		return 0, fmt.Errorf("compose: reading the schedule %s: %w", key, err)
+	}
 	var seconds int
 	if err := json.Unmarshal(raw, &seconds); err != nil {
-		panic("compose: the schedule setting " + key + " does not hold whole seconds: " + err.Error())
+		return 0, fmt.Errorf("compose: the schedule setting %s does not hold whole seconds: %w", key, err)
 	}
-	return time.Duration(seconds) * time.Second
+	return time.Duration(seconds) * time.Second, nil
 }
 
 // schedule builds the periodic job for one setting-driven kind and records it,
@@ -191,24 +205,38 @@ var _ periodicRegistry = (*jobs.Runner)(nil)
 // apply moves every schedule whose setting changed to its new value. A kind is
 // taken off River's list and put back, so it runs once now and then on the new
 // interval, rather than waiting out the run the old one had already planned;
-// one switched to zero is only taken off.
+// one switched to zero is only taken off. A setting whose kinds could not be
+// put back keeps its old value in the book, so the next check sees the change
+// again and retries it.
 func (b *ScheduleBook) apply(values map[string]time.Duration, runner periodicRegistry) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	var moved []string
-	for key, value := range values {
-		if live, known := b.intervals[key]; known && live.get() != value {
-			live.nanos.Store(int64(value))
-			moved = append(moved, key)
+	var failed []error
+	for _, key := range slices.Sorted(maps.Keys(values)) {
+		live, known := b.intervals[key]
+		if !known || live.get() == values[key] {
+			continue
+		}
+		old := live.get()
+		live.nanos.Store(int64(values[key]))
+		if err := b.reregister(key, runner); err != nil {
+			live.nanos.Store(int64(old))
+			failed = append(failed, err)
 		}
 	}
+	return errors.Join(failed...)
+}
+
+// reregister takes every kind scheduled from one setting off River and puts
+// back the ones whose interval is still positive.
+func (b *ScheduleBook) reregister(key string, runner periodicRegistry) error {
 	for _, kind := range slices.Sorted(maps.Keys(b.kinds)) {
 		entry := b.kinds[kind]
-		if !slices.Contains(moved, entry.setting) {
+		if entry.setting != key {
 			continue
 		}
 		runner.RemovePeriodic(kind)
-		if b.intervals[entry.setting].get() <= 0 {
+		if b.intervals[key].get() <= 0 {
 			continue
 		}
 		if err := runner.AddPeriodic(entry.job); err != nil {
@@ -231,25 +259,12 @@ func (b *ScheduleBook) Watch(ctx context.Context, pool *pgxpool.Pool, runner per
 		case <-ticker.C:
 		}
 		values, err := readScheduleValues(ctx, pool)
-		if err == nil {
-			err = b.apply(values, runner)
-		}
 		if err != nil {
-			log.WarnContext(ctx, "schedules: could not apply a changed schedule; the current ones keep running", "err", err)
+			log.WarnContext(ctx, "schedules: could not read the schedule settings; the current schedules keep running", "err", err)
+			continue
+		}
+		if err := b.apply(values, runner); err != nil {
+			log.WarnContext(ctx, "schedules: a changed schedule could not be put back on the runner; that job is off until the next check retries it", "err", err)
 		}
 	}
-}
-
-// renewWithinOf reads how far ahead of expiry a watch scan renews, at the
-// start of the scan, so a changed margin applies to the next one.
-func renewWithinOf(ctx context.Context, pool *pgxpool.Pool, entry *settings.Entry[int]) (time.Duration, error) {
-	ws, err := singletonWorkspace(ctx, pool)
-	if err != nil {
-		return 0, err
-	}
-	hours, err := settings.Get(bootCtx(ctx, ws, scheduleReadActor), NewSettingsStore(pool), entry)
-	if err != nil {
-		return 0, fmt.Errorf("compose: reading %s: %w", entry.Key(), err)
-	}
-	return time.Duration(hours) * time.Hour, nil
 }

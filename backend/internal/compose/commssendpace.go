@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/comms"
@@ -29,19 +30,30 @@ type sendPace struct {
 }
 
 // readSendPace reads the pace under the delivery's own scope: the worker's
-// system principal on the job's workspace.
+// system principal on the job's workspace. One transaction, so an admin's save
+// that moves the rate and its window together is never read half applied —
+// every new pace rebuilds the dispatcher and starts every mailbox's count again.
 func readSendPace(ctx context.Context, store *settings.Store) (sendPace, error) {
-	limit, err := settings.Get(ctx, store, identity.SendRateLimit)
+	var limit, windowSeconds, maxAgeHours int
+	err := store.WriteTx(ctx, func(tx pgx.Tx) error {
+		for _, f := range []struct {
+			into  *int
+			entry *settings.Entry[int]
+		}{
+			{&limit, identity.SendRateLimit},
+			{&windowSeconds, identity.SendRateWindowSeconds},
+			{&maxAgeHours, identity.SendMaxAgeHours},
+		} {
+			value, err := settings.GetTx(ctx, tx, f.entry)
+			if err != nil {
+				return err
+			}
+			*f.into = value
+		}
+		return nil
+	})
 	if err != nil {
-		return sendPace{}, fmt.Errorf("compose: reading the send rate: %w", err)
-	}
-	windowSeconds, err := settings.Get(ctx, store, identity.SendRateWindowSeconds)
-	if err != nil {
-		return sendPace{}, fmt.Errorf("compose: reading the send window: %w", err)
-	}
-	maxAgeHours, err := settings.Get(ctx, store, identity.SendMaxAgeHours)
-	if err != nil {
-		return sendPace{}, fmt.Errorf("compose: reading the send age limit: %w", err)
+		return sendPace{}, fmt.Errorf("compose: reading the send pace: %w", err)
 	}
 	return sendPace{
 		limit:  limit,

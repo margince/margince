@@ -4,6 +4,7 @@
 package compose
 
 import (
+	"errors"
 	"slices"
 	"testing"
 	"time"
@@ -11,13 +12,21 @@ import (
 	"github.com/riverqueue/river"
 )
 
-// periodicLog records what a schedule change asked of the runner, in order.
-type periodicLog struct{ calls []string }
+// periodicLog records what a schedule change asked of the runner, in order,
+// and refuses the next failAdds additions.
+type periodicLog struct {
+	calls    []string
+	failAdds int
+}
 
 func (l *periodicLog) RemovePeriodic(id string) { l.calls = append(l.calls, "remove "+id) }
 
 func (l *periodicLog) AddPeriodic(*river.PeriodicJob) error {
 	l.calls = append(l.calls, "add")
+	if l.failAdds > 0 {
+		l.failAdds--
+		return errors.New("the runner refused the schedule")
+	}
 	return nil
 }
 
@@ -75,5 +84,23 @@ func TestApplySwitchesAScheduleOffAndBackOn(t *testing.T) {
 	}
 	if want := []string{"remove close_date_sweep", "add"}; !slices.Equal(runner.calls, want) {
 		t.Errorf("switching back on asked the runner %v, want %v", runner.calls, want)
+	}
+}
+
+// A schedule taken off River and refused on the way back must not stay off
+// until a restart: the change is retried on the next check.
+func TestApplyRetriesAScheduleTheRunnerRefusedToTakeBack(t *testing.T) {
+	book, closeDate, timeScan := bookWith(t, time.Hour, time.Hour)
+	moved := map[string]time.Duration{closeDate: 2 * time.Hour, timeScan: time.Hour}
+	runner := &periodicLog{failAdds: 1}
+	if err := book.apply(moved, runner); err == nil {
+		t.Fatal("a refused re-add reported success")
+	}
+	runner.calls = nil
+	if err := book.apply(moved, runner); err != nil {
+		t.Fatal(err)
+	}
+	if want := []string{"remove close_date_sweep", "add"}; !slices.Equal(runner.calls, want) {
+		t.Errorf("the next check asked the runner %v, want the refused schedule put back: %v", runner.calls, want)
 	}
 }
