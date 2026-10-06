@@ -591,6 +591,8 @@ export const de = {
   "aiAdmin.coverage":
     "Die Zahlen umfassen nur dauerhaft gespeicherte Website-Lesevorgänge, Unternehmensscans und Aufbauvorgänge von Stilprofilen. Nicht jeder geplante KI-Lauf wird gezählt, und die Zahlen garantieren nicht, dass eine Anfrage noch ausgeführt werden darf.",
   "aiAdmin.unavailable": "Nicht verfügbar",
+  "aiAdmin.providerWaiting":
+    "Wartet auf den KI-Anbieter: {waiting}. Die Arbeit läuft von selbst weiter, sobald er antwortet.",
   "aiAdmin.impact.blocked": "Wartet auf Kontingent",
   "aiAdmin.impact.model": "Anderes Modell gewählt",
   "aiAdmin.impact.decision": "Entscheidungsmodell geändert",
@@ -911,6 +913,8 @@ export const de = {
   "history.field.body": "Notizen",
   "history.field.emails": "E-Mail-Adressen",
   "history.field.nudge_dismissal": "Hinweis ausgeblendet",
+  "history.field.override_category": "Kategorie der Freigabe",
+  "history.field.overrides_carried": "Übernommene Freigaben",
   "history.field.phones": "Telefonnummern",
   "history.field.invitation_status": "Einladungsstatus",
   "history.field.proposal_status": "Status des Terminvorschlags",
@@ -953,6 +957,10 @@ export const de = {
   "history.field.reply_verdict": "Ergebnis der Antwort",
   "history.field.reply_verdict_by": "Ergebnis der Antwort von",
   "history.field.research_claims_accepted": "Übernommene Rechercheaussagen",
+  "history.field.revoked_by": "Widerrufen von",
+  "history.field.revoked_by_level": "Widerrufen auf Ebene",
+  "history.field.revoked_override": "Widerrufene Freigabe",
+  "history.field.revoked_rows": "Zurückgenommene Freigaben",
   "history.field.scope": "Umfang",
   "history.field.stopped": "Gestoppt",
   "history.field.stops_carried": "Übernommene Kontaktsperren",
@@ -1391,6 +1399,12 @@ export const de = {
     "Die Anfrage ist fehlgeschlagen. Keine Ursache gemeldet.",
   "common.assistantUnavailable":
     "Der Assistent hat nicht geantwortet, daher wurde kein Entwurf erstellt. Gib die Angaben von Hand ein oder lass einen Admin das Modell in den Einstellungen unter KI prüfen.",
+  "common.providerOutOfCredit":
+    "Beim KI-Anbieter ist kein Guthaben mehr vorhanden. Wende dich an deine Admins.",
+  "common.providerUnauthorized":
+    "Der KI-Anbieter hat den hinterlegten API-Schlüssel abgelehnt. Wende dich an deine Admins.",
+  "common.providerUnavailable":
+    "Der KI-Anbieter antwortet gerade nicht. Versuche es später erneut oder wende dich an deine Admins.",
   "common.gatewayUnavailable":
     "Der Server hat die Anfrage nicht rechtzeitig abgeschlossen und verarbeitet sie möglicherweise noch. Warte, bevor du es erneut versuchst, sonst kann die Arbeit zweimal laufen.",
   "common.permissionDenied":
@@ -2443,6 +2457,8 @@ export const de = {
   "email.detail.none": "Diese Nachricht",
   "email.detail.attachments_one": "{count} Anhang",
   "email.detail.attachments_other": "{count} Anhänge",
+  "email.detail.attachmentWithheld":
+    "Nicht gespeichert, weil die E-Mail privat ist.",
   "email.detail.showQuoted": "Zitierten Verlauf anzeigen",
   "email.detail.withheldReason":
     "Diese Nachricht ist nicht für dich freigegeben",
@@ -4403,6 +4419,15 @@ export const de = {
   "compose.savedDraftDeleted": "Gespeicherter Entwurf gelöscht",
   "compose.savedDraftRestored": "Gespeicherter Entwurf wiederhergestellt",
   "compose.savedDraftRemove": "Gespeicherten Entwurf löschen",
+  "compose.savedDraftByAgent":
+    "Entwurf eines Agenten wiederhergestellt. Lies den Entwurf vor dem Senden.",
+  "compose.waitingDraftTitle": "Entwurf wartet",
+  "compose.waitingDraftOpen": "Entwurf öffnen",
+  "compose.waitingDraftByAgent":
+    "Ein Agent hat „{subject}“ zur Prüfung entworfen. Nichts wurde gesendet.",
+  "compose.waitingDraftByYou":
+    "Die nicht gesendete E-Mail „{subject}“ wurde im Editor gespeichert.",
+  "compose.waitingDraftNoSubject": "Kein Betreff",
   "compose.savedDraftChangedTitle": "Entwurf in einem anderen Fenster geändert",
   "compose.savedDraftChangedBody":
     "Beim Speichern bleibt der Text auf dem Bildschirm erhalten. Lade stattdessen die gespeicherte Fassung, um mit ihr weiterzuarbeiten.",
@@ -4442,6 +4467,12 @@ export const de = {
   "compose.whyThisDraft": "Warum dieser Entwurf?",
   "compose.body": "Nachrichtentext",
   "compose.bodyHint": "Klicke auf den Text, um ihn zu bearbeiten.",
+  "compose.signOff": "Wird beim Senden angefügt",
+  "compose.signOffClosing":
+    "Du hast keine Signatur, deshalb wird diese Grußformel angefügt.",
+  "compose.signOffSet": "Signatur festlegen",
+  "compose.signOffFailed":
+    "Die Grußformel, die beim Senden angefügt wird, konnte nicht geladen werden.",
   "compose.transport": "Senden über",
   "compose.transportEmail": "E-Mail",
   "compose.recipientHint": "Name oder Adresse",
@@ -5051,7 +5082,7 @@ export const de = {
   "settings.signatureLabel": "Grußformel",
   "settings.signaturePlaceholder": "Marek Janetzke\nGradion · +49 40 123456",
   "settings.signatureHint":
-    "Nur Text. Leer lassen, um ohne Signatur zu senden. KI-Entwürfe fügen nie eine Grußformel hinzu.",
+    "Nur Text. Ohne Signatur enden Mails mit Gruß und deinem Namen. KI fügt keine an.",
   "settings.signatureSaving": "Wird gespeichert…",
   "settings.signatureEdit": "Signatur bearbeiten",
   "settings.signatureNone": "Keine Grußformel festgelegt",
@@ -5492,6 +5523,36 @@ export const de = {
   "jobs.reasonVetted":
     "Gründe, Klassen und Abhilfen stammen aus der Job-Schicht, nie aus der Rohursache des Workers. Einen Fehler, den sie nicht formulieren kann, zeigt sie mit einem festen Ersatztext und ohne Klasse.",
   "jobs.generatedAt": "Stand: {time}",
+
+  "settings.providerHealth": "Status der KI-Anbieter",
+  "settings.providerHealthSub":
+    "Ob jeder KI-Anbieter antwortet, so wie dieser Server es erlebt hat.",
+  "providerHealth.adminOnly":
+    "Der Status der KI-Anbieter betrifft die ganze Installation und erfordert eine Berechtigung, die deine Rolle nicht hat.",
+  "providerHealth.healthy": "Alle KI-Anbieter antworten.",
+  "aiProviderHealth.label.degraded": "Eingeschränkt",
+  "aiProviderHealth.label.down": "Nicht erreichbar",
+  "aiProviderHealth.label.outOfCredit": "Kein Guthaben",
+  "aiProviderHealth.label.unauthorized": "Schlüssel abgelehnt",
+  "aiProviderHealth.reason.degraded":
+    "Einige Anfragen an diesen Anbieter schlagen fehl. Aufrufe laufen weiterhin.",
+  "aiProviderHealth.reason.down":
+    "Dieser Anbieter ist nicht erreichbar. Aufrufe warten bis zur nächsten Prüfung.",
+  "aiProviderHealth.reason.outOfCredit":
+    "Das Konto hat kein Guthaben mehr. Aufrufe warten bis zur nächsten Prüfung.",
+  "aiProviderHealth.reason.unauthorized":
+    "Der Anbieter hat den API-Schlüssel abgelehnt. Aufrufe warten bis zur nächsten Prüfung.",
+  "aiProviderHealth.fix.degraded":
+    "Prüfe die Statusseite des Anbieters oder wende dich an deine Admins.",
+  "aiProviderHealth.fix.down":
+    "Prüfe Statusseite und Host des Anbieters oder wende dich an deine Admins.",
+  "aiProviderHealth.fix.outOfCredit":
+    "Lade das Konto beim Anbieter auf oder wende dich an deine Admins.",
+  "aiProviderHealth.fix.unauthorized":
+    "Ersetze den Schlüssel oder wende dich an deine Admins.",
+  "aiProviderHealth.since": "Begann {when}",
+  "aiProviderHealth.nextCheck": "Nächste Prüfung {when}",
+  "aiProviderHealth.nextCheckDue": "Die nächste Prüfung steht an",
 
   "settings.extIngest": "Abgewiesene Connector-Datensätze",
   "settings.extIngestSub":

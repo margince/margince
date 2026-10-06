@@ -46,7 +46,7 @@ Also called: my name, profile name, rename myself.
 To add an email signature in Margince, open Settings → **Account** and choose **Edit signature** in the **Email signature** row.
 1. Type your sign-off in **Sign-off**, in plain text.
 2. Choose **Save**.
-The signature is added below every message you send, above the unsubscribe footer. Leave it empty to send without one; the row then says **No sign-off set**.
+The signature is added below every email you send yourself, above the unsubscribe footer. Leave it empty and your emails close with a short greeting and your name instead, in the message's language (the installation's language, then English, when the message is too short to tell); the row then says **No sign-off set**. An email an agent sends carries no sign-off.
 AI drafts never add a sign-off, so this is the one that goes out.
 Also called: email footer, sign-off, signature block.
 

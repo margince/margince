@@ -20,21 +20,6 @@
   margin-top: var(--space-3);
 }
 
-/* The "view everything" dialog. Stacked with air between the facts, because
-   this is a thing somebody reads rather than a form they fill in. */
-.approval-detail {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-/* The question, at the top, in the server's own sentence. It was missing from
-   this dialog entirely — the one prose field the approvals module writes, and
-   the reader opened onto `deal_id` instead. */
-.approval-detail-lead {
-  margin-bottom: var(--space-2);
-}
-
 /* A field's value, named or raw: a contact's own words, a date they recognise,
    or a uuid the wire spells. Set as prose, and allowed to break anywhere so an
    unbroken identifier wraps inside the dialog instead of widening it. */

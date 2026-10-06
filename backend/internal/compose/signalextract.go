@@ -368,7 +368,10 @@ func extractRequest(thread settledThread, lang string) model.Request {
 			`for "commitment_made" it is the clause the promise is made in, one promise per event. `+
 			`"due_date" is the day a commitment is due, as YYYY-MM-DD, resolving anything relative `+
 			`against the day that message was sent — "by Friday" is the Friday after it. `+
-			`Use "" when the message names no day, and for every other kind.`, extractMaxEvents)
+			`Use "" when the message names no day, and for every other kind. `+
+			`"confidence" is a number from 0 to 1 for how firmly the text says it: a plain "I will" `+
+			`with a thing and a day is 0.9 or more, while "I'll try" or "at some point" names no `+
+			`real commitment, so report no "commitment_made" for it at all.`, extractMaxEvents)
 
 	return model.Request{
 		System:         extractSystemFor(fence, lang),

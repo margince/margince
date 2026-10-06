@@ -49,6 +49,7 @@ func WithAccountDraft(brain completer) Option {
 			WithEmailSummaries(emailRows(pool)).
 			WithDossier(s.companyDossierSvc).
 			WithVoice(ai.NewVoiceStore(InstallationDB(pool)), s.log)
+		s.firstDrafts.account = svc
 		s.accountDraftHandlers = accountdraft.NewHandlers(svc)
 	}
 }

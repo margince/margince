@@ -64,6 +64,19 @@ type StopCarrier interface {
 	// the survivor. Idempotent: a stop the survivor already holds is left
 	// alone rather than duplicated.
 	CarryStopsTx(ctx context.Context, tx pgx.Tx, from, to commsauthz.StopSubject) error
+
+	// CarryOverridesTx copies every live standing override (a rep's vouch that
+	// a machine-level refusal may be overruled) held by the retiring subject
+	// onto the survivor. Idempotent, the same way CarryStopsTx is.
+	//
+	// NO SEPARATE LOCK METHOD to call first: consent's lock on a subject's
+	// stops and its lock on that subject's overrides are the same advisory
+	// lock, keyed on the subject id alone (see overridecarry.go on the consent
+	// side) — LockStopsTx already takes it before either carry runs. The
+	// override carry also takes its chain's own key internally
+	// (lockOverrideFamily, after the subject keys), so this method locks more
+	// than the subject key alone.
+	CarryOverridesTx(ctx context.Context, tx pgx.Tx, from, to commsauthz.StopSubject) error
 }
 
 // WithStopCarrier wires the consent-side seam. Compose binds it to the consent
@@ -83,6 +96,9 @@ func (e *StopCarrierNotWiredError) Error() string {
 		"asked us to stop"
 }
 
+// Every carrier-not-wired refusal names the source record, so the three spell it once.
+const fieldSourceID = "source_id"
+
 // FieldFault carries the refusal to every surface rather than to the HTTP one
 // alone. The MCP tool surface reaches this store through the datasource seam
 // and never runs the REST error mapper, so a branch there would have told an
@@ -93,7 +109,7 @@ func (e *StopCarrierNotWiredError) Error() string {
 // the one an operator will look at. Naming the target would send them to the
 // record that has nothing wrong with it.
 func (e *StopCarrierNotWiredError) FieldFault() (field, code, message string) {
-	return "source_id", "stop_carrier_not_wired", e.Error()
+	return fieldSourceID, "stop_carrier_not_wired", e.Error()
 }
 
 // carryStopsTx is the one call site, so the refusal below cannot be forgotten

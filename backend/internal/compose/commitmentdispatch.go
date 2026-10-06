@@ -43,6 +43,10 @@ const CommitmentTaskKind = "commitment_task"
 // CommitmentTaskConfidence is the reading at or above which a promise a named
 // colleague made becomes their task without asking. Below it, down to the
 // extractor's own floor, the promise is proposed instead.
+//
+// It sits inside the gap the certification records show: a plain dated promise
+// is read at 0.9 or more, a soft one at 0.3 or less, and the extractors drop
+// anything under 0.7. TestCommitmentTaskConfidenceSitsInTheCertifiedGap holds it.
 const CommitmentTaskConfidence = 0.85
 
 // The claim kinds a commitment is filed under.
@@ -166,7 +170,30 @@ func (d *CommitmentDispatcher) DispatchTx(
 	if err != nil || offered {
 		return CommitmentRemembered, ids.UUID{}, err
 	}
-	if c.Seat != nil && c.Confidence >= CommitmentTaskConfidence && mayHoldPrivateTask(c.PrivateTo, *c.Seat) {
+	// Whether the seat can be GIVEN the task, asked before writing one. An automatic
+	// writer may only assign to an active colleague, and most seats on imported mail
+	// never signed in or have left — so a promise sent by one of them reaches the
+	// writer and is refused, which fails the whole conversation and every later pass
+	// over it.
+	holdsWork := false
+	if c.Seat != nil {
+		var err error
+		if holdsWork, err = activities.SeatCanHoldAutomaticWork(ctx, tx, ids.From[ids.UserKind](*c.Seat)); err != nil {
+			return 0, ids.UUID{}, err
+		}
+	}
+	// A seat that cannot be given the task is not NAMED on the proposal either: a
+	// commitment proposal is visible to its seat alone, so one staged for a colleague
+	// who has not arrived or has left waits where nobody can see it. Unnamed, it
+	// reaches whoever reviews the queue, the same way a promise naming nobody does.
+	//
+	// Except on private mail, where propose names the conversation's own owner and
+	// nobody else may be shown it. An owner who has not signed in yet finds it
+	// waiting when they do, which is what an invited colleague's queue is for.
+	if c.Seat != nil && !holdsWork && c.PrivateTo == nil {
+		c.Seat = nil
+	}
+	if holdsWork && c.Confidence >= CommitmentTaskConfidence && mayHoldPrivateTask(c.PrivateTo, *c.Seat) {
 		task, err := writeCommitmentTask(ctx, tx, d.tasks, d.claims, commitmentTask{
 			Extractor: c.Extractor, Locator: c.Locator, Summary: c.Summary, Body: c.Body,
 			SourceActivityID: c.SourceActivityID, Links: c.Links, DueDate: c.DueDate,

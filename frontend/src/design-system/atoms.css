@@ -187,7 +187,8 @@
 .empty-body p + p {
   margin-top: var(--space-2);
 }
-.empty-action {
+/* A step past the card's gap: the verb stands apart from the sentence above. */
+.empty-instructional > .empty-action {
   margin-top: var(--space-1);
 }
 
@@ -397,6 +398,17 @@
 .modal-drawer-split {
   width: clamp(360px, 62vw, 1040px);
 }
+/* A body stack between the split drawer and its two columns passes on the
+   height the columns claim. */
+.modal-drawer-split > .form-stack {
+  flex: 1 1 auto;
+  min-block-size: 0;
+}
+/* In a dialog the stack's gap is the only space between its rows; a row's own
+   margin would add to it. Declared before `.modal .actions`, so its margin wins. */
+.modal .form-stack > * {
+  margin-block: 0;
+}
 
 /* The zero padding above belongs to the head/body/foot split: those three
    bands pay their own, so the drawer must not pay it twice. A wide drawer
@@ -574,6 +586,11 @@
   to {
     transform: translateX(calc(100% + var(--space-4)));
   }
+}
+
+/* Outside a dialog nothing else spaces an action row from the stack above it. */
+.form-stack + .actions {
+  margin-top: var(--space-3);
 }
 
 /* The row wraps rather than running off a narrow dialog, and only between the

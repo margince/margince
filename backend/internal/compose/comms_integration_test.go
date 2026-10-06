@@ -194,7 +194,7 @@ func TestCommsAdapterSharesTheGovernedPaths(t *testing.T) {
 func assertModelAndFallbackDrafts(ctx context.Context, t *testing.T, adapter commsAdapter, anchorID ids.UUID) {
 	t.Helper()
 	adapter.draft = replyDrafter{
-		brain: integrationReplyBrain{response: `{"subject":"Re: Your pricing question","body":"The discount is confirmed for review."}`},
+		brain: integrationReplyBrain{response: `{"subject":"Re: Your pricing question","body":"Hi Anna,\n\nThe discount is confirmed for review."}`},
 		store: adapter.store,
 		log:   slog.New(slog.NewTextHandler(io.Discard, nil)),
 	}
@@ -202,7 +202,7 @@ func assertModelAndFallbackDrafts(ctx context.Context, t *testing.T, adapter com
 	if err != nil {
 		t.Fatal(err)
 	}
-	if subject != pricingReplySubject || body != "The discount is confirmed for review." {
+	if subject != pricingReplySubject || body != "Hi Anna,\n\nThe discount is confirmed for review." {
 		t.Fatalf("model draft = %q / %q", subject, body)
 	}
 

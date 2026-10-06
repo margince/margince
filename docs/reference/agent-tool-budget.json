@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 81,
     "system_frame_tokens": 586,
-    "tokens": 28578,
-    "median_tool_tokens": 292,
-    "mean_tool_tokens": 352
+    "tokens": 28684,
+    "median_tool_tokens": 293,
+    "mean_tool_tokens": 353
   },
   "agents": [
     {
@@ -195,6 +195,10 @@
       "tokens": 390
     },
     {
+      "name": "draft_email",
+      "tokens": 385
+    },
+    {
       "name": "describe_report_vocabulary",
       "tokens": 349
     },
@@ -257,10 +261,6 @@
     {
       "name": "describe_analytics_vocabulary",
       "tokens": 286
-    },
-    {
-      "name": "draft_email",
-      "tokens": 278
     },
     {
       "name": "draft_follow_ups_for",

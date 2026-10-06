@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { screen } from "storybook/test";
 import { REPORTING_FIXTURE_ZONE } from "./reporting.fixtures";
 import {
   reportingStoryRoutes,
@@ -31,6 +32,9 @@ export const Create: Story = {
         />
       </StoryProviders>
     );
+  },
+  play: async () => {
+    await screen.findByRole("dialog");
   },
 };
 export const Dark: Story = { ...Create, globals: { theme: "dark" } };

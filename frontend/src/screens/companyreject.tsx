@@ -6,13 +6,12 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
 import { useCanWrite } from "../app/capability";
-import { Button, Field, Modal } from "../design-system/atoms";
+import { Button, Field, Modal, Textarea } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import { useArchiveRecord } from "./archive";
 import { throwProblem } from "./common";
-import "./companyreject.css";
 import "./common.css";
 
 type Company = components["schemas"]["Company"];
@@ -133,27 +132,29 @@ export function CompanyRejectAction({
         <Heading size="large" id={headingId} className="t-h2 modal-title">
           {t("company.reject")}
         </Heading>
-        <p className="companyreject-confirm">
-          {t("company.rejectConfirm", {
-            name: company.display_name,
-            domain: primary.domain,
-          })}
-        </p>
-        <Field
-          label={t("company.rejectReasonLabel")}
-          hint={t("company.rejectReasonHint")}
-          required
-        >
-          {(control) => (
-            <textarea
-              {...control}
-              rows={3}
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-            />
-          )}
-        </Field>
-        <ErrorLine error={mutation.error} />
+        <div className="form-stack">
+          <p>
+            {t("company.rejectConfirm", {
+              name: company.display_name,
+              domain: primary.domain,
+            })}
+          </p>
+          <Field
+            label={t("company.rejectReasonLabel")}
+            hint={t("company.rejectReasonHint")}
+            required
+          >
+            {(control) => (
+              <Textarea
+                {...control}
+                rows={3}
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+              />
+            )}
+          </Field>
+          <ErrorLine error={mutation.error} />
+        </div>
         <div className="actions">
           <Button
             onClick={() => setConfirming(false)}

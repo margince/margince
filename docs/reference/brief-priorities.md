@@ -87,6 +87,7 @@ One rule turns a promise read out of a meeting transcript or an email into work 
 - A promise in mail only one member may read stays with that member. Made by a colleague in it, it is proposed to the owner instead of becoming the colleague's task, and the task it becomes is visible to its holder alone.
 - In mail, only what the sender wrote counts: words they quote from earlier in the thread are not filed as theirs.
 - A task carries a due date only when the conversation stated a day. An undated promise sits in today's queue with undated request reminders.
+- A commitment and the task it became settle together (`compose/commitmentsettle.go`, consumer group `cg:commitment-settle`): ticking the task settles the commitment as kept, and settling the commitment as kept completes the task. Reopening the task leaves the commitment kept, and dismissing the commitment leaves the task alone.
 - The task is keyed on the promise's evidence (source, side, party and the words it was said in), archived tasks included. A task a rep archived, a proposal a rep refused and a customer promise a rep dismissed are not raised again when the conversation is read again.
 
 ## Stable close dates

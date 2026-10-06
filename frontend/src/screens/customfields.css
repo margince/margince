@@ -25,21 +25,6 @@
   margin: var(--space-4) 0 0;
 }
 
-/* The builder is no longer a Card of its own — it is the body of the dialog the
-   card's add verb opens — so it owns the rhythm between its own blocks rather
-   than inheriting a card's padding. */
-.cf-builder {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
-
-/* The action row pays for its own interval in the rename dialog, which has no
-   flex gap around it; inside the builder the gap above already did. */
-.cf-builder > .cf-actions {
-  margin-top: 0;
-}
-
 .cf-builder-head {
   display: flex;
   align-items: flex-start;
@@ -99,12 +84,6 @@
   background: var(--bgElevated);
   border-radius: var(--r-sm);
   padding: var(--space-1) var(--space-2);
-}
-
-.cf-actions {
-  display: flex;
-  gap: var(--gapActions);
-  margin-top: var(--space-4);
 }
 
 /* Field cell: a type-glyph tile, then the human label with the immutable API

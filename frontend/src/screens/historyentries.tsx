@@ -283,31 +283,33 @@ function UndoButton({
           putBack.mutate({ kind, id, auditId: entry.id, version })
         }
       >
-        <p>
-          {verbBody
-            ? t(verbBody)
-            : entry.edge
-              ? t("history.undo.confirmEdgeBody", {
-                  other: entry.edge.other_label ?? t("ref.nameLoadFailed"),
-                })
-              : plural("history.undo.confirmBody", changes.length, {
-                  count: formatNumber(changes.length, locale),
-                })}
-        </p>
-        <ul className="entry-fields">
-          {changes.map((change) => (
-            <li key={change.field} className="entry-field">
-              <span>{historyFieldLabel(change.field, t)}</span>
-              <span>
-                {historyValue(change.field, change.oldValue, {
-                  currency,
-                  locale,
-                  zone: recordZone,
-                }) ?? t("history.cleared")}
-              </span>
-            </li>
-          ))}
-        </ul>
+        <div>
+          <p>
+            {verbBody
+              ? t(verbBody)
+              : entry.edge
+                ? t("history.undo.confirmEdgeBody", {
+                    other: entry.edge.other_label ?? t("ref.nameLoadFailed"),
+                  })
+                : plural("history.undo.confirmBody", changes.length, {
+                    count: formatNumber(changes.length, locale),
+                  })}
+          </p>
+          <ul className="entry-fields">
+            {changes.map((change) => (
+              <li key={change.field} className="entry-field">
+                <span>{historyFieldLabel(change.field, t)}</span>
+                <span>
+                  {historyValue(change.field, change.oldValue, {
+                    currency,
+                    locale,
+                    zone: recordZone,
+                  }) ?? t("history.cleared")}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
       </ConfirmModal>
     </span>
   );

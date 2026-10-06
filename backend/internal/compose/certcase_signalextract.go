@@ -26,6 +26,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -229,6 +230,30 @@ func (c *signalExtractCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 		return aitasks.Outcome{Result: aitasks.OutcomeWrongAnswer, Detail: strings.Join(disagreements, "; ")}
 	}
 	return aitasks.Outcome{Result: aitasks.OutcomeAccepted}
+}
+
+// AnswerConfidence is the confidence range over the commitments the reply
+// reports: the one reading the task-creation threshold is set against.
+func (c *signalExtractCase) AnswerConfidence(trace aitasks.Trace) (low, high float64, ok bool) {
+	var payload extractPayload
+	if err := json.Unmarshal([]byte(ai.Unfence(trace.Output)), &payload); err != nil {
+		return 0, 0, false
+	}
+	var confidences []float64
+	for _, event := range payload.events() {
+		if event.Kind == extractKindCommitment {
+			confidences = append(confidences, float64(event.Confidence))
+		}
+	}
+	return spanOf(confidences)
+}
+
+// spanOf is the least and greatest of a set of confidences, and false for none.
+func spanOf(confidences []float64) (low, high float64, ok bool) {
+	if len(confidences) == 0 {
+		return 0, 0, false
+	}
+	return slices.Min(confidences), slices.Max(confidences), true
 }
 
 // disagreements names every event the scenario expects and the reply missed,

@@ -158,6 +158,7 @@ const (
 // merge's own transaction.
 var carriedThroughAPort = map[string]portCarry{
 	"communication_suppression": {consentPkg, "Store.CarryStopsTx", "holdsALiveStop"},
+	"communication_override":    {consentPkg, "Store.CarryOverridesTx", "holdsALiveOverride"},
 	"withdrawal_credential":     {consentPkg, "Store.CarrySatellitesTx", "holdsAConsentSatellite"},
 	"preference_token":          {consentPkg, "Store.CarrySatellitesTx", "holdsAConsentSatellite"},
 	"confirm_token":             {consentPkg, "Store.CarrySatellitesTx", "holdsAConsentSatellite"},

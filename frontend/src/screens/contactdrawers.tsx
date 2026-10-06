@@ -131,7 +131,7 @@ function ClaimMapRow({
             encodes — the model returned prose, and only a human decides it means
             "Role: X". Picking a field reveals the value and citation it will be
             stored under, prefilled from the run and editable. */}
-        <div className="pe-claim-map">
+        <div className="pe-claim-map form-stack">
           <Field label={t("contact.research.mapField")}>
             {(control) => (
               <Select

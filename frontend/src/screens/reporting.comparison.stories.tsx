@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { screen } from "storybook/test";
 import { ReportingComparison } from "./reporting.comparison";
 import { reportingEditions } from "./reporting.scenarios";
 import { reportingStoryRoutes } from "./reporting.story-fixtures";
@@ -41,6 +42,9 @@ export const Default: Story = {
         <Preview />
       </StoryProviders>
     );
+  },
+  play: async () => {
+    await screen.findByRole("dialog");
   },
 };
 

@@ -38,15 +38,6 @@
   gap: var(--space-5);
   padding: var(--padPanel);
 }
-.reporting-dialog-actions {
-  display: flex;
-  justify-content: end;
-  gap: var(--gapActions);
-  position: sticky;
-  bottom: 0;
-  padding-block: var(--space-3);
-  background: var(--bgElevated);
-}
 .reporting-panel-sdr_outcomes {
   grid-column: 1 / -1;
 }

@@ -245,7 +245,8 @@ calls** opens the **AI call log** narrowed to that task.
 Changes take effect within about a minute; a call in flight keeps its binding.
 
 **Providers** — each provider's key, and where it is reached: a host, OpenRouter
-hosts, or a Vertex location. See [AI providers](ai-providers.md).
+hosts, or a Vertex location. A second badge shows when a provider is not
+answering. See [AI providers](ai-providers.md).
 
 **Automations** — the trigger-and-action catalogue. Three rules watch a Live
 List and, when a record joins or leaves it, add a task, notify the rule's owner,
@@ -327,6 +328,8 @@ reading and emptying the installation are no longer three buttons on one screen.
 - **Search index** — rebuilding the index behind search and the AI's retrieval.
 - **Background jobs** — "Queued background jobs and failed jobs by owner."
   Admin and Ops.
+- **AI provider status** — whether each AI provider is answering, as the server
+  and the background worker have seen it, merged into one view. See [AI providers](ai-providers.md).
 - **Mail capture checks** — whether mail capture's background repair passes keep
   up: when each last succeeded, how many contacts and threads are waiting in
   each mailbox, and how many filed meetings are held back across the whole

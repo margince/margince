@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { CompanyRejectAction } from "./companyreject";
 import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
@@ -78,6 +79,16 @@ export const Offered: Story = {
  * this account. */
 export const WithoutBothGrants: Story = {
   render: () => inMenu(COMPANY, meRoute({ company: ["read", "delete"] })),
+};
+
+/** The dialog the offer opens: the sentence naming both halves, then the reason. */
+export const Confirming: Story = {
+  render: () => inMenu(COMPANY, CAN_REJECT),
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(await body.findByTestId("reject-company"));
+    await body.findByRole("dialog");
+  },
 };
 
 /** A company somebody typed in by hand. It was never derived from mail, so
