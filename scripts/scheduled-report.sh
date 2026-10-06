@@ -203,10 +203,15 @@ nothing else in this repository will say so: no lane reddens and no pull request
 is blocked.
 
 \`QUIET\` means it ran once and has not acted since. \`NO_DASHBOARD\` means it has
-never run here at all, which is what an installation bound to a previous owner or
-repository name looks like — check the GitHub App installation before looking
-at the config, because a bad \`renovate.json\` files a config-warning issue
-rather than going silent.
+never run here at all. For both, read the job history on the Mend portal
+(developer.mend.io) before anything on GitHub: jobs finishing with nothing here
+means the account is in Silent mode, no jobs means an installation problem. A bad
+\`renovate.json\` files a config-warning issue rather than going silent.
+
+\`STALLED\` means it runs but opens nothing: its open PRs fill
+\`prConcurrentLimit\` and the rest wait under Rate-Limited on the dashboard. Find
+out why those open PRs cannot merge — a status check stuck at pending is the
+usual cause.
 
 The job log names the last act it could find and its date."\
     || unreported=1
