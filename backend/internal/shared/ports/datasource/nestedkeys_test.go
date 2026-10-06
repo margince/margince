@@ -5,10 +5,9 @@ package datasource
 
 import (
 	"encoding/json"
+	"errors"
+	"reflect"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 type nestedLeaf struct {
@@ -62,12 +61,18 @@ func TestRejectUnknownNestedKeys(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			err := RejectUnknownNestedKeys(json.RawMessage(tc.body), &nestedRoot{})
 			if tc.want == nil {
-				require.NoError(t, err)
+				if err != nil {
+					t.Fatalf("refused %s: %v", tc.body, err)
+				}
 				return
 			}
 			var unknown *UnknownFieldError
-			require.ErrorAs(t, err, &unknown)
-			assert.Equal(t, tc.want, unknown.Fields)
+			if !errors.As(err, &unknown) {
+				t.Fatalf("answered %v, want an unknown-field refusal", err)
+			}
+			if !reflect.DeepEqual(unknown.Fields, tc.want) {
+				t.Errorf("named %v, want %v", unknown.Fields, tc.want)
+			}
 		})
 	}
 }

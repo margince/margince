@@ -18,7 +18,7 @@ func (e *PastCloseDateError) FieldFault() (field, code, message string) {
 }
 
 // AmountCurrencyPairError maps to 422: amount_minor and currency come
-// together or not at all (data-model §6 money rules).
+// together or not at all.
 // The deal's money and forecast fields, whose wire name and column name are the
 // SAME word — deliberately, because the contract was written from the schema, and
 // a refusal that named a different field from the column it guards would send a
