@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { components } from "../../api/schema";
 import { useAgentTierMap, verbTier } from "../../app/autonomy";
 import { Field, TextInput } from "../../design-system/atoms";
@@ -118,12 +118,17 @@ export function ConfirmAdvanceModal({
     setLastAsked(pending);
   }
   const shown = pending ?? lastAsked;
+  // Escape leaves while a write is in flight, so a late answer must not close
+  // or unbusy the dialog asked next.
+  const inFlight = useRef<PendingAdvance | null>(null);
 
   // EVERY way out of this dialog clears what was typed — the buttons, Escape,
   // and the backdrop alike. The component stays mounted between openings, so a
   // reason typed and then abandoned would otherwise still be sitting there the
   // next time a deal is closed, and it would describe a different deal.
   const dismiss = () => {
+    inFlight.current = null;
+    setSubmitting(false);
     setLostReason("");
     setWonReason("");
     setWonDetail("");
@@ -143,6 +148,7 @@ export function ConfirmAdvanceModal({
     wonReason === WON_REASON_NEEDING_DETAIL && !saysSomething(wonDetail);
 
   const confirm = async (asked: PendingAdvance) => {
+    inFlight.current = asked;
     setSubmitting(true);
     // Captured BEFORE the await: `dismiss()` clears what was typed, and the
     // review starts from the words this reader actually wrote for THIS close.
@@ -160,6 +166,10 @@ export function ConfirmAdvanceModal({
       lostReason: lostReason.trim() || undefined,
       ...wonAnswer(needsWonReason, wonReason, wonDetail),
     });
+    if (inFlight.current !== asked) {
+      return;
+    }
+    inFlight.current = null;
     setSubmitting(false);
     // Only the missing-evidence refusal stays open: the reader can answer it
     // here, and any other error renders on the screen behind this dialog.
