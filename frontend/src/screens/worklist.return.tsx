@@ -18,6 +18,7 @@ import {
   useUrlParams,
 } from "../app/urlstate";
 import { useT } from "../i18n";
+import { type ContactTab, contactTabRoute } from "./contacttab";
 import { WORKLIST_FILTER_PARAM } from "./worklist.header";
 
 // The way back from a record to the Worklist drawer it was opened from.
@@ -67,6 +68,11 @@ export function keptWorklistReturn(): UrlParams | undefined {
  */
 export function navigateWithinRecord(route: Route): void {
   navigate(route, keptWorklistReturn());
+}
+
+/** One tab of the contact on screen, through the same move. */
+export function openContactTab(id: string, tab: ContactTab): void {
+  navigateWithinRecord(contactTabRoute(id, tab));
 }
 
 /** `href` with the drawer's dials added, when it addresses a returning record. */

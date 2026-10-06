@@ -15,10 +15,9 @@ import {
 } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import { ChannelReplyAction } from "./compose";
-import { contactTabRoute } from "./contacttab";
 import { interactionIcon, useInteractionLabel } from "./interactionchrome";
 import { groupChronology } from "./timelinegroups";
-import { navigateWithinRecord } from "./worklist.return";
+import { openContactTab } from "./worklist.return";
 
 // Conversation memory (concept §5.10, ADR-0097 D3).
 //
@@ -112,9 +111,7 @@ export function ContactMemory({
       footer={
         <Button
           variant="link"
-          onClick={() =>
-            navigateWithinRecord(contactTabRoute(view.contact.id, "timeline"))
-          }
+          onClick={() => openContactTab(view.contact.id, "timeline")}
         >
           {t("contact.memory.showAll")} <ChevronRight aria-hidden="true" />
         </Button>

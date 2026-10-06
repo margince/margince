@@ -49,7 +49,7 @@ import {
 import { ContactRail, contactStanding, standingSentences } from "./contactrail";
 import { ContactResearchTab } from "./contactresearch";
 import { ContactSubtitle } from "./contactsubtitle";
-import { CONTACT_TABS, type ContactTab, contactTabRoute } from "./contacttab";
+import { CONTACT_TABS, type ContactTab } from "./contacttab";
 import { ContactTimelineTab } from "./contacttabs";
 import { transportForActivity, useTransports } from "./contacttransports";
 import { rosterOwnerName, useRoster, useRosterPartial } from "./entityref";
@@ -65,7 +65,7 @@ import {
 } from "./writeto";
 import "./contact360.css";
 import { buyingRoleLabel } from "./companycontacts/summary";
-import { navigateWithinRecord, WorklistReturnLink } from "./worklist.return";
+import { openContactTab, WorklistReturnLink } from "./worklist.return";
 
 type Contact360 = components["schemas"]["Contact360"];
 type ContactMomentAction = components["schemas"]["ContactMomentAction"];
@@ -446,10 +446,9 @@ export function ContactPageV2({
         <div className="record-sheet">
           <RecordView
             back={<WorklistReturnLink />}
-            // The contact's context, in the details pane beside the work: what is
-            // true of the CONTACT does not belong to whichever part of them is open,
-            // so it does not move when a tab changes. The same pane, fold and
-            // memory of it as every other record page.
+            // The contact's context, in the details pane beside the work: it is
+            // true of the CONTACT, not of the open tab, so a tab change leaves
+            // it put. The same pane, fold and memory as every other record.
             // At phone width there is no column to fold: the same cards open as
             // the drawer below instead, so the record hands the view no pane at
             // all rather than one that folds to nothing beside nothing.
@@ -493,7 +492,7 @@ export function ContactPageV2({
                 options={CONTACT_TABS}
                 value={tab}
                 onChange={(next) => {
-                  navigateWithinRecord(contactTabRoute(id, next));
+                  openContactTab(id, next);
                   scrollPageToTop();
                 }}
                 // The switch for the details pane, at the end of the tab row: it
@@ -782,7 +781,7 @@ function ContactMarks({
   // first, and the reveal waits for the anchor to be drawn.
   const showBrief = () => {
     if (tab !== "overview") {
-      navigateWithinRecord(contactTabRoute(view.contact.id, "overview"));
+      openContactTab(view.contact.id, "overview");
     }
     revealOnceMounted(BRIEF_ANCHOR);
   };

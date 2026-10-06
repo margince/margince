@@ -2983,12 +2983,10 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
             <div className="record-sheet">
               <RecordView
                 back={<WorklistReturnLink />}
-                // Context first: who these contacts are, before the verbs that act
-                // on them. The seats moved out of the main column when the
-                // readings band started counting them — the same two facts were
-                // reaching a reader three times on one screen. The pane is the
-                // one every record page draws, with the same fold and the same
-                // memory of it.
+                // Context first: who these contacts are, before the verbs that
+                // act on them. The seats left the main column once the readings
+                // band counted them, or one screen said the same facts three
+                // times. Every record page draws this pane, fold and memory.
                 aside={dealContext(deal)}
                 asideOpen={details.open}
                 name={deal.name}

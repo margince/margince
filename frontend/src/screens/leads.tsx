@@ -8,7 +8,7 @@ import { useCanWrite, useRecordWriteRefusal } from "../app/capability";
 import { PageAsideToggle, usePageAside } from "../app/pageaside";
 import { useRecordZone } from "../app/recordzone";
 import { scrollPageToTop } from "../app/reveal";
-import { navigate, useRoute } from "../app/router";
+import { navigate } from "../app/router";
 import { useUrlParams } from "../app/urlstate";
 import {
   Badge,
@@ -96,7 +96,8 @@ export { terminalBadge } from "./leadstanding";
 import { AddToShortlistAction } from "./addtoshortlist";
 import { leadKey, leadScoreKey, leadWriteKeys } from "./leadkeys";
 import { RecordListsPanel } from "./recordlists";
-import { navigateWithinRecord, WorklistReturnLink } from "./worklist.return";
+import { useAddressedTab } from "./recordtab";
+import { WorklistReturnLink } from "./worklist.return";
 
 export { LeadsScreen } from "./leads.list";
 
@@ -946,27 +947,6 @@ function PromotedLeadPanel({
 }
 
 const LEAD_TABS = ["overview", "deals", "history"] as const;
-type LeadTab = (typeof LEAD_TABS)[number];
-
-/** isLeadTab narrows a URL segment, which is any string a reader can type. */
-function isLeadTab(value: string | undefined): value is LeadTab {
-  return LEAD_TABS.some((tab) => tab === value);
-}
-
-// The lead's tab, addressed rather than held beside the address: a tab that
-// survives a reload and can be linked to, and Back that steps between the tabs
-// a reader opened instead of leaving the lead altogether. Same shape as the
-// account's (screens/companies.tsx) and the contact's.
-function useLeadTab(recordId: string): [LeadTab, (next: LeadTab) => void] {
-  const route = useRoute();
-  const addressed =
-    route.screen === "leads" && route.id === recordId ? route.id2 : undefined;
-  return [
-    isLeadTab(addressed) ? addressed : "overview",
-    (next: LeadTab) =>
-      navigateWithinRecord({ screen: "leads", id: recordId, id2: next }),
-  ];
-}
 
 // The lead-360's "overview" pane, split out of LeadScreen so the tab switch
 // doesn't push the render-prop closure over the cognitive-complexity budget.
@@ -1332,7 +1312,7 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
   // ONE sentence about this lead being closed, minted here and pointed at by
   // every control the closure refuses (ADR-0108 §6).
   const terminalReasonId = useId();
-  const [tab, setTab] = useLeadTab(id);
+  const [tab, setTab] = useAddressedTab("leads", id, LEAD_TABS);
   // The thread under the call reads the WHOLE history, not whatever the
   // History tab's own filter has narrowed. A filter is a view of that tab; a
   // call that said "no reply since" because the reader had hidden emails
