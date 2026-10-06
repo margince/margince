@@ -165,6 +165,12 @@ var erasureCascadeFiles = []string{
 	// from it.
 	"internal/modules/privacy/erasure_restrict.go",
 	"internal/modules/privacy/erasuredealroom.go",
+	// What colleagues wrote about the subject while asking each other for an
+	// introduction. Its own file because the table is the introductions module's,
+	// and on this list because the row survives the cascade that was meant to
+	// reach it: intro_request's contact FK cascades on DELETE, and an erasure
+	// anonymizes the contact instead.
+	"internal/modules/privacy/erasureintroductions.go",
 	// The subject's own columns, and the strings the anonymize-in-place writes
 	// over them. Reached from the same transaction and each executing SQL of
 	// its own.
