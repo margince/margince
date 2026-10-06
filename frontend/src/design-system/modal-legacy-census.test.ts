@@ -202,48 +202,67 @@ function tagsInText(text: string): number {
 }
 
 const pathOf = (file: string) => relative(srcDir, file).replaceAll("\\", "/");
-let tree: Map<string, ReturnType<typeof censusOf>> | undefined;
-const census = () => {
-  tree ??= new Map(
-    markupFiles().map((f) => [pathOf(f), censusOf(sourceFileAt(f))]),
-  );
-  return tree;
+
+// Whichever test asks first builds the tree's census, inside its own timeout.
+const TREE_BUILD = 60_000;
+const once = <T>(make: () => T) => {
+  let made: { value: T } | undefined;
+  return () => {
+    made ??= { value: make() };
+    return made.value;
+  };
 };
+const files = once(markupFiles);
+const census = once(
+  () => new Map(files().map((f) => [pathOf(f), censusOf(sourceFileAt(f))])),
+);
 
 describe("the legacy overlay props only count down", () => {
-  it("finds the dialogs it is meant to judge, every one the text spells", () => {
-    const walked = [...census().values()].reduce((n, c) => n + c.dialogs, 0);
-    const spelled = markupFiles().reduce(
-      (n, f) => n + tagsInText(readFileSync(f, "utf8")),
-      0,
-    );
-    expect(walked).toBeGreaterThan(0);
-    expect(walked).toBe(spelled);
-  });
+  it(
+    "finds the dialogs it is meant to judge, every one the text spells",
+    () => {
+      const walked = [...census().values()].reduce((n, c) => n + c.dialogs, 0);
+      const spelled = files().reduce(
+        (n, f) => n + tagsInText(readFileSync(f, "utf8")),
+        0,
+      );
+      expect(walked).toBeGreaterThan(0);
+      expect(walked).toBe(spelled);
+    },
+    TREE_BUILD,
+  );
 
-  it("holds every file at or under its frozen count", () => {
-    const grown = [...census()].flatMap(([file, c]) => {
-      const allowed = BASELINE[file] ?? { legacy: 0, bare: 0 };
-      return c.legacy > allowed.legacy || c.bare > allowed.bare
-        ? [
-            `${file}: ${c.legacy} legacy / ${c.bare} bare, allowed ${allowed.legacy} / ${allowed.bare}; name an intent instead`,
-          ]
-        : [];
-    });
-    expect(grown).toEqual([]);
-  });
+  it(
+    "holds every file at or under its frozen count",
+    () => {
+      const grown = [...census()].flatMap(([file, c]) => {
+        const allowed = BASELINE[file] ?? { legacy: 0, bare: 0 };
+        return c.legacy > allowed.legacy || c.bare > allowed.bare
+          ? [
+              `${file}: ${c.legacy} legacy / ${c.bare} bare, allowed ${allowed.legacy} / ${allowed.bare}; name an intent instead`,
+            ]
+          : [];
+      });
+      expect(grown).toEqual([]);
+    },
+    TREE_BUILD,
+  );
 
-  it("keeps the baseline to what the tree still holds", () => {
-    const stale = Object.entries(BASELINE).flatMap(([file, allowed]) => {
-      const c = census().get(file) ?? { legacy: 0, bare: 0 };
-      return c.legacy < allowed.legacy || c.bare < allowed.bare
-        ? [
-            `${file}: down to ${c.legacy} legacy / ${c.bare} bare; lower its entry`,
-          ]
-        : [];
-    });
-    expect(stale).toEqual([]);
-  });
+  it(
+    "keeps the baseline to what the tree still holds",
+    () => {
+      const stale = Object.entries(BASELINE).flatMap(([file, allowed]) => {
+        const c = census().get(file) ?? { legacy: 0, bare: 0 };
+        return c.legacy < allowed.legacy || c.bare < allowed.bare
+          ? [
+              `${file}: down to ${c.legacy} legacy / ${c.bare} bare; lower its entry`,
+            ]
+          : [];
+      });
+      expect(stale).toEqual([]);
+    },
+    TREE_BUILD,
+  );
 
   it("counts every shape a legacy prop can be handed in", () => {
     const planted = `import { Modal as Pane, ConfirmModal } from "./atoms";
