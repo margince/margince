@@ -1389,11 +1389,10 @@ export function ComposeModal({
   // resolves to the record's lead rather than being seeded, so reachability that
   // arrives after the first render is not stuck behind what existed before it.
   const [transportId, setTransportId] = useState(initialTransportId ?? "");
-  const openedOn =
+  const transport =
+    transports.find((option) => option.id === transportId) ??
     transports.find((option) => option.id === initialTransportId) ??
     transports[0];
-  const transport =
-    transports.find((option) => option.id === transportId) ?? openedOn;
   // A channel the reader picked, with the conversation a reply to it continues.
   // Mail is the only transport that can OPEN a conversation, so every other one
   // is anchored by nature.
@@ -1687,10 +1686,11 @@ export function ComposeModal({
   // composer there means — the account path asked them to name a recipient the
   // thread already knows, in front of a To field the draft would have filled.
   const groundable = !answering && entityType === "company" && !isChannelReply;
-  // The box is what the composer opened as, on any record: a reading drawer for
-  // mail, a form for a channel reply. The dial never reshapes it mid-draft.
+  // Shaped by the transport this opening began on; the dial never reshapes it.
+  const openedOn = useRef(transport);
+  if (!open || !openedOn.current) openedOn.current = transport;
   const asDrawer =
-    kind !== "message" && (openedOn === undefined || openedOn.id === "email");
+    kind !== "message" && (openedOn.current?.id ?? "email") === "email";
   // The conversation rides beside the form only where there IS one and there is
   // room for a second column. A channel reply answers a live conversation the
   // provider owns, and has no thread of its own to draw.

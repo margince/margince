@@ -11,7 +11,7 @@ import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 const PREVIEW = {
   destroyed: 41,
   released: 3,
-  skipped: 6,
+  skipped: 7,
   anonymised: 2,
   preview: true,
   kept: {
@@ -64,6 +64,12 @@ export const Checked: Story = { render: story(), play: checkFirst };
 export const CheckedPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
+  render: story(),
+  play: checkFirst,
+};
+
+export const CheckedDark: Story = {
+  globals: { theme: "dark" },
   render: story(),
   play: checkFirst,
 };

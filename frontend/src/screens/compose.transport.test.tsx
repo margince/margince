@@ -106,14 +106,20 @@ function render(ui: ReactNode) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  return rtlRender(
-    <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">{ui}</LocaleProvider>
-    </QueryClientProvider>,
-  );
+  return rtlRender(ui, {
+    wrapper: ({ children }) => (
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">{children}</LocaleProvider>
+      </QueryClientProvider>
+    ),
+  });
 }
 
-function drawer(transports: readonly Transport[], initial?: string) {
+function drawer(
+  transports: readonly Transport[],
+  initial?: string,
+  open = true,
+) {
   return (
     <ComposeModal
       entityType="contact"
@@ -122,7 +128,7 @@ function drawer(transports: readonly Transport[], initial?: string) {
       recordAddress="dana@brandt.example"
       transports={transports}
       initialTransportId={initial}
-      open
+      open={open}
       onClose={vi.fn()}
     />
   );
@@ -243,6 +249,20 @@ describe("the composer's transport dial", () => {
       expect(screen.getByRole("dialog").matches(box)).toBe(true);
     },
   );
+
+  // The contact page keeps its composer mounted between openings, so the caller
+  // can name a different transport than the one the dial still holds.
+  it("shapes each opening by the transport it opens on", async () => {
+    stubRoutes();
+    const view = render(drawer([MAIL, CHAT], "dispact"));
+    await screen.findByLabelText("Send via");
+    view.rerender(drawer([MAIL, CHAT], undefined, false));
+    view.rerender(drawer([MAIL, CHAT]));
+
+    await screen.findByLabelText("Send via");
+    expect(screen.queryByLabelText("Subject")).toBeNull();
+    expect(screen.getByRole("dialog").matches(".modal-form")).toBe(true);
+  });
 
   // The named conversation cannot be answered any more — disconnected, removed,
   // or off the end of the record's own window. Falling back silently is the

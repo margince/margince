@@ -14,6 +14,16 @@ const meta: Meta = {
 };
 export default meta;
 
+// Where the halves landed, which only the `compose` container query decides.
+function halves() {
+  const fold = document.querySelector(".compose-fold")?.getBoundingClientRect();
+  const draft = document
+    .querySelector(".compose-fields")
+    ?.getBoundingClientRect();
+  if (!fold || !draft) throw new Error("The composer drew no split.");
+  return { fold, draft };
+}
+
 /** A reading drawer wide enough for both: the thread beside the draft. */
 export const Beside: StoryObj = {
   parameters: {
@@ -34,6 +44,9 @@ export const Beside: StoryObj = {
     await expect(
       dialog.queryByRole("button", { name: "Show this thread" }),
     ).toBeNull();
+    const { fold, draft } = halves();
+    await expect(draft.left).toBeGreaterThanOrEqual(fold.right);
+    await expect(draft.top).toBe(fold.top);
   },
 };
 
@@ -49,7 +62,14 @@ export const Folded: StoryObj = {
     );
     await dialog.findByRole("heading", { name: "This thread" });
     await dialog.findByRole("button", { name: "Hide this thread" });
+    const { fold, draft } = halves();
+    await expect(draft.top).toBeGreaterThanOrEqual(fold.bottom);
   },
+};
+
+export const FoldedDark: StoryObj = {
+  ...Folded,
+  globals: { ...Folded.globals, theme: "dark" },
 };
 
 /** A fresh mail on a record with history: the earlier threads fold the same way. */
