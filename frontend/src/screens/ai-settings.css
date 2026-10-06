@@ -199,14 +199,6 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  margin-top: var(--space-3);
-}
-
-/* Air between a credential's reading and the field it opens. Without it the
- * field's own label sat directly under the last line of the summary and the two
- * read as one block instead of a reading and the thing it opened. */
-.ai-provider + * {
-  margin-top: var(--space-4);
 }
 
 /* Under the lanes: what the model lists are as of, and the way to move them on.
@@ -467,6 +459,12 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+}
+
+/* In a dialog the row below sets this space; the disclosure's margin would
+   add to it. */
+.modal .ai-serving-summary > .disclosure {
+  margin-bottom: 0;
 }
 
 @media (max-width: 720px) {

@@ -106,6 +106,74 @@ export function classNamesOn(source: ts.SourceFile, on?: string): ClassName[] {
   return out;
 }
 
+/** One class list per branch of a `className` expression, at most `cap`; a
+ * token cut by an interpolation comes back as its prefix (`ds-gap-`). */
+export function classVariants(
+  source: ts.SourceFile,
+  node: ts.Node | undefined,
+  cap = 16,
+): string[][] {
+  const bound = bindingsIn(source);
+  const following = new Set<ts.Node>();
+  const product = (lists: string[][][]) =>
+    lists.reduce<string[][]>(
+      (all, list) =>
+        all.flatMap((a) => list.map((b) => [...a, ...b])).slice(0, cap),
+      [[]],
+    );
+  const followed = (n: ts.Identifier): string[][] => {
+    const initializer = bound.get(n.text);
+    if (!initializer || following.has(initializer)) return [[]];
+    following.add(initializer);
+    const out = of(initializer);
+    following.delete(initializer);
+    return out;
+  };
+  const binary = (n: ts.BinaryExpression): string[][] => {
+    const kind = n.operatorToken.kind;
+    if (kind === ts.SyntaxKind.AmpersandAmpersandToken)
+      return [[], ...of(n.right)];
+    if (kind === ts.SyntaxKind.PlusToken)
+      return product([of(n.left), of(n.right)]);
+    return joins(kind) ? [...of(n.left), ...of(n.right)] : [[]];
+  };
+  // A conditional is the union of its branches, as is a wrapper of one part.
+  const of = (n: ts.Node): string[][] => {
+    if (ts.isStringLiteral(n) || ts.isNoSubstitutionTemplateLiteral(n)) {
+      return [n.text.split(/\s+/).filter(Boolean)];
+    }
+    if (ts.isTemplateExpression(n)) return [templateTokens(n)];
+    if (ts.isIdentifier(n)) return followed(n);
+    if (ts.isBinaryExpression(n)) return binary(n);
+    if (ts.isCallExpression(n) || ts.isArrayLiteralExpression(n)) {
+      return product(partsOf(n).map(of));
+    }
+    const branches = partsOf(n).flatMap(of);
+    return branches.length > 0 ? branches : [[]];
+  };
+  if (!node) return [[]];
+  const seen = new Map(of(node).map((v) => [v.join(" "), v]));
+  return [...seen.values()];
+}
+
+// A template's whole tokens, with a token flush against an interpolation kept
+// only as the prefix it is (`ds-gap-`).
+function templateTokens(n: ts.TemplateExpression): string[] {
+  const pieces = [
+    n.head.text,
+    ...n.templateSpans.map((s) => `\0${s.literal.text}`),
+  ];
+  return pieces
+    .join("")
+    .split(/\s+/)
+    .filter(Boolean)
+    .flatMap((token) => {
+      const [before] = token.split("\0");
+      if (!token.includes("\0")) return [token];
+      return before.endsWith("-") ? [before] : [];
+    });
+}
+
 /**
  * The sub-expressions of a class list that are themselves class lists.
  *
@@ -171,8 +239,12 @@ function tagOf(attribute: ts.JsxAttribute): string | undefined {
  * which over-reads rather than under-reads, the direction a census is allowed
  * to be wrong in.
  */
+const boundIn = new WeakMap<ts.SourceFile, Map<string, ts.Expression>>();
 function bindingsIn(source: ts.SourceFile): Map<string, ts.Expression> {
+  const known = boundIn.get(source);
+  if (known) return known;
   const out = new Map<string, ts.Expression>();
+  boundIn.set(source, out);
   const visit = (node: ts.Node) => {
     if (
       ts.isVariableDeclaration(node) &&
