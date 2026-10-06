@@ -12,22 +12,23 @@ import {
   useCompanyFieldPatch,
   useCompanyReadOnlyReason,
 } from "./companyheader";
-import { CompanySubtitle } from "./companyheaderfacts";
 import { LIFECYCLE_LABELS, LIFECYCLE_OPTIONS } from "./companylookups";
 
 type Company = components["schemas"]["Company"];
 type Lifecycle = NonNullable<Company["lifecycle"]>;
 type UpdateCompanyRequest = components["schemas"]["UpdateCompanyRequest"];
 
-// The name's own line on the company record: where the account stands, then
-// what it is and the one way in. Keyed by the record: a refused pick belongs
-// to this account and must not carry over when the page moves to the next.
+// The name's own line on the company record: the name and where the account
+// stands, nothing else; what it is and the way in read on the marks row under
+// it (CompanyMarks). Centred against the name rather than on the compact
+// head's shared baseline, which drops a button low beside display type.
+// Keyed by the record: a refused pick belongs to this account and must not
+// carry over when the page moves to the next.
 export function CompanyNameLine({ company }: Readonly<{ company: Company }>) {
   return (
-    <>
+    <div className="co-name-control">
       <CompanyLifecycleControl key={company.id} company={company} />
-      <CompanySubtitle company={company} />
-    </>
+    </div>
   );
 }
 
@@ -59,6 +60,14 @@ export function CompanyLifecycleControl({
   const [saving, setSaving] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
   const stored = company.lifecycle ?? "unknown";
+  // A stage saved from somewhere else (the Details grid) supersedes a refused
+  // pick here: the button shows what the record now holds, not the old error.
+  const [shownFor, setShownFor] = useState(stored);
+  if (shownFor !== stored) {
+    setShownFor(stored);
+    setPending(null);
+    setFailure(null);
+  }
   const label = (value: string) => t(LIFECYCLE_LABELS[value as Lifecycle]);
   if (!canUpdate || readOnlyReason) {
     // A reader who may not change the stage is shown the stage. A button that

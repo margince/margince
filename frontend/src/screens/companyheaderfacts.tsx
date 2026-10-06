@@ -25,15 +25,18 @@ type Company = components["schemas"]["Company"];
 type Company360 = components["schemas"]["Company360"];
 
 /**
- * CompanySubtitle is the name line's own subtitle, beside the name rather
- * than under everything else the header carries: what the account is, and
- * the one way in every reader already knows, the same inline shape
- * contactpage.tsx's ContactSubtitle draws for a contact's title and employer.
+ * CompanySubtitle is what the account is and the one way in every reader
+ * already knows, leading the marks row under the name (CompanyMarks). The
+ * name's own line holds the lifecycle control alone. Nothing is drawn for an
+ * account with neither, so the row does not open on an empty gap.
  */
 export function CompanySubtitle({
   company,
 }: Readonly<{ company: Company }>): ReactNode {
   const website = companyWebsite(company);
+  if (!company.industry && !website) {
+    return null;
+  }
   return (
     <div className="record-sub record-sub-inline">
       {company.industry}
