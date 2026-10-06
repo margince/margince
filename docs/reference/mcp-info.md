@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 82 |
 | Resources | 9 |
-| Tool catalog | 251.2 KB |
+| Tool catalog | 251.1 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 65185 |
+| Approx. wire tokens | 65183 |
 | Largest tool | `prep_for_meeting` (9.1 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -136,7 +136,7 @@ descriptions and input schemas are what each step pays for.
 | [`update_record`](#update_record) | Update a record |  | [`ui://margince/field-conflict.html`](#field_conflict_view) | 3.9 KB |
 | [`update_tag`](#update_tag) | Rename or recolour a tag |  | [``](#_view) | 2.1 KB |
 | [`whats_slipping_this_week`](#whats_slipping_this_week) | What's slipping this week | yes | [``](#_view) | 2.3 KB |
-| [`who_knows`](#who_knows) | Next steps for this record | yes | [``](#_view) | 2.2 KB |
+| [`who_knows`](#who_knows) | Who knows this contact | yes | [``](#_view) | 2.2 KB |
 | [`whoami`](#whoami) | Who this passport acts for | yes | [``](#_view) | 1.8 KB |
 
 ## Resources
@@ -17757,7 +17757,7 @@ Renders its result in [``](#_view), visible to `model`.
 
 ### who_knows
 
-**Next steps for this record**
+**Who knows this contact**
 
 ```text
 Answer "who here knows this contact?": the colleagues with a relationship to one contact, warmest

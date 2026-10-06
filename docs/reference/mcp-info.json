@@ -10,9 +10,9 @@
   "totals": {
     "tools": 82,
     "resources": 9,
-    "tool_catalog_bytes": 257182,
+    "tool_catalog_bytes": 257174,
     "resource_catalog_bytes": 3560,
-    "approx_wire_tokens_total": 65185,
+    "approx_wire_tokens_total": 65183,
     "largest_tool_bytes": 9293,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
@@ -16280,7 +16280,7 @@
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": true,
-          "title": "Next steps for this record"
+          "title": "Who knows this contact"
         },
         "description": "Answer \"who here knows this contact?\": the colleagues with a relationship to one contact, warmest first, with the interaction counts that ground the warmth. It reports relationships this workspace can evidence from its own recorded interactions, so a genuine relationship nobody has logged does not appear. Never spoken is reported as no relationship rather than a score of zero. Use intro_path_to when you want a route into a COMPANY rather than the colleagues who know one contact. Each colleague comes back with a user_id; the strength bucket, not the raw score, is what a colleague should be asked about. (Governance: runs immediately; requires passport scope \"read\".)",
         "inputSchema": {
@@ -16424,7 +16424,7 @@
           ],
           "type": "object"
         },
-        "title": "Next steps for this record"
+        "title": "Who knows this contact"
       },
       {
         "_meta": {

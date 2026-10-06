@@ -3049,7 +3049,8 @@
       ],
       "required_as_one_of_a_set_by_cases": [],
       "permitted_in_cases": [
-        "case2_business_card"
+        "case2_business_card",
+        "case56_not_the_same"
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
@@ -3419,7 +3420,8 @@
       "permitted_in_cases": [
         "case30_a_word_for_it",
         "case32_two_words_for_one_thing",
-        "case54_a_word_from_the_fair"
+        "case54_a_word_from_the_fair",
+        "case56_not_the_same"
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
@@ -3450,7 +3452,8 @@
       "required_as_one_of_a_set_by_cases": [],
       "permitted_in_cases": [
         "case31_wrong_word_on_the_record",
-        "case54_a_word_from_the_fair"
+        "case54_a_word_from_the_fair",
+        "case56_not_the_same"
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
@@ -3481,7 +3484,8 @@
       "permitted_in_cases": [
         "case30_a_word_for_it",
         "case31_wrong_word_on_the_record",
-        "case54_a_word_from_the_fair"
+        "case54_a_word_from_the_fair",
+        "case56_not_the_same"
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
