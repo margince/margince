@@ -87,7 +87,7 @@ func (t attentionTasks) OpenForViewer(
 	for _, row := range rows {
 		open = append(open, taskFromActivity(row))
 	}
-	return open, nil
+	return t.markReadOnly(ctx, open)
 }
 
 // UpcomingForViewer reads the work due after the day's end, to a horizon.
@@ -113,5 +113,22 @@ func (t attentionTasks) UpcomingForViewer(
 	for _, row := range rows {
 		upcoming = append(upcoming, taskFromActivity(row))
 	}
-	return upcoming, nil
+	return t.markReadOnly(ctx, upcoming)
+}
+
+// markReadOnly flags the tasks the reader may see and not change, asked of the
+// whole page in one read.
+func (t attentionTasks) markReadOnly(ctx context.Context, tasks []attention.Task) ([]attention.Task, error) {
+	named := make([]ids.UUID, len(tasks))
+	for i, task := range tasks {
+		named[i] = task.ID
+	}
+	writable, err := t.store.WritableTasks(ctx, named)
+	if err != nil {
+		return nil, err
+	}
+	for i := range tasks {
+		tasks[i].ReadOnly = !writable[tasks[i].ID]
+	}
+	return tasks, nil
 }

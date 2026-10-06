@@ -86,6 +86,40 @@ describe("ticking Worklist rows for Mark done", () => {
     expect(selectBox("Reconnect the mailbox")).toBeNull();
   });
 
+  it("ticks one row, not every row that shares its record's id", async () => {
+    const twin = row({
+      ...aPromise,
+      id: aTask.id,
+      title: "Promised the same thing",
+    });
+    stub(
+      day({
+        queue: [aTask, twin],
+        summary: { urgent: 0, due: 0, lower_priority: 2, total: 2 },
+      }),
+    );
+    const user = userEvent.setup();
+    renderUnderAToastRegion();
+
+    await user.click(
+      (
+        await screen.findAllByRole("checkbox", {
+          name: en["bulk.selectRow"].replace(
+            "{name}",
+            "Send the retrofit quote",
+          ),
+        })
+      )[0],
+    );
+
+    expect(
+      (selectBox("Send the retrofit quote") as HTMLInputElement).checked,
+    ).toBe(true);
+    expect(
+      (selectBox("Promised the same thing") as HTMLInputElement).checked,
+    ).toBe(false);
+  });
+
   it("selects every shown task and promise and previews them as one change", async () => {
     const previewed: unknown[] = [];
     stub(theDay());

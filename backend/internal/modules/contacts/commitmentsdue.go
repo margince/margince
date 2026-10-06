@@ -19,12 +19,14 @@ package contacts
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -75,6 +77,9 @@ type CommitmentDue struct {
 	DueAt       time.Time
 	// Version is the claim's, which settling it is conditioned on.
 	Version int64
+	// Settleable says the caller may settle it: a human holding contact update
+	// and write authority over the contact, the gates the settlement asks.
+	Settleable bool
 }
 
 // OpenCommitmentsDue reads the acting rep's own promises falling due by the
@@ -309,4 +314,57 @@ func (s *Store) CountOpenCommitmentsDueByOwner(
 		return nil, fmt.Errorf("count the team's commitments coming due: %w", err)
 	}
 	return per, nil
+}
+
+// MarkSettleable sets Settleable on the promises the caller may settle:
+// SetClaimDoneTx's human and contact update gates, then the write arm over
+// each promise's contact, asked of the page in one read.
+func (s *Store) MarkSettleable(ctx context.Context, promises []CommitmentDue) error {
+	err := auth.RequireHuman(ctx)
+	if err == nil {
+		err = auth.Require(ctx, "contact", principal.ActionUpdate)
+	}
+	switch {
+	case errors.Is(err, apperrors.ErrPermissionDenied) || len(promises) == 0:
+		return nil
+	case err != nil:
+		return err
+	}
+	return s.tx(ctx, func(tx pgx.Tx) error {
+		contactIDs := make([]ids.UUID, len(promises))
+		for i, promise := range promises {
+			contactIDs[i] = promise.ContactID.UUID
+		}
+		var args []any
+		arg := func(v any) int { args = append(args, v); return len(args) }
+		idsPos := arg(contactIDs)
+		clause, err := auth.WriteAuthorityClauseFor(ctx, "contact", "pr", arg)
+		if err != nil {
+			return err
+		}
+		if clause == "" {
+			clause = "true"
+		}
+		rows, err := tx.Query(ctx, fmt.Sprintf(
+			`SELECT pr.id FROM contact pr WHERE pr.id = ANY($%d) AND (%s)`, idsPos, clause), args...)
+		if err != nil {
+			return fmt.Errorf("read which contacts the caller may change: %w", err)
+		}
+		defer rows.Close()
+		writable := map[ids.UUID]bool{}
+		for rows.Next() {
+			var id ids.UUID
+			if err := rows.Scan(&id); err != nil {
+				return fmt.Errorf("read which contacts the caller may change: %w", err)
+			}
+			writable[id] = true
+		}
+		if err := rows.Err(); err != nil {
+			return fmt.Errorf("read which contacts the caller may change: %w", err)
+		}
+		for i := range promises {
+			promises[i].Settleable = writable[promises[i].ContactID.UUID]
+		}
+		return nil
+	})
 }

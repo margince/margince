@@ -4,7 +4,7 @@
 package agents
 
 // bulk_update_records: one change over a selection of contacts, companies,
-// deals, leads or Worklist tasks and promises, previewed and confirmed in the conversation that asked for it.
+// deals, leads or Worklist tasks, previewed and confirmed in the conversation that asked for it.
 //
 // The tool reaches the engine POST /v1/bulk/preview and POST /v1/bulk/execute
 // run on, through a seam compose implements, so the per-row write check, the
@@ -158,7 +158,7 @@ func (t bulkUpdateRecords) Spec() mcp.ToolSpec {
 		InputSchema: schema(`{"type":"object","required":["mode"],"properties":{
 			"mode":{"type":"string","enum":["preview","execute","undo_preview","undo"],
 				"description":"preview says what would change; execute changes it; undo_preview and undo do the same for putting back the change batch_id names"},
-			"record_type":{"type":"string","enum":["contact","company","deal","lead","worklist_item"],"description":"A lead takes every verb but archive. A worklist_item is a Worklist task or promise, and takes complete alone"},
+			"record_type":{"type":"string","enum":["contact","company","deal","lead","worklist_item"],"description":"A lead takes every verb but archive. A worklist_item is a Worklist task, and takes complete alone; a Worklist commitment is refused, because the user marks it done"},
 			"verb":{"type":"string","enum":["reassign_owner","archive","add_to_list","remove_from_list","add_tag","remove_tag","create_task","complete"]},
 			"items":{"type":"array","minItems":1,"maxItems":500,"items":{"type":"object","required":["id","version"],
 				"properties":{"id":{"type":"string","format":"uuid"},"version":{"type":"integer"}},"additionalProperties":false}},

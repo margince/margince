@@ -3,11 +3,12 @@
 
 import { useState } from "react";
 import { Button, Checkbox } from "../design-system/atoms";
-import { SelectionBar } from "../design-system/listtable";
+import { SelectionBar } from "../design-system/selectionbar";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { BulkChangeDialog, type BulkChangeRequest } from "./bulkchange";
 import type { WorklistItem } from "./worklist.queries";
+import { rowIdentity } from "./worklist.rowidentity";
 
 // Marking several Worklist tasks and promises done in one change.
 //
@@ -48,16 +49,17 @@ export type WorklistPicks = Readonly<{
 export function useWorklistPicks(queue: readonly WorklistItem[]) {
   const [ticked, setTicked] = useState<ReadonlySet<string>>(new Set());
   const eligible = queue.filter(bulkDoneEligible);
-  const rows = eligible.filter((item) => ticked.has(item.id));
+  const rows = eligible.filter((item) => ticked.has(rowIdentity(item)));
   const picks: WorklistPicks = {
-    picked: new Set(rows.map((item) => item.id)),
+    picked: new Set(rows.map(rowIdentity)),
     toggle: (item) =>
       setTicked((prev) => {
         const next = new Set(prev);
-        if (next.has(item.id)) {
-          next.delete(item.id);
+        const key = rowIdentity(item);
+        if (next.has(key)) {
+          next.delete(key);
         } else {
-          next.add(item.id);
+          next.add(key);
         }
         return next;
       }),
@@ -66,13 +68,19 @@ export function useWorklistPicks(queue: readonly WorklistItem[]) {
     picks,
     eligible,
     rows,
-    selectAll: () => setTicked(new Set(eligible.map((item) => item.id))),
+    selectAll: () => setTicked(new Set(eligible.map(rowIdentity))),
     clear: () => setTicked(new Set()),
   };
 }
 
-/** One eligible row's checkbox. */
-export function RowPick({
+/** The row's checkbox, or none for a row the change cannot mark done. */
+export function pickFor(item: WorklistItem, picks: WorklistPicks) {
+  return bulkDoneEligible(item) ? (
+    <RowPick item={item} picks={picks} />
+  ) : undefined;
+}
+
+function RowPick({
   item,
   picks,
 }: Readonly<{ item: WorklistItem; picks: WorklistPicks }>) {
@@ -83,7 +91,7 @@ export function RowPick({
     <Checkbox
       label={null}
       aria-label={t("bulk.selectRow", { name: item.title ?? item.id })}
-      checked={picks.picked.has(item.id)}
+      checked={picks.picked.has(rowIdentity(item))}
       onChange={() => picks.toggle(item)}
     />
   );
@@ -109,11 +117,20 @@ export function WorklistBulkBar({
     setRequest({
       recordType: "worklist_item",
       verb: "complete",
-      rows: rows.map((item) => ({
-        id: item.id,
-        version: item.version,
-        label: item.title ?? item.id,
-      })),
+      // Each record once: two rows may name one record, and the change
+      // refuses an id named twice.
+      rows: [
+        ...new Map(
+          rows.map((item) => [
+            item.id,
+            {
+              id: item.id,
+              version: item.version,
+              label: item.title ?? item.id,
+            },
+          ]),
+        ).values(),
+      ],
       openId: crypto.randomUUID(),
     });
   return (

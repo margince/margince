@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // seedWorklistTask files one open task for Rep1 through the task writer, and
@@ -167,5 +168,108 @@ func TestABulkCompletionSettlesAPromiseAndReportsWhatItLeftAlone(t *testing.T) {
 	}
 	if got := taskDoneState(t, e, finished.Id); got != "true" {
 		t.Error("the undo opened a task the change never completed")
+	}
+}
+
+// settledPromise is a promise already marked done, as the item a Worklist row
+// loaded before that would carry, so a change over it skips it as no_change.
+func settledPromise(t *testing.T, e *integration.Env, contact ids.UUID) crmcontracts.BulkItem {
+	t.Helper()
+	promise := seedWorklistPromise(t, e, contact, "Send the price list")
+	if err := contacts.NewStore(e.DB()).SettleConversationClaim(e.Admin(), ids.UUID(promise.Id), "done"); err != nil {
+		t.Fatalf("settling the promise beforehand: %v", err)
+	}
+	promise.Version = int64(e.WsCount(t, `SELECT version FROM conversation_claim WHERE id = $1`, promise.Id))
+	return promise
+}
+
+// A batch's stored skips name promises; a requester who can no longer read
+// activities, which the Worklist's own promise read requires, is no longer told
+// about them.
+func TestABatchStopsNamingAPromiseOnceItsRequesterLosesActivityRead(t *testing.T) {
+	e := integration.Setup(t)
+	contact := e.SeedContact(t, "Herr Baum", &e.Rep1)
+	task := seedWorklistTask(t, e, contact, "Call the buyer")
+	promise := settledPromise(t, e, contact)
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.SchedulerPerms)
+	engine := bulkEngineFor(e)
+
+	out, err := engine.Execute(rep, completeItems(task, promise))
+	if err != nil || out.Changed != 1 {
+		t.Fatalf("execute → %+v, %v; want the task done and the promise skipped", out, err)
+	}
+	status, err := engine.Status(rep, ids.UUID(out.BatchId))
+	if err != nil || len(status.Skipped) != 1 || status.Skipped[0].Id != promise.Id {
+		t.Fatalf("status while the rep reads activities → %+v, %v; want the promise named", status.Skipped, err)
+	}
+
+	noActivityRead := principal.Permissions{
+		RoleKeys: integration.SchedulerPerms.RoleKeys,
+		Objects:  map[string]principal.ObjectGrant{"contact": {Read: true, Update: true}},
+		RowScope: integration.SchedulerPerms.RowScope,
+	}
+	status, err = engine.Status(e.As(e.Rep1, []ids.UUID{e.Team1}, noActivityRead), ids.UUID(out.BatchId))
+	if err != nil || len(status.Skipped) != 0 {
+		t.Fatalf("status without activity read → %+v, %v; want the promise withheld", status.Skipped, err)
+	}
+}
+
+// An agent may mark the user's tasks done, never their promises: whether a
+// human kept their word is theirs to say, and the skip says so by name.
+func TestAnAgentsBulkCompletionLeavesPromisesToTheUser(t *testing.T) {
+	e := integration.Setup(t)
+	contact := e.SeedContact(t, "Frau Keller", &e.Rep1)
+	task := seedWorklistTask(t, e, contact, "Book the site visit")
+	promise := seedWorklistPromise(t, e, contact, "Confirm the delivery date")
+	agent := e.AgentFor(t, e.Rep1, []ids.UUID{e.Team1}, integration.SchedulerPerms)
+
+	out, err := bulkEngineFor(e).Execute(agent, completeItems(task, promise))
+	if err != nil || out.Changed != 1 || len(out.Skipped) != 1 {
+		t.Fatalf("execute → %+v, %v; want the task done and the promise skipped", out, err)
+	}
+	if skip := out.Skipped[0]; skip.Id != promise.Id || skip.Reason != crmcontracts.BulkSkipReasonRefused ||
+		skip.Code == nil || *skip.Code != "commitment_needs_the_user" {
+		t.Errorf("the promise was skipped as %+v, want refused with commitment_needs_the_user", skip)
+	}
+	if got := e.WsScalar(t, `SELECT status FROM conversation_claim WHERE id = $1`, promise.Id); got != "open" {
+		t.Errorf("the promise is %s, want it left open", got)
+	}
+}
+
+// The Worklist offers Done, and with it the Mark done checkbox, only on a row
+// the reader's write would be admitted on.
+func TestTheWorklistOffersDoneOnlyWhereTheReaderMayWrite(t *testing.T) {
+	e := integration.Setup(t)
+	contact := e.SeedContact(t, "Herr Vogt", &e.Rep1)
+	task := seedWorklistTask(t, e, contact, "Call back")
+	seedWorklistPromise(t, e, contact, "Send the quote")
+	readOnly := principal.Permissions{
+		RoleKeys: integration.SchedulerPerms.RoleKeys,
+		Objects: map[string]principal.ObjectGrant{
+			"contact": {Read: true}, "activity": {Read: true},
+		},
+		RowScope: integration.SchedulerPerms.RowScope,
+	}
+	due := time.Now().Add(24 * time.Hour)
+	for name, tc := range map[string]struct {
+		perms    principal.Permissions
+		writable bool
+	}{
+		"a rep who may change them": {integration.SchedulerPerms, true},
+		"a rep who may only read":   {readOnly, false},
+	} {
+		reader := e.As(e.Rep1, []ids.UUID{e.Team1}, tc.perms)
+		tasks, err := e.Activities.WritableTasks(reader, []ids.UUID{ids.UUID(task.Id)})
+		if err != nil || tasks[ids.UUID(task.Id)] != tc.writable {
+			t.Errorf("%s: task writable = %v (%v), want %v", name, tasks[ids.UUID(task.Id)], err, tc.writable)
+		}
+		claims := contacts.NewStore(e.DB())
+		promises, err := claims.OpenCommitmentsDue(reader, ids.From[ids.UserKind](e.Rep1), due, 10)
+		if err == nil {
+			err = claims.MarkSettleable(reader, promises)
+		}
+		if err != nil || len(promises) != 1 || promises[0].Settleable != tc.writable {
+			t.Errorf("%s: promises %+v (%v), want one with settleable = %v", name, promises, err, tc.writable)
+		}
 	}
 }

@@ -67,3 +67,22 @@ func (s *Store) SetTaskDoneTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID,
 	}
 	return *out.Version, nil
 }
+
+// WritableTasks answers which of the named tasks the caller could mark done, so
+// a list offers Done only where the write would be admitted.
+func (s *Store) WritableTasks(ctx context.Context, named []ids.UUID) (map[ids.UUID]bool, error) {
+	err := auth.Require(ctx, "activity", principal.ActionUpdate)
+	if errors.Is(err, apperrors.ErrPermissionDenied) {
+		return map[ids.UUID]bool{}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	var out map[ids.UUID]bool
+	err = s.tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		out, err = auth.ActivityWritableSubset(ctx, tx, named)
+		return err
+	})
+	return out, err
+}

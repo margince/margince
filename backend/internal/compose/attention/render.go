@@ -319,6 +319,11 @@ func taskItem(task Task, asOf, until time.Time, loc *time.Location) crmcontracts
 		Subject: subjectOf(task.LinkType, task.LinkID),
 		Actions: []crmcontracts.AttentionItemActions{"complete", "snooze"},
 	}
+	// Both verbs PATCH the task, so a reader who may not change it is offered
+	// neither.
+	if task.ReadOnly {
+		item.Actions = []crmcontracts.AttentionItemActions{}
+	}
 	if task.LeadResponseEscalation {
 		kind := "lead_response_escalation"
 		item.Kind = &kind
@@ -421,6 +426,9 @@ func commitmentItem(promise Commitment, asOf time.Time) crmcontracts.AttentionIt
 			crmcontracts.AttentionItemActionsComplete,
 			actionOpen,
 		},
+	}
+	if promise.ReadOnly {
+		item.Actions = []crmcontracts.AttentionItemActions{actionOpen}
 	}
 	if promise.SourceLabel != "" {
 		label := promise.SourceLabel

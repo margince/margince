@@ -5,12 +5,8 @@ import { formatMoney, formatNumber, ordinalNumber } from "../format/format";
 import { useLocale } from "../i18n";
 import { Badge, Button } from "./atoms";
 import type { ListChip } from "./listsurface";
-import {
-  CellStrip,
-  type ListColumn,
-  ListTable,
-  SelectionBar,
-} from "./listtable";
+import { CellStrip, type ListColumn, ListTable } from "./listtable";
+import { SelectionBar } from "./selectionbar";
 
 // The list surface every record screen renders into: header, controls, rows and
 // footer as one block. The query dials are CONTROLLED and server-backed in the

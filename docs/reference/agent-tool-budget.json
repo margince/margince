@@ -31,7 +31,7 @@
   "catalog": {
     "tools": 81,
     "system_frame_tokens": 586,
-    "tokens": 28737,
+    "tokens": 28770,
     "median_tool_tokens": 293,
     "mean_tool_tokens": 354
   },
@@ -95,12 +95,12 @@
       "tokens": 823
     },
     {
-      "name": "list_records",
-      "tokens": 794
+      "name": "bulk_update_records",
+      "tokens": 806
     },
     {
-      "name": "bulk_update_records",
-      "tokens": 772
+      "name": "list_records",
+      "tokens": 794
     },
     {
       "name": "compose_analytics_report",

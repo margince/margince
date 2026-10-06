@@ -89,17 +89,13 @@ func EnsureActivityWritableIn(ctx context.Context, tx pgx.Tx, id ids.UUID, live 
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	idPos, me, author := arg(id), arg(p.UserID), arg("%:"+p.UserID.String())
+	idPos := arg(id)
+	arms := activityWriteArms(p, arg)
 
 	var permitted bool
 	if err := tx.QueryRow(ctx, fmt.Sprintf(`
-		SELECT EXISTS (SELECT 1 FROM activity a WHERE a.id = $%[1]d AND (
-		   a.captured_by LIKE $%[3]d
-		   OR a.assignee_id = $%[2]d
-		   OR a.host_user_id = $%[2]d
-		   OR NOT EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = a.id)
-		   OR EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = a.id AND %[4]s)))`,
-		idPos, me, author, linkTargetWritable(p, "l", arg)), args...).Scan(&permitted); err != nil {
+		SELECT EXISTS (SELECT 1 FROM activity a WHERE a.id = $%d AND %s)`,
+		idPos, arms), args...).Scan(&permitted); err != nil {
 		return err
 	}
 	if !permitted {
@@ -109,6 +105,62 @@ func EnsureActivityWritableIn(ctx context.Context, tx pgx.Tx, id ids.UUID, live 
 		return apperrors.ErrPermissionDenied
 	}
 	return nil
+}
+
+// activityWriteArms is the authority half of EnsureActivityWritableIn over the
+// row aliased `a`: authored, assigned, hosted, link-less, or linked to a
+// record the caller may change.
+func activityWriteArms(p principal.Principal, arg func(any) int) string {
+	me, author := arg(p.UserID), arg("%:"+p.UserID.String())
+	return fmt.Sprintf(`(
+		   a.captured_by LIKE $%[2]d
+		   OR a.assignee_id = $%[1]d
+		   OR a.host_user_id = $%[1]d
+		   OR NOT EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = a.id)
+		   OR EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = a.id AND %[3]s))`,
+		me, author, linkTargetWritable(p, "l", arg))
+}
+
+// ActivityWritableSubset answers which of the named live, unheld activities
+// the caller holds write authority over — the authority half
+// EnsureActivityWritable asks of one row, asked of a page at once. The object
+// grant is the caller's to ask first, and the rows are ones the caller was
+// already shown, so visibility is not re-asked.
+func ActivityWritableSubset(ctx context.Context, tx pgx.Tx, rowIDs []ids.UUID) (map[ids.UUID]bool, error) {
+	out := make(map[ids.UUID]bool, len(rowIDs))
+	p, err := rbacActor(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if Unbounded(p) {
+		for _, id := range rowIDs {
+			out[id] = true
+		}
+		return out, nil
+	}
+	if len(rowIDs) == 0 {
+		return out, nil
+	}
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	idsPos := arg(rowIDs)
+	arms := activityWriteArms(p, arg)
+	rows, err := tx.Query(ctx, fmt.Sprintf(
+		`SELECT a.id FROM activity a
+		  WHERE a.id = ANY($%d) AND a.archived_at IS NULL AND a.restricted_at IS NULL AND %s`,
+		idsPos, arms), args...)
+	if err != nil {
+		return nil, fmt.Errorf("auth: reading which activities the caller may change: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id ids.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("auth: reading which activities the caller may change: %w", err)
+		}
+		out[id] = true
+	}
+	return out, rows.Err()
 }
 
 // activityAudienceIncludes probes ONLY ActivityAudienceArm — no liveness, no

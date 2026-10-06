@@ -187,6 +187,9 @@ type Task struct {
 	// without it can be acted on and cannot be acted on SAFELY: two contacts
 	// ticking one task each overwrite the other, and neither is told.
 	Version *int64
+	// ReadOnly says the reader may see the task but not change it, so the row
+	// offers no verb that writes to it.
+	ReadOnly bool
 }
 
 // Receipts is what the system did on its own, most recent first.
@@ -385,6 +388,9 @@ type Commitment struct {
 	DueAt       time.Time
 	// Version is the claim's, which a Worklist row's Done is conditioned on.
 	Version int64
+	// ReadOnly says the reader may not settle the claim, so the row offers no
+	// Done.
+	ReadOnly bool
 }
 
 // DealFacts answers the figures behind deals a row names but does not carry.

@@ -93,9 +93,19 @@ func (s *Store) SetClaimDoneTx(ctx context.Context, tx pgx.Tx, id ids.UUID, done
 }
 
 // VisibleClaims answers which of the named claims the caller may see now:
-// their contact is in scope and the message they quote is readable.
+// the contact and activity read grants OpenCommitmentsDue asks, their contact
+// in scope, and the message they quote readable.
 func VisibleClaims(ctx context.Context, tx pgx.Tx, named []ids.UUID) (map[ids.UUID]bool, error) {
 	out := make(map[ids.UUID]bool, len(named))
+	for _, object := range []string{"contact", "activity"} {
+		err := auth.Require(ctx, object, principal.ActionRead)
+		if errors.Is(err, apperrors.ErrPermissionDenied) {
+			return out, nil
+		}
+		if err != nil {
+			return nil, err
+		}
+	}
 	for _, id := range named {
 		var contactID, activityID ids.UUID
 		err := tx.QueryRow(ctx, `
