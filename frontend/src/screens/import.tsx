@@ -2,18 +2,21 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Upload } from "lucide-react";
-import { useEffect, useId, useRef, useState } from "react";
+import { useRef } from "react";
 import { useCan, useCanWrite } from "../app/capability";
+import { navigate, routeHash } from "../app/router";
+import { useArrivalFocus } from "../design-system/arrivalfocus";
 import {
   Button,
   EmptyState,
   Field,
-  Modal,
   SegmentedControl,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { ConfirmModal } from "../design-system/confirmmodal";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
+import { RecordBack } from "../design-system/recordview";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatDateTime, formatNumber, ordinalNumber } from "../format/format";
@@ -27,6 +30,7 @@ import {
 } from "../i18n";
 import { problemMessageOf, useMe } from "./common";
 import { UndoErrors, UndoInterruptedNotice } from "./import.notices";
+import { useAddressedImportFlow } from "./importaddress";
 import { useImportFlow } from "./importflow";
 import { ImportMappingTable } from "./importmapping";
 import type {
@@ -35,7 +39,8 @@ import type {
   ImportReport,
   ImportRun,
 } from "./importtypes";
-import { identifyingFieldFor } from "./importtypes";
+import { identifyingFieldFor, UNNAMED_IMPORT_OBJECT } from "./importtypes";
+import { IMPORT_RUN_SUBPAGE, settingsHref } from "./settingsrouting";
 import { useTagVocabulary } from "./tags.queries";
 import "./import.css";
 
@@ -47,41 +52,22 @@ import "./import.css";
 // types in one act — so nothing is written until a human has read a report of
 // what will happen and pressed the button again.
 //
-// It lives beside the other operator-run bulk actions rather than in a nav entry
-// of its own. On the settings page it is one row, because an import is an ACT
-// rather than an answer this installation holds: the row states what the act is
-// and carries the verb, and the steps that make up the act — object, file,
-// mapping, dry run, commit, undo — belong to the dialog that verb opens.
+// On the settings page it is one row, because an import is an ACT rather than
+// an answer this installation holds: the row carries the verb, and the steps
+// that make up the act belong to the page that verb opens.
+const IMPORT_HOME = settingsHref("import");
+const openRun = () => navigate({ ...IMPORT_HOME, id2: IMPORT_RUN_SUBPAGE });
 
-export function ImportCard() {
+export function ImportCard({ subpage }: Readonly<{ subpage?: string }>) {
   const t = useT();
-  // The flow does not only create: the dry run parks the run (update), the
-  // approval moves it (update), and every step reads it back (read). A role
-  // edited to create-without-update would otherwise see the card and be
-  // refused at the first button. useCanWrite folds the seat ceiling, which a
-  // read-seat admin would otherwise hit as a clamped POST.
+  // The flow does not only create: the dry run parks the run and the approval
+  // moves it (update). A role edited to create-without-update would see the card
+  // and be refused at the first button. useCanWrite folds the seat ceiling, which
+  // a read-seat admin would otherwise hit as a clamped POST.
   const mayCreate = useCanWrite("import_run", "create");
   const mayAdvance = useCan("import_run", "update");
   const mayImport = mayCreate && mayAdvance;
   const me = useMe();
-  const flow = useImportFlow();
-  const headingId = useId();
-  const [open, setOpen] = useState(false);
-  // An operator who does not know their last import stopped half-way cannot
-  // finish it. The flow reads a parked run back on mount, and inside a dialog
-  // that run is behind a button nobody knows to press — so the dialog opens
-  // itself when a run resumes.
-  //
-  // Guarded by a ref rather than driven by `resumed` alone, so it happens ONCE:
-  // a reader who has looked at the recovered run and closed the dialog is not
-  // fought by the next render.
-  const openedForResumedRun = useRef(false);
-  useEffect(() => {
-    if (flow.resumed && !openedForResumedRun.current) {
-      openedForResumedRun.current = true;
-      setOpen(true);
-    }
-  }, [flow.resumed]);
 
   // Gated on the grant the STORE demands, not on the admin role: `import_run`
   // is seeded to admin AND ops, so asking for the role would hide the card
@@ -106,7 +92,14 @@ export function ImportCard() {
   if (!mayImport) {
     return null;
   }
+  return subpage === IMPORT_RUN_SUBPAGE ? <ImportRunPage /> : <ImportStart />;
+}
 
+function ImportStart() {
+  const t = useT();
+  // The flow reads a parked run back on mount, so the row can say one is left
+  // to finish: an operator who does not know it stopped cannot finish it.
+  const { resumed } = useImportFlow(UNNAMED_IMPORT_OBJECT);
   return (
     <Panel title={t("import.title")}>
       <PanelBody>
@@ -115,40 +108,46 @@ export function ImportCard() {
             label={t("import.startLabel")}
             description={t("import.sub")}
             control={
-              <Button variant="ghost" onClick={() => setOpen(true)}>
-                {t("import.start")}
+              <Button variant="ghost" onClick={openRun}>
+                {resumed ? t("import.continue") : t("import.start")}
               </Button>
             }
           />
         </SettingList>
-        {/* The mapping table scrolls sideways in its own TableScroll. */}
-        <Modal
-          open={open}
-          onClose={() => setOpen(false)}
-          labelledBy={headingId}
-          intent="form"
-        >
-          <Heading size="large" id={headingId} className="t-h2 modal-title">
-            {t("import.title")}
-          </Heading>
-          <ImportWizard flow={flow} />
-        </Modal>
       </PanelBody>
     </Panel>
+  );
+}
+
+function ImportRunPage() {
+  const t = useT();
+  const flow = useAddressedImportFlow();
+  const title = useArrivalFocus<HTMLSpanElement>();
+  return (
+    <div>
+      <RecordBack href={routeHash(IMPORT_HOME)} label={t("import.back")} />
+      <Panel
+        title={
+          <span ref={title} tabIndex={-1}>
+            {t("import.title")}
+          </span>
+        }
+      >
+        <PanelBody>
+          <ImportWizard flow={flow} />
+        </PanelBody>
+      </Panel>
+    </div>
   );
 }
 
 // ImportWizard is the act itself, in the order it is performed: what the rows
 // are, which file, where each column goes, what the run WILL do, and only then
 // the commit — with the undo that follows it.
-//
-// It takes the flow rather than owning one: the flow is what recovers a parked
-// run at mount, and a state machine that only existed while a dialog was open
-// would forget an interrupted import the moment the dialog closed.
 function ImportWizard({
   flow,
 }: Readonly<{
-  flow: ReturnType<typeof useImportFlow>;
+  flow: ReturnType<typeof useAddressedImportFlow>;
 }>) {
   const t = useT();
   const fileInput = useRef<HTMLInputElement>(null);
@@ -162,22 +161,13 @@ function ImportWizard({
     validate,
     commit,
     undo,
+    busy,
+    committed,
   } = flow;
 
-  // The mapping table is on screen while a file is profiled and no report has
-  // been produced for it yet — the one window in which the human is choosing
-  // destinations.
+  // The mapping table shows while a file is profiled and has no report yet —
+  // the one window in which the human is choosing destinations.
   const showMapping = profile !== null && report === null;
-  const busy =
-    upload.isPending ||
-    validate.isPending ||
-    commit.isPending ||
-    undo.isPending;
-  const committed =
-    run?.status === "complete" ||
-    run?.status === "failed" ||
-    run?.status === "undoing" ||
-    run?.status === "undone";
 
   return (
     <div className="import">
@@ -217,7 +207,7 @@ function ImportWizard({
           const file = event.target.files?.[0];
           event.target.value = "";
           if (file) {
-            upload.mutate(file);
+            flow.chooseFile(file);
           }
         }}
         // Out of the tab order: it is invisible, so a keyboard user landing
@@ -280,6 +270,16 @@ function ImportWizard({
           contextTagID={flow.contextTagID}
         />
       ) : null}
+      <ConfirmModal
+        open={flow.asking}
+        title={t("unsaved.title")}
+        confirmLabel={t("unsaved.discard")}
+        confirmVariant="danger"
+        onClose={flow.keepWork}
+        onConfirm={flow.discardWork}
+      >
+        <p>{t("import.discardFile")}</p>
+      </ConfirmModal>
     </div>
   );
 }
