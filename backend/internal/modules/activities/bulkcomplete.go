@@ -92,11 +92,14 @@ func (s *Store) WritableTasks(ctx context.Context, named []ids.UUID) (map[ids.UU
 func VisibleTasks(ctx context.Context, tx pgx.Tx, named []ids.UUID) (map[ids.UUID]bool, error) {
 	out := make(map[ids.UUID]bool, len(named))
 	err := auth.Require(ctx, "activity", principal.ActionRead)
-	if errors.Is(err, apperrors.ErrPermissionDenied) || len(named) == 0 {
+	if errors.Is(err, apperrors.ErrPermissionDenied) {
 		return out, nil
 	}
 	if err != nil {
 		return nil, err
+	}
+	if len(named) == 0 {
+		return out, nil
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
