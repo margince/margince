@@ -5,10 +5,12 @@
 // record's state before and after. Kept apart from the dialog so a new verb is
 // taught its words here, in one place.
 
+import type { QueryKey } from "@tanstack/react-query";
 import type { components } from "../api/schema";
 import { Badge } from "../design-system/atoms";
 import { type PluralBase, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { CLAIM_SETTLED_KEYS } from "./activitykeys";
 import type { BulkChangeRequest, Translate } from "./bulkchange";
 import { OwnerName } from "./entityref";
 
@@ -24,6 +26,8 @@ export type RecordKind = Readonly<{
   unit: MessageKey;
   done: PluralBase;
   undone: PluralBase;
+  /** Further reads the change leaves stale beyond the record's own. */
+  stale?: readonly QueryKey[];
 }>;
 
 export const RECORD_KINDS: Readonly<Record<BulkRecordType, RecordKind>> = {
@@ -63,6 +67,8 @@ export const RECORD_KINDS: Readonly<Record<BulkRecordType, RecordKind>> = {
     unit: "unit.worklistItems",
     done: "bulk.doneWorklistItems",
     undone: "bulk.undoneWorklistItems",
+    // A promise row is a claim, which the contact and deal pages list too.
+    stale: CLAIM_SETTLED_KEYS,
   },
 };
 

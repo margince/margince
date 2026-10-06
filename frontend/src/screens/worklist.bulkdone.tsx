@@ -38,6 +38,8 @@ export function bulkDoneEligible(item: WorklistItem): boolean {
 
 /** The rows the reader has ticked, out of the ones on screen. */
 export type WorklistPicks = Readonly<{
+  /** Whether any row on screen takes a checkbox. */
+  offered: boolean;
   picked: ReadonlySet<string>;
   toggle: (item: WorklistItem) => void;
 }>;
@@ -62,6 +64,7 @@ export function useWorklistPicks(
   const eligible = queue.filter(bulkDoneEligible);
   const rows = eligible.filter((item) => ticked.has(rowIdentity(item)));
   const picks: WorklistPicks = {
+    offered: eligible.length > 0,
     picked: new Set(rows.map(rowIdentity)),
     toggle: (item) =>
       setTicked((prev) => {
@@ -84,10 +87,16 @@ export function useWorklistPicks(
   };
 }
 
-/** The row's checkbox, or none for a row the change cannot mark done. */
+/**
+ * The row's checkbox. A row the change cannot mark done keeps an empty slot of
+ * the same width while any row on screen has a box, so the queue stays aligned.
+ */
 export function pickFor(item: WorklistItem, picks: WorklistPicks) {
-  return bulkDoneEligible(item) ? (
-    <RowPick item={item} picks={picks} />
+  if (bulkDoneEligible(item)) {
+    return <RowPick item={item} picks={picks} />;
+  }
+  return picks.offered ? (
+    <span className="worklist-row-pick-slot" aria-hidden="true" />
   ) : undefined;
 }
 
