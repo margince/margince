@@ -10,10 +10,10 @@
   "totals": {
     "tools": 81,
     "resources": 7,
-    "tool_catalog_bytes": 251425,
+    "tool_catalog_bytes": 254625,
     "resource_catalog_bytes": 2727,
-    "approx_wire_tokens_total": 63538,
-    "largest_tool_bytes": 9253,
+    "approx_wire_tokens_total": 64338,
+    "largest_tool_bytes": 9293,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
       "description_bytes": 66340,
@@ -33,6 +33,13 @@
     "resultType": "complete",
     "tools": [
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": false,
@@ -201,6 +208,13 @@
         "title": "Advance a deal to a stage"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": false,
@@ -344,6 +358,13 @@
         "title": "Move a project to a phase"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": false,
@@ -496,6 +517,13 @@
         "title": "Write findings onto the morning brief"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": false,
@@ -649,6 +677,13 @@
         "title": "Apply a tag to a record"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": false,
@@ -794,6 +829,13 @@
         "title": "Archive a record"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": true,
@@ -983,6 +1025,13 @@
         "title": "Relationships going cold"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": true,
           "readOnlyHint": false,
@@ -1153,6 +1202,13 @@
         "title": "Book a meeting"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": false,
@@ -1567,6 +1623,13 @@
         "title": "Change many records at once"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": true,
@@ -1781,6 +1844,13 @@
         "title": "Catch me up on a record"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": false,
@@ -2039,6 +2109,13 @@
         "title": "Make and change lists"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": true,
@@ -2198,6 +2275,13 @@
         "title": "Check calendar availability"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": false,
@@ -2337,6 +2421,13 @@
         "title": "Commit an import"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": true,
@@ -2573,6 +2664,13 @@
         "title": "Relationship coverage on a deal"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": true,
@@ -2829,6 +2927,13 @@
         "title": "Compose an analytics report"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": false,
@@ -3026,6 +3131,13 @@
         "title": "Create a record"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": false,
@@ -3170,6 +3282,13 @@
         "title": "Create a tag"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": false,
@@ -3343,6 +3462,13 @@
         "title": "Create a task"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": true,
@@ -3475,6 +3601,13 @@
         "title": "How current the sources are"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": false,
@@ -3675,6 +3808,13 @@
         "title": "Approve or reject one staged action"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": false,
@@ -3889,6 +4029,13 @@
         "title": "Approve or reject one act's proposals together"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": false,
@@ -4024,6 +4171,13 @@
         "title": "Reverse a lead promotion"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": true,
@@ -4130,6 +4284,13 @@
         "title": "Describe the analytics vocabulary"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": true,
@@ -4236,6 +4397,13 @@
         "title": "Describe the query vocabulary"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": true,
@@ -4342,6 +4510,13 @@
         "title": "Describe the record write vocabulary"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": true,
@@ -4448,6 +4623,13 @@
         "title": "Describe the report block grammar"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": true,
@@ -4554,6 +4736,13 @@
         "title": "Describe the report vocabulary"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": false,
@@ -4680,6 +4869,13 @@
         "title": "Disqualify a lead"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": false,
@@ -4875,6 +5071,13 @@
         "title": "Draft an email"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": false,
@@ -5047,6 +5250,13 @@
         "title": "Draft follow-ups"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": true,
           "readOnlyHint": false,
@@ -5179,6 +5389,13 @@
         "title": "Enrich a company from its website"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": true,
@@ -5325,6 +5542,13 @@
         "title": "What the forecast's inputs were checked against"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": true,
@@ -5522,6 +5746,13 @@
         "title": "What moved the forecast"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": true,
@@ -5748,6 +5979,13 @@
         "title": "Read the forecast"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": true,
@@ -5904,6 +6142,13 @@
         "title": "Get a record's tags"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": true,
@@ -6041,6 +6286,13 @@
         "title": "Get a tag"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": true,
@@ -6201,6 +6453,13 @@
         "title": "Find a warm introduction path"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": true,
           "readOnlyHint": false,
@@ -6389,6 +6648,13 @@
         "title": "Send a calendar invitation"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": true,
@@ -6600,6 +6866,13 @@
         "title": "List what is waiting for a decision"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": true,
@@ -6729,6 +7002,13 @@
         "title": "List messaging transports"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": true,
@@ -6905,6 +7185,13 @@
         "title": "List colleagues"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": true,
@@ -7060,6 +7347,13 @@
         "title": "What the forecast's inputs still need"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": true,
@@ -7222,6 +7516,13 @@
         "title": "List pipelines and their stages"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": true,
@@ -7472,6 +7773,13 @@
         "title": "List records"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": true,
@@ -7608,6 +7916,13 @@
         "title": "List tags"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": false,
@@ -7812,6 +8127,13 @@
         "title": "Log an activity"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": false,
@@ -7960,6 +8282,13 @@
         "title": "Merge two records"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": false,
@@ -8095,6 +8424,13 @@
         "title": "Fold one tag into another"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": true,
@@ -8947,6 +9283,13 @@
         "title": "Prepare for a meeting"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": true,
@@ -9247,6 +9590,13 @@
         "title": "Prepare a delivery handoff"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": false,
@@ -9433,6 +9783,13 @@
         "title": "Preview an import"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": false,
@@ -9617,6 +9974,13 @@
         "title": "Progress a deal with a note"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": false,
@@ -9782,6 +10146,13 @@
         "title": "Promote a lead to a contact"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": false,
@@ -9944,6 +10315,13 @@
         "title": "Qualify a lead"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": true,
@@ -10182,6 +10560,13 @@
         "title": "Query the workspace"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": true,
@@ -10365,6 +10750,13 @@
         "title": "Read one staged action in full"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": true,
@@ -10598,6 +10990,13 @@
         "title": "Read the morning brief"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": true,
@@ -10892,6 +11291,13 @@
         "title": "Read an import report"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": true,
@@ -11021,6 +11427,13 @@
         "title": "Read an import run"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": true,
@@ -11260,6 +11673,13 @@
         "title": "Find and read lists"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": true,
@@ -11863,6 +12283,13 @@
         "title": "Read a project's page"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": true,
@@ -12025,6 +12452,13 @@
         "title": "Read a record"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": true,
@@ -12275,6 +12709,13 @@
         "title": "Read sales reporting"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": false,
@@ -12425,6 +12866,13 @@
         "title": "Re-associate a set of activities to a record"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": false,
@@ -12573,6 +13021,13 @@
         "title": "Re-associate an activity to a record"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": false,
@@ -12718,6 +13173,13 @@
         "title": "Re-associate a whole conversation to a record"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": false,
@@ -12871,6 +13333,13 @@
         "title": "Take a tag off a record"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": true,
@@ -13099,6 +13568,13 @@
         "title": "Resolve contacts and companies"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": true,
@@ -13296,6 +13772,13 @@
         "title": "Review open commitments"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": true,
@@ -13523,6 +14006,13 @@
         "title": "Run an analytics query"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": true,
@@ -13747,6 +14237,13 @@
         "title": "Run a report"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": true,
@@ -13964,6 +14461,13 @@
         "title": "Search for relevant material"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": true,
@@ -14144,6 +14648,13 @@
         "title": "Search records"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": true,
@@ -14448,6 +14959,13 @@
         "title": "Search the evidence behind a saved run"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": true,
           "readOnlyHint": false,
@@ -14689,6 +15207,13 @@
         "title": "Start an email conversation from a record"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": true,
           "readOnlyHint": false,
@@ -14904,6 +15429,13 @@
         "title": "Send an email"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": true,
           "readOnlyHint": false,
@@ -15086,6 +15618,13 @@
         "title": "Reply on a channel conversation"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": false,
@@ -15274,6 +15813,13 @@
         "title": "Update a record"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": false,
@@ -15426,6 +15972,13 @@
         "title": "Rename or recolour a tag"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": true,
@@ -15743,6 +16296,13 @@
         "title": "Who knows this contact"
       },
       {
+        "_meta": {
+          "ui": {
+            "visibility": [
+              "model"
+            ]
+          }
+        },
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": true,

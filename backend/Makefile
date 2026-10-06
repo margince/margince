@@ -685,7 +685,7 @@ drift: gen perfdoc ## Fail when a committed generated file drifted from what its
 	@u="$$(git ls-files --others --exclude-standard -- 'internal/modules/knowledge/handbook/*.md' ../docs/reference/ai-provider-outages.md)"; \
 		[ -z "$$u" ] || { echo "drift: uncommitted generated page(s):" >&2; echo "$$u" >&2; exit 1; }
 
-# The MCP App admission vocabulary is AUTHORED in frontend/src/mcp-apps, where
+# The MCP App admission vocabulary and the per-view action lists are AUTHORED in frontend/src/mcp-apps, where
 # the build-time validator imports it, and copied here because go:embed cannot
 # reach outside its own package directory. Two validators in two languages are a
 # defect unless they cannot disagree: a document that passes the build check and
@@ -694,6 +694,7 @@ drift: gen perfdoc ## Fail when a committed generated file drifted from what its
 # drifting, and `drift` fails a stale one.
 mcp-apps-vocab: ## Copy the MCP App admission vocabulary in from the frontend
 	cp ../frontend/src/mcp-apps/forbidden.json internal/modules/agents/apps/forbidden.json
+	cp ../frontend/src/mcp-apps/actions.json internal/modules/agents/apps/actions.json
 
 # The operator handbook is AUTHORED in docs/handbook and copied here for the
 # same reason as the vocabulary above: go:embed cannot reach outside its own

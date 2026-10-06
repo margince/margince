@@ -43,6 +43,22 @@ func (t viewingTool) Handle(context.Context, json.RawMessage) (json.RawMessage, 
 	return json.RawMessage(`{}`), nil
 }
 
+// plainTool is a read tool with no view, which is most of the surface.
+type plainTool struct{}
+
+func (plainTool) Spec() mcp.ToolSpec {
+	return mcp.ToolSpec{
+		Name: "read_plain", Title: "A tool without a view", Version: "v1",
+		Description:   "Answers something, and is never rendered.",
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		InputSchema: json.RawMessage(`{"type":"object"}`),
+	}
+}
+
+func (plainTool) Handle(context.Context, json.RawMessage) (json.RawMessage, error) {
+	return json.RawMessage(`{}`), nil
+}
+
 // theView is the published descriptor the tools above point at, declaring the
 // self-contained posture: no origin, no permission.
 func theView() mcp.Resource {
@@ -374,9 +390,22 @@ func TestAToolWhoseViewIsNotHeldLosesItsUIMetaButKeepsAnswering(t *testing.T) {
 		t.Fatal("a tool whose view is missing was withdrawn from the catalog; the answer it gives in text is " +
 			"the whole reason a view is allowed to be optional")
 	}
-	if _, carried := unheld[fieldMeta]; carried {
-		t.Errorf("a tool names a view this server is not serving: %v", unheld[fieldMeta])
+	// What it carries is the model-only audience and no view: nothing a host
+	// could prefetch.
+	if ui := uiMeta(t, unheld); ui != nil && ui.ResourceURI != "" {
+		t.Errorf("a tool names a view this server is not serving: %v", ui.ResourceURI)
 	}
+}
+
+// uiMeta reads a listed tool's `_meta.ui`, or nil when it carries none.
+func uiMeta(t *testing.T, tool map[string]any) *toolUIWire {
+	t.Helper()
+	meta, carried := tool[fieldMeta].(map[string]any)
+	if !carried {
+		return nil
+	}
+	ui, _ := meta[metaUIKey].(*toolUIWire)
+	return ui
 }
 
 // The same invariant stated over the whole surface rather than one pair, so a
@@ -415,6 +444,9 @@ func TestNoToolNamesAViewTheServerDoesNotServe(t *testing.T) {
 					t.Fatalf("%v carries a _meta.ui that is not a view declaration: %#v", tool[fieldName], members[metaUIKey])
 				}
 				named := ui.ResourceURI
+				if named == "" {
+					continue
+				}
 				if tc.held == nil || !tc.held(named) {
 					t.Errorf("%v names the view %q, which this server is not serving", tool[fieldName], named)
 				}
@@ -543,5 +575,28 @@ func TestAnOrdinaryDocumentIsStillServedToAClientWithNoViewSupport(t *testing.T)
 	}
 	if read := rpc(t, d, "resources/read", `{"uri":"margince://schema/query"}`); read.Error != nil {
 		t.Errorf("an ordinary document could not be read without declaring the App extension: %v", read.Error)
+	}
+}
+
+// A tool no view acts through is listed model-only, so a host that honours
+// visibility refuses a rendered view's call to it; a client that declined
+// views is told nothing about audiences.
+func TestAToolNoViewActsThroughIsListedModelOnly(t *testing.T) {
+	registry := NewRegistry(nil, nil)
+	registry.Register(viewingTool{name: "read_something"})
+	d := NewDispatcher(registry, bindAuthenticated, "margince-crm", "test").WithLogger(discardLog())
+	d.viewHeld = func(string) bool { return true }
+	registry.Register(plainTool{})
+
+	offered := d.toolList(agentHolding(principal.ScopeRead), framing{modern: true, apps: true})
+	plain, _ := listedNamed(offered, "read_plain")
+	if ui := uiMeta(t, plain); ui == nil || len(ui.Visibility) != 1 || ui.Visibility[0] != mcp.VisibilityModel || ui.ResourceURI != "" {
+		t.Errorf("a tool no view acts through is not model-only: %#v", ui)
+	}
+
+	declined := d.toolList(agentHolding(principal.ScopeRead), framing{modern: true, apps: false})
+	plain, _ = listedNamed(declined, "read_plain")
+	if _, carried := plain[fieldMeta]; carried {
+		t.Error("a client that declined views was sent audience metadata")
 	}
 }

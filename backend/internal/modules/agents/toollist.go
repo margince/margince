@@ -16,6 +16,7 @@ package agents
 import (
 	"context"
 	"fmt"
+	"github.com/margince/margince/backend/internal/modules/agents/apps"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
@@ -132,6 +133,7 @@ func DescribeForClient(spec mcp.ToolSpec) string {
 func (s *Dispatcher) toolList(ctx context.Context, fr framing) []map[string]any {
 	specs := s.registry.Offered(ctx)
 	tools := make([]map[string]any, 0, len(specs))
+	actionTools := apps.ActionTools()
 	for _, spec := range specs {
 		tool := map[string]any{
 			fieldName: spec.Name,
@@ -164,8 +166,8 @@ func (s *Dispatcher) toolList(ctx context.Context, fr framing) []map[string]any 
 		// missing and the member is absent rather than empty — a client reads
 		// `_meta.ui` as "there is a view to fetch", so an entry pointing at a
 		// document this deployment does not publish is worse than none.
-		if s.appsOffered(fr) && s.viewIsHeld(spec) {
-			if ui := toolUIMeta(spec); ui != nil {
+		if s.appsOffered(fr) {
+			if ui := s.toolMeta(spec, actionTools); ui != nil {
 				tool[fieldMeta] = map[string]any{metaUIKey: ui}
 			}
 		}
