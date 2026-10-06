@@ -44,7 +44,7 @@
 1903 frontend/src/screens/contactpage.stories.tsx
 1270 frontend/src/screens/analytics.tsx
 1534 frontend/src/design-system/atoms.tsx
-1780 frontend/src/screens/company360.tsx
+1598 frontend/src/screens/company360.tsx
 1581 frontend/src/design-system/composed.tsx
 1541 frontend/src/screens/leads.tsx
 2215 frontend/src/screens/company360.test.tsx

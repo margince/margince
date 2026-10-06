@@ -1716,7 +1716,7 @@ export const vi = {
   "co.health.dim.commercial": "Thương mại",
   "co.health.dim.payment": "Thanh toán",
   "co.health.means.relationship":
-    "Hai bên còn liên lạc hay không — ai đã viết, cách đây bao lâu và bên nào chủ động trước.",
+    "Hai bên còn liên lạc hay không — ai đã viết, lần gặp gần nhất diễn ra khi nào hoặc cuộc họp tiếp theo được đặt vào lúc nào, và bên nào chủ động trước.",
   "co.health.means.commercial":
     "Công việc đang chạy có tiến triển không — các deal đang mở, giai đoạn của chúng và đã đứng yên bao lâu.",
   "co.health.means.payment":
@@ -1727,6 +1727,33 @@ export const vi = {
   "co.health.payment.overdue": "Hiện có khoản quá hạn.",
   "co.health.payment.late": "Thường thanh toán trễ {days} ngày.",
   "co.health.payment.onTime": "Thanh toán đúng hạn.",
+  "co.health.reason.neverWritten":
+    "Chưa có tin nhắn nào từ họ và chưa có cuộc gặp nào.",
+  "co.health.reason.quiet_one":
+    "Không có phản hồi và không có cuộc gặp nào trong {days} ngày.",
+  "co.health.reason.quiet_other":
+    "Không có phản hồi và không có cuộc gặp nào trong {days} ngày.",
+  "co.health.reason.meetingBooked": "Đã đặt một cuộc họp vào {at}.",
+  "co.health.reason.lastMet_one": "Lần gặp gần nhất cách đây {days} ngày.",
+  "co.health.reason.lastMet_other": "Lần gặp gần nhất cách đây {days} ngày.",
+  "co.health.reason.singleThreaded":
+    "Vẫn liên lạc, nhưng chỉ một liên hệ gánh cả công ty.",
+  "co.health.reason.severalContacts_one":
+    "{count} liên hệ ở đây đang liên lạc.",
+  "co.health.reason.severalContacts_other":
+    "{count} liên hệ ở đây đang liên lạc.",
+  "co.health.reason.dealsAllStalled_one":
+    "Deal đang mở duy nhất đã bị đình trệ.",
+  "co.health.reason.dealsAllStalled_other":
+    "Cả {count} deal đang mở đều đình trệ.",
+  "co.health.reason.dealsSomeStalled_one":
+    "{count} trên {total} deal đang mở bị đình trệ.",
+  "co.health.reason.dealsSomeStalled_other":
+    "{count} trên {total} deal đang mở bị đình trệ.",
+  "co.health.reason.dealsNoneStalled_one":
+    "{count} deal đang mở, không bị đình trệ.",
+  "co.health.reason.dealsNoneStalled_other":
+    "{count} deal đang mở, không cái nào bị đình trệ.",
   "company.partnerSetUp": "Thiết lập chương trình đối tác",
   "signal.kind.stalled_deal": "Deal đình trệ",
   "signal.kind.champion_left": "Người ủng hộ đã rời đi",
