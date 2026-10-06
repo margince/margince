@@ -58,9 +58,10 @@ above below into onto over under ever`)
 var barLeadWords = map[string]int{"two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8,
 	"nine": 9, "ten": 10}
 
-// The Contributor Covenant is adopted text and docscodeofconduct_test.go holds
-// it verbatim, so its wording is not ours to restyle.
-var barExempt = map[string]bool{"CODE_OF_CONDUCT.md": true}
+// Adopted text held verbatim by its own gate is not ours to restyle: the
+// Contributor Covenant by docscodeofconduct_test.go, and counsel's CLA by
+// cla_test.go, where a restyled word would change what a contributor accepted.
+var barExempt = map[string]bool{"CODE_OF_CONDUCT.md": true, "CLA.md": true}
 
 // History is the content of a changelog and of an evidence record, and the PR
 // template asks about "this change"; everywhere else it is residue.
