@@ -329,7 +329,7 @@ export const SixPriorities: Story = {
   render: brief({ approvals: [], day: SixPrioritiesDay }),
 };
 // A row that is not an activity opens its details in the drawer beside the
-// queue, with the way back to Focus in the drawer's head.
+// queue; its close is the way back to Focus.
 export const RowDetailsOpen: Story = {
   render: brief({ approvals: [], day: SixPrioritiesDay }),
   play: async ({ canvasElement }) => {
@@ -340,8 +340,8 @@ export const RowDetailsOpen: Story = {
         })
       )[0],
     );
-    await within(document.body).findByRole("button", {
-      name: en["brief.focus.back"],
+    await within(document.body).findByRole("dialog", {
+      name: en["brief.focus.context"],
     });
   },
 };

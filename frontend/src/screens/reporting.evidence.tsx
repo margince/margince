@@ -5,9 +5,11 @@ import { api } from "../api/client";
 import { navigate } from "../app/router";
 import { Button } from "../design-system/atoms";
 import { DataTable } from "../design-system/datatable";
+import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
 import { Modal } from "../design-system/modal";
 import { Popover } from "../design-system/popover";
+import { Stack } from "../design-system/stack";
 import { formatDateTime, formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { isVersionSkewOf, QueryGate, throwProblem } from "./common";
@@ -98,18 +100,20 @@ export function ReportingEvidenceDrawer({
       open
       onClose={onClose}
       labelledBy={title}
-      placement="right"
+      intent="drawer"
       initialFocusTo={() => heading.current}
     >
-      <div className="reporting-dialog">
-        <Heading ref={heading} tabIndex={-1} id={title} as="h2" size="medium">
+      <DrawerHead>
+        <Heading
+          ref={heading}
+          tabIndex={-1}
+          id={title}
+          as="h2"
+          size="medium"
+          className="modal-title"
+        >
           {metricLabel(reference.metric, t)}
         </Heading>
-        <MetricDefinition
-          definition={definition}
-          version={metric?.version}
-          frozen={Boolean(editionId)}
-        />
         <p className="t-caption">
           {evaluation.context.scope.label}
           {point?.label ? ` · ${point.label}` : ""}
@@ -117,143 +121,155 @@ export function ReportingEvidenceDrawer({
         <p className="t-caption">
           {interval
             ? reportingPeriodLabel(
-                { ...interval, end_at: reference.through ?? interval.end_at },
+                {
+                  ...interval,
+                  end_at: reference.through ?? interval.end_at,
+                },
                 evaluation.context.timezone,
                 locale,
               )
             : stateLabel}
         </p>
-        {metric?.coverage.status !== undefined &&
-          metric.coverage.status !== "ok" && (
-            <Popover
-              onHover
-              label={t(`reporting.status.${metric.coverage.status}`)}
+      </DrawerHead>
+      <DrawerBody>
+        <Stack gap="4">
+          <MetricDefinition
+            definition={definition}
+            version={metric?.version}
+            frozen={Boolean(editionId)}
+          />
+          {metric?.coverage.status !== undefined &&
+            metric.coverage.status !== "ok" && (
+              <Popover
+                onHover
+                label={t(`reporting.status.${metric.coverage.status}`)}
+              >
+                <p>{metric.coverage.reason}</p>
+              </Popover>
+            )}
+          <Popover onHover label={t("reporting.contextDetails")}>
+            <p>
+              {evaluation.context.currency} · {evaluation.context.timezone}
+            </p>
+            <p>
+              {editionId ? t("reporting.frozen") : t("reporting.live")} ·{" "}
+              {formatDateTime(
+                evaluation.context.evaluated_at,
+                locale,
+                evaluation.context.timezone,
+              )}
+            </p>
+          </Popover>
+          {isVersionSkewOf(query.error) && (
+            <Button
+              onClick={() => {
+                client.invalidateQueries({
+                  predicate: (query) =>
+                    [
+                      "reporting-evaluation",
+                      "reporting-live",
+                      "reporting-forecast",
+                    ].includes(String(query.queryKey[0])),
+                });
+                onClose();
+              }}
             >
-              <p>{metric.coverage.reason}</p>
-            </Popover>
+              {t("common.retry")}
+            </Button>
           )}
-        <Popover onHover label={t("reporting.contextDetails")}>
-          <p>
-            {evaluation.context.currency} · {evaluation.context.timezone}
-          </p>
-          <p>
-            {editionId ? t("reporting.frozen") : t("reporting.live")} ·{" "}
-            {formatDateTime(
-              evaluation.context.evaluated_at,
-              locale,
-              evaluation.context.timezone,
-            )}
-          </p>
-        </Popover>
-        {isVersionSkewOf(query.error) && (
-          <Button
-            onClick={() => {
-              client.invalidateQueries({
-                predicate: (query) =>
-                  [
-                    "reporting-evaluation",
-                    "reporting-live",
-                    "reporting-forecast",
-                  ].includes(String(query.queryKey[0])),
-              });
-              onClose();
-            }}
-          >
-            {t("common.retry")}
-          </Button>
-        )}
-        {selectedValue != null && (
-          <p className="t-num">
-            {t("reporting.selectedValue")}:{" "}
-            {reportingAmount(
-              selectedValue,
-              metric?.unit ?? definition?.unit ?? "count",
-              evaluation.context.currency,
-              locale,
-            )}
-          </p>
-        )}
-        <QueryGate query={query} pendingLabel={t("reporting.evidence")}>
-          {(evidence) => (
-            <>
-              <p>
-                {plural("reporting.pageRecords", evidence.rows.length, {
-                  count: formatNumber(evidence.rows.length, locale),
-                })}
-              </p>
-              <DataTable
-                label={t("reporting.evidence")}
-                rows={evidence.rows}
-                rowKey={(row) => row.key}
-                columns={[
-                  {
-                    key: "source",
-                    header: t("reporting.record"),
-                    render: (row) =>
-                      row.restricted ? (
-                        t("reporting.restricted")
-                      ) : row.source_id && row.source_type === "deal" ? (
-                        <Button
-                          variant="link"
-                          onClick={() => {
-                            onClose();
-                            navigate({ screen: "deals", id: row.source_id });
-                          }}
-                        >
-                          {row.label}
-                        </Button>
-                      ) : (
-                        row.label
-                      ),
-                  },
-                  {
-                    key: "date",
-                    header: dateHeading,
-                    render: (row) =>
-                      row.occurred_at
-                        ? formatDateTime(
-                            row.occurred_at,
-                            locale,
-                            evidence.context.timezone,
-                          )
-                        : "—",
-                  },
-                  {
-                    key: "amount",
-                    header: t(
-                      metric?.unit === "days"
-                        ? "reporting.daysUnit"
-                        : metric?.unit === "count"
-                          ? "reporting.countUnit"
-                          : "reporting.dealValue",
-                    ),
-                    render: (row) =>
-                      reportingAmount(
-                        row.value,
-                        metric?.unit ?? definition?.unit ?? "count",
-                        evidence.context.currency,
-                        locale,
-                      ),
-                  },
-                ]}
-              />
-              {canBack && (
-                <Button variant="ghost" onClick={back}>
-                  {t("reporting.back")}
-                </Button>
+          {selectedValue != null && (
+            <p className="t-num">
+              {t("reporting.selectedValue")}:{" "}
+              {reportingAmount(
+                selectedValue,
+                metric?.unit ?? definition?.unit ?? "count",
+                evaluation.context.currency,
+                locale,
               )}
-              {evidence.next_cursor && (
-                <Button
-                  variant="ghost"
-                  onClick={() => setCursor(evidence.next_cursor)}
-                >
-                  {t("reporting.next")}
-                </Button>
-              )}
-            </>
+            </p>
           )}
-        </QueryGate>
-      </div>
+          <QueryGate query={query} pendingLabel={t("reporting.evidence")}>
+            {(evidence) => (
+              <>
+                <p>
+                  {plural("reporting.pageRecords", evidence.rows.length, {
+                    count: formatNumber(evidence.rows.length, locale),
+                  })}
+                </p>
+                <DataTable
+                  label={t("reporting.evidence")}
+                  rows={evidence.rows}
+                  rowKey={(row) => row.key}
+                  columns={[
+                    {
+                      key: "source",
+                      header: t("reporting.record"),
+                      render: (row) =>
+                        row.restricted ? (
+                          t("reporting.restricted")
+                        ) : row.source_id && row.source_type === "deal" ? (
+                          <Button
+                            variant="link"
+                            onClick={() => {
+                              onClose();
+                              navigate({ screen: "deals", id: row.source_id });
+                            }}
+                          >
+                            {row.label}
+                          </Button>
+                        ) : (
+                          row.label
+                        ),
+                    },
+                    {
+                      key: "date",
+                      header: dateHeading,
+                      render: (row) =>
+                        row.occurred_at
+                          ? formatDateTime(
+                              row.occurred_at,
+                              locale,
+                              evidence.context.timezone,
+                            )
+                          : "—",
+                    },
+                    {
+                      key: "amount",
+                      header: t(
+                        metric?.unit === "days"
+                          ? "reporting.daysUnit"
+                          : metric?.unit === "count"
+                            ? "reporting.countUnit"
+                            : "reporting.dealValue",
+                      ),
+                      render: (row) =>
+                        reportingAmount(
+                          row.value,
+                          metric?.unit ?? definition?.unit ?? "count",
+                          evidence.context.currency,
+                          locale,
+                        ),
+                    },
+                  ]}
+                />
+                {canBack && (
+                  <Button variant="ghost" onClick={back}>
+                    {t("reporting.back")}
+                  </Button>
+                )}
+                {evidence.next_cursor && (
+                  <Button
+                    variant="ghost"
+                    onClick={() => setCursor(evidence.next_cursor)}
+                  >
+                    {t("reporting.next")}
+                  </Button>
+                )}
+              </>
+            )}
+          </QueryGate>
+        </Stack>
+      </DrawerBody>
     </Modal>
   );
 }
