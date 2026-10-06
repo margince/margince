@@ -11147,6 +11147,18 @@ export const de = {
   "worklist.board.atRisk": "Gefährdete Deals",
   "worklist.board.overdue": "Überfällig",
   "worklist.board.nobody": "Nicht zugewiesene Arbeit",
+  "worklist.board.notMeasured": "Nicht gemessen",
+  "worklist.planCoverage.all_one":
+    "Wochenplan von {count} Teammitglied gelesen.",
+  "worklist.planCoverage.all_other":
+    "Wochenpläne aller {count} Teammitglieder gelesen.",
+  "worklist.planCoverage.some_one":
+    "Wochenpläne gelesen: {read} von {count} Teammitglied.",
+  "worklist.planCoverage.some_other":
+    "Wochenpläne gelesen: {read} von {count} Teammitgliedern.",
+  "worklist.planCoverage.unread": "Nicht gelesen: {names}.",
+  "worklist.planCoverage.truncated":
+    "Die Teamliste wurde gekürzt, spätere Teammitglieder wurden nicht geprüft.",
   "worklist.coaching.title": "Coaching-Vorschläge",
   "worklist.coaching.promises_one": "{name} hat {count} fällige Kundenzusage",
   "worklist.coaching.promises_other":

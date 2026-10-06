@@ -11064,6 +11064,18 @@ export const vi = {
   "worklist.board.atRisk": "Deal có rủi ro",
   "worklist.board.overdue": "Quá hạn",
   "worklist.board.nobody": "Công việc chưa phân công",
+  "worklist.board.notMeasured": "Chưa đo",
+  "worklist.planCoverage.all_one":
+    "Đã đọc kế hoạch tuần của {count} thành viên nhóm.",
+  "worklist.planCoverage.all_other":
+    "Đã đọc kế hoạch tuần của cả {count} thành viên nhóm.",
+  "worklist.planCoverage.some_one":
+    "Đã đọc kế hoạch tuần của {read} trên {count} thành viên nhóm.",
+  "worklist.planCoverage.some_other":
+    "Đã đọc kế hoạch tuần của {read} trên {count} thành viên nhóm.",
+  "worklist.planCoverage.unread": "Chưa đọc: {names}.",
+  "worklist.planCoverage.truncated":
+    "Danh sách nhóm đã bị cắt ngắn, các thành viên phía sau chưa được kiểm tra.",
   "worklist.coaching.title": "Đáng trao đổi sáng nay",
   "worklist.coaching.promises_one":
     "{name} còn {count} cam kết đã đến hạn — khách hàng đang chờ.",

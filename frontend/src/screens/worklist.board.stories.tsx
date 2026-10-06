@@ -92,6 +92,28 @@ export const CountedToTheBound: Story = {
     frame(async () => jsonResponse({ ...aLoadedTeam, truncated: true })),
 };
 
+/** A named team whose only other member has been invited and not signed in
+ *  yet. The seat is listed, marked, and says its figures were not measured:
+ *  "—" already means zero on this board. */
+export const AnInvitedSeat: Story = {
+  render: () =>
+    frame(async () =>
+      jsonResponse({
+        ...aLoadedTeam,
+        members: [
+          aLoadedTeam.members[0],
+          {
+            user_id: "00000000-0000-4000-8000-000000000004",
+            display_name: "Ana Novak",
+            activation: "invited",
+            counts: { waiting: 0, at_risk: 0, overdue: 0, promises_due: 0 },
+          },
+        ],
+        unassigned: { waiting: 0, at_risk: 0, overdue: 0, promises_due: 0 },
+      }),
+    ),
+};
+
 /** The board could not be read. It says so and offers the retry; it never
  *  reads as a team carrying nothing. */
 export const Unavailable: Story = {

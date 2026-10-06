@@ -85,6 +85,20 @@ describe("what a lead should do about the board", () => {
     expect(moves).toHaveLength(0);
   });
 
+  // An invited seat's counts were never measured, so whatever they hold is no
+  // basis for a line about that teammate.
+  it("never names an invited seat, whatever its counts hold", () => {
+    const moves = movesFor([
+      {
+        ...member("Ana", { promises_due: 5, waiting: 30 }),
+        activation: "invited",
+      },
+      member("Ben", { waiting: 9 }),
+    ]);
+
+    expect(moves.map((m) => m.name)).toEqual(["Ben"]);
+  });
+
   it("draws nothing at all when nobody is over a threshold", () => {
     const { container } = render(
       <LocaleProvider initial="en">

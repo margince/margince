@@ -465,6 +465,50 @@ export const ATeamBiggerThanTheBoardCanCount: Story = {
   },
 };
 
+// A team's day with one teammate's weekly plan unread. Their commitments are
+// unknown rather than absent, so the notice names them: "nothing due" and "not
+// looked at" must not read alike.
+export const ATeamPlanUnread: Story = {
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", { name: "Team" }),
+    );
+  },
+  render: () => {
+    stubDay({
+      as_of: "2026-08-31T09:00:00Z",
+      scope: "team",
+      scope_options: ["mine", "unassigned", "team", "all"],
+      summary: { urgent: 0, due: 0, lower_priority: 0, total: 0 },
+      sources_unavailable: [],
+      reach: [],
+      readings: {
+        changed_since_brief: 0,
+        revenue_at_risk_minor: null,
+        buyer_replies: 0,
+        prospecting: 0,
+        review: 0,
+        more_available: false,
+      },
+      counts: [],
+      queue: [],
+      plan_coverage: {
+        members: aLoadedTeam.members.map((member) => ({
+          user_id: member.user_id,
+          display_name: member.display_name,
+          read: member.display_name !== "Marc Weber",
+        })),
+        truncated: false,
+      },
+    });
+    return (
+      <StoryProviders>
+        <WorklistScreen />
+      </StoryProviders>
+    );
+  },
+};
+
 // A day of things that went wrong, each saying WHAT went wrong.
 //
 // The story worth looking at for this change: six system rows whose supporting
