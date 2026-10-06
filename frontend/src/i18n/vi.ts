@@ -4357,6 +4357,15 @@ export const vi = {
   "compose.savedDraftDeleted": "Đã xóa bản nháp đã lưu",
   "compose.savedDraftRestored": "Đã khôi phục bản nháp đã lưu",
   "compose.savedDraftRemove": "Xóa bản nháp đã lưu",
+  "compose.savedDraftByAgent":
+    "Đã khôi phục bản nháp của agent. Hãy đọc trước khi gửi.",
+  "compose.waitingDraftTitle": "Bản nháp đang chờ",
+  "compose.waitingDraftOpen": "Mở bản nháp",
+  "compose.waitingDraftByAgent":
+    "Một agent đã soạn “{subject}” để xem xét. Chưa có gì được gửi.",
+  "compose.waitingDraftByYou":
+    "Email chưa gửi “{subject}” đã được lưu từ trình soạn thảo.",
+  "compose.waitingDraftNoSubject": "Không có tiêu đề",
   "compose.savedDraftChangedTitle": "Bản nháp đã đổi ở cửa sổ khác",
   "compose.savedDraftChangedBody":
     "Khi lưu, nội dung trên màn hình được giữ lại. Tải phiên bản đã lưu để viết tiếp từ đó.",

@@ -38,9 +38,9 @@ func (c *recordingComms) DraftEmail(context.Context, ids.UUID, string) (string, 
 	return "", "", nil
 }
 
-func (c *recordingComms) DraftCompanyEmail(_ context.Context, links []RecordLink, _ string) (string, string, error) {
+func (c *recordingComms) DraftCompanyEmail(_ context.Context, links []RecordLink, _ string) (FirstDraft, error) {
 	c.accountDrafted = links
-	return "Following up", "As discussed.", nil
+	return FirstDraft{Subject: "Following up", Body: "As discussed."}, nil
 }
 
 func (c *recordingComms) SendEmail(context.Context, ids.UUID, SendEmailArgs) (SendEmailResult, error) {

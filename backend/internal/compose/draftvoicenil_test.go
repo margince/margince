@@ -88,8 +88,9 @@ func TestNoDraftingEntryPointIsAlwaysUnvoiced(t *testing.T) {
 	// copies became one, so those fourteen are now 2 + 2 in the surfaces (their
 	// own prompt assembly) plus 5 in draftcore, which every surface runs. The
 	// reply lane's two greeting wrappers (completeVoiced, completeFirstVoiced)
-	// add two more.
-	const governedCalls = 33
+	// add two more, and draft_email's first message leaving the reply lane for
+	// the composers' engines took one away.
+	const governedCalls = 32
 	if governed != governedCalls {
 		t.Errorf("the sweep reached %d voice-carrying calls and this gate pins %d. Fewer means it stopped "+
 			"recognising calls it used to read — most likely a voice parameter was renamed out of "+

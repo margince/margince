@@ -753,11 +753,12 @@ The 24 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## mail_draft
 
-13 columns · primary key `(id)` · referenced by 0 foreign keys
+14 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid` | yes | Primary key. |
+| `agent_drafted` | `boolean` | yes | An agent wrote these words for the author through `draft_email`, and the author has not saved over them yet. |
 | `anchor_id` | `uuid` | yes | Required `uuid`. |
 | `anchor_type` | `text` | yes | One of `activity`, `contact`, `company`, `deal`, `lead`, `project`. |
 | `author_id` | `uuid` | yes | Points at `app_user.id` — deleting the parent deletes this row. |

@@ -58,13 +58,15 @@ export function savedDraftAnchor(input: {
   return input.entityId ? { type: input.entityType, id: input.entityId } : null;
 }
 
-function draftKey(anchor: SavedDraftAnchor | null) {
+export function draftKey(anchor: SavedDraftAnchor | null) {
   return ["mail-draft", anchor?.type ?? "", anchor?.id ?? ""] as const;
 }
 
 // A 404 is the ordinary answer: no draft here, or an anchor this reader can no
 // longer see, which the server reports as one thing on purpose.
-async function readDraft(anchor: SavedDraftAnchor): Promise<MailDraft | null> {
+export async function readDraft(
+  anchor: SavedDraftAnchor,
+): Promise<MailDraft | null> {
   const { data, error, response } = await api.GET("/mail-drafts", {
     params: { query: { anchor_type: anchor.type, anchor_id: anchor.id } },
   });
@@ -437,10 +439,16 @@ export function SavedDraftNotices({ draft }: Readonly<{ draft: SavedDraft }>) {
     );
   }
   if (!draft.restored) return null;
+  // An agent's words are marked as an agent's until the reader saves over
+  // them, so they are read before they are sent.
+  const byAgent = draft.held?.agent_drafted === true;
   return (
     <Callout
       kind="standing"
-      title={t("compose.savedDraftRestored")}
+      tone={byAgent ? "ai" : "info"}
+      title={t(
+        byAgent ? "compose.savedDraftByAgent" : "compose.savedDraftRestored",
+      )}
       actions={
         <Button onClick={draft.remove} pending={draft.removing}>
           {t("compose.savedDraftRemove")}

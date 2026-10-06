@@ -4858,6 +4858,15 @@ export interface paths {
          * @description Drafting is 🟢 (never auto-sends). The draft is returned, not sent. Keeping the rep's
          *     unsent message is a separate, explicit act at `PUT /mail-drafts`, which this route
          *     never performs.
+         *
+         *     The `draft_email` verb has a second shape this route does not serve: given `links`
+         *     instead of an activity, it drafts the FIRST message to a contact or lead through the
+         *     same engine as `POST /contacts/{id}/draft-email`, `POST /companies/{id}/draft-email` or
+         *     `POST /leads/{id}/draft-email`. It saves the draft in the saved drafts of the human the
+         *     agent acts for, marked `agent_drafted`, only when that human keeps no unsent draft of
+         *     their own for the recipient. Otherwise it returns the draft unsaved. The tool result
+         *     says which: `saved_draft_id` names the saved draft, and `not_saved` says why there is
+         *     none.
          */
         post: operations["draftEmail"];
         delete?: never;
@@ -5182,8 +5191,12 @@ export interface paths {
          *     is not an activity, not a scheduled send and never on a timeline, and only the seat
          *     that wrote it can read it. There is at most one per author and anchor.
          *
-         *     The AI drafting routes still persist nothing: a draft exists only because the rep's
-         *     composer saved one here.
+         *     The AI drafting routes still persist nothing. A draft exists because the rep's composer
+         *     saved one here, or because an agent acting for the rep drafted a first message to a
+         *     contact or lead through `draft_email` (`agent_drafted`). The agent's draft is kept here
+         *     only when the rep has no draft of their own for that anchor; otherwise the tool returns
+         *     it unsaved with `not_saved` and this store is unchanged. That second writer is the tool
+         *     surface, not this route.
          */
         get: operations["getMailDraft"];
         /**
@@ -30162,6 +30175,8 @@ export interface components {
             html_body?: string | null;
             /** Format: int64 */
             version: number;
+            /** @description An agent wrote these words for the author through `draft_email`, and the author has not saved over them yet. The screen says so before the message is sent. A save from the composer clears it. */
+            agent_drafted: boolean;
             /** Format: date-time */
             created_at: string;
             /** Format: date-time */
