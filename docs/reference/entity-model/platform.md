@@ -179,14 +179,14 @@ The 10 tables owned by `platform`, as the migrations build them. [Back to the en
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
-| `kind` | `text` | yes | Required `text`. |
-| `recorded_at` | `timestamp with time zone` | yes | Required `timestamp with time zone`, defaulting to `now()`. |
-| `storage_key` | `text` | yes | Required `text`. |
+| `kind` | `text` | yes |  |
+| `recorded_at` | `timestamp with time zone`, default `now()` | yes |  |
+| `storage_key` | `text` | yes |  |
 
 **Indexes**
 
-- `stored_object_intent_pkey` — `unique, btree (storage_key)`
-- `stored_object_intent_recorded_idx` — `btree (recorded_at)`
+- `stored_object_intent_pkey`: `unique, btree (storage_key)`
+- `stored_object_intent_recorded_idx`: `btree (recorded_at)`
 
 ## system_log
 

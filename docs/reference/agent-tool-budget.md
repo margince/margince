@@ -57,7 +57,7 @@ spends it on every run of every agent.
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 5 | 5 of 81 | 1890 | 1288 | 3765 | 11% | 19445 | 0 | 5 |
 | `overnight_at_risk_sweep` | 7 | 7 of 81 | 2737 | 1814 | 5138 | 15% | 18072 | 7 | 6 |
-| _whole served catalog's listing, for scale; no run is offered it_ | 81 |  | 28578 |  |  | 87% |  |  |  |
+| _whole served catalog's listing, for scale; no run is offered it_ | 81 |  | 28684 |  |  | 87% |  |  |  |
 
 ### `morning_brief`
 
@@ -146,7 +146,7 @@ would replace it is sampling real runs for chosen-vs-wanted.
 
 ## What each tool costs, largest first
 
-Median 292 tokens, mean 352, across 81 served tools.
+Median 293 tokens, mean 353, across 81 served tools.
 
 Each row is one tool rendered alone, so the rows do not add up to the catalog total:
 every row carries its own rounding, and the catalog figure divides the whole rendered
@@ -181,6 +181,7 @@ listing once. Read a row as what that tool costs a menu.
 | `review_commitments` | 401 |  |
 | `prep_for_meeting` | 394 |  |
 | `enrich` | 390 |  |
+| `draft_email` | 385 |  |
 | `describe_report_vocabulary` | 349 |  |
 | `catch_me_up_on` | 348 | 2 scenarios |
 | `describe_record_fields` | 345 |  |
@@ -197,7 +198,6 @@ listing once. Read a row as what that tool costs a menu.
 | `read_record` | 292 | 2 scenarios |
 | `archive_record` | 289 |  |
 | `describe_analytics_vocabulary` | 286 |  |
-| `draft_email` | 278 |  |
 | `draft_follow_ups_for` | 273 |  |
 | `list_approvals` | 268 |  |
 | `prepare_handoff` | 267 |  |

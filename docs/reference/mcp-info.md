@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 81 |
 | Resources | 11 |
-| Tool catalog | 245.3 KB |
+| Tool catalog | 245.9 KB |
 | Resource catalog | 4.1 KB |
-| Approx. wire tokens | 63838 |
+| Approx. wire tokens | 63994 |
 | Largest tool | `prep_for_meeting` (9.0 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,11 +29,11 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 108.2 KB | 44% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 64.4 KB | 26% | Yes, every step |
+| Output schemas | 108.4 KB | 44% | **No**: a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 64.8 KB | 26% | Yes, every step |
 | Input schemas | 55.8 KB | 22% | Yes, every step |
 | _Names, annotations, punctuation_ | 16.9 KB | 6% | Partly |
-| **Description + input schema** | **120.2 KB** | **48%** | **the recurring cost** |
+| **Description + input schema** | **120.6 KB** | **49%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -85,7 +85,7 @@ descriptions and input schemas are what each step pays for.
 | [`describe_report_blocks`](#describe_report_blocks) | Describe the report block grammar | yes |  | 2.0 KB |
 | [`describe_report_vocabulary`](#describe_report_vocabulary) | Describe the report vocabulary | yes |  | 2.4 KB |
 | [`disqualify_lead`](#disqualify_lead) | Disqualify a lead |  |  | 2.0 KB |
-| [`draft_email`](#draft_email) | Draft an email |  |  | 2.5 KB |
+| [`draft_email`](#draft_email) | Draft an email |  |  | 3.1 KB |
 | [`draft_follow_ups_for`](#draft_follow_ups_for) | Draft follow-ups |  |  | 2.6 KB |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 2.6 KB |
 | [`forecast_input_checks`](#forecast_input_checks) | What the forecast's inputs were checked against | yes |  | 2.7 KB |
@@ -5559,13 +5559,17 @@ their approval has answered. (Governance: runs immediately; requires passport sc
 **Draft an email**
 
 ```text
-Compose an email: a reply to a recorded thread (activity_id), or a FIRST message to a record
-(links). It writes the message and stops: nothing is sent. With no drafting model configured the
-text is a short deterministic note rather than a composed one. draft_follow_ups_for drafts across a
-set of slipping deals at once; send_email sends a reply, send_company_email a first message. Keep
-what comes back — subject, body, and the activity_id or links echoed with it; the send takes them.
-Re-writing the text in between means a human approves one message and another goes out. (Governance:
-runs immediately; requires passport scope "draft".)
+Compose an email: a reply to a recorded thread (activity_id), or a FIRST message to a contact or
+lead (links naming that recipient; with a contact, also the company, its deal or a project the
+message is about), written from that recipient's record. Nothing is sent. A first message is saved
+in Margince for the human you act for: it waits on the contact's or lead's page, marked as drafted
+by an agent, until they review, edit and send it there. It is not saved when they already keep an
+unsent draft of their own for that recipient (not_saved says so), and a reply is never saved: show
+those in full. With no drafting model configured the text is a short deterministic note.
+draft_follow_ups_for drafts across a set of slipping deals at once; send_email sends a reply,
+send_company_email a first message. Keep what comes back — subject, body, to, and the activity_id
+or links echoed with it; the send takes them. Re-writing the text in between means a human approves
+one message and another goes out. (Governance: runs immediately; requires passport scope "draft".)
 ```
 
 <details><summary>Input schema</summary>
@@ -5630,6 +5634,12 @@ runs immediately; requires passport scope "draft".)
   "properties": {
     "data": {
       "properties": {
+        "ai_disclosure": {
+          "type": "string"
+        },
+        "ai_generated": {
+          "type": "boolean"
+        },
         "body": {
           "type": "string"
         },
@@ -5656,8 +5666,21 @@ runs immediately; requires passport scope "draft".)
           },
           "type": "array"
         },
+        "not_saved": {
+          "type": "string"
+        },
+        "saved_draft_id": {
+          "format": "uuid",
+          "type": "string"
+        },
         "subject": {
           "type": "string"
+        },
+        "to": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         }
       },
       "required": [

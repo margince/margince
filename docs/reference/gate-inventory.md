@@ -103,6 +103,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `listsortvocabulary_test.go` | H3 | A sort the list offers is a sort the server accepts. |
 | `localedoc_test.go` | H2 | The docs name the locales the tree ships, and the catalogs are the set the Go validators admit. |
 | `lockspelling_test.go` | H2 | One lock, two modules, and no import between them. |
+| `logokeycolumns_test.go` | H3 | The mark reference check reads every column a mark's key can be stored in. |
 | `magiccaptureconcerns_test.go` | H2 | Every condition capture can raise is a condition the watching lane draws. |
 | `mailbrieflink_test.go` | H1 | The Brief's address is spelled twice: the frontend routes it (frontend/src/screens/brief.view.ts) and outbound mail links to it (internal/platform/mailcopy/link.go), because a message has to name a view before the app it opens is running. |
 | `mailcopy_test.go` | H2 | The weekly message's labels are the weekly panel's labels. |
@@ -338,6 +339,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `sourcecensus_test.go` | H2 | The two source censuses written in Go, and the corpus that holds both halves of each of them to the same cases. |
 | `stagingdecision_test.go` | H3 | Every path that stages a delivery records why it was allowed to. |
 | `statutoryfloorsingle_test.go` | H2 | The statutory retention floor is spelled once, and every destructive activity path applies that one spelling. |
+| `storedobjectdeclaration_test.go` | H2 | A writer that puts bytes into the object store declares them first, or says why its key needs no declaration. |
 | `suppressionauthority_test.go` | H2 | Every kind of suppression says who decided it. |
 | `tableownershipdiscovery_test.go` | H2 | Which packages the ownership gate walks, derived rather than remembered. |
 | `uiautonomyclaims_test.go` | H2 | No shipped UI string promises that nothing sends without a human's approval while the generated policy table says the send verbs auto-execute. |
@@ -506,7 +508,7 @@ The eight shapes, what each is for, and how each one silently passes:
 |---|---|---|
 | `consentpurposescope_test.go` | H1 | consent\_purpose is installation-wide configuration, not a row-scoped record. |
 | `consumermailonelist_test.go` | H2 | One consumer-mail list, held by a test rather than by a comment. |
-| `draftpersistenceparity_test.go` | H3 | Two drafting tools answer the persistence question differently by design, and each says so beside the other's name. |
+| `draftpersistenceparity_test.go` | H3 | Two drafting tools keep their drafts in different places by design, and each says so beside the other's name. |
 | `elapsedonespelling_test.go` | H1 | "How many days of silence" is spelled once. |
 | `employmentcurrency_test.go` | H1 | employment.IsCurrentSQL calls itself "the one spelling of 'this job is still theirs'", and every statement that asks whether an employment is current goes through it. |
 | `importtargetsclaim_test.go` | H3 | What the contract says an import can receive, against what it actually can. |
