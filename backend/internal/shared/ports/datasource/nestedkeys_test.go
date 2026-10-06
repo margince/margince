@@ -59,7 +59,7 @@ func TestRejectUnknownNestedKeys(t *testing.T) {
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			err := RejectUnknownNestedKeys(json.RawMessage(tc.body), &nestedRoot{})
+			err := RejectUnknownNestedKeys(json.RawMessage(tc.body), &nestedRoot{}, nil)
 			if tc.want == nil {
 				if err != nil {
 					t.Fatalf("refused %s: %v", tc.body, err)
@@ -74,5 +74,15 @@ func TestRejectUnknownNestedKeys(t *testing.T) {
 				t.Errorf("named %v, want %v", unknown.Fields, tc.want)
 			}
 		})
+	}
+}
+
+func TestAPathAnotherLayerJudgesIsNotEntered(t *testing.T) {
+	owned := func(path string) bool { return path == "upstream" }
+	if err := RejectUnknownNestedKeys(json.RawMessage(`{"upstream":{"nope":1}}`), &nestedRoot{}, owned); err != nil {
+		t.Errorf("refused a path the caller claimed: %v", err)
+	}
+	if err := RejectUnknownNestedKeys(json.RawMessage(`{"upstream":{"nope":1}}`), &nestedRoot{}, func(string) bool { return false }); err == nil {
+		t.Error("a claim of nothing let an unknown key through")
 	}
 }

@@ -65,7 +65,7 @@ func (h aiRoutingHandlers) ReplaceAiRouting(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	var req crmcontracts.AiRouting
-	if !httperr.DecodeClosed(w, r, &req) {
+	if !httperr.DecodeClosed(w, r, &req, routingBlockIsOwned) {
 		return
 	}
 	expected, err := routingPrecondition(r.Header)

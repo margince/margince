@@ -432,13 +432,13 @@ func TestDecodeClosedRefusesANestedKeyDecodeDrops(t *testing.T) {
 	}
 
 	code, detail := decodeBody(t, body, func(w http.ResponseWriter, r *http.Request) bool {
-		return DecodeClosed(w, r, &plain)
+		return DecodeClosed(w, r, &plain, nil)
 	})
 	if code != http.StatusUnprocessableEntity || !strings.Contains(detail, `"title"`) {
 		t.Errorf("a top-level unknown key = %d %q, want 422 naming it", code, detail)
 	}
 	code, detail = decodeBody(t, `{"deal":{"nope":1}}`, func(w http.ResponseWriter, r *http.Request) bool {
-		return DecodeClosed(w, r, &plain)
+		return DecodeClosed(w, r, &plain, nil)
 	})
 	if code != http.StatusUnprocessableEntity || !strings.Contains(detail, `"deal.nope"`) {
 		t.Errorf("a nested unknown key = %d %q, want 422 naming deal.nope", code, detail)
