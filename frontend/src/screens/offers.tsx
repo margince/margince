@@ -194,7 +194,7 @@ function EditOfferHeaderModal({
     : null;
 
   return (
-    <Modal open={open} onClose={onClose} labelledBy={headingId}>
+    <Modal open={open} onClose={onClose} labelledBy={headingId} intent="form">
       <Heading size="large" id={headingId} className="t-h2 modal-title">
         {t("offer.edit")}
       </Heading>
@@ -290,8 +290,8 @@ function EditOfferHeaderModal({
             />
           )}
         </Field>
+        {errorMessage && <ErrorLine>{errorMessage}</ErrorLine>}
       </div>
-      {errorMessage && <ErrorLine>{errorMessage}</ErrorLine>}
       <div className="actions">
         <Button onClick={onClose}>{t("deals.cancel")}</Button>
         <Button
@@ -823,12 +823,8 @@ function SendOfferAction({ offer }: Readonly<{ offer: Offer }>) {
         onClose={() => setOpen(false)}
         title={t("offer.sendConfirm")}
         tier="confirm"
-        // The last control before an irreversible write says which write it
-        // is. A dialog opened from "Send" whose button reads "Confirm" makes
-        // the reader carry the verb in their head across the dialog boundary,
-        // and this screen's three dialogs are one press apart from each other:
-        // send, accept and reject all read "Confirm", so the button was the
-        // one thing on screen that could not tell them apart.
+        // The confirm names its write: send, accept and reject sit one press
+        // apart, and three buttons all reading "Confirm" cannot be told apart.
         confirmLabel={t("offer.send")}
         onConfirm={() => mutation.mutate()}
         pending={mutation.isPending}
@@ -964,6 +960,7 @@ function RejectOfferAction({ offer }: Readonly<{ offer: Offer }>) {
         onClose={() => setOpen(false)}
         title={t("offer.rejectConfirm")}
         confirmLabel={t("offer.reject")}
+        confirmVariant="danger"
         onConfirm={() => mutation.mutate()}
         pending={mutation.isPending}
         error={errorMessage}

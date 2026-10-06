@@ -1,6 +1,11 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render as rtlRender, screen } from "@testing-library/react";
+import {
+  cleanup,
+  render as rtlRender,
+  screen,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ConfirmModal } from "./confirmmodal";
@@ -62,6 +67,28 @@ describe("ConfirmModal", () => {
       </ConfirmModal>,
     );
     expect(document.querySelector(".dot-confirm")).toBeTruthy();
+  });
+
+  it("draws the tier it is given, an automatic one included", () => {
+    rtlRender(
+      <ConfirmModal
+        open
+        onClose={vi.fn()}
+        title="Move to Won?"
+        tier="auto"
+        confirmLabel="Confirm"
+        onConfirm={vi.fn()}
+      >
+        <p>Moving this deal to a terminal stage.</p>
+      </ConfirmModal>,
+    );
+    expect(
+      within(screen.getByRole("heading", { name: /Move to Won/ })).getByRole(
+        "img",
+        { name: "automatic" },
+      ),
+    ).toBeTruthy();
+    expect(document.querySelector(".dot-confirm")).toBeNull();
   });
 
   it("fires onConfirm when the confirm button is clicked", async () => {
