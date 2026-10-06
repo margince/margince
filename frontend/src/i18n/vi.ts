@@ -5383,7 +5383,7 @@ export const vi = {
   "import.choose": "Chọn tệp",
   "import.chooseAnother": "Chọn tệp khác",
   "import.discardFile":
-    "Bắt đầu lại sẽ bỏ tệp bạn đã chọn và ánh xạ cột của tệp đó.",
+    "Bắt đầu lại sẽ gỡ lần nhập đang dở khỏi trang này, gồm tệp, ánh xạ cột và báo cáo của lần nhập đó.",
   "import.profiled": "Đọc từ {rows} dòng đầu của tệp.",
   "import.mappingTable": "Ánh xạ cột",
   "import.col.column": "Cột",

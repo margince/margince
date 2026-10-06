@@ -12,7 +12,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { meFixture } from "../app/mefixture";
 import { useRoute } from "../app/router";
@@ -97,8 +97,8 @@ function render() {
   );
 }
 
-async function profileAFile() {
-  await userEvent.upload(
+async function profileAFile(user: UserEvent) {
+  await user.upload(
     await screen.findByLabelText("CSV file"),
     new File(["Email\nada@x.test\n"], "estate.csv"),
   );
@@ -130,15 +130,14 @@ describe("the import page's address", () => {
   });
 
   it("asks before the address throws a profiled file away, and puts it back when kept", async () => {
+    const user = userEvent.setup();
     globalThis.location.hash = RUN_PAGE;
     stubRoutes();
     render();
-    await profileAFile();
+    await profileAFile(user);
 
     globalThis.location.hash = `${RUN_PAGE}?object=company`;
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Cancel" }),
-    );
+    await user.click(await screen.findByRole("button", { name: "Cancel" }));
 
     await waitFor(() =>
       expect(globalThis.location.hash).toBe(`${RUN_PAGE}?object=lead`),
@@ -160,6 +159,7 @@ describe("the import page's address", () => {
   });
 
   it("keeps the row type chosen before a parked run is read back", async () => {
+    const user = userEvent.setup();
     localStorage.setItem(REMEMBERED_RUN_KEY, parkedRun.id);
     globalThis.location.hash = RUN_PAGE;
     let answer = (_: Response) => {};
@@ -170,9 +170,7 @@ describe("the import page's address", () => {
         }),
     );
     render();
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Contacts" }),
-    );
+    await user.click(await screen.findByRole("button", { name: "Contacts" }));
 
     await act(async () => answer(json(parkedRun)));
     await waitFor(() =>
@@ -186,15 +184,50 @@ describe("the import page's address", () => {
 });
 
 describe("starting the import over", () => {
+  it.each(["failed", "undoing"])(
+    "asks before another row type forgets a recovered %s run, and keeps it when kept",
+    async (status) => {
+      localStorage.setItem(REMEMBERED_RUN_KEY, parkedRun.id);
+      globalThis.location.hash = RUN_PAGE;
+      stubRoutes(async () => json({ ...parkedRun, status }));
+      render();
+      const user = userEvent.setup();
+      await screen.findByText("Import result");
+
+      await user.click(screen.getByRole("button", { name: "Contacts" }));
+      await user.click(await screen.findByRole("button", { name: "Cancel" }));
+
+      expect(pressed("Companies")).toBeInTheDocument();
+      expect(screen.getByText("Import result")).toBeInTheDocument();
+      expect(localStorage.getItem(REMEMBERED_RUN_KEY)).toBe(parkedRun.id);
+    },
+  );
+
+  it("starts over from a recovered complete run without asking", async () => {
+    localStorage.setItem(REMEMBERED_RUN_KEY, parkedRun.id);
+    globalThis.location.hash = RUN_PAGE;
+    stubRoutes(async () => json(parkedRun));
+    render();
+    const user = userEvent.setup();
+    await screen.findByText("Import result");
+
+    await user.click(screen.getByRole("button", { name: "Contacts" }));
+
+    expect(pressed("Contacts")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(localStorage.getItem(REMEMBERED_RUN_KEY)).toBeNull();
+  });
+
   it("asks before another row type throws a profiled file away", async () => {
+    const user = userEvent.setup();
     globalThis.location.hash = RUN_PAGE;
     stubRoutes();
     render();
-    await profileAFile();
+    await profileAFile(user);
 
-    await userEvent.click(screen.getByRole("button", { name: "Companies" }));
+    await user.click(screen.getByRole("button", { name: "Companies" }));
     expect(screen.getByRole("row", { name: /Email/ })).toBeInTheDocument();
-    await userEvent.click(
+    await user.click(
       await screen.findByRole("button", { name: "Discard changes" }),
     );
 
@@ -204,22 +237,21 @@ describe("starting the import over", () => {
   });
 
   it("asks before another file replaces a profiled one", async () => {
+    const user = userEvent.setup();
     globalThis.location.hash = RUN_PAGE;
     const sent = stubRoutes();
     render();
-    await profileAFile();
+    await profileAFile(user);
     const uploads = () =>
       sent.filter((key) => key === "POST /v1/imports/sources").length;
 
-    await userEvent.upload(
+    await user.upload(
       screen.getByLabelText("CSV file"),
       new File(["Email\ngrace@x.test\n"], "other.csv"),
     );
     await screen.findByRole("dialog", { name: "Discard unsaved changes?" });
     expect(uploads()).toBe(1);
-    await userEvent.click(
-      screen.getByRole("button", { name: "Discard changes" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Discard changes" }));
 
     await waitFor(() => expect(uploads()).toBe(2));
   });

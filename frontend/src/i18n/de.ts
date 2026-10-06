@@ -5451,7 +5451,7 @@ export const de = {
   "import.choose": "Datei auswählen",
   "import.chooseAnother": "Andere Datei auswählen",
   "import.discardFile":
-    "Wenn du neu beginnst, gehen die gewählte Datei und ihre Spaltenzuordnung verloren.",
+    "Neu beginnen entfernt den angefangenen Import von dieser Seite, samt Datei, Spaltenzuordnung und Bericht.",
   "import.profiled": "Ausgewertete Zeilen ab Dateianfang: {rows}.",
   "import.mappingTable": "Spaltenzuordnung",
   "import.col.column": "Spalte",

@@ -37,8 +37,11 @@ export function useAddressedImportFlow() {
     run?.status === "failed" ||
     run?.status === "undoing" ||
     run?.status === "undone";
-  const holdsWork = (flow.profile !== null || upload.isPending) && !committed;
-  useUnsavedGuard(holdsWork);
+  const unsaved = (flow.profile !== null || upload.isPending) && !committed;
+  useUnsavedGuard(unsaved);
+  // Leaving keeps a resumable run's remembered id; starting over forgets it.
+  const holdsWork =
+    unsaved || run?.status === "failed" || run?.status === "undoing";
   const [asking, setAsking] = useState<Restart | null>(null);
 
   const perform = (restart: Restart) => {

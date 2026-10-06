@@ -5606,7 +5606,7 @@ export const en = {
   "import.choose": "Choose file",
   "import.chooseAnother": "Choose another file",
   "import.discardFile":
-    "Starting over drops the file you chose and its column mapping.",
+    "Starting over clears the import in progress from this page: its file, column mapping and report.",
   "import.profiled": "Rows profiled from the start of the file: {rows}.",
   // The name the mapping grid announces once it is wider than its box.
   "import.mappingTable": "Column mapping",
