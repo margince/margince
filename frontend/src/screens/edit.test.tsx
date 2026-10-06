@@ -26,6 +26,7 @@ import { EditAction, EditRecordModal } from "./edit";
 
 afterEach(() => {
   cleanup();
+  vi.unstubAllGlobals();
 });
 
 function render(ui: ReactNode) {
@@ -97,7 +98,6 @@ describe("edit record flow", () => {
       "aria-busy",
       "true",
     );
-    vi.unstubAllGlobals();
   });
 
   it("submits only the typed values", async () => {
