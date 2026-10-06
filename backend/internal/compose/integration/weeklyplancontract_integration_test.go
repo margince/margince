@@ -277,8 +277,6 @@ func deref(s *string) string {
 	return *s
 }
 
-// A save with nothing to change writes nothing: no audit entry, no event, and
-// the plan comes back as it was.
 func TestAContractSaveThatChangesNothingWritesNothing(t *testing.T) {
 	e := setupPlan(t)
 	saved, err := e.store.SetContract(e.rep1Ctx, planClock, weeklyplan.ContractEdit{
@@ -318,8 +316,6 @@ func TestAContractSaveThatChangesNothingWritesNothing(t *testing.T) {
 	}
 }
 
-// Clearing a half that was never written is no change either, while clearing
-// one that holds text is.
 func TestClearingAnUnwrittenHalfIsNoChangeButClearingTextIs(t *testing.T) {
 	e := setupPlan(t)
 	owner, ctx := integration.OwnerConn(t), context.Background()

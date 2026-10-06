@@ -226,10 +226,10 @@ func (h Handlers) AskForWeeklyPlanHelp(
 		return
 	}
 	// An absent key is a client that forgot the field, not one withdrawing the
-	// ask: a withdrawal is spelled `""`.
-	if _, sent := httperr.PresentField(r, "help_requested"); !sent {
+	// ask: a withdrawal is spelled `""`. The field is a string, so null is not.
+	if raw, sent := httperr.PresentField(r, "help_requested"); !sent || raw == nil {
 		httperr.Write(w, r, httperr.Validation("help_requested", "required",
-			"send help_requested; an empty string withdraws the request"))
+			"send help_requested as text; an empty string withdraws the request"))
 		return
 	}
 	if err := h.store.AskForHelp(r.Context(), ids.UUID(id), body.HelpRequested); err != nil {
@@ -330,6 +330,11 @@ func nullableText(value string) *string {
 func (h Handlers) SetWeeklyPlanContract(w http.ResponseWriter, r *http.Request) {
 	var body map[string]json.RawMessage
 	if !httperr.Decode(w, r, &body) {
+		return
+	}
+	if len(body) == 0 {
+		httperr.Write(w, r, httperr.Validation("body", "required",
+			"send "+fieldRisks+", "+fieldCapacityNote+" or both"))
 		return
 	}
 	for _, key := range slices.Sorted(maps.Keys(body)) {

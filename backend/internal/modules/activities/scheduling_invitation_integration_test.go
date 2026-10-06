@@ -28,6 +28,7 @@ type invitationCalendar struct {
 	lookupErr  error
 	inspectErr error
 	checkErr   error
+	listErr    error
 }
 
 func (c *invitationCalendar) Check(context.Context, ids.UserID, string) error { return c.checkErr }
@@ -227,6 +228,9 @@ func (c *invitationCalendar) CheckRecipient(context.Context, ids.UserID, ids.UUI
 }
 
 func (c *invitationCalendar) List(context.Context, ids.UserID, string) ([]connector.CalendarOption, error) {
+	if c.listErr != nil {
+		return nil, c.listErr
+	}
 	return []connector.CalendarOption{{ID: "primary", Name: "Calendar", Writable: true, Primary: true}}, nil
 }
 

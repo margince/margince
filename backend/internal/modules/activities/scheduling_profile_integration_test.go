@@ -66,19 +66,22 @@ func TestBookingProfileIgnoresALegacyStoredName(t *testing.T) {
 
 // A host who picks a provider before connecting it gets the sentence the
 // no-provider case already gives, naming the provider field, not a server error.
-func TestEnablingBookingsWithoutAConnectedCalendarNamesTheProvider(t *testing.T) {
-	e := setupSend(t)
-	ctx := e.as(principal.RowScopeAll)
-	store := e.store(nil).WithPublicBaseURL("https://crm.example.test").
-		WithSchedulingCalendar(&invitationCalendar{checkErr: connector.ErrAuthRejected})
-	profile := defaultSchedulingProfile()
-	profile.Enabled = true
-	profile.Provider = "gcal"
+func TestEnablingBookingsWithoutAUsableCalendarNamesTheProvider(t *testing.T) {
+	for name, calendar := range map[string]*invitationCalendar{
+		"no connection":              {checkErr: connector.ErrAuthRejected},
+		"a connection since revoked": {listErr: connector.ErrAuthRejected},
+	} {
+		e := setupSend(t)
+		store := e.store(nil).WithPublicBaseURL("https://crm.example.test").WithSchedulingCalendar(calendar)
+		profile := defaultSchedulingProfile()
+		profile.Enabled = true
+		profile.Provider = "gcal"
 
-	_, err := store.SaveSchedulingProfile(ctx, profile)
+		_, err := store.SaveSchedulingProfile(e.as(principal.RowScopeAll), profile)
 
-	var refusal *SchedulingArgumentError
-	if !errors.As(err, &refusal) || refusal.Field != "provider" || refusal.Code != "required" {
-		t.Fatalf("an unconnected calendar answered %v, want a refusal naming provider", err)
+		var refusal *SchedulingArgumentError
+		if !errors.As(err, &refusal) || refusal.Field != "provider" || refusal.Code != "required" {
+			t.Errorf("%s answered %v, want a refusal naming provider", name, err)
+		}
 	}
 }

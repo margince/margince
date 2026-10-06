@@ -198,6 +198,9 @@ func (s *Store) validateBookingCalendars(ctx context.Context, host ids.UserID, p
 		return apperrors.ErrPermissionDenied
 	}
 	calendars, err := s.calendar.List(ctx, host, string(profile.Provider))
+	if errors.Is(err, connector.ErrAuthRejected) {
+		return errCalendarNotConnected()
+	}
 	if err != nil {
 		return err
 	}
