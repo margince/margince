@@ -88,7 +88,7 @@ func repairOutcome(t *testing.T, e *integration.Env, id ids.UUID) (string, bool)
 }
 
 // A meeting past the cap is recorded as capped, not as one that named nobody.
-func TestTheRepairSaysCappedRatherThanFoundNone(t *testing.T) {
+func TestTheRepairSaysCappedSeatsRatherThanFoundNone(t *testing.T) {
 	e := integration.Setup(t)
 	seedCalendarConnection(t, e)
 
@@ -110,10 +110,10 @@ func TestTheRepairSaysCappedRatherThanFoundNone(t *testing.T) {
 	if !found {
 		t.Fatal("the crowded meeting was never settled, so the pass will re-read it forever")
 	}
-	if outcome != repairCapped {
+	if outcome != repairCappedSeats {
 		t.Errorf("outcome = %q, want %q — recorded as %q it reads as a meeting that named "+
 			"nobody, and the colleagues still locked out of it are invisible",
-			outcome, repairCapped, outcome)
+			outcome, repairCappedSeats, outcome)
 	}
 }
 
@@ -145,9 +145,9 @@ func TestAMeetingUnderTheCapStillBindsItsAttendees(t *testing.T) {
 
 // The OTHER calendar provider. The repair reads two payload shapes and only
 // Google's was ever exercised, so a Graph meeting past the cap went through the
-// arm nothing had run — and `capped` is decided after that parse, so a shape it
+// arm nothing had run — and the capped outcome is decided after that parse, so a shape it
 // could not read would record `unreadable` and settle the meeting just the same.
-func TestTheRepairReadsAGraphCalendarTooAndSaysCapped(t *testing.T) {
+func TestTheRepairReadsAGraphCalendarTooAndSaysCappedSeats(t *testing.T) {
 	e := integration.Setup(t)
 	seedGraphCalendarConnection(t, e)
 
@@ -185,9 +185,9 @@ func TestTheRepairReadsAGraphCalendarTooAndSaysCapped(t *testing.T) {
 	if !found {
 		t.Fatal("the Graph meeting was never settled, so the pass will re-read it forever")
 	}
-	if outcome != repairCapped {
+	if outcome != repairCappedSeats {
 		t.Errorf("outcome = %q, want %q — recorded as %q a Graph payload the parser could not "+
 			"read is indistinguishable from one it read and refused",
-			outcome, repairCapped, outcome)
+			outcome, repairCappedSeats, outcome)
 	}
 }

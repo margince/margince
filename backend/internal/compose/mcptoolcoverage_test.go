@@ -157,8 +157,15 @@ type coverageTotals struct {
 }
 
 type caseRow struct {
-	Name     string   `json:"name"`
-	File     string   `json:"file"`
+	Name string `json:"name"`
+	// Title is the scenario's own first line, the job in a contact's words.
+	Title string `json:"title"`
+	File  string `json:"file"`
+	// Passport is the credential the scenario asks the lane to present: empty for
+	// the read+write one, "wide" for the one that adds draft and send. Not
+	// published; the surface census reads it to know which scopes a case's
+	// required tools are served under.
+	Passport string   `json:"-"`
 	Criteria []int    `json:"criteria"`
 	Requires []string `json:"requires"`
 	// RequiresOneOf are the any-of groups: one must_call entry whose
@@ -186,6 +193,10 @@ type caseModelRun struct {
 	// rather than left to a reader to compute, because pass_at differs per case
 	// and comparing passed/runs across cases without it flatters the easy ones.
 	Held bool `json:"held"`
+	// Driver and Search are how the run was made, as the verdict recorded it;
+	// empty on a verdict filed before the lane recorded them.
+	Driver string `json:"driver,omitempty"`
+	Search string `json:"search,omitempty"`
 }
 
 // modelCoverage is the whole lane as ONE model ran it. Driven/never-driven is
@@ -206,6 +217,10 @@ type modelCoverage struct {
 	// BelowBar names them, because a rate with no names is a number nobody can
 	// act on.
 	BelowBar []string `json:"cases_below_their_bar_named"`
+	// Route is how the assistant was reached, and Search is "lexical" when any
+	// of its runs had search degraded to word overlap.
+	Route  string `json:"route"`
+	Search string `json:"search,omitempty"`
 }
 
 type mcpToolCoverage struct {
@@ -540,6 +555,7 @@ func coverageRank(row toolCoverageRow) int {
 var (
 	e2eScenarioName = regexp.MustCompile(`(?m)^name:\s*(\S+)\s*$`)
 	e2eCriteria     = regexp.MustCompile(`(?m)^criteria:\s*\[([^\]]*)\]`)
+	e2ePassport     = regexp.MustCompile(`(?m)^passport:\s*(\S+)\s*$`)
 	// A LIST ITEM IS NOT THE ONLY LINE A BLOCK HOLDS. These scenarios carry their
 	// reasoning inline — a comment above the tool it explains — and a pattern that
 	// admits only item lines stops at the first one. That is not a partial read:
@@ -563,6 +579,7 @@ var (
 	e2eMustCallDeclared = regexp.MustCompile(`(?m)^must_call:`)
 	e2eToolItem         = regexp.MustCompile(`(?m)^\s*-\s*(\S+)\s*$`)
 	e2eCriterion        = regexp.MustCompile(`\d+`)
+	e2eScenarioTitle    = regexp.MustCompile(`\A# CASE \d+ — (.+?)\.?\n`)
 )
 
 // verdictKey is what a committed verdict is filed under. The model is half of
@@ -578,6 +595,8 @@ type e2eVerdict struct {
 	Passed   int    `json:"passed"`
 	Runs     int    `json:"runs"`
 	PassAt   int    `json:"pass_at"`
+	Driver   string `json:"driver"`
+	Search   string `json:"search"`
 	// Model is the folder the verdict was filed under, not a field in it: the
 	// lane names the directory for the model it pinned.
 	Model string `json:"-"`
@@ -609,8 +628,14 @@ func readE2ELLMCases(scenarioDir, recordDir string) ([]caseRow, error) {
 		}
 		text := string(body)
 		row := caseRow{Name: strings.TrimSuffix(entry.Name(), ".yaml"), File: entry.Name()}
+		if got := e2eScenarioTitle.FindStringSubmatch(text); len(got) == 2 {
+			row.Title = got[1]
+		}
 		if got := e2eScenarioName.FindStringSubmatch(text); len(got) == 2 {
 			row.Name = got[1]
+		}
+		if got := e2ePassport.FindStringSubmatch(text); len(got) == 2 {
+			row.Passport = got[1]
 		}
 		if got := e2eCriteria.FindStringSubmatch(text); len(got) == 2 {
 			for _, n := range e2eCriterion.FindAllString(got[1], -1) {
@@ -646,6 +671,10 @@ func readE2ELLMVerdicts(dir string) (map[verdictKey]e2eVerdict, error) {
 			return nil, readErr
 		}
 		for _, entry := range files {
+			if entry.IsDir() {
+				return nil, fmt.Errorf("%s/%s: a verdict folder may not nest — the model id carried a '/'; "+
+					"file it under E2E_LLM_FOLDER", model.Name(), entry.Name())
+			}
 			if !strings.HasSuffix(entry.Name(), ".json") {
 				continue
 			}
@@ -721,6 +750,8 @@ func runsFor(verdicts map[verdictKey]e2eVerdict, scenario string) []caseModelRun
 			Passed: v.Passed,
 			PassAt: v.PassAt,
 			Held:   v.PassAt > 0 && v.Passed >= v.PassAt,
+			Driver: v.Driver,
+			Search: v.Search,
 		})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Model < out[j].Model })
@@ -879,12 +910,17 @@ func modelsThatRan(cases []caseRow) []string {
 // summariseModel folds one model's whole lane for the page's top table.
 func summariseModel(cases []caseRow, model string) modelCoverage {
 	summary := modelCoverage{Model: model, BelowBar: []string{}}
+	var routes []string
 	for _, c := range cases {
 		for _, run := range c.ByModel {
 			if run.Model != model {
 				continue
 			}
 			summary.CasesRecorded++
+			routes = append(routes, routeOf(model, run.Driver))
+			if run.Search == "lexical" {
+				summary.Search = "lexical"
+			}
 			summary.Runs += run.Runs
 			summary.Passed += run.Passed
 			if run.Held {
@@ -899,6 +935,7 @@ func summariseModel(cases []caseRow, model string) modelCoverage {
 		summary.Reliability = float64(summary.Passed) / float64(summary.Runs)
 	}
 	sort.Strings(summary.BelowBar)
+	summary.Route = strings.Join(sortedCopy(routes), " + ")
 	return summary
 }
 

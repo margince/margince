@@ -80,6 +80,7 @@ beforeEach(() => {
 afterEach(() => {
   for (const off of detach.splice(0)) off();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 describe("the bridge announces itself", () => {
@@ -400,6 +401,151 @@ describe("the bridge follows the host it is drawn inside", () => {
       params: { theme: "dark" },
     });
     expect(document.documentElement.dataset.theme).not.toBe("dark");
+  });
+});
+
+describe("the bridge tells the host how tall its content is", () => {
+  // A host draws a view at a default height until the view says otherwise, so
+  // a view that never reports its size is cut off part way down its panel.
+  // The observer and the frame clock are the two boundaries here: both are
+  // replaced so a test can say when a resize happens and when a frame paints.
+  type Observed = { resize: () => void; targets: Element[] };
+
+  function stubLayout(): { observed: Observed[]; paint: () => void } {
+    const observed: Observed[] = [];
+    const frames: FrameRequestCallback[] = [];
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        private readonly entry: Observed;
+        constructor(callback: () => void) {
+          this.entry = { resize: callback, targets: [] };
+          observed.push(this.entry);
+        }
+        observe(target: Element) {
+          this.entry.targets.push(target);
+        }
+        disconnect() {}
+      },
+    );
+    vi.stubGlobal("requestAnimationFrame", (frame: FrameRequestCallback) => {
+      frames.push(frame);
+      return frames.length;
+    });
+    const paint = () => {
+      for (const frame of frames.splice(0)) frame(0);
+    };
+    return { observed, paint };
+  }
+
+  function contentHeight(height: number) {
+    vi.spyOn(document.documentElement, "getBoundingClientRect").mockReturnValue(
+      new DOMRect(0, 0, 640, height),
+    );
+  }
+
+  async function handshaken() {
+    const parent = stubParent();
+    const bridge = await loadBridge(parent.win);
+    bridge.onResult(() => {});
+    deliver(parent.win, "https://host.example", {
+      jsonrpc: "2.0",
+      id: parent.sent[0].msg.id,
+      result: {},
+    });
+    return parent;
+  }
+
+  function answer(parent: { win: Window }) {
+    deliver(parent.win, "https://host.example", {
+      jsonrpc: "2.0",
+      method: "ui/notifications/tool-result",
+      params: { structuredContent: { data: {} } },
+    });
+  }
+
+  function sizes(sent: Sent[]) {
+    return sent.filter((s) => s.msg.method === "ui/notifications/size-changed");
+  }
+
+  it("reports its content height to the pinned host once an answer is drawn", async () => {
+    const layout = stubLayout();
+    contentHeight(812.4);
+    const parent = await handshaken();
+    answer(parent);
+    layout.paint();
+    const [report] = sizes(parent.sent);
+    expect(report?.target).toBe("https://host.example");
+    expect(report?.msg.params).toEqual({
+      width: Math.ceil(window.innerWidth),
+      height: 813,
+    });
+  });
+
+  // Before the first answer the document is only its padding. Reported, that
+  // height would shrink the host's frame just to grow it again on the answer.
+  it("says nothing about its size until the first answer is drawn", async () => {
+    const layout = stubLayout();
+    contentHeight(32);
+    const parent = await handshaken();
+    layout.paint();
+    expect(sizes(parent.sent)).toEqual([]);
+    expect(layout.observed).toEqual([]);
+  });
+
+  it("starts watching once, however many answers arrive", async () => {
+    const layout = stubLayout();
+    contentHeight(400);
+    const parent = await handshaken();
+    answer(parent);
+    answer(parent);
+    layout.paint();
+    expect(layout.observed).toHaveLength(1);
+    expect(sizes(parent.sent)).toHaveLength(1);
+  });
+
+  it("watches the document for resizes and reports only a size that changed", async () => {
+    const layout = stubLayout();
+    contentHeight(300);
+    const parent = await handshaken();
+    answer(parent);
+    layout.paint();
+    const [watcher] = layout.observed;
+    expect(watcher?.targets).toEqual([document.documentElement, document.body]);
+
+    // A second result that leaves the content the same height says nothing.
+    watcher?.resize();
+    layout.paint();
+    expect(sizes(parent.sent)).toHaveLength(1);
+
+    contentHeight(520);
+    watcher?.resize();
+    watcher?.resize();
+    layout.paint();
+    const reports = sizes(parent.sent);
+    expect(reports).toHaveLength(2);
+    expect(reports[1]?.msg.params).toEqual({
+      width: Math.ceil(window.innerWidth),
+      height: 520,
+    });
+  });
+
+  // The root stretches to the frame, so measured as it stands it would report
+  // the frame's height straight back and a short frame would never grow.
+  it("measures the content at its own height and leaves the root as it found it", async () => {
+    const layout = stubLayout();
+    const root = document.documentElement;
+    root.style.height = "100%";
+    let measuredAs = "";
+    vi.spyOn(root, "getBoundingClientRect").mockImplementation(() => {
+      measuredAs = root.style.height;
+      return new DOMRect(0, 0, 640, 700);
+    });
+    answer(await handshaken());
+    layout.paint();
+    expect(measuredAs).toBe("max-content");
+    expect(root.style.height).toBe("100%");
+    root.style.removeProperty("height");
   });
 });
 

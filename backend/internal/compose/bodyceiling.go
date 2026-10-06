@@ -10,6 +10,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
+	"github.com/margince/margince/backend/internal/platform/imagenorm"
 )
 
 // Which routes carry FILES, and may therefore read a body wider than the JSON
@@ -56,11 +57,10 @@ func uploadCeilings(limits deployconfig.UploadLimits) map[string]int64 {
 	}
 }
 
-// What a company mark may arrive as. Generous for what it holds — a 5 MB
-// source is a photograph, not a logo — because the cost of refusing a contact's
-// own file is that they go and find image software, while the cost of
-// accepting it is one decode of an image this server immediately shrinks.
-const companyLogoUploadBytes = 5_000_000
+// What a company mark may arrive as, which imagenorm declares because a reader of a
+// STORED mark needs the same number: a mark arrived through this ceiling, so it
+// cannot legitimately be larger.
+const companyLogoUploadBytes = imagenorm.MaxMarkBytes
 
 // bodyCeilingFor is the chassis's BodyCeiling for this composition.
 //

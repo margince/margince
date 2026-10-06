@@ -104,6 +104,7 @@ The 3 tables owned by `knowledge`, as the migrations build them. [Back to the en
 
 **Rules**
 
+- `knowledge_document_byte_size_js_safe` — `CHECK (((byte_size >= '-9007199254740991'::bigint) AND (byte_size <= '9007199254740991'::bigint)))`
 - `knowledge_document_detail_shape` — `CHECK (((ingest_status = 'failed') = (ingest_detail IS NOT NULL)))`
 - `knowledge_document_managed_source_known` — `CHECK (((managed_source IS NULL) OR (managed_source = 'handbook')))`
 - `knowledge_document_status_check` — `CHECK ((ingest_status = ANY (ARRAY['queued', 'running', 'done', 'failed'])))`

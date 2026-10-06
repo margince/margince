@@ -132,6 +132,40 @@ describe("a receipt line is one row", () => {
     ]);
   });
 
+  it("folds a mailbox import into one line that opens to an undo per record", async () => {
+    stub(
+      receipt({
+        done: [
+          line({
+            summary: { key: "magic.action.create_contact" },
+            entity: {
+              type: "contact",
+              id: "00000000-0000-7000-8000-0000000000cc",
+              label: "Anna Weber",
+            },
+            count: 2146,
+            undo: undoable,
+          }),
+        ],
+      }),
+    );
+    renderMagic();
+    const row = rowOf(await onlyLine("Done for you"));
+    expect(row.sentence).toBe("Created contact");
+    expect(row.subject).toBe("Anna Weber and 2,145 more");
+    const done = await screen.findByRole("list", {
+      name: "Done for you",
+      hidden: true,
+    });
+    // One press that archived 2,146 contacts nobody had looked at would be the
+    // unasked bulk write this page reports, so the row carries no Undo.
+    expect(
+      within(done)
+        .getAllByRole("button", { hidden: true })
+        .map((b) => b.textContent),
+    ).toEqual(["Anna Weber and 2,145 more"]);
+  });
+
   it("marks a source to restore in its lane's colour, since the clock does not place it", async () => {
     stub(
       receipt({

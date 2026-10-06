@@ -162,6 +162,10 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The week grid's empty working days depend on the host's zone against the reader's, so the test pins both to make them disagree.",
   },
   {
+    file: "screens/companies.thread.test.tsx",
+    why: "The account page's email drawer must date a message in the record zone, so the test pins one fourteen hours off UTC that a drawer dated in the viewer's zone cannot match.",
+  },
+  {
     file: "screens/contactmeetings.test.tsx",
     why: "The next meeting's end comes from its calendar invitation, and the test names the record zone it renders that span in, so the expected span is stated rather than inherited.",
   },

@@ -83,6 +83,7 @@ function Fold({ data }: Readonly<{ data: Company360 }>) {
             loading={false}
             onOpenHistory={() => {}}
             onOpenRecord={() => {}}
+            onOpenEmail={() => {}}
           />
         </Panel>
       </div>

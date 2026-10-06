@@ -73,6 +73,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Anonymous reachability probe for external uptime monitors.
+         * @description Answers a fixed body and does no work: it proves the public path (DNS, TLS,
+         *     any load balancer or ingress, and routing into the api) and nothing else.
+         *     Dependency health is `/readyz`'s job: an instance that cannot reach its
+         *     dependencies fails readiness and stops receiving traffic, so this probe then
+         *     fails at the edge. Discloses nothing: no version, dependency, or AI state.
+         *     Before the installation is bootstrapped it answers 503, like every `/v1` route.
+         */
+        get: operations["getStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/login": {
         parameters: {
             query?: never;
@@ -4607,6 +4632,64 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/activities/{id}/project-filing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * What filing this activity under a project did to its retention, and whether it can be undone.
+         * @description Answers from the same judgement the undo applies, so the screen offering the undo and the
+         *     write refusing it cannot disagree: `undoable` is true only when the project filing is the
+         *     SOLE reason the correspondence is kept, no statutory hold has started, and no qualifying deal
+         *     is linked. When it is not, `refusal` says which rule stands in the way. `undone` lists the
+         *     decisions already taken on this activity — who, when and the written reason — newest first,
+         *     which is how the audit entry is shown where the activity is.
+         */
+        get: operations["getActivityProjectFiling"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/activities/{id}/project-filing/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Undo filing this activity under a project. Requires a stated reason; audited.
+         * @description Removes the activity from its project and withdraws the retention class that filing gave it,
+         *     so the correspondence is treated as ordinary again. Allowed only when the project filing is
+         *     the sole basis for the class: another qualifying basis (a won deal, a sent offer, a
+         *     controller's pin, a second project) keeps it and the call answers `409
+         *     other_basis_remains`. An activity already restricted by a statutory hold answers `409
+         *     restricted` — a hold that has started never shortens. The decision is recorded with the
+         *     deciding member's name and the written reason, in one transaction with the audit entry and
+         *     the `activity.updated` event.
+         */
+        post: operations["undoActivityProjectFiling"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/activities/relink-thread": {
         parameters: {
             query?: never;
@@ -4775,6 +4858,15 @@ export interface paths {
          * @description Drafting is 🟢 (never auto-sends). The draft is returned, not sent. Keeping the rep's
          *     unsent message is a separate, explicit act at `PUT /mail-drafts`, which this route
          *     never performs.
+         *
+         *     The `draft_email` verb has a second shape this route does not serve: given `links`
+         *     instead of an activity, it drafts the FIRST message to a contact or lead through the
+         *     same engine as `POST /contacts/{id}/draft-email`, `POST /companies/{id}/draft-email` or
+         *     `POST /leads/{id}/draft-email`. It saves the draft in the saved drafts of the human the
+         *     agent acts for, marked `agent_drafted`, only when that human keeps no unsent draft of
+         *     their own for the recipient. Otherwise it returns the draft unsaved. The tool result
+         *     says which: `saved_draft_id` names the saved draft, and `not_saved` says why there is
+         *     none.
          */
         post: operations["draftEmail"];
         delete?: never;
@@ -4896,6 +4988,35 @@ export interface paths {
          *     code, authorizes nothing and records nothing.
          */
         post: operations["previewAccountSendAuthorization"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/emails:sign-off": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * The sign-off a send of this message would append beneath it.
+         * @description What the composer shows under the body, read-only. It runs the code the send
+         *     runs, so the block shown is the block sent.
+         *
+         *     The caller's own signature when they have written one. Otherwise a plain
+         *     closing in the message's language — detected from `body`, then `subject`, then
+         *     the installation's language, then English — above the caller's display name
+         *     when one is on file.
+         *
+         *     Writes nothing. The send asks again, so a signature changed in between goes out
+         *     as changed.
+         */
+        post: operations["previewEmailSignOff"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5070,8 +5191,12 @@ export interface paths {
          *     is not an activity, not a scheduled send and never on a timeline, and only the seat
          *     that wrote it can read it. There is at most one per author and anchor.
          *
-         *     The AI drafting routes still persist nothing: a draft exists only because the rep's
-         *     composer saved one here.
+         *     The AI drafting routes still persist nothing. A draft exists because the rep's composer
+         *     saved one here, or because an agent acting for the rep drafted a first message to a
+         *     contact or lead through `draft_email` (`agent_drafted`). The agent's draft is kept here
+         *     only when the rep has no draft of their own for that anchor; otherwise the tool returns
+         *     it unsaved with `not_saved` and this store is unchanged. That second writer is the tool
+         *     surface, not this route.
          */
         get: operations["getMailDraft"];
         /**
@@ -8718,9 +8843,12 @@ export interface paths {
          *     actually captured: an activity somebody logged by hand was never governed by a capture
          *     rule and is left alone.
          *
-         *     An erasure request that has been EXECUTED leaves such a hold and is therefore covered. One
-         *     still open is not: nothing marks the messages it will be about until somebody acts on it,
-         *     so a purge can destroy correspondence a pending request was going to assemble.
+         *     A data-subject request still OPEN is covered too, and of every kind: an access request
+         *     needs the messages to build the package and a rectification needs them to correct against.
+         *     Nothing is marked on the messages while a request waits — they are found through the
+         *     subject's own addresses — so the mail survives and is reported as skipped rather than
+         *     destroyed and counted as a success. An erasure request already EXECUTED leaves a hold and
+         *     was always covered.
          *
          *     Contacts go too on your own rule, but only the ones your mail is the sole reason this CRM
          *     knows them. A contact with an address outside the rule, a deal against their name, or mail
@@ -10734,6 +10862,35 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ai/provider-health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Which AI providers are not answering, and why.
+         * @description Every provider this process currently treats as degraded, down, out of credit or refusing
+         *     its credential, in name order. A provider that is answering normally is not listed, so an
+         *     empty list is the healthy answer.
+         *
+         *     The API and the worker each publish their status changes to Redis and this reads the merged
+         *     view, where the worst or blocking status wins, so an outage only the worker saw still shows.
+         *     Without Redis a process shows only its own view. Shared entries expire after 30
+         *     minutes unless refreshed every 10 while the provider is unhealthy. It is learned from real
+         *     calls, not a probe. The list never contains a key, a host or the
+         *     provider's own message text. It is admitted through the same grant as `/ai/health`.
+         */
+        get: operations["getAiProviderHealth"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ai/budget": {
         parameters: {
             query?: never;
@@ -10788,6 +10945,68 @@ export interface paths {
          *     string; routing settings are not read. Deferred-work counts cover the company.
          */
         get: operations["getAiStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/task-overrides": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read the per-task thinking level and timeouts (ai_routing read). */
+        get: operations["getAiTaskOverrides"];
+        /**
+         * Replace the per-task overrides installation-wide (ai_routing update). Every role applies them within a minute.
+         * @description Optional If-Match carries the revision returned in the GET ETag header. A stale revision
+         *     returns 409 without changing settings. Omitting If-Match, or sending *, replaces whatever
+         *     is stored.
+         */
+        put: operations["replaceAiTaskOverrides"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/task-overrides/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Judge a draft of the overrides without saving it (ai_routing read and update). */
+        post: operations["previewAiTaskOverrides"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/routing/schema": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The JSON Schema of the routing document, with a description and documentation link per OpenRouter field (ai_routing read).
+         * @description The routing $defs of the configuration schema the editor gate holds to the parser, so
+         *     the admin screen documents exactly what a save accepts. Each OpenRouter field carries
+         *     `x-doc-url` and `x-placement` (tier, or connection for the keys set on the provider).
+         */
+        get: operations["getAiRoutingSchema"];
         put?: never;
         post?: never;
         delete?: never;
@@ -10952,7 +11171,7 @@ export interface paths {
     "/ai/available-models/{provider}": {
         parameters: {
             query?: {
-                /** @description The lane being edited, named as the routing document names it (`premium`, `embeddings`, …). It selects WHICH stored binding supplies the host, for the installation that binds one vendor at two — a broker on one lane and a self-hosted gateway on another, which the routing validator permits. Omitted, or naming a lane bound to some other vendor, the host falls back to any binding on this vendor and then to the adapter's own default. */
+                /** @description The lane being edited, named as the routing document names it (`premium`, `embeddings`, …). A vendor's host is set once, on the provider (`providers` in the routing document), so this matters only for `embeddings`, which may name a server of its own. Every other value asks the provider's host, and a vendor with none set asks the adapter's own default. */
                 tier?: string;
                 /**
                  * @description Return only the best N under the vendor's own published measure, and name that measure in `ranked_by`. For the surface that has to OFFER a choice rather than accept one: a routing form binds an id its reader already knows, while a first run puts a shortlist in front of somebody who has never seen these names, and four hundred rows is not a shortlist.
@@ -11105,6 +11324,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ai/provider-settings/{provider}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The routing name of the vendor — the same string a binding uses. */
+                provider: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set one provider's host, upstream pins and location (admin/ops).
+         * @description Replaces this provider's entry in the routing document's `providers` and re-validates
+         *     the whole document under the routing lock, so no If-Match is needed: nothing else in
+         *     the document changes. An empty object (`{}`) removes the entry.
+         *
+         *     Every lane on the provider reads the new host and pins from here, and takes effect
+         *     without a restart, exactly as `PUT /ai/routing` does.
+         *
+         *     A 422 names the fault: `no_host` when the change leaves a lane that binds this provider
+         *     with nowhere to dial (the message names the lanes); `invalid_value` for an upstream on a
+         *     provider other than an OpenRouter-hosted `openai_compatible`, a host the profile forbids,
+         *     or a malformed URL. 404 for a provider this build does not know.
+         *
+         *     Audit-only write (no event stream, EVT-NOEVT-3).
+         */
+        put: operations["setAiProviderSettings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ai/provider-keys/{provider}/test": {
         parameters: {
             query?: never;
@@ -11173,6 +11427,46 @@ export interface paths {
          *     "capture is off" from "this call has no payload".
          */
         get: operations["listAiCalls"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/call-stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Call figures over a window, grouped — calls, failures, timeouts, latency, tokens and cost (ai_diagnostics read).
+         * @description Counts every model-call attempt in the window, cache hits excluded. A failure is an
+         *     attempt with a sentinel that is not an answer, the same rule the health dot reads;
+         *     a timeout is an attempt its deadline stopped. Cost is priced from the rate sheet the
+         *     way /ai/usage prices it, and calls no rate prices are counted in `unpriced`.
+         */
+        get: operations["getAiCallStats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/call-stats/flow": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Which step of one task's route answered its calls over a window (ai_diagnostics read). */
+        get: operations["getAiTaskFlow"];
         put?: never;
         post?: never;
         delete?: never;
@@ -12771,6 +13065,83 @@ export interface paths {
          *     touch either way.
          */
         post: operations["liftSuppression"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/contacts/{id}/consent/allow": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record a standing vouch that a machine-level refusal for one category may be overruled.
+         * @description Writes a `communication_override`: a rep's standing statement that a future send in the
+         *     named category may go out even though the engine, on its own, would refuse it for lack of
+         *     evidence. **It is not consent and not a lawful basis** — it sits beside the refusal and
+         *     outranks only a MACHINE-level, non-absolute one. A subject-level stop (a suppression, an
+         *     Art. 21 objection) still wins at the gate; this door cannot touch one.
+         *
+         *     **The authority is the seat's own, always.** There is no field for it: the level recorded
+         *     is read from the authenticated session (`user` for a rep, `admin` for an admin), never
+         *     from the body — a caller naming its own level would let any seat write a row that outranks
+         *     every future refusal in that category.
+         *
+         *     **The reason is required**, unlike `suppress`: a vouch that flips a refusal is the write
+         *     most worth being able to explain later, and there is no phone call it merely relays.
+         *
+         *     The override is a standing fact for the contact and category named, not a one-time
+         *     instruction for a single message: it remains live, and is read by every future send
+         *     evaluation for that pair, until it is revoked.
+         */
+        post: operations["allowContact"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/contacts/{id}/consent/allow/{overrideId}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                /**
+                 * @description The override to take back. The row and not the contact: a subject may carry more
+                 *     than one vouch — one per category — and revoking "the override" would take back
+                 *     whichever came first.
+                 */
+                overrideId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Take back a standing override, if your level may revoke the one that recorded it.
+         * @description Revokes one `communication_override`. **You may revoke a vouch recorded below your
+         *     level; a rep cannot revoke another rep's, but an admin may revoke another admin's** —
+         *     admin is the top human authority, so an admin vouch has no higher seat to take it back
+         *     and would otherwise be unrevocable. This is the one place the rule differs from
+         *     `liftSuppression`, which keeps the stricter below-your-level test because a stop erring
+         *     toward not-sending is the safe direction.
+         *
+         *     A row already revoked, belonging to another subject, or never in existence all answer
+         *     `404` alike: a caller learns nothing about rows they would not have been allowed to
+         *     touch either way.
+         */
+        post: operations["revokeOverride"];
         delete?: never;
         options?: never;
         head?: never;
@@ -14987,10 +15358,11 @@ export interface paths {
         };
         /**
          * Download the offer's most recently rendered PDF.
-         * @description Streams the bytes `pdf_asset_ref` points at (set by `renderOffer`). 404 both when the
-         *     offer has never been rendered (`pdf_asset_ref` is null) and on the usual row-scope
-         *     miss — neither leaks which case applies. 501 mirrors `renderOffer`'s own posture when
-         *     the deployment has no blobstore wired.
+         * @description Streams the bytes `pdf_asset_ref` points at (set by `renderOffer`). 404 when the
+         *     caller's read of the offer carries no `pdf_asset_ref` — never rendered, or withheld
+         *     because the caller cannot open the offer's buyer company — and on the usual row-scope
+         *     miss; none leaks which case applies. 501 mirrors `renderOffer`'s own posture when the
+         *     deployment has no blobstore wired.
          */
         get: operations["downloadOfferPdf"];
         put?: never;
@@ -16652,6 +17024,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/deals/{id}/commitments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What the customer committed to that this deal waits on.
+         * @description The open commitments the contacts employed at the deal's company made to us, read
+         *     out of captured activities: overdue first, then by nearest due date, at most 25.
+         *     Each carries the quoted words and the activity they came from, so a reader can check
+         *     it, and its claim id, so a reader with `contact:update` can dismiss it
+         *     (`POST /claims/{id}/settle`).
+         *
+         *     Needs `contact:read`, `activity:read` and `relationship:read` on top of the deal
+         *     grant: each row names a contact, quotes a captured activity, and belongs to this
+         *     account through the contact's employment edge. A commitment whose contact or activity the
+         *     caller may not see is left out, and `complete` is then false, so the card can say it
+         *     speaks about less than the account rather than that nothing is owed. `has_more`
+         *     says more commitments exist past the 25 returned. A deal with no company has
+         *     nothing to read and answers an empty, complete list.
+         */
+        get: operations["getDealCommitments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/deals/{id}/role-proposals": {
         parameters: {
             query?: never;
@@ -16820,14 +17224,14 @@ export interface paths {
          *     edits another member's through this API.
          *
          *     A member who has never written one has no row, and that is not an error:
-         *     `body` is empty and mail goes out unsigned, which is what happens today
-         *     for everyone.
+         *     `body` is empty, and their mail closes with a plain greeting and their
+         *     display name, when one is on file, instead (`POST /emails:sign-off` shows it).
          */
         get: operations["getMyEmailSignature"];
         /**
          * Write or clear your own sign-off.
          * @description An empty `body` CLEARS the signature — a member emptying the field means
-         *     "send my mail unsigned", not "leave what was there".
+         *     "sign off with the plain closing", not "leave what was there".
          *
          *     Plain text only. The transport sends `text/plain` and the drafting
          *     prompts forbid the model from writing a sign-off of its own, so what is
@@ -17155,6 +17559,35 @@ export interface paths {
          *     share pickers, the audit trail — so one write reaches every surface.
          */
         put: operations["saveMyDisplayName"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/greeting-name": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Change the name colleagues greet you by.
+         * @description Always the CALLER's own, never anybody else's: there is no id to pass.
+         *
+         *     A greeting opens with one name, and the first word of the display name
+         *     is often the wrong one ("Dr. Sofia Meier", "Nguyễn Thị Lan"). This is the
+         *     word a colleague's greeting uses instead. Empty or null clears it, and
+         *     the greeting falls back to the first word of the display name.
+         *
+         *     The first sign-in through a login provider fills it from the provider's
+         *     given name, but only while it is empty, so a value saved here is never
+         *     overwritten.
+         */
+        put: operations["saveMyGreetingName"];
         post?: never;
         delete?: never;
         options?: never;
@@ -17786,9 +18219,10 @@ export interface paths {
         put?: never;
         /**
          * Set an FX rate effective today or later (append-forward).
-         * @description Admin/ops-only. Appends one effective-dated rate; same UTC day corrects in
-         *     place, a past date is refused (422). `to` is resolved to the workspace base
-         *     currency server-side; `from == base` is refused. Human session only
+         * @description Admin/ops-only. Appends one effective-dated rate; the same day in the
+         *     installation's zone corrects in place, a past date is refused (422). `to`
+         *     is resolved to the workspace base currency server-side; `from == base` is
+         *     refused. Human session only
          *     (x-agent-access: human-only) — an agent never sets a rate directly.
          */
         post: operations["setFxRate"];
@@ -17871,16 +18305,42 @@ export interface paths {
         put?: never;
         /**
          * Re-price the models this installation calls from the providers' own catalogues.
-         * @description Admin/ops-only. Reads OpenRouter's public model list and writes today's price for each
-         *     OpenRouter-hosted model this installation binds (tiers, embeddings, decision model) and,
-         *     while something is bound at OpenRouter, each `openai_compatible` model already on the
-         *     sheet that the list still names. A self-hosted model priced by hand is never touched. A model
-         *     whose price already matches is left alone and leaves no audit row; a future-dated manual
-         *     price is not touched. Runs inline and answers with what happened per provider. A provider
-         *     that publishes no price list reports `not_available`: its prices are set by hand.
+         * @description Admin/ops-only. Runs the price sync now: vendor APIs whose key is usable are priced from
+         *     models.dev (each model already on the sheet, plus each chat or embedding model the key
+         *     lists that models.dev prices), and the OpenRouter-hosted models this installation binds,
+         *     plus the `openai_compatible` models already on the sheet while something is bound there,
+         *     from OpenRouter's list. A price set by hand is never rewritten (`kept`), and a
+         *     future-dated price is not touched. A model at its catalogue price writes nothing and
+         *     leaves no audit row; the run itself is recorded as the last sync. Runs inline and
+         *     answers with what happened per provider.
          *     Human session only (x-agent-access: human-only).
          */
         post: operations["refreshAiModelRates"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/price-sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Whether model prices sync daily, and what the last sync did (ai_model_rate read).
+         * @description `auto_sync` is on until an admin turns it off. `last_run` is absent until the sync has run
+         *     once, by the daily job or by `POST /ai-model-rates/refresh`.
+         */
+        get: operations["getAiPriceSync"];
+        /**
+         * Turn the daily model price sync on or off (ai_model_rate update).
+         * @description Off stops only the daily job; `POST /ai-model-rates/refresh` still runs on demand. Audited.
+         */
+        put: operations["replaceAiPriceSync"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -18258,6 +18718,14 @@ export interface components {
             cache_write_per_mtok: string;
             /** Format: date */
             effective_date: string;
+            /**
+             * @description Who wrote this price. `manual` was typed into the sheet and the daily sync never
+             *     rewrites it; `catalogue` was read from models.dev or OpenRouter by the sync; `seed` was
+             *     planted when the installation was provisioned. Removing a model's price hands it back
+             *     to the sync.
+             * @enum {string}
+             */
+            source: "manual" | "catalogue" | "seed";
         };
         AiModelRateListResponse: {
             data: components["schemas"]["AiModelRate"][];
@@ -18275,18 +18743,41 @@ export interface components {
              *     publishes no price to read; `not_listed` means a bound model is absent from the
              *     catalogue altogether, so its id may be misspelt; `unreachable` means the catalogue
              *     could not be read;
-             *     `not_bound` means nothing this provider serves is bound or on the sheet.
+             *     `not_bound` means nothing this provider serves is bound or on the sheet;
+             *     `not_configured` means the provider holds no usable key, so the sync did not touch it.
              * @enum {string}
              */
-            outcome: "updated" | "unchanged" | "not_available" | "not_listed" | "unreachable" | "not_bound";
+            outcome: "updated" | "unchanged" | "not_available" | "not_listed" | "unreachable" | "not_bound" | "not_configured";
             /** @description Prices written today. */
             updated: number;
             /** @description Models already at the catalogue price. */
             unchanged: number;
+            /** @description Models priced for the first time today. */
+            added: number;
+            /** @description Models whose price was set by hand, which the sync never rewrites. */
+            kept: number;
             /** @description Model ids written this run. */
             models: string[];
             /** @description Bound model ids the catalogue does not name. */
             unlisted: string[];
+        };
+        AiPriceSync: {
+            /** @description Whether the daily job syncs model prices. */
+            auto_sync: boolean;
+            last_run?: components["schemas"]["AiPriceSyncRun"];
+        };
+        AiPriceSyncRun: {
+            /** Format: date-time */
+            ran_at: string;
+            /**
+             * @description `manual` was an admin pressing Refresh now; `scheduled` the daily job.
+             * @enum {string}
+             */
+            trigger: "manual" | "scheduled";
+            report: components["schemas"]["AiModelRateRefreshReport"];
+        };
+        AiPriceSyncChange: {
+            auto_sync: boolean;
         };
         SetAiModelRateRequest: {
             provider: string;
@@ -18486,6 +18977,13 @@ export interface components {
              */
             max_upload_bytes: number;
             /**
+             * @description How long the access token an MCP connector's OAuth handshake mints lives, in minutes —
+             *     for the code exchange and every refresh rotation alike. 30 days by default, at most
+             *     90. A change applies to the next token minted; tokens already issued keep the expiry
+             *     they were issued with.
+             */
+            oauth_access_token_ttl_minutes: number;
+            /**
              * @description How far back the maintenance banner looks before it calls dead work a problem, in
              *     hours. 24 by default, bounded above by River's own seven-day retention — a window
              *     past that cannot narrow anything, since every terminal row still there is inside it.
@@ -18594,6 +19092,8 @@ export interface components {
             oidc_group_role_map?: {
                 [key: string]: string;
             };
+            /** @description Set how long a connector's access token lives, in minutes. Reaches the next token minted. */
+            oauth_access_token_ttl_minutes?: number;
             /**
              * @description How far back the maintenance banner looks before it calls dead work a problem, in
              *     hours. 24 by default, bounded above by River's own seven-day retention — a window
@@ -18860,6 +19360,15 @@ export interface components {
          */
         CaptureSettings: {
             /**
+             * @description The installation-wide ceiling on AUTOMATIC website reads started in one UTC day.
+             *     Company auto-enrichment and domain triage spend it from one counter. It paces and only
+             *     paces: concurrency is bounded by the deep-read worker pool and model spend by the AI
+             *     budget. Read at the top of every sweep and on every capture, so a change applies
+             *     without a restart. Default 500.
+             */
+            auto_enrich_daily_cap: number;
+            site_read: components["schemas"]["SiteReadLimits"];
+            /**
              * @description The workspace's capture-sharing posture, ON by default: captured correspondence is
              *     readable by every colleague who can see the contact. Switched OFF, everything captured
              *     FROM THEN ON is held to its participants and the capturing member — already-captured
@@ -19125,10 +19634,12 @@ export interface components {
             /** @description The routing name of the vendor that was asked. */
             provider: string;
             models: components["schemas"]["AvailableModel"][];
+            /** @description True when `models` is exactly what the asked place serves — a `gemini_vertex` list, each model asked of the location — so a client offers nothing beside it. Absent or false for a vendor's own list, which may lag a model the vendor shipped since. */
+            complete?: boolean;
             /** @description The measure the order came from, in words a screen can print, and absent when the list is in the vendor's own order. "Top ten" is meaningless without it, and a vendor's raw list arrives in no useful order at all: a first-time admin choosing among four hundred ids needs to be told what made ten of them the ten. */
             ranked_by?: string;
             /**
-             * @description Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter, or the decision endpoint's host, publishes no list. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — an OpenAI-wire binding names no host, so there is no address to ask; or, for a `model` probe, the location does not serve that model.
+             * @description Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter, or the decision endpoint's host, publishes no list. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — the provider has no host set, so there is no address to ask; or, for a `model` probe, the location does not serve that model.
              * @enum {string}
              */
             unavailable?: "no_key" | "profile_forbids" | "not_published" | "unreachable" | "no_endpoint";
@@ -19183,6 +19694,8 @@ export interface components {
         };
         /** @description What may be known about one vendor's credential. Facts about the vendor and whether a key is held, and nothing about the key: it has no read path, and neither does anything derived from it — a length, a prefix or a masked tail would each narrow a brute force while feeling harmless. */
         AiProviderKeyStatus: {
+            /** @description Whether this vendor can be called as the installation stands: a key is held, the adapter calls without one, or it takes no key. The daily price sync reads this same answer to decide which vendors it prices. */
+            usable: boolean;
             /** @description The routing name of the vendor, the same string a binding uses. */
             provider: string;
             /** @description Whether a credential is held. A screen reads this to offer "add" or "rotate"; it says nothing about whether the key still works, which only the vendor can answer. */
@@ -19196,6 +19709,8 @@ export interface components {
              * @enum {string}
              */
             credential_kind: "api_key" | "service_account";
+            /** @description The provider whose prices this one's calls take for a model its own price sheet does not list: `gemini` for `gemini_vertex`, which serves the same models. A price written for this provider overrides it. Absent for a provider whose unpriced models stay unpriced. */
+            priced_by?: string;
         };
         /** @description One vendor's answer to the stored credential. On a pass, `ok` is true, `key_confirmed` says whether the vendor checked the key, and `model_count` is present only when the test listed models. On a failure, `reason` names why, and never in the vendor's own words. */
         AiProviderKeyTestResult: {
@@ -19208,10 +19723,10 @@ export interface components {
             /** @description How many models the vendor reported. Present only when `ok` AND the test listed models; a vendor tested at a key endpoint or with the decision probe passes without one. */
             model_count?: number;
             /**
-             * @description Why the test did not pass, present only when `ok` is false. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the installation profile forbids reaching this vendor at all. `not_published` — this build cannot ask the vendor anything (an unknown adapter). `no_endpoint` — an OpenAI-wire vendor that no binding gives a host yet. `auth_failed` — the vendor refused the credential. `rate_limited` — the vendor is throttling this credential; it may still be valid. `unreachable` — the vendor did not answer, or answered with something else.
+             * @description Why the test did not pass, present only when `ok` is false. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the installation profile forbids reaching this vendor at all. `not_published` — this build cannot ask the vendor anything (an unknown adapter). `no_endpoint` — an OpenAI-wire vendor that has no host set on the provider yet. `auth_failed` — the vendor refused the credential. `permission_denied` — the vendor accepted the credential and refused the call: the account lacks a role or has not enabled the API (for Vertex AI, `roles/aiplatform.user` and the Vertex AI API). `rate_limited` — the vendor is throttling this credential; it may still be valid. `unreachable` — the vendor did not answer, or answered with something else.
              * @enum {string}
              */
-            reason?: "no_key" | "profile_forbids" | "not_published" | "no_endpoint" | "auth_failed" | "rate_limited" | "unreachable";
+            reason?: "no_key" | "profile_forbids" | "not_published" | "no_endpoint" | "auth_failed" | "permission_denied" | "rate_limited" | "unreachable";
         };
         /** @description Exactly one of the two fields, the one the vendor's `credential_kind` names. The server refuses neither, both, or the other one with a 422. */
         AiProviderKeyInput: {
@@ -19241,6 +19756,53 @@ export interface components {
             };
             embeddings: components["schemas"]["AiEmbeddingsBinding"];
             decisions?: components["schemas"]["AiDecisionsBinding"];
+            /**
+             * @description Provider name to what that provider is configured with, independent of any lane: its
+             *     host and the broker's upstream pins. Every lane binding a provider reads them from
+             *     here. A client that omits the field keeps the stored entries; one that sends it owns
+             *     the map, so an entry it leaves out is removed.
+             */
+            providers?: {
+                [key: string]: components["schemas"]["AiProviderSettings"];
+            };
+        };
+        /**
+         * @description One provider's configuration. An entry no lane binds is held to its shape only, so a
+         *     host can be set before anything is bound to it.
+         */
+        AiProviderSettings: {
+            /** @description Where the provider is reached. Required on `openai_compatible` while a lane binds it, and on `jev_compatible` while the decisions lane binds it (the FULL decision endpoint, posted to as written). Optional elsewhere; empty means the adapter's compiled default. */
+            base_url?: string;
+            upstream?: components["schemas"]["AiOpenRouterUpstream"];
+            /**
+             * @description The Vertex AI location a `gemini_vertex` provider is served from, which is where Google
+             *     processes the call: `eu`, `us`, `global`, or a region such as `europe-west4`. Required
+             *     while a lane binds `gemini_vertex`, and refused on every other provider. Moving it asks
+             *     Google about each bound model at the new location first; one it does not serve is a 422.
+             */
+            location?: string;
+        };
+        /**
+         * @description Which OpenRouter hosts may serve this provider's requests, for every lane on it: a
+         *     residency pin lives here. Accepted on `openai_compatible` with an OpenRouter host only.
+         *     How one model is served (sort, quantizations, …) stays on the tier's `routing`.
+         */
+        AiOpenRouterUpstream: {
+            /** @description Upstream slugs allowed; a hard filter. */
+            only?: string[];
+            /** @description Upstream slugs excluded; a hard filter. */
+            ignore?: string[];
+            /** @description Override the broker's host fallback. False is a real choice, distinct from absent. */
+            allow_fallbacks?: boolean;
+            /** @description Zero data retention: only hosts that keep no copy of the prompt or the answer may serve a request. */
+            zdr?: boolean;
+            /**
+             * @description deny keeps every request off hosts that may store or train on prompts.
+             * @enum {string}
+             */
+            data_collection?: "allow" | "deny";
+            /** @description Only models whose licence allows their output to train other models. */
+            enforce_distillable_text?: boolean;
         };
         AiTierBinding: {
             /**
@@ -19250,13 +19812,19 @@ export interface components {
             provider: string;
             /** @description The provider-native model id. */
             model: string;
-            /** @description Endpoint override; empty means the provider default. */
+            /**
+             * @description On a tier, the provider's host as resolved from `providers`; on write it is accepted
+             *     only when empty or equal to the provider's, and a different one is a 422
+             *     `moved_to_provider`. On the embeddings lane it is a live override: a separate
+             *     embeddings server for that lane alone. Empty means the provider's host.
+             */
             base_url?: string;
             /**
-             * @description The Vertex AI location a `gemini_vertex` binding is served from, which is where Google
-             *     processes the call: `eu`, `us`, `global`, or a region such as `europe-west4`. Required
-             *     on `gemini_vertex` and refused on every other provider, whose host is its `base_url`.
-             *     On save, the model is asked for at this location, and one it does not serve is a 422.
+             * @description On a tier, the `gemini_vertex` provider's location as resolved from `providers`; on write
+             *     it is accepted only when empty or equal to the provider's, and a different one is a 422
+             *     `moved_to_provider`. On the embeddings lane it is a live override: Vertex serves an
+             *     embedding model at fewer locations than a chat model, so the lane may sit elsewhere.
+             *     Refused on every provider but `gemini_vertex`.
              */
             location?: string;
             /**
@@ -19278,33 +19846,133 @@ export interface components {
             thinking_level?: "default" | "minimal" | "low" | "medium" | "high";
         };
         /**
-         * @description Upstream-selection preferences for an openai_compatible binding pointed at
-         *     OpenRouter; refused on any other binding, and on the embeddings lane every
-         *     preference but only, ignore and allow_fallbacks is refused. Absent means the
-         *     product default (reliability over price); an empty object means no preferences
-         *     (the broker's own price-weighted routing). The two are different choices and a
-         *     client must not turn one into the other.
+         * @description How an openai_compatible binding pointed at OpenRouter serves its model, in OpenRouter's
+         *     own request shape: `provider` (which hosts and how) and `reasoning` (how hard the model
+         *     thinks). Refused on any other binding; on the embeddings lane only the connection's keys
+         *     are accepted. Absent means the product
+         *     default (reliability over price); an empty object means no preferences (the broker's own
+         *     price-weighted routing). The two are different choices and a client must not turn one
+         *     into the other. The keys that say which hosts may read a request (only, ignore,
+         *     allow_fallbacks, zdr, data_collection, enforce_distillable_text) belong to the provider
+         *     (`AiOpenRouterUpstream`): on a tier they are accepted only when equal to the provider's,
+         *     and refused otherwise, each by its path. `GET /ai/routing/schema` describes every field.
+         *     The flat keys are the older spelling, still read; a response writes `provider` and
+         *     `reasoning`.
          */
         AiOpenRouterRouting: {
-            /** @description Upstream slugs allowed; a hard filter. */
+            provider?: components["schemas"]["AiOpenRouterProvider"];
+            reasoning?: components["schemas"]["AiOpenRouterReasoning"];
+            /**
+             * @deprecated
+             * @description Older spelling of provider.only.
+             */
             only?: string[];
-            /** @description Upstream slugs excluded; a hard filter. */
+            /**
+             * @deprecated
+             * @description Older spelling of provider.ignore.
+             */
             ignore?: string[];
-            /** @description Serving precisions allowed (bf16, fp16, fp8, fp4, int8 …); a hard filter. */
+            /**
+             * @deprecated
+             * @description Older spelling of provider.quantizations.
+             */
             quantizations?: string[];
-            /** @description price | throughput | latency. Reorders rather than filters, and disables load balancing. */
+            /**
+             * @deprecated
+             * @description Older spelling of provider.sort.
+             */
             sort?: string;
-            /** @description Keep the request off hosts that lack any parameter it carries. False is a real choice, distinct from absent. */
+            /**
+             * @deprecated
+             * @description Older spelling of provider.require_parameters.
+             */
             require_parameters?: boolean;
-            /** @description Override the broker's host fallback. False is a real choice, distinct from absent. */
+            /**
+             * @deprecated
+             * @description Older spelling of provider.allow_fallbacks.
+             */
             allow_fallbacks?: boolean;
             /**
              * Format: double
-             * @description Seconds; hosts above it are deprioritized, never removed. Omit to leave unset.
+             * @deprecated
+             * @description Older spelling of provider.preferred_max_latency.p90, in seconds.
              */
             preferred_max_latency_p90?: number;
-            /** @description none | minimal | low | medium | high | xhigh | max. Unset leaves each host its own default. */
+            /**
+             * @deprecated
+             * @description Older spelling of reasoning.effort.
+             */
             reasoning_effort?: string;
+        };
+        /** @description OpenRouter's `provider` request object, sent as written. Every key is optional; GET /ai/routing/schema documents each. */
+        AiOpenRouterProvider: {
+            /** @description Host slugs to try first, in this order. */
+            order?: string[];
+            /** @description Upstream slugs allowed; a hard filter. Set on the provider. */
+            only?: string[];
+            /** @description Upstream slugs excluded; a hard filter. Set on the provider. */
+            ignore?: string[];
+            /** @description Whether the broker may switch hosts on failure. Set on the provider. */
+            allow_fallbacks?: boolean;
+            /** @description Keep the request off hosts that lack any parameter it carries. */
+            require_parameters?: boolean;
+            /**
+             * @description Whether hosts that may store prompts are allowed. Set on the provider.
+             * @enum {string}
+             */
+            data_collection?: "allow" | "deny";
+            /** @description Zero data retention only. Set on the provider. */
+            zdr?: boolean;
+            /** @description Only models whose output may train other models. Set on the provider. */
+            enforce_distillable_text?: boolean;
+            /** @description Serving precisions allowed (bf16, fp16, fp8, fp4, int8 …); a hard filter. */
+            quantizations?: string[];
+            /** @description price | throughput | latency, or {by, partition}. Reorders rather than filters, and disables load balancing. */
+            sort?: ("price" | "throughput" | "latency") | components["schemas"]["AiOpenRouterSort"];
+            max_price?: components["schemas"]["AiOpenRouterPrice"];
+            /** @description Tokens per second, one number or per percentile; a soft preference. */
+            preferred_min_throughput?: number | components["schemas"]["AiOpenRouterPercentiles"];
+            /** @description Seconds, one number or per percentile; a soft preference. */
+            preferred_max_latency?: number | components["schemas"]["AiOpenRouterPercentiles"];
+        };
+        AiOpenRouterSort: {
+            /** @enum {string} */
+            by: "price" | "throughput" | "latency";
+            /**
+             * @description none sorts across every model of a fallback list at once.
+             * @enum {string}
+             */
+            partition?: "model" | "none";
+        };
+        /** @description The most a request may cost, in USD per million prompt or completion tokens, or per request or image. */
+        AiOpenRouterPrice: {
+            /** Format: double */
+            prompt?: number;
+            /** Format: double */
+            completion?: number;
+            /** Format: double */
+            request?: number;
+            /** Format: double */
+            image?: number;
+        };
+        AiOpenRouterPercentiles: {
+            /** Format: double */
+            p50?: number;
+            /** Format: double */
+            p75?: number;
+            /** Format: double */
+            p90?: number;
+            /** Format: double */
+            p99?: number;
+        };
+        /** @description OpenRouter's `reasoning` request object. effort and max_tokens are two spellings of one budget; write one. */
+        AiOpenRouterReasoning: {
+            /** @enum {string} */
+            effort?: "max" | "xhigh" | "high" | "medium" | "low" | "minimal" | "none";
+            max_tokens?: number;
+            /** @description Think, but leave the reasoning out of the answer. */
+            exclude?: boolean;
+            enabled?: boolean;
         };
         AiEmbeddingsBinding: components["schemas"]["AiTierBinding"] & {
             /**
@@ -19324,7 +19992,10 @@ export interface components {
             provider: string;
             /** @description The decision model id, e.g. jev-1.13.0 on jev or typesafe/jev-1.13 on OpenRouter. */
             model: string;
-            /** @description The FULL decision endpoint URL, posted to as written. Optional for jev (default https://api.typesafe.ai/v1/systemone); required for jev_compatible, e.g. https://openrouter.ai/api/alpha/decisions or http://127.0.0.1:8767/v1/systemone. */
+            /**
+             * @deprecated
+             * @description The decision provider's endpoint as resolved from `providers` (the FULL URL, posted to as written; jev defaults to https://api.typesafe.ai/v1/systemone). On write it is accepted only when empty or equal to the provider's; a different one is a 422 `moved_to_provider`.
+             */
             base_url?: string;
         };
         /**
@@ -19351,10 +20022,30 @@ export interface components {
             /** @description Toggle whether contacts are looked up automatically for the free details. */
             automatic_lookup?: boolean;
         };
+        /**
+         * @description What one website read may fetch. Read when a read starts, so a change applies to the next
+         *     one. An automatic read also runs under its own lower page ceiling.
+         */
+        SiteReadLimits: {
+            /** @description Pages one read may fetch. Default 60. */
+            max_pages: number;
+            /** @description Mebibytes one read may hold, summed over its pages. Default 32. */
+            max_mib: number;
+            /** @description Seconds one crawl may run before it stops and extracts what it has. Default 240. */
+            wall_seconds: number;
+        };
         /** @description A sparse capture-settings patch (admin/ops). */
         UpdateCaptureSettingsRequest: {
             /** @description Toggle captured-company auto-enrichment. */
             auto_enrich?: boolean;
+            /** @description Set the daily ceiling on automatic website reads. */
+            auto_enrich_daily_cap?: number;
+            /** @description Set the page limit of one website read. */
+            site_read_max_pages?: number;
+            /** @description Set the size limit of one website read, in MiB. */
+            site_read_max_mib?: number;
+            /** @description Set the time limit of one website crawl, in seconds. */
+            site_read_wall_seconds?: number;
             /** @description Toggle the workspace mail-sharing posture; affects correspondence captured from now on — mail, and chat on a transport whose credential belongs to one member. */
             mail_sharing?: boolean;
             /** @description Toggle the tenant-wide default for reading contact details out of captured mail — its signature and any attached vCard. A mailbox that set its own switch keeps it. */
@@ -19951,6 +20642,8 @@ export interface components {
             filename: string;
             byte_size?: number | null;
             content_type?: string | null;
+            /** @description True when the message is private to its owner and the file was recorded by name, size and type only. There are no bytes to fetch. */
+            readonly bytes_withheld?: boolean;
         };
         /**
          * @description Who reads this message, and what this caller may do about that. `can_change` and
@@ -20773,6 +21466,30 @@ export interface components {
             window_hours: number;
             rungs: components["schemas"]["AiRungHealth"][];
         };
+        AiProviderHealth: {
+            /** @description Providers that are not answering normally, in name order. Empty when all are. */
+            providers: components["schemas"]["AiProviderHealthEntry"][];
+        };
+        AiProviderHealthEntry: {
+            /** @description The provider's name as the routing binds it, never a key or host. */
+            provider: string;
+            /**
+             * @description `degraded` still takes calls; the other three refuse them until `retry_after`, when one
+             *     probe is allowed. `out_of_credit` and `unauthorized` are the administrator's to fix.
+             * @enum {string}
+             */
+            health: "degraded" | "down" | "out_of_credit" | "unauthorized";
+            /**
+             * Format: date-time
+             * @description When the provider first stopped answering normally, kept across failed probes.
+             */
+            since: string;
+            /**
+             * Format: date-time
+             * @description When one probe call is next allowed. Absent for `degraded`, which is not blocked.
+             */
+            retry_after?: string;
+        };
         /** @description One model tier and what it has been doing. */
         AiRungHealth: {
             /** @description The rung's name — `local_small`, `cloud_large` and the rest. */
@@ -20851,6 +21568,8 @@ export interface components {
         AiFeatureRoute: {
             task: string;
             display_name: string;
+            /** @description What the task does, in plain words. */
+            summary?: string;
             execution_mode: string;
             leading_tier: string;
             normal_candidates: components["schemas"]["AiRouteCandidate"][];
@@ -20869,6 +21588,111 @@ export interface components {
              */
             decision_skip_reason?: "unbound" | "uncertified" | "local_only";
             decision_candidate?: components["schemas"]["AiRouteCandidate"];
+            /** @description The task declares a decision form, so a decision model may answer it first and its decision timeout applies. */
+            decides?: boolean;
+            overrides?: components["schemas"]["AiTaskOverride"];
+            defaults?: components["schemas"]["AiTaskSettings"];
+        };
+        /** @description An admin's settings for one task. An absent field keeps the product's own value. */
+        AiTaskOverride: {
+            /**
+             * @description The exact level every site of the task is sent at. Outranks the binding and the site floor; a model with no thinking control ignores it.
+             * @enum {string}
+             */
+            thinking?: "minimal" | "low" | "medium" | "high";
+            /** @description How long the decision model may take before the task falls back to its ladder. Decision tasks only. */
+            decision_timeout_ms?: number;
+            /** @description How long one model call on the ladder may take before the next tier is tried. */
+            attempt_timeout_ms?: number;
+        };
+        /** @description Every task's override, keyed by task id. */
+        AiTaskOverrides: {
+            [key: string]: components["schemas"]["AiTaskOverride"];
+        };
+        /** @description What a task's calls are sent with. */
+        AiTaskSettings: {
+            /** @description Absent when no level is chosen: the binding and the site floor decide. */
+            thinking?: string;
+            decision_timeout_ms: number;
+            attempt_timeout_ms: number;
+        };
+        AiTaskOverridesPreview: {
+            /** @description Every field the save would refuse, by its path (<task>.<field>). */
+            errors?: components["schemas"]["AiFieldError"][];
+            /** @description What each task would be sent with. */
+            effective: {
+                [key: string]: components["schemas"]["AiTaskSettings"];
+            };
+            /** @description Stored overrides for tasks this installation no longer runs; calls ignore them. */
+            stale: string[];
+        };
+        AiCallStats: {
+            window: string;
+            group: string;
+            rows: components["schemas"]["AiCallStatsRow"][];
+        };
+        AiCallStatsRow: {
+            /** @description The group value: a provider, model id, upstream host, tier or task. Empty when the attempts carried none (a host a direct vendor does not report). */
+            key: string;
+            /** Format: int64 */
+            calls: number;
+            /** Format: int64 */
+            failed: number;
+            /** Format: int64 */
+            timeouts: number;
+            /** Format: int64 */
+            p50_ms: number;
+            /** Format: int64 */
+            p95_ms: number;
+            /** Format: int64 */
+            tokens_in: number;
+            /** Format: int64 */
+            tokens_out: number;
+            /**
+             * Format: int64
+             * @description USD micro-units, priced at each call's day.
+             */
+            cost_microusd: number;
+            /**
+             * Format: int64
+             * @description Calls that spent tokens no rate prices; their cost is not in cost_microusd.
+             */
+            unpriced: number;
+        };
+        AiTaskFlow: {
+            task: string;
+            window: string;
+            /**
+             * Format: int64
+             * @description Logical calls in the window, cache hits excluded.
+             */
+            total: number;
+            /**
+             * Format: int64
+             * @description Logical calls whose last attempt failed.
+             */
+            unanswered: number;
+            /** @description The decision model first, then each tier in ladder order. */
+            steps: components["schemas"]["AiFlowStep"][];
+        };
+        AiFlowStep: {
+            decision: boolean;
+            tier: string;
+            provider: string;
+            model: string;
+            /** Format: int64 */
+            attempts: number;
+            /**
+             * Format: int64
+             * @description Logical calls this step answered.
+             */
+            answered: number;
+            /** Format: int64 */
+            p50_ms: number;
+            /** @description Why the walk moved past this step, by sentinel (timeout, provider_error) or the next attempt's reason (decision_below_floor, …). */
+            gave_up: {
+                [key: string]: number;
+            };
         };
         AiDeferredWork: {
             carrier: string;
@@ -20876,6 +21700,11 @@ export interface components {
             available: boolean;
             /** Format: int64 */
             count?: number;
+            /**
+             * Format: int64
+             * @description Work waiting for the AI provider to answer, not for the budget. It resumes by itself at the provider's next probe, and a budget raise does not change it; `count` holds only what a raise would resume.
+             */
+            waiting_on_provider?: number;
         };
         AiStatus: {
             /** Format: date-time */
@@ -20898,6 +21727,27 @@ export interface components {
             current_version: string;
             features: components["schemas"]["AiFeatureRoute"][];
             unused_tiers: string[];
+            /**
+             * @description Every key the save would refuse, by its path in the routing document
+             *     (tiers.cheap_cloud.routing.provider.sort.by). Absent when the draft is valid; when
+             *     present, features are judged with each refused tier routing left as stored.
+             */
+            errors?: components["schemas"]["AiFieldError"][];
+            effective?: components["schemas"]["AiRoutingEffective"];
+        };
+        /** @description What each tier will send OpenRouter once saved, the connection's keys and the product default merged in. Only tiers whose binding sends a block. */
+        AiRoutingEffective: {
+            tiers: {
+                [key: string]: components["schemas"]["AiOpenRouterRouting"];
+            };
+        };
+        /** @description One refused input, the shape a 422's details.errors carries. */
+        AiFieldError: {
+            /** @description The path of the refused key. */
+            field: string;
+            code: string;
+            /** @description What is wrong and what to write instead. */
+            message: string;
         };
         /** @description AI usage + budget (AIRT-WIRE-1): the AIRT-PARAM-33 meter aggregated per day × task × tier, plus the budget band. Token-denominated; cost_est_minor is computed on read from the workspace's ai_model_rate price sheet as of each call's day (ADR-0067, price-on-read) — omitted, never a fabricated 0, when a task line's window carries no priced call, and accompanied by unpriced_calls when it is a partial total. */
         AiUsage: {
@@ -20908,6 +21758,8 @@ export interface components {
                     /** @description capture_classify, enrich, summarize, … */
                     task: string;
                     task_display_name?: string;
+                    /** @description What the task does, in plain words, for a reader deciding what it costs. */
+                    task_summary?: string;
                     /** @description local_small, cheap_cloud, premium, frontier, local_large, or decide (the decision-model lane). */
                     tier: string;
                     calls: number;
@@ -20982,6 +21834,7 @@ export interface components {
              * @description Stable failure code; null on success. New codes are added as failure classes are told apart, so read an unrecognized one as "some failure" rather than refusing it.
              *     The three codes a 429 produces are worth naming, because they have different remedies and an operator reads this to choose one. `provider_quota` — the account is out of budget or over its quota, which a human tops up. `provider_throttled` — an ordinary burst limit, which clears by itself. `provider_refused` — the provider turned the call away and said nothing about why, so the model was never reached and no claim is made about the cause.
              *     Two codes are outcomes rather than failures: a model was reached and decided. `output_withheld` — the provider declined to deliver the answer: a refusal, a safety or recitation stop, a content filter, a blocked prompt. `request_rejected` — the provider's own error code named the request malformed, which is a defect on the calling side.
+             *     `timeout` — the attempt's deadline stopped it: the task's model call timeout on a ladder attempt, its decision model timeout on a decision attempt. A failure like `provider_error`, named apart so a slow host can be told from a broken one. A caller's own cancellation is never a timeout.
              *     `provider_error` is the FALLBACK: a provider failure naming none of those. It covers a connection or TLS fault and a non-429 server error as well as a call the model answered badly, so it says the provider failed and nothing about how far the request got.
              */
             error_sentinel?: string | null;
@@ -21010,7 +21863,7 @@ export interface components {
         AiCallAttempt: {
             attempt: number;
             is_terminal: boolean;
-            /** @description Why this attempt ran — one of provider_error, schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder. Or one of decision_below_floor, decision_error, decision_off_enum, decision_state_too_large, decision_uncertified, decision_local_only — the decision attempt before this walk did not stand, and why. Read an unrecognized reason as "some reason" rather than refusing it. */
+            /** @description Why this attempt ran — one of provider_error, timeout (the attempt before stopped at its deadline), schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder. Or one of decision_below_floor, decision_error, decision_off_enum, decision_state_too_large, decision_uncertified, decision_local_only — the decision attempt before this walk did not stand, and why. Read an unrecognized reason as "some reason" rather than refusing it. */
             attempt_reason: string;
             /**
              * @description What this attempt asked: a chat completion, an embedding, or a decision model.
@@ -21372,6 +22225,10 @@ export interface components {
             issues: components["schemas"]["ImportRowIssue"][];
             /** @description Which column identified a row for idempotency — the request's `source_key`, or the natural key chosen in its absence. Stated because the whole re-run guarantee rests on it. */
             source_key_used: string;
+            /** @description `{source column → target field}` as the run was staged with it, after validation — the same shape the create request's `mapping` takes. A report says where each column went, not only how many rows landed. Absent for a run that carries no mapping. */
+            mapping?: {
+                [key: string]: string;
+            };
             links?: components["schemas"]["ImportRunLinks"];
             /** @description A dry run's estimate for the commit. Null when the run has already finished and the real duration is on the run record. */
             estimated_duration_seconds?: number | null;
@@ -23374,7 +24231,7 @@ export interface components {
             active_contacts?: number | null;
             /** @description The whole relationship rests on one contact. Named as a fact rather than scored, because it is the one shape a rep can fix before it costs them the account. */
             single_threaded?: boolean | null;
-            /** @description Open `commitment_made` signals — things one side said they would do. Null when the caller cannot read signals. */
+            /** @description Commitments either side made with the contacts at this account, read out of conversations, still owed and not yet a task. Null when the caller cannot read contacts and activities. */
             open_commitments?: number | null;
         };
         /**
@@ -25453,6 +26310,44 @@ export interface components {
              */
             readonly email_summary?: components["schemas"]["EmailSummary"] | null;
         };
+        DealCommitments: {
+            data: components["schemas"]["DealCommitment"][];
+            /** @description True when more open commitments exist than the most urgent ones returned. */
+            has_more: boolean;
+            /** @description False when a commitment was left out because its contact or its message is outside what the caller may read. */
+            complete: boolean;
+        };
+        DealCommitment: {
+            /**
+             * Format: uuid
+             * @description The id of the claim, which `POST /claims/{id}/settle` takes.
+             */
+            id: string;
+            /** Format: uuid */
+            contact_id: string;
+            contact_name: string;
+            /** @description What was committed to, in the language of the reader. */
+            body: string;
+            /** @description The words it was read from, verbatim. */
+            source_quote: string;
+            /**
+             * Format: uuid
+             * @description The captured activity it was read from.
+             */
+            source_activity_id: string;
+            /** @description The kind of activity it was read from (`email`, `meeting`, …), so a client opens it in the reader that kind needs. */
+            source_kind: string;
+            /**
+             * Format: date-time
+             * @description Absent when the conversation named no day.
+             */
+            due_at?: string | null;
+            /**
+             * Format: date-time
+             * @description When it was said.
+             */
+            occurred_at: string;
+        };
         DealCoverage: {
             /** Format: uuid */
             deal_id: string;
@@ -25480,12 +26375,32 @@ export interface components {
         EmailSignature: {
             /**
              * @description The sign-off appended below every message this member sends, plain text.
-             *     Empty means unsigned, which is the state of every member who has not
-             *     written one.
+             *     Empty means none written; a send then closes with a plain greeting and
+             *     the member's display name when one is on file.
              */
             body: string;
             /** Format: date-time */
             updated_at?: string | null;
+        };
+        EmailSignOffRequest: {
+            /** @description The message as written so far, plain text. Read only for its language. */
+            body: string;
+            /** @description The subject, read for its language when the body is too short to tell. */
+            subject?: string;
+        };
+        EmailSignOff: {
+            /**
+             * @description The block appended below the message, plain text, exactly as sent. Empty when
+             *     `kind` is `none`.
+             */
+            text: string;
+            /**
+             * @description `signature`: the caller's own, from Settings. `closing`: the caller has written
+             *     none, so the send closes with a plain greeting and their name when available. `none`: this
+             *     send appends nothing.
+             * @enum {string}
+             */
+            kind: "signature" | "closing" | "none";
         };
         SaveEmailSignatureRequest: {
             /**
@@ -25502,6 +26417,13 @@ export interface components {
              *     applies, because this writes the same column.
              */
             display_name: string;
+        };
+        SaveMyGreetingNameRequest: {
+            /**
+             * @description The name a colleague's greeting uses. Surrounding whitespace is
+             *     trimmed; empty or null clears it.
+             */
+            greeting_name: string | null;
         };
         /**
          * @description When one contact is bookable, on their own clock.
@@ -27641,6 +28563,16 @@ export interface components {
         };
         TransitionPolicyList: {
             data: components["schemas"]["TransitionPolicy"][];
+            /**
+             * @description Whether this installation permits stage automation at all
+             *     (`deals.stage_autopilot_enabled`). It defaults to FALSE, and while it is
+             *     off every transition is forced to `propose` regardless of its own rule.
+             *
+             *     A rule's `mode` therefore describes what was asked for, not what will
+             *     happen: read both before telling somebody a transition moves deals by
+             *     itself.
+             */
+            automation_enabled: boolean;
         };
         TransitionPolicy: {
             /** Format: uuid */
@@ -28725,6 +29657,8 @@ export interface components {
              * @description The agreement this document is about (CONTRACT-DDL-5) — the same kind of roll-up as company_id above, and just as deliberately not a second parent. Set at upload by the contact filing the paper; never inferred from a filename or a date, which is the guess the document state exists to refuse.
              */
             readonly contract_id?: string | null;
+            /** @description True for a file a private message carried that was recorded by name, size and type only: no bytes were kept, so there is nothing to download (404) or read. */
+            readonly bytes_withheld?: boolean;
             source: string;
             /** @description Server-stamped from the authenticated principal; never client-supplied. */
             readonly captured_by: string;
@@ -29319,6 +30253,8 @@ export interface components {
             html_body?: string | null;
             /** Format: int64 */
             version: number;
+            /** @description An agent wrote these words for the author through `draft_email`, and the author has not saved over them yet. The screen says so before the message is sent. A save from the composer clears it. */
+            agent_drafted: boolean;
             /** Format: date-time */
             created_at: string;
             /** Format: date-time */
@@ -31951,6 +32887,8 @@ export interface components {
             /** Format: email */
             email: string;
             display_name: string;
+            /** @description The name a colleague's greeting uses ("Hi Sofia,"), absent or null when nobody has said. Read through one rule on both sides: this when set, else the first word of `display_name`. Present on the caller's own seat; absent on the roster. */
+            greeting_name?: string | null;
             /**
              * @description IANA name.
              * @default UTC
@@ -32013,6 +32951,8 @@ export interface components {
             /** Format: email */
             email: string;
             display_name: string;
+            /** @description The name the member's greetings use, when the first word of `display_name` is not it. Optional; absent, empty or null leaves it unset. */
+            greeting_name?: string | null;
             /** @description A live role's key: one of the seeded system roles or one made with `createRole`. Seeded keys are wire vocabulary and diverge from the product names on purpose — `manager` displays as "Team Lead", `rep` as "User"; `management` is the whole-company seat that holds no admin power. A caller who is not an admin may only produce an account whose whole access their own contains — every grant, row scope, team and readable field — because the set-password link goes to an address the caller chooses. `listAssignableRoles` names the roles this caller may hand out. */
             role: string;
             /** @description The teams the member joins on arrival, in the same transaction as the seat and the role. A team-scoped role (`manager`, `rep`) with no team sees and edits only its own records; the access preview says what a given role + teams will see before the invite is sent. */
@@ -32127,6 +33067,11 @@ export interface components {
             /** @enum {string} */
             provider: "anthropic" | "gemini" | "gemini_vertex" | "ollama" | "openai" | "openai_compatible" | "vllm";
             model: string;
+        };
+        /** @description The fixed answer of `GET /status`. */
+        ServiceStatus: {
+            /** @enum {string} */
+            status: "ok";
         };
         AuthCapabilities: {
             /** @description Email + password login is enabled. */
@@ -32262,6 +33207,20 @@ export interface components {
             scope_limited?: boolean;
             landing?: components["schemas"]["ForecastLanding"];
             sufficiency?: components["schemas"]["ForecastSufficiency"];
+            /** @description The frozen states of this period and population, newest first: the ten most recent plus the period's first, so a reader has both the latest and the "since the period opened" anchor. These are the ids `getForecastMovement` takes in `from` and `to`. Only whole-pipeline snapshots are listed; one restricted to a single pipeline covers a different population. Empty when nothing was frozen, and always empty for `managed_teams`, which nothing is frozen against. */
+            snapshots?: components["schemas"]["ForecastSnapshotRef"][];
+        };
+        /** @description One frozen forecast, by the handle a movement read takes. */
+        ForecastSnapshotRef: {
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            taken_at: string;
+            /**
+             * @description Why it was taken.
+             * @enum {string}
+             */
+            trigger: "daily" | "call" | "period_close" | "recheck";
         };
         /**
          * @description Where the period finishes if nothing changes, and what that answer rests on.
@@ -33873,6 +34832,10 @@ export interface components {
             score?: number | null;
             /** @description For a `tag` hit only: how many contacts, companies and deals carry this word, as THIS caller may see them — the same three types the tag page counts and the filters offer, not every type `taggable` admits. It is what tells a searcher whether the word is worth opening before they open it. Null on every other hit type, and null when no count was taken. */
             carried_by?: number | null;
+            /** @description On a `contact` hit found through `with_employees`: the company it currently works at that the query matched, which is why the hit is here — the contact's own text did not match. When the contact works at several matching companies, the best-matching one. Null on every other hit, a contact the query matched by its own text included. */
+            readonly works_at?: components["schemas"]["SearchHitEmployer"] | null;
+            /** @description For a `company` hit only: the company's logo, the same URL its record carries as `Company.logo_url`. Absent when it has none, and on every other hit type. */
+            readonly logo_url?: string | null;
             /** @description For a `company` hit only: whether the account carries a LIVE partner programme. True when a partner record exists and has not been retired, false when it was checked and carries none. Null on every other hit type, and null when the marker was not taken — a caller who may not read partner programmes gets null rather than false, because null means UNKNOWN while false would tell them this account is not a partner. A client renders the partner marker, with a route to the company's partner record, on `true` alone. */
             is_partner?: boolean | null;
             /** @description The canonical email row, on an `activity` hit whose activity is an email THIS caller may read. Null on every other hit type, and null for a non-email activity — a call, a note, a task and a meeting are activities too, and each keeps its generic hit. An email whose content is not this caller's produces no hit at all, because the activity branch is content-gated. A client renders the canonical row when this is present and falls back to `title`/`snippet` when it is not. */
@@ -33883,9 +34846,17 @@ export interface components {
              */
             trust_tier?: "authoritative" | "external" | "unverified" | null;
         };
+        /** @description A company a contact currently works at, by any current employment — the same reading as the company's own roster, not only the contact's primary employer. */
+        SearchHitEmployer: {
+            /** Format: uuid */
+            company_id: string;
+            company_name: string;
+        };
         SearchResponse: {
             data: components["schemas"]["SearchResult"][];
             page: components["schemas"]["PageInfo"];
+            /** @description On a `per_type` answer only: the types that matched more hits than the page carries for them. Absent on a ranked answer, whose `page.has_more` says the same thing for the list as a whole. */
+            types_with_more?: ("contact" | "company" | "deal" | "activity" | "lead" | "project" | "product" | "offer_template" | "tag")[];
         };
         ContextEntityRef: {
             /**
@@ -35151,7 +36122,7 @@ export interface components {
         Approval: {
             /** Format: uuid */
             id: string;
-            /** @description coldstart | send_email | advance_deal | promote_lead | overnight | transcript_proposal. */
+            /** @description Examples: coldstart | send_email | advance_deal | promote_lead | overnight | deal_follow_up | commitment_task. */
             kind: string;
             /** @enum {string} */
             status: "pending" | "approved" | "rejected" | "expired";
@@ -35541,6 +36512,45 @@ export interface components {
             action?: components["schemas"]["RetentionAction"];
             lawful_basis?: string | null;
             enabled?: boolean;
+        };
+        /** @description What filing one activity under a project did to its retention, and whether the filing can be undone. Names projects by the name frozen when the filing qualified the correspondence, so a renamed or deleted project still reads as what it was. */
+        ProjectFiling: {
+            /** @description Whether the activity carries evidence that filing it under a project qualified it. */
+            filed: boolean;
+            /** @description The project filings on record, oldest first. */
+            projects: components["schemas"]["ProjectFilingEntry"][];
+            undoable: boolean;
+            /** @description Why a filed activity cannot be undone. Absent when it can, or when it is not filed. */
+            refusal?: components["schemas"]["ProjectFilingRefusal"];
+            /** @description Undo decisions already taken on this activity, newest first. */
+            undone: components["schemas"]["ProjectFilingUndoDecision"][];
+        };
+        ProjectFilingEntry: {
+            /** @description The project's name when the filing qualified the activity. Empty when the project is hidden from the caller. */
+            name: string;
+            /** @description True when the project exists and the caller cannot see it; its name is withheld. */
+            hidden?: boolean;
+            /** Format: date-time */
+            qualified_at: string;
+        };
+        ProjectFilingRefusal: {
+            /** @enum {string} */
+            code: "not_filed" | "archived" | "restricted" | "legal_hold" | "erasure_pending" | "hidden_project" | "other_basis_remains" | "qualifying_deal";
+            message: string;
+        };
+        ProjectFilingUndoDecision: {
+            /**
+             * Format: uuid
+             * @description The audit entry that recorded the decision.
+             */
+            id: string;
+            /** Format: date-time */
+            at: string;
+            /** @description True when the decision touched a project the caller cannot see; only its moment is shown. */
+            redacted?: boolean;
+            by_name: string;
+            reason: string;
+            projects: string[];
         };
         RetentionOverrideRequest: {
             reason: string;
@@ -37370,10 +38380,40 @@ export interface components {
             required_change?: boolean;
             /** @description Provenance. Required on the seller edge; a buyer's comment always carries the credential's own value. `manual` for someone writing through this product. */
             source?: string;
+            /**
+             * Format: uuid
+             * @description An id the CLIENT mints for this attempt, so a repeated delivery of the
+             *     same attempt lands once.
+             *
+             *     Repeating an attempt answers with the SAME thread rather than an error: a
+             *     double-click, a mobile retry and a proxy replay are one attempt arriving
+             *     twice. Scoped to the room, so an id only has to be unique within the one
+             *     being written to. Omit it and no deduplication applies.
+             *
+             *     Mint it fresh per attempt rather than deriving it from the message —
+             *     saying the same thing twice on purpose is allowed, and a key derived from
+             *     the text would refuse the second one.
+             */
+            request_id?: string;
         };
         PostDealRoomCommentRequest: {
             body: string;
             source?: string;
+            /**
+             * Format: uuid
+             * @description An id the CLIENT mints for this attempt, so a repeated delivery of the
+             *     same attempt lands once.
+             *
+             *     Repeating an attempt answers with the SAME thread rather than an error: a
+             *     double-click, a mobile retry and a proxy replay are one attempt arriving
+             *     twice. Scoped to the room, so an id only has to be unique within the one
+             *     being written to. Omit it and no deduplication applies.
+             *
+             *     Mint it fresh per attempt rather than deriving it from the message —
+             *     saying the same thing twice on purpose is allowed, and a key derived from
+             *     the text would refuse the second one.
+             */
+            request_id?: string;
         };
         DealRoomCredentialRequest: {
             /** @description The one-time credential from the invitation link's fragment. */
@@ -37632,7 +38672,7 @@ export interface components {
              * @description The offer_template used for locale/layout at render time; unset falls back to the workspace's default template for the offer's locale.
              */
             template_id?: string | null;
-            /** @description Rendered PDF ref, set by renderOffer (B-E03.22/WP7). */
+            /** @description Rendered PDF ref, set by renderOffer. Null, as are buyer_company_id and buyer_snapshot, for a reader who cannot open the buyer company; cleared when a draft's buyer changes. */
             pdf_asset_ref?: string | null;
             /** Format: date-time */
             readonly accepted_at?: string | null;
@@ -37755,6 +38795,14 @@ export interface components {
         };
         /** @description Header-field patch; allowed only while status=draft (422 offer_not_draft otherwise). Totals are derived and not settable (422). */
         UpdateOfferRequest: {
+            /**
+             * @description Refused while the draft carries priced lines. A line's price is an integer with no
+             *     unit of its own, so moving the currency would leave every one of them where it is
+             *     and read it in the new one — a silent reprice of a document a buyer will sign.
+             *     Remove the lines and re-enter them in the new currency, or start a new offer in it.
+             *     Changing the currency on a draft with no priced lines is free, and re-sending the
+             *     currency the offer already holds is not a change.
+             */
             currency?: string;
             /** Format: uuid */
             buyer_company_id?: string | null;
@@ -37792,6 +38840,14 @@ export interface components {
             on_behalf_of: string;
             /** Format: date-time */
             expires_at: string;
+        };
+        /** @description The standing override just recorded, by id. The category and reason are what the caller sent and the authority is their own session's, so the id is the one fact the caller could not have known — and the handle a later revoke takes. */
+        RecordedOverride: {
+            /**
+             * Format: uuid
+             * @description The standing override that now stands. A contact can hold several at once — one per category, and more than one for a single category after a merge — so this names which of them this call created.
+             */
+            override_id: string;
         };
         /**
          * @description What the consent screen renders. The client name is resolved from the database, never
@@ -39149,9 +40205,10 @@ export interface components {
             relationship?: components["schemas"]["AttentionRelationshipFacts"];
             /**
              * Format: uuid
-             * @description Whose record a `meeting` row's brief is read on. Sent only for
-             *     `source: meeting`, and only where the meeting names a contact this caller may
-             *     see.
+             * @description Who a meeting is with: the first attendee by name who holds no seat here, is not
+             *     employed by the installation's own company, and is a contact this caller may
+             *     see. Sent by `source: meeting` and `source: meeting_outcome`. On a `meeting`
+             *     row it is also whose record the brief is read on.
              *
              *     It is not the row's SUBJECT, which is the meeting itself — the row is about
              *     the appointment, and the brief happens to be reached through somebody's page:
@@ -39356,6 +40413,19 @@ export interface components {
              *     which carries the same fact out under the same rule.
              */
             no_champion?: boolean | null;
+            /**
+             * @description `true` when an imported deal leaves its champion unsaid: no seat the caller
+             *     can read holds the champion role, whether no seat was recorded, a seat is
+             *     withheld from the caller, or the seats carry other roles. The source system
+             *     may have had no such role, so this is not a finding that nobody is carrying
+             *     the deal. Never sent beside `no_champion`, and `false` is never sent.
+             *
+             *     Absent on a deal created here, on a deal whose champion is named, and when
+             *     the server did not assess coverage.
+             */
+            champion_unknown?: boolean | null;
+            /** @description `true` when the deal carries no open task of its own, so nothing is planned to move it. Never `false`: absent means a step is planned or the server did not check. */
+            no_next_step?: boolean | null;
         };
         /**
          * @description What the lapsed relationship behind a `relationship_decay` item was WORTH before
@@ -40541,8 +41611,10 @@ export interface components {
              * @description Whose record a `meeting` row's brief is read on, carried out from
              *     `AttentionItem.with_contact`.
              *
-             *     Sent only for `source: meeting`, and only where the meeting names a contact
-             *     this caller may see. It is not the row's SUBJECT — the row is about the
+             *     Sent for `source: meeting` and `source: meeting_outcome`, and only where the
+             *     meeting names a contact this caller may see. On a `meeting_outcome` row no
+             *     move opens a brief, so the field only says who the meeting was with, as
+             *     `contact` does. It is not the row's SUBJECT — the row is about the
              *     appointment — and it exists because the brief is not a page of its own: it
              *     opens as `?prep=<activity>` on a contact's record, so the address needs both
              *     ids and the subject carries only one.
@@ -40553,6 +41625,15 @@ export interface components {
              */
             with_contact?: string;
             contact?: components["schemas"]["WorklistContactFacts"];
+            /**
+             * @description Who hosted the meeting a `meeting` or `meeting_outcome` row is about: the
+             *     seat whose calendar it came off. `kind` is always `user`.
+             *
+             *     A fact about the meeting, kept apart from `owner`, which says who answers
+             *     for the row. Absent where no calendar claims the meeting. `label` follows
+             *     `WorklistOwner.label`: absent where this caller may not resolve the name.
+             */
+            host?: components["schemas"]["WorklistOwner"];
             /**
              * Format: date-time
              * @description When this is due, or when the meeting starts.
@@ -40957,7 +42038,7 @@ export interface components {
              * @description Which fact this is. The client writes the phrase.
              * @enum {string}
              */
-            kind: "pinned" | "buyer_wrote_last" | "waiting_days" | "overdue" | "due_today" | "closing_soon" | "expected_revenue" | "material" | "below_material" | "quiet_days" | "no_champion" | "promised" | "approved_and_failed" | "blocks_customer_work" | "routine" | "repeated_failure" | "legal_deadline" | "meeting_soon" | "meeting_unprepared" | "response_overdue" | "response_due_soon" | "unassigned" | "stale" | "no_reply_history" | "asks_nothing" | "addressed_elsewhere" | "outcome_unrecorded";
+            kind: "pinned" | "buyer_wrote_last" | "waiting_days" | "overdue" | "due_today" | "closing_soon" | "expected_revenue" | "material" | "below_material" | "quiet_days" | "no_champion" | "champion_unknown" | "promised" | "approved_and_failed" | "blocks_customer_work" | "routine" | "repeated_failure" | "legal_deadline" | "opened_overdue" | "earlier_requests" | "first_asked" | "no_next_step" | "meeting_soon" | "meeting_unprepared" | "response_overdue" | "response_due_soon" | "unassigned" | "stale" | "no_reply_history" | "asks_nothing" | "addressed_elsewhere" | "outcome_unrecorded";
             value?: components["schemas"]["WorklistValue"];
         };
         /**
@@ -40990,7 +42071,7 @@ export interface components {
          */
         WorklistValue: {
             /** @enum {string} */
-            kind: "date" | "money" | "days" | "level" | "score" | "none";
+            kind: "date" | "money" | "days" | "level" | "score" | "count" | "none";
             /** Format: date-time */
             date?: string;
             /**
@@ -41000,6 +42081,8 @@ export interface components {
             minor?: number;
             currency?: string;
             days?: number;
+            /** @description How many of something, such as earlier requests folded into one card. */
+            count?: number;
             level?: number;
             /**
              * @description A ranking judgement between 0 and 1 — today, the overnight brief's composite
@@ -41161,6 +42244,15 @@ export interface components {
             /** @description The contact's display name. Absent when the caller may not read the contact. */
             label?: string;
             touch?: components["schemas"]["WorklistContactTouch"];
+            /**
+             * @description Where the contact works today, so a meeting row says which account the
+             *     meeting was with. Sent on `meeting` and `meeting_outcome` rows only: every
+             *     other row's title already names its record.
+             *
+             *     Absent where the contact has no current employer, or where this caller may
+             *     not read the employment or the company. Absent never means "works nowhere".
+             */
+            employer?: components["schemas"]["ContactEmployer"];
         };
         /**
          * @description When they last wrote to us and when we last wrote to them — the same two dates,
@@ -41237,7 +42329,9 @@ export interface components {
              *
              *     Absence therefore says nothing either way. A client MUST NOT render it as
              *     "nobody is carrying this", and MUST NOT render it as "somebody is": the four
-             *     cases are indistinguishable on the wire by design.
+             *     cases are indistinguishable in this field by design. An imported deal whose
+             *     readable committee names no champion carries `champion_unknown` in the item's
+             *     `because` instead, which says so without telling those cases apart.
              */
             no_champion?: boolean | null;
         };
@@ -41721,6 +42815,36 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AuthCapabilities"];
+                };
+            };
+        };
+    };
+    getStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The api is reachable through the public path. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceStatus"];
+                };
+            };
+            /** @description The installation is not bootstrapped yet. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -48842,6 +49966,72 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    getActivityProjectFiling: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The filing's state. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectFiling"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    undoActivityProjectFiling: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RetentionOverrideRequest"];
+            };
+        };
+        responses: {
+            /** @description The filing's state after the undo. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectFiling"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description The filing cannot be undone; the problem's `code` is one of `not_filed`, `archived`, `restricted`, `legal_hold`, `erasure_pending`, `hidden_project`, `other_basis_remains` or `qualifying_deal`, or `decider_unnamed` when the deciding account has no display name. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
     relinkThread: {
         parameters: {
             query?: never;
@@ -49139,6 +50329,32 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    previewEmailSignOff: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmailSignOffRequest"];
+            };
+        };
+        responses: {
+            /** @description The block a send would append. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailSignOff"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -55366,6 +56582,10 @@ export interface operations {
                 q: string;
                 /** @description Restrict to these object types (default all). */
                 types?: ("contact" | "company" | "deal" | "activity" | "lead" | "project" | "product" | "offer_template" | "tag")[];
+                /** @description Answer GROUPED instead of as one ranked list: up to this many hits of EACH type, each type's best first. Relevance is not comparable across types — a message naming an account ten times outranks the account itself — so a short ranked list can hold nothing but messages, while a grouped answer carries every type that matched. `data` holds each type's hits together, best first. The page is the whole answer, so it takes no `cursor` and no `limit`; `types_with_more` names the types holding more than it carries, and asking again without `per_type`, with `types` set to one of them, pages through the rest. */
+                per_type?: number;
+                /** @description Also find the contacts who currently work at a company the query matches, each carrying that company as `works_at`. A contact the query matches by its own text is returned once, as itself; one found only through its employer ranks after every contact matched by its own text. Staff are read from the best-matching companies only, as many as a grouped page can show (20), so a word matching hundreds of accounts reaches the contacts at its strongest matches rather than at all of them. It needs the caller to read contacts, companies and the employment between them, and finds no one through the installation's own company or through a query using the websearch operators (`or`, `-word`, quotes), where `-acme` would reach every other company in the workspace. Honoured by both page shapes, so a contact a grouped page shows is also on the ranked list narrowed to `types=contact`. */
+                with_employees?: boolean;
                 /**
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
@@ -55386,7 +56606,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Ranked cross-object results. */
+            /** @description Ranked cross-object results, or with `per_type` a few of each type. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -58357,6 +59577,28 @@ export interface operations {
             403: components["responses"]["PermissionDenied"];
         };
     };
+    getAiProviderHealth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The providers that are not answering normally. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiProviderHealth"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+        };
+    };
     getAiBudget: {
         parameters: {
             query?: never;
@@ -58483,6 +59725,114 @@ export interface operations {
                 content?: never;
             };
             422: components["responses"]["ValidationError"];
+        };
+    };
+    getAiTaskOverrides: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The stored overrides; the ETag is the If-Match a save is held to. */
+            200: {
+                headers: {
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiTaskOverrides"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+        };
+    };
+    replaceAiTaskOverrides: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AiTaskOverrides"];
+            };
+        };
+        responses: {
+            /** @description The overrides as stored. */
+            200: {
+                headers: {
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiTaskOverrides"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            /** @description Someone saved the overrides since they were read; reload before saving. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    previewAiTaskOverrides: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AiTaskOverrides"];
+            };
+        };
+        responses: {
+            /** @description Every field a save refuses, what each task would be sent with, and stale overrides. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiTaskOverridesPreview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+        };
+    };
+    getAiRoutingSchema: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The routing $defs. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/schema+json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
         };
     };
     previewAiRouting: {
@@ -58615,7 +59965,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
-            /** @description The supplied configuration revision is stale. */
+            /** @description The supplied configuration revision is stale, or, with no revision supplied, the document kept changing while its Vertex AI bindings were being checked. Read it again and retry. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -58659,7 +60009,7 @@ export interface operations {
     listAvailableModels: {
         parameters: {
             query?: {
-                /** @description The lane being edited, named as the routing document names it (`premium`, `embeddings`, …). It selects WHICH stored binding supplies the host, for the installation that binds one vendor at two — a broker on one lane and a self-hosted gateway on another, which the routing validator permits. Omitted, or naming a lane bound to some other vendor, the host falls back to any binding on this vendor and then to the adapter's own default. */
+                /** @description The lane being edited, named as the routing document names it (`premium`, `embeddings`, …). A vendor's host is set once, on the provider (`providers` in the routing document), so this matters only for `embeddings`, which may name a server of its own. Every other value asks the provider's host, and a vendor with none set asks the adapter's own default. */
                 tier?: string;
                 /**
                  * @description Return only the best N under the vendor's own published measure, and name that measure in `ranked_by`. For the surface that has to OFFER a choice rather than accept one: a routing form binds an id its reader already knows, while a first run puts a shortlist in front of somebody who has never seen these names, and four hundred rows is not a shortlist.
@@ -58787,6 +60137,46 @@ export interface operations {
             };
         };
     };
+    setAiProviderSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The routing name of the vendor — the same string a binding uses. */
+                provider: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AiProviderSettings"];
+            };
+        };
+        responses: {
+            /** @description The whole routing document, as it now reads. */
+            200: {
+                headers: {
+                    /** @description The configuration revision now stored. */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiRouting"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            404: components["responses"]["NotFound"];
+            /** @description The routing document kept changing while its Vertex AI bindings were being checked against the new location. Read it again and retry. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
     testAiProviderKey: {
         parameters: {
             query?: never;
@@ -58830,6 +60220,14 @@ export interface operations {
                 limit?: components["parameters"]["Limit"];
                 /** @description Filter to one task (capture_classify, enrich, …). */
                 task?: string;
+                /** @description Filter to calls that ended on one provider (openai_compatible, gemini, …). */
+                provider?: string;
+                /** @description Filter to calls that ended on one configured model id. */
+                model?: string;
+                /** @description Filter to calls a broker served from one upstream host. */
+                served_provider?: string;
+                /** @description Filter to calls that ended on one tier. */
+                tier?: string;
             };
             header?: never;
             path?: never;
@@ -58848,6 +60246,63 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getAiCallStats: {
+        parameters: {
+            query?: {
+                window?: "24h" | "7d" | "30d";
+                group?: "provider" | "model" | "served_provider" | "tier" | "task";
+                provider?: string;
+                model?: string;
+                tier?: string;
+                task?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One row per group, most calls first; empty when the window holds none. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiCallStats"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getAiTaskFlow: {
+        parameters: {
+            query: {
+                task: string;
+                window?: "24h" | "7d" | "30d";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The task's logical calls, how many got no answer, and each step of its route. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiTaskFlow"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -61007,6 +62462,95 @@ export interface operations {
         };
         responses: {
             /** @description Lifted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    allowContact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * @description Which category of send this vouch covers. The engine resolves every send to
+                     *     exactly one category, and the override applies to that one only — a vouch for
+                     *     `marketing` says nothing about `customer_service`. The five categories that
+                     *     serve the subject are absent on purpose: they are never refused for lack of
+                     *     evidence, so a vouch for one would be a row nothing could ever read.
+                     * @enum {string}
+                     */
+                    category: "reply_to_inbound" | "requested_followup" | "precontract_quote" | "active_deal_followup" | "customer_service" | "account_notice" | "contract_notice" | "invoice_or_payment" | "marketing";
+                    /**
+                     * @description Why the rep is vouching for this send, in their own words. Required: unlike a
+                     *     suppression, which may only relay what the subject said, this write is the
+                     *     rep's own judgement call and the record must say why it was made.
+                     */
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Recorded. The body names the row, which is what the revoke door takes. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordedOverride"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    revokeOverride: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                /**
+                 * @description The override to take back. The row and not the contact: a subject may carry more
+                 *     than one vouch — one per category — and revoking "the override" would take back
+                 *     whichever came first.
+                 */
+                overrideId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * @description Why the override is being revoked. Required, the same asymmetry
+                     *     `liftSuppression`'s reason states: a vouch that gets taken back is the
+                     *     write most worth being able to explain later.
+                     */
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Revoked. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -64794,7 +66338,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description The offer, with pdf_asset_ref populated. */
+            /** @description The offer, with pdf_asset_ref populated — null, as on every read, for a caller who cannot open the offer's buyer company. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -66829,6 +68373,31 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    getDealCommitments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The customer's open commitments on this deal's account. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealCommitments"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     proposeDealRoles: {
         parameters: {
             query?: never;
@@ -67377,6 +68946,34 @@ export interface operations {
         };
         responses: {
             /** @description The caller's seat, with the new name. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    saveMyGreetingName: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveMyGreetingNameRequest"];
+            };
+        };
+        responses: {
+            /** @description The caller's seat, with the new greeting name. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -68333,6 +69930,55 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    getAiPriceSync: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The sync's posture and its last run. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiPriceSync"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+        };
+    };
+    replaceAiPriceSync: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AiPriceSyncChange"];
+            };
+        };
+        responses: {
+            /** @description The sync's posture and its last run. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiPriceSync"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            422: components["responses"]["ValidationError"];
         };
     };
     proposeAiModelRateRefresh: {

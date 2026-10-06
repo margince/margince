@@ -421,6 +421,9 @@ export function offeredModels(
     // a usable model or offer an embedder to a chat tier.
     .filter((m) => m.lane === undefined || m.lane === lane)
     .map((m) => ({ value: m.id, hint: priced.get(m.id) }));
+  // A complete list is what the asked place serves; a sheet model beside it is
+  // one that place does not, so none is added.
+  if (available?.complete) return fromVendor;
   const seen = new Set(fromVendor.map((s) => s.value));
   const fromSheet = [...priced.entries()]
     .filter(([id]) => !seen.has(id))
@@ -444,4 +447,41 @@ export function unkeyedProviders(
       .filter((p) => !p.configured && !p.optional)
       .map((p) => p.provider),
   );
+}
+
+/**
+ * The rows provider borrows from pricedBy: pricedBy's rows for the models
+ * provider's own sheet does not price, on any lane. A mirror of the server's
+ * rate lookup (rateMatch, ratesource.go), which matches on the model alone.
+ */
+export function borrowedRows(
+  sheet: readonly ModelRate[],
+  provider: string,
+  pricedBy: string | undefined,
+): ModelRate[] {
+  if (!pricedBy) return [];
+  const own = sheet.filter((r) => r.provider === provider);
+  return sheet.filter(
+    (r) =>
+      r.provider === pricedBy && !own.some((o) => o.model_id === r.model_id),
+  );
+}
+
+/**
+ * The sheet as every lane and picker reads it: each provider the server says
+ * is priced by another (`priced_by`) also carries the rows it borrows, under
+ * its own name, so a lane on it shows the price its calls are billed at.
+ */
+export function withBorrowedRows(
+  sheet: ModelCatalogue,
+  providers: readonly { provider: string; priced_by?: string }[] | undefined,
+): ModelCatalogue {
+  if (!sheet || !providers) return sheet;
+  const lent = providers.flatMap((p) =>
+    borrowedRows(sheet, p.provider, p.priced_by).map((r) => ({
+      ...r,
+      provider: p.provider,
+    })),
+  );
+  return lent.length === 0 ? sheet : [...sheet, ...lent];
 }

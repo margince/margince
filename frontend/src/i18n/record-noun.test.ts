@@ -354,6 +354,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "users.roleLabel",
     "users.teamNobodyToAdd",
     "vcardImport.outcome.needsReview",
+    "worklist.because.champion_unknown",
     "worklist.because.no_champion",
     "worklist.disposition.done.not_mine",
     "worklist.disposition.done.not_sales",

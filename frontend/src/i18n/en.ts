@@ -238,9 +238,10 @@ export const en = {
     "They pick any open time. The link books once and expires in 7 days.",
   "scheduling.pickOffer": "Pick two or three times to offer",
   "scheduling.pickAgreed": "Pick the agreed time",
+  "scheduling.openTimes": "Your open times",
   "scheduling.guestPicks": "{name} picks the time",
-  "scheduling.guestPicksHelp":
-    "You send one personal link. They see your open times and book one.",
+  "scheduling.guestPicksOne":
+    "They book one of the open times in the calendar.",
   "scheduling.guest": "Your guest",
   "scheduling.length": "Length",
   "scheduling.minutes_one": "{count} min",
@@ -572,6 +573,8 @@ export const en = {
   "aiAdmin.coverage":
     "Counts cover durable website reads, company scans and voice builds only. They do not count every scheduled AI pass or guarantee that a request is still eligible to run.",
   "aiAdmin.unavailable": "Unavailable",
+  "aiAdmin.providerWaiting":
+    "Waiting for the AI provider: {waiting}. It resumes by itself when the provider answers.",
   "aiAdmin.impact.blocked": "Waiting on allowance",
   "aiAdmin.impact.model": "Different model selected",
   "aiAdmin.impact.decision": "Decision model changed",
@@ -824,6 +827,12 @@ export const en = {
   "history.undo.confirmTitle": "Undo this change?",
   "history.undo.confirmEdgeBody":
     "This changes the link with {other}. Both records stay; only the link between them changes.",
+  "history.undo.confirmCreateBody":
+    "This archives the record. You can bring it back from its history.",
+  "history.undo.confirmArchiveBody":
+    "This brings the record back from the archive.",
+  "history.undo.confirmPromoteBody":
+    "This turns the contact back into a lead. If the promotion created the contact, the contact is archived.",
   "history.undo.confirmBody_one":
     "{count} field reverts to its value before this change:",
   "history.undo.confirmBody_other":
@@ -880,6 +889,8 @@ export const en = {
   "history.field.body": "Notes",
   "history.field.emails": "Email addresses",
   "history.field.nudge_dismissal": "Nudge dismissed",
+  "history.field.override_category": "Override category",
+  "history.field.overrides_carried": "Overrides carried",
   "history.field.phones": "Phone numbers",
   "history.field.invitation_status": "Invitation status",
   "history.field.proposal_status": "Meeting proposal status",
@@ -922,6 +933,10 @@ export const en = {
   "history.field.reply_verdict": "Reply result",
   "history.field.reply_verdict_by": "Reply result by",
   "history.field.research_claims_accepted": "Research claims accepted",
+  "history.field.revoked_by": "Revoked by",
+  "history.field.revoked_by_level": "Revoked at level",
+  "history.field.revoked_override": "Revoked override",
+  "history.field.revoked_rows": "Overrides taken back",
   "history.field.scope": "Scope",
   "history.field.stopped": "Stopped",
   "history.field.stops_carried": "Contact blocks copied",
@@ -1060,6 +1075,8 @@ export const en = {
   "search.group.activity": "Activities",
   "search.group.lead": "Leads",
   "search.group.tag": "Tags",
+  "search.group.email": "Emails",
+  "search.group.showAllNamed": "Show all {group}",
   "search.kind.contact": "Contact",
   "search.kind.company": "Company",
   "search.kind.partnerCompany": "Partner company",
@@ -1072,6 +1089,7 @@ export const en = {
   "search.kind.tag": "Tag",
   "search.filter.label": "Show only",
   "search.filter.all": "All",
+  "search.filter.activity": "Emails and activities",
   "search.pending": "Searching…",
   "search.tag.carriedBy_one": "{count} tagged record",
   "search.tag.carriedBy_other": "{count} tagged records",
@@ -1080,6 +1098,7 @@ export const en = {
   "search.partner.badge": "Partner",
   "search.partner.open": "Open partner record",
   "search.partner.openNamed": "Open partner record for {name}",
+  "search.contact.worksAt": "Works at {company}",
 
   "palette.aria": "Command palette",
   "palette.placeholder": "Search or ask Margince",
@@ -1163,7 +1182,8 @@ export const en = {
   "record.archiveDone": "“{name}” archived",
   "record.archive": "Archive",
   "record.disqualify": "Disqualify",
-  "record.archiveConfirm": "Archive this record? There is no undo.",
+  "record.archiveConfirm":
+    "Archive this record? You can bring it back from its history.",
   "record.archived": "Archived",
   "record.archivedReadOnly": "This company is archived and takes no changes.",
   "record.notYoursToChange":
@@ -1373,6 +1393,12 @@ export const en = {
   "common.errorNoCause": "The request failed. No cause reported.",
   "common.assistantUnavailable":
     "The assistant did not respond, so no draft was created. Enter the details manually, or ask an administrator to check the model in Settings under AI.",
+  "common.providerOutOfCredit":
+    "The AI provider has no credit left. Contact your system administrator.",
+  "common.providerUnauthorized":
+    "The AI provider refused the configured credential. Contact your system administrator.",
+  "common.providerUnavailable":
+    "The AI provider is not answering right now. Try again later or contact your system administrator.",
   "common.gatewayUnavailable":
     "The server did not finish the request in time and may still be processing it. Wait before retrying, or the work can run twice.",
   // Every 403 the server codes `permission_denied`, which is two refusals with
@@ -2137,6 +2163,13 @@ export const en = {
   "co.next.overdue": "Overdue",
   "co.next.due": "Due {when}",
   "co.next.undated": "No due date",
+  "commitment.dismiss": "Dismiss",
+  "commitment.quote": "“{quote}”",
+  "deal.watch.title": "Customer commitments",
+  "deal.watch.incomplete":
+    "Some commitments at this company are hidden from you.",
+  "deal.watch.more": "Showing the 25 most urgent commitments; more are open.",
+  "deal.watch.source": "Open message",
   "co.work.closes": "closes {date}",
   "co.brief.by.model": "Written by Margince",
   "co.brief.by.deterministic": "Compiled from CRM records",
@@ -2234,6 +2267,7 @@ export const en = {
   "approval.field.from_stage": "From",
   "approval.field.to_stage": "To",
   "approval.kind.transcript_proposal": "Add next step from transcript",
+  "approval.kind.commitment_task": "Add commitment task",
   "approval.kind.fx_rate_proposal": "Update exchange rates",
   "approval.kind.disqualify_lead": "Disqualify lead",
   "approval.kind.demote_lead": "Reverse lead qualification",
@@ -2495,6 +2529,8 @@ export const en = {
   "email.detail.none": "This message",
   "email.detail.attachments_one": "{count} attachment",
   "email.detail.attachments_other": "{count} attachments",
+  "email.detail.attachmentWithheld":
+    "Not kept, because the message is private.",
   "email.detail.showQuoted": "Show quoted history",
   "email.detail.withheldReason": "This message is not shared with you",
   "email.detail.from": "From",
@@ -3382,7 +3418,7 @@ export const en = {
   "deal.fxBase": "Base {value} · rate {rate} as of {date}",
   "deal.archive": "Archive deal",
   "deal.archiveConfirm":
-    "Archiving removes this deal from open deals. This cannot be undone here.",
+    "Archiving removes this deal from open deals. You can bring it back from its history.",
   "deal.archivedReadOnly": "This deal is archived and takes no changes.",
   "deal.notYoursToChange":
     "You cannot change this deal. Ask its owner to share it, or an administrator for edit rights.",
@@ -3548,6 +3584,8 @@ export const en = {
   "offer.committedNet": "Committed net",
   "offer.edit": "Edit header",
   "offer.currency": "Currency",
+  "offer.currencyFixedByLines":
+    "The currency is fixed once a line has a price: moving it would re-read every price in the new currency. Remove the lines to change it, or start a new offer.",
   "offer.buyerCompany": "Buyer company",
   "offer.buyerCompanyConfirm": "Buyer company: {name}",
   "offer.template": "Template",
@@ -4485,6 +4523,14 @@ export const en = {
   "compose.savedDraftDeleted": "Saved draft deleted",
   "compose.savedDraftRestored": "Saved draft restored",
   "compose.savedDraftRemove": "Delete saved draft",
+  "compose.savedDraftByAgent": "Agent draft restored. Read it before sending.",
+  "compose.waitingDraftTitle": "Draft waiting",
+  "compose.waitingDraftOpen": "Open draft",
+  "compose.waitingDraftByAgent":
+    "An agent drafted “{subject}” for review. Nothing has been sent.",
+  "compose.waitingDraftByYou":
+    "The unsent email “{subject}” was saved from the composer.",
+  "compose.waitingDraftNoSubject": "No subject",
   "compose.savedDraftChangedTitle": "Draft changed in another window",
   "compose.savedDraftChangedBody":
     "Saving keeps the text on screen. Load the saved version to continue from it instead.",
@@ -4526,6 +4572,10 @@ export const en = {
   "compose.whyThisDraft": "Why this draft?",
   "compose.body": "Body",
   "compose.bodyHint": "Click the text to edit it.",
+  "compose.signOff": "Added when you send",
+  "compose.signOffClosing": "You have no signature, so this closing is added.",
+  "compose.signOffSet": "Set your signature",
+  "compose.signOffFailed": "Could not load the sign-off a send adds.",
   "compose.transport": "Send via",
   "compose.transportEmail": "Email",
   "compose.recipientHint": "Name or address",
@@ -5131,7 +5181,7 @@ export const en = {
   "settings.signatureLabel": "Sign-off",
   "settings.signaturePlaceholder": "Marek Janetzke\nGradion · +49 40 123456",
   "settings.signatureHint":
-    "Plain text. Leave empty to send without a signature. AI drafts never add a sign-off.",
+    "Plain text. If empty, mail closes with a greeting and your name. AI never adds one.",
   "settings.signatureSaving": "Saving…",
   "settings.signatureEdit": "Edit signature",
   "settings.signatureNone": "No sign-off set",
@@ -5151,6 +5201,10 @@ export const en = {
   "settings.displayNameHelp":
     "Shown to colleagues on records you edit, in pickers and in the audit log.",
   "settings.displayNameSave": "Save",
+  "settings.greetingName": "Greeting name",
+  "settings.greetingNameHelp":
+    "The name you are greeted by in drafted messages and greetings. Empty uses the first word of your display name.",
+  "settings.greetingNameSave": "Save",
   "settings.languageHelp": "Applies to this session.",
   "settings.deviceCard": "This device",
   "settings.installApp": "Margince app",
@@ -5408,6 +5462,7 @@ export const en = {
   "agent.fact.sources": "Sources",
   "agent.fact.offline": "offline",
   // The two reasons there is no model to name, in the value's own slot.
+  "agent.fact.searchIndex": "Search index: {model}",
   "agent.fact.noCalls": "No model calls yet",
   "agent.fact.hidden": "Hidden for your role",
   // The fault a badge carries, above the facts it invalidates.
@@ -5631,6 +5686,36 @@ export const en = {
   "jobs.reasonVetted":
     "Reasons, classes and remedies come from the job layer, never the worker’s raw cause. A failure it cannot phrase shows a fixed substitute and no class.",
   "jobs.generatedAt": "As of {time}",
+
+  "settings.providerHealth": "AI provider status",
+  "settings.providerHealthSub":
+    "Whether each AI provider is answering, as this server has seen it.",
+  "providerHealth.adminOnly":
+    "AI provider status covers the whole installation and requires a permission your role does not have.",
+  "providerHealth.healthy": "All AI providers are answering.",
+  "aiProviderHealth.label.degraded": "Degraded",
+  "aiProviderHealth.label.down": "Unreachable",
+  "aiProviderHealth.label.outOfCredit": "Out of credit",
+  "aiProviderHealth.label.unauthorized": "Key rejected",
+  "aiProviderHealth.reason.degraded":
+    "Some requests to this provider are failing. Calls still go through.",
+  "aiProviderHealth.reason.down":
+    "This provider is not reachable. Calls wait until the next check.",
+  "aiProviderHealth.reason.outOfCredit":
+    "The account has no credit left. Calls wait until the next check.",
+  "aiProviderHealth.reason.unauthorized":
+    "The provider rejected the API key. Calls wait until the next check.",
+  "aiProviderHealth.fix.degraded":
+    "Check the provider’s status page, or contact your system administrator.",
+  "aiProviderHealth.fix.down":
+    "Check the provider’s status page and host, or contact your system administrator.",
+  "aiProviderHealth.fix.outOfCredit":
+    "Top up the provider account, or contact your system administrator.",
+  "aiProviderHealth.fix.unauthorized":
+    "Replace the key, or contact your system administrator.",
+  "aiProviderHealth.since": "Started {when}",
+  "aiProviderHealth.nextCheck": "Next check {when}",
+  "aiProviderHealth.nextCheckDue": "Next check is due",
 
   "settings.extIngest": "Refused connector records",
   "settings.extIngestSub":
@@ -8773,6 +8858,9 @@ export const en = {
   "users.nameLabel": "Full name",
   "users.emailPlaceholder": "name@company.com",
   "users.namePlaceholder": "Full name",
+  "users.greetingLabel": "Greeting name",
+  "users.greetingHint":
+    "Optional. Leave empty to let greetings use the first word of the full name.",
   "users.deactivateConfirmTitle": "Deactivate {name}?",
   "users.deactivateConfirmBody":
     "They are signed out everywhere and their agent passports are revoked immediately. They can be reactivated later and must then sign in again.",
@@ -9024,6 +9112,7 @@ export const en = {
     "Decision model not certified for this task",
   "aicalls.reason.decision_local_only":
     "Task is local-only and the decision model is not",
+  "aicalls.reason.timeout": "The attempt before ran out of time",
   "aicalls.decisionAnswer": "answered {choice} at {confidence}",
   "aicalls.callsLabel": "Recent calls",
   "aicalls.filter.all": "All tasks",
@@ -9036,6 +9125,8 @@ export const en = {
   "aicalls.detail.contextNone": "No company context injected",
   "aicalls.detail.attempts": "Attempts",
   "aicalls.detail.request": "Request payload",
+  "aicalls.detail.settings": "Request settings sent",
+  "aicalls.detail.servedBy": "served by {host}",
   "aicalls.detail.response": "Response payload",
   "aicalls.payload.off":
     "Payload capture is off. Set ai.capture_payloads: true in margince.yaml to record request and response content.",
@@ -9274,6 +9365,8 @@ export const en = {
     "Stored in the key vault and cannot be read back. Paste a new key to replace it. It can also be supplied as {envVar}.",
   "aiProviderKeys.absentHint":
     "This provider has no key, so models bound to it cannot be called. It can also be supplied as {envVar}.",
+  "aiProviderKeys.vertexRoleHint":
+    "The service account needs the Vertex AI User role (roles/aiplatform.user).",
   "aiProviderKeys.addPlaceholder": "Paste API key",
   "aiProviderKeys.replacePlaceholder": "Paste new key",
   "aiProviderKeys.add": "Add",
@@ -9350,6 +9443,11 @@ export const en = {
   "aiRouting.dimensions.label": "Vector width",
   "aiRouting.dimensions.help":
     "Leave blank for the provider default. Values outside 1 to 2000 are refused.",
+  "aiRouting.provider.noHost":
+    "{provider} has no host yet. Set its host under Providers before saving.",
+  "aiRouting.embeddingsServer.label": "Embeddings server",
+  "aiRouting.embeddingsServer.help":
+    "Only if the embeddings model runs on its own server. Blank uses the provider’s host.",
   "aiRouting.baseUrl.placeholder": "https://openrouter.ai/api",
   "aiRouting.baseUrl.label": "Host",
   "aiRouting.baseUrl.help":
@@ -9361,8 +9459,11 @@ export const en = {
     "Full endpoint URL, used as written. Required.",
   "aiRouting.baseUrl.placeholder.jevCompatible":
     "https://openrouter.ai/api/alpha/decisions",
+  "aiRouting.models.askingLocation":
+    "Asking Google which models {location} serves…",
   "aiRouting.models.noKey": "No key, so no model list. Type any ID it serves.",
-  "aiRouting.models.noEndpoint": "Enter the host above to load its model list.",
+  "aiRouting.models.noEndpoint":
+    "Set this provider’s host under Providers to load its model list.",
   "aiRouting.models.profileForbids":
     "This profile does not allow this provider.",
   "aiRouting.models.notPublished": "This provider publishes no model list.",
@@ -9387,6 +9488,10 @@ export const en = {
   "aiProviderKeys.modelCount_other": "{count} models available",
   "aiProviderKeys.reason.authFailed":
     "The provider refused this key. Check it, then replace it.",
+  "aiProviderKeys.reason.permissionDenied":
+    "The provider accepted the key but refused the call. Check the key’s permissions.",
+  "aiProviderKeys.reason.permissionDeniedVertex":
+    "Google accepted the key but refused the call. Grant the service account Vertex AI User (roles/aiplatform.user) and enable the Vertex AI API on its project.",
   "aiProviderKeys.reason.rateLimited":
     "The provider is rate-limiting this key. It may still be valid; try again later.",
   "aiProviderKeys.reason.noKey": "No key is stored for this provider.",
@@ -9425,7 +9530,8 @@ export const en = {
   "aiRouting.median": "Median {ms} ms",
   "aiTasks.title": "AI tasks",
   "aiTasks.intro":
-    "Read-only: each task’s tier is fixed by contract. Each row shows the tier and the model it runs on now.",
+    "Edit a task to see how its calls went and to set its thinking level and timeouts. Its tier is fixed by contract; each row shows the tier and the model it runs on now.",
+  "aiTasks.whatItDoes": "{task}: what it does",
   "aiTasks.decisionFirst": "Decision model first",
   "aiTasks.viewCalls": "View calls",
   "workingHours.title": "Bookable hours",
@@ -9485,6 +9591,37 @@ export const en = {
   "captureSettings.adminOnly":
     "Only an administrator or operations user can change this.",
   "captureSettings.updateFailed": "Setting not changed",
+  "captureReading.title": "Website reads",
+  "captureReading.sub":
+    "How much Margince reads from company websites. A change applies to the next read.",
+  "captureReading.dailyCap.label": "Daily automatic reads",
+  "captureReading.dailyCap.help":
+    "Reads nobody asked for, across all companies, 1 to 20,000 a day.",
+  "captureReading.dailyCap.refusal": "Enter a whole number from 1 to 20,000.",
+  "captureReading.maxPages.label": "Pages per read",
+  "captureReading.maxPages.help":
+    "Maximum pages one read fetches, 1 to 200 (automatic reads stop at 12).",
+  "captureReading.maxPages.refusal":
+    "Enter a whole number of pages from 1 to 200.",
+  "captureReading.maxMiB.label": "Size per read (MiB)",
+  "captureReading.maxMiB.help":
+    "Maximum data one read keeps across its pages, 1 to 128 MiB.",
+  "captureReading.maxMiB.refusal": "Enter a whole number of MiB from 1 to 128.",
+  "captureReading.wall.label": "Read time (seconds)",
+  "captureReading.wall.help":
+    "Maximum time one read runs before it keeps what it found, 30 to 600 seconds.",
+  "captureReading.wall.refusal":
+    "Enter a whole number of seconds from 30 to 600.",
+  "agentConnections.title": "Agent connections",
+  "agentConnections.sub":
+    "How long an agent connected over MCP keeps its passport before it renews. A change applies to the next passport issued.",
+  "agentConnections.adminOnly":
+    "Only an administrator or operations user can change this.",
+  "agentConnections.ttl.label": "Passport lifetime (minutes)",
+  "agentConnections.ttl.help": "Whole minutes, 5 to 129,600 (90 days).",
+  "agentConnections.ttl.refusal":
+    "Enter a whole number of minutes from 5 to 129,600.",
+  "agentConnections.updateFailed": "Setting not changed",
 
   "ownDomains.companyTitle": "Company domains",
   "captureExclusions.title": "Capture exclusions",
@@ -11010,6 +11147,7 @@ export const en = {
     "{urgent} urgent · {due} due · {inPlay} in play · {lower} routine · {total} total",
   "worklist.summary.noMiddle":
     "{urgent} urgent · {due} due · {lower} routine · {total} total",
+  "worklist.summary.wholeDay": "Whole day: {sentence}",
   "worklist.summary.split": "{today} today · {review} to review",
   "worklist.completeness": "{shown} of {considered} shown",
   "worklist.review.partial":
@@ -11045,8 +11183,8 @@ export const en = {
   "worklist.pane.openRow": "Show details for {position}, {title}",
   "worklist.pane.loading": "Loading record…",
   "worklist.pane.nothing": "Nothing recorded yet.",
-  "worklist.pane.lastInbound": "Last inbound",
-  "worklist.pane.lastOutbound": "Last outbound",
+  "worklist.pane.lastInbound": "Last from this contact",
+  "worklist.pane.lastOutbound": "Last to this contact",
   "worklist.pane.never": "Never",
   "worklist.pane.company": "Company",
   "worklist.pane.role": "Role",
@@ -11091,6 +11229,9 @@ export const en = {
   "worklist.scope.all": "All",
   "worklist.owner.visibleLabel": "Viewing",
   "worklist.manager.cancel": "Cancel",
+  "worklist.owner.wholeTeam": "The whole team",
+  "worklist.owner.everyone": "Everyone",
+  "worklist.owner.nobodyYet": "Nobody yet",
   "worklist.owner.mine": "My Worklist",
   "worklist.owner.backToMine": "Back to your Worklist",
   "worklist.manager.reassign": "Reassign",
@@ -11167,8 +11308,9 @@ export const en = {
     "{name} has {count} customer commitment due",
   "worklist.coaching.promises_other":
     "{name} has {count} customer commitments due",
-  "worklist.coaching.waiting_one": "{count} customer is waiting on {name}",
-  "worklist.coaching.waiting_other": "{count} customers are waiting on {name}",
+  "worklist.coaching.waiting_one": "{count} conversation is waiting on {name}",
+  "worklist.coaching.waiting_other":
+    "{count} conversations are waiting on {name}",
   "worklist.coaching.overdue_one": "{name} has {count} overdue task",
   "worklist.coaching.overdue_other": "{name} has {count} overdue tasks",
   "worklist.board.promises": "Commitments due",
@@ -11192,7 +11334,8 @@ export const en = {
   "worklist.hidden.clear":
     "Nothing is hidden. Every waiting customer reaches a Worklist.",
   "worklist.hidden.truncated":
-    "Counts are incomplete. Each figure is a minimum.",
+    "The Worklist is at its reading limit, so these figures are minimums and a rule reading “Not counted” may still hold messages. Open a rule to see them.",
+  "worklist.hidden.notCounted": "Not counted",
   "worklist.hidden.count": "{count} waiting",
   "worklist.hidden.pastHorizon": "Too old for the Worklist",
   "worklist.hidden.pastHorizon.detail":
@@ -11214,6 +11357,8 @@ export const en = {
     "Snoozed or marked not yours. Snoozed items return automatically.",
   "worklist.hidden.shown": "The Worklist shows {count}.",
   "worklist.hidden.rows.loading": "Loading the held-back messages…",
+  "worklist.hidden.rows.outOfReach":
+    "None could be read at this size. Some may still be held back.",
   "worklist.hidden.rows.empty": "Nothing is held back by this rule now.",
   "worklist.filter.label": "Work type",
   "worklist.filter.all": "All",
@@ -11263,13 +11408,24 @@ export const en = {
   "worklist.because.quiet_days": "gone quiet",
   "worklist.because.quiet_days.value_one": "quiet for {value} day",
   "worklist.because.quiet_days.value_other": "quiet for {value} days",
+  "worklist.because.no_next_step": "no next step planned",
   "worklist.because.no_champion": "no champion",
+  "worklist.because.champion_unknown": "champion unknown",
   "worklist.because.promised": "committed by you",
   "worklist.because.approved_and_failed": "approved but did not run",
   "worklist.because.blocks_customer_work": "customer waiting on this",
   "worklist.because.routine": "routine cleanup",
   "worklist.because.repeated_failure": "repeated failure",
+  "worklist.because.earlier_requests": "earlier requests in this thread",
+  "worklist.because.earlier_requests.value_one":
+    "{value} earlier request in this thread",
+  "worklist.because.earlier_requests.value_other":
+    "{value} earlier requests in this thread",
+  "worklist.because.first_asked": "asked earlier",
+  "worklist.because.first_asked.value": "first asked {value}",
   "worklist.because.legal_deadline": "legal deadline running",
+  "worklist.because.opened_overdue":
+    "recorded after its deadline, from imported history",
   "worklist.because.meeting_soon": "starting soon",
   "worklist.because.meeting_unprepared": "nothing prepared",
   "worklist.because.outcome_unrecorded": "no outcome recorded",
@@ -11345,7 +11501,7 @@ export const en = {
   "noticeDuty.askConfirm": "Ask them to confirm their details",
   "noticeDuty.end": "End the duty…",
   "noticeDuty.sent":
-    "Sent to {address}. The duty is discharged once it goes out.",
+    "Sent to {address}. It leaves your Worklist but stays owed on the compliance queue until delivered, and comes back here if it bounces.",
   "noticeDuty.notSent":
     "Not sent: this installation cannot send mail to {address}.",
   "noticeDuty.ended": "The duty is ended, with your ground on record.",
@@ -11487,6 +11643,9 @@ export const en = {
   // composer and so never needs the reply/write "now" split above.
   "worklist.verb.open_meeting_brief": "Prepare for meeting",
   "worklist.deal.closes": "closes {date}",
+  "worklist.when.held": "held {when}",
+  "worklist.meeting.hostedBy": "hosted by {name}",
+  "worklist.meeting.hostedByYou": "hosted by you",
   "worklist.when.starts": "starts {when}",
   "worklist.when.due": "due {when}",
   "worklist.batch.system_incident_one": "{cause} failed {count} time",
@@ -11644,6 +11803,21 @@ export const en = {
   "aiRates.refresh.outcome.unreachable": "Unreachable",
   "aiRates.refresh.outcome.not_bound": "Not in use",
   "aiRates.refresh.outcome.not_listed": "Not in the list",
+  "aiRates.refresh.outcome.not_configured": "No key",
+  "aiPriceSync.title": "Model prices",
+  "aiPriceSync.autoSync.label": "Auto-sync daily",
+  "aiPriceSync.autoSync.help":
+    "Reads each configured provider’s prices once a day. A price you set by hand is kept.",
+  "aiPriceSync.sources": "Sources: models.dev · OpenRouter",
+  "aiPriceSync.lastSynced": "Last synced {ago}",
+  "aiPriceSync.never": "Not synced yet",
+  "aiPriceSync.adminOnly": "Your role cannot change this.",
+  "aiPriceSync.withheld": "Model prices are not yours to see.",
+  "aiRates.refresh.addedCount_one": "{count} model added",
+  "aiRates.refresh.addedCount_other": "{count} models added",
+  "aiRates.refresh.keptCount_one": "{count} hand-set price kept",
+  "aiRates.refresh.keptCount_other": "{count} hand-set prices kept",
+  "aiProviders.setByHand": "Hand-set",
   "aiRates.refresh.unlisted": "Not in the broker’s list: {ids}",
   "aiRates.refresh.updatedCount_one": "{count} price written",
   "aiRates.refresh.updatedCount_other": "{count} prices written",
@@ -11659,7 +11833,35 @@ export const en = {
   "aiProviders.inUse": "In use",
   "aiProviders.unpriced": "{model} is in use and has no price.",
   "aiProviders.setPrice": "Set price",
-  "aiProviders.manage": "Manage",
+  "aiProviderSettings.service.choose": "Choose a service",
+  "aiProviderSettings.service.label": "Service",
+  "aiProviderSettings.service.openrouter": "OpenRouter",
+  "aiProviderSettings.service.openrouterEu": "OpenRouter (EU)",
+  "aiProviderSettings.service.openrouterEu.note":
+    "Requests are processed only inside the EU. Needs an OpenRouter Business or Enterprise plan, and only EU-eligible models are served.",
+  "aiProviderSettings.service.mistral": "Mistral",
+  "aiProviderSettings.service.together": "Together",
+  "aiProviderSettings.service.groq": "Groq",
+  "aiProviderSettings.service.deepseek": "DeepSeek",
+  "aiProviderSettings.service.typesafe": "TypeSafe (default)",
+  "aiProviderSettings.service.otherChat": "Other OpenAI-compatible service",
+  "aiProviderSettings.service.otherDecisions": "Other decision server",
+  "aiProviderSettings.service.otherAddress": "Other address",
+  "aiProviderSettings.service.learnMore": "About OpenRouter EU",
+  "aiProviderSettings.host.line": "Host: {host}",
+  "aiProviderSettings.host.default": "Uses the service’s own address.",
+  "aiProviderSettings.host.guide": "How to find your host",
+  "aiProviderSettings.save": "Save connection",
+  "aiProviders.name.anthropic": "Anthropic",
+  "aiProviders.name.openaiCompatible": "OpenAI-compatible",
+  "aiProviders.name.openai": "OpenAI",
+  "aiProviders.name.gemini": "Google Gemini",
+  "aiProviders.name.geminiVertex": "Gemini on Vertex AI",
+  "aiProviders.name.jev": "TypeSafe Jev",
+  "aiProviders.name.jevCompatible": "Jev-compatible",
+  "aiProviders.name.ollama": "Ollama",
+  "aiProviders.name.vllm": "vLLM",
+  "aiProviders.borrowedFrom": "From {provider}",
   "aiProviders.connection": "Connection",
   "aiProviders.prices": "Prices",
   "aiProviders.addPrice": "Add price",
@@ -11767,6 +11969,9 @@ export const en = {
   "stageAutomation.rules": "Transition rules",
   "stageAutomation.rulesIntro":
     "Turning a transition on does not start moving deals. Margince keeps asking until the record above meets the threshold, then applies moves automatically.",
+  "stageAutomation.offTitle": "Stage automation is switched off",
+  "stageAutomation.offBody":
+    "No deal moves by itself while this is off, whatever a transition below is set to. An admin turns it on for the whole installation in stage automation settings.",
   "stageAutomation.modeHint":
     "When on and the record qualifies, Margince moves the deal and notifies you afterward.",
   "stageAutomation.notEarnedYet": "Not qualified yet: {why}",
@@ -11829,6 +12034,8 @@ export const en = {
   "magic.clear.needsYou": "Nothing waiting on you",
   "magic.clear.couldNotComplete": "Nothing failed",
   "magic.clear.watching": "Every source healthy",
+  "magic.count.keptInSync_one": "{count} kept in sync",
+  "magic.count.keptInSync_other": "{count} kept in sync",
   "magic.count.done_one": "{count} done for you",
   "magic.count.done_other": "{count} done for you",
   "magic.count.needsYou_one": "{count} waiting on you",
@@ -11869,6 +12076,18 @@ export const en = {
     "Erased transcript content past its retention period",
   "magic.action.retention_deal_archive":
     "Archived closed deals past their retention period",
+  "magic.action.create_contact": "Created contact",
+  "magic.action.create_company": "Created company",
+  "magic.action.create_deal": "Created deal",
+  "magic.action.create_lead": "Created lead",
+  "magic.action.create_project": "Created project",
+  "magic.action.create_activity": "Saved email or meeting",
+  "magic.action.archive_contact": "Archived contact",
+  "magic.action.archive_company": "Archived company",
+  "magic.action.archive_deal": "Archived deal",
+  "magic.action.archive_lead": "Archived lead",
+  "magic.action.archive_project": "Archived project",
+  "magic.action.archive_activity": "Archived email or meeting",
   "magic.why.mail_filed": "The sender’s address belongs to this contact.",
   "magic.why.public_records":
     "From the company’s public website and DNS records.",
@@ -11894,6 +12113,7 @@ export const en = {
   "magic.noRecord": "No record named",
   "magic.undo.action": "Undo",
   "magic.undo.done": "Undone",
+  "magic.decide": "Decide",
   "magic.records.title": "What changed, record by record",
   "magic.records.empty": "None of these records is in view any more.",
   "magic.records.more": "Show more",
@@ -11922,6 +12142,8 @@ export const en = {
   "magic.glance.meetingsBooked": "Meetings booked",
   "magic.glance.leadsDisqualified": "Leads disqualified",
   "magic.glance.retention": "Retention applied",
+  "magic.glance.recordsCreated": "Records created",
+  "magic.glance.recordsArchived": "Records archived",
   "magic.timeline.title": "When it happened",
   "magic.timeline.agent": "Agents",
   "magic.timeline.sync": "Sync and rules",
@@ -11950,8 +12172,10 @@ export const en = {
     "Promoting a lead is waiting for your word",
   "magic.action.approval_overnight":
     "An overnight proposal is waiting for your word",
-  "magic.action.approval_transcript_proposal":
-    "A proposal from a recording is waiting for your word",
+  "magic.action.approval_commitment_task":
+    "A commitment from a conversation is waiting for your word",
+  "magic.action.approval_capture_counterparty":
+    "{target} wrote to you. Keep them as a contact?",
   "magic.action.approval_pending": "A {kind} proposal is waiting for your word",
   "magic.action.capture_reauth_required":
     "{provider} needs to be connected again",
@@ -11977,6 +12201,271 @@ export const en = {
     "What you see from this source may be short.",
   "magic.consequence.capture_history_incomplete":
     "Older exchanges from this source are missing.",
+  "aiFigures.window.24h": "24 h",
+  "aiFigures.window.7d": "7 d",
+  "aiFigures.window.30d": "30 d",
+  "aiFigures.window": "Window",
+  "aiFigures.groupBy": "Group by",
+  "aiFigures.by.host": "By host",
+  "aiFigures.by.model": "By model",
+  "aiFigures.by.tier": "By tier",
+  "aiFigures.recentCalls": "Recent calls",
+  "aiFigures.intro":
+    "Every call this connection made. Read from the call record that health and the trace already use.",
+  "aiFigures.intro.broker":
+    "Every call this connection made, and which OpenRouter host served it. Read from the call record that health and the trace already use.",
+  "aiFigures.openRow": "Open a row to see the calls that ended there.",
+  "aiFigures.lastWeek": "Last 7 days",
+  "aiFigures.noHost": "No host answered",
+  "aiFigures.costAtLeast": "at least {cost}",
+  "aiFigures.hostUnrecorded": "Host not recorded",
+  "aiFigures.empty": "No calls in this window.",
+  "aiFigures.pending": "Reading the call record…",
+  "aiFigures.unread":
+    "The call figures could not be read. Try again in a moment.",
+  "aiFigures.col.calls": "Calls",
+  "aiFigures.col.failed": "Failed",
+  "aiFigures.col.timeouts": "Timeouts",
+  "aiFigures.col.p50": "p50",
+  "aiFigures.col.p95": "p95",
+  "aiFigures.col.cost": "Cost",
+  "aiFigures.line.none": "No calls in the last 7 days",
+  "aiFigures.line.calls_one": "{count} call",
+  "aiFigures.line.calls_other": "{count} calls",
+  "aiFigures.line.noneFailed": "0 failed",
+  "aiFigures.line.failed_one": "{count} failed",
+  "aiFigures.line.failed_other": "{count} failed",
+  "aiFigures.line.timeouts_one": "({count} timeout)",
+  "aiFigures.line.timeouts_other": "({count} timeouts)",
+  "aiFigures.line.timeoutCount_one": "{count} timeout",
+  "aiFigures.line.timeoutCount_other": "{count} timeouts",
+  "aiFigures.line.p50": "p50 {latency}",
+  "aiFigures.line.sort": "sort: {sort}",
+  "aiFigures.line.week": "7 d: {figures}",
+  "aiFigures.line.prefix": "7 d: {sentence}",
+  "aicalls.filtered": "Showing calls that ended on {filter}.",
+  "aicalls.filtered.clear": "Show all calls",
+  "aiOpenRouter.title": "OpenRouter settings",
+  "aiOpenRouter.privacyDocs": "Data policies ↗",
+  "aiOpenRouter.routingDocs": "Provider routing ↗",
+  "aiOpenRouter.intro":
+    "Shown because the service is OpenRouter. Applies to every tier on this connection, and no tier can loosen it.",
+  "aiOpenRouter.zdr": "Zero data retention",
+  "aiOpenRouter.zdr.help": "Only hosts that keep nothing.",
+  "aiOpenRouter.deny": "Refuse hosts that train on prompts",
+  "aiOpenRouter.deny.help": "Sends data_collection: deny.",
+  "aiOpenRouter.distill": "Distillable models only",
+  "aiOpenRouter.distill.help":
+    "Only models whose license allows reusing output.",
+  "aiOpenRouter.fallbacks": "Allow fallbacks",
+  "aiOpenRouter.fallbacks.help":
+    "Try another host when the preferred one fails.",
+  "aiOpenRouter.only": "Use only these hosts",
+  "aiOpenRouter.only.help":
+    "Comma-separated OpenRouter host names. Empty means any host that passes the rules above.",
+  "aiOpenRouter.only.placeholder": "for example mistral/eu, cerebras",
+  "aiOpenRouter.ignore": "Never use",
+  "aiOpenRouter.ignore.help": "Hosts to skip everywhere.",
+  "aiOpenRouter.ignore.placeholder": "for example coreweave",
+  "aiOpenRouter.account":
+    "Settings in your OpenRouter account also apply, and are not shown here.",
+  "aiServing.title": "Serving",
+  "aiServing.openRouter": "OpenRouter",
+  "aiServing.guide": "Routing guide ↗",
+  "aiServing.blocked.decisions":
+    "The decision model answers through OpenRouter’s decisions endpoint, which takes no routing block. Its timeout is set per task under AI tasks.",
+  "aiServing.blocked.provider":
+    "Host routing applies only to OpenRouter. {provider} serves this model itself. Thinking level and timeout are still set per task under AI tasks.",
+  "aiServing.blocked.host":
+    "Host routing applies only to OpenRouter. The connection points at another service. Thinking level and timeout are still set per task under AI tasks.",
+  "aiServing.empty":
+    "Empty uses the shipped default: sort by throughput, fp16 or bf16, require parameters. {} lets OpenRouter route on its own.",
+  "aiServing.empty.embeddings":
+    "Empty adds nothing to the connection’s host rules. This lane takes only only, ignore, allow_fallbacks, zdr, data_collection and enforce_distillable_text.",
+  "aiServing.json": "Serving JSON",
+  "aiServing.format": "Format",
+  "aiServing.example": "Insert example",
+  "aiServing.useDefault": "Use shipped default",
+  "aiServing.checking": "Checking with the server…",
+  "aiServing.valid": "Valid",
+  "aiServing.shippedDefault": "Shipped default",
+  "aiServing.problems_one": "{count} problem",
+  "aiServing.problems_other": "{count} problems",
+  "aiServing.reference": "Field reference",
+  "aiServing.connectionOnly": "connection only",
+  "aiServing.openRouterDocs": "OpenRouter ↗",
+  "aiServing.referenceNote":
+    "Read from GET /ai/routing/schema. Keys Margince sets per call (model, messages, tools, response_format …) are refused.",
+  "aiServing.asked": "What OpenRouter will be asked for",
+  "aiServing.askedFor":
+    "every call from {lane}, after your settings, the connection and Margince’s defaults are combined",
+  "aiServing.fixFirst": "Fix the problems above to see what will be sent.",
+  "aiServing.brokerOwn": "Nothing extra: OpenRouter picks the host on its own.",
+  "aiServing.showJson": "Show the JSON that is sent",
+  "aiServing.source.default": "Margince default",
+  "aiServing.source.connection": "Connection",
+  "aiServing.source.tier": "You set here",
+  "aiServing.source.task": "Each task",
+  "aiServing.say.sort": "Pick the host by {by}.",
+  "aiServing.say.sortAcross":
+    "Pick the host by {by}, comparing fallback models too.",
+  "aiServing.say.quantizations":
+    "Only hosts running the model at {levels} precision.",
+  "aiServing.say.requireParameters":
+    "Only hosts that support every option Margince sends, such as the reply format.",
+  "aiServing.say.requireParametersOff":
+    "Hosts may ignore options they do not support.",
+  "aiServing.say.zdr": "Only hosts that keep no copy of prompts or replies.",
+  "aiServing.say.zdrOff": "Hosts that keep a copy of prompts are allowed.",
+  "aiServing.say.denyCollection":
+    "Skip hosts that may store or train on prompts.",
+  "aiServing.say.allowCollection": "Hosts that store prompts are allowed.",
+  "aiServing.say.distill":
+    "Only models whose license allows reusing their output.",
+  "aiServing.say.distillOff": "Models of any license are allowed.",
+  "aiServing.say.only": "Use only {hosts}.",
+  "aiServing.say.ignore": "Never use {hosts}.",
+  "aiServing.say.order": "Try {hosts} first.",
+  "aiServing.say.fallbacks": "Fall back to another host if these fail.",
+  "aiServing.say.noFallbacks": "Fail rather than use another host.",
+  "aiServing.say.maxPrice": "Skip hosts charging more than: {prices}.",
+  "aiServing.say.maxLatency":
+    "Prefer hosts that start answering within {latency}. A slower host still answers if nothing faster is free.",
+  "aiServing.say.minThroughput":
+    "Prefer hosts generating at least {throughput} tokens per second.",
+  "aiServing.say.effort": "Think at {effort}.",
+  "aiServing.say.maxTokens": "Think for at most {tokens} tokens.",
+  "aiServing.say.exclude": "Think, but leave the reasoning out of the reply.",
+  "aiServing.say.include": "Return the reasoning with the reply.",
+  "aiServing.say.thinkOn": "Turn thinking on.",
+  "aiServing.say.thinkOff": "Turn thinking off.",
+  "aiServing.say.taskEffort":
+    "Thinking level comes from each task’s setting under AI tasks.",
+  "aiServing.say.raw": "{key} = {value}",
+  "aiFigures.line.brokerOwn": "broker’s own routing",
+  "aiFigures.line.sortAcross": "{by} across models",
+  "aiTasks.settings": "Settings",
+  "aiTasks.custom": "Custom",
+  "aiTaskSheet.decision": "decision",
+  "aiTaskSheet.settings": "Settings",
+  "aiTaskSheet.thinkingGuide": "What thinking levels do ↗",
+  "aiTaskSheet.thinking": "Thinking level",
+  "aiTaskSheet.thinking.default":
+    "Default (the binding and each prompt decide)",
+  "aiTaskSheet.thinking.default.help":
+    "Each prompt’s own floor and the tier’s binding decide how much the model thinks.",
+  "aiTaskSheet.thinking.minimal.help":
+    "Answer straight away. Cheapest and fastest. Sent to every provider through its own thinking setting.",
+  "aiTaskSheet.thinking.low.help":
+    "A short think before answering. Sent to every provider through its own thinking setting.",
+  "aiTaskSheet.thinking.medium.help":
+    "Think through the steps. Slower, more tokens. Sent to every provider through its own thinking setting.",
+  "aiTaskSheet.thinking.high.help":
+    "Think at length. Slowest and most expensive. Sent to every provider through its own thinking setting.",
+  "aiTaskSheet.decisionTimeout": "Decision model timeout",
+  "aiTaskSheet.decisionTimeout.help":
+    "{low} to {high} s. When the decision model gives up, the task falls back to its tier model.",
+  "aiTaskSheet.attemptTimeout": "Model call timeout",
+  "aiTaskSheet.attemptTimeout.help":
+    "{low} to {high} s for each call to a tier model. A call that runs longer is stopped and counted as a timeout. Applies to every provider.",
+  "aiTaskSheet.attemptTimeout.help.decision":
+    "{low} to {high} s for each call to a tier model, including the fallback. A call that runs longer is stopped and counted as a timeout. Applies to every provider.",
+  "aiTaskSheet.seconds": "{seconds} s",
+  "aiTaskSheet.seconds.default": "{seconds} s (default)",
+  "aiTaskSheet.reset": "Reset to defaults",
+  "aiTaskSheet.fixed": "Fixed by contract",
+  "aiTaskSheet.tiersTried": "Tiers tried",
+  "aiTaskSheet.runs": "Runs",
+  "aiTaskSheet.fixed.help": "Change these in ai-tasks.yaml.",
+  "aiTaskSheet.addTask": "Add or change an AI task ↗",
+  "aiTaskSheet.conflict": "Someone saved these settings while you were editing",
+  "aiTaskSheet.conflict.help":
+    "Close this sheet and open it again to start from what is saved now.",
+  "aiTaskSheet.saveFailed": "The settings were not saved",
+  "aiTaskSheet.readFailed": "The saved settings could not be read",
+  "aiTaskSheet.unsaved": "Unsaved changes",
+  "aiTaskSheet.applies": "Applies installation-wide within a minute.",
+  "aiTaskSheet.save": "Save settings",
+  "aiTaskSheet.viewCalls": "View these calls →",
+  "aiTaskSheet.hostsUnder": "· which host served each call is under Providers.",
+  "aiOutcome.firstTry": "Answered first try",
+  "aiOutcome.fallback": "Answered by the fallback",
+  "aiOutcome.noAnswer": "No answer",
+  "aiOutcome.legend": "How calls got an answer",
+  "aiOutcome.headline.all_one": "The one call got an answer.",
+  "aiOutcome.headline.all_other": "All {total} calls got an answer.",
+  "aiOutcome.headline.lost":
+    "{share} of {total} calls got an answer. {lost} did not.",
+  "aiOutcome.lostNote_one":
+    "{lost} call got no answer from any step. The task handles it as it does when no model answers.",
+  "aiOutcome.lostNote_other":
+    "{lost} calls got no answer from any step. The task handles them as it does when no model answers.",
+  "aiOutcome.step": "Step {n} · {role}",
+  "aiOutcome.role.decision": "decision model",
+  "aiOutcome.role.tier": "tier model",
+  "aiOutcome.role.fallback": "fallback",
+  "aiOutcome.answered": "{answered} of {attempts} answered",
+  "aiOutcome.usually": "usually in {latency}",
+  "aiOutcome.notNeeded": "Not needed in this window",
+  "aiOutcome.gaveUp.on_one": "{count} {reason} → passed on",
+  "aiOutcome.gaveUp.on_other": "{count} {reason} → passed on",
+  "aiOutcome.gaveUp.last_one": "{count} {reason} → no answer",
+  "aiOutcome.gaveUp.last_other": "{count} {reason} → no answer",
+  "aiOutcome.gaveUp.timeout": "timed out",
+  "aiOutcome.gaveUp.failed": "failed",
+  "aiOutcome.gaveUp.throttled": "throttled",
+  "aiOutcome.gaveUp.quota": "out of quota",
+  "aiOutcome.gaveUp.refused": "refused",
+  "aiOutcome.gaveUp.unsure": "not sure enough",
+  "aiOutcome.gaveUp.offEnum": "answered off the choices",
+  "aiOutcome.gaveUp.invalid": "answered in the wrong shape",
+  "aiOutcome.latencyTitle": "How long calls take, against the timeout",
+  "aiOutcome.latencyMarks": "● half finish within {p50} · ◆ 95% within {p95}",
+  "aiOutcome.timeout": "timeout",
+  "aiOutcome.decisionTimeout": "decision model timeout",
+  "aiOutcome.limit": "│ {name} {seconds} s",
+  "aiOutcome.limitNear": "│ {name} {seconds} s: p95 is close to it",
+  "aiOutcome.limitOver": "│ {name} {seconds} s: p95 is above it",
+  "aiOutcome.limitFar": "{name} {seconds} s, far above p95",
+  "aiServing.notJson":
+    "is not valid JSON; check the commas and brackets on this line.",
+  "aiServing.notObject": "must be an object: the text between { and }.",
+  "aiServing.previewFailed":
+    "The server could not check this value: {reason} Save stays off until it can.",
+  "projectFiling.action": "Undo filing",
+  "projectFiling.title": "Undo project filing?",
+  "projectFiling.loading": "Checking what keeps this activity…",
+  "projectFiling.explain":
+    "Filing this activity under {projects} marked it as commercial correspondence, which erasure and retention sweeps must keep. Undoing removes it from the project and withdraws that mark.",
+  "projectFiling.reason": "Why is the filing wrong?",
+  "projectFiling.reasonHint": "Kept in the audit log with your name.",
+  "projectFiling.reasonRequired":
+    "Write why the filing is wrong. It is kept in the audit log.",
+  "projectFiling.confirm": "Undo filing",
+  "projectFiling.doneTitle": "Filing undone",
+  "projectFiling.done":
+    "The activity is no longer filed under the project, and its retention mark is withdrawn.",
+  "projectFiling.decisions": "Decisions on record",
+  "projectFiling.decision": "{name} · {when}",
+  "projectFiling.refusal.not_filed":
+    "A project filing is not what keeps this activity, so there is nothing to undo.",
+  "projectFiling.refusal.other_basis_remains":
+    "Something else still qualifies this activity as commercial correspondence, such as a won deal, a sent offer or a controller’s pin, so it keeps its retention mark.",
+  "projectFiling.refusal.restricted":
+    "A statutory hold has already started on this activity. A hold that has started never shortens.",
+  "projectFiling.refusal.qualifying_deal":
+    "This activity is filed under a deal that qualifies it as commercial correspondence, so it keeps its retention mark.",
+  "projectFiling.actionFor": "Undo filing: {subject}",
+  "projectFiling.hiddenProject": "a project you cannot see",
+  "projectFiling.decisionRedacted": "A decision was recorded on {when}",
+  "projectFiling.refusal.archived":
+    "This activity is archived, so its filing can no longer be undone.",
+  "projectFiling.refusal.erasure_pending":
+    "An open erasure request covers a contact on this activity, so its retention mark stays until the request is decided.",
+  "projectFiling.refusal.legal_hold":
+    "A legal hold sits on a record this activity is linked to, so its retention mark stays until the hold is lifted.",
+  "projectFiling.refusal.hidden_project":
+    "A project you cannot see still holds this activity. Ask someone who can see it to undo the filing.",
 } as const;
 
 export type MessageKey = keyof typeof en;

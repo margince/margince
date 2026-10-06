@@ -20,7 +20,7 @@
 # gmail_watch_renew_connection is GmailWatchRenewArgs — the names are crossed
 # relative to the types, and that is not a defect to fix here.)
 #
-# timeout takes exactly one of four forms:
+# timeout takes exactly one of three forms:
 #   2m                                a literal wall clock
 #   {derived: c, value: 4h, reason:}  computed from a Go constant elsewhere in
 #                                     the tree; value is what Govern hands
@@ -36,8 +36,6 @@
 #                                     literal above. reason: is optional and
 #                                     states the arithmetic where the kind's
 #                                     own reason: does not.
-#   {operator: Field}                 computed at registration from a config
-#                                     field; not knowable here at all
 #   {none: true, reason:}             a deliberate absence — the pass is bounded
 #                                     by a backlog rather than a wall clock, and
 #                                     a negative River timeout takes the row out
@@ -148,9 +146,9 @@ queues:
   rate_refresh:
     max_workers: 2
     reason: >-
-      The FX rate refresh (page fetch + LLM extract) is likewise long; its own
-      bounded pool keeps a multi-workspace burst from starving
-      close-date, reconcile, and capture jobs.
+      The FX rate refresh (page fetch + LLM extract) and the daily model price
+      sync are likewise long; their own bounded pool keeps a multi-workspace
+      burst from starving close-date, reconcile, and capture jobs.
   ai_capture:
     max_workers: 2
     reason: >-
@@ -1447,7 +1445,7 @@ kinds:
     role: worker
     go_type: SiteDeepReadArgs
     queue: deep_read
-    timeout: {operator: DeepReadCaps}
+    timeout: {derived: deepReadTimeout, value: 13m50s}
     opts_owner: caller
     registration: {when: [DeepReadBrain], absent: registers_anyway}
     args:
@@ -1458,16 +1456,15 @@ kinds:
       MaxPages:
         scalar: true
         reason: >-
-          this run's page ceiling, or zero for the deployment's own. The
-          worker clamps it against the configured cap, so it can only ever
-          narrow what an operator set, and a crawl budget states nothing
-          about a subject.
+          this run's page ceiling, or zero for the installation's own. The
+          worker clamps it against the page limit an admin set, so it can only
+          ever narrow it, and a crawl budget states nothing about a subject.
     reason: >-
-      The crawl wall an operator configured, plus the parallel extraction
+      The longest crawl wall an admin may choose, plus the parallel extraction
       budget, plus the logo lane's own bounded spend, plus a minute for the
-      staging and dossier writes — floored so a tightened cap never squeezes the
-      terminal writes. Not knowable here: it is computed from CrawlCaps at
-      registration.
+      staging and dossier writes. Sized for the ceiling rather than the chosen
+      wall, because the wall is a setting read when the read starts and this is
+      fixed when the worker registers.
 
   check_company_vat:
     role: worker
@@ -1774,6 +1771,20 @@ kinds:
       Carrier recovery preserves the original request and its attempt policy.
       The next periodic pass retries reconciliation; River backoff must not delay it.
 
+  ai_price_sync_sweep:
+    role: worker
+    fleet: true
+    go_type: AIPriceSyncSweepArgs
+    queue: rate_refresh
+    timeout: 5m
+    opts_owner: caller
+    cadence: 24h
+    reason: >-
+      Daily, and at boot like every pass here: a vendor changes a price on its own
+      timetable, and a day's lag is what the Model prices card promises. A pass reads
+      two public price lists once (a 15-minute in-process cache), asks each keyed vendor
+      for its model list (five seconds each) and writes what changed in one transaction.
+      Five minutes is that with a slow vendor or two.
   voice_build_retry:
     role: dispatcher
     go_type: VoiceBuildRetryArgs

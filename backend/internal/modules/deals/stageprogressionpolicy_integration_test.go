@@ -14,6 +14,7 @@ package deals
 // bar is asked four ways and each one is proven to withhold on its own.
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -474,5 +475,43 @@ func TestARefusedVerdictNamesProposeRatherThanNothing(t *testing.T) {
 	if got.Mode != ModePropose {
 		t.Fatalf("a refused verdict reads %q, want %q — a caller testing for propose "+
 			"falls through to neither branch", got.Mode, ModePropose)
+	}
+}
+
+// The settings screen reads the kill switch, and reads the SAME row the apply path
+// reads.
+//
+// That is the whole of the defect: the screen rendered each transition's own `mode`
+// with nothing saying whether the installation permits automation at all, so a
+// default installation showed `auto` on transitions StageAutopilotModeTx forces to
+// propose. What the apply path does with the switch is held next door by
+// TestNothingAutoAppliesWhileTheKillSwitchIsOff; this holds that the screen is told
+// the same thing, through settings.ApplyTx on the same key rather than a reading of
+// its own.
+func TestTheSettingsSurfaceIsToldWhetherAutomationIsPermitted(t *testing.T) {
+	e := setupConfigEnv(t)
+
+	for _, permitted := range []bool{false, true} {
+		autopilotOn(t, e, permitted)
+		told, err := e.store.StageAutomationEnabled(e.as())
+		if err != nil {
+			t.Fatalf("reading the kill switch for the screen: %v", err)
+		}
+		if told != permitted {
+			t.Errorf("the screen is told automation_enabled=%t while the installation says %t — "+
+				"an admin sets a transition to auto and no deal ever moves", told, permitted)
+		}
+	}
+}
+
+// And a reader who may not see the pipeline is not told either: the flag travels
+// with the rules and is gated the same way, so it cannot become a side channel
+// answering a question about an installation to somebody refused its pipelines.
+func TestTheKillSwitchReadIsGatedLikeTheRulesItAccompanies(t *testing.T) {
+	e := setupConfigEnv(t)
+	autopilotOn(t, e, true)
+
+	if _, err := e.store.StageAutomationEnabled(context.Background()); err == nil {
+		t.Error("a caller with no grant was told whether automation is on")
 	}
 }

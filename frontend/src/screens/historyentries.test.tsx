@@ -230,6 +230,36 @@ describe("putting one change back", () => {
     await waitFor(() => expect(restoreCalls(fetchMock)).toHaveLength(1));
   });
 
+  // Undoing a create archives the whole record, which no field list describes:
+  // the dialog says what happens before the press lands.
+  it("says an undo of a create archives the record, before it lands", async () => {
+    const created = {
+      ...restorable,
+      action: "create",
+      summary: "The mailbox created the record",
+      before: null,
+      after: null,
+    };
+    const fetchMock = servingOnePage([created]);
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    render(
+      <RecordHistory kind="deal" id="d1" currency="EUR" restore={RESTORE} />,
+    );
+
+    await user.click(await screen.findByRole("button", { name: /^undo$/i }));
+
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      within(dialog).getByText(
+        "This archives the record. You can bring it back from its history.",
+      ),
+    ).toBeTruthy();
+    expect(restoreCalls(fetchMock)).toHaveLength(0);
+    await user.click(within(dialog).getByRole("button", { name: /^undo$/i }));
+    await waitFor(() => expect(restoreCalls(fetchMock)).toHaveLength(1));
+  });
+
   // Nothing to pin the write against is nothing to offer: a restore with no
   // precondition is last-write-wins, which this control may not choose.
   it("offers no verb on a record read back without a version", async () => {

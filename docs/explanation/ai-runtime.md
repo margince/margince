@@ -5,8 +5,7 @@ How every AI call in Margince is *named*, *routed*, *metered*, *traced*, and
 deep-read extraction, capture classification, the agent loop, briefs — they all
 speak the same task vocabulary and pass through the same Router. For what an
 *agent* does with a call, see [agent-surface.md](agent-surface.md); for how the
-governance gate admits it, see [authorization.md](authorization.md). This page is
-the model runtime itself.
+governance gate admits it, see [authorization.md](authorization.md).
 
 ## The shape at a glance
 
@@ -162,8 +161,8 @@ embeddings:    {provider: gemini}
   model runs: `eu_hosted` (partner-operated EU inference), `sovereign` (zero
   egress by construction), `cloud_frontier` (a vendor's cloud, wherever it
   serves). It constrains, it never leaks: under `eu_hosted` a lane on the
-  OpenRouter broker must pin EU-region hosts (`routing: {only: [...]}`), as an
-  unpinned broker serves from any region, and a `gemini_vertex` lane must name
+  OpenRouter broker must pin EU-region hosts (`only` on the connection's
+  `upstream`), as an unpinned broker serves from any region, and a `gemini_vertex` lane must name
   an EU `location`, where Google processes the call — or the config is refused.
 - **No key ever lives in the binding.** A provider names only itself, and a stray
   `api_key:` is a *boot error* rather than a convenience. Where the key comes from
@@ -265,8 +264,8 @@ lives in; the queue job kind that resumes it is spelled differently for the
 first two (`site_deep_read`, `account_scan`) and identically for the third
 (`voice_build`). Each carrier has its own "budget-deferred" predicate
 (`contacts.BudgetDeferredSiteReads`, `companyscan.BudgetDeferredScans`,
-`ai.BudgetDeferredVoiceBuilds`), and its count is what Settings → AI's
-waiting-work list shows — gated on `ai_diagnostics:read`, separate from the
+`ai.BudgetDeferredVoiceBuilds`; a provider wait is excluded), and its count is what
+Settings → AI's waiting-work list shows — gated on `ai_diagnostics:read`, separate from the
 `ai_budget:read` needed to see the allowance itself, so a budget-only editor
 can preview an allowance change without gaining an `ai_diagnostics` or
 `ai_routing` grant.
@@ -345,8 +344,8 @@ unless every check passes, in this order:
    ladder's `servableLadder` both read, unconditional today: #6396 reverted
    the ladder's narrowing pending #3351, and the lane follows suit.
 2. **The answer stands.** The state is secret-stripped and capped at 48,000
-   bytes, the call has 15 seconds, and the answer must clear the **site's
-   own** floor (the one its LLM path applies).
+   bytes, the call has the task's [decision timeout](ai-request-settings.md),
+   and the answer must clear the **site's own** floor (its LLM path's).
 
 No certification row is required — only the two checks above. [Certifying a
 site](../how-to/certify-a-decision-site.md) is advisory only, a measured
@@ -376,7 +375,8 @@ Every call converges on the Router (`internal/modules/ai`). In one pass it:
 - **strips secrets** from the prompt before the request leaves the process, and
   again from anything it records;
 - **walks the ladder** — one attempt per rung, escalating on provider error or a
-  structured-output schema failure;
+  structured-output schema failure, and skipping a rung whose provider is
+  blocked ([provider health](ai-provider-health.md));
 - **traces** every attempt (below).
 
 **Company context** is the installation's own profile (offer, ICP, voice —

@@ -54,3 +54,30 @@ it("groups a week by day, names each slot in full and says when a day is busy", 
   await user.click(slot);
   expect(onSelect).toHaveBeenCalledExactlyOnceWith({ start, end });
 });
+
+it("draws a preview week's times without offering them to be pressed", () => {
+  render(
+    <MeetingWeek
+      days={[
+        {
+          key: "2026-10-05",
+          weekday: "Mon",
+          date: "5 Oct",
+          slots: [
+            {
+              start: "2026-10-05T07:00:00Z",
+              end: "2026-10-05T07:30:00Z",
+              label: "Monday 5 October, 09:00",
+              time: "09:00",
+            },
+          ],
+        },
+      ]}
+      selected={[]}
+      emptyDay="No free time"
+    />,
+  );
+  const monday = screen.getByRole("group", { name: "Mon 5 Oct" });
+  expect(monday.textContent).toContain("Monday 5 October, 09:00");
+  expect(screen.queryByRole("button")).toBeNull();
+});

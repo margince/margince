@@ -112,7 +112,10 @@ type Identity struct {
 	WorkspaceName string
 	Email         string
 	DisplayName   string
-	SeatType      string
+	// GreetingName is the name colleagues greet this member by, nil when
+	// nobody has said and greetings use the first word of DisplayName.
+	GreetingName *string
+	SeatType     string
 	// Locale is the language this member chose for their own interface, empty
 	// when they never chose one. Distinct from the installation's base
 	// language, which is what AI writes in for the whole team.
@@ -328,7 +331,7 @@ func (s *Service) Authenticate(ctx context.Context, rawToken string) (Identity, 
 		var locale, timezone *string
 		err := tx.QueryRow(ctx,
 			`SELECT s.id, u.id, u.email, u.display_name, u.seat_type, u.must_change_password,
-			        u.locale, u.timezone,
+			        u.locale, u.timezone, u.greeting_name,
 			        coalesce((SELECT value #>> '{}' FROM setting WHERE key = $2), '')
 			 FROM session s
 			 JOIN app_user u ON u.id = s.user_id
@@ -337,7 +340,7 @@ func (s *Service) Authenticate(ctx context.Context, rawToken string) (Identity, 
 			   AND now() < s.idle_expires_at
 			   AND now() < s.expires_at
 			   AND `+LiveMemberSQL("u")+``,
-			tokenHash, Name.Key()).Scan(&sessionID, &userID, &id.Email, &id.DisplayName, &id.SeatType, &id.MustChangePassword, &locale, &timezone, &id.WorkspaceName)
+			tokenHash, Name.Key()).Scan(&sessionID, &userID, &id.Email, &id.DisplayName, &id.SeatType, &id.MustChangePassword, &locale, &timezone, &id.GreetingName, &id.WorkspaceName)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}

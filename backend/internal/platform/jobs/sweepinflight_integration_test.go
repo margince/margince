@@ -28,8 +28,9 @@ import (
 // itself, the per-workspace arm and the per-connection arm — under every state
 // a successor can sit in before it has an outcome.
 //
-// The kinds are real declarations because each arm is selected from the
-// contract: a fixture kind would prove a query that never runs.
+// The per-kind and per-connection arms are selected from the contract, so
+// embed_drift_sweep and telegram_poll are real declarations; the per-workspace
+// arm reads every tagged kind, so sweep_child is a fixture as in stats tests.
 func TestADiscardedTickStaysFailedWhileTheNextIsInFlight(t *testing.T) {
 	for _, successor := range []string{"available", "running", "retryable"} {
 		t.Run(successor, func(t *testing.T) {

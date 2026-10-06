@@ -34,6 +34,7 @@ import { problemMessageOf } from "./common";
 // a much larger diff. What moved here is the cluster and the two audience
 // controls, which are about reading a message rather than writing one.
 import { ChannelReplyAction, type RelinkKind, RelinkModal } from "./compose";
+import { ProjectFilingAction } from "./projectfiling";
 
 type Activity = components["schemas"]["Activity"];
 type ActivityAudience = components["schemas"]["ActivityAudience"];
@@ -97,6 +98,15 @@ export function TimelineActions({
       )}
       {extra?.(activity)}
       <Button onClick={() => setRelink(true)}>{t("compose.relink")}</Button>
+      {/* Every row on a project's timeline is filed under that project, so this
+          is the one surface where taking the filing back is always meaningful. */}
+      {entityType === "project" && (
+        <ProjectFilingAction
+          activityId={activity.id}
+          projectId={entityId}
+          subject={activity.subject ?? undefined}
+        />
+      )}
       {/* An EMAIL's audience is changed from the message, in the drawer, where
           the server states which write it would accept as `change_mode` and the
           editor opens on the set already standing. The row used to decide that

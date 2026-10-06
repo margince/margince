@@ -40,7 +40,6 @@ import (
 	"reflect"
 	"slices"
 	"strings"
-	"time"
 
 	"github.com/riverqueue/river"
 
@@ -70,27 +69,10 @@ type jobRegistry struct {
 type wiredWorker struct {
 	args   river.JobArgs
 	worker any
-	// operatorSupplied records that the registration passed a wall clock
-	// rather than leaving it to the file. Only addDeclaredWorkerWithTimeout
-	// sets it, and only a {operator: …} policy reads what it passes, so the
-	// two sets have to be the same one.
-	operatorSupplied bool
 }
 
 func newJobRegistry() *jobRegistry {
 	return &jobRegistry{workers: river.NewWorkers(), wired: map[string]wiredWorker{}}
-}
-
-// markOperatorSupplied records that this kind's wall clock was computed at its
-// registration. It is called AFTER the registration that recorded the kind, so
-// there is always an entry to mark.
-func (r *jobRegistry) markOperatorSupplied(kind string) {
-	entry, registered := r.wired[kind]
-	if !registered {
-		panic("compose: marking " + kind + " operator-supplied before it was registered")
-	}
-	entry.operatorSupplied = true
-	r.wired[kind] = entry
 }
 
 // misfiledKinds names every registration whose args type is not the one the
@@ -143,13 +125,9 @@ func (r *jobRegistry) everyKindIsRegisteredWithItsDeclaredType() error {
 
 // addGovernedWorker registers one worker under its DECLARED options.
 //
-// supplied is read only by a kind whose timeout is an operator's to set
-// ({operator: …} in api/jobs.yaml — site_deep_read is the only one today);
-// every other policy ignores it, so 0 is the ordinary argument.
-//
 // The type argument is explicit at every call site because Go cannot infer a
 // type parameter from a concrete value passed to an interface parameter.
-func addGovernedWorker[T river.JobArgs](reg *jobRegistry, w jobs.WorkOnly[T], supplied time.Duration) {
+func addGovernedWorker[T river.JobArgs](reg *jobRegistry, w jobs.WorkOnly[T]) {
 	var zero T
 	kind := zero.Kind()
 	// Every kind THIS registration makes workable, which is Kind() plus every
@@ -171,5 +149,5 @@ func addGovernedWorker[T river.JobArgs](reg *jobRegistry, w jobs.WorkOnly[T], su
 	// River's one-minute default — away from a running job.
 	spec, _ := jobs.SpecFor(kind)
 	//nolint:forbidigo // the ONE sanctioned registration: every kind reaches River through this line, already wrapped in jobs.Govern and already recorded for MustBeTotal
-	river.AddWorker(reg.workers, jobs.Govern[T](w, spec, supplied))
+	river.AddWorker(reg.workers, jobs.Govern[T](w, spec))
 }

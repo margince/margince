@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/providerwait"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -189,11 +190,11 @@ func (w *voiceBuildWorker) Work(ctx context.Context, job *river.Job[VoiceBuildAr
 			"Voice building is unavailable until an AI provider is configured on the worker role."))
 	}
 	if err := w.run(ctx, buildID, input); err != nil {
-		if errors.Is(err, ai.ErrBudgetDeferred) {
+		if ai.IsDeferral(err) {
 			terminal, cancel := terminalCtx(ctx)
 			defer cancel()
 			if deferErr := w.store.DeferBuild(terminal, buildID, claimedAt,
-				"The monthly AI budget is exhausted; the build resumes in the next window.",
+				voiceDeferralDetail(err),
 				w.deferralDeadline(err)); deferErr != nil {
 				return jobs.FaultContext(ctx, fmt.Errorf("voice_build %s: defer: %w", job.Args.BuildID, deferErr))
 			}
@@ -246,12 +247,20 @@ func evaluatedPredecessorVersion(predecessor *ai.VoiceProfileVersion) int {
 	return predecessor.ProfileVersion
 }
 
-// deferralDeadline honors the router's exact budget-window boundary when the
+// voiceDeferralDetail is the line the build row shows while it waits: the
+// reader needs to know whether to wait for a month or for the provider.
+func voiceDeferralDetail(err error) string {
+	if errors.Is(err, ai.ErrProviderDown) {
+		return providerwait.Detail
+	}
+	return "The monthly AI budget is exhausted; the build resumes in the next window."
+}
+
+// deferralDeadline honors the router's exact retry moment when the
 // error carries one; the fixed fallback serves only a bare sentinel.
 func (w *voiceBuildWorker) deferralDeadline(err error) time.Time {
-	var deferral *ai.BudgetDeferralError
-	if errors.As(err, &deferral) && deferral.NextAttemptAt.After(w.now()) {
-		return deferral.NextAttemptAt
+	if until, ok := ai.DeferredUntil(err); ok && until.After(w.now()) {
+		return until
 	}
 	return w.now().Add(voiceBuildDeferral)
 }

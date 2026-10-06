@@ -76,6 +76,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `company_owner_private_names_its_owner` — `CHECK (((visibility <> 'owner') OR (owner_id IS NOT NULL)))`
 - `company_size_band_check` — `CHECK (((size_band IS NULL) OR (size_band = ANY (ARRAY['1-10', '11-50', '51-200', '201-500', '501-1000', '1001-5000', '5000+']))))`
 - `company_source_author_needs_a_source` — `CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))`
+- `company_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 - `company_visibility_check` — `CHECK ((visibility = ANY (ARRAY['workspace', 'owner'])))`
 
 **Indexes**
@@ -132,6 +133,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 **Rules**
 
 - `company_domain_norm` — `CHECK ((domain = lower(domain)))`
+- `company_domain_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
@@ -241,6 +243,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `company_fact_technical_evidence` — `CHECK (((source <> 'technical_lookup') OR ((evidence_snippet IS NOT NULL) AND (evidence_snippet <> '') AND (source_url IS NOT NULL) AND (source_url <> '') AND (retrieved_at IS NOT NULL))))`
 - `company_fact_value_key_cardinality` — `CHECK ((((category = 'company') AND (field <> 'location') AND (value_key = '')) OR ((category = 'company') AND (field = 'location') AND (value_key <> '')) OR ((category = ANY (ARRAY['offering', 'market', 'signal'])) AND (value_key <> ''))))`
 - `company_fact_verified_pair` — `CHECK (((verified_at IS NULL) = (verified_by IS NULL)))`
+- `company_fact_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 - `uq_company_fact` — `UNIQUE (company_id, category, field, value_key)`
 
 **Indexes**
@@ -309,6 +312,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `company_profile_field_field_check` — `CHECK ((field = ANY (ARRAY['display_name', 'offer_summary', 'icp', 'value_proposition', 'usp', 'customer_pains', 'desired_outcomes', 'buying_center', 'buying_intents', 'common_objections', 'sales_motion', 'legal_name', 'registered_address', 'register_vat', 'industry', 'history', 'legal_form', 'register_court', 'register_number'])))`
 - `company_profile_field_source_check` — `CHECK ((source = ANY (ARRAY['human', 'site_read', 'connector', 'migration'])))`
 - `company_profile_field_verified_pair` — `CHECK (((verified_at IS NULL) = (verified_by IS NULL)))`
+- `company_profile_field_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 - `company_profile_site_evidence` — `CHECK (((source <> 'site_read') OR ((evidence_snippet IS NOT NULL) AND (evidence_snippet <> '') AND (source_url IS NOT NULL) AND (source_url <> '') AND (confidence IS NOT NULL))))`
 - `uq_company_profile_field` — `UNIQUE (company_id, field)`
 
@@ -346,6 +350,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 **Rules**
 
 - `company_relationship_type_relationship_type_check` — `CHECK ((relationship_type = ANY (ARRAY['customer', 'partner', 'supplier', 'investor', 'portfolio_company', 'competitor', 'other'])))`
+- `company_relationship_type_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
@@ -417,6 +422,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `company_vat_check_one_per_company` — `UNIQUE (company_id)`
 - `company_vat_check_receipt_needs_an_answer` — `CHECK (((consultation_number IS NULL) OR (status <> 'unavailable')))`
 - `company_vat_check_status_check` — `CHECK ((status = ANY (ARRAY['valid', 'invalid', 'unavailable'])))`
+- `company_vat_check_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
@@ -425,7 +431,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## contact
 
-32 columns · primary key `(id)` · referenced by 41 foreign keys
+32 columns · primary key `(id)` · referenced by 42 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -477,6 +483,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `contact_narrowing_reason_only_when_owner` — `CHECK (((narrowing_reason IS NULL) OR (visibility = 'owner')))`
 - `contact_owner_private_names_its_owner` — `CHECK (((visibility <> 'owner') OR (owner_id IS NOT NULL)))`
 - `contact_source_author_needs_a_source` — `CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))`
+- `contact_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 - `contact_visibility_check` — `CHECK ((visibility = ANY (ARRAY['workspace', 'owner'])))`
 
 **Indexes**
@@ -558,6 +565,10 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `contact_id` | `contact` | deleting the parent deletes this row |
 | `provider` | `channel_provider` | the parent cannot be deleted while this row points at it |
 
+**Rules**
+
+- `contact_channel_identity_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
+
 **Indexes**
 
 - `contact_channel_identity_pkey` — `unique, btree (id)`
@@ -598,6 +609,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 - `contact_email_email_type_check` — `CHECK ((email_type = ANY (ARRAY['work', 'personal', 'other'])))`
 - `contact_email_norm` — `CHECK ((email = lower(email)))`
+- `contact_email_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
@@ -643,6 +655,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 - `contact_phone_e164` — `CHECK ((phone ~ '^\+[1-9][0-9]{7,14}$'))`
 - `contact_phone_phone_type_check` — `CHECK ((phone_type = ANY (ARRAY['work', 'mobile', 'home', 'other'])))`
+- `contact_phone_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
@@ -689,6 +702,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `contact_profile_field_confidence_check` — `CHECK (((confidence IS NULL) OR ((confidence >= (0)::numeric) AND (confidence <= (1)::numeric))))`
 - `contact_profile_field_field_check` — `CHECK ((field = ANY (ARRAY['title', 'phone', 'role', 'linkedin', 'company_name', 'address', 'website'])))`
 - `contact_profile_field_value_key_cardinality` — `CHECK (((field = 'phone') = (value_key <> '')))`
+- `contact_profile_field_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 - `uq_contact_profile_field` — `UNIQUE (contact_id, field, value_key)`
 
 **Indexes**
@@ -832,10 +846,12 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 - `conversation_claim_kind_check` — `CHECK ((kind = ANY (ARRAY['commitment_ours', 'commitment_theirs', 'open_question', 'decision', 'priority', 'objection', 'success_criterion', 'decision_process'])))`
 - `conversation_claim_status_check` — `CHECK ((status = ANY (ARRAY['open', 'done', 'dismissed'])))`
+- `conversation_claim_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
 - `conversation_claim_contact_ix` — `btree (contact_id, kind) WHERE (archived_at IS NULL)`
+- `conversation_claim_evidence_ux` — `unique, btree (contact_id, source_activity_id, evidence_fingerprint) WHERE (archived_at IS NULL)`
 - `conversation_claim_pkey` — `unique, btree (id)`
 - `idx_conversation_claim_contact` — `btree (contact_id)`
 - `idx_conversation_claim_source_activity` — `btree (source_activity_id)`
@@ -890,6 +906,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `dedupe_candidate_entity_type_check` — `CHECK ((entity_type = ANY (ARRAY['contact', 'company', 'lead'])))`
 - `dedupe_candidate_ordered` — `CHECK ((COALESCE(left_contact_id, left_company_id, left_lead_id) < COALESCE(right_contact_id, right_company_id, right_lead_id)))`
 - `dedupe_candidate_shape` — `CHECK ((((entity_type = 'contact') AND (left_contact_id IS NOT NULL) AND (right_contact_id IS NOT NULL) AND (left_company_id IS NULL) AND (right_company_id IS NULL) AND (left_lead_id IS NULL) AND (right_lead_id IS NULL)) OR ((entity_type = 'company') AND (left_company_id IS NOT NULL) AND (right_company_id IS NOT NULL) AND (left_contact_id IS NULL) AND (right_contact_id IS NULL) AND (left_lead_id IS NULL) AND (right_lead_id IS NULL)) OR ((entity_type = 'lead') AND (left_lead_id IS NOT NULL) AND (right_lead_id IS NOT NULL) AND (left_contact_id IS NULL) AND (right_contact_id IS NULL) AND (left_company_id IS NULL) AND (right_company_id IS NULL))))`
+- `dedupe_candidate_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
@@ -930,6 +947,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 **Rules**
 
 - `email_signature_owner_id_key` — `UNIQUE (owner_id)`
+- `email_signature_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
@@ -958,7 +976,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## lead
 
-36 columns · primary key `(id)` · referenced by 13 foreign keys
+36 columns · primary key `(id)` · referenced by 14 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1024,6 +1042,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `lead_source_author_needs_a_source` — `CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))`
 - `lead_status_check` — `CHECK ((status = ANY (ARRAY['new', 'contacted', 'engaged', 'promoted', 'disqualified'])))`
 - `lead_status_set_by_check` — `CHECK (((status_set_by IS NULL) OR (status_set_by = ANY (ARRAY['human', 'system']))))`
+- `lead_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
@@ -1065,6 +1084,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 **Rules**
 
 - `lead_disqualify_reason_label_present` — `CHECK ((length(btrim(label)) > 0))`
+- `lead_disqualify_reason_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
@@ -1172,6 +1192,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `lead_source_intent_check` — `CHECK ((intent = ANY (ARRAY['high', 'neutral', 'low'])))`
 - `lead_source_key_shape` — `CHECK (((key = lower(key)) AND (length(btrim(key)) > 0)))`
 - `lead_source_label_present` — `CHECK ((length(btrim(label)) > 0))`
+- `lead_source_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
@@ -1304,6 +1325,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `partner_relationship_health_check` — `CHECK (((relationship_health IS NULL) OR ((relationship_health >= (0)::numeric) AND (relationship_health <= (1)::numeric))))`
 - `partner_relationship_stage_check` — `CHECK ((relationship_stage = ANY (ARRAY['research', 'identified', 'contacted', 'in_conversation', 'fit_confirmed', 'agreement_pending', 'active', 'active_referring', 'dormant', 'no_fit'])))`
 - `partner_retention_rate_check` — `CHECK (((retention_rate IS NULL) OR ((retention_rate >= 0) AND (retention_rate <= 100))))`
+- `partner_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
@@ -1446,6 +1468,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `relationship_ended_precision_check` — `CHECK ((ended_precision = ANY (ARRAY['day', 'month'])))`
 - `relationship_kind_check` — `CHECK ((kind = ANY (ARRAY['employment', 'deal_stakeholder', 'partner_of', 'referred_by', 'co_sell_with', 'project_stakeholder', 'project_company', 'works_with', 'billing_contact'])))`
 - `relationship_started_precision_check` — `CHECK ((started_precision = ANY (ARRAY['day', 'month'])))`
+- `relationship_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
@@ -1543,6 +1566,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `sdr_handoff_reason_pair` — `CHECK (((reason_id IS NULL) = (reason_applies_to IS NULL)))`
 - `sdr_handoff_reason_when_refused` — `CHECK (((status = ANY (ARRAY['rejected', 'recycled'])) = (reason_id IS NOT NULL)))`
 - `sdr_handoff_status` — `CHECK ((status = ANY (ARRAY['submitted', 'accepted', 'rejected', 'recycled'])))`
+- `sdr_handoff_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
@@ -1609,6 +1633,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `sdr_handoff_reason_applies_to` — `CHECK ((applies_to = ANY (ARRAY['rejected', 'recycled'])))`
 - `sdr_handoff_reason_id_kind` — `UNIQUE (id, applies_to)`
 - `sdr_handoff_reason_label_present` — `CHECK ((length(btrim(label)) > 0))`
+- `sdr_handoff_reason_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 

@@ -30,7 +30,6 @@ import (
 	"fmt"
 	"log/slog"
 	"sync"
-	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
@@ -253,12 +252,10 @@ func addExtensionJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Logger) []
 	for _, j := range set {
 		addComposedWorker(reg,
 			extJobDispatcherArgs{JobKind: j.decl.DispatcherKind()},
-			&extJobDispatcherWorker{pool: pool, decl: j.decl},
-			j.decl.DispatcherTimeout)
+			&extJobDispatcherWorker{pool: pool, decl: j.decl})
 		addComposedWorker(reg,
 			extJobWorkspaceArgs{JobKind: j.decl.ChildKind()},
-			&extJobWorkspaceWorker{pool: pool, decl: j.decl, handle: j.handle, log: log},
-			j.decl.Timeout)
+			&extJobWorkspaceWorker{pool: pool, decl: j.decl, handle: j.handle, log: log})
 		periodic = append(periodic, periodicForComposed(j.decl))
 	}
 	return periodic
@@ -290,11 +287,11 @@ func periodicForComposed(d extension.JobDeclaration) *river.PeriodicJob {
 // methods for itself, and the kind is recorded for jobs.MustBeTotal — which now
 // finds it, because RegisterExtensions declared it through jobs.RegisterComposed
 // before this runs.
-func addComposedWorker[T river.JobArgs](reg *jobRegistry, args T, w jobs.WorkOnly[T], timeout time.Duration) {
+func addComposedWorker[T river.JobArgs](reg *jobRegistry, args T, w jobs.WorkOnly[T]) {
 	kind := args.Kind()
 	reg.kinds = append(reg.kinds, kind)
 	reg.wired[kind] = wiredWorker{args: args, worker: w}
 	spec, _ := jobs.SpecFor(kind)
 	//nolint:forbidigo // the ONE sanctioned AddWorkerArgs: a composed kind lives in the args value, not the type, so River must be handed the value — still wrapped in jobs.Govern and still recorded for MustBeTotal
-	river.AddWorkerArgs(reg.workers, args, jobs.Govern[T](w, spec, timeout))
+	river.AddWorkerArgs(reg.workers, args, jobs.Govern[T](w, spec))
 }

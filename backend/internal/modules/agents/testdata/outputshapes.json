@@ -3266,6 +3266,12 @@
       "data": {
         "type": "object",
         "properties": {
+          "ai_disclosure": {
+            "type": "string"
+          },
+          "ai_generated": {
+            "type": "boolean"
+          },
           "body": {
             "type": "string"
           },
@@ -3292,8 +3298,21 @@
               ]
             }
           },
+          "not_saved": {
+            "type": "string"
+          },
+          "saved_draft_id": {
+            "type": "string",
+            "format": "uuid"
+          },
           "subject": {
             "type": "string"
+          },
+          "to": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         },
         "required": [
@@ -3938,6 +3957,28 @@
           "scope_limited": {
             "type": "boolean"
           },
+          "snapshots": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "taken_at": {
+                  "type": "string"
+                },
+                "trigger": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "taken_at",
+                "trigger"
+              ]
+            }
+          },
           "timezone": {
             "type": "string"
           },
@@ -3961,6 +4002,7 @@
           "period_start",
           "priced_count",
           "scope_kind",
+          "snapshots",
           "timezone",
           "weighted_minor",
           "won_minor"
@@ -5301,6 +5343,25 @@
                 "id": {
                   "type": "string",
                   "format": "uuid"
+                },
+                "owner": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "is_you": {
+                      "type": "boolean"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "is_you"
+                  ]
                 },
                 "record_type": {
                   "type": "string"
@@ -8088,6 +8149,12 @@
                   "offered"
                 ]
               },
+              "mapping": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
               "rows_read": {
                 "type": "integer"
               },
@@ -9049,6 +9116,25 @@
           "id": {
             "type": "string",
             "format": "uuid"
+          },
+          "owner": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "is_you": {
+                "type": "boolean"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "is_you"
+            ]
           },
           "record_type": {
             "type": "string"
@@ -10388,6 +10474,25 @@
                 "id": {
                   "type": "string",
                   "format": "uuid"
+                },
+                "owner": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "is_you": {
+                      "type": "boolean"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "is_you"
+                  ]
                 },
                 "record_type": {
                   "type": "string"

@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer names only Emsland Ventilbau as the company whose change needed the user's sign-off, and explains why (its lifecycle had already been set by someone else).",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 3. The answer names Emsland Ventilbau, and only Emsland Ventilbau, as the company whose change needed the user's sign-off. Saying why — a person had already set its lifecycle — is welcome and not required. Answer no if the answer names a different company as the one that needed sign-off, says none of them needed it, or says all four did.",
+  "answer": "All four are now prospects.\n\n- Kieler Pumpenwerk GmbH, Rhön Hydraulik AG and Altmark Fördertechnik GmbH were updated straight away — their lifecycle was still on the default \"unknown\", so no sign-off was needed.\n- Emsland Ventilbau GmbH needed your sign-off: someone had already set its lifecycle to \"target\" by hand, so Margince held the change for approval. As you said, I approved it and applied it, and it now stands at prospect.\n\nNothing else is waiting in your queue."
+}

@@ -5,6 +5,7 @@ package ai
 
 import (
 	"fmt"
+	"net/url"
 	"strings"
 )
 
@@ -22,6 +23,16 @@ func isEURegionHost(slug string) bool {
 	return region == "eu" || strings.HasPrefix(region, "eu-") || strings.HasPrefix(region, "europe-")
 }
 
+// openRouterEUAddress is OpenRouter's EU base URL host. A request sent there is
+// decrypted only inside the EU and routed only to providers operating there,
+// so the address is the residency guarantee and no `only:` pin is needed.
+const openRouterEUAddress = "eu.openrouter.ai"
+
+func isOpenRouterEUAddress(baseURL string) bool {
+	u, err := url.Parse(strings.TrimSpace(baseURL))
+	return err == nil && strings.EqualFold(u.Hostname(), openRouterEUAddress)
+}
+
 // EURegionPinGap names why a broker binding, or a gemini_vertex one, may be
 // served outside the EU, or answers "" when every host its `only:` admits is
 // an EU-region endpoint and every Vertex location an EU one.
@@ -36,13 +47,13 @@ func EURegionPinGap(binding ProviderConfig) string {
 	if gap := vertexLocationGap(binding); gap != "" {
 		return gap
 	}
-	if !UpstreamPreferencesApply(binding) {
+	if !UpstreamPreferencesApply(binding) || isOpenRouterEUAddress(binding.BaseURL) {
 		return ""
 	}
-	if binding.Routing == nil || len(binding.Routing.Only) == 0 {
+	if binding.Routing == nil || len(binding.Routing.Provider.Only) == 0 {
 		return "no `only:` — the broker may serve " + binding.Model + " from any region"
 	}
-	for _, slug := range binding.Routing.Only {
+	for _, slug := range binding.Routing.Provider.Only {
 		if !isEURegionHost(slug) {
 			return "`only:` admits " + slug + ", which is not an EU-region endpoint"
 		}

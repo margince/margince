@@ -159,13 +159,13 @@ Both services sit behind one reverse proxy / ingress, under **one host**:
 
 | path | service |
 | --- | --- |
-| `/v1`, `/healthz`, `/readyz`, `/metrics` | api |
+| `/v1`, `/healthz`, `/readyz`, `/metrics`; `/.well-known/security.txt` when [`web.security_txt`](reference/configuration.md#securitytxt) is set | api |
 | `/webhooks/gmail`, `/webhooks/graph` | api (present only where that receiver's own token is set — which is a separate switch from whether the connector itself is configured) |
 | `/oauth/`, `/mcp`, `/.well-known/oauth-authorization-server`, `/.well-known/oauth-protected-resource` (and its `/mcp`-suffixed form) | api (present only with the MCP connector declared) |
 | everything else, `/` included | web (the SPA, port 8080) |
 
-Route the OAuth metadata documents by those exact paths, not by a
-`/.well-known/*` prefix: they are the only things the api serves under
+Route the OAuth metadata documents and `security.txt` by those exact paths, not
+by a `/.well-known/*` prefix: they are the only things the api serves under
 `/.well-known`, and a prefix rule takes `/.well-known/acme-challenge/…` away
 from whatever answers your certificate challenges. The webhook row is the api's
 because the caller is the provider, not a browser: each handler verifies its own
@@ -192,8 +192,9 @@ One host, not two, because three things cross the split:
 - `/healthz` — liveness: a dumb 200 (a DB outage must not restart-loop the api).
 - `/readyz` — readiness: 200 when every dependency (Postgres, Redis, and any
   configured object store / vault / AI) is up, else 503 naming the unready one.
+- `/v1/status` — reachability: anonymous, fixed `200 {"status":"ok"}`, no work.
 
-Point liveness at `/healthz` and readiness at `/readyz`.
+Point liveness at `/healthz`, readiness at `/readyz`, uptime monitors at `/v1/status`.
 
 `/readyz` also answers 503 while the **database is behind the binary** — the
 versions this build ships that the ledger does not record, for the core and

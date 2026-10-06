@@ -252,7 +252,7 @@ func upstreamFromEnv(t *testing.T, name string) *ai.OpenRouterRouting {
 	// and the run then reports the default's numbers under a tuned run's name —
 	// the exact way this measurement can lie without failing. ai.ParseRouting
 	// applies the same check to a config file; this is the env var's door to it.
-	if err := routing.Validate(); err != nil {
+	if err := routing.Validate(name); err != nil {
 		t.Fatalf("%s=%s: %v", name, raw, err)
 	}
 	t.Logf("%s: %s", name, raw)

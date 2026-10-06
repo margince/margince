@@ -180,7 +180,7 @@ function AddAcquisitionSourceDialog({
           />
         )}
       </Field>
-      <div className="action-row">
+      <div className="actions">
         <Button variant="ghost" onClick={onClose}>
           {t("deals.cancel")}
         </Button>

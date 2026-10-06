@@ -23,7 +23,7 @@ The 36 tables owned by `compose`, as the migrations build them. [Back to the ent
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `activity_id` | `uuid` | yes | Points at `activity.id` — deleting the parent deletes this row. |
-| `outcome` | `text` | yes | One of `attendees`, `none`, `capped`, `unreadable`. |
+| `outcome` | `text` | yes | One of `attendees`, `none`, `capped`, `capped_seats`, `unreadable`. |
 | `repaired_at` | `timestamp with time zone` | yes | Required `timestamp with time zone`, defaulting to `now()`. |
 
 **Points at**
@@ -34,7 +34,7 @@ The 36 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 **Rules**
 
-- `activity_meeting_attendee_repair_outcome_check` — `CHECK ((outcome = ANY (ARRAY['attendees', 'none', 'capped', 'unreadable'])))`
+- `activity_meeting_attendee_repair_outcome_check` — `CHECK ((outcome = ANY (ARRAY['attendees', 'none', 'capped', 'capped_seats', 'unreadable'])))`
 
 **Indexes**
 
@@ -163,6 +163,7 @@ The 36 tables owned by `compose`, as the migrations build them. [Back to the ent
 - `analytics_share_scope_id_matches_kind` — `CHECK (((scope_kind = 'workspace') = (scope_id IS NULL)))`
 - `analytics_share_scope_kind_check` — `CHECK ((scope_kind = ANY (ARRAY['workspace', 'team', 'owner'])))`
 - `analytics_share_snapshot_matches_kind` — `CHECK (((kind = 'snapshot') = (snapshot_id IS NOT NULL)))`
+- `analytics_share_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 - `uq_analytics_share_token` — `UNIQUE (token_hash)`
 
 **Indexes**
@@ -260,6 +261,7 @@ The 36 tables owned by `compose`, as the migrations build them. [Back to the ent
 - `brief_run_narrative_needs_a_pass` — `CHECK (((narrative IS NULL) OR (annotated_at IS NOT NULL)))`
 - `brief_run_revenue_norm_currency_check` — `CHECK (((revenue_norm_currency = '') OR (revenue_norm_currency ~ '^[A-Z]{3}$')))`
 - `brief_run_revenue_norm_minor_check` — `CHECK ((revenue_norm_minor > 0))`
+- `brief_run_revenue_norm_minor_js_safe` — `CHECK (((revenue_norm_minor >= '-9007199254740991'::bigint) AND (revenue_norm_minor <= '9007199254740991'::bigint)))`
 - `uq_brief_run_user_day` — `UNIQUE (user_id, local_day)`
 
 **Indexes**
@@ -780,12 +782,18 @@ The 36 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 **Rules**
 
+- `team_weekly_review_outlook_best_case_minor_js_safe` — `CHECK (((best_case_minor >= '-9007199254740991'::bigint) AND (best_case_minor <= '9007199254740991'::bigint)))`
+- `team_weekly_review_outlook_closing_landing_minor_js_safe` — `CHECK (((closing_landing_minor >= '-9007199254740991'::bigint) AND (closing_landing_minor <= '9007199254740991'::bigint)))`
+- `team_weekly_review_outlook_commit_minor_js_safe` — `CHECK (((commit_minor >= '-9007199254740991'::bigint) AND (commit_minor <= '9007199254740991'::bigint)))`
 - `team_weekly_review_outlook_currency_present` — `CHECK ((btrim(base_currency) <> ''))`
 - `team_weekly_review_outlook_measure_known` — `CHECK (((forward_measure IS NULL) OR (forward_measure = ANY (ARRAY['commit_evidence', 'weighted', 'manager_call']))))`
 - `team_weekly_review_outlook_measure_with_landing` — `CHECK ((NOT ((forward_measure IS NULL) IS DISTINCT FROM (closing_landing_minor IS NULL))))`
+- `team_weekly_review_outlook_opening_landing_minor_js_safe` — `CHECK (((opening_landing_minor >= '-9007199254740991'::bigint) AND (opening_landing_minor <= '9007199254740991'::bigint)))`
 - `team_weekly_review_outlook_opening_whole` — `CHECK ((NOT ((opening_snapshot_id IS NULL) IS DISTINCT FROM (opening_landing_minor IS NULL))))`
 - `team_weekly_review_outlook_period_kind_check` — `CHECK ((period_kind = ANY (ARRAY['week', 'month', 'quarter'])))`
+- `team_weekly_review_outlook_weighted_minor_js_safe` — `CHECK (((weighted_minor >= '-9007199254740991'::bigint) AND (weighted_minor <= '9007199254740991'::bigint)))`
 - `team_weekly_review_outlook_window_ordered` — `CHECK ((period_end >= period_start))`
+- `team_weekly_review_outlook_won_minor_js_safe` — `CHECK (((won_minor >= '-9007199254740991'::bigint) AND (won_minor <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
@@ -955,6 +963,7 @@ The 36 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 **Rules**
 
+- `weekly_review_deal_amount_minor_at_close_js_safe` — `CHECK (((amount_minor_at_close >= '-9007199254740991'::bigint) AND (amount_minor_at_close <= '9007199254740991'::bigint)))`
 - `weekly_review_deal_label_present` — `CHECK ((btrim(deal_label) <> ''))`
 - `weekly_review_deal_money_whole` — `CHECK (((amount_minor_at_close IS NULL) = (currency_at_close IS NULL)))`
 - `weekly_review_deal_outcome_check` — `CHECK ((outcome = ANY (ARRAY['moved', 'won', 'lost'])))`
@@ -987,6 +996,7 @@ The 36 tables owned by `compose`, as the migrations build them. [Back to the ent
 **Rules**
 
 - `weekly_review_driver_bar_check` — `CHECK ((bar = ANY (ARRAY['created', 'advanced', 'slipped', 'won', 'lost', 'other'])))`
+- `weekly_review_driver_delta_minor_js_safe` — `CHECK (((delta_minor >= '-9007199254740991'::bigint) AND (delta_minor <= '9007199254740991'::bigint)))`
 - `weekly_review_driver_label_present` — `CHECK ((btrim(deal_label) <> ''))`
 - `weekly_review_driver_period_kind_check` — `CHECK ((period_kind = ANY (ARRAY['week', 'month', 'quarter'])))`
 
@@ -1077,6 +1087,7 @@ The 36 tables owned by `compose`, as the migrations build them. [Back to the ent
 **Rules**
 
 - `weekly_review_movement_bar_check` — `CHECK ((bar = ANY (ARRAY['created', 'advanced', 'slipped', 'won', 'lost', 'other'])))`
+- `weekly_review_movement_delta_minor_js_safe` — `CHECK (((delta_minor >= '-9007199254740991'::bigint) AND (delta_minor <= '9007199254740991'::bigint)))`
 - `weekly_review_movement_period_kind_check` — `CHECK ((period_kind = ANY (ARRAY['week', 'month', 'quarter'])))`
 
 **Indexes**
@@ -1114,12 +1125,18 @@ The 36 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 **Rules**
 
+- `weekly_review_outlook_best_case_minor_js_safe` — `CHECK (((best_case_minor >= '-9007199254740991'::bigint) AND (best_case_minor <= '9007199254740991'::bigint)))`
+- `weekly_review_outlook_closing_landing_minor_js_safe` — `CHECK (((closing_landing_minor >= '-9007199254740991'::bigint) AND (closing_landing_minor <= '9007199254740991'::bigint)))`
+- `weekly_review_outlook_commit_minor_js_safe` — `CHECK (((commit_minor >= '-9007199254740991'::bigint) AND (commit_minor <= '9007199254740991'::bigint)))`
 - `weekly_review_outlook_currency_present` — `CHECK ((btrim(base_currency) <> ''))`
 - `weekly_review_outlook_measure_known` — `CHECK (((forward_measure IS NULL) OR (forward_measure = ANY (ARRAY['commit_evidence', 'weighted', 'manager_call']))))`
 - `weekly_review_outlook_measure_with_landing` — `CHECK ((NOT ((forward_measure IS NULL) IS DISTINCT FROM (closing_landing_minor IS NULL))))`
+- `weekly_review_outlook_opening_landing_minor_js_safe` — `CHECK (((opening_landing_minor >= '-9007199254740991'::bigint) AND (opening_landing_minor <= '9007199254740991'::bigint)))`
 - `weekly_review_outlook_opening_whole` — `CHECK ((NOT ((opening_snapshot_id IS NULL) IS DISTINCT FROM (opening_landing_minor IS NULL))))`
 - `weekly_review_outlook_period_kind_check` — `CHECK ((period_kind = ANY (ARRAY['week', 'month', 'quarter'])))`
+- `weekly_review_outlook_weighted_minor_js_safe` — `CHECK (((weighted_minor >= '-9007199254740991'::bigint) AND (weighted_minor <= '9007199254740991'::bigint)))`
 - `weekly_review_outlook_window_ordered` — `CHECK ((period_end >= period_start))`
+- `weekly_review_outlook_won_minor_js_safe` — `CHECK (((won_minor >= '-9007199254740991'::bigint) AND (won_minor <= '9007199254740991'::bigint)))`
 
 **Indexes**
 

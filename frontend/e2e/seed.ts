@@ -1,4 +1,5 @@
 import type { BrowserContext, Page } from "@playwright/test";
+import type { components } from "../src/api/schema";
 import { type GrantSpec, meFixture } from "../src/app/mefixture";
 import { bookingInvitation, bookingProfile } from "../src/screens/book.testkit";
 import {
@@ -689,6 +690,20 @@ export const aiProviderKeys = {
   ],
 };
 
+// One blocked provider, so the sweeps visit the health badge and the System
+// health card in their failing state rather than only the empty one.
+// `retry_after` is omitted for a degraded provider only.
+export const aiProviderHealth = {
+  providers: [
+    {
+      provider: "gemini",
+      health: "out_of_credit",
+      since: "2026-10-05T08:00:00Z",
+      retry_after: "2026-10-05T08:15:00Z",
+    },
+  ],
+};
+
 // The lane bindings the routing card draws, and the fifth read behind the AI
 // page that the catch-all cannot answer: `tiers` and `embeddings` are required
 // by AiRouting, so `{data,page}` hands the form neither and it renders the
@@ -797,6 +812,36 @@ export const aiUsage = {
     currency: "USD",
   },
 };
+
+// The call figures every provider row and tier popover reads. `rows` is
+// required by AiCallStats, so the catch-all's `{data,page}` throws mid-render
+// and takes the whole AI entry down with it. One row per provider and tier the
+// fixtures above bind, with failures and timeouts, so the widest form of each
+// line is what the 390px and axe sweeps see.
+const callStatsRow = (key: string) => ({
+  key,
+  calls: 1_284,
+  failed: 37,
+  timeouts: 12,
+  p50_ms: 940,
+  p95_ms: 4_200,
+  tokens_in: 1_284_000,
+  tokens_out: 212_000,
+  cost_microusd: 12_480_000,
+  unpriced: 3,
+});
+
+export function aiCallStats(group: string | null) {
+  const keys: Record<string, string[]> = {
+    provider: aiProviderKeys.providers.map((p) => p.provider),
+    tier: ["local_small", "cheap_cloud", "premium"],
+  };
+  return {
+    window: "7d",
+    group: group ?? "provider",
+    rows: (keys[group ?? "provider"] ?? []).map(callStatsRow),
+  };
+}
 
 // Two terminal calls, one clean and one that retried and degraded — the second
 // is what puts a badge column and an error sentinel into the widest row, which
@@ -1166,11 +1211,13 @@ export async function mockApi(
   // The mailbox-privacy fixtures, per page for the same reason as the rest:
   // a posture change, a sender overrule and a hold all have to be readable
   // back within one test.
-  const captureSettings: Record<string, boolean> = {
+  const captureSettings: components["schemas"]["CaptureSettings"] = {
     auto_enrich: true,
     mail_sharing: true,
     shared_posture_allowed: false,
     signature_enrich: true,
+    auto_enrich_daily_cap: 500,
+    site_read: { max_pages: 60, max_mib: 32, wall_seconds: 240 },
   };
   const captureConnections = [
     {
@@ -1404,6 +1451,7 @@ export async function mockApi(
         base_language: "de",
         base_currency_locked: false,
         max_upload_bytes: 25_000_000,
+        oauth_access_token_ttl_minutes: 43_200,
         // Two providers, one of each state, so the sign-in methods card renders
         // both an offered and a withheld row rather than only the empty case.
         sign_in_providers: [
@@ -1558,6 +1606,17 @@ export async function mockApi(
     }
     if (path === "/contacts/p-new") {
       return json({ ...anna, id: "p-new", full_name: "Peter Neu" });
+    }
+    // The contact the search fixture finds through Brandt, so opening that hit
+    // lands on its own record.
+    if (path === "/contacts/p-jonas") {
+      return json({
+        ...anna,
+        id: "p-jonas",
+        full_name: "Jonas Weiß",
+        title: "Fleet manager",
+        emails: [],
+      });
     }
     if (path === "/companies" && method === "POST") {
       const body = route.request().postDataJSON();
@@ -2469,6 +2528,23 @@ export async function mockApi(
           title: "Brandt Automotive",
           score: 0.86,
         },
+        // A contact found only through the company the word named, and only
+        // for a caller that asked for employees, as the server answers.
+        ...(q.includes("brandt") &&
+        url.searchParams.get("with_employees") === "true"
+          ? [
+              {
+                type: "contact",
+                id: "p-jonas",
+                title: "Jonas Weiß",
+                score: 0.5,
+                works_at: {
+                  company_id: "o-brandt",
+                  company_name: "Brandt Automotive",
+                },
+              },
+            ]
+          : []),
         { type: "deal", id: "d-fleet", title: "Fleet renewal", score: 0.8 },
         {
           type: "product",
@@ -2728,8 +2804,29 @@ export async function mockApi(
     if (path === "/ai/provider-keys" && method === "GET") {
       return json(aiProviderKeys);
     }
+    if (path === "/ai/provider-health") {
+      return json(aiProviderHealth);
+    }
     if (path === "/ai/calls" && method === "GET") {
       return json(aiCalls);
+    }
+    if (path === "/ai/call-stats") {
+      return json(aiCallStats(url.searchParams.get("group")));
+    }
+    if (path === "/ai/call-stats/flow") {
+      return json({
+        task: url.searchParams.get("task"),
+        window: "7d",
+        total: 0,
+        unanswered: 0,
+        steps: [],
+      });
+    }
+    if (path === "/ai/task-overrides" && method === "GET") {
+      return json({});
+    }
+    if (path === "/ai/routing/schema") {
+      return json({});
     }
     if (path === "/admin/job-health") {
       return json(jobHealth);
@@ -2740,7 +2837,23 @@ export async function mockApi(
     // untouched value, which passes while doing nothing.
     if (path === "/capture/settings") {
       if (method === "PATCH") {
-        Object.assign(captureSettings, route.request().postDataJSON());
+        // The request is flat and the record nests the per-read limits, so
+        // each wire field is filed where a read-back finds it.
+        const {
+          site_read_max_pages,
+          site_read_max_mib,
+          site_read_wall_seconds,
+          ...flat
+        } = route
+          .request()
+          .postDataJSON() as components["schemas"]["UpdateCaptureSettingsRequest"];
+        Object.assign(captureSettings, flat);
+        captureSettings.site_read = {
+          max_pages: site_read_max_pages ?? captureSettings.site_read.max_pages,
+          max_mib: site_read_max_mib ?? captureSettings.site_read.max_mib,
+          wall_seconds:
+            site_read_wall_seconds ?? captureSettings.site_read.wall_seconds,
+        };
       }
       return json(captureSettings);
     }

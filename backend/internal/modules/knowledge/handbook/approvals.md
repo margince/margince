@@ -15,7 +15,7 @@ To approve a proposed change in Margince, open **Home**, show the **Worklist**, 
 2. Set **Work type** to **Approvals** to see only approvals.
 3. On the row, choose **Decide**. The **Your decision** panel opens.
 4. Read the proposal and its evidence, then choose **Accept**.
-If it edited a record, the toast **Applied** offers **Undo on record** to reverse it from the record's history; a sent email or a new record has no undo.
+If it edited a record, the toast **Applied** offers **Undo on record** to reverse it from the record's history; a sent email has no undo. A new contact, company or deal can be taken back with **Undo** on its "Created" entry in the record's history, which archives it.
 Also called: confirm, accept, sign off, OK an agent action.
 
 ### Where are my approvals?
@@ -39,7 +39,7 @@ An approval in Margince expires after **72 hours** by default if nobody decides 
 Also called: approval timed out, missed an approval, stale approval.
 
 ### Who approves agent actions?
-An agent action in Margince is approved by the colleague the agent acts for, or by a colleague who could have made the same change themselves. You only see approvals whose target you can see and whose effect you could perform. No agent may approve its own proposal or one staged for somebody else. An administrator has no override beyond their own permissions.
+An agent action in Margince is approved by the colleague the agent acts for, or by a colleague who could have made the same change themselves. You only see approvals whose target you can see and whose effect you could perform. No agent may approve a proposal staged for somebody else, or a send it proposed itself. An administrator has no override beyond their own permissions.
 Also called: approver, who signs off, permission to approve.
 
 ### How do I stop Margince making automatic changes?
@@ -134,8 +134,9 @@ An approval has three answers.
 **Accept.** The proposed change commits, in one transaction that also writes
 the audit record. When it changed a record, the toast offers **Undo on
 record**, which opens that record's history to reverse it. A kind that sends
-mail, creates a record or names no record has nothing to put back, so it offers
-no undo.
+mail or names no record has nothing to put back, so it offers no undo. A new
+contact, company or deal is taken back from its "Created" entry in the record's
+history.
 
 **Approve edited.** You change the payload first (retype the subject line,
 correct a value) and *the edited version is what executes*. Not the original.
@@ -160,8 +161,14 @@ listed and then refused, because listing it would tell you the record exists.
 Opening such a card by its link answers "not found", the same as an
 out-of-scope record does.
 
-**Nobody releases their own proposal.** An agent may not approve a card its own
-credential staged. It may still reject it.
+**An agent releases its own proposal only when it can be undone.** On your word,
+an agent may approve a proposal it staged for you only when it is a change that
+would have gone straight through but for a human's earlier edit — no deal
+close, no relink, no tag merge, no schema change, no send, and nothing your
+installation's floor puts before a human — and only in a conversation, never
+on a schedule. The decision is recorded as yours, given through that agent.
+Everything else it proposed is yours to release here, or through a passport you
+minted by hand for that purpose. It may always reject its own proposal.
 
 A colleague's own direct action needs no approval: a human doing the thing
 themselves *is* the confirmation.

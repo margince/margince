@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -42,7 +43,7 @@ func seedProvisionalCompany(t *testing.T, e *integration.Env, name, nameSource s
 
 // seedSigningEmployee plants one contact employed by company whose accepted
 // signature evidence names signedName as their company.
-func seedSigningEmployee(t *testing.T, e *integration.Env, company ids.UUID, fullName, signedName string) {
+func seedSigningEmployee(t *testing.T, e *integration.Env, company ids.UUID, fullName, signedName string) ids.UUID {
 	t.Helper()
 	contact := ids.NewV7()
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -65,6 +66,7 @@ func seedSigningEmployee(t *testing.T, e *integration.Env, company ids.UUID, ful
 	if err != nil {
 		t.Fatal(err)
 	}
+	return contact
 }
 
 // seedDossierName plants the company's own site-stated name — the one source an
@@ -445,5 +447,81 @@ func TestCompanyNamePromotionDoesNotAutoApplyADeclinedRename(t *testing.T) {
 	}
 	if name, source := companyNameAndSource(t, e, fresh); name != "Acme Global" || source != "signature" {
 		t.Fatalf("un-refused company = %q/%q, want the dossier-corroborated name applied", name, source)
+	}
+}
+
+// What a human's verdict about one signature does to the rename it was helping
+// to corroborate.
+//
+// Seeded through the ledger's own writer rather than an INSERT: a verdict
+// assembled by the test would prove nothing about the one the product records,
+// and the recency rule the reader applies lives in the row that writer shapes.
+func TestASuppressedSignatureStopsCorroboratingARename(t *testing.T) {
+	e := integration.Setup(t)
+	company := seedProvisionalCompany(t, e, "Gitex", "domain")
+	alice := seedSigningEmployee(t, e, company, "Alice Signer", "Gitex Global")
+	suppressCompanyNameSignature(t, e, alice, "Gitex Global")
+
+	promoter := NewCompanyNamePromoter(e.Pool, slog.New(slog.DiscardHandler))
+	if err := promoter.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), e.WS); err != nil {
+		t.Fatalf("RunWorkspace: %v", err)
+	}
+
+	// The only signature was struck, so there is no claim left to put to
+	// anybody. An unreviewed signature on its own DOES stage a question
+	// (TestCompanyNamePromotionAsksAboutASingleSignature), which is what makes
+	// this zero the verdict's doing.
+	staged := e.WsCount(t, `SELECT count(*) FROM approval WHERE kind = 'company_name_promotion' AND target_entity_id = $1`, company)
+	if staged != 0 {
+		t.Errorf("%d proposal(s) staged from a signature a human struck; a wrong observation corroborates nothing", staged)
+	}
+	if name, _ := companyNameAndSource(t, e, company); name != "Gitex" {
+		t.Errorf("the company became %q on struck evidence", name)
+	}
+}
+
+// A correction is not a veto: it counts, and the proposal carries the human's
+// value rather than the machine's.
+func TestACorrectedSignatureCorroboratesTheHumansValue(t *testing.T) {
+	e := integration.Setup(t)
+	company := seedProvisionalCompany(t, e, "Gitex", "domain")
+	alice := seedSigningEmployee(t, e, company, "Alice Signer", "Gitex Global")
+	corrected := "Gitex Global SE"
+	recordCompanyNameVerdict(t, e, alice, ai.VerdictCorrected, "Gitex Global", &corrected)
+
+	promoter := NewCompanyNamePromoter(e.Pool, slog.New(slog.DiscardHandler))
+	if err := promoter.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), e.WS); err != nil {
+		t.Fatalf("RunWorkspace: %v", err)
+	}
+
+	var proposed string
+	if err := e.Pool.QueryRow(context.Background(), `
+		SELECT proposed_change->>'proposed_name' FROM approval
+		 WHERE kind = 'company_name_promotion' AND target_entity_id = $1`, company).Scan(&proposed); err != nil {
+		t.Fatalf("reading the staged proposal: %v", err)
+	}
+	if proposed != corrected {
+		t.Errorf("the proposal names %q, want the human's %q", proposed, corrected)
+	}
+}
+
+// suppressCompanyNameSignature records the verdict that says one contact's
+// company_name observation is wrong.
+func suppressCompanyNameSignature(t *testing.T, e *integration.Env, contact ids.UUID, shown string) {
+	t.Helper()
+	recordCompanyNameVerdict(t, e, contact, ai.VerdictSuppressed, shown, nil)
+}
+
+func recordCompanyNameVerdict(t *testing.T, e *integration.Env, contact ids.UUID,
+	verdict, shown string, corrected *string,
+) {
+	t.Helper()
+	if err := ai.NewFeedbackStore(InstallationDB(e.Pool)).Record(e.Admin(), ai.RecordInput{
+		SubjectType: "contact", SubjectID: contact,
+		ClaimKind: ai.ClaimProfileField,
+		ClaimPath: string(ai.ProfileFieldClaimPath(companyNameField)),
+		Verdict:   verdict, CorrectedValue: corrected, ValueShown: &shown,
+	}); err != nil {
+		t.Fatalf("recording the %s verdict: %v", verdict, err)
 	}
 }

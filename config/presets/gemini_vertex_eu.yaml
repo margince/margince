@@ -16,15 +16,21 @@ version: 1
 seeds:
   ai_routing:
     profile: eu_hosted          # eu_hosted | sovereign | cloud_frontier
+    # Where Google processes every chat tier's call, written once.
+    providers:
+      gemini_vertex:
+        location: eu
     # gemini_cloud.yaml's Flash and Flash-Lite at its thinking levels, so its
     # certification records grade these rungs (aicert.MeasuredAs). Vertex serves
     # no Pro model in the EU, so frontier takes premium's Flash.
     tiers:
-      local_small: { provider: gemini_vertex, location: eu, model: gemini-3.1-flash-lite }
-      cheap_cloud: { provider: gemini_vertex, location: eu, model: gemini-3.1-flash-lite }
-      premium:     { provider: gemini_vertex, location: eu, model: gemini-3.5-flash, thinking_level: low }
-      frontier:    { provider: gemini_vertex, location: eu, model: gemini-3.5-flash, thinking_level: low }
+      local_small: { provider: gemini_vertex, model: gemini-3.1-flash-lite }
+      cheap_cloud: { provider: gemini_vertex, model: gemini-3.1-flash-lite }
+      premium:     { provider: gemini_vertex, model: gemini-3.5-flash, thinking_level: low }
+      frontier:    { provider: gemini_vertex, model: gemini-3.5-flash, thinking_level: low }
     # The width is asked of the model as outputDimensionality, as on gemini.
+    # The embedder keeps a location of its own, which overrides the provider's
+    # for this lane alone.
     embeddings:
       provider: gemini_vertex
       location: europe-west4

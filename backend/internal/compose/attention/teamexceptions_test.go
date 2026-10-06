@@ -132,6 +132,10 @@ func TestTeamExceptionsExcludeReadableDealsOutsideTheLiveRoster(t *testing.T) {
 	if len(got.Exceptions) != 1 || got.Exceptions[0].Owner.Id == nil || ids.UUID(*got.Exceptions[0].Owner.Id) != member {
 		t.Fatalf("team exceptions escaped the live roster: %+v", got)
 	}
+	// Named from the roster, or a client draws a real colleague as "Hidden".
+	if label := got.Exceptions[0].Owner.Label; label == nil || *label != "The teammate" {
+		t.Errorf("the exception's owner is labelled %v, want the teammate's name", label)
+	}
 }
 
 func unassignedTask() ranked {

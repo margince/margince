@@ -48,12 +48,11 @@ const runnableStates = `('available','retryable','scheduled')`
 // the reason, and the sweep pair answers "are tenants being missed".
 const terminalBadStates = `('discarded','cancelled')`
 
-// finishedFirst leads each DISTINCT ON key's ordering in the sweep reads, so
-// the row that answers for a key is its newest FINISHED one and an in-flight
-// row stands in only for a key with none. A tick still running or retrying
-// has no outcome yet; letting it lead would hide the discard of the tick
-// before it for as long as it ran.
-const finishedFirst = `(state::text IN ('completed','discarded','cancelled')) DESC`
+// terminalStates are the states a run has ENDED in, good or bad. A row in any
+// other state has not finished, so it answers nothing about how the pass went —
+// see statsBySweep, where reading an unfinished row as the pass's outcome is the
+// blind spot this names.
+const terminalStates = `('completed','discarded','cancelled')`
 
 // StateRow is one (queue, kind, workspace, state) group of the job table as
 // it stands right now. WorkspaceID is the empty string for a dispatcher —
@@ -122,7 +121,7 @@ type SweepUnit struct {
 	Kind string
 	Unit FanOutUnit
 	// Units is how many distinct units of this kind have a surviving child,
-	// and Failed how many of those most recently FINISHED dead. The pair reads
+	// and Failed how many of those most recently ended dead. The pair reads
 	// exactly as SweepPass's does, one grain down.
 	Units  int64
 	Failed int64
@@ -291,9 +290,7 @@ func statsByState(ctx context.Context, pool *pgxpool.Pool) ([]StateRow, error) {
 // Per-workspace-latest also answers the question the pair exists for — are
 // tenants being missed — more directly than a batch count did: a workspace
 // whose most recent pass of a kind is dead is a tenant being missed,
-// whether that happened this pass or three passes ago. Most recent means
-// most recently FINISHED (finishedFirst): the next tick in flight has not
-// answered yet, and must not stand in for the discard before it. And because it
+// whether that happened this pass or three passes ago. And because it
 // counts DISTINCT workspaces, a dispatcher that fans out per connection
 // rather than per workspace still counts each workspace once, with no
 // special case.
@@ -323,29 +320,60 @@ func statsByState(ctx context.Context, pool *pgxpool.Pool) ([]StateRow, error) {
 // holds even if that ever stopped being true of the data.
 func statsBySweep(ctx context.Context, pool *pgxpool.Pool) ([]SweepPass, error) {
 	standalone := standaloneFleetKinds()
+	// The two readings come from DIFFERENT rows of the same group, and that is the
+	// whole of this query's shape. Coverage asks "did the pass reach this tenant",
+	// so it counts a group with any tagged row, a pending one included. The
+	// outcome asks "what did the last attempt that ENDED do", so it reads the
+	// latest row in a terminal state and ignores one still on its way.
+	//
+	// Reading both from the newest row is what this fixes. A periodic pass has a
+	// pending or running next tick almost all the time, so the newest row is
+	// usually one that has not run, and a tick that exhausted its attempts read as
+	// healthy for as long as a successor existed — the gauge reported 0 failed
+	// while the discard counter next to it rose once an hour.
+	//
+	// A later COMPLETED run still supersedes an earlier failure: it is terminal,
+	// so it is the latest ended row. That rule is deliberate — the tenant is being
+	// served now — and only the masking by an unfinished row is gone.
 	const q = `
-		SELECT kind,
-		       count(*)::bigint,
-		       count(*) FILTER (WHERE state IN ` + terminalBadStates + `)::bigint
-		FROM (
-		    (SELECT DISTINCT ON (kind, args->>'workspace_id')
-		            kind, state::text AS state
-		     FROM river_job
-		     WHERE ` + sweepTagPredicate + `
-		       AND coalesce(args->>'workspace_id', '') <> ''
-		       AND NOT (kind = ANY(coalesce($1::text[], ARRAY[]::text[])))
-		     ORDER BY kind, args->>'workspace_id', ` + finishedFirst + `, created_at DESC, id DESC)
-
+		WITH tagged AS (
+		    SELECT kind, args->>'workspace_id' AS workspace, state::text AS state,
+		           created_at, id,
+		           kind = ANY(coalesce($1::text[], ARRAY[]::text[])) AS standalone
+		    FROM river_job
+		    WHERE ` + sweepTagPredicate + `
+		),
+		-- One row per group, whatever state it is in: the coverage count.
+		grouped AS (
+		    (SELECT DISTINCT ON (kind, workspace) kind, workspace
+		     FROM tagged
+		     WHERE coalesce(workspace, '') <> '' AND NOT standalone
+		     ORDER BY kind, workspace, created_at DESC, id DESC)
 		    UNION ALL
-
-		    (SELECT DISTINCT ON (kind)
-		            kind, state::text AS state
-		     FROM river_job
-		     WHERE ` + sweepTagPredicate + `
-		       AND kind = ANY(coalesce($1::text[], ARRAY[]::text[]))
-		     ORDER BY kind, ` + finishedFirst + `, created_at DESC, id DESC)
-		) latest
-		GROUP BY kind`
+		    (SELECT DISTINCT ON (kind) kind, NULL AS workspace
+		     FROM tagged WHERE standalone
+		     ORDER BY kind, created_at DESC, id DESC)
+		),
+		-- One row per group among those that ENDED: the outcome.
+		ended AS (
+		    (SELECT DISTINCT ON (kind, workspace) kind, workspace, state
+		     FROM tagged
+		     WHERE coalesce(workspace, '') <> '' AND NOT standalone
+		       AND state IN ` + terminalStates + `
+		     ORDER BY kind, workspace, created_at DESC, id DESC)
+		    UNION ALL
+		    (SELECT DISTINCT ON (kind) kind, NULL AS workspace, state
+		     FROM tagged
+		     WHERE standalone AND state IN ` + terminalStates + `
+		     ORDER BY kind, created_at DESC, id DESC)
+		)
+		SELECT g.kind,
+		       count(*)::bigint,
+		       count(*) FILTER (WHERE e.state IN ` + terminalBadStates + `)::bigint
+		FROM grouped g
+		LEFT JOIN ended e
+		       ON e.kind = g.kind AND e.workspace IS NOT DISTINCT FROM g.workspace
+		GROUP BY g.kind`
 
 	cursor, err := pool.Query(ctx, q, standalone)
 	if err != nil {
@@ -370,9 +398,10 @@ func statsBySweep(ctx context.Context, pool *pgxpool.Pool) ([]SweepPass, error) 
 // statsBySweepUnit is statsBySweep one grain down, for the kinds whose
 // dispatcher fans out per connection or per build rather than per workspace.
 //
-// The reading rule is the SAME — latest outcome per unit, never a batch, for
-// the reason statsBySweep sets out in full — and only the key it is latest PER
-// changes: args->>'connection_id' instead of args->>'workspace_id'. That is
+// The reading rule is the SAME — coverage from any tagged row of the unit, the
+// outcome from the latest row of it that ENDED, for the reason statsBySweep sets
+// out in full — and only the key it is latest PER changes:
+// args->>'connection_id' instead of args->>'workspace_id'. That is
 // what removes the masking. A workspace with a healthy connection and a broken
 // one is one healthy unit and one failed unit here, where the workspace pair
 // sees only whichever child ran last.
@@ -398,20 +427,30 @@ func statsBySweepUnit(ctx context.Context, pool *pgxpool.Pool) ([]SweepUnit, err
 	}
 
 	const q = `
-		SELECT kind,
-		       count(*)::bigint,
-		       count(*) FILTER (WHERE state IN ` + terminalBadStates + `)::bigint
-		FROM (
-		    SELECT DISTINCT ON (j.kind, j.args->>u.args_key)
-		           j.kind, j.state::text AS state
+		WITH tagged AS (
+		    SELECT j.kind, j.args->>u.args_key AS unit, j.state::text AS state,
+		           j.created_at, j.id
 		    FROM river_job j
 		    JOIN unnest($1::text[], $2::text[]) AS u(kind, args_key) ON u.kind = j.kind
 		    WHERE '` + SweepTag + `' = ANY(j.tags)
 		      AND coalesce(j.args->>u.args_key, '') <> ''
 		      AND coalesce(j.args->>'workspace_id', '') <> ''
-		    ORDER BY j.kind, j.args->>u.args_key, ` + finishedFirst + `, j.created_at DESC, j.id DESC
-		) latest
-		GROUP BY kind`
+		),
+		grouped AS (
+		    SELECT DISTINCT ON (kind, unit) kind, unit
+		    FROM tagged ORDER BY kind, unit, created_at DESC, id DESC
+		),
+		ended AS (
+		    SELECT DISTINCT ON (kind, unit) kind, unit, state
+		    FROM tagged WHERE state IN ` + terminalStates + `
+		    ORDER BY kind, unit, created_at DESC, id DESC
+		)
+		SELECT g.kind,
+		       count(*)::bigint,
+		       count(*) FILTER (WHERE e.state IN ` + terminalBadStates + `)::bigint
+		FROM grouped g
+		LEFT JOIN ended e ON e.kind = g.kind AND e.unit = g.unit
+		GROUP BY g.kind`
 
 	cursor, err := pool.Query(ctx, q, kinds, argsKeys)
 	if err != nil {

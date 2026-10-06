@@ -44,7 +44,7 @@ func writeSweepGauges(w io.Writer, sweeps []jobs.SweepPass) error {
 	}
 
 	if err := writeFamilyHeader(w, "margince_sweep_workspaces_failed",
-		"Workspaces whose MOST RECENT FINISHED child of this fleet pass ended discarded or cancelled — tenants whose share of the pass did not happen. A workspace that failed and then succeeded is not counted; one that failed and is running again still is, until the new run succeeds. For a kind that answers for the whole installation in one row, this reads 1 when its latest finished tagged run ended that way."); err != nil {
+		"Workspaces whose most recent child of this fleet pass THAT ENDED was discarded or cancelled — tenants whose share of the pass did not happen. A workspace that failed and then succeeded is not counted; one that failed and is running again still is, until the new run succeeds. For a kind that answers for the whole installation in one row, this reads 1 when its latest tagged run that ended was discarded or cancelled."); err != nil {
 		return err
 	}
 	for _, s := range ordered {
@@ -84,7 +84,7 @@ func writeSweepUnitGauges(w io.Writer, units []jobs.SweepUnit) error {
 	}
 
 	if err := writeFamilyHeader(w, "margince_sweep_units_failed",
-		"Fan-out units whose MOST RECENT FINISHED child of this fleet pass ended discarded or cancelled. Unlike the per-workspace pair, a failed connection is counted even when a sibling connection in the same workspace succeeded afterwards -- which is the masking this pair exists to remove."); err != nil {
+		"Fan-out units whose most recent child of this fleet pass THAT ENDED was discarded or cancelled. Unlike the per-workspace pair, a failed connection is counted even when a sibling connection in the same workspace succeeded afterwards -- which is the masking this pair exists to remove."); err != nil {
 		return err
 	}
 	for _, u := range ordered {

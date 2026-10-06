@@ -84,6 +84,9 @@ func stagingSpec(name string) (runner.AgentSpec, bool) {
 			Tools:      []string{"search_records", "read_record", "enrich"},
 		}, true
 	}
+	if name == releasingSpecName {
+		return releasingSpec, true
+	}
 	// The shipped agents fall back to the COMPOSE resolver, not the runner
 	// catalog: the catalog carries no tools, and this lane's whole subject is
 	// what an allowlist refuses.

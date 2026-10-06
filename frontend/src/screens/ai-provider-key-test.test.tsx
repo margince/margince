@@ -12,6 +12,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
+import { keyTestReasonKey } from "./ai-provider-key-test";
 import { AiProviderKeysCard } from "./ai-provider-keys";
 
 // The Test button on a provider row: the server asks the vendor with the key
@@ -32,24 +33,28 @@ const PROVIDERS = [
     provider: "gemini",
     configured: true,
     env_var: "GEMINI_API_KEY",
+    usable: true,
     optional: false,
   },
   {
     provider: "openai",
     configured: false,
     env_var: "OPENAI_API_KEY",
+    usable: false,
     optional: false,
   },
   {
     provider: "jev",
     configured: true,
     env_var: "TYPESAFE_API_KEY",
+    usable: true,
     optional: false,
   },
   {
     provider: "jev_compatible",
     configured: false,
     env_var: "JEV_COMPATIBLE_API_KEY",
+    usable: true,
     optional: true,
   },
 ];
@@ -101,7 +106,10 @@ async function testRow(
   provider: string,
 ) {
   await user.click(
-    await screen.findByRole("button", { name: `Manage ${provider}` }),
+    within(await screen.findByTestId(`ai-provider-row-${provider}`)).getByRole(
+      "button",
+      { name: /^Edit/ },
+    ),
   );
   const row = await screen.findByTestId(`ai-provider-key-${provider}`);
   await user.click(within(row).getByRole("button", { name: /^test$/i }));
@@ -134,6 +142,7 @@ describe("testing a provider key", () => {
   // a throttled one may be fine, and a vendor that is down is neither.
   it.each([
     ["auth_failed", /refused this key/i],
+    ["permission_denied", /accepted the key but refused the call/i],
     ["rate_limited", /rate-limiting this key/i],
     ["unreachable", /did not respond/i],
     ["no_endpoint", /no tier uses this provider yet/i],
@@ -184,7 +193,9 @@ describe("testing a provider key", () => {
     const user = userEvent.setup();
     for (const provider of ["gemini", "jev", "jev_compatible", "openai"]) {
       await user.click(
-        await screen.findByRole("button", { name: `Manage ${provider}` }),
+        within(
+          await screen.findByTestId(`ai-provider-row-${provider}`),
+        ).getByRole("button", { name: /^Edit/ }),
       );
       const row = await screen.findByTestId(`ai-provider-key-${provider}`);
       const test = within(row).queryByRole("button", { name: /^test$/i });
@@ -272,6 +283,19 @@ describe("testing a provider key", () => {
 
     await waitFor(() =>
       expect(within(row).queryByText("Test failed")).toBeNull(),
+    );
+  });
+});
+
+describe("keyTestReasonKey", () => {
+  // A Vertex 403 is a missing role or API, never a key to replace, so its
+  // sentence names both; every other vendor gets the generic one.
+  it("names the role and the API for Gemini on Vertex AI", () => {
+    expect(keyTestReasonKey("gemini_vertex", "permission_denied")).toBe(
+      "aiProviderKeys.reason.permissionDeniedVertex",
+    );
+    expect(keyTestReasonKey("openai", "permission_denied")).toBe(
+      "aiProviderKeys.reason.permissionDenied",
     );
   });
 });

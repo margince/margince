@@ -84,8 +84,8 @@ func (firstDraftCases) Prepare(fixture, expected json.RawMessage) (aitasks.Prepa
 // firstDraftCase is one first-message request ready to be answered.
 type firstDraftCase struct{ data replyActivityData }
 
-// Run drives the production lane — the same completeFirstVoiced, correction loop
-// and validators DraftFirstEmail drives — and records every request it issued.
+// Run drives the site's lane — completeFirstVoiced, its correction loop and its
+// validators — and records every request it issued.
 //
 // The drafter is built with a brain and nothing else because this path does no
 // I/O at all: unlike the reply, there is no activity to read and no voice signal

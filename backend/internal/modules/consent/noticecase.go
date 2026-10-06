@@ -17,6 +17,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -169,7 +170,10 @@ type OpenNoticeCase struct {
 	ContactID ids.ContactID
 	Rule      NoticeRule
 	DueAt     time.Time
-	Blocked   bool
+	// OpenedAt is when the duty was recorded. One recorded after its own
+	// deadline came from history this installation imported late.
+	OpenedAt time.Time
+	Blocked  bool
 }
 
 // openNoticeLaneDefault mirrors the DSR lane's small page for the same reason:
@@ -191,6 +195,17 @@ type NoticeCaseInput struct {
 	// lets a test drive a deadline without waiting for one. Required exactly
 	// when State is terminal, which the table's own CHECK also holds.
 	CompletedAt *time.Time
+}
+
+// agendaNoticeStates are the owed states a rep is asked to act on. Derived from
+// "still owed" like dischargeableNoticeStates. A queued disclosure is on its
+// way, so asking for it again would invite a second notice; it stays owed in
+// law and on the compliance queue, and a bounce moves it to delivery_failed,
+// which is back on the agenda.
+func agendaNoticeStates() []string {
+	return slices.DeleteFunc(unresolvedNoticeStates(), func(state string) bool {
+		return state == string(NoticeQueued)
+	})
 }
 
 // NoticeAgendaInput narrows the contact-linked agenda before its page limit.
@@ -227,7 +242,7 @@ func (s *Store) OpenNoticeCasesDueSoonest(ctx context.Context, in NoticeAgendaIn
 		if err != nil {
 			return err
 		}
-		where := storekit.SQLf("n.state = ANY($%d) AND c.archived_at IS NULL", arg(unresolvedNoticeStates()))
+		where := storekit.SQLf("n.state = ANY($%d) AND c.archived_at IS NULL", arg(agendaNoticeStates()))
 		if scope != "" {
 			where += " AND " + scope
 		}
@@ -243,7 +258,7 @@ func (s *Store) OpenNoticeCasesDueSoonest(ctx context.Context, in NoticeAgendaIn
 		if in.TeamOwners != nil {
 			where += storekit.SQLf(" AND ("+owner+" IS NULL OR "+owner+" = ANY($%d))", arg(in.TeamOwners))
 		}
-		query := `SELECT n.id, n.contact_id, n.rule, n.due_at, n.state = 'blocked', ` + owner + `
+		query := `SELECT n.id, n.contact_id, n.rule, n.due_at, n.created_at, n.state = 'blocked', ` + owner + `
    FROM privacy_notice_case n JOIN contact c ON c.id = n.contact_id
    WHERE ` + where + storekit.SQLf(" ORDER BY n.due_at, n.id LIMIT $%d", arg(in.Limit))
 		rows, err := tx.Query(ctx, query, args...)
@@ -253,7 +268,7 @@ func (s *Store) OpenNoticeCasesDueSoonest(ctx context.Context, in NoticeAgendaIn
 		defer rows.Close()
 		for rows.Next() {
 			var c OpenNoticeCase
-			if err := rows.Scan(&c.ID, &c.ContactID, &c.Rule, &c.DueAt, &c.Blocked, &c.OwnerID); err != nil {
+			if err := rows.Scan(&c.ID, &c.ContactID, &c.Rule, &c.DueAt, &c.OpenedAt, &c.Blocked, &c.OwnerID); err != nil {
 				return err
 			}
 			out = append(out, c)

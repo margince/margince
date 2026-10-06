@@ -969,7 +969,7 @@ function FulfilErasureModal({
       returnFocusTo={returnFocusTo}
     >
       <p>{t("privacy.erasureIrreversible")}</p>
-      <Field className="dsr-erase-field" label={t("privacy.typeErase")}>
+      <Field label={t("privacy.typeErase")}>
         {(control) => (
           <TextInput
             {...control}

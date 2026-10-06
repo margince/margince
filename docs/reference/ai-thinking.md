@@ -28,11 +28,20 @@ Strongest first:
 
 1. The request's own options: `ProviderOptions["gemini"].thinking_level`,
    `ProviderOptions["openai"].reasoning_effort`, `ProviderOptions["ollama"].think`.
-2. The binding's explicit setting: `thinking_level` (Gemini) or
-   `routing.reasoning_effort` (OpenRouter). The operator chose it, so it wins in
+2. An admin's level for the task, set in the task's sheet under AI tasks and
+   stored in `ai.task_overrides` (`thinking`). It is an EXACT level, not a
+   floor, and applies to every site of the task: OpenRouter is sent it as
+   `reasoning.effort`, Gemini as `thinkingLevel` on a model that takes one,
+   OpenAI as `reasoning.effort` on a reasoning model, Anthropic as the budget
+   for that level, Ollama as the least listed value that meets it. A model
+   with no thinking control ignores it, and the call records no reasoning
+   block. It also moves the result-cache key, so an answer cached at another
+   level is not served.
+3. The binding's explicit setting: `thinking_level` (Gemini) or
+   `routing.reasoning.effort` (OpenRouter). The operator chose it, so it wins in
    both directions, even below the floor.
-3. The site floor: `thinking:` on the site in `ai-tasks.yaml`.
-4. The adapter's default.
+4. The site floor: `thinking:` on the site in `ai-tasks.yaml`.
+5. The adapter's default.
 
 ## What each provider is sent for `low`
 
@@ -49,7 +58,7 @@ Strongest first:
 | OpenRouter `anthropic/claude-sonnet-4.6` | on, effort `medium` | nothing | default `medium` meets `low` |
 | OpenRouter `mistralai/ministral-*` | does not reason | nothing | the model lists no `reasoning` |
 | OpenRouter, a model on by default that states no effort | on, effort unknown | `reasoning: {"effort": "low"}` | — |
-| OpenRouter, any model | the catalog `GET /api/v1/models`, read once per binding; a failed read is retried after a minute | the rule above | the request carries tools, the list is unreadable, or the binding sets `routing.reasoning_effort` |
+| OpenRouter, any model | the catalog `GET /api/v1/models`, read once per binding; a failed read is retried after a minute | the rule above | the request carries tools, the list is unreadable, or the binding sets `routing.reasoning.effort` |
 | Anthropic 4.6–4.8 (`claude-sonnet-4-6`, `claude-opus-4-6`/`-7`/`-8`) | off | `thinking: {"type": "adaptive"}` | the request carries tools |
 | Anthropic 4.5 and earlier (`claude-haiku-4-5`, `claude-sonnet-4-5`, …) | off | `thinking: {"type": "enabled", "budget_tokens": 1024}` | tools, or `max_tokens` leaves under 1024 for the answer after the budget |
 | Anthropic 5.x (Opus 5, Sonnet 5, Fable, Mythos) | on, effort `high` | nothing | always meets the floor |
@@ -90,10 +99,9 @@ A binding's own level, in a preset or routing file (this outranks every site):
 ```yaml
 cheap_cloud: { provider: gemini, model: gemini-3.1-flash-lite, thinking_level: low }
 cheap_cloud:
-  provider: openai_compatible
+  provider: openai_compatible          # host on providers.openai_compatible
   model: openai/gpt-oss-120b
-  base_url: https://openrouter.ai/api
-  routing: { sort: throughput, reasoning_effort: low }
+  routing: { provider: { sort: throughput }, reasoning: { effort: low } }
 ```
 
 ## How to check

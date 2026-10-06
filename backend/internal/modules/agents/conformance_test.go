@@ -213,7 +213,7 @@ func fullRegistry(t *testing.T) *Registry {
 	RegisterBulkTool(r, inertLifecycle{})
 	RegisterQueryTool(r, nil, func(context.Context, json.RawMessage) (QueryAnswer, error) {
 		return QueryAnswer{Coverage: CoverageCompleteExact}, nil
-	}, nil)
+	})
 	RegisterVocabularyTool(r, inertVocabulary{})
 	// The REAL resource, over the probe catalog. Nothing about the report
 	// vocabulary needs a pool or a seam, so a stub here would put a test double

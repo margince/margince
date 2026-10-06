@@ -164,6 +164,14 @@ function refusalSentence(
   return detail ?? undefined;
 }
 
+// What undoing an entry of each of these verbs does to the record, said before
+// the press lands. The verbs are the audit trail's own.
+const INVERSE_CONFIRM: Readonly<Record<string, MessageKey | undefined>> = {
+  create: "history.undo.confirmCreateBody",
+  archive: "history.undo.confirmArchiveBody",
+  promote: "history.undo.confirmPromoteBody",
+};
+
 function UndoButton({
   entry,
   kind,
@@ -229,6 +237,10 @@ function UndoButton({
     return null;
   }
 
+  // An undo that archives, un-archives or demotes says so first: it moves the
+  // whole record rather than a field.
+  // A link's own entries keep the link's wording.
+  const verbBody = entry.edge ? undefined : INVERSE_CONFIRM[entry.action];
   const upFront = advisory.undoable
     ? undefined
     : (refusalSentence(advisory.reason, advisory.detail, t) ??
@@ -242,7 +254,7 @@ function UndoButton({
     // connection between two records rather than editing a value on this one.
     // An edge entry carries no field changes at all, so the field count alone
     // would wave through the more consequential of the two.
-    if (changes.length > 1 || entry.edge) {
+    if (changes.length > 1 || entry.edge || verbBody) {
       setConfirming(true);
       return;
     }
@@ -271,29 +283,33 @@ function UndoButton({
           putBack.mutate({ kind, id, auditId: entry.id, version })
         }
       >
-        <p>
-          {entry.edge
-            ? t("history.undo.confirmEdgeBody", {
-                other: entry.edge.other_label ?? t("ref.nameLoadFailed"),
-              })
-            : plural("history.undo.confirmBody", changes.length, {
-                count: formatNumber(changes.length, locale),
-              })}
-        </p>
-        <ul className="entry-fields">
-          {changes.map((change) => (
-            <li key={change.field} className="entry-field">
-              <span>{historyFieldLabel(change.field, t)}</span>
-              <span>
-                {historyValue(change.field, change.oldValue, {
-                  currency,
-                  locale,
-                  zone: recordZone,
-                }) ?? t("history.cleared")}
-              </span>
-            </li>
-          ))}
-        </ul>
+        <div>
+          <p>
+            {verbBody
+              ? t(verbBody)
+              : entry.edge
+                ? t("history.undo.confirmEdgeBody", {
+                    other: entry.edge.other_label ?? t("ref.nameLoadFailed"),
+                  })
+                : plural("history.undo.confirmBody", changes.length, {
+                    count: formatNumber(changes.length, locale),
+                  })}
+          </p>
+          <ul className="entry-fields">
+            {changes.map((change) => (
+              <li key={change.field} className="entry-field">
+                <span>{historyFieldLabel(change.field, t)}</span>
+                <span>
+                  {historyValue(change.field, change.oldValue, {
+                    currency,
+                    locale,
+                    zone: recordZone,
+                  }) ?? t("history.cleared")}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
       </ConfirmModal>
     </span>
   );

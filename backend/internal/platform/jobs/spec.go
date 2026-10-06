@@ -116,7 +116,7 @@ const (
 	OptsCaller
 )
 
-// TimeoutPolicy is a kind's whole-job wall clock in the one of four forms it
+// TimeoutPolicy is a kind's whole-job wall clock in the one of three forms it
 // actually takes. Absence is not one of them: a kind with no declared timeout
 // fails generation, because River's silent one-minute default is the failure
 // this contract exists to remove.
@@ -126,37 +126,19 @@ const (
 // (privacy.MaxPassDuration and friends). Fixed still carries the resolved
 // duration — Govern hands River a duration, not a name — and the census is
 // what keeps the two from drifting apart when the upstream constant moves.
-//
-// OperatorField names the JobRunnerConfig field the value is computed FROM at
-// registration, exactly as Cadence.OperatorField does for a schedule. The name
-// is what makes the source checkable: the duration itself is not knowable here
-// — it is an expression a call site writes — so without the field path a
-// registration computing its wall clock from an unrelated dial would read
-// exactly like one computing it from the declared one.
 type TimeoutPolicy struct {
-	Fixed         time.Duration
-	None          bool
-	OperatorField string
-	DerivedFrom   string
+	Fixed       time.Duration
+	None        bool
+	DerivedFrom string
 }
 
-// FromOperator reports that the value comes from the operator's config rather
-// than from the file. It is derived from OperatorField rather than stored
-// beside it, so the two cannot say different things.
-func (p TimeoutPolicy) FromOperator() bool { return p.OperatorField != "" }
-
 // Duration is the value Govern hands River. A None policy yields -1, which
-// takes the job out of River's rescuer; an operator-supplied policy yields the
-// value supplied at registration.
-func (p TimeoutPolicy) Duration(supplied time.Duration) time.Duration {
-	switch {
-	case p.None:
+// takes the job out of River's rescuer.
+func (p TimeoutPolicy) Duration() time.Duration {
+	if p.None {
 		return -1
-	case p.FromOperator():
-		return supplied
-	default:
-		return p.Fixed
 	}
+	return p.Fixed
 }
 
 // Cadence is a dispatcher's schedule, in exactly one of three forms: Fixed is

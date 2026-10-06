@@ -258,7 +258,8 @@ gives, because it is ordinary German in another sense.
 
 Terms that carry over unchanged, so no second word is needed: Lead, Commit,
 Best Case, Follow-up, Entwurf, Notiz, Verlauf, Datensatz, Feldhistorie,
-Aufbewahrung, Lizenz, Angebot, Abschlussdatum, Deal-Wert.
+Aufbewahrung, Lizenz, Angebot, Abschlussdatum, Deal-Wert, Champion (the buying
+committee role, as on the role picker).
 
 ## What the gate holds
 

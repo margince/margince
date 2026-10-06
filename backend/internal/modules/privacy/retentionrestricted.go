@@ -19,6 +19,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/retentionscope"
 )
 
 // restrictionExpiryStages is the batched stage this file adds to a workspace
@@ -74,17 +75,7 @@ func (s *RetentionService) evaluateRestrictionExpiry(ctx context.Context) error 
 
 // notHeldThroughAnyLink is notTransitivelyHeld plus the contact arm.
 func notHeldThroughAnyLink(activityID string) string {
-	return `
-	  AND NOT EXISTS (
-	    SELECT 1 FROM activity_link h
-	    LEFT JOIN contact hp ON hp.id = h.contact_id
-	    LEFT JOIN company company ON company.id = h.company_id
-	    LEFT JOIN deal dl ON dl.id = h.deal_id
-	    LEFT JOIN lead ld ON ld.id = h.lead_id
-	    LEFT JOIN project pj ON pj.id = h.project_id
-	    WHERE h.activity_id = ` + activityID + `
-	      AND (coalesce(hp.legal_hold, false) OR coalesce(company.legal_hold, false) OR coalesce(dl.legal_hold, false)
-	           OR coalesce(ld.legal_hold, false) OR coalesce(pj.legal_hold, false)))`
+	return "\n\t  AND NOT " + retentionscope.HeldThroughAnyLink(activityID)
 }
 
 // expireRestriction erases one held record in its own audited transaction. The

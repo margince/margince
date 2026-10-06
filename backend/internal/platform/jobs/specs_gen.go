@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "1dac3a1a737d902fe0b9791abc290094552b3ea968e2a502ca7a768c06218667"
+const JobContractHash = "91c96dc81733c21366eb50d407fca8d50c086c8121958d8cb05e0923121ac5fc"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -79,6 +79,16 @@ var specs = map[string]Spec{
 		MaxAttempts: 1,
 		OptsOwner:   OptsArgs,
 		Cadence:     Cadence{Fixed: 1 * time.Minute},
+	},
+	"ai_price_sync_sweep": {
+		Kind:      "ai_price_sync_sweep",
+		GoType:    "AIPriceSyncSweepArgs",
+		Role:      Worker,
+		Fleet:     true,
+		Queue:     "rate_refresh",
+		Timeout:   TimeoutPolicy{Fixed: 5 * time.Minute},
+		OptsOwner: OptsCaller,
+		Cadence:   Cadence{Fixed: 24 * time.Hour},
 	},
 	"approval_auto_apply": {
 		Kind:        "approval_auto_apply",
@@ -712,10 +722,10 @@ var specs = map[string]Spec{
 		GoType:       "SiteDeepReadArgs",
 		Role:         Worker,
 		Queue:        "deep_read",
-		Timeout:      TimeoutPolicy{OperatorField: "DeepReadCaps"},
+		Timeout:      TimeoutPolicy{Fixed: 830 * time.Second, DerivedFrom: "deepReadTimeout"},
 		OptsOwner:    OptsCaller,
 		Registration: Registration{When: []string{"DeepReadBrain"}, AbsentRegistersAnyway: true},
-		Args:         []ArgField{{Name: "CompanyID"}, {Name: "MaxPages", Scalar: true, Reason: "this run's page ceiling, or zero for the deployment's own. The worker clamps it against the configured cap, so it can only ever narrow what an operator set, and a crawl budget states nothing about a subject."}, {Name: "RequestedBy"}, {Name: "SiteReadID"}, {Name: "Workspace"}},
+		Args:         []ArgField{{Name: "CompanyID"}, {Name: "MaxPages", Scalar: true, Reason: "this run's page ceiling, or zero for the installation's own. The worker clamps it against the page limit an admin set, so it can only ever narrow it, and a crawl budget states nothing about a subject."}, {Name: "RequestedBy"}, {Name: "SiteReadID"}, {Name: "Workspace"}},
 	},
 	"stage_evidence_read": {
 		Kind:         "stage_evidence_read",

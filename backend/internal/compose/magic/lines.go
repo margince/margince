@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"sort"
 	"strings"
+	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -63,7 +64,7 @@ func linesOf(mask imageMask, entries []entry, capped map[string]bool, limit int)
 		}
 		group[key] = len(out)
 		records[len(out)] = map[ids.UUID]bool{e.EntityID: true}
-		if capped[e.EntityType] {
+		if capped[armOfEntry(e)] {
 			// Its arm was cut, so this line's records were counted out of a
 			// partial read: what it shows is the floor, whether it ends up
 			// standing for one record or five thousand.
@@ -119,8 +120,12 @@ func lineOf(mask imageMask, e entry) (crmcontracts.MagicLine, string, bool) {
 		on := openapi_types.UUID(*e.OnBehalfOf)
 		line.Actor.OnBehalfOf = &on
 	}
-	line.Before = mask.withheldFrom(e.EntityType, fieldsOf(e.Before))
-	line.After = mask.withheldFrom(e.EntityType, fieldsOf(e.After))
+	// A create's image is the whole new record and an archive's is empty;
+	// neither says more than the line's sentence and the record's name.
+	if !bulkActions[e.Action] {
+		line.Before = mask.withheldFrom(e.EntityType, fieldsOf(e.Before))
+		line.After = mask.withheldFrom(e.EntityType, fieldsOf(e.After))
+	}
 	return line, groupKey(e, d), true
 }
 
@@ -138,7 +143,7 @@ func groupKeyOf(e entry) (string, bool) {
 // groupKey is what two lines must share to be one line with a count: the same
 // job, doing the same thing, for the same reason, to the same kind of record.
 func groupKey(e entry, d description) string {
-	parts := []string{e.ActorID, e.Action, e.EntityType, sentenceKey(d.summary), "", ""}
+	parts := []string{e.ActorID, e.Action, e.EntityType, sentenceKey(d.summary), "", "", ""}
 	if d.reason != nil {
 		parts[4] = sentenceKey(*d.reason)
 		if many, perRecord := manyReasons[d.reason.Key]; perRecord {
@@ -150,6 +155,11 @@ func groupKey(e entry, d description) string {
 	// would name only one of them.
 	if e.OnBehalfOf != nil {
 		parts[5] = e.OnBehalfOf.String()
+	}
+	// A bulk verb folds per day: "created 2,146 contacts" is one line for the
+	// day it happened, and an import that ran over a week reads as seven.
+	if bulkActions[e.Action] {
+		parts[6] = e.OccurredAt.UTC().Format(time.DateOnly)
 	}
 	return strings.Join(parts, "\x00")
 }

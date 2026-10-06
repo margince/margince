@@ -9,9 +9,11 @@ import { Button, Modal } from "../design-system/atoms";
 import { Heading } from "../design-system/heading";
 import { PageZones } from "../design-system/pagezones";
 import { formatDateTime } from "../format/format";
+import { greetingNameOf } from "../format/greetingname";
 import { useNow } from "../format/now";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
+import { LinkedApprovalDrawer } from "./approvaldrawer";
 import { changedSinceBrief } from "./brief.changed";
 import { BriefChanges } from "./brief.changes";
 import { BriefDials } from "./brief.dials";
@@ -77,7 +79,7 @@ export function BriefScreen() {
   );
   const queuedDay = briefDay(queued.data?.pages);
   const review = useWeeklyReview(address.week);
-  const firstName = me.data?.user?.display_name?.trim().split(/\s+/)[0] ?? null;
+  const firstName = greetingNameOf(me.data?.user);
   return (
     <div className="wrap brief-wrap">
       {/* THE HEAD ON THE PAGE GROUND, the way a record's head stands: the
@@ -85,6 +87,8 @@ export function BriefScreen() {
           under it, and the controls on the far edge where a record's verbs
           stand. The one raised surface under it is the Focus panel — the
           work is the card, and everything around it is the page. */}
+      {/* A link to one decision, from a notice or a receipt, opens it here. */}
+      <LinkedApprovalDrawer />
       <div className="brief-head">
         <BriefGlance
           view={address.view}

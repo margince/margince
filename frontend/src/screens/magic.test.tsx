@@ -209,17 +209,55 @@ describe("the receipt draws every lane it promises", () => {
     expect(screen.queryByText(/magic\.action\./)).toBeNull();
   });
 
-  it("gives a waiting decision no verb, because decisions are decided elsewhere", async () => {
+  it("names a proposal's kind and subject in words, never its code", async () => {
     stub(
       receipt({
         needs_you: [
           line({
+            id: "0198a0de-0000-7000-8000-00000000d0c2",
+            lane: "needs_you",
+            summary: {
+              key: "magic.action.approval_pending",
+              values: { kind: "capture_counterparty" },
+            },
+          }),
+          line({
+            id: "0198a0de-0000-7000-8000-00000000d0c3",
+            lane: "needs_you",
+            summary: {
+              key: "magic.action.approval_capture_counterparty",
+              values: {
+                kind: "capture_counterparty",
+                target: "Boris <boris@customer.example>",
+              },
+            },
+          }),
+        ],
+        totals: { done: 0, needs_you: 2, could_not_complete: 0, watching: 0 },
+      }),
+    );
+    renderMagic();
+    const waiting = await lane("Waiting on you");
+    expect(within(waiting).queryByText(/capture_counterparty/)).toBeNull();
+    expect(
+      within(waiting).getByText(/Boris <boris@customer\.example> wrote to you/),
+    ).toBeTruthy();
+  });
+
+  it("points a waiting decision at that decision, where it is decided", async () => {
+    stub(
+      receipt({
+        needs_you: [
+          line({
+            id: "0198a0de-0000-7000-8000-00000000d0c1",
             lane: "needs_you",
             summary: {
               key: "magic.action.approval_advance_deal",
               values: { target: "Fleet retrofit" },
             },
             consequence: "magic.consequence.awaits_your_decision",
+            // An older server still sends a refusal here; the line must not
+            // repeat it as "cannot be undone" about a change nobody made.
             undo: { undoable: false, reason: "no_completed_change" },
           }),
         ],
@@ -231,8 +269,12 @@ describe("the receipt draws every lane it promises", () => {
     expect(
       within(waiting).getByText("Nothing happens until you decide."),
     ).toBeTruthy();
+    const decide = within(waiting).getByRole("link", { name: "Decide" });
+    expect(decide.getAttribute("href")).toBe(
+      "#/home?approval=0198a0de-0000-7000-8000-00000000d0c1",
+    );
     expect(within(waiting).queryAllByRole("button")).toEqual([]);
-    // Nothing changed yet, so a way back is not a question this line asks.
+    expect(within(waiting).queryByText("Undo")).toBeNull();
     expect(
       within(waiting).queryByText(
         "Nothing changed, so there is nothing to put back.",

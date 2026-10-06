@@ -72,6 +72,63 @@ describe("the receipt at a glance", () => {
     ]);
   });
 
+  // "Done for you" is what an agent did; mail filing and other sync keep the
+  // records current, which is maintenance, so it is counted apart.
+  it("counts an agent's work apart from what sync kept current", async () => {
+    stub(
+      receipt({
+        done: [
+          line({ id: lineId(1), count: 2 }),
+          line({
+            id: lineId(2),
+            summary: { key: "magic.action.mail_filed" },
+            actor: mailFiling,
+            count: 1200,
+          }),
+        ],
+      }),
+    );
+    renderMagic();
+    expect(
+      await within(
+        await screen.findByRole("list", { name: "Summary" }),
+      ).findByText("2 done for you · 1,200 kept in sync"),
+    ).toBeTruthy();
+  });
+
+  it("counts records created and archived as readings of their own", async () => {
+    stub(
+      receipt({
+        done: [
+          line({
+            id: lineId(1),
+            summary: { key: "magic.action.create_contact" },
+            actor: mailFiling,
+            count: 30,
+          }),
+          line({
+            id: lineId(2),
+            summary: { key: "magic.action.create_company" },
+            actor: mailFiling,
+            count: 4,
+          }),
+          line({
+            id: lineId(3),
+            summary: { key: "magic.action.archive_activity" },
+            actor: mailFiling,
+            count: 9,
+          }),
+        ],
+      }),
+    );
+    renderMagic();
+    const glance = await screen.findByRole("region", { name: "What got done" });
+    expect(readings(glance)).toEqual([
+      ["Records created", "34", "Mail filing"],
+      ["Records archived", "9", "Mail filing"],
+    ]);
+  });
+
   it("names the job with the most records across a reading's lines", async () => {
     const mailReader = {
       type: "system",
@@ -139,7 +196,7 @@ describe("the receipt at a glance", () => {
     expect(readings(glance)).toEqual([["Emails filed", "100+", ""]]);
     expect(
       within(screen.getByRole("list", { name: "Summary" })).getByText(
-        "100+ done for you",
+        "100+ kept in sync",
       ),
     ).toBeTruthy();
     expect(screen.getByText("100+ changes, one by one")).toBeTruthy();
@@ -217,7 +274,7 @@ describe("the receipt at a glance", () => {
     ]);
     expect(
       within(screen.getByRole("list", { name: "Summary" })).getByText(
-        "5,001+ done for you",
+        "1 done for you · 5,000+ kept in sync",
       ),
     ).toBeTruthy();
     // "All" would claim the whole of a figure that is only a floor.

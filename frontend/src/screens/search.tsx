@@ -1,42 +1,62 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useQuery } from "@tanstack/react-query";
-import { type FormEvent, useState } from "react";
-import { api } from "../api/client";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { type FormEvent, type ReactNode, useState } from "react";
+import { api, FIRST_PAGE } from "../api/client";
 import type { components } from "../api/schema";
+import { ENTITY } from "../app/entity";
 import { useRecordZone } from "../app/recordzone";
 import { navigate, routeHash } from "../app/router";
 import {
-  SEARCH_HIT_GROUP_KEY,
+  groupSearchHits,
+  SEARCH_FILTER_KEY,
+  SEARCH_GROUP_KEY,
   SEARCH_HIT_ORDER,
   type SearchHitType,
+  type SearchRecordCardType,
+  searchGroupType,
+  searchHitHasCard,
   searchHitRoute,
 } from "../app/searchkinds";
 import { useUrlParams } from "../app/urlstate";
-import { Badge, Card, EmptyState, SearchField } from "../design-system/atoms";
+import { Badge, Button, EmptyState, SearchField } from "../design-system/atoms";
 import { EmailEntry } from "../design-system/emailentry";
 import { FilterPills } from "../design-system/filterpills";
-import { Heading } from "../design-system/heading";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
+import { Panel, PanelBody } from "../design-system/panel";
+import { RecordCard } from "../design-system/recordcard";
 import { formatDateTime, formatNumber } from "../format/format";
-import { useLocale, usePlural, useT } from "../i18n";
-import { QueryGate, throwProblem } from "./common";
+import { type Translator, useLocale, usePlural, useT } from "../i18n";
+import { LoadMoreButton, QueryGate, QueryStates, throwProblem } from "./common";
 import { companyTabRoute } from "./companytab";
 import { useOpenEmail } from "./openemail";
 import "./search.css";
 
 type SearchResult = components["schemas"]["SearchResult"];
 
-// RS-1/RS-2: the cross-object search results screen. Hits are grouped by
-// record type so a caller scanning "acme" sees contacts, companies, deals and the
-// rest as separate sections rather than one undifferentiated ranked list.
+// RS-1/RS-2: the cross-object search results screen. Hits are grouped by what
+// they are so a caller scanning "acme" sees the company, its contacts, its deals
+// and the mail about it as separate sections rather than one ranked list.
+//
+// Unnarrowed, the page asks for a few of EACH type rather than the best fifty
+// overall: relevance does not compare across types, and a thread that names an
+// account in every paragraph outranks the account, so fifty ranked hits could
+// be fifty emails with the company itself nowhere on the page. Narrowed to one
+// type, it is that type's ranked list, paged.
 //
 // The order and the headings come from app/searchkinds.ts, which the ⌘K palette
 // reads too. They were a pair of literals here until a type the server returned
 // went missing from both — project hits came back ranked and were dropped on the
 // floor, because a list that has to be edited by hand once per new type is a
 // list somebody eventually does not edit.
+
+// How many hits of each type the unnarrowed page shows before "Show all".
+export const RESULTS_PER_TYPE = 5;
+
+// Both page shapes ask for the contacts working at a matched company, so a
+// contact the grouped page lists is still there once "Show all" narrows to it.
+const WITH_EMPLOYEES = true;
 
 // Which type the reader has narrowed to. `all` is the absence of a narrowing
 // and is spelled by an ABSENT parameter, so one view has exactly one address.
@@ -58,32 +78,6 @@ export function SearchScreen({
   const zone = useRecordZone();
   const [params, setParams] = useUrlParams();
   const filter = typeFilterFrom(params.get(SEARCH_TYPE_PARAM));
-  const query = useQuery({
-    // The narrowing is part of the key because it is part of the REQUEST: the
-    // pills send `types` to the server rather than hiding rows already drawn,
-    // so a narrowed search is a different answer and not a smaller view of the
-    // same one. That is also why no pill carries a count — the endpoint returns
-    // one page of ranked hits and knows no per-type total, and a figure derived
-    // from what happens to be on screen would be a number the reader could act
-    // on and could not trust.
-    queryKey: ["search", q, filter],
-    enabled: q.trim().length > 0,
-    queryFn: async () => {
-      const { data, error } = await api.GET("/search", {
-        params: {
-          query: {
-            q,
-            limit: 50,
-            ...(filter === ALL_TYPES ? {} : { types: [filter] }),
-          },
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
 
   const narrowTo = (next: TypeFilter) => {
     const dials = new Map(params);
@@ -125,28 +119,40 @@ export function SearchScreen({
         <>
           {/* Drawn above the results and not inside them, because it survives
               an empty answer: a reader who narrowed to Deals and found none
-              needs the control that got them there in order to get back. */}
-          <FilterPills
-            label={t("search.filter.label")}
-            value={filter}
-            onChange={narrowTo}
-            pills={[
-              { value: ALL_TYPES as TypeFilter, label: t("search.filter.all") },
-              ...SEARCH_HIT_ORDER.map((kind) => ({
-                value: kind as TypeFilter,
-                label: t(SEARCH_HIT_GROUP_KEY[kind]),
-              })),
-            ]}
-          />
-          <QueryGate query={query} pendingLabel={t("search.pending")}>
-            {(data) =>
-              data.data.length === 0 ? (
-                <EmptyState>{t("search.empty", { q })}</EmptyState>
-              ) : (
-                <SearchGroups results={data.data} onOpenEmail={setOpenEmail} />
-              )
-            }
-          </QueryGate>
+              needs the control that got them there in order to get back.
+
+              The narrowing is a SERVER dial: a pill sends `types` rather than
+              hiding rows already drawn, so a narrowed search is a different
+              answer and not a smaller view of the same one. That is also why
+              no pill carries a count — the endpoint knows no per-type total,
+              and a figure derived from what happens to be on screen would be
+              a number the reader could act on and could not trust. */}
+          <div className="search-filter">
+            <FilterPills
+              label={t("search.filter.label")}
+              value={filter}
+              onChange={narrowTo}
+              pills={[
+                {
+                  value: ALL_TYPES as TypeFilter,
+                  label: t("search.filter.all"),
+                },
+                ...SEARCH_HIT_ORDER.map((kind) => ({
+                  value: kind as TypeFilter,
+                  label: t(SEARCH_FILTER_KEY[kind]),
+                })),
+              ]}
+            />
+          </div>
+          {filter === ALL_TYPES ? (
+            <GroupedResults
+              q={q}
+              onOpenEmail={setOpenEmail}
+              onNarrow={narrowTo}
+            />
+          ) : (
+            <NarrowedResults q={q} type={filter} onOpenEmail={setOpenEmail} />
+          )}
         </>
       )}
       {/* One drawer over the whole results page, at page level rather than
@@ -161,36 +167,164 @@ export function SearchScreen({
   );
 }
 
-function SearchGroups({
-  results,
+// A few of every type that matched, each type's best first, with a way into
+// the rest of any type the server says holds more.
+function GroupedResults({
+  q,
+  onOpenEmail,
+  onNarrow,
+}: Readonly<{
+  q: string;
+  onOpenEmail: (activityId: string) => void;
+  onNarrow: (type: SearchHitType) => void;
+}>) {
+  const t = useT();
+  const query = useQuery({
+    queryKey: ["search", q, ALL_TYPES],
+    queryFn: async () => {
+      const { data, error } = await api.GET("/search", {
+        params: {
+          query: {
+            q,
+            per_type: RESULTS_PER_TYPE,
+            with_employees: WITH_EMPLOYEES,
+          },
+        },
+      });
+      if (error) {
+        throwProblem(error);
+      }
+      return data;
+    },
+  });
+  return (
+    <QueryGate query={query} pendingLabel={t("search.pending")}>
+      {(data) =>
+        data.data.length === 0 ? (
+          <EmptyState>{t("search.empty", { q })}</EmptyState>
+        ) : (
+          <SearchGroups
+            results={data.data}
+            onOpenEmail={onOpenEmail}
+            more={{ types: data.types_with_more ?? [], onNarrow }}
+          />
+        )
+      }
+    </QueryGate>
+  );
+}
+
+// One type's ranked list, paged by the server's keyset cursor.
+function NarrowedResults({
+  q,
+  type,
   onOpenEmail,
 }: Readonly<{
-  results: SearchResult[];
+  q: string;
+  type: SearchHitType;
   onOpenEmail: (activityId: string) => void;
 }>) {
   const t = useT();
+  const query = useInfiniteQuery({
+    queryKey: ["search", q, type],
+    initialPageParam: FIRST_PAGE,
+    queryFn: async ({ pageParam }) => {
+      const { data, error } = await api.GET("/search", {
+        params: {
+          query: {
+            q,
+            types: [type],
+            limit: 50,
+            with_employees: WITH_EMPLOYEES,
+            cursor: pageParam ?? undefined,
+          },
+        },
+      });
+      if (error) {
+        throwProblem(error);
+      }
+      return data;
+    },
+    getNextPageParam: (last) => last.page.next_cursor ?? null,
+  });
+  const hits = query.data?.pages.flatMap((page) => page.data) ?? [];
+  return (
+    <QueryStates query={query} pendingLabel={t("search.pending")}>
+      {hits.length === 0 ? (
+        <EmptyState>{t("search.empty", { q })}</EmptyState>
+      ) : (
+        <>
+          <SearchGroups results={hits} onOpenEmail={onOpenEmail} />
+          <LoadMoreButton query={query} />
+        </>
+      )}
+    </QueryStates>
+  );
+}
+
+function SearchGroups({
+  results,
+  onOpenEmail,
+  more,
+}: Readonly<{
+  results: SearchResult[];
+  onOpenEmail: (activityId: string) => void;
+  // Which types hold more than is drawn, and how to show them. Absent on a
+  // narrowed page, where the rest arrives by loading more instead.
+  more?: Readonly<{
+    types: readonly SearchHitType[];
+    onNarrow: (type: SearchHitType) => void;
+  }>;
+}>) {
+  const t = useT();
+  const groups = groupSearchHits(results);
   return (
     <div className="search-groups arrive-stack">
-      {SEARCH_HIT_ORDER.filter((type) =>
-        results.some((r) => r.type === type),
-      ).map((type) => (
-        <Card key={type} className="search-group">
-          <Heading size="small" as="h2">
-            {t(SEARCH_HIT_GROUP_KEY[type])}
-          </Heading>
-          <ul className="search-hits">
-            {results
-              .filter((r) => r.type === type)
-              .map((hit) => (
-                <SearchHit
-                  key={`${hit.type}:${hit.id}`}
-                  hit={hit}
-                  onOpenEmail={onOpenEmail}
-                />
-              ))}
-          </ul>
-        </Card>
-      ))}
+      {groups.map(({ group, hits }, index) => {
+        const heading = t(SEARCH_GROUP_KEY[group]);
+        const type = searchGroupType(group);
+        // Emails and activities narrow to one list and the server counts them
+        // as one type, so only the first of their groups offers the rest.
+        const offersMore =
+          more?.types.includes(type) &&
+          groups.findIndex((other) => searchGroupType(other.group) === type) ===
+            index;
+        return (
+          <Panel
+            key={group}
+            title={heading}
+            titleAction={
+              offersMore &&
+              more && (
+                <Button
+                  aria-label={t("search.group.showAllNamed", {
+                    group: t(SEARCH_FILTER_KEY[type]),
+                  })}
+                  onClick={() => more.onNarrow(type)}
+                >
+                  {t("list.showAll")}
+                </Button>
+              )
+            }
+          >
+            <PanelBody>
+              <ul
+                className={
+                  searchHitHasCard(type) ? "record-card-list" : "search-hits"
+                }
+              >
+                {hits.map((hit) => (
+                  <SearchHit
+                    key={`${hit.type}:${hit.id}`}
+                    hit={hit}
+                    onOpenEmail={onOpenEmail}
+                  />
+                ))}
+              </ul>
+            </PanelBody>
+          </Panel>
+        );
+      })}
     </div>
   );
 }
@@ -223,13 +357,19 @@ function SearchHit({
       </li>
     );
   }
+  // A contact or a company is a record LISTED here, so it wears the card the
+  // record rails list one in; every other kind keeps its title line.
+  const type = hit.type;
+  if (searchHitHasCard(type)) {
+    return <RecordHit hit={hit} type={type} />;
+  }
   // Where this kind goes, asked of the one place that knows. A tag is not a
   // record and a catalog row has no page of its own, and each used to be a
   // branch spelled here as well as in the palette; an activity answers null
   // because it is a link rather than a thing links hang off, and it renders as
   // plain text.
   const isTag = hit.type === "tag";
-  const route = searchHitRoute(hit.type as SearchHitType, hit.id);
+  const route = searchHitRoute(type, hit.id);
   return (
     <li className="search-hit">
       <div className="search-hit-title">
@@ -248,43 +388,7 @@ function SearchHit({
         ) : (
           <span>{hit.title ?? hit.id}</span>
         )}
-        {/* Only a tier the reader would not otherwise assume. Nearly every
-            stored record is `authoritative` (contract: external and unverified
-            are reserved for connector rows), so badging it
-            put the same green pill on every hit on the page — a mark that
-            never varies marks nothing, and it crowded out the one that does.
-            `unverified` is the opposite case and keeps its badge: it is rare by
-            the same contract, and a tier the record CARRIES while the page draws
-            nothing reads as a record with nothing to declare.
-
-            Neither badge names the SYSTEM a row came from. `external` covers
-            every connector-sourced row and the hit carries no provider field,
-            so one vendor's name would be stamped on rows mirrored from any
-            other. */}
-        {hit.trust_tier === "external" && (
-          <Badge tone="accent">{t("search.tier.mirrored")}</Badge>
-        )}
-        {hit.trust_tier === "unverified" && (
-          <Badge tone="warning">{t("search.tier.unverified")}</Badge>
-        )}
-        {/* The route rides with the badge: a mark with nowhere to go leaves the
-            reader on a Partners screen reachable only by knowing it exists.
-            `true` alone draws it — null is a marker nobody took, not a company
-            checked and found plain. */}
-        {hit.type === "company" && hit.is_partner === true && (
-          <>
-            <Badge>{t("search.partner.badge")}</Badge>
-            <a
-              className="entity-link"
-              href={routeHash(companyTabRoute(hit.id, "partner"))}
-              aria-label={t("search.partner.openNamed", {
-                name: hit.title ?? hit.id,
-              })}
-            >
-              {t("search.partner.open")}
-            </a>
-          </>
-        )}
+        {hitMarks(hit, t)}
       </div>
       {/* `hit.score` is deliberately not drawn. The contract bounds it to
           nothing (schema: "Relevance score"), so the retriever's raw figure
@@ -313,4 +417,83 @@ function SearchHit({
       )}
     </li>
   );
+}
+
+// A contact or a company, drawn from what the hit carries — the name, the
+// logo, the employer — and never from a read per hit.
+function RecordHit({
+  hit,
+  type,
+}: Readonly<{ hit: SearchResult; type: SearchRecordCardType }>) {
+  const t = useT();
+  const marks = hitMarks(hit, t);
+  // A contact found through its employer says so, or a reader looking for
+  // Acme meets a name with no reason it is on the page.
+  const reason = hit.works_at
+    ? t("search.contact.worksAt", { company: hit.works_at.company_name })
+    : hit.snippet;
+  // The marks are facts about the record, so they share its facts row, which
+  // spans the card and wraps; in the aside's track they squeezed the name.
+  const facts = (reason || marks.length > 0) && (
+    <span className="search-hit-marks">
+      {reason && <span>{reason}</span>}
+      {marks}
+    </span>
+  );
+  return (
+    <li className="search-hit">
+      <RecordCard
+        kind={type}
+        name={hit.title ?? hit.id}
+        identity={hit.id}
+        href={routeHash(ENTITY[type].route(hit.id))}
+        logo={hit.logo_url}
+        position={facts}
+      />
+    </li>
+  );
+}
+
+// What a hit carries beyond its name: a tier the reader would not assume, and
+// whether a company is a partner.
+function hitMarks(hit: SearchResult, t: Translator): ReactNode[] {
+  const marks: ReactNode[] = [];
+  // Nearly every stored record is `authoritative` (external and unverified are
+  // reserved for connector rows), and a mark that never varies marks nothing.
+  // Neither badge names the SYSTEM: the hit carries no provider field.
+  if (hit.trust_tier === "external") {
+    marks.push(
+      <Badge key="tier" tone="accent">
+        {t("search.tier.mirrored")}
+      </Badge>,
+    );
+  }
+  // Rare by the same contract, and a tier the record CARRIES while the page
+  // draws nothing reads as a record with nothing to declare.
+  if (hit.trust_tier === "unverified") {
+    marks.push(
+      <Badge key="tier" tone="warning">
+        {t("search.tier.unverified")}
+      </Badge>,
+    );
+  }
+  // `true` alone: null is a marker nobody took, not a company found plain. The
+  // route rides with the badge, or the Partners screen is reachable only by
+  // knowing it exists.
+  if (hit.type === "company" && hit.is_partner === true) {
+    marks.push(
+      <Badge key="partner">{t("search.partner.badge")}</Badge>,
+      <a
+        key="partner-open"
+        className="entity-link"
+        href={routeHash(companyTabRoute(hit.id, "partner"))}
+        aria-label={t("search.partner.openNamed", {
+          name: hit.title ?? hit.id,
+        })}
+      >
+        {t("search.partner.open")}
+      </a>,
+    );
+  }
+  return marks;
 }

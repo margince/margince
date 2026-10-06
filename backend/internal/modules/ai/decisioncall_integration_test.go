@@ -62,7 +62,7 @@ func TestADecisionCallRoundTripsTheTrace(t *testing.T) {
 
 	reader := NewCallReadStore(env.dbFor(ws))
 	readCtx := diagnosticsReader(ws)
-	page, err := reader.ListCalls(readCtx, nil, nil, nil)
+	page, err := reader.ListCalls(readCtx, nil, nil, CallListFilter{})
 	if err != nil || len(page.Items) != 1 {
 		t.Fatalf("ListCalls: %d items, %v", len(page.Items), err)
 	}
@@ -136,7 +136,7 @@ func TestTheTraceListSaysWhichCallsAskedADecisionModel(t *testing.T) {
 	}
 
 	reader := NewCallReadStore(env.dbFor(ws))
-	page, err := reader.ListCalls(diagnosticsReader(ws), nil, nil, nil)
+	page, err := reader.ListCalls(diagnosticsReader(ws), nil, nil, CallListFilter{})
 	if err != nil || len(page.Items) != 2 {
 		t.Fatalf("ListCalls: %d items, %v", len(page.Items), err)
 	}
@@ -167,7 +167,7 @@ func decidedDetail(t *testing.T, task Task, reply decisionReply) CallDetail {
 	}
 	reader := NewCallReadStore(env.dbFor(ws))
 	readCtx := diagnosticsReader(ws)
-	page, err := reader.ListCalls(readCtx, nil, nil, nil)
+	page, err := reader.ListCalls(readCtx, nil, nil, CallListFilter{})
 	if err != nil || len(page.Items) != 1 {
 		t.Fatalf("ListCalls: %d items, %v", len(page.Items), err)
 	}

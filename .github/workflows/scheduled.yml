@@ -481,6 +481,16 @@ jobs:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           MARGINCE_E2E_LLM: "1"
           E2E_LLM_SLUG: ci
+          # The subscription token above is the only credential this job holds,
+          # and only the claude CLI can spend it.
+          E2E_LLM_CANDIDATE: claude
+          E2E_LLM_VIA: cli
+          # No embedding key reaches this runner, so search_context ranks by
+          # word overlap; the verdicts it would write say `search: lexical`.
+          E2E_LLM_ALLOW_LEXICAL: "1"
+          # Verdicts go to a directory this run alone writes, so the upload
+          # below can never carry the committed ones in its place.
+          E2E_LLM_VERDICTS: ${{ runner.temp }}/e2e-llm-verdicts
         run: |
           set -o pipefail
           if make e2e-llm 2>&1 | tee llm.log; then
@@ -510,6 +520,16 @@ jobs:
           # nothing — a green step on top of a job that had already failed 30
           # seconds in. The absence of transcripts is itself the finding.
           if-no-files-found: error
+      # The verdicts each say how they were measured (route, search mode), which
+      # the transcripts do not; a lane that stopped first leaves none, so warn.
+      - name: Keep the run verdicts
+        if: always() && steps.funded.outputs.configured == 'yes'
+        uses: ./.github/actions/upload-artifact-retried
+        with:
+          name: e2e-llm-verdicts
+          path: ${{ runner.temp }}/e2e-llm-verdicts/
+          retention-days: 30
+          if-no-files-found: warn
 
   # PERF-1's PERCEIVED budget (MOBILE-AC-2), the browser half of what
   # perf-budgets measures over HTTP.

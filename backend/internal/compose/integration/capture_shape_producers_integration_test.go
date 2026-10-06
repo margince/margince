@@ -99,7 +99,7 @@ func TestTheExtractorIsOfferedAConversationCaptureLinkedThroughAContact(t *testi
 	brain := &scriptedBrain{reply: `{"events": []}`}
 	extractor := compose.NewSignalExtractor(e.Pool, brain,
 		func() time.Time { return captureShapeClock }, slog.Default())
-	pass, err := extractor.RunWorkspace(e.Admin(), ids.From[ids.WorkspaceKind](e.WS))
+	pass, err := extractor.RunWorkspace(signalScanCtx(e), ids.From[ids.WorkspaceKind](e.WS))
 	if err != nil {
 		t.Fatalf("signal extract: %v", err)
 	}
@@ -163,7 +163,7 @@ func TestAModelReadOfPrivateMailIsPrivateEvenOnASharedAccount(t *testing.T) {
 		"They wrote that they will not renew.", 0.95)}
 	extractor := compose.NewSignalExtractor(e.Pool, brain,
 		func() time.Time { return captureShapeClock }, slog.Default())
-	if _, err := extractor.RunWorkspace(e.Admin(), ids.From[ids.WorkspaceKind](e.WS)); err != nil {
+	if _, err := extractor.RunWorkspace(signalScanCtx(e), ids.From[ids.WorkspaceKind](e.WS)); err != nil {
 		t.Fatalf("signal extract: %v", err)
 	}
 
@@ -286,7 +286,7 @@ func TestAPrivateAccountSuppliesTheReaderItsOwnMailAnswersTo(t *testing.T) {
 		"They wrote that they will not renew.", 0.95)}
 	extractor := compose.NewSignalExtractor(e.Pool, brain,
 		func() time.Time { return captureShapeClock }, slog.Default())
-	if _, err := extractor.RunWorkspace(e.Admin(), ids.From[ids.WorkspaceKind](e.WS)); err != nil {
+	if _, err := extractor.RunWorkspace(signalScanCtx(e), ids.From[ids.WorkspaceKind](e.WS)); err != nil {
 		t.Fatalf("signal extract: %v", err)
 	}
 

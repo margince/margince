@@ -193,7 +193,7 @@ func (e metricEvaluator) capturedMovementChart(ctx context.Context, tx pgx.Tx, c
 	if err != nil {
 		return chart, nil, err
 	}
-	if withheld {
+	if withheld || before.Withheld || after.Withheld {
 		chart.Coverage = reportingGap(reportingUnavailable, "Some captured contributions are restricted")
 		chart.Coverage.Withheld = true
 		return chart, nil, nil

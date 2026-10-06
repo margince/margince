@@ -412,7 +412,7 @@ func writeActivitySatellites(
 	// Who was in it (ACT-DDL-3). After the links, because the counterparty is
 	// whichever contact they name — and they have just been through the
 	// row-scope gate, so nothing here needs to re-check them.
-	if err := stampLoggedParticipants(ctx, tx, id, in.Kind, in.Direction, in.Links, in.Author); err != nil {
+	if err := stampLoggedParticipants(ctx, tx, id, in); err != nil {
 		return err
 	}
 	if err := recordImportedProvenance(ctx, tx, id, in, by); err != nil {

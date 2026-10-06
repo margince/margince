@@ -58,7 +58,10 @@ export function StageRulesCard({
       if (error) {
         throwProblem(error);
       }
-      return data.data;
+      // The whole response, not only the rows: it carries whether this
+      // installation permits automation at all, and a rule's mode means nothing
+      // without that.
+      return data;
     },
   });
 
@@ -97,7 +100,7 @@ export function StageRulesCard({
   }
 
   const byTransition = new Map(
-    (rules.data ?? []).map((rule) => [
+    (rules.data?.data ?? []).map((rule) => [
       keyOf(rule.from_stage_id, rule.to_stage_id),
       rule,
     ]),
@@ -112,6 +115,19 @@ export function StageRulesCard({
           {t("stageAutomation.rules")}
         </Heading>
         <p>{t("stageAutomation.rulesIntro")}</p>
+        {/* Above the switches, because it OVERRIDES every one of them: while the
+            installation has automation off, the server forces each transition to
+            propose whatever its own row reads. A switch showing `auto` beneath
+            this notice is saying what the rule asks for, not what will happen. */}
+        {rules.data?.automation_enabled === false && (
+          <Callout
+            tone="warning"
+            kind="standing"
+            title={t("stageAutomation.offTitle")}
+          >
+            {t("stageAutomation.offBody")}
+          </Callout>
+        )}
         {save.isError && (
           <Callout
             tone="danger"

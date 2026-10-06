@@ -112,8 +112,9 @@ type Store struct {
 	// clock reads the current instant. Injected so the scheduling suites can
 	// pin a due moment and a missed window without sleeping (P3).
 	clock func() time.Time
-	// horizons remembers the measured waiting horizon per workspace for an
-	// hour (waitinghorizoncache.go). A POINTER, so every With* copy of one store
+	// horizons remembers the waiting horizon per workspace: an hour
+	// for a measurement, five minutes for the compiled stand-in for one that
+	// timed out (waitinghorizoncache.go). A POINTER, so every With* copy of one store
 	// shares one memory rather than each clone re-measuring a year of answers.
 	horizons *horizonCache
 }

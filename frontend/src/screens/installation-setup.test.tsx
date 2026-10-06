@@ -667,6 +667,26 @@ describe("the first-run setup gate", () => {
     ).toBeNull();
   });
 
+  it("holds no copy of a stored key in the mutation cache when the binding fails", async () => {
+    const user = userEvent.setup();
+    const { writes, qc } = mount(setupReport(false, false), ["/ai/routing"]);
+    await screen.findByText("Choose a model provider");
+    await user.type(screen.getByLabelText("API key"), "AIza-secret");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await waitFor(() => expect(writes.length).toBe(2));
+
+    await waitFor(() =>
+      expect(
+        JSON.stringify(
+          qc
+            .getMutationCache()
+            .getAll()
+            .map((m) => m.state.variables),
+        ),
+      ).not.toContain("AIza-secret"),
+    );
+  });
+
   // A first-time admin should not have to know a model id by heart. The sheet
   // the installation was seeded with is what it can price, so it is what the
   // field offers — per lane, because an embedder cannot serve a chat tier.

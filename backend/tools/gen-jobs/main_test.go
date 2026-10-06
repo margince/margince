@@ -41,6 +41,20 @@ kinds:
 `, "declares no timeout")
 }
 
+// A timeout nothing in the file states would be computed somewhere else at
+// boot, and the one kind that did that now derives its value from a constant.
+func TestParseRejectsATimeoutTakenFromConfiguration(t *testing.T) {
+	mustFail(t, validQueues+`
+kinds:
+  foo_workspace:
+    role: worker
+    go_type: FooWorkspaceArgs
+    queue: default
+    timeout: {operator: SomeCaps}
+    opts_owner: caller
+`, "operator")
+}
+
 func TestParseRejectsAQueueNoEntryDeclares(t *testing.T) {
 	mustFail(t, validQueues+`
 kinds:
@@ -433,12 +447,12 @@ kinds:
 `, "fans out to nothing")
 }
 
-// fourForms carries one kind per timeout form, plus an on-demand dispatcher, so
+// timeoutForms carries one kind per timeout form, plus an on-demand dispatcher, so
 // the parse assertions and the emitted-source assertions below are made against
 // the same document. The derived value is 26m20s deliberately: it is not a whole
 // number of minutes, which is what exercises goDuration's fall-through to
 // seconds — the rung a rounder fixture would never reach.
-const fourForms = validQueues + `
+const timeoutForms = validQueues + `
 kinds:
   a_workspace:
     role: worker
@@ -451,12 +465,6 @@ kinds:
     go_type: BWorkspaceArgs
     queue: default
     timeout: {derived: bPassTimeout, value: 26m20s}
-    opts_owner: caller
-  c_workspace:
-    role: worker
-    go_type: CWorkspaceArgs
-    queue: default
-    timeout: {operator: SomeCaps}
     opts_owner: caller
   d_workspace:
     role: worker
@@ -500,8 +508,8 @@ func specBlock(t *testing.T, src, kind string) string {
 	return src[start : start+end]
 }
 
-func TestParseAcceptsTheFourTimeoutForms(t *testing.T) {
-	c := mustParse(t, fourForms)
+func TestParseAcceptsTheThreeTimeoutForms(t *testing.T) {
+	c := mustParse(t, timeoutForms)
 	if got := c.Kinds["a_workspace"].Timeout.Fixed; got != 90_000_000_000 {
 		t.Errorf("a_workspace fixed timeout = %v, want 90s", got)
 	}
@@ -510,9 +518,6 @@ func TestParseAcceptsTheFourTimeoutForms(t *testing.T) {
 	}
 	if got := c.Kinds["b_workspace"].Timeout.Fixed; got != 1_580_000_000_000 {
 		t.Errorf("b_workspace resolved value = %v, want 26m20s — Govern hands River a duration, not a constant name", got)
-	}
-	if got := c.Kinds["c_workspace"].Timeout.Operator; got != "SomeCaps" {
-		t.Errorf("c_workspace operator field = %q, want SomeCaps", got)
 	}
 	if !c.Kinds["d_workspace"].Timeout.None {
 		t.Error("d_workspace must parse as a deliberate absence")
@@ -524,7 +529,7 @@ func TestParseAcceptsTheFourTimeoutForms(t *testing.T) {
 // goDuration's unit ladder. Determinism alone does not cover either — an
 // emitter that renders the same wrong duration every time is perfectly stable.
 func TestEmitRendersEachTimeoutForm(t *testing.T) {
-	src, err := emitSpecs(mustParse(t, fourForms), "hash")
+	src, err := emitSpecs(mustParse(t, timeoutForms), "hash")
 	if err != nil {
 		t.Fatalf("emitting specs: %v", err)
 	}
@@ -543,16 +548,6 @@ func TestEmitRendersEachTimeoutForm(t *testing.T) {
 		}
 	}
 
-	// The field path, not merely the posture: it is what a gate joins the
-	// registration's computed expression back to, and a policy that rendered
-	// only "this comes from an operator" would leave WHICH dial uncheckable.
-	operator := specBlock(t, src, "c_workspace")
-	if !strings.Contains(operator, `TimeoutPolicy{OperatorField: "SomeCaps"}`) {
-		t.Errorf("c_workspace rendered as:\n%s\nwant TimeoutPolicy{OperatorField: \"SomeCaps\"}", operator)
-	}
-	if strings.Contains(operator, "Fixed") {
-		t.Errorf("c_workspace rendered as:\n%s\nan {operator: …} policy must not carry a Fixed: Duration returns the SUPPLIED value, so a leaked one would be silently unreachable", operator)
-	}
 }
 
 // TestEmitRendersTheDeclarationsAConsumerReads pins the fields whose absence
@@ -560,7 +555,7 @@ func TestEmitRendersEachTimeoutForm(t *testing.T) {
 // render as a kind with no schedule, and the kind-to-type pairing must survive
 // into Go so a gate can assert it without re-parsing the contract.
 func TestEmitRendersTheDeclarationsAConsumerReads(t *testing.T) {
-	src, err := emitSpecs(mustParse(t, fourForms), "hash")
+	src, err := emitSpecs(mustParse(t, timeoutForms), "hash")
 	if err != nil {
 		t.Fatalf("emitting specs: %v", err)
 	}

@@ -14,6 +14,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -24,7 +25,10 @@ import (
 type InviteUserInput struct {
 	Email       string
 	DisplayName string
-	Role        string
+	// GreetingName is the name the member's greetings use; nil leaves it
+	// unset, and their first federated sign-in may then fill it.
+	GreetingName *string
+	Role         string
 	// TeamIDs are the teams the member joins on arrival, in the same
 	// transaction as the seat and the role.
 	TeamIDs []ids.UUID
@@ -57,6 +61,11 @@ func (s *Service) InviteUser(ctx context.Context, actor Identity, in InviteUserI
 		return ids.UserID{}, "", err
 	}
 	in.TeamIDs = teams
+	greeting, err := greetingNameOf(in.GreetingName)
+	if err != nil {
+		return ids.UserID{}, "", err
+	}
+	in.GreetingName = greetingNameColumn(greeting)
 	raw, tokenHash, err := mintSessionToken()
 	if err != nil {
 		return ids.UserID{}, "", err
@@ -89,9 +98,9 @@ func (s *Service) InviteUser(ctx context.Context, actor Identity, in InviteUserI
 			return err
 		}
 		insErr := tx.QueryRow(ctx,
-			`INSERT INTO app_user (email, password_hash, display_name, status)
-			 VALUES (lower($1), NULL, $2, 'invited') RETURNING id`,
-			in.Email, in.DisplayName).Scan(&newUserID)
+			`INSERT INTO app_user (email, password_hash, display_name, greeting_name, status)
+			 VALUES (lower($1), NULL, $2, $3, 'invited') RETURNING id`,
+			in.Email, in.DisplayName, in.GreetingName).Scan(&newUserID)
 		if storekit.IsUniqueViolation(insErr) {
 			return errEmailTaken
 		}
@@ -113,15 +122,33 @@ func (s *Service) InviteUser(ctx context.Context, actor Identity, in InviteUserI
 			return err
 		}
 		auditID, err := storekit.Audit(ctx, tx, "create", "user", newUserID.UUID,
-			nil, map[string]any{"email": in.Email, "role": in.Role, fieldTeamIDs: in.TeamIDs, userAuditKeyStatus: userStatusInvited})
+			nil, map[string]any{
+				"email": in.Email, "role": in.Role, fieldTeamIDs: in.TeamIDs,
+				userAuditKeyStatus: userStatusInvited, greetingNameField: in.GreetingName,
+			})
 		if err != nil {
 			return err
 		}
-		return storekit.EmitEvent(ctx, tx, auditID, newUserID.UUID,
-			userInvitedPayload(newUserID, in.Role, actor.UserID, in.TeamIDs))
+		return emitInvited(ctx, tx, auditID, newUserID, actor.UserID, in)
 	})
 	if err != nil {
 		return ids.UserID{}, "", err
 	}
 	return newUserID, raw, nil
+}
+
+// emitInvited publishes the invitation, and the greeting name when the invite
+// carried one, so a subscriber that follows greeting names hears it too.
+func emitInvited(
+	ctx context.Context, tx pgx.Tx, auditID ids.UUID, newUserID, inviter ids.UserID, in InviteUserInput,
+) error {
+	if err := storekit.EmitEvent(ctx, tx, auditID, newUserID.UUID,
+		userInvitedPayload(newUserID, in.Role, inviter, in.TeamIDs)); err != nil {
+		return err
+	}
+	if in.GreetingName == nil {
+		return nil
+	}
+	return storekit.EmitEvent(ctx, tx, auditID, newUserID.UUID,
+		crmcontracts.PublicEventUserGreetingNameChanged{GreetingName: in.GreetingName})
 }

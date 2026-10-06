@@ -89,6 +89,12 @@ type JobRunnerConfig struct {
 	// what River does with it and why it keeps River's own name. Production
 	// leaves it false; TestJobRunnerConfigIsNeverSetInProduction holds that.
 	TestOnly bool
+	// DrainWindow is jobs.Config.SoftStopTimeout: how long a job already
+	// running when the runner stops keeps its work context. Zero leaves the
+	// runner's stop hard — every running job's work context is cancelled the
+	// moment the context the runner was started under is — which only a test
+	// harness wants.
+	DrainWindow time.Duration
 	// SendPacing bounds how fast one mailbox transmits and how long a
 	// delivery may be deferred before it parks; the zero value takes the
 	// documented defaults (SendPacing.withDefaults).
@@ -175,6 +181,9 @@ type JobRunnerConfig struct {
 	// could only fail every job it enqueued. Declared by omission, the posture
 	// GmailRegistry already takes.
 	ChannelVault keyvault.Vault
+	// AIKeyVault holds the sealed vendor keys the price sweep lists models with.
+	// Nil lists with the environment's keys only; the sweep still registers.
+	AIKeyVault keyvault.Vault
 	// ChannelAPI is the Telegram Bot API seam the poller dials out through. Nil
 	// takes the real client, which is what every process role passes; the
 	// acceptance suites substitute a fake, because a poller left on the real
@@ -306,9 +315,6 @@ type JobRunnerConfig struct {
 	// then settles its domain from what the workspace already knows rather than
 	// leaving the question open forever.
 	DeepReadTriageBrain completer
-	// DeepReadCaps bounds each deep-read crawl; the zero value takes the
-	// compose defaults (CrawlCaps.withDefaults).
-	DeepReadCaps CrawlCaps
 	// Blobstore holds the logo bytes a deep read resolves from the site it
 	// crawls (A55). Nil is a worker role with no object store: reads still
 	// run and still land their facts, and every company keeps the monogram
@@ -378,10 +384,11 @@ func NewJobRunner(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*j
 	}
 
 	return jobs.New(pool, jobs.Config{
-		Queues:       jobQueues(),
-		Workers:      reg.workers,
-		PeriodicJobs: periodic,
-		TestOnly:     cfg.TestOnly,
+		Queues:          jobQueues(),
+		Workers:         reg.workers,
+		PeriodicJobs:    periodic,
+		SoftStopTimeout: cfg.DrainWindow,
+		TestOnly:        cfg.TestOnly,
 	}, log)
 }
 
@@ -427,6 +434,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		addDealScoutJobs(reg, pool, cfg, log),
 		addListEvaluateJobs(reg, pool, cfg, log),
 		addFinanceJobs(reg, pool, cfg, log),
+		addAIPriceSyncJobs(reg, pool, cfg, log),
 		registerTelegramPoll(reg, pool, cfg, log),
 		// The composed extension jobs, if any. Empty on every vanilla process:
 		// the ext_ kinds and their ticks do not exist there at all.

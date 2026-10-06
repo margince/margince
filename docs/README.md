@@ -81,6 +81,7 @@ a 24-hour deadline is not a thing to work out under pressure.
 - [getting-started.md](tutorials/getting-started.md) — clone → running instance with a bootstrapped workspace.
 
 ### How-to — accomplish a task
+- [Inventory what history left in the Worklist](how-to/inventory-home-attention.md) — a read-only count of imported mail, old requests, privacy duties and proposals before a repair.
 - [Operate sales reporting](how-to/operate-reporting.md) — setup, captures, schedules, privacy and durable schedule pause.
 - [add-an-endpoint.md](how-to/add-an-endpoint.md) — add or change an API operation (contract → gen → handler).
 - [add-a-module.md](how-to/add-a-module.md) — add a new capability (module) or a cross-module edge, wired into compose.
@@ -92,6 +93,8 @@ a 24-hour deadline is not a thing to work out under pressure.
 - [work-on-an-issue.md](how-to/work-on-an-issue.md) — check whether an issue is already somebody's before you start it, claim the one you take, hand it back when you stop, and re-derive its ruling from the code before you build any of it.
 - [mint-a-passport.md](how-to/mint-a-passport.md) — issue an agent passport token.
 - [connect-an-mcp-client.md](how-to/connect-an-mcp-client.md) — connect a client to the governed MCP tool surface.
+- [test-the-mcp-surface-end-to-end.md](how-to/test-the-mcp-surface-end-to-end.md) — drive the MCP surface with a real Claude, GPT or Mistral (`make e2e-llm`): pick the assistant and route, give the stack a working search, read a harness stop apart from a finding, publish to the coverage page.
+- [improve-mcp-quality.md](how-to/improve-mcp-quality.md) — the loop that raises the score for Claude and Codex: triage each red case to harness, grader, copy, result shape or model; fix that layer honestly; prove it free; re-run with controls; widen what the scenarios prove.
 - [run-the-frontend.md](how-to/run-the-frontend.md) — run the SPA in dev.
 - [connect-a-mailbox.md](how-to/connect-a-mailbox.md) — connect a mailbox for capture: Gmail OAuth (standing sync + backfill), IMAP app-password, Microsoft Graph OAuth, or Google Calendar — all standing connections.
 - [enrich-with-a-local-llm.md](how-to/enrich-with-a-local-llm.md) — point the AI lanes at a local Ollama and enrich a company with no cloud key.
@@ -102,6 +105,7 @@ a 24-hour deadline is not a thing to work out under pressure.
 - [import-your-linkedin-network.md](how-to/import-your-linkedin-network.md) — import your own `Connections.csv` as graph substrate, and read the reach it buys.
 - [import-a-company-spreadsheet.md](how-to/import-a-company-spreadsheet.md) — bring a CSV of companies in: the column mapping, what the preview counts, and how a row names the company it corrects.
 - [connect-a-cloud-model-provider.md](how-to/connect-a-cloud-model-provider.md) — bind the AI lanes to a BYOK cloud key (Anthropic / OpenAI / Gemini / any OpenAI-compatible vendor).
+- [recover-after-a-provider-outage.md](how-to/recover-after-a-provider-outage.md) — read the AI provider status card, fix the cause, and reopen the sender questions and company enrichments an outage parked (`worker reopen-parked`, dry run first).
 - [certify-an-ai-model.md](how-to/certify-an-ai-model.md) — certify a model against a task's fixture corpus and benchmark a candidate swap (`make e2e-ai`).
 - [certify-a-decision-site.md](how-to/certify-a-decision-site.md) — certify a decision model for a site, so the `decisions:` lane may answer it, and re-certify or drop it when the site changes.
 - [re-certify-the-whole-corpus.md](how-to/re-certify-the-whole-corpus.md) — the sweep loop after a tree-wide change stales every record: run both preset bindings, tell a moved question from a model regression before calling anything a drop, fix or flag, re-run one task, regenerate both generated pages.
@@ -110,6 +114,7 @@ a 24-hour deadline is not a thing to work out under pressure.
 - [register-a-webhook.md](how-to/register-a-webhook.md) — register an HTTPS endpoint for Standard-Webhooks-signed, retried outbound delivery of contract-generated event payloads (curl or Settings → Integrations), and verify/inspect/replay a delivery.
 - [add-an-extension.md](how-to/add-an-extension.md) — ship a stable-tier extension unit (a jurisdiction pack) under `extensions/`, composed and verified.
 - [debug-an-ai-task.md](how-to/debug-an-ai-task.md) — run ONE production AI invocation site against input you supply (`make ai-probe`), and read every boundary between that input and the verdict as numbers.
+- [tune-ai-requests.md](how-to/tune-ai-requests.md) — read what the model calls did per provider, tier and task, then set OpenRouter routing and privacy and each task's thinking level and timeouts.
 - [build-the-desktop-app.md](how-to/build-the-desktop-app.md) — build the self-contained folder that runs the whole stack with no Docker, on macOS (`make desktop`) or Windows (`make desktop-win`), then run, configure and update an installation.
 - [update-the-handbook.md](how-to/update-the-handbook.md) — change the operator handbook so the in-app ask can answer from it: how a page is cut and read, the task-section rules, the probe (`scripts/handbook-ask/probe.sh`) to run before and after, and the checklist.
 - [cut-a-release.md](how-to/cut-a-release.md) — push a `v*` tag and get a GitHub release with both desktop bundles attached: what the tag's shelf decides, what a failed or re-run lane leaves behind, and why this is not the constellation dist release.
@@ -147,6 +152,7 @@ budget rather than keeping its own list of which pages are generated.
 - [vllm-self-hosting.md](reference/vllm-self-hosting.md) — the same 24GB Mac mini M4 serving Qwen3, gpt-oss, Gemma 3 and two Mistral models through vLLM (vllm-metal): the server flags that change answers (thinking, window, sampling, the JSON whitespace loop), what did not start or answered gibberish, and a pass rate and latency per model on seven tasks.
 - [ai-thinking.md](reference/ai-thinking.md) — how much a model thinks before it answers: the level vocabulary, where a site's floor and a binding's own level are set, their precedence, and the exact wire field each provider and model is sent.
 - [openrouter.md](reference/openrouter.md) — the broker's upstream selection: why a model id served by 21 hosts makes latency and answer quality a per-request lottery, the `routing:` default this product ships against that (reliability over price, the inverse of the broker's own), which preferences are hard filters and which only reorder, and the 2026-09-02 measurements behind each choice — including the one that was 17× faster and would have cost a fifth of the certification score.
+- [openrouter-routing-fields.md](reference/openrouter-routing-fields.md) — every key a `routing:` value may carry, whether a tier or the connection owns it, and how a misplaced or unknown key is refused by its path.
 - [make-targets.md](reference/make-targets.md) — every `make` target.
 - [system-requirements.md](reference/system-requirements.md) — what an installation needs, for both deployment shapes: one node, or the api / worker / web / database on separate nodes.
 - [ai-egress.md](reference/ai-egress.md) — every declared AI task, and whether the text it reads can leave the installation. Generated from `backend/api/ai-tasks.yaml`, never hand-edited.
@@ -192,6 +198,8 @@ budget rather than keeping its own list of which pages are generated.
 **AI, retrieval and automation**
 
 - [ai-runtime.md](explanation/ai-runtime.md) — the AI task contract, tiers/ladders, the routing config, the one Router gate, honest tracing, and certification.
+- [ai-provider-health.md](explanation/ai-provider-health.md) — the five provider health states, what trips and clears each, why a blocked provider is skipped with no call and no charge, and why a throttle is not a state.
+- [ai-request-settings.md](explanation/ai-request-settings.md) — per-task thinking and timeouts, the deadline every ladder rung runs under, what each attempt records it was sent, and the call figures the admin screens read.
 - [agent-surface.md](explanation/agent-surface.md) — the Surface-B reasoning loop and the model runtime.
 - [ai-provenance-notice.md](explanation/ai-provenance-notice.md) — the sentence a model-written draft carries: what it is for, why it discharges no EU AI Act Art. 50 disclosure duty, which surface shows it to the rep only and which renders it into the outgoing body, and the send-without-review path that would make the analysis stop holding.
 - [ai-activity-rail.md](explanation/ai-activity-rail.md) — what the AI is doing for you while it does it: the one `ai_task_run` projection, who reports into it (router vs. carrier vs. step), how an occurrence is attributed to a contact, the read's one-statement/two-arm shape and its derived `stalled`, and the separate question of which of the 23 kinds a reader is actually shown — with the written reason for each of the 17 that are not.

@@ -20,6 +20,7 @@ import (
 // every outbound payload is recorded post-stripping so tests can assert
 // what would have left the process.
 type FakeClient struct {
+	model.NoHealth
 	mu        sync.Mutex
 	scripted  []string
 	steps     []FakeStep

@@ -11,7 +11,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { SearchScreen } from "./search";
 
@@ -276,11 +276,11 @@ describe("SearchScreen", () => {
     );
     expect(screen.getByRole("heading", { name: "Deals" })).toBeTruthy();
     expect(screen.getByText(/Dana at Acme/)).toBeTruthy();
-    // The hit title renders straight from the search result (no per-hit
-    // record fetch) as a link to the record's 360.
-    const hitLink = screen.getByText("Dana Buyer");
-    expect(hitLink.tagName).toBe("BUTTON");
-    expect(hitLink.className).toContain("entity-link");
+    // A contact is a record card, named straight from the search result (no
+    // per-hit record fetch), whose name links to the record's 360.
+    const hitLink = screen.getByRole("link", { name: "Dana Buyer" });
+    expect(hitLink.getAttribute("href")).toBe("#/contacts/p1");
+    expect(hitLink.className).toContain("record-card-open");
   });
 
   // A stored record is `authoritative` in native mode — every one of them — so
@@ -639,7 +639,13 @@ describe("SearchScreen — narrowing by type", () => {
       const asked = fetchMock.mock.calls.map(([input]) =>
         input instanceof Request ? input.url : String(input),
       );
-      expect(asked.some((url) => url.includes("types=product"))).toBe(true);
+      expect(
+        asked.some(
+          (url) =>
+            url.includes("types=product") &&
+            url.includes("with_employees=true"),
+        ),
+      ).toBe(true);
     });
     expect(globalThis.location.hash).toContain("type=product");
   });
@@ -685,5 +691,261 @@ describe("SearchScreen — narrowing by type", () => {
     render(<SearchScreen q="zzz" />);
     expect(await screen.findByText(/No matches/)).toBeTruthy();
     expect(screen.getByRole("button", { name: "All" })).toBeTruthy();
+  });
+});
+
+describe("SearchScreen — grouped by what each hit is", () => {
+  // Unnarrowed: a test above leaves a `type` dial in the address.
+  beforeEach(() => {
+    globalThis.location.hash = "#/search/rennsteig";
+  });
+  const urlOf = (input: RequestInfo | URL) =>
+    input instanceof Request ? input.url : String(input);
+
+  // Fifty hits ranked across types were fifty emails for a word that also named
+  // the company: relevance does not compare across kinds. Unnarrowed, the page
+  // asks for a few of each kind instead, and the company is on it.
+  it("asks for a few of each kind and draws the mail apart from the records", async () => {
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL) =>
+      jsonResponse({
+        data: [
+          emailHit,
+          {
+            type: "company",
+            id: "o1",
+            title: "Rennsteig GmbH",
+            score: 0.2,
+            trust_tier: "authoritative",
+          },
+        ],
+        page: { next_cursor: null, has_more: false },
+        types_with_more: [],
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    render(<SearchScreen q="rennsteig" />);
+
+    expect(
+      await screen.findByRole("heading", { name: "Companies" }),
+    ).toBeTruthy();
+    const headings = screen
+      .getAllByRole("heading")
+      .map((heading) => heading.textContent);
+    expect(headings).toEqual(["Companies", "Emails"]);
+    const asked = fetchMock.mock.calls.map(([input]) => urlOf(input));
+    expect(asked.some((url) => url.includes("per_type=5"))).toBe(true);
+    expect(asked.some((url) => url.includes("limit="))).toBe(false);
+    expect(asked.some((url) => url.includes("with_employees=true"))).toBe(true);
+    // Nothing was cut, so nothing offers the rest.
+    expect(screen.queryByRole("button", { name: /^Show all/ })).toBeNull();
+  });
+
+  // Only a kind the server says holds more offers the rest, and the rest is
+  // that kind's own ranked list: the same narrowing the pills make.
+  it("offers the rest of a kind the server cut, as that kind's own list", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL) =>
+      jsonResponse({
+        data: [
+          emailHit,
+          { type: "company", id: "o1", title: "Rennsteig GmbH", score: 0.2 },
+        ],
+        page: { next_cursor: null, has_more: false },
+        types_with_more: ["company"],
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    render(<SearchScreen q="rennsteig" />);
+
+    const showAll = await screen.findByRole("button", {
+      name: "Show all Companies",
+    });
+    expect(
+      screen.queryByRole("button", { name: "Show all Emails" }),
+    ).toBeNull();
+    await user.click(showAll);
+
+    await waitFor(() =>
+      expect(globalThis.location.hash).toContain("type=company"),
+    );
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.some(([input]) =>
+          urlOf(input).includes("types=company"),
+        ),
+      ).toBe(true),
+    );
+  });
+
+  // Emails and calls are one type to the server, so a cut among either is one
+  // list to open: one button, named for that list, not one per heading.
+  it("offers the rest of emails and activities once, for both", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: [
+            emailHit,
+            { type: "activity", id: "a2", title: "Rennsteig kickoff call" },
+          ],
+          page: { next_cursor: null, has_more: false },
+          types_with_more: ["activity"],
+        }),
+      ),
+    );
+    render(<SearchScreen q="rennsteig" />);
+
+    expect(
+      await screen.findByRole("heading", { name: "Activities" }),
+    ).toBeTruthy();
+    const offers = screen.getAllByRole("button", { name: /^Show all/ });
+    expect(offers.map((button) => button.getAttribute("aria-label"))).toEqual([
+      "Show all Emails and activities",
+    ]);
+  });
+
+  // The activity pill narrows to the emails AND the calls and notes beside
+  // them, so it says both rather than reading as the Activities heading.
+  it("names the activity pill for everything it narrows to", () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: [],
+          page: { next_cursor: null, has_more: false },
+        }),
+      ),
+    );
+    render(<SearchScreen q="acme" />);
+    expect(
+      screen.getByRole("button", { name: "Emails and activities" }),
+    ).toBeTruthy();
+  });
+});
+
+describe("SearchScreen — one kind, paged", () => {
+  // A narrowed search is that kind's whole ranked list, and fifty is a page of
+  // it rather than the end of it.
+  it("loads the next page of a narrowed search from the cursor", async () => {
+    const user = userEvent.setup();
+    globalThis.location.hash = "#/search/acme?type=deal";
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = input instanceof Request ? input.url : String(input);
+      return url.includes("cursor=next-1")
+        ? jsonResponse({
+            data: [{ type: "deal", id: "d2", title: "Acme renewal" }],
+            page: { next_cursor: null, has_more: false },
+          })
+        : jsonResponse({
+            data: [{ type: "deal", id: "d1", title: "Acme expansion" }],
+            page: { next_cursor: "next-1", has_more: true },
+          });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<SearchScreen q="acme" />);
+
+    await user.click(await screen.findByRole("button", { name: "Load more" }));
+
+    expect(await screen.findByText("Acme renewal")).toBeTruthy();
+    expect(screen.getByText("Acme expansion")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
+  });
+});
+
+// A word that names a company also finds the contacts who work there, and each
+// says why it is listed. Both kinds are drawn as the card the record rails use.
+describe("SearchScreen — a company and the contacts who work there", () => {
+  beforeEach(() => {
+    globalThis.location.hash = "#/search/acme";
+  });
+  const LOGO =
+    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E";
+  const answer = (data: unknown[]) =>
+    vi.fn(async () =>
+      jsonResponse({
+        data,
+        page: { next_cursor: null, has_more: false },
+        types_with_more: [],
+      }),
+    );
+
+  it("draws a company as a record card with its logo, linked to its page", async () => {
+    vi.stubGlobal(
+      "fetch",
+      answer([
+        { type: "company", id: "o1", title: "Acme GmbH", logo_url: LOGO },
+      ]),
+    );
+    const { container } = render(<SearchScreen q="acme" />);
+
+    const open = await screen.findByRole("link", { name: "Acme GmbH" });
+    expect(open.getAttribute("href")).toBe("#/companies/o1");
+    expect(open.closest(".record-card")).toBeTruthy();
+    expect(
+      hitRow(container).querySelector(".avatar-img")?.getAttribute("src"),
+    ).toBe(LOGO);
+  });
+
+  it("draws the monogram for a company without a logo", async () => {
+    vi.stubGlobal(
+      "fetch",
+      answer([
+        { type: "company", id: "o1", title: "Acme GmbH", logo_url: null },
+      ]),
+    );
+    const { container } = render(<SearchScreen q="acme" />);
+    await screen.findByRole("link", { name: "Acme GmbH" });
+    expect(hitRow(container).querySelector(".avatar-img")).toBeNull();
+    expect(hitRow(container).querySelector(".avatar")?.textContent).toBe("AG");
+  });
+
+  it("says which matched company a contact works at", async () => {
+    vi.stubGlobal(
+      "fetch",
+      answer([
+        { type: "company", id: "o1", title: "Acme GmbH" },
+        {
+          type: "contact",
+          id: "p1",
+          title: "Jonas Weiß",
+          works_at: { company_id: "o1", company_name: "Acme GmbH" },
+        },
+        { type: "contact", id: "p2", title: "Acme Mustermann" },
+      ]),
+    );
+    render(<SearchScreen q="acme" />);
+
+    const jonas = await screen.findByRole("link", { name: "Jonas Weiß" });
+    expect(jonas.getAttribute("href")).toBe("#/contacts/p1");
+    const card = jonas.closest(".record-card");
+    expect(card?.querySelector(".record-card-position")?.textContent).toBe(
+      "Works at Acme GmbH",
+    );
+    // A contact the word matched by its own name needs no reason given.
+    const own = screen.getByRole("link", { name: "Acme Mustermann" });
+    expect(own.closest(".record-card")?.textContent).not.toContain("Works at");
+    expect(screen.getAllByText(/^Works at/)).toHaveLength(1);
+  });
+
+  // In the facts row, which spans the card and wraps: in the aside's narrow
+  // track the marks squeezed a partner's name to a letter on a phone.
+  it("keeps a partner company's mark and route in its card's facts row", async () => {
+    vi.stubGlobal(
+      "fetch",
+      answer([
+        { type: "company", id: "o2", title: "Brandt GmbH", is_partner: true },
+      ]),
+    );
+    render(<SearchScreen q="brandt" />);
+
+    const open = await screen.findByRole("link", {
+      name: "Open partner record for Brandt GmbH",
+    });
+    const facts = open.closest(".record-card-position");
+    expect(facts?.querySelectorAll(".badge")).toHaveLength(1);
+    expect(facts?.textContent).toContain("Partner");
+    expect(
+      open.closest(".record-card")?.querySelector(".record-card-aside"),
+    ).toBeNull();
   });
 });

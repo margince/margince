@@ -38,7 +38,7 @@ func TestABindingSurvivesTheRoundTripToTheWireAndBack(t *testing.T) {
 		},
 	}
 
-	back := fromContractAiRouting(toContractAiRouting(original))
+	back := roundTrip(t, original)
 
 	if back.Profile != original.Profile {
 		t.Errorf("profile = %q, want %q", back.Profile, original.Profile)
@@ -67,7 +67,7 @@ func TestABindingSurvivesTheRoundTripToTheWireAndBack(t *testing.T) {
 // value. "No base_url override" must not read back as "base_url set to the
 // empty string", which is why these fields are pointers on the wire.
 func TestAnUnsetOptionalIsAbsentRatherThanEmpty(t *testing.T) {
-	wire := toContractAiRouting(ai.RoutingConfig{
+	wire := mustWire(t, ai.RoutingConfig{
 		Profile: ai.ProfileEUHosted,
 		Tiers:   map[ai.Tier]ai.ProviderConfig{ai.TierPremium: {Provider: "fake", Model: "m"}},
 	})
@@ -96,9 +96,12 @@ func TestAnUnsetOptionalIsAbsentRatherThanEmpty(t *testing.T) {
 func TestABindingsRoutingSurvivesTheRoundTripInAllThreeStates(t *testing.T) {
 	no := false
 	cases := map[string]*ai.OpenRouterRouting{
-		"absent":    nil,
-		"empty":     {},
-		"populated": {Only: []string{"deepinfra"}, RequireParameters: &no, AllowFallbacks: &no, ReasoningEffort: "low"},
+		"absent": nil,
+		"empty":  {},
+		"populated": {
+			Provider:  ai.OpenRouterProvider{Only: []string{"deepinfra"}, RequireParameters: &no, AllowFallbacks: &no},
+			Reasoning: &ai.OpenRouterReasoning{Effort: "low"},
+		},
 	}
 	for label, routing := range cases {
 		openRouter := ai.ProviderConfig{
@@ -110,7 +113,7 @@ func TestABindingsRoutingSurvivesTheRoundTripInAllThreeStates(t *testing.T) {
 			Tiers:      map[ai.Tier]ai.ProviderConfig{ai.TierCheapCloud: openRouter},
 			Embeddings: ai.EmbeddingsConfig{ProviderConfig: openRouter},
 		}
-		back := fromContractAiRouting(toContractAiRouting(original))
+		back := roundTrip(t, original)
 		if got := back.Tiers[ai.TierCheapCloud].Routing; !reflect.DeepEqual(got, routing) {
 			t.Errorf("%s: tier routing came back as %#v, want %#v", label, got, routing)
 		}
@@ -132,14 +135,20 @@ func TestABindingsRoutingSurvivesTheRoundTripInAllThreeStates(t *testing.T) {
 // lane, and on the embeddings lane, is refused there, and must still reach it
 // to be refused.
 func TestEveryRoutingFieldSurvivesTheRoundTrip(t *testing.T) {
-	yes := true
+	yes, half, budget := true, 0.5, 512
 	openRouter := ai.ProviderConfig{
 		Provider: "openai_compatible", Model: "m", BaseURL: "https://openrouter.ai/api",
 		Location: "eu", Input: []string{"text", "image"}, ThinkingLevel: "medium",
 		Routing: &ai.OpenRouterRouting{
-			Only: []string{"a"}, Ignore: []string{"b"}, Quantizations: []string{"bf16"},
-			Sort: "throughput", RequireParameters: &yes, AllowFallbacks: &yes,
-			PreferredMaxLatencyP90: 2.5, ReasoningEffort: "low",
+			Provider: ai.OpenRouterProvider{
+				Only: []string{"a"}, Ignore: []string{"b"}, Quantizations: []string{"bf16"},
+				Sort: &ai.OpenRouterSort{By: "latency", Partition: "none"}, RequireParameters: &yes, AllowFallbacks: &yes,
+				PreferredMaxLatency: &ai.OpenRouterPctile{P50: &half, P75: &half, P90: &half, P99: &half},
+				Order:               []string{"c"}, DataCollection: "deny", ZDR: &yes, EnforceDistillableText: &yes,
+				MaxPrice:               &ai.OpenRouterPrice{Prompt: &half, Completion: &half, Request: &half, Image: &half},
+				PreferredMinThroughput: &ai.OpenRouterPctile{All: &half},
+			},
+			Reasoning: &ai.OpenRouterReasoning{Effort: "low", MaxTokens: &budget, Exclude: &yes, Enabled: &yes},
 		},
 	}
 	full := ai.RoutingConfig{
@@ -147,59 +156,150 @@ func TestEveryRoutingFieldSurvivesTheRoundTrip(t *testing.T) {
 		Tiers:      map[ai.Tier]ai.ProviderConfig{ai.TierPremium: openRouter},
 		Embeddings: ai.EmbeddingsConfig{ProviderConfig: openRouter, Dimensions: 768},
 		Decisions:  &ai.DecisionsConfig{Provider: "jev_compatible", Model: "typesafe/jev-1.13", BaseURL: "https://openrouter.ai/api/alpha/decisions"},
+		Providers: map[string]ai.ProviderSettings{
+			"openai_compatible": {
+				BaseURL: "https://openrouter.ai/api",
+				Upstream: &ai.OpenRouterRouting{Provider: ai.OpenRouterProvider{
+					Only: []string{"a"}, Ignore: []string{"b"}, AllowFallbacks: &yes,
+					ZDR: &yes, DataCollection: "deny", EnforceDistillableText: &yes,
+				}},
+				Location: "eu",
+			},
+		},
 	}
-	assertEveryFieldSet(t, reflect.ValueOf(full), "RoutingConfig")
+	// A provider's upstream carries the connection keys alone; the store
+	// refuses the rest there, so the wire has no field for them. A threshold is
+	// one number or a set of percentiles, never both.
+	exempt := map[string]bool{"RoutingConfig.Providers[openai_compatible].Upstream.Reasoning": true}
+	for _, field := range []string{"Quantizations", "Sort", "RequireParameters", "PreferredMaxLatency", "Order", "MaxPrice", "PreferredMinThroughput"} {
+		exempt["RoutingConfig.Providers[openai_compatible].Upstream.Provider."+field] = true
+	}
+	for _, lane := range []string{"Tiers[premium]", "Embeddings.ProviderConfig"} {
+		exempt["RoutingConfig."+lane+".Routing.Provider.PreferredMaxLatency.All"] = true
+		for _, p := range []string{"P50", "P75", "P90", "P99"} {
+			exempt["RoutingConfig."+lane+".Routing.Provider.PreferredMinThroughput."+p] = true
+		}
+	}
+	// Reasoning takes effort or max_tokens; the mapping carries both regardless.
+	assertEveryFieldSet(t, reflect.ValueOf(full), "RoutingConfig", exempt)
 
-	back := fromContractAiRouting(toContractAiRouting(full))
+	back := roundTrip(t, full)
 	if !reflect.DeepEqual(back, full) {
 		t.Errorf("routing came back as %#v, want %#v", back, full)
 	}
+}
+
+// GET shows each lane the host it is served at, read from its provider, so a
+// client that predates `providers` still sees where a lane goes; the embeddings
+// lane's own server wins for that lane alone.
+func TestEachLaneReadsItsProvidersHostOnTheWire(t *testing.T) {
+	cfg := ai.RoutingConfig{
+		Profile: ai.ProfileCloudFrontier,
+		Tiers:   map[ai.Tier]ai.ProviderConfig{ai.TierPremium: {Provider: "openai_compatible", Model: "m"}},
+		Embeddings: ai.EmbeddingsConfig{ProviderConfig: ai.ProviderConfig{
+			Provider: "openai_compatible", Model: "e", BaseURL: "https://embed.example",
+		}},
+		Decisions: &ai.DecisionsConfig{Provider: "jev_compatible", Model: "d"},
+		Providers: map[string]ai.ProviderSettings{
+			"openai_compatible": {BaseURL: "https://openrouter.ai/api"},
+			"jev_compatible":    {BaseURL: "https://openrouter.ai/api/alpha/decisions"},
+		},
+	}
+
+	wire := mustWire(t, cfg)
+
+	if got := deref(wire.Tiers[string(ai.TierPremium)].BaseUrl); got != "https://openrouter.ai/api" {
+		t.Errorf("premium base_url = %q, want the provider's host", got)
+	}
+	if got := deref(wire.Embeddings.BaseUrl); got != "https://embed.example" {
+		t.Errorf("embeddings base_url = %q, want its own server", got)
+	}
+	if got := deref(wire.Decisions.BaseUrl); got != "https://openrouter.ai/api/alpha/decisions" {
+		t.Errorf("decisions base_url = %q, want the provider's endpoint", got)
+	}
+	if wire.Providers == nil || deref((*wire.Providers)["openai_compatible"].BaseUrl) != "https://openrouter.ai/api" {
+		t.Errorf("providers = %#v, want the openai_compatible host", wire.Providers)
+	}
+}
+
+func deref(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
 }
 
 // An unbound decision lane stays unbound across a save. A round trip that
 // turned absent into an empty binding would hand every decision site a lane
 // with no provider, where absent sends it straight to its LLM ladder.
 func TestAnAbsentDecisionLaneStaysAbsent(t *testing.T) {
-	wire := toContractAiRouting(ai.RoutingConfig{Profile: ai.ProfileEUHosted})
+	wire := mustWire(t, ai.RoutingConfig{Profile: ai.ProfileEUHosted})
 	if wire.Decisions != nil {
 		t.Fatalf("decisions = %+v on the wire, want absent", *wire.Decisions)
 	}
-	if back := fromContractAiRouting(wire); back.Decisions != nil {
+	if back := mustConfig(t, wire); back.Decisions != nil {
 		t.Errorf("decisions = %+v after the round trip, want absent", *back.Decisions)
 	}
 }
 
 // assertEveryFieldSet walks a fixture and fails on any exported field left at
-// its zero value, descending through pointers, structs and map values. Only
+// its zero value, descending through pointers, structs and map values, except
+// the paths in exempt, which the wire deliberately has no field for. Only
 // exported fields are configuration a document carries; the unexported ones
 // (a source digest, a key resolver) are stamped by whoever loaded the config
 // and have no wire spelling to lose.
-func assertEveryFieldSet(t *testing.T, v reflect.Value, path string) {
+func assertEveryFieldSet(t *testing.T, v reflect.Value, path string, exempt map[string]bool) {
 	t.Helper()
+	if exempt[path] {
+		return
+	}
 	if v.IsZero() {
 		t.Errorf("%s is unset in the fixture — set it so the round trip exercises it", path)
 		return
 	}
 	switch v.Kind() {
 	case reflect.Pointer:
-		assertEveryFieldSet(t, v.Elem(), path)
+		assertEveryFieldSet(t, v.Elem(), path, exempt)
 	case reflect.Map:
 		for _, key := range v.MapKeys() {
-			assertEveryFieldSet(t, v.MapIndex(key), path+"["+key.String()+"]")
+			assertEveryFieldSet(t, v.MapIndex(key), path+"["+key.String()+"]", exempt)
 		}
 	case reflect.Struct:
 		for i := range v.NumField() {
 			if field := v.Type().Field(i); field.IsExported() {
-				assertEveryFieldSet(t, v.Field(i), path+"."+field.Name)
+				assertEveryFieldSet(t, v.Field(i), path+"."+field.Name, exempt)
 			}
 		}
 	}
 }
 
+func roundTrip(t *testing.T, cfg ai.RoutingConfig) ai.RoutingConfig {
+	t.Helper()
+	return mustConfig(t, mustWire(t, cfg))
+}
+
+func mustWire(t *testing.T, cfg ai.RoutingConfig) crmcontracts.AiRouting {
+	t.Helper()
+	wire, err := toContractAiRouting(cfg)
+	if err != nil {
+		t.Fatalf("mapping to the wire: %v", err)
+	}
+	return wire
+}
+
+func mustConfig(t *testing.T, wire crmcontracts.AiRouting) ai.RoutingConfig {
+	t.Helper()
+	cfg, err := fromContractAiRouting(wire, nil)
+	if err != nil {
+		t.Fatalf("mapping from the wire: %v", err)
+	}
+	return cfg
+}
+
 // An unbound installation answers `{}`, never null. A null leaves a client
 // unable to tell "nothing is bound" from "the field was omitted".
 func TestAnUnboundInstallationReportsAnEmptyTierMapNotNull(t *testing.T) {
-	wire := toContractAiRouting(ai.RoutingConfig{})
+	wire := mustWire(t, ai.RoutingConfig{})
 	if wire.Tiers == nil {
 		t.Error("tiers is null; an unbound installation must say so with an empty object")
 	}
@@ -211,7 +311,7 @@ func TestAnUnboundInstallationReportsAnEmptyTierMapNotNull(t *testing.T) {
 // A submitted document with no tiers maps to the unconfigured config, which is
 // what lets an operator unbind every model deliberately.
 func TestASubmittedDocumentWithNoTiersIsUnconfigured(t *testing.T) {
-	cfg := fromContractAiRouting(crmcontracts.AiRouting{Profile: "eu_hosted"})
+	cfg := mustConfig(t, crmcontracts.AiRouting{Profile: "eu_hosted"})
 	if !cfg.Unconfigured() {
 		t.Errorf("tiers = %v, want unconfigured", cfg.Tiers)
 	}
@@ -250,6 +350,17 @@ func TestAnAgentCannotReplaceTheModelBinding(t *testing.T) {
 	}
 }
 
+func TestAnAgentCannotSetAProvidersHost(t *testing.T) {
+	h := aiRoutingHandlers{store: &ai.RoutingStore{}}
+	rec := httptest.NewRecorder()
+
+	h.SetAiProviderSettings(rec, agentReq(`{"base_url":"https://evil.example"}`), "openai_compatible")
+
+	if rec.Code != http.StatusForbidden {
+		t.Errorf("status = %d, want %d — an agent re-pointed a provider", rec.Code, http.StatusForbidden)
+	}
+}
+
 // A malformed body is a 422 naming the fault, not a panic and not a partially
 // applied binding.
 func TestAMalformedBindingDocumentIsRefused(t *testing.T) {
@@ -280,6 +391,9 @@ func TestAnUnwiredRoutingSurfaceIsNotImplemented(t *testing.T) {
 	for name, call := range map[string]func(http.ResponseWriter, *http.Request){
 		"GetAiRouting":     h.GetAiRouting,
 		"ReplaceAiRouting": h.ReplaceAiRouting,
+		"SetAiProviderSettings": func(w http.ResponseWriter, r *http.Request) {
+			h.SetAiProviderSettings(w, r, "openai_compatible")
+		},
 	} {
 		rec := httptest.NewRecorder()
 		call(rec, httptest.NewRequest(http.MethodGet, "/v1/ai/routing", nil))

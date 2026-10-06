@@ -30,12 +30,22 @@ func (h Handlers) ListTransitionPolicies(
 		writeStoreErr(w, r, err)
 		return
 	}
+	// The kill switch travels with the rules, because a rule's mode means nothing
+	// without it: while the installation has automation off, StageAutopilotModeTx
+	// forces every transition to propose whatever its own row says. A screen given
+	// only the rows shows `auto` on a transition that will never move a deal, and
+	// has no reason to show for why.
+	enabled, err := h.store.StageAutomationEnabled(r.Context())
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
 	out := make([]crmcontracts.TransitionPolicy, 0, len(rules))
 	for _, rule := range rules {
 		out = append(out, transitionPolicyWire(rule))
 	}
 	httperr.WriteJSON(w, http.StatusOK,
-		crmcontracts.TransitionPolicyList{Data: out})
+		crmcontracts.TransitionPolicyList{Data: out, AutomationEnabled: enabled})
 }
 
 // SetTransitionPolicy records what an admin wants for one transition.

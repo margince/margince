@@ -40,11 +40,14 @@ The 1 table owned by `commissions`, as the migrations build them. [Back to the e
 **Rules**
 
 - `commission_entry_amount_minor_check` — `CHECK ((amount_minor >= 0))`
+- `commission_entry_amount_minor_js_safe` — `CHECK (((amount_minor >= '-9007199254740991'::bigint) AND (amount_minor <= '9007199254740991'::bigint)))`
 - `commission_entry_attribution_at_accrual_check` — `CHECK ((attribution_at_accrual = ANY (ARRAY['sourced', 'influenced'])))`
 - `commission_entry_basis_amount_minor_check` — `CHECK ((basis_amount_minor >= 0))`
+- `commission_entry_basis_amount_minor_js_safe` — `CHECK (((basis_amount_minor >= '-9007199254740991'::bigint) AND (basis_amount_minor <= '9007199254740991'::bigint)))`
 - `commission_entry_currency_check` — `CHECK ((currency ~ '^[A-Z]{3}$'))`
 - `commission_entry_rate_bps_check` — `CHECK (((rate_bps >= 0) AND (rate_bps <= 10000)))`
 - `commission_entry_status_check` — `CHECK ((status = ANY (ARRAY['accrued', 'approved', 'paid', 'void'])))`
+- `commission_entry_version_js_safe` — `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 - `commission_reversal_is_void` — `CHECK (((reversal_of IS NULL) OR (status = 'void')))`
 - `commission_void_has_reason` — `CHECK (((status <> 'void') OR (void_reason IS NOT NULL)))`
 

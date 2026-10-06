@@ -218,16 +218,13 @@ func validateArgs(name string, def kindDef) error {
 }
 
 // validateTimeout holds the rule this whole contract exists for: every kind
-// has a CHOSEN timeout, in exactly one of the four forms.
+// has a CHOSEN timeout, in exactly one of the three forms.
 func validateTimeout(name string, t *timeoutDef) error {
 	if t == nil {
 		return fmt.Errorf("kind %q: declares no timeout — an absent one is River's silent 1-minute default, which is what this contract removes", name)
 	}
 	forms := 0
 	if t.None {
-		forms++
-	}
-	if t.Operator != "" {
 		forms++
 	}
 	if t.Derived != "" {
@@ -237,16 +234,12 @@ func validateTimeout(name string, t *timeoutDef) error {
 		forms++
 	}
 	if forms != 1 {
-		return fmt.Errorf("kind %q: timeout must take exactly one of the four forms (a duration, {derived: …}, {operator: …}, {none: true}), got %d", name, forms)
+		return fmt.Errorf("kind %q: timeout must take exactly one of the three forms (a duration, {derived: …}, {none: true}), got %d", name, forms)
 	}
 	switch {
 	case t.None:
 		if t.Reason == "" {
 			return fmt.Errorf("kind %q: a {none: true} timeout needs a reason — taking a job out of River's rescuer is a decision, not a default", name)
-		}
-	case t.Operator != "":
-		if !configFieldRE.MatchString(t.Operator) {
-			return fmt.Errorf("kind %q: timeout operator %q must name a JobRunnerConfig field", name, t.Operator)
 		}
 	case t.Derived != "":
 		if !goConstRE.MatchString(t.Derived) {

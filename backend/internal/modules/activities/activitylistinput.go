@@ -135,6 +135,10 @@ type ListActivitiesInput struct {
 	// is connected. Same rule as meetingStillWorthPreparing, which is the
 	// forward lane's spelling of the same fact.
 	AwaitingOutcome bool
+	// CustomerMeetingsOnly keeps meetings linked to a customer record, by the
+	// rule reporting counts customer meetings with (CustomerMeetingSQL). An
+	// internal stand-up owes no customer follow-up.
+	CustomerMeetingsOnly bool
 	// WaitingReplyAsOf narrows the list to the SAME thread walk WaitingReplies
 	// answers for the Worklist: the newest inbound message per thread that
 	// nobody has answered, as of this instant. Nil means the filter is off.
@@ -180,7 +184,8 @@ type ListActivitiesInput struct {
 	// work for a given instant, and a queue that promised today's list would be
 	// lying if it carried the undated backlog too.
 	OpenAndDueBy *time.Time
-	// IncludeEmailRequests adds undated captured requests to the execution queue, not overdue counts.
+	// IncludeEmailRequests adds undated captured requests and undated commitments
+	// to the execution queue, not overdue counts.
 	IncludeEmailRequests bool
 	// OpenAndDueAfter narrows the same read to work due LATER than an instant,
 	// and is paired with OpenAndDueBy to ask for one window.

@@ -240,9 +240,10 @@ export const de = {
     "Dein Kontakt wählt eine freie Zeit. Der Link bucht einmal und läuft nach 7 Tagen ab.",
   "scheduling.pickOffer": "Wähle zwei oder drei Zeiten zum Anbieten",
   "scheduling.pickAgreed": "Wähle die vereinbarte Zeit",
+  "scheduling.openTimes": "Deine freien Zeiten",
   "scheduling.guestPicks": "{name} wählt die Zeit",
-  "scheduling.guestPicksHelp":
-    "Du sendest einen persönlichen Link. Dein Kontakt sieht deine freien Zeiten und bucht eine.",
+  "scheduling.guestPicksOne":
+    "Dein Kontakt bucht eine der freien Zeiten im Kalender.",
   "scheduling.guest": "Dein Gast",
   "scheduling.length": "Dauer",
   "scheduling.minutes_one": "{count} Min.",
@@ -590,6 +591,8 @@ export const de = {
   "aiAdmin.coverage":
     "Die Zahlen umfassen nur dauerhaft gespeicherte Website-Lesevorgänge, Unternehmensscans und Aufbauvorgänge von Stilprofilen. Nicht jeder geplante KI-Lauf wird gezählt, und die Zahlen garantieren nicht, dass eine Anfrage noch ausgeführt werden darf.",
   "aiAdmin.unavailable": "Nicht verfügbar",
+  "aiAdmin.providerWaiting":
+    "Wartet auf den KI-Anbieter: {waiting}. Die Arbeit läuft von selbst weiter, sobald er antwortet.",
   "aiAdmin.impact.blocked": "Wartet auf Kontingent",
   "aiAdmin.impact.model": "Anderes Modell gewählt",
   "aiAdmin.impact.decision": "Entscheidungsmodell geändert",
@@ -842,6 +845,12 @@ export const de = {
   "history.undo.confirmTitle": "Diese Änderung rückgängig machen?",
   "history.undo.confirmEdgeBody":
     "Damit ändert sich die Verknüpfung mit {other}. Beide Datensätze bleiben bestehen, nur die Verknüpfung zwischen ihnen ändert sich.",
+  "history.undo.confirmCreateBody":
+    "Der Datensatz wird archiviert. Über seinen Verlauf kannst du ihn zurückholen.",
+  "history.undo.confirmArchiveBody":
+    "Der Datensatz wird aus dem Archiv zurückgeholt.",
+  "history.undo.confirmPromoteBody":
+    "Der Kontakt wird wieder zum Lead. Hat die Umwandlung den Kontakt erst angelegt, wird er archiviert.",
   "history.undo.confirmBody_one":
     "{count} Feld wird auf seinen Wert vor dieser Änderung zurückgesetzt:",
   "history.undo.confirmBody_other":
@@ -904,6 +913,8 @@ export const de = {
   "history.field.body": "Notizen",
   "history.field.emails": "E-Mail-Adressen",
   "history.field.nudge_dismissal": "Hinweis ausgeblendet",
+  "history.field.override_category": "Kategorie der Freigabe",
+  "history.field.overrides_carried": "Übernommene Freigaben",
   "history.field.phones": "Telefonnummern",
   "history.field.invitation_status": "Einladungsstatus",
   "history.field.proposal_status": "Status des Terminvorschlags",
@@ -946,6 +957,10 @@ export const de = {
   "history.field.reply_verdict": "Ergebnis der Antwort",
   "history.field.reply_verdict_by": "Ergebnis der Antwort von",
   "history.field.research_claims_accepted": "Übernommene Rechercheaussagen",
+  "history.field.revoked_by": "Widerrufen von",
+  "history.field.revoked_by_level": "Widerrufen auf Ebene",
+  "history.field.revoked_override": "Widerrufene Freigabe",
+  "history.field.revoked_rows": "Zurückgenommene Freigaben",
   "history.field.scope": "Umfang",
   "history.field.stopped": "Gestoppt",
   "history.field.stops_carried": "Übernommene Kontaktsperren",
@@ -1064,6 +1079,8 @@ export const de = {
   "search.group.activity": "Aktivitäten",
   "search.group.lead": "Leads",
   "search.group.tag": "Tags",
+  "search.group.email": "E-Mails",
+  "search.group.showAllNamed": "Alle {group} anzeigen",
   "search.kind.contact": "Kontakt",
   "search.kind.company": "Unternehmen",
   "search.kind.partnerCompany": "Partnerunternehmen",
@@ -1076,6 +1093,7 @@ export const de = {
   "search.kind.tag": "Tag",
   "search.filter.label": "Nur anzeigen",
   "search.filter.all": "Alle",
+  "search.filter.activity": "E-Mails und Aktivitäten",
   "search.pending": "Wird gesucht…",
   "search.tag.carriedBy_one": "{count} Datensatz mit diesem Tag",
   "search.tag.carriedBy_other": "{count} Datensätze mit diesem Tag",
@@ -1084,6 +1102,7 @@ export const de = {
   "search.partner.badge": "Partner",
   "search.partner.open": "Partnerdatensatz öffnen",
   "search.partner.openNamed": "Partnerdatensatz öffnen für {name}",
+  "search.contact.worksAt": "Arbeitet bei {company}",
 
   "palette.aria": "Befehlspalette",
   "palette.placeholder": "Suchen oder Margince fragen",
@@ -1164,7 +1183,7 @@ export const de = {
   "record.archive": "Archivieren",
   "record.disqualify": "Disqualifizieren",
   "record.archiveConfirm":
-    "Diesen Datensatz archivieren? Das lässt sich nicht rückgängig machen.",
+    "Diesen Datensatz archivieren? Über seinen Verlauf kannst du ihn zurückholen.",
   "record.archived": "Archiviert",
   "record.archivedReadOnly":
     "Dieses Unternehmen ist archiviert und lässt keine Änderungen zu.",
@@ -1380,6 +1399,12 @@ export const de = {
     "Die Anfrage ist fehlgeschlagen. Keine Ursache gemeldet.",
   "common.assistantUnavailable":
     "Der Assistent hat nicht geantwortet, daher wurde kein Entwurf erstellt. Gib die Angaben von Hand ein oder lass einen Admin das Modell in den Einstellungen unter KI prüfen.",
+  "common.providerOutOfCredit":
+    "Beim KI-Anbieter ist kein Guthaben mehr vorhanden. Wende dich an deine Admins.",
+  "common.providerUnauthorized":
+    "Der KI-Anbieter hat den hinterlegten API-Schlüssel abgelehnt. Wende dich an deine Admins.",
+  "common.providerUnavailable":
+    "Der KI-Anbieter antwortet gerade nicht. Versuche es später erneut oder wende dich an deine Admins.",
   "common.gatewayUnavailable":
     "Der Server hat die Anfrage nicht rechtzeitig abgeschlossen und verarbeitet sie möglicherweise noch. Warte, bevor du es erneut versuchst, sonst kann die Arbeit zweimal laufen.",
   "common.permissionDenied":
@@ -2076,6 +2101,13 @@ export const de = {
   "co.next.overdue": "\u00dcberfällig",
   "co.next.due": "Fällig {when}",
   "co.next.undated": "Kein Fälligkeitsdatum",
+  "commitment.dismiss": "Verwerfen",
+  "commitment.quote": "„{quote}“",
+  "deal.watch.title": "Zusagen des Kunden",
+  "deal.watch.incomplete":
+    "Einige Zusagen dieses Unternehmens sind für dich nicht sichtbar.",
+  "deal.watch.more": "Die 25 dringendsten Zusagen; weitere sind offen.",
+  "deal.watch.source": "Nachricht öffnen",
   "co.work.closes": "Abschluss {date}",
   "co.brief.by.model": "Von Margince geschrieben",
   "co.brief.by.deterministic": "Aus CRM-Datensätzen zusammengestellt",
@@ -2172,6 +2204,7 @@ export const de = {
   "approval.field.to_stage": "Nach",
   "approval.kind.transcript_proposal":
     "Nächsten Schritt aus Transkript anlegen",
+  "approval.kind.commitment_task": "Aufgabe für eine Zusage anlegen",
   "approval.kind.fx_rate_proposal": "Wechselkurse aktualisieren",
   "approval.kind.disqualify_lead": "Lead disqualifizieren",
   "approval.kind.demote_lead": "Lead-Qualifizierung zurücknehmen",
@@ -2424,6 +2457,8 @@ export const de = {
   "email.detail.none": "Diese Nachricht",
   "email.detail.attachments_one": "{count} Anhang",
   "email.detail.attachments_other": "{count} Anhänge",
+  "email.detail.attachmentWithheld":
+    "Nicht gespeichert, weil die E-Mail privat ist.",
   "email.detail.showQuoted": "Zitierten Verlauf anzeigen",
   "email.detail.withheldReason":
     "Diese Nachricht ist nicht für dich freigegeben",
@@ -3326,7 +3361,7 @@ export const de = {
   "deal.fxBase": "Basis {value} · Kurs {rate} vom {date}",
   "deal.archive": "Deal archivieren",
   "deal.archiveConfirm":
-    "Das Archivieren entfernt diesen Deal aus den offenen Deals. Das lässt sich hier nicht rückgängig machen.",
+    "Das Archivieren entfernt diesen Deal aus den offenen Deals. Über seinen Verlauf kannst du ihn zurückholen.",
   "deal.archivedReadOnly":
     "Dieser Deal ist archiviert und lässt keine Änderungen zu.",
   "deal.notYoursToChange":
@@ -3494,6 +3529,8 @@ export const de = {
   "offer.committedNet": "Verbindlicher Nettowert",
   "offer.edit": "Kopfdaten bearbeiten",
   "offer.currency": "Währung",
+  "offer.currencyFixedByLines":
+    "Die Währung ist festgelegt, sobald eine Position einen Preis hat: Bei einem Wechsel würde jeder vorhandene Preis als Betrag in der neuen Währung interpretiert. Entferne die Positionen, um die Währung zu ändern, oder erstelle ein neues Angebot.",
   "offer.buyerCompany": "Käuferunternehmen",
   "offer.buyerCompanyConfirm": "Käuferunternehmen: {name}",
   "offer.template": "Vorlage",
@@ -4382,6 +4419,15 @@ export const de = {
   "compose.savedDraftDeleted": "Gespeicherter Entwurf gelöscht",
   "compose.savedDraftRestored": "Gespeicherter Entwurf wiederhergestellt",
   "compose.savedDraftRemove": "Gespeicherten Entwurf löschen",
+  "compose.savedDraftByAgent":
+    "Entwurf eines Agenten wiederhergestellt. Lies den Entwurf vor dem Senden.",
+  "compose.waitingDraftTitle": "Entwurf wartet",
+  "compose.waitingDraftOpen": "Entwurf öffnen",
+  "compose.waitingDraftByAgent":
+    "Ein Agent hat „{subject}“ zur Prüfung entworfen. Nichts wurde gesendet.",
+  "compose.waitingDraftByYou":
+    "Die nicht gesendete E-Mail „{subject}“ wurde im Editor gespeichert.",
+  "compose.waitingDraftNoSubject": "Kein Betreff",
   "compose.savedDraftChangedTitle": "Entwurf in einem anderen Fenster geändert",
   "compose.savedDraftChangedBody":
     "Beim Speichern bleibt der Text auf dem Bildschirm erhalten. Lade stattdessen die gespeicherte Fassung, um mit ihr weiterzuarbeiten.",
@@ -4421,6 +4467,12 @@ export const de = {
   "compose.whyThisDraft": "Warum dieser Entwurf?",
   "compose.body": "Nachrichtentext",
   "compose.bodyHint": "Klicke auf den Text, um ihn zu bearbeiten.",
+  "compose.signOff": "Wird beim Senden angefügt",
+  "compose.signOffClosing":
+    "Du hast keine Signatur, deshalb wird diese Grußformel angefügt.",
+  "compose.signOffSet": "Signatur festlegen",
+  "compose.signOffFailed":
+    "Die Grußformel, die beim Senden angefügt wird, konnte nicht geladen werden.",
   "compose.transport": "Senden über",
   "compose.transportEmail": "E-Mail",
   "compose.recipientHint": "Name oder Adresse",
@@ -5030,7 +5082,7 @@ export const de = {
   "settings.signatureLabel": "Grußformel",
   "settings.signaturePlaceholder": "Marek Janetzke\nGradion · +49 40 123456",
   "settings.signatureHint":
-    "Nur Text. Leer lassen, um ohne Signatur zu senden. KI-Entwürfe fügen nie eine Grußformel hinzu.",
+    "Nur Text. Ohne Signatur enden Mails mit Gruß und deinem Namen. KI fügt keine an.",
   "settings.signatureSaving": "Wird gespeichert…",
   "settings.signatureEdit": "Signatur bearbeiten",
   "settings.signatureNone": "Keine Grußformel festgelegt",
@@ -5050,6 +5102,10 @@ export const de = {
   "settings.displayNameHelp":
     "Wird im Team an Datensätzen, die du bearbeitest, in Auswahllisten und im Audit-Log angezeigt.",
   "settings.displayNameSave": "Speichern",
+  "settings.greetingName": "Rufname",
+  "settings.greetingNameHelp":
+    "Mit diesem Namen wirst du in entworfenen Nachrichten und Begrüßungen angesprochen. Lässt du das Feld leer, gilt das erste Wort deines Anzeigenamens.",
+  "settings.greetingNameSave": "Speichern",
   "settings.languageHelp": "Gilt für diese Sitzung.",
   "settings.deviceCard": "Dieses Gerät",
   "settings.installApp": "Margince-App",
@@ -5257,6 +5313,7 @@ export const de = {
   "agent.fact.tools": "Tools",
   "agent.fact.sources": "Quellen",
   "agent.fact.offline": "offline",
+  "agent.fact.searchIndex": "Suchindex: {model}",
   "agent.fact.noCalls": "Noch keine Modellaufrufe",
   "agent.fact.hidden": "Für deine Rolle ausgeblendet",
   "agent.fact.noModel": "Kein Modell konfiguriert",
@@ -5466,6 +5523,36 @@ export const de = {
   "jobs.reasonVetted":
     "Gründe, Klassen und Abhilfen stammen aus der Job-Schicht, nie aus der Rohursache des Workers. Einen Fehler, den sie nicht formulieren kann, zeigt sie mit einem festen Ersatztext und ohne Klasse.",
   "jobs.generatedAt": "Stand: {time}",
+
+  "settings.providerHealth": "Status der KI-Anbieter",
+  "settings.providerHealthSub":
+    "Ob jeder KI-Anbieter antwortet, so wie dieser Server es erlebt hat.",
+  "providerHealth.adminOnly":
+    "Der Status der KI-Anbieter betrifft die ganze Installation und erfordert eine Berechtigung, die deine Rolle nicht hat.",
+  "providerHealth.healthy": "Alle KI-Anbieter antworten.",
+  "aiProviderHealth.label.degraded": "Eingeschränkt",
+  "aiProviderHealth.label.down": "Nicht erreichbar",
+  "aiProviderHealth.label.outOfCredit": "Kein Guthaben",
+  "aiProviderHealth.label.unauthorized": "Schlüssel abgelehnt",
+  "aiProviderHealth.reason.degraded":
+    "Einige Anfragen an diesen Anbieter schlagen fehl. Aufrufe laufen weiterhin.",
+  "aiProviderHealth.reason.down":
+    "Dieser Anbieter ist nicht erreichbar. Aufrufe warten bis zur nächsten Prüfung.",
+  "aiProviderHealth.reason.outOfCredit":
+    "Das Konto hat kein Guthaben mehr. Aufrufe warten bis zur nächsten Prüfung.",
+  "aiProviderHealth.reason.unauthorized":
+    "Der Anbieter hat den API-Schlüssel abgelehnt. Aufrufe warten bis zur nächsten Prüfung.",
+  "aiProviderHealth.fix.degraded":
+    "Prüfe die Statusseite des Anbieters oder wende dich an deine Admins.",
+  "aiProviderHealth.fix.down":
+    "Prüfe Statusseite und Host des Anbieters oder wende dich an deine Admins.",
+  "aiProviderHealth.fix.outOfCredit":
+    "Lade das Konto beim Anbieter auf oder wende dich an deine Admins.",
+  "aiProviderHealth.fix.unauthorized":
+    "Ersetze den Schlüssel oder wende dich an deine Admins.",
+  "aiProviderHealth.since": "Begann {when}",
+  "aiProviderHealth.nextCheck": "Nächste Prüfung {when}",
+  "aiProviderHealth.nextCheckDue": "Die nächste Prüfung steht an",
 
   "settings.extIngest": "Abgewiesene Connector-Datensätze",
   "settings.extIngestSub":
@@ -8620,6 +8707,9 @@ export const de = {
   "users.nameLabel": "Vollständiger Name",
   "users.emailPlaceholder": "name@company.com",
   "users.namePlaceholder": "Vollständiger Name",
+  "users.greetingLabel": "Rufname",
+  "users.greetingHint":
+    "Optional. Nur angeben, wenn der Rufname nicht das erste Wort des vollständigen Namens ist.",
   "users.deactivateConfirmTitle": "{name} deaktivieren?",
   "users.deactivateConfirmBody":
     "Die Person wird überall abgemeldet, und ihre Agenten-Passports werden sofort widerrufen. Eine spätere Reaktivierung ist möglich; danach muss sich die Person erneut anmelden.",
@@ -8880,6 +8970,7 @@ export const de = {
     "Entscheidungsmodell für diese Aufgabe nicht zertifiziert",
   "aicalls.reason.decision_local_only":
     "Aufgabe nur lokal, Entscheidungsmodell nicht lokal",
+  "aicalls.reason.timeout": "Der Versuch davor lief in sein Zeitlimit",
   "aicalls.decisionAnswer": "antwortete {choice} mit {confidence}",
   "aicalls.callsLabel": "Letzte Aufrufe",
   "aicalls.filter.all": "Alle Aufgaben",
@@ -8892,6 +8983,8 @@ export const de = {
   "aicalls.detail.contextNone": "Kein Unternehmenskontext eingefügt",
   "aicalls.detail.attempts": "Versuche",
   "aicalls.detail.request": "Anfrage-Nutzdaten",
+  "aicalls.detail.settings": "Gesendete Anfrage-Einstellungen",
+  "aicalls.detail.servedBy": "bedient von {host}",
   "aicalls.detail.response": "Antwort-Nutzdaten",
   "aicalls.payload.off":
     "Die Erfassung der Nutzdaten ist ausgeschaltet. Setze ai.capture_payloads: true in margince.yaml, um Inhalte von Anfrage und Antwort aufzuzeichnen.",
@@ -9134,6 +9227,8 @@ export const de = {
     "Im Schlüsseltresor gespeichert und nicht auslesbar. Füge einen neuen Schlüssel ein, um ihn zu ersetzen. Er kann auch als {envVar} bereitgestellt werden.",
   "aiProviderKeys.absentHint":
     "Für diesen Anbieter gibt es keinen Schlüssel, daher können ihm zugeordnete Modelle nicht aufgerufen werden. Ein Schlüssel kann auch als {envVar} bereitgestellt werden.",
+  "aiProviderKeys.vertexRoleHint":
+    "Das Dienstkonto braucht die Rolle Vertex AI User (roles/aiplatform.user).",
   "aiProviderKeys.addPlaceholder": "API-Schlüssel einfügen",
   "aiProviderKeys.replacePlaceholder": "Neuen Schlüssel einfügen",
   "aiProviderKeys.add": "Hinzufügen",
@@ -9211,6 +9306,11 @@ export const de = {
   "aiRouting.dimensions.label": "Vektorbreite",
   "aiRouting.dimensions.help":
     "Leer lassen für den Standardwert des Anbieters. Werte außerhalb von 1 bis 2.000 werden abgelehnt.",
+  "aiRouting.provider.noHost":
+    "{provider} hat noch keinen Host. Lege ihn unter Anbieter fest, bevor du speicherst.",
+  "aiRouting.embeddingsServer.label": "Embedding-Server",
+  "aiRouting.embeddingsServer.help":
+    "Nur wenn das Embedding-Modell auf einem eigenen Server läuft. Leer nutzt den Host des Anbieters.",
   "aiRouting.baseUrl.placeholder": "https://openrouter.ai/api",
   "aiRouting.baseUrl.label": "Host",
   "aiRouting.baseUrl.help":
@@ -9222,10 +9322,12 @@ export const de = {
     "Vollständige Endpunkt-URL, unverändert verwendet. Erforderlich.",
   "aiRouting.baseUrl.placeholder.jevCompatible":
     "https://openrouter.ai/api/alpha/decisions",
+  "aiRouting.models.askingLocation":
+    "Google wird gefragt, welche Modelle {location} bedient …",
   "aiRouting.models.noKey":
     "Kein Schlüssel, daher keine Modellliste. Beliebige Modell-ID eingeben.",
   "aiRouting.models.noEndpoint":
-    "Host oben eintragen, um die Modellliste zu laden.",
+    "Lege den Host dieses Anbieters unter Anbieter fest, um seine Modellliste zu laden.",
   "aiRouting.models.profileForbids":
     "Dieses Profil erlaubt diesen Anbieter nicht.",
   "aiRouting.models.notPublished":
@@ -9251,6 +9353,10 @@ export const de = {
   "aiProviderKeys.modelCount_other": "{count} Modelle verfügbar",
   "aiProviderKeys.reason.authFailed":
     "Der Anbieter hat diesen Schlüssel abgelehnt. Prüfe ihn und ersetze ihn.",
+  "aiProviderKeys.reason.permissionDenied":
+    "Der Anbieter hat den Schlüssel akzeptiert, den Aufruf aber abgelehnt. Prüfe die Berechtigungen des Schlüssels.",
+  "aiProviderKeys.reason.permissionDeniedVertex":
+    "Google hat den Schlüssel akzeptiert, den Aufruf aber abgelehnt. Gib dem Dienstkonto die Rolle Vertex AI User (roles/aiplatform.user) und aktiviere die Vertex AI API im Projekt.",
   "aiProviderKeys.reason.rateLimited":
     "Der Anbieter drosselt diesen Schlüssel. Er kann trotzdem gültig sein; versuche es später erneut.",
   "aiProviderKeys.reason.noKey":
@@ -9291,7 +9397,8 @@ export const de = {
   "aiRouting.median": "Median {ms} ms",
   "aiTasks.title": "KI-Aufgaben",
   "aiTasks.intro":
-    "Nur lesbar: Die Stufe jeder Aufgabe ist vertraglich festgelegt. Jede Zeile zeigt die Stufe und das Modell, auf dem sie gerade läuft.",
+    "Bearbeite eine Aufgabe, um zu sehen, wie ihre Aufrufe liefen, und um Denkstufe und Zeitlimits festzulegen. Die Stufe ist vertraglich festgelegt; jede Zeile zeigt die Stufe und das Modell, auf dem sie gerade läuft.",
+  "aiTasks.whatItDoes": "{task}: was es tut",
   "aiTasks.decisionFirst": "Zuerst Entscheidungsmodell",
   "aiTasks.viewCalls": "Aufrufe ansehen",
   "workingHours.title": "Buchbare Zeiten",
@@ -9351,6 +9458,37 @@ export const de = {
   "captureSettings.removeFailed": "Ausschluss nicht entfernt",
   "captureSettings.addFailed": "Ausschluss nicht hinzugefügt",
   "captureSettings.updateFailed": "Einstellung nicht geändert",
+  "captureReading.title": "Website-Lesevorgänge",
+  "captureReading.sub":
+    "Wie viel Margince von Unternehmenswebsites liest. Eine Änderung gilt ab dem nächsten Lesevorgang.",
+  "captureReading.dailyCap.label": "Automatische Lesevorgänge pro Tag",
+  "captureReading.dailyCap.help":
+    "Lesevorgänge, die niemand angestoßen hat, über alle Unternehmen, 1 bis 20.000 pro Tag.",
+  "captureReading.dailyCap.refusal":
+    "Gib eine ganze Zahl von 1 bis 20.000 ein.",
+  "captureReading.maxPages.label": "Seiten pro Lesevorgang",
+  "captureReading.maxPages.help":
+    "Höchstzahl der Seiten eines Lesevorgangs, 1 bis 200 (automatische Lesevorgänge enden bei 12).",
+  "captureReading.maxPages.refusal":
+    "Gib eine ganze Zahl von 1 bis 200 Seiten ein.",
+  "captureReading.maxMiB.label": "Größe pro Lesevorgang (MiB)",
+  "captureReading.maxMiB.help":
+    "Höchstmenge an Daten eines Lesevorgangs über alle Seiten, 1 bis 128 MiB.",
+  "captureReading.maxMiB.refusal": "Gib eine ganze Zahl von 1 bis 128 MiB ein.",
+  "captureReading.wall.label": "Lesedauer (Sekunden)",
+  "captureReading.wall.help":
+    "Längste Dauer eines Lesevorgangs, bevor er das Gefundene behält, 30 bis 600 Sekunden.",
+  "captureReading.wall.refusal":
+    "Gib eine ganze Zahl von 30 bis 600 Sekunden ein.",
+  "agentConnections.title": "Agent-Verbindungen",
+  "agentConnections.sub":
+    "Wie lange ein Passport für MCP-Verbindungen gültig ist, bevor eine Erneuerung nötig ist. Eine Änderung gilt ab dem nächsten ausgestellten Passport.",
+  "agentConnections.adminOnly": "Nur Admins und Operations können das ändern.",
+  "agentConnections.ttl.label": "Passport-Laufzeit (Minuten)",
+  "agentConnections.ttl.help": "Ganze Minuten, 5 bis 129.600 (90 Tage).",
+  "agentConnections.ttl.refusal":
+    "Gib eine ganze Zahl von 5 bis 129.600 Minuten ein.",
+  "agentConnections.updateFailed": "Einstellung nicht geändert",
   "captureSettings.adminOnly": "Nur Admins und Operations können das ändern.",
 
   "ownDomains.companyTitle": "Unternehmensdomains",
@@ -10854,6 +10992,7 @@ export const de = {
     "{urgent} dringend · {due} fällig · {inPlay} in Arbeit · {lower} Routine · {total} gesamt",
   "worklist.summary.noMiddle":
     "{urgent} dringend · {due} fällig · {lower} Routine · {total} gesamt",
+  "worklist.summary.wholeDay": "Ganzer Tag: {sentence}",
   "worklist.summary.split": "{today} heute · {review} zu prüfen",
   "worklist.completeness": "{shown} von {considered} angezeigt",
   "worklist.review.partial":
@@ -10889,8 +11028,8 @@ export const de = {
   "worklist.pane.openRow": "Details für {position}, {title} anzeigen",
   "worklist.pane.loading": "Datensatz wird geladen…",
   "worklist.pane.nothing": "Noch nichts erfasst.",
-  "worklist.pane.lastInbound": "Zuletzt eingehend",
-  "worklist.pane.lastOutbound": "Zuletzt ausgehend",
+  "worklist.pane.lastInbound": "Letzte Nachricht von diesem Kontakt",
+  "worklist.pane.lastOutbound": "Letzte Nachricht an diesen Kontakt",
   "worklist.pane.never": "Nie",
   "worklist.pane.company": "Unternehmen",
   "worklist.pane.role": "Rolle",
@@ -10936,6 +11075,9 @@ export const de = {
   "worklist.scope.all": "Alle",
   "worklist.owner.visibleLabel": "Ansicht",
   "worklist.manager.cancel": "Abbrechen",
+  "worklist.owner.wholeTeam": "Das ganze Team",
+  "worklist.owner.everyone": "Alle",
+  "worklist.owner.nobodyYet": "Noch niemand",
   "worklist.owner.mine": "Meine Worklist",
   "worklist.owner.backToMine": "Zurück zu deiner Worklist",
   "worklist.manager.reassign": "Neu zuweisen",
@@ -11015,8 +11157,8 @@ export const de = {
   "worklist.coaching.promises_one": "{name} hat {count} fällige Kundenzusage",
   "worklist.coaching.promises_other":
     "{name} hat {count} fällige Kundenzusagen",
-  "worklist.coaching.waiting_one": "{count} Kontakt wartet auf {name}",
-  "worklist.coaching.waiting_other": "{count} Kontakte warten auf {name}",
+  "worklist.coaching.waiting_one": "{count} Unterhaltung wartet auf {name}",
+  "worklist.coaching.waiting_other": "{count} Unterhaltungen warten auf {name}",
   "worklist.coaching.overdue_one": "{name} hat {count} überfällige Aufgabe",
   "worklist.coaching.overdue_other": "{name} hat {count} überfällige Aufgaben",
   "worklist.board.promises": "Fällige Zusagen",
@@ -11040,7 +11182,8 @@ export const de = {
   "worklist.hidden.clear":
     "Nichts ist ausgeblendet. Jeder wartende Kontakt erreicht eine Worklist.",
   "worklist.hidden.truncated":
-    "Die Zählung ist unvollständig. Jede Zahl ist ein Mindestwert.",
+    "Die Worklist ist an ihrer Lesegrenze. Die Zahlen sind Mindestwerte, und eine Regel mit „Nicht gezählt“ kann trotzdem Nachrichten zurückhalten. Öffne eine Regel, um sie zu sehen.",
+  "worklist.hidden.notCounted": "Nicht gezählt",
   "worklist.hidden.count": "{count} wartend",
   "worklist.hidden.pastHorizon": "Zu alt für die Worklist",
   "worklist.hidden.pastHorizon.detail":
@@ -11062,6 +11205,8 @@ export const de = {
     "Zurückgestellt oder als nicht zuständig markiert. Zurückgestellte Einträge kommen automatisch zurück.",
   "worklist.hidden.shown": "Angezeigt in der Worklist: {count}.",
   "worklist.hidden.rows.loading": "Zurückgehaltene Nachrichten werden geladen…",
+  "worklist.hidden.rows.outOfReach":
+    "Bei dieser Menge ließ sich keine Nachricht lesen. Es können trotzdem welche zurückgehalten werden.",
   "worklist.hidden.rows.empty": "Diese Regel hält gerade nichts zurück.",
   "worklist.filter.label": "Art der Arbeit",
   "worklist.filter.all": "Alle",
@@ -11112,13 +11257,24 @@ export const de = {
   "worklist.because.quiet_days": "verstummt",
   "worklist.because.quiet_days.value_one": "seit {value} Tag still",
   "worklist.because.quiet_days.value_other": "seit {value} Tagen still",
+  "worklist.because.no_next_step": "kein nächster Schritt geplant",
   "worklist.because.no_champion": "kein Champion",
+  "worklist.because.champion_unknown": "Champion unbekannt",
   "worklist.because.promised": "von dir zugesagt",
   "worklist.because.approved_and_failed": "freigegeben, aber nicht ausgeführt",
   "worklist.because.blocks_customer_work": "Kontakt wartet darauf",
   "worklist.because.routine": "Routinebereinigung",
   "worklist.because.repeated_failure": "wiederholter Fehler",
+  "worklist.because.earlier_requests": "frühere Anfragen in diesem Thread",
+  "worklist.because.earlier_requests.value_one":
+    "{value} frühere Anfrage in diesem Thread",
+  "worklist.because.earlier_requests.value_other":
+    "{value} frühere Anfragen in diesem Thread",
+  "worklist.because.first_asked": "früher angefragt",
+  "worklist.because.first_asked.value": "zuerst angefragt am {value}",
   "worklist.because.legal_deadline": "gesetzliche Frist läuft",
+  "worklist.because.opened_overdue":
+    "erst nach Fristablauf erfasst, aus importiertem Bestand",
   "worklist.because.meeting_soon": "beginnt bald",
   "worklist.because.meeting_unprepared": "nichts vorbereitet",
   "worklist.because.outcome_unrecorded": "kein Ergebnis erfasst",
@@ -11201,7 +11357,7 @@ export const de = {
   "noticeDuty.askConfirm": "Bestätigung der Daten anfragen",
   "noticeDuty.end": "Pflicht beenden…",
   "noticeDuty.sent":
-    "An {address} gesendet. Die Pflicht ist erfüllt, sobald die Nachricht verschickt ist.",
+    "An {address} gesendet. Der Eintrag verschwindet aus deiner Worklist, bleibt aber offen, bis die Nachricht zugestellt ist, und kommt zurück, falls die Nachricht nicht ankommt.",
   "noticeDuty.notSent":
     "Nicht gesendet: Diese Installation kann keine E-Mail an {address} senden.",
   "noticeDuty.ended":
@@ -11321,6 +11477,9 @@ export const de = {
   // nicht braucht.
   "worklist.verb.open_meeting_brief": "Termin vorbereiten",
   "worklist.deal.closes": "Abschluss {date}",
+  "worklist.when.held": "Fand statt: {when}",
+  "worklist.meeting.hostedBy": "Organisiert von {name}",
+  "worklist.meeting.hostedByYou": "Von dir organisiert",
   "worklist.when.starts": "Beginn: {when}",
   "worklist.when.due": "Fällig: {when}",
   "worklist.batch.system_incident_one":
@@ -11495,6 +11654,21 @@ export const de = {
   "aiRates.refresh.outcome.unreachable": "Nicht erreichbar",
   "aiRates.refresh.outcome.not_bound": "Nicht in Verwendung",
   "aiRates.refresh.outcome.not_listed": "Nicht in der Liste",
+  "aiRates.refresh.outcome.not_configured": "Kein Schlüssel",
+  "aiPriceSync.title": "Modellpreise",
+  "aiPriceSync.autoSync.label": "Täglich automatisch abgleichen",
+  "aiPriceSync.autoSync.help":
+    "Liest die Preise jedes eingerichteten Anbieters einmal täglich. Manuell gesetzte Preise bleiben erhalten.",
+  "aiPriceSync.sources": "Quellen: models.dev · OpenRouter",
+  "aiPriceSync.lastSynced": "Zuletzt abgeglichen {ago}",
+  "aiPriceSync.never": "Noch nicht abgeglichen",
+  "aiPriceSync.adminOnly": "Deine Rolle kann das nicht ändern.",
+  "aiPriceSync.withheld": "Modellpreise sind für dich nicht sichtbar.",
+  "aiRates.refresh.addedCount_one": "{count} Modell hinzugefügt",
+  "aiRates.refresh.addedCount_other": "{count} Modelle hinzugefügt",
+  "aiRates.refresh.keptCount_one": "{count} manueller Preis beibehalten",
+  "aiRates.refresh.keptCount_other": "{count} manuelle Preise beibehalten",
+  "aiProviders.setByHand": "Manuell",
   "aiRates.refresh.unlisted": "Nicht in der Liste des Anbieters: {ids}",
   "aiRates.refresh.updatedCount_one": "{count} Preis geschrieben",
   "aiRates.refresh.updatedCount_other": "{count} Preise geschrieben",
@@ -11510,7 +11684,35 @@ export const de = {
   "aiProviders.inUse": "In Verwendung",
   "aiProviders.unpriced": "{model} ist in Verwendung und hat keinen Preis.",
   "aiProviders.setPrice": "Preis festlegen",
-  "aiProviders.manage": "Verwalten",
+  "aiProviderSettings.service.choose": "Dienst auswählen",
+  "aiProviderSettings.service.label": "Dienst",
+  "aiProviderSettings.service.openrouter": "OpenRouter",
+  "aiProviderSettings.service.openrouterEu": "OpenRouter (EU)",
+  "aiProviderSettings.service.openrouterEu.note":
+    "Anfragen werden nur in der EU verarbeitet. Erfordert einen OpenRouter-Business- oder -Enterprise-Tarif, und es werden nur EU-fähige Modelle bedient.",
+  "aiProviderSettings.service.mistral": "Mistral",
+  "aiProviderSettings.service.together": "Together",
+  "aiProviderSettings.service.groq": "Groq",
+  "aiProviderSettings.service.deepseek": "DeepSeek",
+  "aiProviderSettings.service.typesafe": "TypeSafe (Standard)",
+  "aiProviderSettings.service.otherChat": "Anderer OpenAI-kompatibler Dienst",
+  "aiProviderSettings.service.otherDecisions": "Anderer Entscheidungsserver",
+  "aiProviderSettings.service.otherAddress": "Andere Adresse",
+  "aiProviderSettings.service.learnMore": "Über OpenRouter EU",
+  "aiProviderSettings.host.line": "Host: {host}",
+  "aiProviderSettings.host.default": "Nutzt die eigene Adresse des Dienstes.",
+  "aiProviderSettings.host.guide": "So findest du deinen Host",
+  "aiProviderSettings.save": "Verbindung speichern",
+  "aiProviders.name.anthropic": "Anthropic",
+  "aiProviders.name.openaiCompatible": "OpenAI-kompatibel",
+  "aiProviders.name.openai": "OpenAI",
+  "aiProviders.name.gemini": "Google Gemini",
+  "aiProviders.name.geminiVertex": "Gemini auf Vertex AI",
+  "aiProviders.name.jev": "TypeSafe Jev",
+  "aiProviders.name.jevCompatible": "Jev-kompatibel",
+  "aiProviders.name.ollama": "Ollama",
+  "aiProviders.name.vllm": "vLLM",
+  "aiProviders.borrowedFrom": "Von {provider}",
   "aiProviders.connection": "Verbindung",
   "aiProviders.prices": "Preise",
   "aiProviders.addPrice": "Preis hinzufügen",
@@ -11609,6 +11811,9 @@ export const de = {
   "stageAutomation.rules": "Regeln für Übergänge",
   "stageAutomation.rulesIntro":
     "Das Einschalten eines Übergangs verschiebt noch keine Deals. Margince fragt weiter nach, bis die Bilanz oben die Schwelle erreicht, und verschiebt dann automatisch.",
+  "stageAutomation.offTitle": "Phasen-Automatik ist ausgeschaltet",
+  "stageAutomation.offBody":
+    "Solange sie aus ist, bewegt sich kein Deal von selbst, unabhängig davon, was unten eingestellt ist. Admins schalten sie in den Einstellungen zur Phasen-Automatik für die gesamte Installation ein.",
   "stageAutomation.modeHint":
     "Wenn eingeschaltet und die Bilanz ausreicht, verschiebt Margince den Deal und benachrichtigt dich danach.",
   "stageAutomation.notEarnedYet": "Noch nicht qualifiziert: {why}",
@@ -11671,6 +11876,8 @@ export const de = {
   "magic.clear.needsYou": "Nichts wartet auf dich",
   "magic.clear.couldNotComplete": "Nichts ist fehlgeschlagen",
   "magic.clear.watching": "Alle Quellen in Ordnung",
+  "magic.count.keptInSync_one": "{count} synchron gehalten",
+  "magic.count.keptInSync_other": "{count} synchron gehalten",
   "magic.count.done_one": "{count} für dich erledigt",
   "magic.count.done_other": "{count} für dich erledigt",
   "magic.count.needsYou_one": "{count} wartet auf dich",
@@ -11714,6 +11921,18 @@ export const de = {
     "Transkriptinhalte nach Ablauf der Aufbewahrungsfrist gelöscht",
   "magic.action.retention_deal_archive":
     "Abgeschlossene Deals nach Ablauf der Aufbewahrungsfrist archiviert",
+  "magic.action.create_contact": "Kontakt angelegt:",
+  "magic.action.create_company": "Unternehmen angelegt:",
+  "magic.action.create_deal": "Deal angelegt:",
+  "magic.action.create_lead": "Lead angelegt:",
+  "magic.action.create_project": "Projekt angelegt:",
+  "magic.action.create_activity": "E-Mail oder Termin gespeichert:",
+  "magic.action.archive_contact": "Kontakt archiviert:",
+  "magic.action.archive_company": "Unternehmen archiviert:",
+  "magic.action.archive_deal": "Deal archiviert:",
+  "magic.action.archive_lead": "Lead archiviert:",
+  "magic.action.archive_project": "Projekt archiviert:",
+  "magic.action.archive_activity": "E-Mail oder Termin archiviert:",
   "magic.why.mail_filed": "Die Absenderadresse gehört zu diesem Kontakt.",
   "magic.why.public_records":
     "Aus der öffentlichen Website und den DNS-Einträgen des Unternehmens.",
@@ -11740,6 +11959,7 @@ export const de = {
   "magic.noRecord": "Kein Datensatz genannt",
   "magic.undo.action": "Rückgängig",
   "magic.undo.done": "Rückgängig gemacht",
+  "magic.decide": "Entscheiden",
   "magic.records.title": "Was sich geändert hat, Datensatz für Datensatz",
   "magic.records.empty": "Keiner dieser Datensätze ist noch sichtbar.",
   "magic.records.more": "Mehr anzeigen",
@@ -11769,6 +11989,8 @@ export const de = {
   "magic.glance.meetingsBooked": "Termine gebucht",
   "magic.glance.leadsDisqualified": "Leads disqualifiziert",
   "magic.glance.retention": "Aufbewahrung angewendet",
+  "magic.glance.recordsCreated": "Datensätze angelegt",
+  "magic.glance.recordsArchived": "Datensätze archiviert",
   "magic.timeline.title": "Wann es passiert ist",
   "magic.timeline.agent": "Agenten",
   "magic.timeline.sync": "Synchronisierung und Regeln",
@@ -11797,8 +12019,10 @@ export const de = {
     "Die Umwandlung eines Leads wartet auf dein Wort",
   "magic.action.approval_overnight":
     "Ein Vorschlag aus der Nacht wartet auf dein Wort",
-  "magic.action.approval_transcript_proposal":
-    "Ein Vorschlag aus einer Aufzeichnung wartet auf dein Wort",
+  "magic.action.approval_commitment_task":
+    "Eine Zusage aus einem Gespräch wartet auf dein Wort",
+  "magic.action.approval_capture_counterparty":
+    "{target} hat dir geschrieben. Als Kontakt behalten?",
   "magic.action.approval_pending":
     "Ein Vorschlag vom Typ {kind} wartet auf dein Wort",
   "magic.action.capture_reauth_required":
@@ -11828,4 +12052,283 @@ export const de = {
     "Was du aus dieser Quelle siehst, kann unvollständig sein.",
   "magic.consequence.capture_history_incomplete":
     "Älterer Austausch aus dieser Quelle fehlt.",
+  "aiFigures.window.24h": "24 Std.",
+  "aiFigures.window.7d": "7 T.",
+  "aiFigures.window.30d": "30 T.",
+  "aiFigures.window": "Zeitraum",
+  "aiFigures.groupBy": "Gruppieren nach",
+  "aiFigures.by.host": "Nach Host",
+  "aiFigures.by.model": "Nach Modell",
+  "aiFigures.by.tier": "Nach Stufe",
+  "aiFigures.recentCalls": "Letzte Aufrufe",
+  "aiFigures.intro":
+    "Jeder Aufruf über diese Verbindung. Gelesen aus demselben Aufrufprotokoll wie Status und Verlauf.",
+  "aiFigures.intro.broker":
+    "Jeder Aufruf über diese Verbindung und welcher OpenRouter-Host ihn bedient hat. Gelesen aus demselben Aufrufprotokoll wie Status und Verlauf.",
+  "aiFigures.openRow":
+    "Öffne eine Zeile, um die Aufrufe zu sehen, die dort endeten.",
+  "aiFigures.lastWeek": "Letzte 7 Tage",
+  "aiFigures.noHost": "Kein Host hat geantwortet",
+  "aiFigures.costAtLeast": "mindestens {cost}",
+  "aiFigures.hostUnrecorded": "Host nicht erfasst",
+  "aiFigures.empty": "Keine Aufrufe in diesem Zeitraum.",
+  "aiFigures.pending": "Aufrufprotokoll wird gelesen …",
+  "aiFigures.unread":
+    "Die Aufrufzahlen konnten nicht gelesen werden. Versuche es gleich noch einmal.",
+  "aiFigures.col.calls": "Aufrufe",
+  "aiFigures.col.failed": "Fehlgeschlagen",
+  "aiFigures.col.timeouts": "Zeitüberschreitungen",
+  "aiFigures.col.p50": "p50",
+  "aiFigures.col.p95": "p95",
+  "aiFigures.col.cost": "Kosten",
+  "aiFigures.line.none": "Keine Aufrufe in den letzten 7 Tagen",
+  "aiFigures.line.calls_one": "{count} Aufruf",
+  "aiFigures.line.calls_other": "{count} Aufrufe",
+  "aiFigures.line.noneFailed": "0 fehlgeschlagen",
+  "aiFigures.line.failed_one": "{count} fehlgeschlagen",
+  "aiFigures.line.failed_other": "{count} fehlgeschlagen",
+  "aiFigures.line.timeouts_one": "({count} Zeitüberschreitung)",
+  "aiFigures.line.timeouts_other": "({count} Zeitüberschreitungen)",
+  "aiFigures.line.timeoutCount_one": "{count} Zeitüberschreitung",
+  "aiFigures.line.timeoutCount_other": "{count} Zeitüberschreitungen",
+  "aiFigures.line.p50": "p50 {latency}",
+  "aiFigures.line.sort": "Sortierung: {sort}",
+  "aiFigures.line.week": "7 T.: {figures}",
+  "aiFigures.line.prefix": "7 T.: {sentence}",
+  "aicalls.filtered": "Es werden Aufrufe gezeigt, die bei {filter} endeten.",
+  "aicalls.filtered.clear": "Alle Aufrufe zeigen",
+  "aiOpenRouter.title": "OpenRouter-Einstellungen",
+  "aiOpenRouter.privacyDocs": "Datenrichtlinien ↗",
+  "aiOpenRouter.routingDocs": "Anbieter-Routing ↗",
+  "aiOpenRouter.intro":
+    "Erscheint, weil der Dienst OpenRouter ist. Gilt für jede Stufe dieser Verbindung, und keine Stufe kann es lockern.",
+  "aiOpenRouter.zdr": "Keine Datenspeicherung",
+  "aiOpenRouter.zdr.help": "Nur Hosts, die nichts speichern.",
+  "aiOpenRouter.deny": "Hosts ablehnen, die mit Prompts trainieren",
+  "aiOpenRouter.deny.help": "Sendet data_collection: deny.",
+  "aiOpenRouter.distill": "Nur destillierbare Modelle",
+  "aiOpenRouter.distill.help":
+    "Nur Modelle, deren Lizenz die Weiterverwendung der Ausgabe erlaubt.",
+  "aiOpenRouter.fallbacks": "Ausweichen erlauben",
+  "aiOpenRouter.fallbacks.help":
+    "Einen anderen Host versuchen, wenn der bevorzugte ausfällt.",
+  "aiOpenRouter.only": "Nur diese Hosts verwenden",
+  "aiOpenRouter.only.help":
+    "OpenRouter-Hostnamen, durch Komma getrennt. Leer heißt jeder Host, der die Regeln oben erfüllt.",
+  "aiOpenRouter.only.placeholder": "zum Beispiel mistral/eu, cerebras",
+  "aiOpenRouter.ignore": "Nie verwenden",
+  "aiOpenRouter.ignore.help": "Hosts, die überall übersprungen werden.",
+  "aiOpenRouter.ignore.placeholder": "zum Beispiel coreweave",
+  "aiOpenRouter.account":
+    "Einstellungen in deinem OpenRouter-Konto gelten ebenfalls und werden hier nicht gezeigt.",
+  "aiServing.title": "Bereitstellung",
+  "aiServing.openRouter": "OpenRouter",
+  "aiServing.guide": "Routing-Leitfaden ↗",
+  "aiServing.blocked.decisions":
+    "Das Entscheidungsmodell antwortet über den Entscheidungs-Endpunkt von OpenRouter, der keinen Routing-Block annimmt. Sein Zeitlimit wird pro Aufgabe unter KI-Aufgaben festgelegt.",
+  "aiServing.blocked.provider":
+    "Host-Routing gilt nur für OpenRouter. {provider} stellt dieses Modell selbst bereit. Denkstufe und Zeitlimit werden weiterhin pro Aufgabe unter KI-Aufgaben festgelegt.",
+  "aiServing.blocked.host":
+    "Host-Routing gilt nur für OpenRouter. Die Verbindung zeigt auf einen anderen Dienst. Denkstufe und Zeitlimit werden weiterhin pro Aufgabe unter KI-Aufgaben festgelegt.",
+  "aiServing.empty":
+    "Leer nutzt die mitgelieferte Vorgabe: nach Durchsatz sortieren, fp16 oder bf16, nur Hosts, die alle gesendeten Parameter unterstützen. {} lässt OpenRouter selbst routen.",
+  "aiServing.empty.embeddings":
+    "Leer ergänzt nichts zu den Host-Regeln der Verbindung. Diese Spur nimmt nur only, ignore, allow_fallbacks, zdr, data_collection und enforce_distillable_text.",
+  "aiServing.json": "Bereitstellungs-JSON",
+  "aiServing.format": "Formatieren",
+  "aiServing.example": "Beispiel einfügen",
+  "aiServing.useDefault": "Mitgelieferte Vorgabe nutzen",
+  "aiServing.checking": "Wird mit dem Server geprüft …",
+  "aiServing.valid": "Gültig",
+  "aiServing.shippedDefault": "Mitgelieferte Vorgabe",
+  "aiServing.problems_one": "{count} Problem",
+  "aiServing.problems_other": "{count} Probleme",
+  "aiServing.reference": "Feldreferenz",
+  "aiServing.connectionOnly": "nur Verbindung",
+  "aiServing.openRouterDocs": "OpenRouter ↗",
+  "aiServing.referenceNote":
+    "Gelesen aus GET /ai/routing/schema. Schlüssel, die Margince pro Aufruf setzt (model, messages, tools, response_format …), werden abgelehnt.",
+  "aiServing.asked": "Was OpenRouter angefragt wird",
+  "aiServing.askedFor":
+    "jeder Aufruf von {lane}, nachdem deine Einstellungen, die Verbindung und die Vorgaben von Margince zusammengeführt sind",
+  "aiServing.fixFirst":
+    "Behebe die Probleme oben, um zu sehen, was gesendet wird.",
+  "aiServing.brokerOwn": "Nichts zusätzlich: OpenRouter wählt den Host selbst.",
+  "aiServing.showJson": "Gesendetes JSON zeigen",
+  "aiServing.source.default": "Vorgabe von Margince",
+  "aiServing.source.connection": "Verbindung",
+  "aiServing.source.tier": "Hier festgelegt",
+  "aiServing.source.task": "Jede Aufgabe",
+  "aiServing.say.sort": "Den Host nach {by} wählen.",
+  "aiServing.say.sortAcross":
+    "Den Host nach {by} wählen und dabei auch Ausweichmodelle vergleichen.",
+  "aiServing.say.quantizations":
+    "Nur Hosts, die das Modell mit {levels}-Genauigkeit ausführen.",
+  "aiServing.say.requireParameters":
+    "Nur Hosts, die jede Option unterstützen, die Margince sendet, etwa das Antwortformat.",
+  "aiServing.say.requireParametersOff":
+    "Hosts dürfen Optionen ignorieren, die sie nicht unterstützen.",
+  "aiServing.say.zdr":
+    "Nur Hosts, die keine Kopie von Prompts oder Antworten behalten.",
+  "aiServing.say.zdrOff":
+    "Hosts, die eine Kopie von Prompts behalten, sind erlaubt.",
+  "aiServing.say.denyCollection":
+    "Hosts überspringen, die Prompts speichern oder damit trainieren könnten.",
+  "aiServing.say.allowCollection":
+    "Hosts, die Prompts speichern, sind erlaubt.",
+  "aiServing.say.distill":
+    "Nur Modelle, deren Lizenz die Weiterverwendung ihrer Ausgabe erlaubt.",
+  "aiServing.say.distillOff": "Modelle jeder Lizenz sind erlaubt.",
+  "aiServing.say.only": "Nur {hosts} verwenden.",
+  "aiServing.say.ignore": "Nie {hosts} verwenden.",
+  "aiServing.say.order": "Zuerst {hosts} versuchen.",
+  "aiServing.say.fallbacks":
+    "Auf einen anderen Host ausweichen, wenn diese ausfallen.",
+  "aiServing.say.noFallbacks":
+    "Lieber fehlschlagen als einen anderen Host verwenden.",
+  "aiServing.say.maxPrice":
+    "Hosts überspringen, deren Preise diese Grenzen überschreiten: {prices}.",
+  "aiServing.say.maxLatency":
+    "Hosts bevorzugen, die innerhalb von {latency} zu antworten beginnen. Ein langsamerer Host antwortet trotzdem, wenn kein schnellerer frei ist.",
+  "aiServing.say.minThroughput":
+    "Hosts bevorzugen, die mindestens {throughput} Tokens pro Sekunde erzeugen.",
+  "aiServing.say.effort": "Mit Stufe {effort} denken.",
+  "aiServing.say.maxTokens": "Höchstens {tokens} Tokens lang denken.",
+  "aiServing.say.exclude":
+    "Denken, aber die Begründung aus der Antwort lassen.",
+  "aiServing.say.include": "Die Begründung mit der Antwort zurückgeben.",
+  "aiServing.say.thinkOn": "Denken einschalten.",
+  "aiServing.say.thinkOff": "Denken ausschalten.",
+  "aiServing.say.taskEffort":
+    "Die Denkstufe kommt aus der Einstellung jeder Aufgabe unter KI-Aufgaben.",
+  "aiServing.say.raw": "{key} = {value}",
+  "aiFigures.line.brokerOwn": "eigenes Routing des Brokers",
+  "aiFigures.line.sortAcross": "{by} über alle Modelle",
+  "aiTasks.settings": "Einstellungen",
+  "aiTasks.custom": "Angepasst",
+  "aiTaskSheet.decision": "Entscheidung",
+  "aiTaskSheet.settings": "Einstellungen",
+  "aiTaskSheet.thinkingGuide": "Was Denkstufen bewirken ↗",
+  "aiTaskSheet.thinking": "Denkstufe",
+  "aiTaskSheet.thinking.default":
+    "Standard (Bindung und jeder Prompt entscheiden)",
+  "aiTaskSheet.thinking.default.help":
+    "Die Untergrenze jedes Prompts und die Bindung der Stufe entscheiden, wie viel das Modell denkt.",
+  "aiTaskSheet.thinking.minimal.help":
+    "Sofort antworten. Am günstigsten und schnellsten. Wird jedem Anbieter über dessen eigene Denkeinstellung gesendet.",
+  "aiTaskSheet.thinking.low.help":
+    "Kurz nachdenken vor der Antwort. Wird jedem Anbieter über dessen eigene Denkeinstellung gesendet.",
+  "aiTaskSheet.thinking.medium.help":
+    "Die Schritte durchdenken. Langsamer, mehr Tokens. Wird jedem Anbieter über dessen eigene Denkeinstellung gesendet.",
+  "aiTaskSheet.thinking.high.help":
+    "Ausführlich nachdenken. Am langsamsten und teuersten. Wird jedem Anbieter über dessen eigene Denkeinstellung gesendet.",
+  "aiTaskSheet.decisionTimeout": "Zeitlimit des Entscheidungsmodells",
+  "aiTaskSheet.decisionTimeout.help":
+    "{low} bis {high} s. Gibt das Entscheidungsmodell auf, weicht die Aufgabe auf ihr Stufenmodell aus.",
+  "aiTaskSheet.attemptTimeout": "Zeitlimit pro Modellaufruf",
+  "aiTaskSheet.attemptTimeout.help":
+    "{low} bis {high} s pro Aufruf eines Stufenmodells. Ein längerer Aufruf wird gestoppt und als Zeitüberschreitung gezählt. Gilt für jeden Anbieter.",
+  "aiTaskSheet.attemptTimeout.help.decision":
+    "{low} bis {high} s pro Aufruf eines Stufenmodells, auch beim Ausweichen. Ein längerer Aufruf wird gestoppt und als Zeitüberschreitung gezählt. Gilt für jeden Anbieter.",
+  "aiTaskSheet.seconds": "{seconds} s",
+  "aiTaskSheet.seconds.default": "{seconds} s (Standard)",
+  "aiTaskSheet.reset": "Auf Standard zurücksetzen",
+  "aiTaskSheet.fixed": "Durch Vertrag festgelegt",
+  "aiTaskSheet.tiersTried": "Versuchte Stufen",
+  "aiTaskSheet.runs": "Läuft",
+  "aiTaskSheet.fixed.help": "Ändere diese in ai-tasks.yaml.",
+  "aiTaskSheet.addTask": "KI-Aufgabe hinzufügen oder ändern ↗",
+  "aiTaskSheet.conflict":
+    "Jemand hat diese Einstellungen während deiner Bearbeitung gespeichert",
+  "aiTaskSheet.conflict.help":
+    "Schließe dieses Fenster und öffne es erneut, um vom jetzt gespeicherten Stand auszugehen.",
+  "aiTaskSheet.saveFailed": "Die Einstellungen wurden nicht gespeichert",
+  "aiTaskSheet.readFailed":
+    "Die gespeicherten Einstellungen konnten nicht gelesen werden",
+  "aiTaskSheet.unsaved": "Nicht gespeicherte Änderungen",
+  "aiTaskSheet.applies":
+    "Gilt innerhalb einer Minute für die ganze Installation.",
+  "aiTaskSheet.save": "Einstellungen speichern",
+  "aiTaskSheet.viewCalls": "Diese Aufrufe ansehen →",
+  "aiTaskSheet.hostsUnder":
+    "· welcher Host jeden Aufruf bedient hat, steht unter Anbieter.",
+  "aiOutcome.firstTry": "Beim ersten Versuch beantwortet",
+  "aiOutcome.fallback": "Vom Ausweichen beantwortet",
+  "aiOutcome.noAnswer": "Keine Antwort",
+  "aiOutcome.legend": "Wie Aufrufe eine Antwort bekamen",
+  "aiOutcome.headline.all_one": "Der eine Aufruf bekam eine Antwort.",
+  "aiOutcome.headline.all_other": "Alle {total} Aufrufe bekamen eine Antwort.",
+  "aiOutcome.headline.lost":
+    "{share} von {total} Aufrufen bekamen eine Antwort. {lost} nicht.",
+  "aiOutcome.lostNote_one":
+    "{lost} Aufruf bekam von keinem Schritt eine Antwort. Die Aufgabe behandelt ihn wie ohne Modellantwort.",
+  "aiOutcome.lostNote_other":
+    "{lost} Aufrufe bekamen von keinem Schritt eine Antwort. Die Aufgabe behandelt sie wie ohne Modellantwort.",
+  "aiOutcome.step": "Schritt {n} · {role}",
+  "aiOutcome.role.decision": "Entscheidungsmodell",
+  "aiOutcome.role.tier": "Stufenmodell",
+  "aiOutcome.role.fallback": "Ausweichen",
+  "aiOutcome.answered": "{answered} von {attempts} beantwortet",
+  "aiOutcome.usually": "meist in {latency}",
+  "aiOutcome.notNeeded": "In diesem Zeitraum nicht gebraucht",
+  "aiOutcome.gaveUp.on_one": "{count} {reason} → weitergegeben",
+  "aiOutcome.gaveUp.on_other": "{count} {reason} → weitergegeben",
+  "aiOutcome.gaveUp.last_one": "{count} {reason} → keine Antwort",
+  "aiOutcome.gaveUp.last_other": "{count} {reason} → keine Antwort",
+  "aiOutcome.gaveUp.timeout": "Zeit überschritten",
+  "aiOutcome.gaveUp.failed": "fehlgeschlagen",
+  "aiOutcome.gaveUp.throttled": "gedrosselt",
+  "aiOutcome.gaveUp.quota": "Kontingent erschöpft",
+  "aiOutcome.gaveUp.refused": "abgelehnt",
+  "aiOutcome.gaveUp.unsure": "nicht sicher genug",
+  "aiOutcome.gaveUp.offEnum": "außerhalb der Auswahl beantwortet",
+  "aiOutcome.gaveUp.invalid": "in falscher Form beantwortet",
+  "aiOutcome.latencyTitle": "Wie lange Aufrufe dauern, gemessen am Zeitlimit",
+  "aiOutcome.latencyMarks":
+    "● die Hälfte endet innerhalb von {p50} · ◆ 95 % innerhalb von {p95}",
+  "aiOutcome.timeout": "Zeitlimit",
+  "aiOutcome.decisionTimeout": "Zeitlimit des Entscheidungsmodells",
+  "aiOutcome.limit": "│ {name} {seconds} s",
+  "aiOutcome.limitNear": "│ {name} {seconds} s: p95 liegt nah daran",
+  "aiOutcome.limitOver": "│ {name} {seconds} s: p95 liegt darüber",
+  "aiOutcome.limitFar": "{name} {seconds} s, weit über p95",
+  "aiServing.notJson":
+    "ist kein gültiges JSON; prüfe Kommas und Klammern in dieser Zeile.",
+  "aiServing.notObject": "muss ein Objekt sein: der Text zwischen { und }.",
+  "aiServing.previewFailed":
+    "Der Server konnte diesen Wert nicht prüfen: {reason} Speichern bleibt aus, bis er es kann.",
+  "projectFiling.action": "Ablage rückgängig machen",
+  "projectFiling.title": "Projektablage rückgängig machen?",
+  "projectFiling.loading": "Prüfe, was diese Aktivität aufbewahrt …",
+  "projectFiling.explain":
+    "Die Ablage dieser Aktivität unter {projects} hat sie als Geschäftskorrespondenz markiert, die Lösch- und Aufbewahrungsläufe aufbewahren müssen. Rückgängig machen entfernt sie aus dem Projekt und hebt diese Markierung auf.",
+  "projectFiling.reason": "Warum ist die Ablage falsch?",
+  "projectFiling.reasonHint": "Wird mit deinem Namen im Audit-Log gespeichert.",
+  "projectFiling.reasonRequired":
+    "Begründe, warum die Ablage falsch ist. Die Begründung wird im Audit-Log gespeichert.",
+  "projectFiling.confirm": "Ablage rückgängig machen",
+  "projectFiling.doneTitle": "Ablage rückgängig gemacht",
+  "projectFiling.done":
+    "Die Aktivität ist nicht mehr unter dem Projekt abgelegt, und ihre Aufbewahrungsmarkierung ist aufgehoben.",
+  "projectFiling.decisions": "Dokumentierte Entscheidungen",
+  "projectFiling.decision": "{name} · {when}",
+  "projectFiling.refusal.not_filed":
+    "Diese Aktivität wird nicht durch eine Projektablage aufbewahrt, daher gibt es nichts rückgängig zu machen.",
+  "projectFiling.refusal.other_basis_remains":
+    "Etwas anderes qualifiziert diese Aktivität weiterhin als Geschäftskorrespondenz, etwa ein gewonnener Deal, ein gesendetes Angebot oder eine Festlegung durch den Verantwortlichen, daher behält sie ihre Aufbewahrungsmarkierung.",
+  "projectFiling.refusal.restricted":
+    "Für diese Aktivität hat bereits eine gesetzliche Sperre begonnen. Eine begonnene Sperre wird nie verkürzt.",
+  "projectFiling.refusal.qualifying_deal":
+    "Diese Aktivität ist unter einem Deal abgelegt, der sie als Geschäftskorrespondenz qualifiziert, daher behält sie ihre Aufbewahrungsmarkierung.",
+  "projectFiling.actionFor": "Ablage rückgängig machen: {subject}",
+  "projectFiling.hiddenProject": "ein Projekt, das du nicht sehen kannst",
+  "projectFiling.decisionRedacted": "Entscheidung am {when} dokumentiert",
+  "projectFiling.refusal.archived":
+    "Diese Aktivität ist archiviert, daher kann ihre Ablage nicht mehr rückgängig gemacht werden.",
+  "projectFiling.refusal.erasure_pending":
+    "Eine offene Löschanfrage betrifft einen Kontakt dieser Aktivität, daher bleibt ihre Aufbewahrungsmarkierung bis zur Entscheidung.",
+  "projectFiling.refusal.legal_hold":
+    "Auf einen Datensatz, mit dem diese Aktivität verknüpft ist, gilt ein Legal Hold, daher bleibt die Aufbewahrungsmarkierung bis zur Aufhebung.",
+  "projectFiling.refusal.hidden_project":
+    "Ein Projekt, das du nicht sehen kannst, hält diese Aktivität weiterhin. Frage jemanden, der es sehen kann, ob er die Ablage rückgängig macht.",
 } as const satisfies Record<MessageKey, string>;

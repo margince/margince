@@ -102,9 +102,8 @@ func TestChangingTheBindingChangesTheVersion(t *testing.T) {
 		"the location ladder changes": strings.Replace(
 			baseRouting, "profile: eu_hosted", "profile: cloud_frontier", 1,
 		),
-		"a tier gains a base-url override": strings.Replace(
-			baseRouting, "premium: {provider: gemini, model: gemini-3.5-flash}",
-			"premium: {provider: gemini, model: gemini-3.5-flash, base_url: https://eu-gateway.example}", 1,
+		"the provider gains a base-url override": strings.Replace(
+			baseRouting, "tiers:\n", "providers:\n  gemini: {base_url: https://eu-gateway.example}\ntiers:\n", 1,
 		),
 		"a tier narrows what it accepts": strings.Replace(
 			baseRouting, "premium: {provider: gemini, model: gemini-3.5-flash}",

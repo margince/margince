@@ -151,7 +151,7 @@ func TestAllowanceGatesBeforeReadingOrReturningAConflict(t *testing.T) {
 	if _, err := store.ReadStatus(ctx); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("status: %v", err)
 	}
-	if _, err := store.PreviewRouting(ctx, RoutingConfig{}); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := store.PreviewRouting(ctx, RoutingConfig{}, nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("preview: %v", err)
 	}
 }

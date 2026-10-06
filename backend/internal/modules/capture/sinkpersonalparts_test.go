@@ -19,9 +19,9 @@ func TestAPrivateThreadsFilesAreTakenOutBeforeAnythingStoresThem(t *testing.T) {
 		{Ordinal: 2, Filename: "attest.pdf", Body: []byte("medical")},
 	}}
 
-	stripped, withheld := stripPersonalParts(rec)
-	if withheld != 2 {
-		t.Fatalf("withheld = %d, want both files counted", withheld)
+	stripped, taken := stripPersonalParts(rec)
+	if len(taken) != 2 {
+		t.Fatalf("took %d parts, want both files, so both can still be named", len(taken))
 	}
 	if len(stripped.Parts) != 0 {
 		t.Fatalf("parts = %d, want none left to stage", len(stripped.Parts))
@@ -47,8 +47,8 @@ func TestAWithheldFileLeavesNoEmptyPartToStage(t *testing.T) {
 // did. A log saying "0 files withheld" on every ordinary message is noise that
 // makes the real ones harder to find.
 func TestAMessageWithNoFilesWithholdsNothing(t *testing.T) {
-	_, withheld := stripPersonalParts(connector.NormalizedRecord{})
-	if withheld != 0 {
-		t.Fatalf("withheld = %d on a message that carried nothing", withheld)
+	_, taken := stripPersonalParts(connector.NormalizedRecord{})
+	if len(taken) != 0 {
+		t.Fatalf("took %d parts from a message that carried nothing", len(taken))
 	}
 }

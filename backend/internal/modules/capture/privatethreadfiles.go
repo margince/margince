@@ -1,0 +1,203 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package capture
+
+// The files of personal mail captured before its thread was judged private.
+//
+// Capture keeps no bytes for a message on a thread already held as personal
+// (sinkpersonalparts.go). The verdict usually lands after the thread's first
+// messages, so those keep their files — and nothing destroys a personal THREAD
+// the way the personal-mail purge destroys a personal SENDER's mail. This
+// selects those messages once the same undo window the purge gives has closed,
+// and rewrites their stored originals without the bytes.
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"strconv"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/modules/capture/partslim"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+)
+
+// PrivateThreadMessage is one message whose files are due, and the stored
+// original it was read from, if any.
+type PrivateThreadMessage struct {
+	Activity   ids.UUID
+	RawCapture *ids.UUID
+}
+
+// SelectPrivateThreadFilesDueTx lists messages on a thread held as personal
+// whose undo window has closed and that still have stored file bytes.
+//
+// The verdict is the capturing seat's own — the seat captured_by names, as the
+// attendee repair reads it — and the message's author is one the verdict saw
+// (senderWasSeen, at capture). The window is the purge's: a week
+// when the owner held the thread, a month when the classifier did, measured
+// from the later of the message's capture and the verdict. A message a
+// colleague also imported is theirs too and is left alone. So, as the purge
+// leaves them, is mail under a hold, inside the statutory floor, or named by an
+// open data-subject request: withholding bytes cannot be undone either.
+func SelectPrivateThreadFilesDueTx(
+	ctx context.Context, tx pgx.Tx, windows PersonalPurgeWindows, floor StatutoryFloor, limit int,
+) ([]PrivateThreadMessage, error) {
+	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
+		return nil, err
+	}
+	if limit <= 0 {
+		return nil, nil
+	}
+	where, args := privateThreadFilesDue(windows, floor)
+	args = append(args, limit)
+	rows, err := tx.Query(ctx, `
+		SELECT a.id, a.raw_capture_id
+		  FROM activity a
+		  JOIN capture_thread_verdict v
+		    ON v.thread_key = a.thread_key AND v.user_id::text = split_part(a.captured_by, ':', 3)
+		 WHERE `+where+`
+		 ORDER BY a.id
+		 LIMIT $`+strconv.Itoa(len(args)), args...)
+	if err != nil {
+		return nil, fmt.Errorf("capture: selecting private-thread mail whose files are due: %w", err)
+	}
+	out, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (PrivateThreadMessage, error) {
+		var m PrivateThreadMessage
+		return m, row.Scan(&m.Activity, &m.RawCapture)
+	})
+	if err != nil {
+		return nil, fmt.Errorf("capture: reading private-thread mail whose files are due: %w", err)
+	}
+	return out, nil
+}
+
+// PrivateThreadFilesStillDueTx asks the selection's question again for one
+// message, inside the transaction that will withhold its files, and locks the
+// message and its verdict while it does.
+//
+// The selection ran in a transaction of its own, and a thread shared back, a
+// hold, an archive or a colleague's import between that read and this one would
+// otherwise be stripped on a stale answer. The locks keep the owner's share and
+// a restriction from landing between this answer and the commit.
+func PrivateThreadFilesStillDueTx(
+	ctx context.Context, tx pgx.Tx, windows PersonalPurgeWindows, floor StatutoryFloor, activity ids.UUID,
+) (bool, error) {
+	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
+		return false, err
+	}
+	where, args := privateThreadFilesDue(windows, floor)
+	args = append(args, activity)
+	var due bool
+	err := tx.QueryRow(ctx, `
+		SELECT true
+		  FROM activity a
+		  JOIN capture_thread_verdict v
+		    ON v.thread_key = a.thread_key AND v.user_id::text = split_part(a.captured_by, ':', 3)
+		 WHERE `+where+` AND a.id = $`+strconv.Itoa(len(args))+`
+		   FOR UPDATE OF a, v`, args...).Scan(&due)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("capture: rechecking a private-thread message before withholding its files: %w", err)
+	}
+	return due, nil
+}
+
+// privateThreadFilesDue says which messages' files are due, over `activity a`
+// joined to its verdict `v`, with its arguments. The scan and the recheck both
+// read it, so they ask the same question.
+func privateThreadFilesDue(windows PersonalPurgeWindows, floor StatutoryFloor) (string, []any) {
+	args := []any{windows.ByOwner, windows.ByClassifier}
+	shielded, args := floor.column(len(args), args)
+	return `v.kind = 'personal' AND v.status IN ('held', 'held_by_owner')
+		   AND v.resolved_at IS NOT NULL
+		   AND a.counterparty_email = ANY (v.seen_addresses)
+		   AND a.kind = 'email' AND a.captured_by LIKE 'connector:%'
+		   AND a.archived_at IS NULL AND a.restricted_at IS NULL
+		   AND NOT (` + shielded + `)
+		   AND NOT ` + underAnOpenRequest + `
+		   AND greatest(a.created_at, v.resolved_at)
+		       + (CASE WHEN v.status = 'held_by_owner' THEN $1 ELSE $2 END)::interval <= now()
+		   AND NOT EXISTS (
+		       SELECT 1 FROM capture_import o WHERE o.activity_id = a.id AND o.user_id <> v.user_id)
+		   AND EXISTS (
+		       SELECT 1 FROM attachment at
+		        WHERE at.activity_id = a.id AND at.storage_key <> '' AND NOT at.bytes_withheld)`, args
+}
+
+// StoredBody is one stored file of a message, with its bytes: the ordinal the
+// original numbers it by and the key a slimmed original refers to it under.
+type StoredBody struct {
+	Ordinal int
+	Key     string
+	Body    []byte
+}
+
+// WithholdStoredOriginalTx cuts these files' bytes out of the message's stored
+// original — the third sanctioned rewrite of raw_capture, beside the part
+// slim and erasure.
+//
+// A slimmed original no longer carries the bytes but names the object they
+// moved to, so it is first restored from the bodies given, then withheld like
+// any other. The row is stamped slimmed either way, so the slim sweep does not
+// read it again.
+func WithholdStoredOriginalTx(ctx context.Context, tx pgx.Tx, rawCaptureID ids.UUID, files []StoredBody) error {
+	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
+		return err
+	}
+	if len(files) == 0 {
+		return nil
+	}
+	var payload []byte
+	err := tx.QueryRow(ctx,
+		`SELECT payload FROM raw_capture WHERE id = $1 FOR UPDATE`, rawCaptureID).Scan(&payload)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("capture: reading the original to withhold its files: %w", err)
+	}
+	original, err := DecodeStoredOriginal(payload)
+	if err != nil {
+		return fmt.Errorf("capture: decoding the original to withhold its files: %w", err)
+	}
+	byKey := make(map[string][]byte, len(files))
+	parts := make([]partslim.WithheldPart, 0, len(files))
+	located := true
+	for _, f := range files {
+		byKey[f.Key] = f.Body
+		parts = append(parts, partslim.WithheldPart{Ordinal: f.Ordinal, Body: f.Body})
+		// An object already gone leaves no bytes to find the part by, so the
+		// original keeps only its headers rather than a part nobody can locate.
+		located = located && len(f.Body) > 0
+	}
+	original, err = partslim.RestoreStoredParts(original, func(ref partslim.PartRef) ([]byte, error) {
+		if body, ok := byKey[ref.StorageKey]; ok {
+			return body, nil
+		}
+		return nil, fmt.Errorf("capture: the original names a part this message no longer stores: part:%d", ref.Ordinal)
+	})
+	if err != nil || !located {
+		// A stanza naming an object not among the files given cannot be put
+		// back, so nothing of the body is trusted: only the headers are kept.
+		original = partslim.HeadersOnly(original)
+	} else {
+		original, _ = partslim.WithholdParts(original, parts)
+	}
+	rewritten, err := EncodeStoredOriginal(original)
+	if err != nil {
+		return fmt.Errorf("capture: encoding the withheld original: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `
+		UPDATE raw_capture SET payload = $2::jsonb, parts_slimmed_at = now() WHERE id = $1`,
+		rawCaptureID, rewritten); err != nil {
+		return fmt.Errorf("capture: writing the withheld original: %w", err)
+	}
+	return nil
+}

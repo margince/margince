@@ -45,6 +45,9 @@ type ChampionCover struct {
 	// makes Covered unsafe to report as a finding. Callers state the gap or
 	// say nothing; they never round it down to "no champion".
 	Withheld bool
+	// ChampionNamed is true when a seat this reader may see holds the champion
+	// role, engaged or not: somebody has said who the champion is.
+	ChampionNamed bool
 }
 
 // ChampionCoverFor answers the champion question for each of the given deals.
@@ -89,6 +92,7 @@ func ChampionCoverFor(
 	}
 	for deal, contacts := range seats {
 		cover := out[deal]
+		cover.ChampionNamed = len(contacts) > 0
 		for _, contact := range contacts {
 			if engaged[dealContact{deal: deal, contact: contact}] {
 				cover.Covered = true

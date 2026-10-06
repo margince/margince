@@ -28,6 +28,8 @@ import (
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/licensecheck"
 	"github.com/margince/margince/backend/internal/platform/netguard"
+	"github.com/margince/margince/backend/internal/platform/providerhealthstore"
+	"github.com/margince/margince/backend/internal/platform/ratelimit"
 	"github.com/margince/margince/backend/internal/shared/buildinfo"
 	"github.com/margince/margince/backend/pkg/extension"
 )
@@ -462,4 +464,11 @@ func workerHandoffOptions(
 	opts = append(opts, embedReindex)
 	opts = append(opts, enqueueOpts...)
 	return opts, nil
+}
+
+// shareThroughRedis hands the Redis client to the two process-wide registries
+// that coordinate this process with the others: rate limits and provider health.
+func shareThroughRedis(ctx context.Context, rdb *redis.Client) {
+	ratelimit.ShareProcess(rdb)
+	ai.ShareProviderHealth(ctx, providerhealthstore.New(rdb))
 }

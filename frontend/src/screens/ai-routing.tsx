@@ -16,8 +16,10 @@ import {
   type ModelCatalogue,
   unkeyedProviders,
   useAiModelCatalogue,
+  withBorrowedRows,
 } from "./ai-models";
-import { useProviderKeys } from "./ai-provider-keys";
+import { invalidateProviderHealth } from "./ai-provider-health";
+import { useProviderKeys } from "./ai-provider-key-hooks";
 import { DECISION_PROVIDERS } from "./ai-routing-fields";
 import { type Lane, TiersTable } from "./ai-routing-lane";
 import { ROUTING_KEY, type RoutingRead, useRouting } from "./ai-routing-query";
@@ -150,6 +152,7 @@ function ModelTiers({
   // Which vendors hold a credential, joined into the rows and the editor. Same
   // grant as this card, so no second denial to answer.
   const keys = useProviderKeys(true);
+  const sheet = withBorrowedRows(catalogue.data, keys.data?.providers);
   const canDiagnose = useCan("ai_diagnostics", "read");
   const canBudget = useCan("ai_budget", "read");
   const health = useAiHealth(canDiagnose).data;
@@ -236,7 +239,7 @@ function ModelTiers({
         lanes={lanes}
         health={health}
         features={features}
-        catalogue={catalogue.data}
+        catalogue={sheet}
         unkeyed={unkeyed}
         canManage={canManage}
         onAddDecisions={routing.decisions ? undefined : editDecisions}
@@ -247,7 +250,7 @@ function ModelTiers({
           initial={editing.initial}
           label={editing.label}
           keys={keys.data?.providers}
-          catalogue={catalogue.data}
+          catalogue={sheet}
           canManage={canManage}
           onClose={() => setEditing(null)}
         />
@@ -311,6 +314,7 @@ function FirstBinding({
     onSuccess: async (saved) => {
       queryClient.setQueryData(ROUTING_KEY, saved);
       await queryClient.invalidateQueries({ queryKey: ["ai-status"] });
+      await invalidateProviderHealth(queryClient);
     },
   });
   const startable = startableProviders(providers);

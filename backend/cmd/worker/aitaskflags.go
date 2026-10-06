@@ -105,7 +105,9 @@ func parseAITaskFlags(args []string) (aiTaskFlags, error) {
 		positionals = append(positionals, rest[0])
 		rest = rest[1:]
 	}
-	env.Apply(fs, config.FromOS)
+	if err := env.Apply(fs, config.FromOS); err != nil {
+		return aiTaskFlags{}, err
+	}
 	cfg := *parsed
 	if len(positionals) > 1 {
 		return aiTaskFlags{}, fmt.Errorf("aitask %s takes one positional, got %d: %s",

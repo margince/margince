@@ -62,6 +62,10 @@ type commsAdapter struct {
 	// The activities store excludes participants with a seat; a colleague
 	// without one is only recognisable by domain, and that set is capture's.
 	own *capture.OwnDomainStore
+	// firstDrafts are the web composer's drafting engines, read at call time
+	// because the api role binds their model lanes after the registry is built.
+	// Nil on a surface with no server, which then drafts no first message.
+	firstDrafts *firstMessageEngines
 }
 
 var _ agents.Comms = commsAdapter{}
@@ -124,74 +128,6 @@ func (c commsAdapter) DraftEmail(ctx context.Context, anchor ids.UUID, intent st
 		answering.Body = *activity.Body
 	}
 	subject, body := activities.DeterministicEmailDraft(answering, intent)
-	return subject, body, nil
-}
-
-// DraftCompanyEmail composes the first message to a record.
-//
-// There is no thread to read, so the draft is built from what a first message
-// actually is rather than from prior correspondence: BandFresh (this IS the
-// opening), Threaded false (nothing is being answered), and the intent as the
-// whole of the subject material — the caller's own words for what the message
-// should do, which is all that exists before a conversation starts.
-//
-// It reaches the SAME routed lane the reply path does, one method along
-// (activities.FirstEmailDrafter). It used not to, and the reason was never a
-// decision about first messages: EmailDrafter took an anchor by signature, so a
-// draft with no activity behind it could not be asked for. What a caller got
-// instead was a template to rewrite.
-//
-// It deliberately does NOT resolve a recipient. DraftEmail can ask the store
-// who a thread is with; here the caller names the addressee at send time
-// (send_company_email takes `to`), and inventing one from a link would put an
-// address in a draft nobody chose.
-//
-// The links are not read either, and that is a judgment worth stating: the
-// drafter takes text, not records, and reading a company's fields into the
-// opening line would make the draft's content depend on data the approving
-// human is not looking at. They are carried for the SEND to file under.
-//
-// IT PERSISTS NOTHING, and that is deliberate rather than unfinished.
-//
-// It returns text and writes no timeline row, which is the same answer the HTTP
-// draft endpoint gives — the one the web app's own draft button calls. That
-// agreement is the feature: the same act should not mean two different things
-// depending on whether a contact did it through the app or through an agent.
-// Drafting proposes words; sending is the separate consent-gated act, and a
-// draft that filed itself would put messages nobody sent on the record a rep
-// goes to for what actually happened with a customer.
-//
-// agents.FollowUpDrafter deliberately does the opposite and says so at its own
-// declaration. It is not the same act: this drafts ONE message meant to be sent
-// now, and that drafts N for later triage — a batch living only in a transcript
-// would be unusable, since nobody triages ten drafts out of a chat scrollback.
-// Two writers of one invariant either share a helper or say why they do not;
-// these legitimately do not, and this is the saying why.
-func (c commsAdapter) DraftCompanyEmail(
-	ctx context.Context, links []agents.RecordLink, intent string,
-) (string, string, error) {
-	if len(links) == 0 {
-		return "", "", &agents.BadArgsError{Cause: errors.New(
-			"links must name at least one record this conversation is filed under; " +
-				"a first message has no thread to inherit them from")}
-	}
-	// The routed model lane when the drafter can open a conversation, and the
-	// deterministic floor when it cannot. Which one answers is a property of
-	// the deployment — a role that composed no drafting model binds a drafter
-	// that implements only the reply seam, or none at all — so this branch is
-	// the same one the reply path takes, asked one method along.
-	if first, ok := c.draft.(activities.FirstEmailDrafter); ok {
-		return first.DraftFirstEmail(ctx, intent)
-	}
-	// Topic stays EMPTY, and the intent is passed once. DeterministicEmailDraft
-	// renders Topic into a "following up on …" line AND appends the intent as
-	// its own paragraph (handlers_email.go), so naming both would print the
-	// caller's instruction twice in consecutive sections. There is no thread
-	// here for a topic to name anyway — the intent is the whole substance.
-	subject, body := activities.DeterministicEmailDraft(activities.DraftContext{
-		Band:     convstate.BandFresh,
-		Threaded: false,
-	}, intent)
 	return subject, body, nil
 }
 

@@ -2104,8 +2104,9 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
       .fill("brandt");
     // Wait on the hits, not on a duration: the live arm is what adds the rows
     // this sweep exists to judge.
+    // Exact: a contact found through the company carries its name too.
     await expect(
-      page.getByRole("button", { name: /Brandt Automotive/ }),
+      page.getByRole("button", { name: "Brandt Automotive", exact: true }),
     ).toBeVisible();
     await settleAnimations(page);
     await expectNoAaViolations(page, "brief — the command palette open");
@@ -2672,17 +2673,18 @@ test.describe("ADR-0076: the unauthenticated surface", () => {
 // means the same thing on an idle laptop and on a CI box running six other jobs,
 // which no reading of a clock does.
 //
-// This case bounds `GET /contacts/{id}`, and the title says so because that is the
-// read it holds. The heading itself comes from `/contacts/{id}/360` — a record
-// head that draws before ITS own read returns is the wider claim, and #2864
-// carries it, product half first.
+// This case holds the read the heading itself comes from. A record route carries
+// an id and not a name, so the head is seeded from the list row the open was
+// clicked from (`useCachedRecordName`) and draws before `/contacts/{id}/360`
+// answers. Holding the plain `/contacts/{id}` instead would leave the case green
+// over a page that waits, because that is not the request the heading depends on.
 //
 // The perceived BUDGET is not asserted here at all. One wall-clock sample says
 // how busy the runner was, and this lane shares its machine with six integration
 // shards. `make bench-mobile` owns the 300ms figure as a p95 over 20 samples on
 // a throttled Fast-3G profile — the harder of the two conditions, so a budget
 // that holds there holds unthrottled by construction.
-test("PERF-1: a record's heading does not wait on GET /contacts/{id}", async ({
+test("PERF-1: a record opens on its route's identity, not on its read", async ({
   page,
 }) => {
   // Held, not slowed: the read cannot have answered when the assertion below
@@ -2698,7 +2700,7 @@ test("PERF-1: a record's heading does not wait on GET /contacts/{id}", async ({
   // itself. `readStarted` is what tells the two apart.
   let readStarted = false;
   let readAnswered = false;
-  await page.route("**/contacts/p-anna", async (route) => {
+  await page.route("**/contacts/p-anna/360", async (route) => {
     readStarted = true;
     await new Promise((settle) => setTimeout(settle, READ_HELD_MS));
     readAnswered = true;

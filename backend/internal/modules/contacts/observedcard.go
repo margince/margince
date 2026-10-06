@@ -55,7 +55,7 @@ func applyObservedCard(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, 
 		if err != nil {
 			return nil, err
 		}
-		if outcome == observedApplied {
+		if outcome == observedApplied || outcome == observedConfirmed {
 			applied = append(applied, f.name)
 		}
 	}

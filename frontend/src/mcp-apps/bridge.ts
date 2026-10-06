@@ -31,6 +31,7 @@
 //   cannot become a second door onto a record.
 
 import { minorUnitDigits, toMajorUnits } from "../format/minorunits";
+import { followContentSize } from "./size";
 import {
   asFiniteNumber,
   asRecord,
@@ -55,6 +56,7 @@ let initializeID: number | null = null;
 // result after it has announced itself, and these two states are what let
 // handle() refuse anything out of order.
 let initialized = false;
+let sizing = false;
 // The host's origin, LEARNED rather than configured.
 //
 // A view is loaded into an opaque sandbox origin and cannot know its host's
@@ -229,6 +231,12 @@ function deliverResult(message: Record<string, unknown>): void {
   if (resultHandler === null) return;
   const envelope = asRecord(asRecord(message.params).structuredContent);
   resultHandler(envelope.data ?? null, asWarnings(envelope.warnings));
+  // Sized from the first answer drawn: before it the document is only padding,
+  // and a host told that height shrinks the frame just to grow it again.
+  if (!sizing) {
+    sizing = true;
+    followContentSize(send);
+  }
 }
 
 function handle(event: MessageEvent): void {

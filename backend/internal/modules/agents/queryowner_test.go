@@ -179,6 +179,23 @@ func TestANamingFailureDisclosesTheOwnerAndSaysItFailed(t *testing.T) {
 	}
 }
 
+// An owner_id the reader cannot decode is not an unowned record: the answer
+// says ownership could not be read rather than that nobody holds the account.
+func TestAnUndecodableOwnerSaysItCouldNotBeNamed(t *testing.T) {
+	rows := rowsFor(datasource.Record{
+		Ref:    datasource.EntityRef{Type: datasource.EntityCompany, ID: ids.NewV7()},
+		Fields: json.RawMessage(`{"owner_id":"not-a-seat"}`),
+	})
+
+	_, note := attachOwners(humanCtx(ids.NewV7()), func(_ context.Context, seats []ids.UUID) (map[ids.UUID]string, error) {
+		return map[ids.UUID]string{}, nil
+	}, rows)
+
+	if note == nil || note.Code != CodeOwnerNamesUnavailable {
+		t.Errorf("an owner_id that would not decode read as an unowned record: note %+v", note)
+	}
+}
+
 // The mirror of the above: a seat that simply does not resolve is NOT a
 // failure, and must not raise the alarm. An owner who left is an ordinary
 // answer.

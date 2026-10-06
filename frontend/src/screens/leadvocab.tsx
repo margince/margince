@@ -6,8 +6,8 @@ import { isOption } from "../app/options";
 import { Badge, Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
-import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
+import { NumberSettingRow } from "../design-system/numbersetting";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
@@ -46,10 +46,12 @@ function rowsOf<Row>(rows: readonly Row[] | null | undefined): readonly Row[] {
   return Array.isArray(rows) ? rows : [];
 }
 
-// The first-response target's bounds, the same the server enforces
-// (15 minutes to 7 days); checked here so a refusal never leaves the page.
-const TARGET_MIN_MINUTES = 15;
-const TARGET_MAX_MINUTES = 7 * 24 * 60;
+// The first-response target's bounds (15 minutes to 7 days), checked here so a
+// refusal never leaves the page. backend/gates/settingbounds_test.go holds them
+// to the ones the server enforces.
+const TARGET_BOUNDS = {
+  first_response_target_minutes: { min: 15, max: 10_080 },
+} as const;
 const intentLabel: Record<LeadSourceIntent, MessageKey> = {
   high: "leadSources.intent.high",
   neutral: "leadSources.intent.neutral",
@@ -765,114 +767,59 @@ export function LeadHandlingCard() {
   const canEdit = useCanWrite("custom_field", "update");
   const query = useLeadSettings();
   const update = useUpdateLeadSettings();
-  const [draft, setDraft] = useState<string | null>(null);
-  const [targetError, setTargetError] = useState<string | null>(null);
-  // Minted unconditionally: a hook may not depend on whether the value in the
-  // box is currently refused.
-  const targetErrorId = useId();
   return (
     <Panel title={t("leadHandling.title")}>
       {/* Plain body, for the reason the sources card carries in full. */}
       <PanelBody>
         <PanelIntro>{t("leadHandling.sub")}</PanelIntro>
         <QueryGate query={query} pendingLabel={t("leadHandling.title")}>
-          {(settings) => {
-            const shown =
-              draft ?? String(settings.first_response_target_minutes);
-            const commit = () => {
-              const minutes = Number(shown);
-              if (minutes === settings.first_response_target_minutes) {
-                setDraft(null);
-                setTargetError(null);
-                return;
-              }
-              if (
-                !Number.isInteger(minutes) ||
-                minutes < TARGET_MIN_MINUTES ||
-                minutes > TARGET_MAX_MINUTES
-              ) {
-                // The typed value stays so it can be corrected, and the
-                // field says what it wants.
-                setTargetError(t("leadHandling.targetOutOfRange"));
-                return;
-              }
-              setTargetError(null);
-              update.mutate(
-                { first_response_target_minutes: minutes },
-                // A refused write keeps the draft for the reader to fix; a
-                // landed one clears it so the field reads the stored value.
-                { onSuccess: () => setDraft(null) },
-              );
-            };
-            return (
-              <SettingList>
-                {/* The posture comes first: the number below is only a
-                    judgement the switch above it makes readable. */}
-                <SettingRow
-                  label={t("leadHandling.firstResponse")}
-                  description={t("leadHandling.firstResponseHint")}
-                  control={(control) => (
-                    // The switch keeps its own hidden label — it owns its
-                    // accessible name by design, and pointing it at the row's
-                    // span as well would name it twice — but it takes the row's
-                    // DESCRIPTION, or the sentence saying what the setting does
-                    // reaches nobody who cannot see it. `reason` refuses the
-                    // flip AND says why, which is what a stateful control a
-                    // permission denies owes its reader.
-                    <Switch
-                      describedBy={control["aria-describedby"]}
-                      label={t("leadHandling.firstResponse")}
-                      labelHidden
-                      checked={settings.first_response_enabled}
-                      pending={update.isPending}
-                      reason={canEdit ? undefined : t("leadSources.readOnly")}
-                      testId="lead-first-response-switch"
-                      onChange={(next) =>
-                        update.mutate({ first_response_enabled: next })
-                      }
-                    />
-                  )}
-                />
-                <SettingRow
-                  label={t("leadHandling.targetMinutes")}
-                  description={t("leadHandling.targetHint")}
-                  control={(control) => (
-                    <div className="settingrow-measure lead-handling-target">
-                      <TextInput
-                        {...control}
-                        // The row already describes the field; a value out of
-                        // range ADDS the refusal to that description rather
-                        // than replacing it, so a reader hears the rule and how
-                        // they broke it.
-                        aria-describedby={
-                          [
-                            control["aria-describedby"],
-                            targetError === null ? null : targetErrorId,
-                          ]
-                            .filter(Boolean)
-                            .join(" ") || undefined
-                        }
-                        aria-invalid={targetError === null ? undefined : true}
-                        data-testid="lead-first-response-target"
-                        inputMode="numeric"
-                        value={shown}
-                        disabled={!canEdit || !settings.first_response_enabled}
-                        onChange={(e) => setDraft(e.target.value)}
-                        onBlur={commit}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            commit();
-                          }
-                        }}
-                      />
-                      <ErrorLine id={targetErrorId}>{targetError}</ErrorLine>
-                    </div>
-                  )}
-                />
-              </SettingList>
-            );
-          }}
+          {(settings) => (
+            <SettingList>
+              {/* The posture comes first: the number below is only a
+                  judgement the switch above it makes readable. */}
+              <SettingRow
+                label={t("leadHandling.firstResponse")}
+                description={t("leadHandling.firstResponseHint")}
+                control={(control) => (
+                  // The switch keeps its own hidden label — it owns its
+                  // accessible name by design, and pointing it at the row's
+                  // span as well would name it twice — but it takes the row's
+                  // DESCRIPTION, or the sentence saying what the setting does
+                  // reaches nobody who cannot see it. `reason` refuses the
+                  // flip AND says why, which is what a stateful control a
+                  // permission denies owes its reader.
+                  <Switch
+                    describedBy={control["aria-describedby"]}
+                    label={t("leadHandling.firstResponse")}
+                    labelHidden
+                    checked={settings.first_response_enabled}
+                    pending={update.isPending}
+                    reason={canEdit ? undefined : t("leadSources.readOnly")}
+                    testId="lead-first-response-switch"
+                    onChange={(next) =>
+                      update.mutate({ first_response_enabled: next })
+                    }
+                  />
+                )}
+              />
+              <NumberSettingRow
+                label={t("leadHandling.targetMinutes")}
+                description={t("leadHandling.targetHint")}
+                testId="lead-first-response-target"
+                value={settings.first_response_target_minutes}
+                {...TARGET_BOUNDS.first_response_target_minutes}
+                refusal={t("leadHandling.targetOutOfRange")}
+                disabled={
+                  !canEdit ||
+                  !settings.first_response_enabled ||
+                  update.isPending
+                }
+                onCommit={(minutes) =>
+                  update.mutate({ first_response_target_minutes: minutes })
+                }
+              />
+            </SettingList>
+          )}
         </QueryGate>
         {/* The same component the two cards above report a refused write with.
             This card's rows are switches every seat may flip, so no posture. */}

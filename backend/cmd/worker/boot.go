@@ -20,6 +20,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/aiactivity"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -30,6 +31,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/events"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
+	"github.com/margince/margince/backend/internal/platform/providerhealthstore"
 	"github.com/margince/margince/backend/internal/platform/ratelimit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -99,6 +101,7 @@ func openBus(ctx context.Context, cfg workerConfig) (*redis.Client, error) {
 		return nil, err
 	}
 	ratelimit.ShareProcess(rdb)
+	ai.ShareProviderHealth(ctx, providerhealthstore.New(rdb))
 	return rdb, nil
 }
 
@@ -380,6 +383,7 @@ func startProjectionLanes(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cl
 	startNoticeCaseOpen(ctx, pool, rdb, background, logger, stdout)
 
 	startDealRoomTimeline(ctx, pool, rdb, background, logger, stdout)
+	startCommitmentSettle(ctx, pool, rdb, background, logger, stdout)
 
 	// What the AI is doing for one contact, projected into the table the UI
 	// reads. Deterministic like the projections above, so it runs on every

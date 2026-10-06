@@ -23,10 +23,14 @@ package activities
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
 // waitingHorizonSpread is what the derivation measures: how long this
@@ -136,14 +140,61 @@ func (s *Store) waitingHorizonFor(ctx context.Context, tx pgx.Tx, asOf time.Time
 			return days, nil
 		}
 	}
-	days, err := s.measureWaitingHorizon(ctx, tx, asOf)
+	days, measured, err := s.measureWaitingHorizonOrDefault(ctx, tx, asOf)
 	if err != nil {
 		return 0, err
 	}
+	// The compiled horizon standing in for a measurement is remembered too, but
+	// briefly, so a read of several pages does not re-run a measurement that
+	// just ran out of time.
 	if wsErr == nil {
-		s.horizons.remember(ws, asOf, s.now(), days)
+		ttl := waitingHorizonTTL
+		if !measured {
+			ttl = waitingHorizonFallbackTTL
+		}
+		s.horizons.remember(ws, asOf, s.now(), days, ttl)
 	}
 	return days, nil
+}
+
+// waitingHorizonSavepoint fences the measurement off from the caller's
+// transaction.
+const waitingHorizonSavepoint = "waiting_horizon"
+
+// measureWaitingHorizonOrDefault measures the horizon inside a savepoint, and
+// answers the compiled one when the measurement is stopped before it answers.
+//
+// The horizon only bounds which waits the queue holds, so a measurement that
+// outruns the statement timeout is no reason to fail the read or the
+// owed_verdict sweep that asked for it: the compiled horizon is what an
+// installation too new to measure is judged by as well. A timed-out statement
+// aborts the whole transaction, and rolling back to the savepoint is what
+// leaves it usable for the caller's own statements.
+//
+// A cancelled CONTEXT is not that case. Postgres raises the same 57014 for the
+// caller going away, and the caller's next statement fails on its own, so the
+// error is returned as it is. measured is false whenever the compiled horizon
+// is answered.
+func (s *Store) measureWaitingHorizonOrDefault(ctx context.Context, tx pgx.Tx, asOf time.Time) (days int, measured bool, err error) {
+	if _, err := tx.Exec(ctx, `SAVEPOINT `+waitingHorizonSavepoint); err != nil {
+		return 0, false, fmt.Errorf("activities: opening the waiting horizon's savepoint: %w", err)
+	}
+	days, err = s.measureWaitingHorizon(ctx, tx, asOf)
+	if err == nil {
+		if _, err := tx.Exec(ctx, `RELEASE SAVEPOINT `+waitingHorizonSavepoint); err != nil {
+			return 0, false, fmt.Errorf("activities: releasing the waiting horizon's savepoint: %w", err)
+		}
+		return days, true, nil
+	}
+	if !storekit.IsQueryCanceled(err) || ctx.Err() != nil {
+		return 0, false, err
+	}
+	if _, rbErr := tx.Exec(ctx, `ROLLBACK TO SAVEPOINT `+waitingHorizonSavepoint+`; RELEASE SAVEPOINT `+waitingHorizonSavepoint); rbErr != nil {
+		return 0, false, errors.Join(err, fmt.Errorf("activities: rolling back the waiting horizon's savepoint: %w", rbErr))
+	}
+	slog.WarnContext(ctx, "activities: the waiting horizon could not be measured in time; using the compiled horizon",
+		"default_days", waitingHorizonDays, "err", err)
+	return waitingHorizonDays, false, nil
 }
 
 // measureWaitingHorizon takes the response spread and derives the horizon

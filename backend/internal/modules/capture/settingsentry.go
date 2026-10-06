@@ -125,6 +125,7 @@ var SignatureEnrich = settings.Define[bool](
 func Definitions() []settings.Definition {
 	return []settings.Definition{
 		AutoEnrich, MailSharing, SharedPostureAllowed, SignatureEnrich,
+		AutoEnrichDailyCap, SiteReadMaxPages, SiteReadMaxMiB, SiteReadWallSeconds,
 		GoogleAppSetting, MicrosoftAppSetting,
 	}
 }
