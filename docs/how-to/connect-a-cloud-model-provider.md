@@ -1,54 +1,58 @@
 # Connect a cloud model provider (BYOK)
 
-Point the AI lanes at a **customer-supplied cloud key** — Anthropic, OpenAI,
-Gemini (on AI Studio or on Vertex AI), or any OpenAI-compatible vendor. Margince runs no inference of its own:
-the key, the endpoint, and the DPA are yours. A provider is part of the stored
-**binding**, never a binary flag — swapping one is a settings change, not a
-deploy, and not even a restart. See [explanation/agent-surface.md](../explanation/agent-surface.md) for
-the model runtime and [reference/configuration.md](../reference/configuration.md)
-for the full provider matrix. For the no-cloud path, see
+Point the AI lanes at a **customer-supplied cloud key**: Anthropic, OpenAI,
+Gemini (on AI Studio or on Vertex AI), or any OpenAI-compatible vendor. Margince
+runs no inference of its own: the key, the endpoint, and the DPA are yours. A
+provider is part of the stored **binding**, never a binary flag, so swapping one
+is a settings change with no deploy and no restart. See
+[explanation/agent-surface.md](../explanation/agent-surface.md) for the model
+runtime and [reference/configuration.md](../reference/configuration.md) for the
+full provider matrix. For the no-cloud path, see
 [enrich-with-a-local-llm.md](enrich-with-a-local-llm.md).
 
 ## 1. Pick a provider
 
 | `provider` | Use it for | Key env var | `base_url` |
 |---|---|---|---|
-| `anthropic` | Claude (native Messages API — image input) | `ANTHROPIC_API_KEY` | optional (default `api.anthropic.com`) |
-| `openai` | GPT (native Responses API — reasoning effort, prompt-cache + reasoning token usage, image/PDF input) | `OPENAI_API_KEY` | optional (default `api.openai.com`) |
-| `gemini` | Gemini (native `generateContent` — thinking level, thought-signature continuity, image/PDF input) | `GEMINI_API_KEY` | optional (default `…/v1beta`) |
-| `gemini_vertex` | the same Gemini wire, served by Vertex AI at a `location` you choose, which is where Google processes the call (§5) | `GEMINI_VERTEX_SA_JSON` (a service-account key) | **refused** — the host follows from `location` |
-| `openai_compatible` | the OpenAI-wire long tail — Mistral, DeepSeek, Groq, Together, OpenRouter, a self-hosted gateway, … | `OPENAI_COMPATIBLE_API_KEY` | **required** |
+| `anthropic` | Claude (native Messages API: image input) | `ANTHROPIC_API_KEY` | optional (default `api.anthropic.com`) |
+| `openai` | GPT (native Responses API: reasoning effort, prompt-cache + reasoning token usage, image/PDF input) | `OPENAI_API_KEY` | optional (default `api.openai.com`) |
+| `gemini` | Gemini (native `generateContent`: thinking level, thought-signature continuity, image/PDF input) | `GEMINI_API_KEY` | optional (default `…/v1beta`) |
+| `gemini_vertex` | the same Gemini wire, served by Vertex AI at a `location` you choose, which is where Google processes the call (step 5) | `GEMINI_VERTEX_SA_JSON` (a service-account key) | **refused**: the host follows from `location` |
+| `openai_compatible` | the OpenAI-wire long tail: Mistral, DeepSeek, Groq, Together, OpenRouter, a self-hosted gateway, … | `OPENAI_COMPATIBLE_API_KEY` | **required** |
 
-A binding names only the provider — **the BYOK key lives in the key vault**, put
+A binding names only the provider. **The BYOK key lives in the key vault**, put
 there under Settings → AI → Model provider keys (step 4). A stray `api_key:` in a
 binding is a startup error, and secrets never touch a config file.
 
-The variable above is a **seed**, not the home: a boot that finds one may seal it
-into the vault, after which it can be unset. It stays the runtime source in two
-cases — an installation with no vault configured, and the DB-less debug and
-certification lanes, which open no vault at all.
+The variable above is a **seed**: a boot that finds one may seal it into the
+vault, after which it can be unset. It stays the runtime source in two cases: an
+installation with no vault configured, and the DB-less debug and certification
+lanes, which open no vault at all.
 
 Reach for a **native** adapter (`openai`/`gemini`) when you want that vendor's
-reasoning/thinking knobs, itemized usage, or a PDF handed to the model whole —
+reasoning/thinking knobs, itemized usage, or a PDF handed to the model whole.
 `anthropic` carries images but not PDFs, and `openai_compatible` carries only
-what its binding declares. Reach for
-`openai_compatible` for any vendor that speaks `/v1/chat/completions` and isn't
-worth a dedicated adapter — it is the correct default for everything that is not
-Anthropic, OpenAI, or Gemini.
+what its binding declares. Reach for `openai_compatible` for any vendor that
+speaks `/v1/chat/completions` and does not need a dedicated adapter. It is the
+correct default for everything that is not Anthropic, OpenAI, or Gemini.
 
 ## 2. Bind a tier
 
 The binding lives in the database. On a **running, already-bound** installation,
-bind a tier under **Settings → AI** — that is the whole step, and it takes effect
-without a restart, within the routing refresh interval.
+bind a tier under **Settings → AI**. It takes effect without a restart, within
+the routing refresh interval.
 
-Saving the FIRST binding is the one case that needs a restart afterwards: a role
+Saving the first binding is the one case that needs a restart afterwards. A role
 that started with nothing bound wired no model path, and the watcher that would
-pick up the change is built from that path. For a fresh installation, declaring it
-under `seeds.ai_routing` in `margince.yaml` (a dev stack's is in
-`config/margince.dev.yaml`) avoids that entirely — first boot comes up bound.
+pick up the change is built from that path. For a fresh installation, declare
+the binding under `seeds.ai_routing` in `margince.yaml` (a dev stack's is in
+`config/margince.dev.yaml`), and the first boot comes up bound.
 
-Either way it is the same shape, and **no key ever appears in it** — the key goes
+A seed is consumed **once**, at bootstrap, so editing it after a database exists
+changes nothing. `make dev-fresh` re-runs the bootstrap, and Settings → AI
+rebinds a stack that is already up.
+
+Either way it is the same shape, and **no key ever appears in it**; the key goes
 in separately, in step 4. The shipped dev default binds **gemini** on
 `cheap_cloud` + `premium`:
 
@@ -71,52 +75,54 @@ tiers:
     model: mistral-small-2506        # pin an explicit version — -latest aliases drift
 ```
 
-> **A provider's host is set once, on the provider.** `providers.<name>.base_url`
-> is where every lane binding that provider is reached; in the app it is the
-> **Service** on the provider's sheet (Settings → AI models → Providers), with a
-> Host field under **Other**. A lane names
-> only its provider and model. The one exception is the embeddings lane, which
-> may carry its own `base_url` for a separate embeddings server (a self-hosted
-> vLLM serves one model per process). A lane that still writes `base_url` — the
-> older spelling — is lifted onto its provider when the provider names none.
+The binding's shape (`profile` plus a `tiers` map) is schema-validated against
+`config/margince.schema.json` in any editor with a YAML language server
+(autocomplete, enum checks, hover docs). The shipped configs point at it with a
+`# yaml-language-server:` line.
 
-> **`base_url` for the OpenAI-wire providers (`openai_compatible`, `openai`,
-> `vllm`) is the vendor host root with _no_ version segment.** The adapter
-> appends `/v1/chat/completions` (or `/v1/responses`), so a base ending in `/v1`
-> doubles it — `https://api.mistral.ai/v1` becomes `…/v1/v1/chat/completions` and
-> 404s. Use `https://api.mistral.ai`. `gemini` is the mirror: its default base
-> keeps `/v1beta` and the paths are version-relative, so leave `base_url` unset.
->
-> A seed is consumed **once**, at bootstrap, so editing it after a database
-> exists changes nothing — `make dev-fresh` re-runs the bootstrap, and Settings →
-> AI rebinds a stack that is already up. The shape a binding has — `profile` plus
-> a `tiers` map — is schema-validated in any editor with a YAML language server
-> (autocomplete, enum checks, hover docs) against `config/margince.schema.json`, which the shipped configs point at with a `# yaml-language-server:` line.
->
-> **Gemini thinking on a structured call.** Gemini charges its thinking to the
-> same output ceiling the answer needs, so a request with a response schema and
-> no `thinking_level` of its own is sent `thinkingLevel: low`. That only ever
-> lowers a model's default: a Flash-Lite, which already defaults to `minimal` (or
-> to no thinking at all on 2.5), is sent no level and keeps its own. A task that
-> wants a different level names it on the request
-> (`ProviderOptions["gemini"].thinking_level`), and a tier that should think
-> differently names it on the binding (`thinking_level: low`, which a request's
-> own level still outranks) — see
-> [configuration.md](../reference/configuration.md).
->
-> **One key, every open-weight model:** give `openai_compatible` the host
-> `https://openrouter.ai/api` and one `OPENAI_COMPATIBLE_API_KEY`, and
-> a single OpenRouter key reaches every open-weight model. Filter candidates to
-> models declaring both `structured_outputs` and `tools`. To certify one rather
-> than bind it, `make e2e-ai` takes the model outright:
-> `MODEL=openai_compatible:<slug> BASE_URL=https://openrouter.ai/api`.
+### Set the host
+
+- `providers.<name>.base_url` is where every lane binding that provider is
+  reached. In the app it is the **Service** on the provider's sheet (Settings →
+  AI models → Providers), with a Host field under **Other**. A lane names only
+  its provider and model.
+- The embeddings lane may carry its own `base_url` for a separate embeddings
+  server (a self-hosted vLLM serves one model per process).
+- A `base_url` on a lane is moved onto its provider when the provider names none.
+- For the OpenAI-wire providers (`openai_compatible`, `openai`, `vllm`),
+  `base_url` is the vendor host root with _no_ version segment. The adapter
+  appends `/v1/chat/completions` (or `/v1/responses`), so a base ending in `/v1`
+  doubles it: `https://api.mistral.ai/v1` becomes `…/v1/v1/chat/completions` and
+  404s. Use `https://api.mistral.ai`.
+- `gemini` is the mirror: its default base keeps `/v1beta` and the paths are
+  version-relative, so leave `base_url` unset.
+
+### Gemini thinking on a structured call
+
+Gemini charges its thinking to the same output ceiling the answer needs, so a
+request with a response schema and no `thinking_level` of its own is sent
+`thinkingLevel: low`. That only ever lowers a model's default: a Flash-Lite,
+which already defaults to `minimal` (or to no thinking at all on 2.5), is sent
+no level and keeps its own. A task that wants a different level names it on the
+request (`ProviderOptions["gemini"].thinking_level`). A tier that should think
+differently names it on the binding (`thinking_level: low`), and a request's own
+level still outranks it. See [configuration.md](../reference/configuration.md).
+
+### One key for every open-weight model
+
+Give `openai_compatible` the host `https://openrouter.ai/api` and one
+`OPENAI_COMPATIBLE_API_KEY`, and a single OpenRouter key reaches every
+open-weight model. Filter candidates to models declaring both
+`structured_outputs` and `tools`. To certify one instead of binding it,
+`make e2e-ai` takes the model outright:
+`MODEL=openai_compatible:<slug> BASE_URL=https://openrouter.ai/api`.
 
 ## 3. Bind the embeddings lane separately
 
 The embedding lane is bound apart from the chat tiers so retrieval survives a
-chat-budget exhaustion. Bound apart does not mean bound elsewhere: the dev seed
-points it at the same broker the chat tiers use, so a stack needs ONE key rather
-than a second provider's purely for embeddings.
+chat-budget exhaustion. It can still use the same provider: the dev seed points
+it at the broker the chat tiers use, so a stack needs one key and no second
+provider for embeddings.
 
 ```yaml
 # the dev default — the same broker and key as the chat tiers. The dev seed's
@@ -132,17 +138,17 @@ embeddings: { provider: openai_compatible, model: mistralai/mistral-embed-2312,
 
 > The retrieval store's column is an unbounded **`vector`**, and `dimensions:`
 > on the embeddings binding declares the width it is populated under (default
-> 1536, ceiling 2000 — pgvector's own index limit). The **native** adapters pin
-> that width on the wire — `gemini` via `outputDimensionality`, `openai` via
-> `dimensions` — so a cloud embedder drops in at whatever width you ask for.
-> **`openai_compatible` does not**: it deliberately never sends `dimensions`,
-> because a non-MRL model behind vLLM 400s on it. On that provider the
-> configured width must EQUAL the model's native width. A binding that returns
-> another width fails loudly.
+> 1536, ceiling 2000, pgvector's own index limit). The **native** adapters pin
+> that width on the wire: `gemini` via `outputDimensionality`, `openai` via
+> `dimensions`. A cloud embedder therefore drops in at whatever width you ask for.
+> **`openai_compatible` does not**: it never sends `dimensions`, because a
+> non-MRL model behind vLLM 400s on it. On that provider the configured width
+> must equal the model's native width. A binding that returns another width
+> fails with an error.
 >
 > **Not every `openai_compatible` vendor serves the embeddings lane.**
-> OpenRouter does — `/v1/embeddings`, with the catalog at
-> `GET /api/v1/embeddings/models` — while a chat-only vendor 404s. Bind
+> OpenRouter does (`/v1/embeddings`, with the catalog at
+> `GET /api/v1/embeddings/models`), while a chat-only vendor 404s. Bind
 > `embeddings:` to a vendor that has the lane (`gemini`, `openai`, Mistral,
 > OpenRouter) or a local model (`ollama` `bge-m3`).
 
@@ -153,7 +159,7 @@ provider keys**, one field per bound provider. It is encrypted at rest, never
 read back to the screen, and rotatable without a restart.
 
 For local dev the shortcut is still the environment. Set the key for your bound
-provider in `.env.local` — `GEMINI_API_KEY`, `OPENAI_API_KEY`,
+provider in `.env.local`: `GEMINI_API_KEY`, `OPENAI_API_KEY`,
 `ANTHROPIC_API_KEY`, or `OPENAI_COMPATIBLE_API_KEY`. `make dev` sources
 `.env.local`, and the first boot that finds one **seals it into the vault** and
 records where, so the variable can come back out afterwards. Either way the
@@ -171,7 +177,7 @@ its process manager):
 cd backend && GEMINI_API_KEY=… go run ./cmd/api   # the stored binding applies; no routing flag
 ```
 
-The api comes up on `:8080`. Exercise a lane that ladders to your tier — e.g.
+The api comes up on `:8080`. Exercise a lane that ladders to your tier, e.g.
 open a company and **Read now** (cold-start read-back runs `cheap_cloud` →
 `premium`). Set `MARGINCE_LOG_LEVEL=debug` for verbose model-runtime logs.
 
@@ -193,7 +199,7 @@ enabled:
    contents into the `gemini_vertex` row or choose the file. Saving exchanges
    it with Google once, and a key Google refuses is not stored.
 
-`GEMINI_VERTEX_SA_JSON` is the environment route, as for any other key: it holds
+`GEMINI_VERTEX_SA_JSON` is the environment route, as for any other key. It holds
 the file's *contents* (one line, single-quoted in `.env.local`), not a path, and
 the first boot seals it into the key vault. The project comes from the key's
 `project_id`.
@@ -214,10 +220,10 @@ embeddings: { provider: gemini_vertex, location: europe-west4, model: gemini-emb
 Changing the provider's location asks Google about every bound model at the new
 location before it is stored; a model it does not serve refuses the change.
 
-`eu` — the EU multi-region — is the recommendation: Google keeps processing in
-EU member states and picks the region. An EU region
-(`europe-west1`, `-west3`, `-west4`, `-west8`, `-west9`, `-west10`, `-west12`,
-`-north1`, `-north2`, `-central2`, `-southwest1`) pins one country, when that is what you need.
+`eu`, the EU multi-region, is the recommendation: Google keeps processing in EU
+member states and picks the region. An EU region (`europe-west1`, `-west3`,
+`-west4`, `-west8`, `-west9`, `-west10`, `-west12`, `-north1`, `-north2`,
+`-central2`, `-southwest1`) pins one country, when that is what you need.
 `europe-west2` is London and `europe-west6` is Zürich, both outside the EU;
 `global` may process anywhere; `us` is the US. None of those is in the EU.
 [`config/presets/gemini_vertex_eu.yaml`](../../config/presets/gemini_vertex_eu.yaml)
@@ -228,80 +234,81 @@ binds the chat tiers at `eu` and the embeddings lane at `europe-west4`, because
 locations the key can reach and the models the chosen one serves, and checks a
 model once you pick it. Saving asks Google again about every `gemini_vertex`
 binding the save adds or changes, so one the location does not serve is refused
-rather than stored. If Google cannot be asked at that moment, the save goes
+instead of stored. If Google cannot be asked at that moment, the save goes
 through and the API logs a warning naming the unchecked binding: an outage at
 Google does not block routing edits.
 
-**What `eu_hosted` enforces on Vertex.** Every `gemini_vertex` tier and embeddings
-lane must name an EU location. Any other is refused when the routing is saved (or
-at boot, from a seed) with the tier named, and model discovery refuses a non-EU
-location before it makes any call. The guarantee covers **AI inference only**: connectors, enrichment and mail reach their own
-services whatever the profile says, and the certification judge (`make e2e-ai`
-`JUDGE=`) is not profile-checked — its corpus is synthetic.
+**What `eu_hosted` enforces on Vertex.** Every `gemini_vertex` tier and
+embeddings lane must name an EU location. Any other is refused when the routing
+is saved (or at boot, from a seed) with the tier named, and model discovery
+refuses a non-EU location before it makes any call. The guarantee covers **AI
+inference only**. Connectors, enrichment and mail reach their own services
+whatever the profile says, and the certification judge (`make e2e-ai` `JUDGE=`)
+is not profile-checked because its corpus is synthetic.
 
 ## The sovereign profile refuses every cloud provider
 
 Under `profile: sovereign` (zero egress by construction) a cloud provider on any
-tier — or the embeddings lane — is a **startup error**, not a runtime surprise.
-The refusal is bound to the provider _name_, not a config flag, so pointing
-`openai_compatible` at a localhost URL is still refused: only `ollama`, `vllm`,
-and `fake` are sovereign-eligible. Use `eu_hosted` or `cloud_frontier` for a BYOK
-cloud binding.
+tier, or on the embeddings lane, is a **startup error**. The refusal is bound to
+the provider _name_, so pointing `openai_compatible` at a localhost URL is still
+refused: only `ollama`, `vllm`, and `fake` are sovereign-eligible. Use
+`eu_hosted` or `cloud_frontier` for a BYOK cloud binding.
 
-The endpoint is checked too, because a local provider name is not on its own a
-local endpoint: `ollama` and `vllm` take a `base_url`, and one pointed at a
+The endpoint is checked too, because a local provider name does not make a local
+endpoint. `ollama` and `vllm` take a `base_url`, and one pointed at a
 third-party host would send every call of a zero-egress deployment over the
 public internet. Under this profile each binding's resolved `base_url` must be
-loopback or a private range — your own GPU box on your own network counts; a DNS
+loopback or a private range. Your own GPU box on your own network counts; a DNS
 name does not, since what it resolves to can change after boot.
 
 ## Where a `base_url` may point, on every profile
 
-Outside `sovereign` a `base_url` is not a promise about egress, but it is still
+Outside `sovereign` a `base_url` makes no promise about egress, but it is still
 the address this server dials, so each provider reaches only what its lane is
 for. `ollama`, `vllm` and `openai_compatible` may name loopback, a private range
 or a public host, over http or https. `anthropic`, `openai` and `gemini` may name
-a **public host over https only**: the call carries this installation's model key
+a **public host over https only**. The call carries this installation's model key
 in a header Go does not strip across hosts, so pointing one at your own network
-would send that key there and cleartext would send it in the open. Use
+would send that key there, and cleartext would send it in the open. Use
 `openai_compatible` for a gateway you host, or one served over http.
 
 Neither lane may name link-local (`169.254.0.0/16`, `fe80::/10`), carrier-grade
-NAT or the documentation ranges — nothing serves inference from those, and the
+NAT or the documentation ranges. Nothing serves inference from those, and the
 first of them is where every cloud keeps its instance-metadata service. The rule
 is checked at the write and again on the socket, so a DNS name that resolves to
-a refused address fails at connect time rather than slipping past. A `base_url`
-carrying userinfo is refused: a binding never carries a credential. Redirects
-follow the same rule — one that stays on the host and keeps the scheme is
-followed, one that changes host or downgrades to http is refused.
+a refused address fails at connect time. A `base_url` carrying userinfo is
+refused: a binding never carries a credential. Redirects follow the same rule:
+one that stays on the host and keeps the scheme is followed, and one that
+changes host or downgrades to http is refused.
 
 ## Troubleshooting
 
 | Symptom | Meaning / fix |
 |---|---|
-| `http 404` on `…/v1/v1/chat/completions` or `…/v1/v1/responses` | `base_url` includes a `/v1` segment — drop it (§2 caveat); the adapter adds it. |
+| `http 404` on `…/v1/v1/chat/completions` or `…/v1/v1/responses` | `base_url` includes a `/v1` segment; drop it ([Set the host](#set-the-host)). The adapter adds it. |
 | Boot error *"profile sovereign forbids cloud provider …"* | A cloud provider is bound under a profile that refuses it. Switch to `eu_hosted`/`cloud_frontier`, or bind that tier to `ollama`/`vllm`. |
 | Boot error *"needs an api key — set X_API_KEY …"* | The bound cloud provider's key env var is unset. Export the one the error names (e.g. `GEMINI_API_KEY`). |
-| Boot error *"field api_key not found"* | You put an `api_key:` in the `seeds.ai_routing` binding — remove it; the key comes from the env var (see the table above). |
+| Boot error *"field api_key not found"* | You put an `api_key:` in the `seeds.ai_routing` binding. Remove it; the key comes from the key vault (Settings → AI → Model provider keys) or its seed env var. |
 | Boot error *"needs a base_url …"* | `openai_compatible` has no host. Set `providers.openai_compatible.base_url` (the Host field on its provider sheet) to the vendor host root (no `/v1`). |
 | Boot error *"must name a public host"* | A native vendor binding (`anthropic`/`openai`/`gemini`) points inside your network. Bind `openai_compatible` for a self-hosted gateway (see "Where a `base_url` may point"). |
-| Boot error *"must be https"* | A native vendor binding uses `http://`. Use `https://`, or bind `openai_compatible` if the endpoint is genuinely served over http. |
+| Boot error *"must be https"* | A native vendor binding uses `http://`. Use `https://`, or bind `openai_compatible` if the endpoint is served over http. |
 | Boot error *"not an address inference is served from"* | The `base_url` names a link-local, CGNAT or documentation address. Give the endpoint's own address (see "Where a `base_url` may point"). |
-| `http 404` on `/embeddings` | That `openai_compatible` vendor is chat-only. Rebind `embeddings:` to a lane-serving vendor or a local `bge-m3` (§3). |
-| Embed error *"returned N vectors of width W, need 1×D"* | On `openai_compatible` the adapter never sends `dimensions`, so `dimensions:` must equal the model's NATIVE width (§3). Set it to `W`. |
+| `http 404` on `/embeddings` | That `openai_compatible` vendor is chat-only. Rebind `embeddings:` to a lane-serving vendor or a local `bge-m3` (step 3). |
+| Embed error *"returned N vectors of width W, need 1×D"* | On `openai_compatible` the adapter never sends `dimensions`, so `dimensions:` must equal the model's native width (step 3). Set it to `W`. |
 | Model 404 / *"model not found"* | A drifting `-latest` alias or a wrong id. Pin an explicit versioned model, or resolve it from the vendor's `/models` endpoint. |
 | **Test** says *"Google accepted the key but refused the call"* | Google answered 403: the key is valid, but the service account lacks `roles/aiplatform.user` on its project, or the project has not enabled the Vertex AI API. Grant the role or enable the API; the key needs no replacing. |
-| Settings says *"No service-account key is held yet"* (`unavailable: no_key`) | No service-account key is held. Add it under Model provider keys (§5), or set `GEMINI_VERTEX_SA_JSON` and restart. |
+| Settings says *"No service-account key is held yet"* (`unavailable: no_key`) | No service-account key is held. Add it under Model provider keys (step 5), or set `GEMINI_VERTEX_SA_JSON` and restart. |
 | 422 *"the service-account key was not accepted by Google: … invalid_grant"* | The key was revoked, the account deleted, or the machine clock is off. Create a new JSON key on the account. |
-| 422 *"invalid service account key: …"* | Not a service-account JSON key file — the message names the field. Paste the whole downloaded file. |
+| 422 *"invalid service account key: …"* | Not a service-account JSON key file; the message names the field. Paste the whole downloaded file. |
 | 422 *"gemini_vertex does not serve model … in location …"* | That location has no endpoint for the model (`no_endpoint`; Settings shows *Not served in …*). Pick a model the location lists, or another location. |
 | Log warning *"routing saved with a gemini_vertex model unchecked"* | The save probe could not run (`unreachable`): Google unreachable, or the key lacks `roles/aiplatform.user` or the project the Vertex AI API. The binding is stored; fix the grant and pick the model again in Settings to check it. |
 | 422 *"… the service-account key was refused by Google … — replace the key under Provider keys"* | Saving a Vertex lane asked Google, and Google refused the key (revoked, or the account deleted). Create a new JSON key on the account and replace it. |
-| 422 *"the stored gemini_vertex service-account key is not usable"* | The held key file cannot be parsed. Replace it under Model provider keys (§5). |
-| 422 *"… under profile eu_hosted: gemini_vertex location … is not an EU location"* | London, Zürich, `global` and `us` are outside the EU. Choose `eu` or an EU region (§5), or declare `cloud_frontier`. |
-| Provider badge *Out of credit* (Settings → AI models) | The vendor refused for want of credit or quota (402, or a 4xx whose text says so, such as "credit balance is too low"). Top up the account at the vendor; Margince probes again within 15 minutes. Work waits meanwhile, and nothing is charged, including the call that first met the empty balance, and later failed probes are refunded too. |
-| Provider badge *Key rejected* | The vendor answered 401, or a 400 or 403 whose text says the key is invalid (never a plain "does not have permission"). Replace the key under Model provider keys (§5); a successful **Test** clears the badge at once, a save within about 30 seconds. |
-| Provider badge *Unreachable* | The host did not answer, or three calls in a row got a 5xx. Check the `base_url` and the vendor's status; it is probed again at 30 seconds, doubling to 5 minutes. |
+| 422 *"the stored gemini_vertex service-account key is not usable"* | The held key file cannot be parsed. Replace it under Model provider keys (step 5). |
+| 422 *"… under profile eu_hosted: gemini_vertex location … is not an EU location"* | London, Zürich, `global` and `us` are outside the EU. Choose `eu` or an EU region (step 5), or declare `cloud_frontier`. |
+| Provider badge *Out of credit* (Settings → AI models) | The vendor refused for want of credit or quota: a 402, or a 4xx whose text says so, such as "credit balance is too low". Top up the account at the vendor; Margince probes again within 15 minutes. Work waits meanwhile and nothing is charged, including the call that first met the empty balance and any later failed probe. |
+| Provider badge *Key rejected* | The vendor answered 401, or a 400 or 403 whose text says the key is invalid. A plain "does not have permission" never counts. Replace the key under Model provider keys (step 5). A successful **Test** clears the badge at once, and a save clears it within about 30 seconds. |
+| Provider badge *Unreachable* | The host did not answer, or three calls in a row got a 5xx. Check the `base_url` and the vendor's status. Margince probes again after 30 seconds, doubling up to 5 minutes. |
 | Provider badge *Degraded* | Three calls in a row timed out. Calls still go out; if it persists, check the network path or the vendor's status. |
-| Users see *"The AI provider has no credit left"*, *"refused the configured credential"* or *"is not answering right now"* | The same states, met by an interactive request: it fails fast with a 503 and no timeout wait. Read Settings → System health, fix the cause, then see [recover-after-a-provider-outage.md](recover-after-a-provider-outage.md) for the work that waited. |
-| Log says *"offline fake"* despite a cloud binding | Two causes, and the log line distinguishes them. Either nothing is bound — bind a tier under Settings → AI, or `make dev-fresh` to consume a `seeds.ai_routing` you just declared — or a binding EXISTS and could not be built, which with `--ai-fake` on the command line falls back to the fake and warns "the stored model binding cannot be served". That second one is almost always a bound vendor whose key is missing: supply it under Settings → AI → Model provider keys. |
+| Users see *"The AI provider has no credit left"*, *"refused the configured credential"* or *"is not answering right now"* | An interactive request met one of these states. It fails fast with a 503 and no timeout wait. Read Settings → System health and fix the cause. Then see [recover-after-a-provider-outage.md](recover-after-a-provider-outage.md) for the work that waited. |
+| Log says *"offline fake"* and nothing is bound | Bind a tier under Settings → AI, or run `make dev-fresh` to consume a `seeds.ai_routing` you just declared. |
+| Log says *"offline fake"* and warns *"the stored model binding cannot be served"* | A binding exists but could not be built, and `--ai-fake` on the command line made it fall back to the fake. Almost always a bound vendor's key is missing: supply it under Settings → AI → Model provider keys. |

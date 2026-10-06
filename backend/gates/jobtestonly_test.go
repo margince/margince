@@ -7,9 +7,9 @@ package gates
 
 // jobs.Config.TestOnly and compose.JobRunnerConfig.TestOnly carry River's flag
 // of the same name, which disables machinery that is "useful in production, but
-// which may be harmful to tests" — in the pinned river@v0.43.0, the maintenance
-// services' staggered startup. A test harness that boots a runner per test pays
-// that stagger per test, which is what the flag buys back.
+// which may be harmful to tests" (in the pinned river@v0.43.0, the maintenance
+// services' staggered startup). A test harness that boots a runner per test
+// pays that stagger per test, which is what the flag buys back.
 //
 // The risk it introduces is one-directional and quiet: a production role that
 // set it would run its queue maintainer without the jitter River added on

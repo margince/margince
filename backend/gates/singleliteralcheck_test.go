@@ -7,7 +7,8 @@
 
 package gates
 
-// A CHECK that admits exactly one value is a discriminator or it is nothing.
+// A CHECK that admits one value and no other is a discriminator or it is
+// nothing.
 //
 // `DEFAULT x` plus `CHECK (col = x)` makes a column the same on every row that
 // exists and every row that can exist. It cannot carry information, and the cost

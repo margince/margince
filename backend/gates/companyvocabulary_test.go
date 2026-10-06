@@ -7,8 +7,7 @@
 
 package gates
 
-// The record type is called company, and this is what stops the other word
-// coming back.
+// The record type is called company, and its retired name fails here.
 //
 // It never had to come back, because it never left: the product said company
 // on every screen while the schema said company, parts of the code said

@@ -5,8 +5,8 @@
 
 package gates
 
-// A nightly agent acts FOR A CONTACT, and the identity of one night's work has
-// to say which contact. This gate holds the half that fails silently.
+// A nightly agent acts for a seat, and the identity of one night's work has to
+// say which seat. This gate holds the half that fails silently.
 //
 // Two uniqueness rules stop a scheduled occurrence running twice:
 // agent_run_trigger_unique on trigger_ref alone, and runner_job_trigger_unique

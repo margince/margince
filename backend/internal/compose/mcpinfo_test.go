@@ -58,14 +58,13 @@ var updateMCPInfo = flag.Bool("update-mcp-info", false,
 // file will not come looking for a Go comment to find out whose view it is.
 const mcpInfoNote = "Generated from the served MCP surface by " +
 	"`go test ./internal/compose/ -run TestPublishedMCPSurface -update-mcp-info`; do not edit by hand. " +
-	"This is the ALL-SCOPE view: tools/list and resources/list are both filtered per caller, so a " +
-	"passport holding fewer scopes is served less than this. It is the CORE catalog: extension units " +
-	"register onto the same registry and are not composed here. It is captured as an Apps-capable " +
-	"host sees it, so a tool bound to a view carries `_meta.ui.resourceUri`; only a MODERN request " +
-	"that declined the UI extension is served no such member — the handshake era, which has no way " +
-	"to declare one, is served views. The `ui://` view descriptors ARE " +
-	"included, and a deployment publishes each only once its boot has fetched and admitted that " +
-	"document, so an api serving neither advertises neither."
+	"It shows every tool and resource across all scopes. tools/list and resources/list are filtered " +
+	"per caller, so a passport holding fewer scopes is served less. Extension tools are left out. " +
+	"The surface is captured as a client that supports MCP Apps sees it, so a tool bound to a view carries " +
+	"`_meta.ui.resourceUri`. A client that declines the UI extension is served no such member, and a " +
+	"client on the older handshake protocol, which cannot declare the extension, is served views. " +
+	"The `ui://` view descriptors are included; a deployment publishes each only after its boot has " +
+	"fetched and admitted that document."
 
 // mcpInfo is the published shape: the two catalogs, and the sizes that make the
 // document reviewable at a glance rather than by diffing 90 KB of schema.

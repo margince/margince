@@ -5,7 +5,7 @@
 
 package gates
 
-// An audited update says what it changed FROM.
+// An audited update says what it changed from.
 //
 // audit_log carries before and after images. A row whose action is `update` and
 // whose before is absent records that something changed and cannot say what it

@@ -5,7 +5,7 @@
 
 package gates
 
-// A scheduled pass binds its provenance through ONE helper.
+// A scheduled pass binds its provenance through one helper.
 //
 // The system principal and a fresh correlation id are two calls that belong
 // together: every audit row and outbox event such a pass leaves carries both,

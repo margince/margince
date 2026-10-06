@@ -4,32 +4,31 @@ Build the self-contained folder a non-technical user runs on macOS or Windows
 with no Docker and no services to configure: Postgres, the event bus, the api, the
 worker and the SPA, started by one launcher and used in a browser.
 
-Why it is shaped this way — the custom Postgres, the update contract, why the
-two platforms differ where they do, the known limits — is
+Why it is shaped this way (the custom Postgres, the update contract, why the
+two platforms differ where they do, the known limits) is in
 [explanation/desktop-distribution.md](../explanation/desktop-distribution.md).
 
 ## Will it run on my computer?
 
-What a **user** needs. Building it needs more — see the next section.
+What a **user** needs. Building it needs more; see the next section.
 
 | | macOS bundle | Windows bundle |
 |---|---|---|
-| **OS** | macOS 13 Ventura or newer | Windows 10 or newer. Server 2016+ shares that kernel and is expected to work, but **is untested** — nothing has launched the bundle there |
-| **Architecture** | Whatever the build machine was — **not** universal. An Apple-silicon build does not run on an Intel Mac at all; an Intel build runs on Apple silicon under Rosetta 2. `make desktop-dist` prints which one it produced | x64 only. Windows on ARM has x64 emulation, but no ARM build is produced and none is tested |
+| **OS** | macOS 13 Ventura or newer | Windows 10 or newer. Server 2016+ shares that kernel and is expected to work, but **is untested**: nothing has launched the bundle there |
+| **Architecture** | Whatever the build machine was; the bundle is **not** universal. An Apple-silicon build does not run on an Intel Mac at all; an Intel build runs on Apple silicon under Rosetta 2. `make desktop-dist` prints which one it produced | x64 only. Windows on ARM has x64 emulation, but no ARM build is produced and none is tested |
 | **Must already be installed** | Nothing | The [Microsoft Visual C++ x64 redistributable](https://aka.ms/vs/17/release/vc_redist.x64.exe). Present on most machines, **not** bundled |
-| **Admin rights** | Not needed | Not needed. Running as an administrator also works — `pg_ctl` drops the privileges Postgres refuses to start with |
-| **First-launch warning** | Ad-hoc signed, so a copy downloaded through a browser is quarantined and Gatekeeper refuses it — **once**: right-click → **Open**, and the bundle clears the rest itself (see below). Copying by `cp`, USB or AirDrop sets no quarantine and needs none of this | Unsigned, so SmartScreen blocks it: **More info** → **Run anyway** |
+| **Admin rights** | Not needed | Not needed. Running as an administrator also works: `pg_ctl` drops the privileges Postgres refuses to start with |
+| **First-launch warning** | Ad-hoc signed, so a copy downloaded through a browser is quarantined and Gatekeeper refuses it **once**: right-click → **Open**, and the bundle clears the rest itself (see below). Copying by `cp`, USB or AirDrop sets no quarantine and needs none of this | Unsigned, so SmartScreen blocks it: **More info** → **Run anyway** |
 | **Where it is put** | Path must be short: the database socket path has a 103-byte system limit, and the launcher measures it and says so | Anywhere. There is no socket, so no limit |
 | **Browser** | Chrome/Edge 111+, Firefox 114+, or Safari 16.4+ (Safari 16.4 is available back to macOS 11, so it is reachable on every supported version) | Chrome/Edge 111+ or Firefox 114+ |
 
-The OS floors are not aspirational: `MACOSX_DEPLOYMENT_TARGET` is pinned to
-13.0 and **the build fails** if any shipped binary requires newer, so it cannot
-silently inherit the build machine's macOS. On Windows the floor is
-PostgreSQL 16's own (Windows 10 or newer), which Go and the MSYS2 runtime also
-share.
+The OS floors are enforced: `MACOSX_DEPLOYMENT_TARGET` is pinned to 13.0 and
+**the build fails** if any shipped binary requires newer, so it cannot inherit
+the build machine's macOS. On Windows the floor is PostgreSQL 16's own
+(Windows 10 or newer), which Go and the MSYS2 runtime also share.
 
 Both need roughly 1 GB free for the folder plus the database, and neither
-writes a single byte outside its own folder — no installer, no registry keys,
+writes a single byte outside its own folder: no installer, no registry keys,
 no `~/Library`, no `%APPDATA%`.
 
 ## Or download one already built
@@ -39,33 +38,33 @@ Two places, for two different needs.
 ### A release, for a build meant to be kept
 
 The [releases page](https://github.com/margince/margince/releases)
-carries both bundles as assets on every release that was cut with them —
-`margince-macos-<version>.tar.gz` and `margince-windows-<version>.zip` — with
-the first-launch steps in the release notes. Release assets do not expire, which
-is the difference that matters: pick a version, download its build.
+carries both bundles as assets on every release that was cut with them
+(`margince-macos-<version>.tar.gz` and `margince-windows-<version>.zip`), with
+the first-launch steps in the release notes. Release assets do not expire:
+pick a version, download its build.
 
 Cutting one is a manual dispatch of the **Release** workflow from the Actions
-tab. Ordinary merges to main do not build desktop bundles — each one compiles
-Postgres from source, and a merge answers no new question about it — so a
+tab. Ordinary merges to main do not build desktop bundles, because each one
+compiles Postgres from source and a merge answers no new question about it. A
 downloadable build exists because somebody decided it should.
 
 ### A run artifact, for testing a change
 
 Each platform also has a CI lane that publishes the folder as a run artifact, so
-testing a branch needs no toolchain at all — and the runner IS the proof the lane
+testing a branch needs no toolchain at all. The runner also proves the lane
 still works, since neither half can be built on the other platform. These expire
 after 14 days.
 
 | Workflow | Runner | Artifact |
 |---|---|---|
-| `desktop-macos` | `macos-latest` (Apple silicon) | `margince-macos-<sha>` — a **tarball**, because artifact upload does not preserve the executable bit |
-| `desktop-windows` | `windows-latest` (x64) | `margince-windows-<sha>` — a plain folder |
+| `desktop-macos` | `macos-latest` (Apple silicon) | `margince-macos-<sha>`: a **tarball**, because artifact upload does not preserve the executable bit |
+| `desktop-windows` | `windows-latest` (x64) | `margince-windows-<sha>`: a plain folder |
 
 Both run automatically when `desktop/**` changes on a pull request, by hand from
 the Actions tab, and as reusable workflows called by **Release** when it is
-cutting a downloadable build — the same lane either way, so a release bundle
-cannot differ from the one a pull request was checked against. Download from the
-run page, or:
+cutting a downloadable build. It is the same lane either way, so a release
+bundle cannot differ from the one a pull request was checked against. Download
+from the run page, or:
 
 ```
 gh run download <run-id> -n margince-macos-<sha>
@@ -83,7 +82,7 @@ no build system other than `nmake` against MSVC.
 
 | | Build host | Also needs |
 |---|---|---|
-| macOS | Apple silicon or Intel — the bundle inherits the builder's architecture | Xcode Command Line Tools (`xcode-select --install`), Go, node+pnpm |
+| macOS | Apple silicon or Intel; the bundle inherits the builder's architecture | Xcode Command Line Tools (`xcode-select --install`), Go, node+pnpm |
 | Windows | x64 | [Visual Studio Build Tools](https://visualstudio.microsoft.com/downloads/) with the "Desktop development with C++" workload (for pgvector), [MSYS2](https://www.msys2.org/) with `base-devel gcc` (for the event bus), Go, node+pnpm |
 
 ## Build it — macOS
@@ -109,7 +108,7 @@ pinned version does.
 
 Rerun `make desktop-postgres` after bumping the pinned Postgres or pgvector
 version in `desktop/build/build-postgres.sh`; the checksums are pinned there
-and a mismatch fails the build rather than silently using a cached tarball.
+and a mismatch fails the build instead of using a cached tarball.
 
 ## Build it — Windows
 
@@ -135,20 +134,20 @@ If `make` and `pwsh` are available, the same lane has wrapper targets:
 | `make desktop-win-bus` | `build-bus.ps1` | The event bus: Redis 7.2 built under MSYS2 |
 | `make desktop-win-app` | `build-app.ps1` | api/worker/migrate + frontend + launcher |
 | `make desktop-win-dist` | `build-dist.ps1` | Assemble the folder and verify it runs standalone |
-| `make desktop-clean` | — | Remove `build/desktop/` entirely, both platforms |
+| `make desktop-clean` | (none) | Remove `build/desktop/` entirely, both platforms |
 
 The pinned versions and checksums live at the top of each script. A mismatch
-fails the build rather than silently using a cached download.
+fails the build instead of using a cached download.
 
 ## Run it
 
 ### macOS
 
 **Copy the folder somewhere short first.** The database uses a unix socket
-inside the folder, and the path has a 103-byte system limit — the repo's own
-`build/desktop/margince/` is normally past it already — how far depends on
-where you cloned — and the launcher refuses to start, naming the limit and the
-measured length and telling you to move it.
+inside the folder, and the path has a 103-byte system limit. The repo's own
+`build/desktop/margince/` is usually past the limit (how far depends on where
+you cloned). The launcher then refuses to start, names the limit and the
+measured length, and tells you to move the folder.
 
 ```
 cp -R build/desktop/margince ~/Margince
@@ -158,21 +157,20 @@ cd ~/Margince && ./margince
 Or double-click **Start Margince.command** in Finder, which is what a
 non-technical user does.
 
-**A copy that arrived through a browser warns once.** The build is ad-hoc
-signed — Developer ID signing and notarization need a paid Apple account — so
+**A downloaded copy warns once.** The build is ad-hoc
+signed (Developer ID signing and notarization need a paid Apple account), so
 Gatekeeper refuses it: right-click → **Open** → **Open**, or approve it in
 System Settings → Privacy & Security.
 
-Once, though, not once per program. The browser marks the download and the
-unarchiver copies that mark onto everything it extracts, and Gatekeeper asks at
-the moment a program is *executed* — so an untreated bundle puts a separate
-dialog in front of `initdb`, `postgres`, `valkey-server`, `migrate`, `api` and
-`worker` as the stack comes up, each one blocking the boot. The starter clears
-the mark from the launcher and the launcher clears it from `runtime/` before it
-spawns anything, which is what reduces that queue to the single dialog above.
-Neither touches `data/`: those are your records, not ours to relabel.
+It warns once for the whole bundle. The browser marks the download, the
+unarchiver copies that mark onto everything it extracts, and Gatekeeper asks
+when a program is *executed*. An untreated bundle would put a separate dialog in
+front of `initdb`, `postgres`, `valkey-server`, `migrate`, `api` and `worker` as
+the stack comes up, each one blocking the boot. The starter clears the mark from
+the launcher, and the launcher clears it from `runtime/` before it spawns
+anything, which leaves the single dialog above. Neither touches `data/`.
 
-A copy that never went through a browser — `cp`, a USB stick, AirDrop — is not
+A copy that never went through a browser (`cp`, a USB stick, AirDrop) is not
 marked and shows nothing. To clear an already-downloaded folder yourself:
 
 ```
@@ -189,7 +187,7 @@ Copy-Item -Recurse build\desktop\margince-windows $HOME\Margince
 ```
 
 Or double-click **Start Margince.cmd**, which opens it in its own window.
-**The first launch shows a SmartScreen warning** — the build is unsigned, and
+**The first launch shows a SmartScreen warning**: the build is unsigned, and
 Authenticode signing needs a purchased certificate. "More info" → "Run anyway".
 
 ### Either way
@@ -205,8 +203,8 @@ copy.
 ## Configure it
 
 Everything optional is off by default. Turn features on in `margince.env`
-next to the launcher — generated on first run with every supported setting
-documented and commented out, so it doubles as the reference for what exists:
+next to the launcher. The first run generates it with every supported setting
+documented and commented out. It doubles as the reference for what exists:
 Gmail/Outlook capture, outbound webhooks, log level, the port, and the
 credentials that drive the AI surfaces.
 
@@ -214,23 +212,23 @@ Attachments and company logos are **not** in that list: they already work.
 The launcher keeps their bytes in `data/blobs` inside the folder, with the
 database and the rest of the user's records, so an update leaves them alone. Set
 `MARGINCE_BLOBSTORE_PATH` to move them elsewhere, or
-`MARGINCE_BLOBSTORE_ENDPOINT` to keep them in an S3-compatible service instead —
+`MARGINCE_BLOBSTORE_ENDPOINT` to keep them in an S3-compatible service instead;
 the endpoint takes precedence when both are set. No S3 server is bundled and
 none is needed.
 
-**A backup is `data/` plus wherever the objects actually are.** Left at the
-default they are inside `data/`, so a copy of that directory is the whole
-installation's records; point `MARGINCE_BLOBSTORE_PATH` somewhere else and a copy
-of `data/` is a database whose attachment rows name bytes it does not contain.
-`margince.yaml` and `margince.env` sit beside `data/` and
-are part of a restore too — they are not regenerated, and `margince.yaml` decides
-the company this database belongs to.
+A **backup** is `data/` plus wherever the objects are. Left at the default
+they are inside `data/`, so a copy of that directory is the whole installation's
+records. Point `MARGINCE_BLOBSTORE_PATH` somewhere else and a copy of `data/` is
+a database whose attachment rows name bytes it does not contain.
+`margince.yaml` and `margince.env` sit beside `data/` and are part of a restore
+too: they are not regenerated, and `margince.yaml` decides the company this
+database belongs to.
 
-What a local store does not give is what a service would: no replication, no
-versioning, no signed URLs, and no sharing between machines of its own — put the
-directory on a mount two machines see and they see the same bytes, but nothing
-here arranges that or keeps them consistent. For one contact's installation that
-is the whole requirement; for anything more, set the endpoint.
+A local store lacks what a service gives: no replication, no versioning, no
+signed URLs, and no sharing between machines of its own. Put the directory on a
+mount two machines see and they see the same bytes, but nothing here arranges
+that or keeps them consistent. For one user's installation that is enough; for
+anything more, set the endpoint.
 
 ```
 # margince.env
@@ -239,17 +237,19 @@ MARGINCE_PORT=8801
 ```
 
 Restart to apply. A malformed line refuses the start and names the file and
-line rather than being skipped. Field reference:
+line instead of being skipped. Field reference:
 [reference/configuration.md](../reference/configuration.md).
 
 Company name, currency and timezone live in `margince.yaml`. Both files are
 created once and never overwritten, so your edits survive a restart and an
-update. **On Windows, check the timezone**: Windows records its own zone
-identifier rather than the IANA name this field takes, so a Windows
-installation is created as `UTC` and the value is yours to correct once.
+update.
+
+**On Windows, check the timezone.** Windows records its own zone identifier
+instead of the IANA name this field takes. A Windows installation is therefore
+created as `UTC`, and the value is yours to correct once.
 
 For a real model, open **Settings → AI** in the running app: bind each tier, and
-put the provider's key under **Model provider keys**. Both halves are needed — a
+put the provider's key under **Model provider keys**. Both halves are needed: a
 key with no tier bound to its vendor changes nothing. A servable stored binding
 outranks the launcher's offline fake, so it takes effect without a restart,
 within the routing refresh interval, and there is no file to place. See
@@ -258,11 +258,11 @@ within the routing refresh interval, and there is no file to place. See
 ## Update an installation
 
 Replace **the launcher, the starter script, and `runtime/`**. Leave
-`margince.yaml`, `margince.env` and `data/` alone — they are the user's, and
+`margince.yaml`, `margince.env` and `data/` alone: they are the user's, and
 `data/` is the database.
 
 **Quit it first**, so nothing is holding the database while its binaries are
-swapped. Then delete `runtime/` before copying the new one: copying over the
+swapped. Then delete `runtime/` before copying the new one. Copying over the
 top leaves behind any file the new version dropped, and a stale library beside
 a new binary is a failure with no obvious cause.
 
@@ -282,8 +282,8 @@ Copy-Item -Force build\desktop\margince-windows\margince.exe $HOME\Margince\
 Copy-Item -Force "build\desktop\margince-windows\Start Margince.cmd" $HOME\Margince\
 ```
 
-Those are the only three things an update replaces. Replacing the whole folder
-would destroy the records.
+An update replaces only those three things. Replacing the whole folder would
+destroy the records.
 
 ## Start over
 
@@ -296,7 +296,7 @@ Remove-Item -Recurse -Force $HOME\Margince\data, $HOME\Margince\margince.yaml, $
 ```
 
 The next launch bootstraps a fresh installation with a new password. To
-remove everything, delete the folder — nothing is stored outside it.
+remove everything, delete the folder; nothing is stored outside it.
 
 ## When something goes wrong
 
@@ -311,14 +311,14 @@ writes its own file.
 | "expected KEY=value" | A malformed line in `margince.env`, named with its line number |
 | "a database from a previous session is still running" | Windows: a launcher was killed without stopping Postgres and the stray could not be stopped. Sign out and back in |
 | Windows SmartScreen blocks the first launch | The build is unsigned. "More info" → "Run anyway" |
-| Windows: "VCRUNTIME140.dll was not found" | The [Microsoft Visual C++ redistributable](https://aka.ms/vs/17/release/vc_redist.x64.exe) is not installed. It is not bundled |
+| Windows: "VCRUNTIME140.dll was not found" | The [Microsoft Visual C++ redistributable](https://aka.ms/vs/17/release/vc_redist.x64.exe) is not installed, and the bundle does not include it |
 | Attachments or logos fail | No object storage. Set `MARGINCE_BLOBSTORE_*` |
-| AI answers look canned | Nothing is bound, or the bound vendor holds no key — so the offline fake is driving the AI surfaces. Open **Settings → AI**: bind each tier, and put the vendor's key in under **Model provider keys**. Adding a file to this folder no longer changes it |
+| AI answers look canned | Nothing is bound, or the bound vendor holds no key, so the offline fake is driving the AI surfaces. Open **Settings → AI**: bind each tier, and put the vendor's key in under **Model provider keys** |
 | "no licence is configured and this installation is production" | `MARGINCE_ENV` was set to `production` in `margince.env` without a `MARGINCE_LICENSE` beside it. Supply the token, or remove the override and let the default `dev` posture stand |
 | Dates and times look wrong on Windows | The first run defaulted to `UTC`. Set `timezone` in `margince.yaml` |
 
-To stop a stuck instance, find it by the port it listens on rather than by
-name — on macOS it is started as `./margince`, so a `pkill -f` on the full path
+To stop a stuck instance, find it by the port it listens on instead of by
+name. On macOS it is started as `./margince`, so a `pkill -f` on the full path
 will not match it. **Substitute your own port** if `margince.env` sets
 `MARGINCE_PORT`; 8800 is only the default.
 

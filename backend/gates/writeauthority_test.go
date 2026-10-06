@@ -5,9 +5,9 @@
 
 package gates
 
-// The read/write asymmetry of a manual record grant, as a fitness function:
-// a path that CHANGES a shareable record probes for write authority, not for
-// visibility.
+// A path that changes a shareable record probes for write authority rather than
+// for visibility, because a manual record grant is asymmetric between read and
+// write.
 //
 // The class this closes is one column that nothing read. record_grant.access
 // has always carried two levels and the schema has always said "write satisfies

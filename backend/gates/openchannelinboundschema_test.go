@@ -6,7 +6,7 @@
 package gates_test
 
 // The published OpenAPI body schema and the `arrival` struct it documents are
-// ONE invariant spelled on both sides of a wire.
+// one invariant spelled on both sides of a wire.
 //
 // extensions/openchannel/inbound.openapi.yaml exists because the core admits
 // these bytes on a signature and interprets nothing in them: the unit alone

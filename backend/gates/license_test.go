@@ -5,12 +5,9 @@
 
 package gates
 
-// License-notice fitness function (business/12-license.md §5 "honest
-// labeling", §8 "don't strip notices"): every hand-written Go file must
-// carry the BUSL-1.1 SPDX header, and the obligation is derived from the
-// tree rather than a checklist — a new file is enrolled the moment it
-// exists. Generated files are exempt: their headers are owned by the
-// generator (and the drift gate), not by hand.
+// Every hand-written Go file carries the BUSL-1.1 SPDX header, and the file
+// list is derived from the tree. Generated files are exempt: their headers are
+// owned by the generator (and the drift gate), not by hand.
 
 import (
 	"path/filepath"

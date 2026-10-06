@@ -1,24 +1,23 @@
 # The composition layer
 
 `internal/compose/` is the only layer that knows about more than one module. Modules stay flat and
-**never import each other** ([architecture.md](architecture.md)); compose is where they are assembled
-into the running binaries and where **every cross-module edge is injected**. This page explains how it
-initializes and where things are wired. To *add* a feature that touches it, see
-[how-to/add-a-module.md](../how-to/add-a-module.md).
+never import each other ([architecture.md](architecture.md)). Compose assembles them into the running
+binaries and injects every cross-module edge. Below: how it initializes and where things are wired. To
+*add* a feature that touches it, see [how-to/add-a-module.md](../how-to/add-a-module.md).
 
 ## What compose owns
 
-- **The composite HTTP `Server`** — every module's handlers, shadowing the generated 501 stubs.
-- **The cross-module edges** — injected as small adapters, so no module imports a sibling.
-- **The datasource `Provider`** — the system-of-record seam the agent/MCP surface binds to.
-- **The MCP tool registry** — the one governed tool surface, shared by the `/mcp` transport and the REST agent gate.
-- **The background wiring** each binary needs — the River job runner, the Surface-B runner, the
+- The composite HTTP `Server`: every module's handlers, shadowing the generated 501 stubs.
+- The cross-module edges, injected as small adapters so no module imports a sibling.
+- The datasource `Provider`: the system-of-record seam the agent/MCP surface binds to.
+- The MCP tool registry: the governed tool surface, shared by the `/mcp` transport and the REST agent gate.
+- The background wiring each binary needs: the River job runner, the Surface-B runner, the
   workflow engine, the capture registry.
-- **The per-role `Option`s** — how each binary customizes the wiring.
+- The per-role `Option`s: how each binary customizes the wiring.
 
 ## The `Server`: module handlers shadow generated stubs
 
-`Server` (`server.go`) embeds each module's handler set (via a type alias per module) **and** the
+`Server` (`server.go`) embeds each module's handler set (via a type alias per module) and the
 generated `stubs`. Go promotes the shallower method, so a module handler shadows the matching 501 stub:
 
 ```go
@@ -32,12 +31,12 @@ type Server struct {
 var _ crmcontracts.ServerInterface = Server{}   // compile-time completeness guarantee
 ```
 
-That assertion is load-bearing: if a regenerated contract adds an operation nothing implements,
-`Server` stops satisfying `ServerInterface` and the build fails **here** — the stubs are simultaneously
-the fallback (an unimplemented op answers a loud 501, never a silent 404) and the drift gate's
-inventory. (The generated stubs live in `stubs_gen.go`; see [contract-first.md](contract-first.md).)
+If a regenerated contract adds an operation nothing implements, `Server` stops satisfying
+`ServerInterface` and the build fails at that assertion. The stubs are both the fallback (an
+unimplemented op answers a loud 501, never a silent 404) and the drift gate's inventory. The generated
+stubs live in `stubs_gen.go`; see [contract-first.md](contract-first.md).
 
-## How it boots — `compose.New` (the api handler)
+## How it boots: `compose.New` (the api handler)
 
 `cmd/api` calls `compose.New(pool, log, opts...) http.Handler`. The pipeline (`server.go`):
 
@@ -62,42 +61,41 @@ func New(pool, log, opts...) http.Handler {
 2. **Options** apply per-role customization (blobstore, keyvault, bus probe, …).
 3. **`applySendPath`** binds the outbound send lane once the options have settled which providers exist.
 4. **`contractAPI`** mounts the generated chi router at `BaseURL: "/v1"` with two middlewares:
-   `agentGate` (the transport-agnostic admission layer — same tier table as the MCP surface) then
-   `idempotency`. Idempotency sits **outermost** so a staged-approval refusal is never recorded as
-   "the" response for an idempotency key (the approved retry is the same request under the same key).
+   `agentGate` (the transport-agnostic admission layer, with the same tier table as the MCP surface)
+   then `idempotency`. Idempotency sits outermost so a staged-approval refusal is never recorded as
+   the response for an idempotency key, because the approved retry is the same request under the same key.
 5. **`operationalMux`** mounts the contract surface next to `/healthz`, `/readyz` (role-specific
-   dependency probes), `/metrics`, the anonymous `/v1/public/*` edges, the `/oauth` A2 authorization
-   server. It takes the same `identitySvc` instance `contractAPI` got: ONE `identity.Service` per
+   dependency probes), `/metrics`, the anonymous `/v1/public/*` edges and the `/oauth` authorization
+   server. It takes the same `identitySvc` instance `contractAPI` got: one `identity.Service` per
    process, so the admission gate and the connector's authenticate closure share its singleton cache
    and its clock.
 6. The whole thing is wrapped `RecoverPanics → LimitBodies → SecureHeaders`.
 
 ## The installation bootstrap (one transaction, at boot)
 
-The singleton company is **not created by a request**. `compose.EnsureInstallation`
-(`installation.go`) runs the boot state machine from `margince.yaml` (A107/ADR-0061), seeding every
-module's per-workspace defaults — deals' default pipeline, consent's purposes and retention,
-automation's starter automations, activities' booking page — in ONE transaction, so they stand or fall
-together. identity imports none of those modules: compose owns the seed, as it owns every other
+No request creates the singleton company. `compose.EnsureInstallation` (`installation.go`) runs the
+boot state machine from `margince.yaml`. It seeds every module's per-workspace defaults in one
+transaction, so they stand or fall together. The defaults are deals' default pipeline, consent's
+purposes and retention, automation's starter automations and activities' booking page. identity imports none of those modules: compose owns the seed, as it owns every other
 cross-module edge. The HTTP surface only ever serves the already-bound company.
 
 ## The cross-module edges (the map)
 
-Every edge is an **adapter constructed in compose** that implements the consumer's small interface,
-backed by the provider module's store — so neither module names the other. The current edges
-(`newServer` + the blob/vault Options):
+Every edge is an adapter constructed in compose that implements the consumer's small interface,
+backed by the provider module's store, so neither module names the other. The edges wired in
+`newServer` and the blob/vault Options:
 
 | Consumer | ← needs | Wired as |
 |---|---|---|
-| the installation bootstrap | deals + consent + automation + activities defaults | `compose.EnsureInstallation` (one tx, at boot — `installation.go`) |
+| the installation bootstrap | deals + consent + automation + activities defaults | `compose.EnsureInstallation` (one tx, at boot; `installation.go`) |
 | activities | consent's outbound suppression gate; contacts (public booking); consent (unsubscribe link) | `.WithConsent(...)`, `.WithPublicBooking(...)`, `.WithUnsubscribe(...)` |
 | consent (DSR erase) | privacy's `Eraser` (blob-aware under `WithBlobstore`) | `consent.NewHandlers(pool).WithEraser(privacy.NewEraser(pool))` |
 | agents (MCP surface) | approvals' staging + redemption (the 🟡 confirm-first effects) | `approvalsHandlersWithEffects(pool)` (`.WithEffects(...)`) |
-| automation (workflow engine) | collections' add-to-list write; activities' draft-email compute + consent's suppression gate; approvals' staging (its own adapter — `automation.StageRequest` is not the agents surface's request type); activities' no-activity/check-in candidate scan; identity's live RBAC (the match-time owner gate, via `authz.Resolver`) | `compose.NewWorkflowEngine(pool)` (`compose/workflows.go`) |
+| automation (workflow engine) | collections' add-to-list write; activities' draft-email compute + consent's suppression gate; approvals' staging (its own adapter, because `automation.StageRequest` is not the agents surface's request type); activities' no-activity/check-in candidate scan; identity's live RBAC (the match-time owner gate, via `authz.Resolver`) | `compose.NewWorkflowEngine(pool)` (`compose/workflows.go`) |
 | signals | contacts's relationship-strength | `signalStrength{contacts: contacts.NewStore(pool)}` adapter |
 | imap connect | capture's connector registry (vault under `WithKeyvault`) | `imapConnectHandlers{registry: NewCaptureRegistry(pool, vault)}` |
 | filtered export | collections' saved-view/list source | `filteredExportHandlers{collections: collections.NewStore(pool)}` |
-| every model consumer | ai's tiered router (routing, budget, metering, secret-stripping) | the `Brain` seam (`brain.go`) — Surface-B, retrieval embed, cold-start all ride one router |
+| every model consumer | ai's tiered router (routing, budget, metering, secret-stripping) | the `Brain` seam (`brain.go`); Surface-B, retrieval embed and cold-start all ride one router |
 | AI task prompts | contacts's company context (scope-filtered, fingerprinted) | `companycontextprompt.go` (+ the `company_context.rollout` kill switch, `WithCompanyContextRollout`) |
 | reply drafting | activities' evidence + ai's model path + the voice profile | `replydraft.go` (`WithReplyDraft`) |
 | deep read | contacts's site reads + ai's budget deferral (River re-schedule) | `deepreadtransport.go`, `deepreadbudget.go` (`WithDeepRead`) |
@@ -109,18 +107,13 @@ the provider's store.*
 ## Per-role `Option`s, and "declare absence by omission"
 
 An `Option func(*Server, *pgxpool.Pool)` customizes the wiring for one process role; everything not
-optioned keeps its safe default. The current options (grep `func With` in `internal/compose/` for the
-live list): infra — `WithBusReady`, `WithBlobstore`, `WithKeyvault`, `WithSchemaPool`,
-`WithPublicBaseURL`, `WithPasswordReset`; AI lanes — `WithColdStart`, `WithScrape`,
-`WithExtractor`, `WithBrief`, `WithAIMetrics`, `WithAIState`, `WithDeepRead`, `WithReplyDraft`,
-`WithOfferDraft`, `WithCompanyContextRollout`; capture — `WithCaptureBackfill`, `WithGmailCapture`,
-`WithGmailPush`, `WithGraphCapture`.
+optioned keeps its safe default. To list the options, grep `func With` in `internal/compose/`.
 
-The important rule: **a capability whose infra a role wasn't given leaves its endpoints as the generated
-501 stub rather than nil-derefing at request time.** No `WithBlobstore` → the `/attachments` endpoints
-answer 501 (a role that stores no objects declares that by omission). A capture-capable role must pass
-`WithKeyvault` or fail to boot. `/readyz` probes exactly the dependencies the role wired — so a split
-deployment answers ready on what it actually depends on.
+A capability whose infra a role was not given leaves its endpoints as the generated 501 stub instead of
+dereferencing nil at request time. No `WithBlobstore` → the `/attachments` endpoints answer 501 (a role
+that stores no objects declares that by omission). A capture-capable role must pass `WithKeyvault` or
+fail to boot. `/readyz` probes the dependencies the role wired and no others, so a split deployment
+answers ready on what it depends on.
 
 ## The other compose entry points (per binary)
 
@@ -149,7 +142,7 @@ Each binary composes only what its role needs, all through this one layer:
 | The datasource provider | `internal/compose/provider.go` |
 | The MCP registry | `internal/compose/registry.go` |
 | The REST admission middleware | `internal/compose/agentgate.go`, `idempotency.go` |
-| Background wiring | `internal/compose/{jobs,jobs_*,dispatch,jobregistry,jobschedule,runnerservice,workflows,capture}.go` — see [job-fleet.md](job-fleet.md) |
+| Background wiring | `internal/compose/{jobs,jobs_*,dispatch,jobregistry,jobschedule,runnerservice,workflows,capture}.go`; see [job-fleet.md](job-fleet.md) |
 | The AI orchestration group | `internal/compose/{brain,companycontextprompt,companycontextrollout,replydraft,deepreadtransport,deepreadbudget,onboardingstate}.go` |
 | The AI certification lane | `internal/compose/aicert/` (corpus, runner, records; report tool in `aicert/reportcmd`) |
 | The AI cost pre-flight estimator | `internal/compose/costestimate/` (backfill preview cost; reads `ai` + `activities` + `capture`, prices with `ai.PriceCall`) |

@@ -77,8 +77,8 @@ export const OFF_RAIL_TITLE_KEYS: Record<string, MessageKey> = {
   partners: "nav.partners",
   share: "nav.share",
   search: "nav.search",
-  // Off the rail deliberately. The rail carries the product's ten destinations
-  // and a queue of one contact's own unsent mail is not an eleventh; it is
+  // Off the rail on purpose. The rail carries the product's destinations, and a
+  // queue of one user's own unsent mail is not one of them; it is
   // reached from the composer that put a message in it and from Today, which is
   // where the same rep's other waiting work already lives.
   scheduled: "nav.scheduled",

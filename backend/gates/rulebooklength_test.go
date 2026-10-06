@@ -8,7 +8,7 @@
 package gates
 
 // A rulebook is read in full by every session and, for its Craftsmanship
-// section, by every gate prompt — so its length is a running cost rather than a
+// section, by every gate prompt, so its length is a running cost rather than a
 // matter of taste. Left alone it only grows: each addition is individually
 // defensible, nothing ever asks whether the whole still earns its size, and the
 // file arrives at a thousand lines nobody reads to the end.
@@ -90,7 +90,11 @@ var ceilings = map[string]int{
 	// figures at hand and every reason to paste them as evidence. The rule has to
 	// be in front of the session before it writes, so it cannot live only in
 	// `docs/`.
-	"AGENTS.md": 374,
+	//
+	// +5 for the docs prose pointer: the gate holds the mechanics, and a
+	// session that never opens the style page writes the facts and audience it
+	// cannot see. The prose cleanup that added it shrank this file by more.
+	"AGENTS.md": 377,
 	// Raised from 160 for the AI-hue rule: indigo marks agent-authored content,
 	// and a reader who does not know that paints the meaning onto a decoration.
 	// The reasoning lives in the design-system README; what is here is the twelve

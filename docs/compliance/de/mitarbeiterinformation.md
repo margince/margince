@@ -1,7 +1,7 @@
 # Mitarbeiterinformation zur Erfassung von E-Mail-Korrespondenz
 
 > Vorlage. Platzhalter in `[eckigen Klammern]` ausfüllen. Diese Information ist
-> **vor** der ersten Verbindung eines Postfachs auszuhändigen, nicht danach.
+> **vor** der ersten Verbindung eines Postfachs auszuhändigen.
 
 **Verantwortlicher:** [Firma, Anschrift]
 **Datenschutzbeauftragte:r:** [Name, Kontakt]
@@ -34,12 +34,11 @@ bei IMAP das eingerichtete Postfach und der Sendeordner.
 | --- | --- |
 | Dokumentation der Geschäftskorrespondenz im CRM | Art. 6 Abs. 1 lit. b und f DSGVO, § 26 Abs. 1 BDSG |
 | Aufbewahrung von Handelsbriefen | Art. 6 Abs. 1 lit. c DSGVO i. V. m. § 257 HGB, § 147 AO |
-| [bei erlaubter Privatnutzung:] Verarbeitung privater Korrespondenz | Art. 6 Abs. 1 lit. a DSGVO, § 26 Abs. 2 BDSG — gesonderte Einwilligung |
+| [bei erlaubter Privatnutzung:] Verarbeitung privater Korrespondenz | Art. 6 Abs. 1 lit. a DSGVO, § 26 Abs. 2 BDSG; gesonderte Einwilligung |
 
 ## Wer die Inhalte lesen kann
 
-Das ist die Frage, auf die es ankommt, und die Antwort hängt an einer Einstellung
-Ihres Postfachs:
+Wer die Inhalte lesen kann, hängt an einer Einstellung Ihres Postfachs:
 
 - **`classified` (Voreinstellung):** Jede erfasste Nachricht ist zunächst **nur
   für Sie und die auf der Mail genannten Personen** sichtbar. Ein Klassifikator
@@ -50,7 +49,7 @@ Ihres Postfachs:
   Diese Einstellung ist nur verfügbar, wenn die Geschäftsführung sie ausdrücklich
   freischaltet.
 
-**Eine Administratorin kann eine zurückgehaltene Nachricht nicht lesen.** Die
+Eine Administratorin kann eine zurückgehaltene Nachricht nicht lesen. Die
 Zugriffsprüfung kennt keine Administratorausnahme.
 
 Fällt der Klassifikator aus, bleibt alles zurückgehalten. Das System entscheidet
@@ -59,16 +58,16 @@ im Zweifel gegen die Sichtbarkeit.
 ## Was Sie selbst steuern
 
 - **Absender ausschließen:** Post von einer Adresse oder Domain gar nicht erst
-  erfassen — Einstellungen → Erfassungsaktivität, Karte „Nicht erfassen".
+  erfassen: Einstellungen → Erfassungsaktivität, Karte „Erfassungsausschlüsse“.
 - **Bereits erfasste Post löschen:** unwiderruflich, einschließlich Anhängen und
   abgeleiteter Daten. Löschen Sie eine erfasste Nachricht in Ihrem Postfach,
-  wird die Kopie hier mitgelöscht — es sei denn, eine Kollegin hat dieselbe
-  Nachricht ebenfalls erfasst oder es handelt sich um einen Handelsbrief
-  innerhalb seiner Aufbewahrungsfrist. Post, die auch eine Kollegin empfangen hat, bleibt ihr
+  wird die Kopie hier mitgelöscht. Ausgenommen ist eine Nachricht, die eine Kollegin
+  ebenfalls erfasst hat, und ein Handelsbrief innerhalb seiner
+  Aufbewahrungsfrist. Post, die auch eine Kollegin empfangen hat, bleibt ihr
   erhalten; Ihr Zugriff darauf endet.
 - **Absenderentscheidungen einsehen und korrigieren:** Die Seite „Absender“ zeigt
   jede automatische Entscheidung über Ihre Korrespondenten. Ihre Korrektur ist
-  endgültig — die Maschine überschreibt sie nicht.
+  endgültig; die Maschine überschreibt sie nicht.
 - **Einzelne Threads freigeben oder privat halten:** unabhängig davon, was der
   Klassifikator entschieden hat.
 - **Postfach trennen:** jederzeit. Bereits Erfasstes bleibt, bis Sie es löschen.
@@ -78,10 +77,10 @@ im Zweifel gegen die Sichtbarkeit.
 Handelsbriefe: [z. B. sechs Jahre] nach § 257 HGB, § 147 AO. Übrige
 Korrespondenz: [Frist].
 
-Als privat eingestufte Post wird vernichtet, und wie lange das dauert, hängt
+Als privat eingestufte Post wird vernichtet. Wie lange das dauert, hängt
 davon ab, wer die Einstufung vorgenommen hat: sieben Tage, wenn Sie den Absender
 selbst als privat gekennzeichnet haben, und dreißig Tage, wenn der Klassifikator
-es war. Die längere Frist gilt der unbestätigten Entscheidung — bis dahin können
+es war. Die längere Frist gilt der unbestätigten Entscheidung; bis dahin können
 Sie sie auf der Seite „Absender" korrigieren.
 
 ## Ihre Rechte

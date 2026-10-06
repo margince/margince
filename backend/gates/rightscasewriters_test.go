@@ -5,7 +5,7 @@
 
 package gates
 
-// EVERY PROPOSAL A DATA SUBJECT SENDS OPENS A CASE SOMEBODY OWES AN ANSWER TO.
+// Every proposal a data subject sends opens a case somebody owes an answer to.
 //
 // stageSubmission files what the subject asked for; openRightsCaseTx puts it in
 // the DPO's queue with a deadline and a receipt. The two are one act, and the

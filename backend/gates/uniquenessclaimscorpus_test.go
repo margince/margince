@@ -5,7 +5,7 @@
 
 package gates
 
-// WHERE the claim sweep looks, as against what it looks for.
+// Where the claim sweep looks, as against what it looks for.
 //
 // The register's number is held per shape in uniquenessclaims_test.go, and that
 // prices narrowing the PATTERNS. It leaves the corpus free, and the corpus is

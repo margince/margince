@@ -100,7 +100,7 @@ func writeAICertDecisions(page *strings.Builder, decisions []aiCertDecision) {
 		}
 		state := "`" + d.State + "`"
 		if d.StaleReason != "" {
-			state += " — " + d.StaleReason
+			state += ": " + d.StaleReason
 		}
 		fmt.Fprintf(page, "| `%s/%s` | `%s` | %s | `%s` | %s | %d | %d | %d | %.2f | %s | %.2f |\n",
 			d.Task, d.Site, d.Binding.label(), state, d.Verdict, serves, d.Runs, d.Kept, d.KeptWrong,
@@ -156,7 +156,7 @@ func TestTheDecisionSectionShowsEachRecordAndWhetherItServes(t *testing.T) {
 	writeAICertDecisions(&page, decisions)
 	for _, want := range []string{
 		"| `site_triage/triage` | `jev_compatible · typesafe/jev-1.13 · cloud_frontier` | `current` | `certified` | yes | 15 | 14 | 0 | 0.07 | `below_floor` 1 | 1.00 |",
-		"`stale` — the prompt this build sends changed under scenario a",
+		"`stale`: the prompt this build sends changed under scenario a",
 	} {
 		if !strings.Contains(page.String(), want) {
 			t.Errorf("the section lacks %q:\n%s", want, page.String())
