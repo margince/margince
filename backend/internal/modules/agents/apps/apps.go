@@ -39,29 +39,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
-// The URIs the tools name. They are exported because a tool's declaration and
-// the document that answers it are two halves of one promise, and the only way
-// they cannot drift is for both to read the same constant — the composed-surface
-// sweep proves every named URI is published, but a shared constant means there
-// is nothing for it to catch.
-const (
-	// CompanyBriefURI renders read_brief's queue.
-	CompanyBriefURI = "ui://margince/company-brief.html"
-	// RelationshipMapURI renders who_knows's colleagues.
-	RelationshipMapURI = "ui://margince/relationship-map.html"
-	// CommitmentsURI renders review_commitments's open promises.
-	CommitmentsURI = "ui://margince/commitments.html"
-	// HandoffURI renders prepare_handoff's briefing and its gaps.
-	HandoffURI = "ui://margince/handoff.html"
-	// PipelineReviewURI renders whats_slipping_this_week's ranked deals.
-	//
-	// It registers NO tool of its own. A `render_*` name on this surface is a
-	// document hung off a tool that already answers, not a second verb — the
-	// two that shipped before it are the same, and a tool here would cost a
-	// listing slot and an admission surface to display an answer the caller
-	// already has.
-	PipelineReviewURI = "ui://margince/pipeline-review.html"
-)
+// RelationshipMapURI renders who_knows's colleagues. It is exported so the
+// tool's declaration and the document that answers it read the same constant;
+// the composed-surface sweep proves every URI a tool names is published.
+const RelationshipMapURI = "ui://margince/relationship-map.html"
 
 // view is one published document's identity. The document itself is not here:
 // it is fetched, admitted and held at run time, so this is the half that is a
@@ -78,36 +59,10 @@ type view struct {
 // is derived from the URI rather than listed beside it.
 var catalog = []view{
 	{
-		uri:  CompanyBriefURI,
-		name: "company_brief_view",
-		// A title a human reads in a host's own UI chrome, so it says what the
-		// panel shows rather than naming the tool behind it.
-		title:       "Morning brief",
-		description: "The ranked brief queue, with the factor decomposition each item ranked on.",
-	},
-	{
 		uri:         RelationshipMapURI,
 		name:        "relationship_map_view",
 		title:       "Who knows this contact",
 		description: "The colleagues who know a contact, warmest first, with the interactions behind each warmth band.",
-	},
-	{
-		uri:         CommitmentsURI,
-		name:        "commitments_view",
-		title:       "Open commitments",
-		description: "The promises still outstanding, oldest first, with who owes each one and how far past due it is.",
-	},
-	{
-		uri:         HandoffURI,
-		name:        "handoff_view",
-		title:       "Delivery handoff",
-		description: "What the delivery side is being given for one project, with each gap beside the fact it is about.",
-	},
-	{
-		uri:         PipelineReviewURI,
-		name:        "pipeline_review_view",
-		title:       "Pipeline review",
-		description: "The deals at risk this week, worst first, with the evidence each risk claim rests on.",
 	},
 }
 

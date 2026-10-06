@@ -19,7 +19,6 @@
 // the components already guarantee they do.
 
 import { meshOf, meshStyle, monogramOf } from "../design-system/avatarmesh";
-import type { CalloutTone } from "../design-system/callout";
 import type { PanelTone } from "../design-system/panel";
 import type { StrengthBand } from "../design-system/strengthmeter";
 import { el, heading } from "./bridge";
@@ -57,22 +56,9 @@ export function panel(
   return section;
 }
 
-/** panelRow mirrors `PanelRow`: one row, ruled from the row above it. */
-export function panelRow(className?: string): HTMLElement {
-  return el(
-    "div",
-    className === undefined ? "panel-row" : `panel-row ${className}`,
-  );
-}
-
 /** panelBody mirrors `PanelBody`. */
 export function panelBody(): HTMLElement {
   return el("div", "panel-body");
-}
-
-/** panelFoot is the panel's footer band, under a rule. */
-export function panelFoot(): HTMLElement {
-  return el("footer", "panel-foot");
 }
 
 /**
@@ -100,31 +86,6 @@ export function avatar(
   return node;
 }
 
-/**
- * meter mirrors `Meter` dense and flat: a proportion as a thin bar, named for
- * assistive technology. A share that is not known draws an empty trough that
- * is hidden from assistive technology rather than announced as a meter with no
- * value: an absent factor is not a factor of zero, and the em dash beside it
- * already says so in words.
- */
-export function meter(share: number | null, label: string): HTMLElement {
-  const bar = el("div", "meterbar meterbar-dense meterbar-flat");
-  const fill = el("span");
-  bar.appendChild(fill);
-  if (share === null) {
-    bar.setAttribute("aria-hidden", "true");
-    return bar;
-  }
-  const percent = Math.round(Math.min(1, Math.max(0, share)) * 100);
-  bar.setAttribute("role", "meter");
-  bar.setAttribute("aria-label", label);
-  bar.setAttribute("aria-valuemin", "0");
-  bar.setAttribute("aria-valuemax", "100");
-  bar.setAttribute("aria-valuenow", String(percent));
-  fill.style.width = `${percent}%`;
-  return bar;
-}
-
 /** strengthMeter mirrors `StrengthMeter`: three rising bars beside the word. */
 export function strengthMeter(band: StrengthBand, word: string): HTMLElement {
   const node = el("span", "strength-meter");
@@ -133,25 +94,5 @@ export function strengthMeter(band: StrengthBand, word: string): HTMLElement {
   bars.setAttribute("aria-hidden", "true");
   for (let i = 0; i < 3; i++) bars.appendChild(el("i"));
   node.append(bars, word);
-  return node;
-}
-
-/**
- * callout mirrors `Callout` as a standing notice: a bordered note whose title
- * says the news and whose text says the rest. No live role, because Callout
- * gives a notice with no `kind` none — a verdict drawn with the panel is read
- * with it, not announced over it.
- */
-export function callout(
-  tone: CalloutTone,
-  title: string,
-  text: string,
-): HTMLElement {
-  const node = el("div", `callout callout-${tone}`);
-  const body = el("div", "callout-body");
-  const copy = el("div", "callout-copy");
-  copy.append(el("p", "callout-title", title), el("div", "callout-text", text));
-  body.appendChild(copy);
-  node.appendChild(body);
   return node;
 }

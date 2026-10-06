@@ -12,10 +12,10 @@ receives it. This page is rendered from that file.
 | | |
 |---|---:|
 | Tools | 81 |
-| Resources | 11 |
-| Tool catalog | 245.9 KB |
-| Resource catalog | 4.1 KB |
-| Approx. wire tokens | 63994 |
+| Resources | 7 |
+| Tool catalog | 245.5 KB |
+| Resource catalog | 2.7 KB |
+| Approx. wire tokens | 63538 |
 | Largest tool | `prep_for_meeting` (9.0 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -32,7 +32,7 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 | Output schemas | 108.4 KB | 44% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 64.8 KB | 26% | Yes, every step |
 | Input schemas | 55.8 KB | 22% | Yes, every step |
-| _Names, annotations, punctuation_ | 16.9 KB | 6% | Partly |
+| _Names, annotations, punctuation_ | 16.6 KB | 6% | Partly |
 | **Description + input schema** | **120.6 KB** | **49%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
@@ -40,7 +40,7 @@ descriptions and input schemas are what each step pays for.
 
 ## Index
 
-### Resources (11)
+### Resources (7)
 
 - [`margince://capabilities`](#capabilities): What this installation can do
 - [`margince://schema/query`](#query_vocabulary): Workspace query vocabulary
@@ -48,11 +48,7 @@ descriptions and input schemas are what each step pays for.
 - [`margince://schema/reports`](#report_vocabulary): Report plan vocabulary
 - [`margince://schema/report-blocks`](#report_blocks): Report block grammar
 - [`margince://schema/analytics`](#analytics-schema): Analytics query vocabulary
-- [`ui://margince/company-brief.html`](#company_brief_view): Morning brief
 - [`ui://margince/relationship-map.html`](#relationship_map_view): Who knows this contact
-- [`ui://margince/commitments.html`](#commitments_view): Open commitments
-- [`ui://margince/handoff.html`](#handoff_view): Delivery handoff
-- [`ui://margince/pipeline-review.html`](#pipeline_review_view): Pipeline review
 
 ### Tools (81)
 
@@ -106,14 +102,14 @@ descriptions and input schemas are what each step pays for.
 | [`merge_records`](#merge_records) | Merge two records |  |  | 2.4 KB |
 | [`merge_tags`](#merge_tags) | Fold one tag into another |  |  | 2.0 KB |
 | [`prep_for_meeting`](#prep_for_meeting) | Prepare for a meeting | yes |  | 9.0 KB |
-| [`prepare_handoff`](#prepare_handoff) | Prepare a delivery handoff | yes | [`ui://margince/handoff.html`](#handoff_view) | 3.9 KB |
+| [`prepare_handoff`](#prepare_handoff) | Prepare a delivery handoff | yes |  | 3.8 KB |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 4.3 KB |
 | [`progress_deal`](#progress_deal) | Progress a deal with a note |  |  | 3.4 KB |
 | [`promote_lead`](#promote_lead) | Promote a lead to a contact |  |  | 2.6 KB |
 | [`qualify_lead`](#qualify_lead) | Qualify a lead |  |  | 2.4 KB |
 | [`query_workspace`](#query_workspace) | Query the workspace | yes |  | 4.2 KB |
 | [`read_approval`](#read_approval) | Read one staged action in full | yes |  | 2.4 KB |
-| [`read_brief`](#read_brief) | Read the morning brief | yes | [`ui://margince/company-brief.html`](#company_brief_view) | 3.2 KB |
+| [`read_brief`](#read_brief) | Read the morning brief | yes |  | 3.1 KB |
 | [`read_import_report`](#read_import_report) | Read an import report | yes |  | 3.0 KB |
 | [`read_import_run`](#read_import_run) | Read an import run | yes |  | 1.4 KB |
 | [`read_lists`](#read_lists) | Find and read lists | yes |  | 3.8 KB |
@@ -125,7 +121,7 @@ descriptions and input schemas are what each step pays for.
 | [`relink_thread`](#relink_thread) | Re-associate a whole conversation to a record |  |  | 2.2 KB |
 | [`remove_tag`](#remove_tag) | Take a tag off a record |  |  | 1.9 KB |
 | [`resolve_entities`](#resolve_entities) | Resolve contacts and companies | yes |  | 3.5 KB |
-| [`review_commitments`](#review_commitments) | Review open commitments | yes | [`ui://margince/commitments.html`](#commitments_view) | 3.4 KB |
+| [`review_commitments`](#review_commitments) | Review open commitments | yes |  | 3.3 KB |
 | [`run_analytics_query`](#run_analytics_query) | Run an analytics query | yes |  | 3.4 KB |
 | [`run_report`](#run_report) | Run a report | yes |  | 5.4 KB |
 | [`search_context`](#search_context) | Search for relevant material | yes |  | 3.1 KB |
@@ -136,7 +132,7 @@ descriptions and input schemas are what each step pays for.
 | [`send_message`](#send_message) | Reply on a channel conversation |  |  | 3.6 KB |
 | [`update_record`](#update_record) | Update a record |  |  | 3.8 KB |
 | [`update_tag`](#update_tag) | Rename or recolour a tag |  |  | 2.0 KB |
-| [`whats_slipping_this_week`](#whats_slipping_this_week) | What's slipping this week | yes | [`ui://margince/pipeline-review.html`](#pipeline_review_view) | 2.3 KB |
+| [`whats_slipping_this_week`](#whats_slipping_this_week) | What's slipping this week | yes |  | 2.3 KB |
 | [`who_knows`](#who_knows) | Who knows this contact | yes | [`ui://margince/relationship-map.html`](#relationship_map_view) | 2.3 KB |
 | [`whoami`](#whoami) | Who this passport acts for | yes |  | 1.8 KB |
 
@@ -216,34 +212,6 @@ The populations a run_analytics_query plan may name, each with its group_by dime
 measures, derived for this seat. run_analytics_query names this document instead of carrying it.
 ```
 
-### company_brief_view
-
-`ui://margince/company-brief.html` · text/html;profile=mcp-app
-
-**Morning brief**
-
-```text
-The ranked brief queue, with the factor decomposition each item ranked on.
-```
-
-<details><summary>Sandbox policy (<code>_meta.ui</code>)</summary>
-
-```json
-{
-  "ui": {
-    "csp": {
-      "baseUriDomains": [],
-      "connectDomains": [],
-      "frameDomains": [],
-      "resourceDomains": []
-    },
-    "prefersBorder": true
-  }
-}
-```
-
-</details>
-
 ### relationship_map_view
 
 `ui://margince/relationship-map.html` · text/html;profile=mcp-app
@@ -252,90 +220,6 @@ The ranked brief queue, with the factor decomposition each item ranked on.
 
 ```text
 The colleagues who know a contact, warmest first, with the interactions behind each warmth band.
-```
-
-<details><summary>Sandbox policy (<code>_meta.ui</code>)</summary>
-
-```json
-{
-  "ui": {
-    "csp": {
-      "baseUriDomains": [],
-      "connectDomains": [],
-      "frameDomains": [],
-      "resourceDomains": []
-    },
-    "prefersBorder": true
-  }
-}
-```
-
-</details>
-
-### commitments_view
-
-`ui://margince/commitments.html` · text/html;profile=mcp-app
-
-**Open commitments**
-
-```text
-The promises still outstanding, oldest first, with who owes each one and how far past due it is.
-```
-
-<details><summary>Sandbox policy (<code>_meta.ui</code>)</summary>
-
-```json
-{
-  "ui": {
-    "csp": {
-      "baseUriDomains": [],
-      "connectDomains": [],
-      "frameDomains": [],
-      "resourceDomains": []
-    },
-    "prefersBorder": true
-  }
-}
-```
-
-</details>
-
-### handoff_view
-
-`ui://margince/handoff.html` · text/html;profile=mcp-app
-
-**Delivery handoff**
-
-```text
-What the delivery side is being given for one project, with each gap beside the fact it is about.
-```
-
-<details><summary>Sandbox policy (<code>_meta.ui</code>)</summary>
-
-```json
-{
-  "ui": {
-    "csp": {
-      "baseUriDomains": [],
-      "connectDomains": [],
-      "frameDomains": [],
-      "resourceDomains": []
-    },
-    "prefersBorder": true
-  }
-}
-```
-
-</details>
-
-### pipeline_review_view
-
-`ui://margince/pipeline-review.html` · text/html;profile=mcp-app
-
-**Pipeline review**
-
-```text
-The deals at risk this week, worst first, with the evidence each risk claim rests on.
 ```
 
 <details><summary>Sandbox policy (<code>_meta.ui</code>)</summary>
@@ -10247,8 +10131,6 @@ The project_id, and each gap's source field — the gaps are what a follow-up fi
 runs immediately; requires passport scope "read".)
 ```
 
-Renders its result in [`ui://margince/handoff.html`](#handoff_view), visible to `model`, `app`.
-
 <details><summary>Input schema</summary>
 
 ```json
@@ -11818,8 +11700,6 @@ currently says. Each item names a deal_id and its evidence_ids; read those to ci
 rested on rather than restating the item's own summary. (Governance: runs immediately; requires
 passport scope "read".)
 ```
-
-Renders its result in [`ui://margince/company-brief.html`](#company_brief_view), visible to `model`, `app`.
 
 <details><summary>Input schema</summary>
 
@@ -14772,8 +14652,6 @@ where a task has one. Every state is judged against as_of, so carry that too if 
 answer later. (Governance: runs immediately; requires passport scope "read".)
 ```
 
-Renders its result in [`ui://margince/commitments.html`](#commitments_view), visible to `model`, `app`.
-
 <details><summary>Input schema</summary>
 
 ```json
@@ -17324,8 +17202,6 @@ rather than whether it is moving. Keep each deal_id if you intend to act; draft_
 over this same ranked set without you re-deriving it. (Governance: runs immediately; requires
 passport scope "read".)
 ```
-
-Renders its result in [`ui://margince/pipeline-review.html`](#pipeline_review_view), visible to `model`, `app`.
 
 <details><summary>Input schema</summary>
 

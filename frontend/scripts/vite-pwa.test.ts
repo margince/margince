@@ -388,7 +388,7 @@ describe("the service worker", () => {
     const worker = await installed();
     worker.scope.fetch.mockRejectedValue(new TypeError("Failed to fetch"));
     for (const url of [
-      "/mcp-apps/company-brief.html",
+      "/mcp-apps/relationship-map.html",
       "/v1beta",
       "/setup-guide",
     ]) {

@@ -77,8 +77,8 @@ var viewsWithoutAFixture = gatekit.Waive(map[string]string{})
 
 // appFixtureFloor is the number of views the sweep must find. Below it the
 // derivation has stopped reaching the catalog, and a sweep that judges nothing
-// reports PASS.
-const appFixtureFloor = 4
+// reports PASS. One view is published today, so the floor is the whole catalog.
+const appFixtureFloor = 1
 
 // fixtureKey matches one member of a JavaScript object literal. This tree's
 // formatter puts one key per line, which is what makes a line-wise read of a

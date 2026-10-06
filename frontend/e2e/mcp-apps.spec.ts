@@ -18,30 +18,7 @@ import { expect, test } from "@playwright/test";
 // rendering a populated list may still fetch something on the empty state, on a
 // warning, on a malformed payload, or when the host changes the theme.
 
-const VIEWS = [
-  { file: "company-brief" },
-  { file: "relationship-map" },
-] as const;
-
-const BRIEF = {
-  candidate_count: 7,
-  as_of: "2026-08-10T06:00:00Z",
-  items: [
-    {
-      deal_id: "8f14e45f-ceea-467a-9a1a-2e9b0e4c3d21",
-      rank: 1,
-      composite: 0.82,
-      factors: {
-        winnability: 0.9,
-        revenue: 0.7,
-        timing: 0.85,
-        momentum: 0.94,
-        warmth: 0.61,
-      },
-      state: "new",
-    },
-  ],
-};
+const VIEWS = [{ file: "relationship-map" }] as const;
 
 const NETWORK = {
   contact_id: "7c9e6679-7425-40de-944b-e07fc1f90ae7",
@@ -61,12 +38,9 @@ const NETWORK = {
 };
 
 /** The five payload/host states each view is driven through. */
-function states(view: (typeof VIEWS)[number]) {
-  const populated = view.file === "company-brief" ? BRIEF : NETWORK;
-  const empty =
-    view.file === "company-brief"
-      ? { candidate_count: 0, items: [] }
-      : { colleagues: [] };
+function states() {
+  const populated = NETWORK;
+  const empty = { colleagues: [] };
   return [
     { name: "populated", data: populated, warnings: [], theme: "light" },
     { name: "empty", data: empty, warnings: [], theme: "light" },
@@ -107,7 +81,7 @@ for (const view of VIEWS) {
     );
     const before = requests.length;
 
-    for (const state of states(view)) {
+    for (const state of states()) {
       await page.evaluate(
         async ({ html, state }) => {
           const frame = document.getElementById("view") as HTMLIFrameElement;
