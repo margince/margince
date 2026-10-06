@@ -29,7 +29,18 @@ type State = {
   reason?: string;
 };
 
-const decided = new WeakMap<HTMLElement, State>();
+// Keyed by the record the offer is for, so a later create drawn into the same
+// frame starts from its own offer, not the last one's coined tag.
+const decided = new WeakMap<HTMLElement, Map<string, State>>();
+
+function statesOf(root: HTMLElement): Map<string, State> {
+  let found = decided.get(root);
+  if (found === undefined) {
+    found = new Map();
+    decided.set(root, found);
+  }
+  return found;
+}
 
 type Target = { record_type: string; record_id: string };
 
@@ -58,9 +69,13 @@ export function tagOfferPanel(
     record_type: asText(created.record_type),
     record_id: asText(created.id),
   };
-  const state = decided.get(root) ?? { phase: "idle", tagID: offer.tagID };
+  const states = statesOf(root);
+  const state = states.get(record.record_id) ?? {
+    phase: "idle",
+    tagID: offer.tagID,
+  };
   const set = (next: State) => {
-    decided.set(root, next);
+    states.set(record.record_id, next);
     again();
   };
   const card = panel("Tag this record?", { level: "h2" });

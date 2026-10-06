@@ -213,6 +213,7 @@ describe("the tag offer", () => {
     answers.push(
       { ok: true, data: { tag_id: "t9" }, warnings: [] },
       { ok: false, reason: "The record is archived." },
+      { ok: true, data: {}, warnings: [] },
     );
     const root = mount(
       withOffer({ name: "Fair", exists: false, may_create: true }),
@@ -225,7 +226,25 @@ describe("the tag offer", () => {
       "apply_tag",
       "apply_tag",
     ]);
+    expect(calls[2].args.tag_id).toBe("t9");
     expect(root.textContent).toContain("Tagged “Fair”.");
+  });
+
+  it("starts a later create in the same frame without the last offer's coined tag", async () => {
+    answers.push(
+      { ok: true, data: { tag_id: "t9" }, warnings: [] },
+      { ok: false, reason: "The record is archived." },
+    );
+    const offer = { name: "Fair", exists: false, may_create: true };
+    const root = mount(withOffer(offer));
+    await press(root, "Add the tag and tag it");
+    expect(labels(root)).toEqual(["Tag it", "No thanks"]);
+    render(
+      root,
+      { ...withOffer(offer), id: "0195c3a0-0000-7000-8000-0000000000ff" },
+      [],
+    );
+    expect(labels(root)).toEqual(["Add the tag and tag it", "No thanks"]);
   });
 
   it("keeps Undo when taking the tag off failed, since it may still be on", async () => {

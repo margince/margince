@@ -70,8 +70,9 @@ type DuplicateEvidence struct {
 	// Left is the value on the record this call created and Right the one
 	// already here, in their stored form: detection writes the evidence from
 	// the created record's side, whichever order the pair's ids sort in.
-	// Either may be empty: a one-sided signal is a fact one record carries and the
-	// other does not, which is itself evidence.
+	//
+	// Either may be empty: a one-sided signal is a fact one record carries and
+	// the other does not, which is itself evidence.
 	Left  string `json:"left_value,omitempty"`
 	Right string `json:"right_value,omitempty"`
 	// Signal is how they met: "collide" for two values that are the same or
