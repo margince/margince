@@ -32,16 +32,16 @@ export type Proposal = Readonly<{
 /**
  * The proposed tree added to the one on screen: its clauses join the root when
  * both combine the same way, and arrive as one group of their own otherwise.
+ * A stored single clause decodes to a bare leaf, which becomes the root's
+ * first child.
  */
-export function addProposal(current: Node, proposed: Node): Node {
-  if (!isGroup(current)) {
-    return current;
-  }
+export function addProposal(current: Node, proposed: Node): Group {
+  const root = rootGroup(current);
   const added =
-    isGroup(proposed) && proposed.join === current.join
+    isGroup(proposed) && proposed.join === root.join
       ? proposed.children
       : [proposed];
-  return { ...current, children: [...current.children, ...added] };
+  return { ...root, children: [...root.children, ...added] };
 }
 
 /** Every leaf in the group marked as proposed. */
@@ -67,6 +67,23 @@ export function ownLeaf(leaf: Leaf): Leaf {
   }
   const { proposed: _accepted, ...own } = leaf;
   return own;
+}
+
+/**
+ * The tree after the reader changed how one group joins. Every leaf in that
+ * group is theirs from then on, as an edited leaf is, so a second proposal
+ * cannot take away a group they reworked. An unknown id changes nothing.
+ */
+export function ownGroup(tree: Group, groupId: string): Group {
+  if (tree.id === groupId) {
+    return acceptProposals(tree);
+  }
+  return withChildren(
+    tree,
+    tree.children.map((child) =>
+      isGroup(child) ? ownGroup(child, groupId) : child,
+    ),
+  );
 }
 
 /** The tree with every remaining mark dropped: Keep all. */
@@ -121,7 +138,7 @@ export function landProposal(
   const tree =
     own.children.length === 0
       ? { ...own, join: incoming.join, children: incoming.children }
-      : rootGroup(addProposal(own, incoming));
+      : addProposal(own, incoming);
   const nodeIds = tree.children
     .filter((child) => !own.children.includes(child))
     .map((child) => child.id);

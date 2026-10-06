@@ -91,6 +91,11 @@ describe("a filter read as one sentence", () => {
     ).toBe("Last activity is within the last 30 days");
     expect(
       read(
+        newGroup("and", [newLeaf("last_activity_at", "gt", { days_ago: 1 })]),
+      ),
+    ).toBe("Last activity is within the last day");
+    expect(
+      read(
         newGroup("and", [newLeaf("last_activity_at", "lte", { days_ago: 1 })]),
       ),
     ).toBe("Last activity is at least 1 day ago");
@@ -134,6 +139,10 @@ describe("a filter read as one sentence", () => {
         "Country code is any of …",
       );
     }
+    // An id not chosen yet is not one id to count.
+    expect(read(newGroup("and", [newLeaf("stage_id", "eq", "")]))).toBe(
+      "Stage is …",
+    );
   });
 
   it("reads exists as having a value or being empty, with no operand", () => {
@@ -192,6 +201,25 @@ describe("a filter read as one sentence", () => {
     expect(
       read(newGroup("and", [newLeaf("owner_id", "in", ["u1", "u2", "u3"])])),
     ).toBe("Owner is any of 3 team members");
+    // One counted id is still a count, never the stage itself.
+    expect(read(newGroup("and", [newLeaf("stage_id", "in", ["s1"])]))).toBe(
+      "Stage is any of 1 stage",
+    );
+  });
+
+  it("counts ids in German with no article that must agree with the noun", () => {
+    const german = wordsIn("de");
+    expect(
+      read(newGroup("and", [newLeaf("stage_id", "in", ["s1", "s2"])]), german),
+    ).toBe(
+      `${de["filters.field.stage_id"]} ${de["filters.sentence.inCounted"]} 2 Phasen`,
+    );
+    expect(
+      read(newGroup("and", [newLeaf("owner_id", "in", ["u1"])]), german),
+    ).toMatch(/ 1 Teammitglied$/);
+    expect(
+      read(newGroup("and", [newLeaf("country", "in", ["DE", "AT"])]), german),
+    ).toBe(`${de["filters.field.country"]} ${de["filters.op.in"]} DE, AT`);
   });
 
   it("keeps a field's own name until the vocabulary answers, and only counts the tree", () => {

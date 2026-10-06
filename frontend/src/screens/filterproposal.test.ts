@@ -7,6 +7,7 @@ import {
   addProposal,
   landProposal,
   markProposed,
+  ownGroup,
   ownLeaf,
   type Proposal,
   proposedCount,
@@ -79,9 +80,20 @@ describe("marking a proposal", () => {
     const marked = markProposed(deep);
     expect(proposedCount(deep)).toBe(0);
     expect(proposedCount(marked)).toBe(3);
-    expect(JSON.stringify(marked)).toContain(
-      '"field":"city","op":"eq","value":"Graz","proposed":true',
-    );
+    const graz = { field: "city", op: "eq", value: "Graz", proposed: true };
+    expect(marked).toMatchObject({
+      join: "and",
+      children: [
+        { field: "city", value: "Berlin", proposed: true },
+        {
+          join: "or",
+          children: [
+            { field: "city", value: "Wien", proposed: true },
+            { join: "and", children: [{ join: "or", children: [graz] }] },
+          ],
+        },
+      ],
+    });
   });
 
   it("accepts every mark and keeps the nodes it did not change", () => {
@@ -299,7 +311,7 @@ describe("the wire never carries a mark", () => {
       withoutProposed(landed.tree),
       replaceWithProposal(landed.tree, landed.proposal),
       acceptProposals(landed.tree),
-      rootGroup(addProposal(mine, landed.tree)),
+      addProposal(mine, landed.tree),
     ];
     for (const result of results) {
       const wire = encode(result);
@@ -331,5 +343,92 @@ it("adds a proposal joined the same way into the root, and any other as one grou
   expect(grouped).toMatchObject({
     join: "and",
     children: [{ field: "full_name" }, { join: "or" }],
+  });
+});
+
+it("keeps a stored single clause, which decodes to a bare leaf, beside what it adds", () => {
+  const stored = decode({ field: "full_name", op: "eq", value: "Ann" });
+  const proposed = decode({ and: [cityIs("Berlin")] });
+  if (stored === null || proposed === null) {
+    throw new Error("fixture trees did not decode");
+  }
+  const added = addProposal(stored, proposed);
+  expect(shapeOf(added)).toEqual({
+    join: "and",
+    children: [
+      { field: "full_name", op: "eq", value: "Ann" },
+      cityIs("Berlin"),
+    ],
+  });
+  expect(added.children[0]).toBe(stored);
+});
+
+describe("a group whose join the reader changed", () => {
+  /** The reader's edit: the group's join flipped, which makes it theirs. */
+  function toggleJoin(tree: Group, groupId: string): Group {
+    const toggled = replaceNode(tree, groupId, (found) =>
+      isGroup(found)
+        ? { ...found, join: found.join === "and" ? "or" : "and" }
+        : found,
+    );
+    return ownGroup(rootGroup(toggled ?? tree), groupId);
+  }
+
+  function groupAt(tree: Group, index: number): Group {
+    const child = tree.children[index];
+    if (child === undefined || !isGroup(child)) {
+      throw new Error(`child ${index} is not a group`);
+    }
+    return child;
+  }
+
+  it("is the reader's own at every depth, and nothing else changes", () => {
+    const mine = newGroup("and", [newLeaf("city", "eq", "Bonn")]);
+    const { tree } = landProposal(
+      mine,
+      decoded({
+        and: [
+          cityIs("Kiel"),
+          { or: [cityIs("Wien"), { and: [cityIs("Graz")] }] },
+        ],
+      }),
+      "asked",
+      null,
+    );
+    const group = groupAt(tree, 2);
+    const owned = ownGroup(tree, group.id);
+    expect(proposedCount(tree)).toBe(3);
+    expect(proposedCount(groupAt(owned, 2))).toBe(0);
+    expect(proposedCount(owned)).toBe(1);
+    expect(owned.children[0]).toBe(tree.children[0]);
+    expect(owned.children[1]).toBe(tree.children[1]);
+    expect(ownGroup(tree, "no-such-group")).toBe(tree);
+  });
+
+  it("survives a second proposal, which replaces only the untouched rows", () => {
+    const mine = newGroup("and", [newLeaf("city", "eq", "Bonn")]);
+    const first = landProposal(
+      mine,
+      decoded({ or: [cityIs("Wien"), cityIs("Graz")] }),
+      "first",
+      null,
+    );
+    const reworked = toggleJoin(first.tree, groupAt(first.tree, 1).id);
+    const second = landProposal(
+      reworked,
+      decoded({ and: [cityIs("Salzburg")] }),
+      "second",
+      first.proposal,
+    );
+    expect(shapeOf(second.tree)).toEqual({
+      join: "and",
+      children: [
+        cityIs("Bonn"),
+        { join: "and", children: [cityIs("Wien"), cityIs("Graz")] },
+        { ...cityIs("Salzburg"), proposed: true },
+      ],
+    });
+    // Nothing proposed was left untouched, so Undo stops at the reworked tree.
+    expect(second.proposal.before).toBe(reworked);
   });
 });

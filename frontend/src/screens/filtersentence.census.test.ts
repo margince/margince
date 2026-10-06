@@ -25,7 +25,7 @@ const REPO = join(import.meta.dirname, "..", "..", "..");
 const SRC = join(REPO, "frontend", "src");
 const EXTENSIONS = join(REPO, "extensions");
 const OWNER = "frontend/src/screens/filtersentence.ts";
-const OPERATOR_WORDS = "filters.op.";
+const OPERATOR_FAMILY = "filters.op";
 
 // The analytics question engine has operators of its own (`ne`, `is_null`,
 // `is_not_null`) that no filter tree carries, so it words them itself, in
@@ -53,21 +53,26 @@ function shippedModules(): string[] {
     .filter(shipped);
 }
 
+/**
+ * Whether a literal names the operator family: a whole key, or the bare head a
+ * key is composed from, but never a neighbour such as `filters.operator`.
+ */
+function namesOperatorFamily(text: string): boolean {
+  return text === OPERATOR_FAMILY || text.startsWith(`${OPERATOR_FAMILY}.`);
+}
+
 /** Every string literal in this source that names an operator's message. */
 function operatorLiterals(path: string, source: string): string[] {
   const found: string[] = [];
   const visit = (node: ts.Node): void => {
     if (
       (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) &&
-      node.text.startsWith(OPERATOR_WORDS)
+      namesOperatorFamily(node.text)
     ) {
       found.push(node.text);
     }
     // A key composed at run time still names the family by its head.
-    if (
-      ts.isTemplateExpression(node) &&
-      node.head.text.startsWith(OPERATOR_WORDS)
-    ) {
+    if (ts.isTemplateExpression(node) && namesOperatorFamily(node.head.text)) {
       found.push(node.head.text);
     }
     ts.forEachChild(node, visit);
@@ -95,7 +100,7 @@ describe("one module says how a filter operator reads", () => {
   const writers = census(modules);
 
   it("finds the owner, which proves the scan reaches it", () => {
-    expect(writers.get(OWNER)).toContain("filters.op.eq");
+    expect(writers.get(OWNER) ?? []).toContain("filters.op.eq");
   });
 
   it("reads the extension tier too, which ships in the same bundle", () => {
@@ -133,15 +138,25 @@ describe("one module says how a filter operator reads", () => {
       // biome-ignore lint/suspicious/noTemplateCurlyInString: a fixture of source code
       "const label = t(`filters.op.${op}`);",
       "const KEYS = { gt: `filters.op.moreThan` };",
+      `const label = t("filters.op" + "." + op);`,
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: a fixture of source code
+      "const label = t(`filters.op${dot}${op}`);",
     ].join("\n");
     expect(operatorLiterals("planted.tsx", planted)).toEqual([
       "filters.op.eq",
       "filters.op.",
       "filters.op.moreThan",
+      "filters.op",
+      "filters.op",
     ]);
-    expect(
-      operatorLiterals("planted.tsx", `// t("filters.op.eq")\nt("x");`),
-    ).toEqual([]);
+    const neighbours = [
+      `// t("filters.op.eq")`,
+      `t("filters.operator");`,
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: a fixture of source code
+      "t(`filters.operator${suffix}`);",
+      `t("filters.opened");`,
+    ].join("\n");
+    expect(operatorLiterals("planted.tsx", neighbours)).toEqual([]);
   });
 
   it("leaves tests, stories, kits and the catalogs out of the census", () => {

@@ -86,6 +86,7 @@ export const Archived: Story = {
       [`POST /lists/${LIVE_ID}/visit`]: visitAnswer(LIVE_ID),
       [`GET /lists/${LIVE_ID}/history`]: () => jsonResponse({ data: [], page }),
       "GET /companies": () => jsonResponse({ data: [], page }),
+      "GET /filters/vocabulary": () => jsonResponse(liveVocabulary),
     });
     return (
       <StoryProviders>

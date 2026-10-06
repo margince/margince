@@ -106,7 +106,7 @@ describe("the vocabulary read", () => {
     );
 
     await waitFor(() => expect(result.current.wanted.isSuccess).toBe(true));
-    expect(result.current.unwanted.fetchStatus).toBe("idle");
+    expect(result.current.unwanted.status).toBe("pending");
     expect(seen.filter((url) => url.includes("/filters/vocabulary"))).toEqual(
       [],
     );

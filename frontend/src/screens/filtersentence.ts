@@ -142,23 +142,39 @@ export function clauseWords(
   if (relative) {
     return { field, ...relative };
   }
-  const single = op === "in" && Array.isArray(operand) && operand.length === 1;
-  const said = t(
-    single ? "filters.op.eq" : operatorKey(op, known?.type ?? "text"),
-  );
   const text = operandText(operand, known, words);
   return {
     field,
-    op: said,
+    op: t(clauseOperatorKey(clause, known)),
     operand: text === "" ? t("filters.sentence.pendingValue") : text,
   };
 }
 
 /**
+ * The operator as this clause says it. One value of `in` reads "is", except
+ * where ids are counted: "Stage is 1 stage" says the count is the stage. A
+ * counted `in` has words of its own, since German „eines von“ would have to
+ * agree with a noun only the count names.
+ */
+function clauseOperatorKey(
+  { op, operand }: Clause,
+  field: VocabularyField | undefined,
+): MessageKey {
+  if (op === "in" && field?.references) {
+    return "filters.sentence.inCounted";
+  }
+  if (op === "in" && Array.isArray(operand) && operand.length === 1) {
+    return "filters.op.eq";
+  }
+  return operatorKey(op, field?.type ?? "text");
+}
+
+/**
  * A count back from today, read as how long ago rather than as a comparison:
  * `lt 45 days ago` is a day further back than that, "more than 45 days ago",
- * and `gt` is a day since then, "within the last 45 days". Its own words, not
- * the operator's: German says „liegt mehr als 45 Tage zurück“, not „größer als“.
+ * and `gt` is a day since then, "within the last 45 days", one phrase so that
+ * one day reads "within the last day". Its own words, not the operator's:
+ * German says „liegt mehr als 45 Tage zurück“, not „größer als“.
  */
 function relativeDateWords(
   op: FilterOp,
@@ -181,10 +197,7 @@ function relativeDateWords(
     };
   }
   if (op === "gt" || op === "gte") {
-    return {
-      op: t("filters.sentence.withinLast"),
-      operand: plural("filters.sentence.days", days, count),
-    };
+    return { op: plural("filters.sentence.withinLast", days, count) };
   }
   return undefined;
 }
@@ -249,7 +262,8 @@ function typedOperandText(
   if (field.type === "currency" && field.currency) {
     return moneyText(operand, field.currency, locale);
   }
-  if (!field.references) {
+  // An id not chosen yet is no id to count, so it reads as a gap to fill.
+  if (!field.references || operand === "") {
     return undefined;
   }
   const ids = Array.isArray(operand) ? operand.length : 1;

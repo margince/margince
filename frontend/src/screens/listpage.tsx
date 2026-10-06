@@ -41,7 +41,7 @@ import {
 import { ListSettingsAction } from "./listsettings";
 import { useListAudienceLabel } from "./listsharing";
 import "./lists.css";
-import { decode, rootGroup } from "./segmentpredicate";
+import { decode } from "./segmentpredicate";
 
 function isMemberSource(type: ListRecordType): type is MemberSource {
   return type in MEMBER_SOURCES;
@@ -187,7 +187,11 @@ function ListFilterLine({ list }: Readonly<{ list: List }>) {
   const words = useSentenceWords();
   const live = list.list_type === "dynamic";
   const vocabulary = useFilterVocabulary(list.entity_type, live);
-  const tree = live ? decode(list.definition) : null;
+  // Decoding mints a fresh id for every node, so it runs once per definition.
+  const tree = useMemo(
+    () => (live ? decode(list.definition) : null),
+    [live, list.definition],
+  );
   const fields = vocabulary.data?.fields;
   if (tree === null || fields === undefined) {
     return null;
@@ -196,7 +200,7 @@ function ListFilterLine({ list }: Readonly<{ list: List }>) {
     <p className="t-caption">
       {t("lists.filterLine", {
         records: t(RECORD_TYPE_LABEL[list.entity_type]),
-        sentence: filterSentence(rootGroup(tree), fields, words),
+        sentence: filterSentence(tree, fields, words),
       })}
     </p>
   );
