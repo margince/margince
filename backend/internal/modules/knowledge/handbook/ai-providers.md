@@ -139,6 +139,12 @@ Also called: is the AI down, AI outage, model provider health, AI provider statu
 Margince checks again by itself; a successful key **Test** clears it at once, and saving a key within about 30 seconds. The first three stop calls until then.
 Also called: provider badge, provider status, credit exhausted, 401, API key refused.
 
+### What happens to an AI task while its provider is down?
+While a provider is out of credit, rejecting its key or unreachable, Margince skips it, and a task with another model on a working provider uses that one.
+When every model a task can use is blocked, background work such as mail checks and enrichment waits and tries again at the provider's next check without using up its attempts, and a request someone makes in the app fails at once with a message to contact their administrator.
+Under **Settings**, then **AI models**, the dot before such a task in **AI tasks** turns red; select the task's name to read what it does in this state.
+Also called: AI task stuck, task waiting, deferred AI work, AI outage per task.
+
 ### What does a provider badge on AI models mean?
 A badge next to a provider under **Providers** means Margince has found it not answering: **Out of credit**, **Key rejected**, **Unreachable** or **Degraded**.
 Fix the cause named on **Settings**, then **System health**, in the **AI provider status** card; testing a new key under **Providers** clears it at once.

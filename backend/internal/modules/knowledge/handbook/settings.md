@@ -239,8 +239,8 @@ rather than by tier. What you see is the current policy; **AI call log** is what
 actually ran. Shared bindings sit under Advanced, and changing one can move
 several activities at once. Prices show input and output cost per million
 tokens, and a tier name proves nothing about where data is processed or what it
-costs — read the binding. Each row in **AI tasks** names its tier, and **View
-calls** opens the **AI call log** narrowed to that task.
+costs — read the binding. Each row in **AI tasks** names its tier; select a
+task's name for its state and **View calls**, and **Edit** for its timeouts.
 
 Changes take effect within about a minute; a call in flight keeps its binding.
 

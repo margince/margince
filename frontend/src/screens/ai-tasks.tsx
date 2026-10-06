@@ -8,6 +8,7 @@ import { useT } from "../i18n";
 import { AiFeaturesWithheldPanel, useAiStatus } from "./ai-admin";
 import { AiFeatureTable } from "./ai-feature-table";
 import { useAiHealth } from "./ai-health";
+import { useProviderHealth } from "./ai-provider-health";
 import { TaskSheet } from "./ai-task-sheet";
 import { PanelTitle } from "./ai-terms";
 import { QueryGate } from "./common";
@@ -27,6 +28,7 @@ export function AiTasksCard() {
   const canRoute = useCan("ai_routing", "read");
   const status = useAiStatus(canDiagnose && canBudget);
   const health = useAiHealth(canDiagnose).data;
+  const providers = useProviderHealth(canDiagnose).data;
   // `/ai/status` needs all three: without the diagnostics or budget grant
   // there is no payload, and without routing read its task list is empty —
   // either way the withheld panel says so, rather than drawing a table that
@@ -44,6 +46,7 @@ export function AiTasksCard() {
             <AiFeatureTable
               rows={current.features}
               health={health}
+              providers={providers}
               canTrace={canDiagnose}
               onEdit={(row) => setOpened(row.task)}
             />
