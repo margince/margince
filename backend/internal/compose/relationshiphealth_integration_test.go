@@ -94,10 +94,14 @@ func TestAMeetingKeepsTheRelationshipOffAtRisk(t *testing.T) {
 		meetingAt func(now time.Time) time.Time
 		want      crmcontracts.HealthDimensionReasonCode
 	}{
-		{"held three weeks ago", func(now time.Time) time.Time { return now.AddDate(0, 0, -21) },
-			crmcontracts.HealthDimensionReasonCodeLastMet},
-		{"booked for the day after tomorrow", func(now time.Time) time.Time { return now.AddDate(0, 0, 2) },
-			crmcontracts.HealthDimensionReasonCodeMeetingBooked},
+		{
+			"held three weeks ago", func(now time.Time) time.Time { return now.AddDate(0, 0, -21) },
+			crmcontracts.HealthDimensionReasonCodeLastMet,
+		},
+		{
+			"booked for the day after tomorrow", func(now time.Time) time.Time { return now.AddDate(0, 0, 2) },
+			crmcontracts.HealthDimensionReasonCodeMeetingBooked,
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

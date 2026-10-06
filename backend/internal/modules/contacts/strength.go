@@ -84,14 +84,13 @@ type RelationshipStrength struct {
 	LastInboundActivity *ids.ActivityID
 }
 
-// The shared test for an activity that counts as contact, on each fold alias.
-var strengthCounts = relstrength.InteractionCountsSQL("a")
-var strengthCitedCounts = relstrength.InteractionCountsSQL("i")
-
-// strengthInteractionUnit is what ONE interaction is when these folds count
-// them, from the same shared definition — see relstrength.InteractionUnitSQL.
-// Every fold below aliases activity as `a`, so one rendering serves them all.
-var strengthInteractionUnit = relstrength.InteractionUnitSQL("a")
+// What counts as contact, and what ONE interaction is, from relstrength's shared
+// definitions. The folds alias activity as `a`; the cited read uses `i`.
+var (
+	strengthCounts          = relstrength.InteractionCountsSQL("a")
+	strengthCitedCounts     = relstrength.InteractionCountsSQL("i")
+	strengthInteractionUnit = relstrength.InteractionUnitSQL("a")
+)
 
 // ContactStrength computes the §4 baseline for one contact. The contact
 // read is row-scoped exactly like GetContact: a contact the caller cannot
