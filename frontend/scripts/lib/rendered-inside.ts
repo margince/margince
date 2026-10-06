@@ -109,23 +109,24 @@ export function drawnElements(root: string): DrawnElement[] {
   return drawn;
 }
 
-function intrinsicTagOf(node: ts.Node): string | undefined {
-  const tag = ts.isJsxElement(node)
+function jsxTagOf(node: ts.Node): ts.JsxTagNameExpression | undefined {
+  return ts.isJsxElement(node)
     ? node.openingElement.tagName
     : ts.isJsxSelfClosingElement(node)
       ? node.tagName
       : undefined;
-  return tag === undefined || isComponentTag(tag) ? undefined : tag.text;
+}
+
+function intrinsicTagOf(node: ts.Node): string | undefined {
+  const tag = jsxTagOf(node);
+  return tag === undefined ? undefined : intrinsicName(tag);
 }
 
 function drawsContent(node: ts.Node): boolean {
-  const tag = ts.isJsxElement(node)
-    ? node.openingElement.tagName
-    : ts.isJsxSelfClosingElement(node)
-      ? node.tagName
-      : undefined;
+  const tag = jsxTagOf(node);
   if (tag === undefined) return true;
-  if (isComponentTag(tag) || tag.text === "svg") return true;
+  const name = intrinsicName(tag);
+  if (name === undefined || name === "svg") return true;
   if (!ts.isJsxElement(node)) return false;
   return node.children.some((child) =>
     ts.isJsxText(child)
@@ -163,8 +164,11 @@ function expressionDrawsContent(expression: ts.Expression): boolean {
 }
 
 // `<Icon/>` and `<icons.Check/>` are components; `<span>` is an element.
-function isComponentTag(tag: ts.JsxTagNameExpression): boolean {
-  return !ts.isIdentifier(tag) || /^[A-Z]/.test(tag.text);
+// A lowercase identifier is an HTML or SVG element; anything else is a component.
+function intrinsicName(tag: ts.JsxTagNameExpression): string | undefined {
+  return ts.isIdentifier(tag) && !/^[A-Z]/.test(tag.text)
+    ? tag.text
+    : undefined;
 }
 
 function componentFiles(dir: string): string[] {
