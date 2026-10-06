@@ -336,12 +336,19 @@ export function BulkChangeDialog({
   }
 
   return (
-    <Modal open={request !== null} onClose={close} labelledBy={headingId}>
+    <Modal
+      open={request !== null}
+      onClose={close}
+      labelledBy={headingId}
+      intent="confirm"
+    >
       <Heading size="large" id={headingId} className="t-h2 modal-title">
         {words.title}
       </Heading>
-      <div className="form-stack">{body}</div>
-      <ErrorLine error={execute.error} />
+      <div className="form-stack">
+        {body}
+        <ErrorLine error={execute.error} />
+      </div>
       <div className="actions">
         {runnable ? (
           <>

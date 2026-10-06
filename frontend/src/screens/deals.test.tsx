@@ -228,12 +228,8 @@ function stubDealBackend(
   });
 }
 
-// AC-F1: column totals come from the server's per-stage
-// aggregate (Σround(amount×p/100), never round(Σamount×p/100)) — not from
-// summing whatever page of cards happened to load. buildStageTotals shapes
-// the report's rows (grouped by stage_id + currency); buildColumns reads
-// from that, and keeps building the CARD list from the loaded deals as
-// before — the cap on cards is unrelated to the correctness of the totals.
+// Column totals are the server's per-stage Σround(amount×p/100), never a sum of
+// the cards that loaded: the card cap is unrelated to the totals' correctness.
 describe("buildStageTotals", () => {
   it("carries one currency's totals straight through", () => {
     const totals = buildStageTotals([
@@ -1814,11 +1810,8 @@ describe("DealScreen — edit, archive (A3)", () => {
     expect("partner_attribution" in body).toBe(false);
   });
 
-  // The facts used to run together without a separator on the identity line:
-  // three adjacent spans in a plain text row rendered "€48,000.00Acme Corpvia
-  // Northgate", which is why the partner looked missing on screen while every
-  // assertion about it passed. Each is its own cell in the facts strip now, so
-  // two facts cannot share a text node no matter what either one contains.
+  // Each fact is its own cell: adjacent spans in one text row run together
+  // ("€48,000.00Acme Corpvia Northgate") while every text assertion passes.
   it("keeps each fact in its own cell rather than running them together", async () => {
     const d = deal({
       id: "x",
@@ -1887,10 +1880,15 @@ describe("DealScreen — edit, archive (A3)", () => {
         },
       }),
     );
+    const user = userEvent.setup();
     render(<DealScreen id="x" />);
-    await openHeaderMenu();
-    await userEvent.click(screen.getByTestId("archive-record"));
-    await userEvent.click(screen.getByTestId("archive-confirm"));
+    await openHeaderMenu(user);
+    await user.click(screen.getByTestId("archive-record"));
+    await user.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: /^Archive/,
+      }),
+    );
     await waitFor(() => expect(deleted).toBe(true));
   });
 });

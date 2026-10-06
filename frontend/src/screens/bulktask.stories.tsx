@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { screen, userEvent, within } from "storybook/test";
 import { TaskVerb } from "./bulktask";
 import {
   installFetchStub,
@@ -45,3 +46,15 @@ function Verb({ disabled = false }: Readonly<{ disabled?: boolean }>) {
 export const Ready: Story = { render: () => <Verb /> };
 
 export const Busy: Story = { render: () => <Verb disabled /> };
+
+export const Open: Story = {
+  render: () => <Verb />,
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      within(canvasElement).getByRole("button", { name: "Create task" }),
+    );
+    await screen.findByRole("dialog", {
+      name: "A task for each selected record",
+    });
+  },
+};

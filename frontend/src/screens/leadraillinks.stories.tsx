@@ -2,8 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { LeadDealSection } from "./leadraillinks";
+import { LeadScreen } from "./leads";
 import {
   installFetchStub,
   jsonResponse,
@@ -92,4 +94,27 @@ export const Closed: Story = {
  */
 export const Refused: Story = {
   render: () => section({}, "lead-not-yours"),
+};
+
+/** The project verb's picker, a form dialog over the lead page. */
+export const AttachingAProject: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /leads/l-1": () => jsonResponse(lead({ writable: true })),
+      "GET /me": meRoute({ lead: ["read", "update"], project: ["read"] }),
+    });
+    return (
+      <StoryProviders>
+        <LeadScreen id="l-1" />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const [attach] = await canvas.findAllByRole("button", {
+      name: "Attach project",
+    });
+    await userEvent.click(attach);
+    await within(document.body).findByRole("dialog");
+  },
 };

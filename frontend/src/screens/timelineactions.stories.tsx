@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { screen, userEvent, within } from "storybook/test";
 
 import type { components } from "../api/schema";
 import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
@@ -98,6 +99,19 @@ export const CapturedThread: Story = { args: { activity: CAPTURED } };
 
 /** Outside the audience: the row keeps its verbs and loses the control. */
 export const Withheld: Story = { args: { activity: WITHHELD } };
+
+/** A logged call: the per-row visibility dialog, open. */
+export const AudienceOpen: Story = {
+  args: {
+    activity: { ...BASE, kind: "call", subject: "Rückfragen zum Angebot" },
+  },
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      within(canvasElement).getByRole("button", { name: "Change visibility" }),
+    );
+    await screen.findByRole("dialog", { name: "Who may read this message?" });
+  },
+};
 
 export const InvitationPending: Story = {
   args: {
