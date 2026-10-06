@@ -11,9 +11,11 @@ import type { Block, Inline, Run } from "./markdown-parse";
 export const URL_PATTERN = /https?:\/\/[^\s<>"')\]]+[^\s<>"')\].,;:!?]/g;
 
 /**
- * The parsed document with every bare address in its prose turned into a link
- * labelled with the address itself. Code stays literal and an existing link is
- * left alone, so no link ever nests inside another.
+ * The parsed document for prose nobody vetted: every bare address becomes a
+ * link, and every link's visible text is its own destination. A labelled link
+ * keeps its label as text, followed by the real address as the link, so
+ * "[Your bank](https://evil.example)" cannot hide where it goes. Code stays
+ * literal. The parser already refused every href but http(s) and mailto.
  */
 export function autolinkBlocks(blocks: readonly Block[]): Block[] {
   return blocks.map(autolinkBlock);
@@ -46,11 +48,28 @@ function autolinkRun(run: Run): Run {
 function autolinkInline(nodes: readonly Inline[]): Inline[] {
   return nodes.flatMap((node): Inline[] => {
     if (node.kind === "text") return splitAddresses(node.text);
+    if (node.kind === "link") return showDestination(node);
     if (node.kind === "strong" || node.kind === "em" || node.kind === "mark") {
       return [{ ...node, children: autolinkInline(node.children) }];
     }
     return [node];
   });
+}
+
+function showDestination(link: Extract<Inline, { kind: "link" }>): Inline[] {
+  const shown: Inline = {
+    ...link,
+    children: [{ kind: "text", text: link.href }],
+  };
+  if (link.children.length === 1 && link.children[0].kind === "text") {
+    if (link.children[0].text === link.href) return [shown];
+  }
+  return [
+    ...autolinkInline(link.children),
+    { kind: "text", text: " (" },
+    shown,
+    { kind: "text", text: ")" },
+  ];
 }
 
 function splitAddresses(text: string): Inline[] {

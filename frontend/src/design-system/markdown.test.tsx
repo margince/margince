@@ -436,3 +436,38 @@ describe("autolink", () => {
     expect(screen.getByText("https://example.com/code").tagName).toBe("CODE");
   });
 });
+
+describe("autolink shows where every link goes", () => {
+  it("keeps a label as text and makes the real address the link", () => {
+    const { container } = render(
+      <Markdown source="[Your bank](https://evil.example/login)" autolink />,
+    );
+    const link = screen.getByRole("link");
+    expect(link.textContent).toBe("https://evil.example/login");
+    expect(link.getAttribute("href")).toBe("https://evil.example/login");
+    expect(screen.queryByRole("link", { name: "Your bank" })).toBeNull();
+    expect(visibleText(container)).toBe(
+      "Your bank (https://evil.example/login)",
+    );
+  });
+
+  it("renders a javascript: link as its label and nothing to press", () => {
+    const { container } = render(
+      <Markdown source="[Verify](javascript:alert(1))" autolink />,
+    );
+    expect(screen.queryByRole("link")).toBeNull();
+    expect(visibleText(container)).toBe("Verify");
+  });
+
+  it("leaves a link whose label is its address as one link", () => {
+    render(
+      <Markdown
+        source="[https://example.com/t](https://example.com/t)"
+        autolink
+      />,
+    );
+    expect(screen.getAllByRole("link").map((a) => a.textContent)).toEqual([
+      "https://example.com/t",
+    ]);
+  });
+});

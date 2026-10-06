@@ -982,6 +982,13 @@ describe("TimelineText on a note", () => {
     ).toBeNull();
   });
 
+  it("shows a note link's real address, never only its label", () => {
+    render(row("note", "[Your bank](https://evil.example/login)"));
+    expect(screen.getByRole("link").textContent).toBe(
+      "https://evil.example/login",
+    );
+  });
+
   it("leaves a mail body's markdown characters as text", () => {
     render(row("email", "## Summary\n\n- point one"));
     expect(screen.queryByRole("heading", { name: "Summary" })).toBeNull();

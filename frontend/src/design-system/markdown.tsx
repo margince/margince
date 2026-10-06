@@ -120,8 +120,8 @@ export function Markdown({
 }: Readonly<{
   /** The raw document. Every byte of it is treated as hostile. */
   source: string;
-  /** Whether a bare http(s) address in the prose becomes a link, as it does
-   *  in a person's note; a corpus document links only what its author did. */
+  /** For a note: a bare http(s) address becomes a link, and every link shows
+   *  its own destination as its text. A corpus document renders as written. */
   autolink?: boolean;
   highlight?: MarkdownHighlight;
   /**
