@@ -5,7 +5,9 @@ package weeklyplan
 
 import (
 	"encoding/json"
+	"maps"
 	"net/http"
+	"slices"
 	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -223,6 +225,13 @@ func (h Handlers) AskForWeeklyPlanHelp(
 	if !httperr.Decode(w, r, &body) {
 		return
 	}
+	// An absent key is a client that forgot the field, not one withdrawing the
+	// ask: a withdrawal is spelled `""`.
+	if _, sent := httperr.PresentField(r, "help_requested"); !sent {
+		httperr.Write(w, r, httperr.Validation("help_requested", "required",
+			"send help_requested; an empty string withdraws the request"))
+		return
+	}
 	if err := h.store.AskForHelp(r.Context(), ids.UUID(id), body.HelpRequested); err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -322,6 +331,13 @@ func (h Handlers) SetWeeklyPlanContract(w http.ResponseWriter, r *http.Request) 
 	var body map[string]json.RawMessage
 	if !httperr.Decode(w, r, &body) {
 		return
+	}
+	for _, key := range slices.Sorted(maps.Keys(body)) {
+		if key != fieldRisks && key != fieldCapacityNote {
+			httperr.Write(w, r, httperr.Validation("body", "unknown_field",
+				"unknown field \""+key+"\"; the contract has "+fieldRisks+" and "+fieldCapacityNote))
+			return
+		}
 	}
 	edit := ContractEdit{}
 	var err error

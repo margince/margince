@@ -27,9 +27,10 @@ type invitationCalendar struct {
 	canceled   int
 	lookupErr  error
 	inspectErr error
+	checkErr   error
 }
 
-func (c *invitationCalendar) Check(context.Context, ids.UserID, string) error { return nil }
+func (c *invitationCalendar) Check(context.Context, ids.UserID, string) error { return c.checkErr }
 func (c *invitationCalendar) Busy(context.Context, ids.UserID, string, string, time.Time, time.Time) ([]connector.CalendarInterval, error) {
 	return c.busy, nil
 }
