@@ -2,8 +2,8 @@
 
 Every tool an agent can invoke: its passport scope, whether it runs alone or waits for a human, and
 how it behaves when records live in another CRM. The governance model is in
-[authorization.md](../explanation/authorization.md) and [agent-surface.md](../explanation/agent-surface.md).
-What each tool costs in an agent's context window is in [agent-tool-budget.md](agent-tool-budget.md).
+[authorization.md](../explanation/authorization.md) and [agent-surface.md](../explanation/agent-surface.md);
+what each tool costs in an agent's context window is in [agent-tool-budget.md](agent-tool-budget.md).
 
 ## How to read this page
 
@@ -39,8 +39,7 @@ binary; `backend/cmd/` is `api`, `migrate`, `worker`. Connecting a client:
 
 ## The catalog
 
-Every core verb the surface serves. An enabled extension unit's own served verbs (`x-mcp-tool`)
-would add to this listing. The live tool count is in [mcp-info.md](mcp-info.md), which is generated.
+Every core verb the surface serves; the generated [mcp-info.md](mcp-info.md) has the live tool count.
 `TestTheToolCatalogsTiersAreTheContractsTiers` holds this table's tiers and membership against the
 contract in both directions. Every operation carrying `x-mcp-tool` in `api/crm.yaml` has a
 registered tool of that verb, and every registered tool is either declared by an operation or listed
@@ -93,6 +92,7 @@ as a composed intent: `TestEveryDeclaredToolVerbIsRegistered` and
 | `create_tag` | 🟢 | `write` | no |
 | `create_task` | 🟢 | `write` | no |
 | `decide_approval` | 🟢 | `write` | no |
+| `decide_duplicate` | 🟢 | `write` | no |
 | `decide_approval_bundle` | 🟢 | `write` | no |
 | `describe_query_vocabulary` | 🟢 | `read` | no |
 | `describe_analytics_vocabulary` | 🟢 | `read` | no |

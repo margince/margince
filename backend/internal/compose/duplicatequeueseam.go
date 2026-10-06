@@ -1,0 +1,43 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package compose
+
+import (
+	"context"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+)
+
+// notADuplicate is the disposition the web screen's "not a duplicate" posts.
+const notADuplicate = "not_a_duplicate"
+
+// duplicateQueue binds the two queue verbs to the contacts store the web screen
+// uses, so a pair dismissed from a chat card and one dismissed in the queue pass
+// the same write-authority probe over both records and write the same audit row.
+type duplicateQueue struct{ store *contacts.Store }
+
+func duplicateQueueSeam(pool *pgxpool.Pool) agents.DuplicateQueue {
+	return duplicateQueue{store: contacts.NewStore(InstallationDB(pool))}
+}
+
+func (q duplicateQueue) Dismiss(ctx context.Context, candidate ids.UUID) (agents.DuplicateVerdict, error) {
+	row, err := q.store.DisposeDedupeCandidate(ctx, candidate, notADuplicate, nil)
+	return verdictOf(row, err)
+}
+
+func (q duplicateQueue) Reopen(ctx context.Context, candidate ids.UUID) (agents.DuplicateVerdict, error) {
+	row, err := q.store.UndoDedupeDisposition(ctx, candidate)
+	return verdictOf(row, err)
+}
+
+func verdictOf(row contacts.DedupeCandidateRow, err error) (agents.DuplicateVerdict, error) {
+	if err != nil {
+		return agents.DuplicateVerdict{}, err
+	}
+	return agents.DuplicateVerdict{CandidateID: row.ID.String(), Disposition: row.Disposition}, nil
+}

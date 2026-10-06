@@ -11,11 +11,11 @@ receives it. This page is rendered from that file.
 
 | | |
 |---|---:|
-| Tools | 81 |
+| Tools | 82 |
 | Resources | 7 |
-| Tool catalog | 248.7 KB |
+| Tool catalog | 250.7 KB |
 | Resource catalog | 2.7 KB |
-| Approx. wire tokens | 64338 |
+| Approx. wire tokens | 64858 |
 | Largest tool | `prep_for_meeting` (9.1 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,11 +29,11 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 108.4 KB | 43% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 64.8 KB | 26% | Yes, every step |
-| Input schemas | 55.8 KB | 22% | Yes, every step |
-| _Names, annotations, punctuation_ | 19.7 KB | 7% | Partly |
-| **Description + input schema** | **120.6 KB** | **48%** | **the recurring cost** |
+| Output schemas | 109.3 KB | 43% | **No**: a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 65.2 KB | 26% | Yes, every step |
+| Input schemas | 56.3 KB | 22% | Yes, every step |
+| _Names, annotations, punctuation_ | 19.9 KB | 7% | Partly |
+| **Description + input schema** | **121.5 KB** | **48%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -48,9 +48,9 @@ descriptions and input schemas are what each step pays for.
 - [`margince://schema/reports`](#report_vocabulary): Report plan vocabulary
 - [`margince://schema/report-blocks`](#report_blocks): Report block grammar
 - [`margince://schema/analytics`](#analytics-schema): Analytics query vocabulary
-- [`ui://margince/relationship-map.html`](#relationship_map_view): Who knows this contact
+- [`ui://margince/duplicate.html`](#duplicate_view): Possible duplicate
 
-### Tools (81)
+### Tools (82)
 
 | Tool | What it is for | Read-only | View | Size |
 |---|---|:-:|---|---:|
@@ -68,12 +68,13 @@ descriptions and input schemas are what each step pays for.
 | [`commit_import`](#commit_import) | Commit an import |  | [``](#_view) | 2.2 KB |
 | [`company_coverage`](#company_coverage) | Relationship coverage on a deal | yes | [``](#_view) | 3.2 KB |
 | [`compose_analytics_report`](#compose_analytics_report) | Compose an analytics report | yes | [``](#_view) | 4.2 KB |
-| [`create_record`](#create_record) | Create a record |  | [``](#_view) | 4.0 KB |
+| [`create_record`](#create_record) | Create a record |  | [`ui://margince/duplicate.html`](#duplicate_view) | 4.1 KB |
 | [`create_tag`](#create_tag) | Create a tag |  | [``](#_view) | 2.0 KB |
 | [`create_task`](#create_task) | Create a task |  | [``](#_view) | 2.2 KB |
 | [`data_coverage`](#data_coverage) | How current the sources are | yes | [``](#_view) | 2.1 KB |
 | [`decide_approval`](#decide_approval) | Approve or reject one staged action |  | [``](#_view) | 3.2 KB |
 | [`decide_approval_bundle`](#decide_approval_bundle) | Approve or reject one act's proposals together |  | [``](#_view) | 3.0 KB |
+| [`decide_duplicate`](#decide_duplicate) | Decide a flagged duplicate pair |  |  | 2.0 KB |
 | [`demote_lead`](#demote_lead) | Reverse a lead promotion |  | [``](#_view) | 2.4 KB |
 | [`describe_analytics_vocabulary`](#describe_analytics_vocabulary) | Describe the analytics vocabulary | yes | [``](#_view) | 2.2 KB |
 | [`describe_query_vocabulary`](#describe_query_vocabulary) | Describe the query vocabulary | yes | [``](#_view) | 2.1 KB |
@@ -99,7 +100,7 @@ descriptions and input schemas are what each step pays for.
 | [`list_records`](#list_records) | List records | yes | [``](#_view) | 4.6 KB |
 | [`list_tags`](#list_tags) | List tags | yes | [``](#_view) | 1.6 KB |
 | [`log_activity`](#log_activity) | Log an activity |  | [``](#_view) | 4.0 KB |
-| [`merge_records`](#merge_records) | Merge two records |  | [``](#_view) | 2.4 KB |
+| [`merge_records`](#merge_records) | Merge two records |  |  | 2.4 KB |
 | [`merge_tags`](#merge_tags) | Fold one tag into another |  | [``](#_view) | 2.0 KB |
 | [`prep_for_meeting`](#prep_for_meeting) | Prepare for a meeting | yes | [``](#_view) | 9.0 KB |
 | [`prepare_handoff`](#prepare_handoff) | Prepare a delivery handoff | yes | [``](#_view) | 3.9 KB |
@@ -133,7 +134,7 @@ descriptions and input schemas are what each step pays for.
 | [`update_record`](#update_record) | Update a record |  | [``](#_view) | 3.8 KB |
 | [`update_tag`](#update_tag) | Rename or recolour a tag |  | [``](#_view) | 2.1 KB |
 | [`whats_slipping_this_week`](#whats_slipping_this_week) | What's slipping this week | yes | [``](#_view) | 2.3 KB |
-| [`who_knows`](#who_knows) | Who knows this contact | yes | [`ui://margince/relationship-map.html`](#relationship_map_view) | 2.3 KB |
+| [`who_knows`](#who_knows) | Possible duplicate | yes | [``](#_view) | 2.2 KB |
 | [`whoami`](#whoami) | Who this passport acts for | yes | [``](#_view) | 1.8 KB |
 
 ## Resources
@@ -212,14 +213,15 @@ The populations a run_analytics_query plan may name, each with its group_by dime
 measures, derived for this seat. run_analytics_query names this document instead of carrying it.
 ```
 
-### relationship_map_view
+### duplicate_view
 
-`ui://margince/relationship-map.html` · text/html;profile=mcp-app
+`ui://margince/duplicate.html` · text/html;profile=mcp-app
 
-**Who knows this contact**
+**Possible duplicate**
 
 ```text
-The colleagues who know a contact, warmest first, with the interactions behind each warmth band.
+A record that looks like one already on file, with the values that matched and the choice to merge
+them or keep them apart.
 ```
 
 <details><summary>Sandbox policy (<code>_meta.ui</code>)</summary>
@@ -3368,7 +3370,7 @@ result; keep it for anything that links to it. (Governance: runs immediately; re
 scope "write".)
 ```
 
-Renders its result in [``](#_view), visible to `model`.
+Renders its result in [`ui://margince/duplicate.html`](#duplicate_view), visible to `model`.
 
 <details><summary>Input schema</summary>
 
@@ -3423,6 +3425,9 @@ Renders its result in [``](#_view), visible to `model`.
         "duplicate_candidates": {
           "items": {
             "properties": {
+              "candidate_id": {
+                "type": "string"
+              },
               "confidence": {
                 "type": "number"
               },
@@ -3457,6 +3462,7 @@ Renders its result in [``](#_view), visible to `model`.
               }
             },
             "required": [
+              "candidate_id",
               "confidence",
               "evidence",
               "other_record_id"
@@ -4448,6 +4454,155 @@ Renders its result in [``](#_view), visible to `model`.
       },
       "required": [
         "members"
+      ],
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "properties": {
+          "captured_by": {
+            "type": "string"
+          },
+          "record_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "record_type": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "record_type"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "freshness": {
+      "properties": {
+        "authoritative": {
+          "type": "boolean"
+        },
+        "last_synced_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "authoritative"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "trust": {
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "data",
+    "evidence",
+    "freshness",
+    "schema_version",
+    "trace_id",
+    "trust",
+    "warnings"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+### decide_duplicate
+
+**Decide a flagged duplicate pair**
+
+```text
+Settle a pair the review queue flagged: not_the_same says they are two different contacts or
+companies, so the pair is not flagged again; reopen takes that back. Only for a pair create_record
+reported in duplicate_candidates, by its candidate_id; neither record changes, and a merged pair
+cannot be re-opened. Use merge_records when they are the same one, never this. (Governance: runs
+immediately; requires passport scope "write".)
+```
+
+<details><summary>Input schema</summary>
+
+```json
+{
+  "additionalProperties": false,
+  "properties": {
+    "candidate_id": {
+      "description": "The pair's candidate_id, from the duplicate_candidates a create answered with",
+      "format": "uuid",
+      "type": "string"
+    },
+    "decision": {
+      "description": "not_the_same dismisses the pair; reopen takes a dismissal back",
+      "enum": [
+        "not_the_same",
+        "reopen"
+      ],
+      "type": "string"
+    },
+    "idempotency_key": {
+      "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+      "maxLength": 255,
+      "type": "string"
+    }
+  },
+  "required": [
+    "candidate_id",
+    "decision"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+<details><summary>Output schema</summary>
+
+```json
+{
+  "properties": {
+    "data": {
+      "properties": {
+        "candidate_id": {
+          "type": "string"
+        },
+        "disposition": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "candidate_id",
+        "disposition"
       ],
       "type": "object"
     },
@@ -9027,8 +9182,6 @@ worth keeping, rather than merging to make it disappear. target_id is the record
 source_id the one merged away — read both records before choosing: the fold cannot be called back,
 and by default nothing holds it. (Governance: runs immediately; requires passport scope "write".)
 ```
-
-Renders its result in [``](#_view), visible to `model`.
 
 <details><summary>Input schema</summary>
 
@@ -17525,7 +17678,7 @@ Renders its result in [``](#_view), visible to `model`.
 
 ### who_knows
 
-**Who knows this contact**
+**Possible duplicate**
 
 ```text
 Answer "who here knows this contact?": the colleagues with a relationship to one contact, warmest
@@ -17537,7 +17690,7 @@ Each colleague comes back with a user_id; the strength bucket, not the raw score
 colleague should be asked about. (Governance: runs immediately; requires passport scope "read".)
 ```
 
-Renders its result in [`ui://margince/relationship-map.html`](#relationship_map_view), visible to `model`, `app`.
+Renders its result in [``](#_view), visible to `model`.
 
 <details><summary>Input schema</summary>
 

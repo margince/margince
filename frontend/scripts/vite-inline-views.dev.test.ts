@@ -1,5 +1,6 @@
 import { createServer, type Plugin, type ViteDevServer } from "vite";
 import { afterAll, beforeAll, expect, it } from "vitest";
+import actions from "../src/mcp-apps/actions.json";
 import spaConfig from "../vite.config";
 import {
   inspectDocument,
@@ -64,13 +65,13 @@ afterAll(async () => {
 });
 
 it("serves a document the admission check would accept", async () => {
-  const res = await fetch(`${base}/mcp-apps/relationship-map.html`);
+  const res = await fetch(`${base}/mcp-apps/duplicate.html`);
   expect(res.status).toBe(200);
   expect(res.headers.get("content-type")).toMatch(/text\/html/);
   const doc = await res.text();
-  expect(validateDocument(doc)).toEqual([]);
+  expect(validateDocument(doc, actions.duplicate)).toEqual([]);
   expect(inspectDocument(doc)).toEqual([]);
-  expect(doc).toContain("<title>Who knows this contact</title>");
+  expect(doc).toContain("<title>Possible duplicate</title>");
   expect(doc).toContain("SPDX-License-Identifier: BUSL-1.1");
 }, 30_000);
 
@@ -110,7 +111,7 @@ it("lets a second server stand beside the first", async () => {
     await second.listen();
     const other = servedAt(second);
     expect(other).not.toBe(base);
-    const res = await fetch(`${other}/mcp-apps/relationship-map.html`);
+    const res = await fetch(`${other}/mcp-apps/duplicate.html`);
     expect(res.status).toBe(200);
   } finally {
     await second.close();

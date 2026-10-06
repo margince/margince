@@ -13,7 +13,6 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/margince/margince/backend/internal/modules/agents/apps"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -66,7 +65,7 @@ type whoKnowsTool struct{ list WhoKnowsLister }
 
 func (t whoKnowsTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
-		Name: "who_knows", Title: "Who knows this contact", Version: toolVersionV1,
+		Name: "who_knows", Title: "Possible duplicate", Version: toolVersionV1,
 		Description:   whoKnowsCopy.render(),
 		Instead:       whoKnowsCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
@@ -75,11 +74,6 @@ func (t whoKnowsTool) Spec() mcp.ToolSpec {
 			"contact_id":{"type":"string","format":"uuid","description":"The contact to ask about"}},
 			"required":["contact_id"],"additionalProperties":false}`),
 		OutputSchema: schemaFor[WhoKnowsAnswer](),
-		// The view renders this tool's own answer as a ranked list. What it buys
-		// over the text is the band and the interaction count side by side —
-		// including the case the seam is careful about, where a colleague has an
-		// absent strength rather than a zero one.
-		UI: &mcp.ToolUI{ResourceURI: apps.RelationshipMapURI},
 	}
 }
 

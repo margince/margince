@@ -17106,8 +17106,7 @@ paths:
     post:
       tags: [Contacts]
       operationId: disposeDedupeCandidate
-      x-agent-access: human-only
-      security: [ { cookieAuth: [] } ]
+      x-mcp-tool: { verb: decide_duplicate, record_type: contact, tier: auto_execute, scope: write }
       summary: Decide one pair — merge through the owner's verb, or dismiss forever.
       description: |
         `merge` requires `winner_id` (one of the pair) and executes `mergeContact`/
@@ -17140,8 +17139,7 @@ paths:
     post:
       tags: [Contacts]
       operationId: undoDedupeDisposition
-      x-agent-access: human-only
-      security: [ { cookieAuth: [] } ]
+      x-mcp-tool: { verb: decide_duplicate, record_type: contact, tier: auto_execute, scope: write }
       summary: Re-open a disposed pair.
       description: |
         A dismissed pair re-opens (the suppression lifts). A merged pair needs the

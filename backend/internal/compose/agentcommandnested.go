@@ -102,3 +102,21 @@ func createOfferCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, bo
 		Fields: json.RawMessage(body),
 	}), nil
 }
+
+//nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
+func dismissDuplicateCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, _ []byte) (agents.GovernedCall, error) {
+	id, err := routedID(r)
+	if err != nil {
+		return nil, err
+	}
+	return agents.NewDismissDuplicateCall(deps.language, agents.DedupeCommand{ID: id}), nil
+}
+
+//nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
+func reopenDuplicateCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, _ []byte) (agents.GovernedCall, error) {
+	id, err := routedID(r)
+	if err != nil {
+		return nil, err
+	}
+	return agents.NewReopenDuplicateCall(deps.language, agents.DedupeCommand{ID: id}), nil
+}

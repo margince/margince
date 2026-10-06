@@ -1,1 +1,6 @@
-{}
+{
+  "duplicate": [
+    "merge_records",
+    "decide_duplicate"
+  ]
+}

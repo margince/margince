@@ -16,6 +16,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/margince/margince/backend/internal/modules/agents/apps"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -264,6 +265,11 @@ func (t createRecord) Spec() mcp.ToolSpec {
 			"additionalProperties":false}`),
 		UnkeyedArguments: recordFieldsUnkeyed(),
 		OutputSchema:     schemaFor[createdRecord](),
+		// The card's choice is a decision about the pair this create filed, so
+		// the card is the second renderer of an answer the text already gives.
+		// Model-only: a view acts through the tools apps/actions.json names,
+		// and creating a record is not one of them.
+		UI: &mcp.ToolUI{ResourceURI: apps.DuplicateURI, Visibility: []string{mcp.VisibilityModel}},
 	}
 }
 

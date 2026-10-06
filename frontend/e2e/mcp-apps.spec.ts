@@ -18,36 +18,39 @@ import { expect, test } from "@playwright/test";
 // rendering a populated list may still fetch something on the empty state, on a
 // warning, on a malformed payload, or when the host changes the theme.
 
-const VIEWS = [{ file: "relationship-map" }] as const;
+const VIEWS = [{ file: "duplicate" }] as const;
 
-const NETWORK = {
-  contact_id: "7c9e6679-7425-40de-944b-e07fc1f90ae7",
-  colleagues: [
+const FILED = {
+  record_type: "contact",
+  id: "0195c3a0-0000-7000-8000-000000000002",
+  fields: { full_name: "Anna Meyer" },
+  duplicate_candidates: [
     {
-      display_name: "Dana Okafor",
-      strength: 88,
-      strength_bucket: "high",
-      interactions_90d: 41,
-    },
-    {
-      display_name: "Mira Lindqvist",
-      strength_bucket: "none",
-      interactions_90d: 0,
+      candidate_id: "0195c3a0-0000-7000-8000-0000000000aa",
+      other_record_id: "0195c3a0-0000-7000-8000-000000000001",
+      confidence: 0.92,
+      evidence: [
+        {
+          field: "full_name",
+          left_value: "Anna Meyer",
+          right_value: "Anna Meyer",
+        },
+      ],
     },
   ],
 };
 
 /** The five payload/host states each view is driven through. */
 function states() {
-  const populated = NETWORK;
-  const empty = { colleagues: [] };
+  const populated = FILED;
+  const empty = { record_type: "contact", id: "x", fields: {} };
   return [
     { name: "populated", data: populated, warnings: [], theme: "light" },
     { name: "empty", data: empty, warnings: [], theme: "light" },
     {
       name: "warned",
       data: populated,
-      warnings: [{ code: "sweep_truncated" }],
+      warnings: [{ code: "duplicate_filed_for_review" }],
       theme: "light",
     },
     { name: "malformed", data: "not an object", warnings: [], theme: "light" },
@@ -162,3 +165,107 @@ for (const view of VIEWS) {
     await context.close();
   });
 }
+
+// A choice card acts through the HOST: the click becomes a tools/call the host
+// proxies, never a request the view makes itself. This drives the real built
+// card against a host that advertises serverTools and records what reaches it.
+test("the duplicate card asks its host for exactly the tools it declares and reaches no network", async ({
+  browser,
+}) => {
+  const html = await readFile("dist/mcp-apps/duplicate.html", "utf8");
+  const context = await browser.newContext({ serviceWorkers: "block" });
+  const requests: string[] = [];
+  context.on("request", (r) => requests.push(r.url()));
+  const page = await context.newPage();
+  await page.setContent(
+    `<iframe id="view" sandbox="allow-scripts" style="width:600px;height:600px;border:0"></iframe>`,
+  );
+  const before = requests.length;
+
+  await page.evaluate(
+    async ({ html, data }) => {
+      const frame = document.getElementById("view") as HTMLIFrameElement;
+      const child = () => frame.contentWindow;
+      const w = window as unknown as {
+        calls: { name: string; args: unknown }[];
+      };
+      w.calls = [];
+      const ready = new Promise<void>((resolve) => {
+        window.addEventListener("message", (e: MessageEvent) => {
+          if (e.source !== child()) return;
+          const msg = e.data as {
+            id?: number;
+            method?: string;
+            params?: { name: string; arguments: unknown };
+          };
+          if (msg?.method === "ui/initialize") {
+            child()?.postMessage(
+              {
+                jsonrpc: "2.0",
+                id: msg.id,
+                result: {
+                  hostContext: {},
+                  hostCapabilities: { serverTools: {} },
+                },
+              },
+              "*",
+            );
+          } else if (msg?.method === "ui/notifications/initialized") {
+            child()?.postMessage(
+              {
+                jsonrpc: "2.0",
+                method: "ui/notifications/tool-result",
+                params: { structuredContent: { data, warnings: [] } },
+              },
+              "*",
+            );
+            resolve();
+          } else if (msg?.method === "tools/call") {
+            w.calls.push({
+              name: msg.params?.name ?? "",
+              args: msg.params?.arguments,
+            });
+            child()?.postMessage(
+              {
+                jsonrpc: "2.0",
+                id: msg.id,
+                result: { structuredContent: { data: {}, warnings: [] } },
+              },
+              "*",
+            );
+          }
+        });
+      });
+      frame.srcdoc = html;
+      await ready;
+    },
+    { html, data: FILED },
+  );
+
+  const card = page.frameLocator("#view");
+  await card
+    .getByRole("button", { name: "Merge into the existing record" })
+    .click();
+  await expect(
+    card.getByText("Merged into the record already on file."),
+  ).toBeVisible();
+
+  const calls = await page.evaluate(
+    () => (window as unknown as { calls: { name: string }[] }).calls,
+  );
+  expect(calls).toEqual([
+    {
+      name: "merge_records",
+      args: {
+        record_type: "contact",
+        source_id: "0195c3a0-0000-7000-8000-000000000002",
+        target_id: "0195c3a0-0000-7000-8000-000000000001",
+      },
+    },
+  ]);
+  const reached = requests
+    .slice(before)
+    .filter((url) => !url.startsWith("about:"));
+  expect(reached).toEqual([]);
+  await context.close();
+});

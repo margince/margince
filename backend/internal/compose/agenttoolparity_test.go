@@ -399,6 +399,7 @@ var notTheRecordsOwnID = map[string]string{
 	"approval_id":  "the staged call being redeemed",
 	"host_user_id": "whose calendar a meeting is booked on",
 	"assignee_id":  "who a task is for",
+	"candidate_id": "the review-queue pair a dedupe verb settles, which is neither of its records",
 }
 
 // requiredRecordID is the one required uuid argument naming the record this verb

@@ -21,6 +21,8 @@ import (
 // so a sentence added to the struct with no row here fails.
 var summaryVerbs = map[string][]string{
 	"archive":             {"%s", "%s"},
+	"dismissDuplicate":    {"%s"},
+	"reopenDuplicate":     {"%s"},
 	"createHead":          {"%s"},
 	"updateHead":          {"%s"},
 	"logHead":             {"%s"},

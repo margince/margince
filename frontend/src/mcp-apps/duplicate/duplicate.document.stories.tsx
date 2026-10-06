@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { builtDocument, DocumentHost } from "../story-hosts";
-import { relationshipMapFixture } from "./fixture";
+import { duplicateFixture } from "./fixture";
 
 // import.meta.glob, NOT a static `?raw` import — see the account brief's
 // document story for why, and why `eager` is beside the point.
@@ -11,12 +11,12 @@ const built = import.meta.glob("/dist/mcp-apps/*.html", {
 });
 
 const meta: Meta<typeof DocumentHost> = {
-  title: "MCP Apps/Relationship map (document)",
+  title: "MCP Apps/Duplicate (document)",
   component: DocumentHost,
   args: {
-    html: builtDocument(built, "relationship-map"),
-    answer: relationshipMapFixture,
-    title: "Who knows this contact",
+    html: builtDocument(built, "duplicate"),
+    answer: duplicateFixture,
+    title: "Possible duplicate",
   },
 };
 export default meta;

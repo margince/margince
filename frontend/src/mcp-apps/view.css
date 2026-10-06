@@ -27,6 +27,8 @@
 @import "../design-system/readings.css";
 @import "../design-system/callout.css";
 @import "../design-system/strengthmeter.css";
+/* The app's button, which a choice card presses. */
+@import "../design-system/base.css";
 
 * {
   box-sizing: border-box;
@@ -164,4 +166,30 @@ ol {
   padding: var(--space-4);
   border-radius: var(--r-md);
   background: var(--bgCard);
+}
+
+/* The duplicate card's evidence: the two records' values side by side. */
+.evidence {
+  width: 100%;
+  border-collapse: collapse;
+  margin-block: var(--space-3);
+}
+
+.evidence th,
+.evidence td {
+  padding: var(--space-1) var(--space-2);
+  text-align: start;
+  vertical-align: top;
+}
+
+.choices,
+.settled {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.refusal {
+  color: var(--textSecondary);
 }

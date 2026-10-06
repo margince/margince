@@ -85,12 +85,12 @@ Everything below is the detail behind the two tables above: which tools each job
 
 | | |
 |---|---:|
-| Tools the assistant is offered | 81 |
+| Tools the assistant is offered | 82 |
 | … some case requires | 49 |
 | … some case requires as one of a set | 4 |
-| … **no case requires** | 28 |
+| … **no case requires** | 29 |
 | … of those, permitted somewhere but never required | 23 |
-| Prompt tokens spent on tools no case requires | 8482 |
+| Prompt tokens spent on tools no case requires | 8685 |
 | Use cases | 29 |
 | Acceptance criteria the cases declare, each with a statement | 73 |
 
@@ -112,7 +112,7 @@ A tool being "untried" means something different on each, so the numbers above a
 | | Surface A: MCP | Surface B: scheduled agents |
 |---|---|---|
 | Who drives it | a user, watching | a job on a timer, unattended |
-| Menu | 81 tools, the whole catalog | 5 to 7 tools, declared per agent |
+| Menu | 82 tools, the whole catalog | 5 to 7 tools, declared per agent |
 | A wrong reach | the user corrects it | nobody is there |
 | Graded by | the use-case lane on this page | [ai-certification.md](ai-certification.md) |
 
@@ -448,7 +448,7 @@ A tool this lane has not tried may still be graded. The `Graded by` column names
 corpus tests the tool anyway. That lane asks which tool a goal should reach for, and which plausible neighbour it must
 avoid, which this lane cannot express at all: it sees that a name appeared, never whether it was the right first reach.
 
-So of the 28 tools no use case requires, **9 are graded elsewhere** and 19 are untried by any lane.
+So of the 29 tools no use case requires, **9 are graded elsewhere** and 20 are untried by any lane.
 
 A tool in the `Permitted in` column is worse than one with nothing: a case is allowed to use it and no case checks that it can.
 
@@ -478,6 +478,7 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 | `whats_slipping_this_week` | 211 | `agent_loop` | `case44_chase_what_is_slipping` | `overnight_at_risk_sweep` |
 | `list_input_checks` | 209 | - | `case21_what_are_we_closing`, `case22_can_i_trust_the_numbers` | - |
 | `read_brief` | 205 | `agent_loop` | - | `morning_brief` |
+| `decide_duplicate` | 203 | - | - | - |
 | `who_knows` | 197 | - | `case33_two_cards_for_one_company`, `case49_who_can_introduce_us`, `case5_before_the_meeting` | - |
 | `list_pipelines` | 191 | - | `case1_log_it`, `case20_put_it_in_the_board_pack`, `case45_move_the_deal_on` | - |
 | `whoami` | 129 | - | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case42_can_i_answer_on_whatsapp`, `case43_the_fair_leads_are_prospects`, `case46_get_us_in_a_room`, `case47_tidy_the_fair_list` | - |

@@ -86,6 +86,29 @@ export function avatar(
   return node;
 }
 
+/**
+ * button mirrors `Button`: the same `btn` classes the app's sheet draws, as a
+ * plain button because a view has no form to submit. `onPress` is the whole
+ * behaviour, and `busy` mirrors `pending` — aria-disabled rather than disabled,
+ * so focus stays where the reader put it while the write is out.
+ */
+export function button(
+  label: string,
+  variant: "primary" | "ghost",
+  onPress: () => void,
+  busy = false,
+): HTMLElement {
+  const node = el("button", `btn btn-${variant}`, label);
+  node.setAttribute("type", "button");
+  if (busy) {
+    node.setAttribute("aria-busy", "true");
+    node.setAttribute("aria-disabled", "true");
+    return node;
+  }
+  node.addEventListener("click", onPress);
+  return node;
+}
+
 /** strengthMeter mirrors `StrengthMeter`: three rising bars beside the word. */
 export function strengthMeter(band: StrengthBand, word: string): HTMLElement {
   const node = el("span", "strength-meter");

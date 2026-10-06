@@ -39,10 +39,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
-// RelationshipMapURI renders who_knows's colleagues. It is exported so the
-// tool's declaration and the document that answers it read the same constant;
-// the composed-surface sweep proves every URI a tool names is published.
-const RelationshipMapURI = "ui://margince/relationship-map.html"
+// DuplicateURI is the card create_record offers when a create filed a pair for
+// review. It is exported so the tool's declaration and the document that
+// answers it read the same constant; the composed-surface sweep proves every URI
+// a tool names is published.
+const DuplicateURI = "ui://margince/duplicate.html"
 
 // view is one published document's identity. The document itself is not here:
 // it is fetched, admitted and held at run time, so this is the half that is a
@@ -59,10 +60,10 @@ type view struct {
 // is derived from the URI rather than listed beside it.
 var catalog = []view{
 	{
-		uri:         RelationshipMapURI,
-		name:        "relationship_map_view",
-		title:       "Who knows this contact",
-		description: "The colleagues who know a contact, warmest first, with the interactions behind each warmth band.",
+		uri:         DuplicateURI,
+		name:        "duplicate_view",
+		title:       "Possible duplicate",
+		description: "A record that looks like one already on file, with the values that matched and the choice to merge them or keep them apart.",
 	},
 }
 
