@@ -249,12 +249,13 @@ func daysBetween(from, to time.Time) float64 {
 	return d
 }
 
-// healthActivityKinds are the qualifying two-way-engagement interaction
-// kinds (§4 inputs; tasks and notes are not contact). It reads the shared
-// definition rather than restating it: relationship scoring, deal health and
-// contact strength all ask the same question, and a set that drifts between
-// them makes the network and coverage signals disagree about one activity.
-var healthActivityKinds = relstrength.InteractionKindSQLGroup()
+// healthInteraction is the activity that qualifies as two-way engagement: an
+// interaction kind (§4 inputs; tasks and notes are not contact), and no
+// canceled or no-show meeting. It reads the shared definition rather than
+// restating it: relationship scoring, deal health and contact strength all ask
+// the same question, and a rule that drifts between them makes the network and
+// coverage signals disagree about one activity.
+var healthInteraction = relstrength.InteractionCountsSQL("a")
 
 // DealHealth computes the §10.5 score for one deal. The read is
 // row-scoped exactly like GetDeal — a deal the caller cannot see has no

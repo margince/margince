@@ -261,12 +261,12 @@ func withheldSeats(
 // the window.
 //
 // The engagement test is EngagedStakeholders' — both directions required
-// inside the same window, over the same qualifying kinds — asked of a set
+// inside the same window, over the same qualifying activity — asked of a set
 // rather than one deal. Two spellings of "engaged" is how one screen calls a
 // deal single-threaded while another calls it covered, which is the
 // disagreement the single-definition rule in this package's header exists to
 // stop; the shared pieces are healthEngagementWindowDays and
-// healthActivityKinds, so a change to either moves both readers at once.
+// healthInteraction, so a change to either moves both readers at once.
 func engagedAmong(
 	ctx context.Context, tx pgx.Tx, dealIDs []ids.UUID, now time.Time,
 ) (map[dealContact]bool, error) {
@@ -278,9 +278,9 @@ func engagedAmong(
 	if err != nil {
 		return nil, err
 	}
-	// The kind list is an ARGUMENT to Sprintf rather than concatenated into
-	// its format string, for the reason EngagedStakeholders gives: a `%` in a
-	// kind would be read as a verb and corrupt the statement at runtime.
+	// The interaction rule is an ARGUMENT to Sprintf rather than concatenated
+	// into its format string, for the reason EngagedStakeholders gives: a `%`
+	// in it would be read as a verb and corrupt the statement at runtime.
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT DISTINCT r.deal_id, r.contact_id FROM relationship r
 		WHERE r.kind = 'deal_stakeholder' AND r.deal_id = ANY($%[1]d) AND r.archived_at IS NULL
@@ -288,14 +288,14 @@ func engagedAmong(
 		  AND EXISTS (
 			SELECT 1 FROM activity a
 			JOIN activity_link l ON l.activity_id = a.id AND l.contact_id = r.contact_id
-			WHERE a.kind IN %[4]s AND a.archived_at IS NULL`+auth.AudienceWorkspaceOnly("a")+`
+			WHERE %[4]s AND a.archived_at IS NULL`+auth.AudienceWorkspaceOnly("a")+`
 			  AND a.occurred_at >= $%[2]d AND a.direction = 'inbound')
 		  AND EXISTS (
 			SELECT 1 FROM activity a
 			JOIN activity_link l ON l.activity_id = a.id AND l.contact_id = r.contact_id
-			WHERE a.kind IN %[4]s AND a.archived_at IS NULL`+auth.AudienceWorkspaceOnly("a")+`
+			WHERE %[4]s AND a.archived_at IS NULL`+auth.AudienceWorkspaceOnly("a")+`
 			  AND a.occurred_at >= $%[2]d AND a.direction = 'outbound')`,
-		dealsPos, windowPos, bound, healthActivityKinds), args...)
+		dealsPos, windowPos, bound, healthInteraction), args...)
 	if err != nil {
 		return nil, fmt.Errorf("deals: reading engagement across a set of deals: %w", err)
 	}
