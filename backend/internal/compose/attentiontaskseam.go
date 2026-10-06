@@ -30,12 +30,15 @@ type attentionTasks struct{ store *activities.Store }
 // built from a second copy of these arms would answer a different question from
 // the page it sits beside, one arm at a time.
 //
+// asOf is what the store ages overdue tasks out of the Worklist against, so the
+// page and its count drop the same ones.
+//
 // The false answer means "no reader to answer for", which is a page of nothing
 // rather than a refusal.
 func openTasksDueBy(
-	ctx context.Context, until time.Time, scope attention.TaskScope, owner ids.UUID,
+	ctx context.Context, asOf, until time.Time, scope attention.TaskScope, owner ids.UUID,
 ) (activities.ListActivitiesInput, bool) {
-	in := activities.ListActivitiesInput{OpenAndDueBy: &until, IncludeEmailRequests: true, Worklist: true}
+	in := activities.ListActivitiesInput{OpenAndDueBy: &until, IncludeEmailRequests: true, WorklistAsOf: &asOf}
 	switch scope {
 	case attention.TasksMine:
 		actor, ok := principal.Actor(ctx)
@@ -67,14 +70,14 @@ func openTasksDueBy(
 }
 
 func (t attentionTasks) OpenForViewer(
-	ctx context.Context, until time.Time, limit int, scope attention.TaskScope, owner ids.UUID,
+	ctx context.Context, asOf, until time.Time, limit int, scope attention.TaskScope, owner ids.UUID,
 ) ([]attention.Task, error) {
 	// The store answers "open and due by then" itself, so the limit bounds the
 	// rows that QUALIFY. This used to read ten times the lane and narrow
 	// afterwards, which put the bound on the wrong set: a pile of completed
 	// tasks filled the scan, the overdue promise underneath never reached the
 	// reader, and the day rendered clear while the work was still there.
-	in, ok := openTasksDueBy(ctx, until, scope, owner)
+	in, ok := openTasksDueBy(ctx, asOf, until, scope, owner)
 	if !ok {
 		return nil, nil
 	}
@@ -97,9 +100,9 @@ func (t attentionTasks) OpenForViewer(
 // and the window is closed at both ends in the QUERY, so the limit bounds rows
 // that qualify rather than a wider set narrowed afterwards.
 func (t attentionTasks) UpcomingForViewer(
-	ctx context.Context, from, until time.Time, limit int, scope attention.TaskScope, owner ids.UUID,
+	ctx context.Context, asOf, from, until time.Time, limit int, scope attention.TaskScope, owner ids.UUID,
 ) ([]attention.Task, error) {
-	in, ok := openTasksDueBy(ctx, until, scope, owner)
+	in, ok := openTasksDueBy(ctx, asOf, until, scope, owner)
 	if !ok {
 		return nil, nil
 	}
