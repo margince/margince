@@ -231,7 +231,7 @@ func germanInstallation(context.Context) textlang.Lang { return textlang.German 
 // option reaches the tool, and the tool hands it to the resolver.
 func TestTheToolDoorDescribesInTheComposedLanguage(t *testing.T) {
 	r := NewRegistry(nil, nil, WithBaseLanguage(germanInstallation))
-	RegisterCoreTools(r, stubRecordProvider{}, nil, nil, nil, nil, nil)
+	RegisterCoreTools(r, stubRecordProvider{}, nil, nil, nil, nil, nil, nil)
 	tool, ok := r.tools["create_record"].(createRecord)
 	if !ok {
 		t.Fatalf("create_record is registered as %T, want createRecord", r.tools["create_record"])

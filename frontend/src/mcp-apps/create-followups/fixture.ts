@@ -6,7 +6,7 @@ import type { Envelope } from "../types";
  * MIRRORED BY HAND from agents.createdRecord and agents.DuplicateCandidate.
  * Left is the record this create wrote, Right the one already on file.
  */
-export const duplicateFixture: Envelope = {
+export const createFollowupsFixture: Envelope = {
   data: {
     record_type: "contact",
     id: "0195c3a0-0000-7000-8000-000000000002",

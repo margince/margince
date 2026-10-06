@@ -387,7 +387,11 @@ describe("the service worker", () => {
   it("gives the offline page to a failed navigation that only starts like an api path, a shipped /mcp-apps view among them", async () => {
     const worker = await installed();
     worker.scope.fetch.mockRejectedValue(new TypeError("Failed to fetch"));
-    for (const url of ["/mcp-apps/duplicate.html", "/v1beta", "/setup-guide"]) {
+    for (const url of [
+      "/mcp-apps/create-followups.html",
+      "/v1beta",
+      "/setup-guide",
+    ]) {
       const answer = await worker.request(url, "navigate");
       expect(await answer?.text(), url).toBe(page());
     }

@@ -140,7 +140,7 @@ func TestAViewThatFailsToFetchIsSimplyNotHeld(t *testing.T) {
 	if err := p.Prime(t.Context()); err != nil {
 		t.Fatalf("priming: %v", err)
 	}
-	if !p.Holds(DuplicateURI) {
+	if !p.Holds(CreateFollowupsURI) {
 		t.Error("the view that WAS served is not held")
 	}
 	if p.Holds(secondViewURI) {
@@ -150,11 +150,11 @@ func TestAViewThatFailsToFetchIsSimplyNotHeld(t *testing.T) {
 
 func TestARefusedDocumentIsNeverHeld(t *testing.T) {
 	tier, p := newWebTier(t)
-	tier.answer(DuplicateURI, ok(documentFor(DuplicateURI)+`<link rel="stylesheet" href="/a.css">`))
+	tier.answer(CreateFollowupsURI, ok(documentFor(CreateFollowupsURI)+`<link rel="stylesheet" href="/a.css">`))
 	if err := p.Prime(t.Context()); err != nil {
 		t.Fatalf("priming: %v", err)
 	}
-	if p.Holds(DuplicateURI) {
+	if p.Holds(CreateFollowupsURI) {
 		t.Fatal("a document the admission check refused is being served")
 	}
 	if p.admissionFailures.Load() == 0 {
@@ -169,10 +169,10 @@ func TestAFailedRefreshKeepsTheLastKnownGoodDocument(t *testing.T) {
 	if err := p.Prime(t.Context()); err != nil {
 		t.Fatalf("priming: %v", err)
 	}
-	before, _ := p.served(DuplicateURI)
-	tier.answer(DuplicateURI, broken(http.StatusBadGateway))
+	before, _ := p.served(CreateFollowupsURI)
+	tier.answer(CreateFollowupsURI, broken(http.StatusBadGateway))
 	p.Refresh(t.Context())
-	after, holding := p.served(DuplicateURI)
+	after, holding := p.served(CreateFollowupsURI)
 	if !holding {
 		t.Fatal("one bad response during a refresh took a working view down")
 	}
@@ -186,10 +186,10 @@ func TestARefusedDocumentNeverReplacesAGoodOne(t *testing.T) {
 	if err := p.Prime(t.Context()); err != nil {
 		t.Fatalf("priming: %v", err)
 	}
-	before, _ := p.served(DuplicateURI)
-	tier.answer(DuplicateURI, ok(documentFor(DuplicateURI)+`<script>fetch("/v1/contacts")</script>`))
+	before, _ := p.served(CreateFollowupsURI)
+	tier.answer(CreateFollowupsURI, ok(documentFor(CreateFollowupsURI)+`<script>fetch("/v1/contacts")</script>`))
 	p.Refresh(t.Context())
-	after, holding := p.served(DuplicateURI)
+	after, holding := p.served(CreateFollowupsURI)
 	if !holding || after != before {
 		t.Fatal("a document that would be refused replaced the last known-good copy")
 	}
@@ -202,10 +202,10 @@ func TestARefreshPublishesADocumentThatChanged(t *testing.T) {
 	if err := p.Prime(t.Context()); err != nil {
 		t.Fatalf("priming: %v", err)
 	}
-	updated := strings.Replace(documentFor(DuplicateURI), "border:1px", "border:2px", 1)
-	tier.answer(DuplicateURI, ok(updated))
+	updated := strings.Replace(documentFor(CreateFollowupsURI), "border:1px", "border:2px", 1)
+	tier.answer(CreateFollowupsURI, ok(updated))
 	p.Refresh(t.Context())
-	if got, _ := p.served(DuplicateURI); got != updated {
+	if got, _ := p.served(CreateFollowupsURI); got != updated {
 		t.Fatal("a refresh did not publish the new document the origin served")
 	}
 }
@@ -249,13 +249,13 @@ func TestTheHeldSnapshotIsReplacedAtomically(t *testing.T) {
 						t.Errorf("a concurrent read saw %d views, want %d", len(got), len(catalog))
 						return
 					}
-					_, _ = p.served(DuplicateURI)
+					_, _ = p.served(CreateFollowupsURI)
 				}
 			}
 		}()
 	}
 	for i := range 20 {
-		tier.answer(DuplicateURI, ok(strings.Replace(documentFor(DuplicateURI),
+		tier.answer(CreateFollowupsURI, ok(strings.Replace(documentFor(CreateFollowupsURI),
 			"border:1px", "border:"+string(rune('1'+i%8))+"px", 1)))
 		p.Refresh(t.Context())
 	}
@@ -280,7 +280,7 @@ func TestAViewIsNotAdvertisedBeforeItIsPrimed(t *testing.T) {
 	if got := p.Resources(context.Background()); len(got) != 0 {
 		t.Fatalf("an unprimed provider advertised %d views", len(got))
 	}
-	if _, err := p.ReadResource(context.Background(), DuplicateURI); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := p.ReadResource(context.Background(), CreateFollowupsURI); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("an unprimed provider answered %v for a view, want the not-found sentinel", err)
 	}
 }
@@ -312,7 +312,7 @@ func TestTheRealProviderSendsItsPolicyWithTheDocument(t *testing.T) {
 	if err := p.Prime(t.Context()); err != nil {
 		t.Fatalf("priming: %v", err)
 	}
-	contents, err := p.ReadResource(context.Background(), DuplicateURI)
+	contents, err := p.ReadResource(context.Background(), CreateFollowupsURI)
 	if err != nil {
 		t.Fatalf("reading a held view: %v", err)
 	}
@@ -327,7 +327,7 @@ func TestTheRealProviderSendsItsPolicyWithTheDocument(t *testing.T) {
 	// two providers share a URI.
 	var listed *mcp.ResourceUI
 	for _, r := range p.Resources(context.Background()) {
-		if r.URI == DuplicateURI {
+		if r.URI == CreateFollowupsURI {
 			listed = r.UI
 		}
 	}
@@ -378,12 +378,12 @@ func TestEveryHeldViewIsAWellFormedAppDocument(t *testing.T) {
 
 func TestATitleMismatchIsReportedAndTheViewStillServes(t *testing.T) {
 	tier, p := newWebTier(t)
-	tier.answer(DuplicateURI, ok(strings.Replace(documentFor(DuplicateURI),
-		"<title>Possible duplicate</title>", "<title>Possible duplicates</title>", 1)))
+	tier.answer(CreateFollowupsURI, ok(strings.Replace(documentFor(CreateFollowupsURI),
+		"<title>Next steps for this record</title>", "<title>Next steps for these records</title>", 1)))
 	if err := p.Prime(t.Context()); err != nil {
 		t.Fatalf("priming: %v", err)
 	}
-	if !p.Holds(DuplicateURI) {
+	if !p.Holds(CreateFollowupsURI) {
 		t.Fatal("a title mismatch took the view down; it is diagnostic, not an integrity check")
 	}
 	if p.titleMismatches.Load() != 1 {
@@ -406,7 +406,7 @@ func TestTheFailureLineIsRateLimitedButTheCounterIsNot(t *testing.T) {
 	if err := p.Prime(t.Context()); err != nil {
 		t.Fatalf("priming: %v", err)
 	}
-	tier.answer(DuplicateURI, broken(http.StatusBadGateway))
+	tier.answer(CreateFollowupsURI, broken(http.StatusBadGateway))
 	for range 5 {
 		p.Refresh(t.Context())
 	}
@@ -441,8 +441,8 @@ func TestTheMetricsSectionNamesEachViewSeparately(t *testing.T) {
 	p.WriteMetrics(&out)
 	body := out.String()
 	for want, why := range map[string]string{
-		`margince_mcp_app_view_held{uri="` + DuplicateURI + `"} 1`:  "the held view reads as held",
-		`margince_mcp_app_view_held{uri="` + secondViewURI + `"} 0`: "the missing view reads as missing",
+		`margince_mcp_app_view_held{uri="` + CreateFollowupsURI + `"} 1`: "the held view reads as held",
+		`margince_mcp_app_view_held{uri="` + secondViewURI + `"} 0`:      "the missing view reads as missing",
 	} {
 		if !strings.Contains(body, want) {
 			t.Errorf("the metrics section does not say %s (%q missing)\n---\n%s", why, want, body)
@@ -460,7 +460,7 @@ func TestTheMetricsSectionNamesEachViewSeparately(t *testing.T) {
 // stampedBrief is the relationship map's document carrying a build revision,
 // the way the inliner writes one.
 func stampedBrief(revision string) string {
-	return strings.Replace(documentFor(DuplicateURI), "-->",
+	return strings.Replace(documentFor(CreateFollowupsURI), "-->",
 		"-->\n<!-- margince-build-revision: "+revision+" -->", 1)
 }
 
@@ -473,11 +473,11 @@ func TestAStampMismatchIsReportedAndTheViewStillServes(t *testing.T) {
 	buildinfo.Revision = "aaaaaaaa"
 
 	tier, p := newWebTier(t)
-	tier.answer(DuplicateURI, ok(stampedBrief("bbbbbbbb")))
+	tier.answer(CreateFollowupsURI, ok(stampedBrief("bbbbbbbb")))
 	if err := p.Prime(t.Context()); err != nil {
 		t.Fatalf("priming: %v", err)
 	}
-	if !p.Holds(DuplicateURI) {
+	if !p.Holds(CreateFollowupsURI) {
 		t.Fatal("a build-revision mismatch took the view down")
 	}
 	var out strings.Builder
@@ -485,7 +485,7 @@ func TestAStampMismatchIsReportedAndTheViewStillServes(t *testing.T) {
 	body := out.String()
 	// Per URI, because a rollout replaces one document before the other: a
 	// single process-wide reading would be whichever view was read last.
-	if !strings.Contains(body, `margince_mcp_app_build_skew{uri="`+DuplicateURI+`"} 1`) {
+	if !strings.Contains(body, `margince_mcp_app_build_skew{uri="`+CreateFollowupsURI+`"} 1`) {
 		t.Errorf("the metrics section does not report the skewed view:\n%s", body)
 	}
 	if !strings.Contains(body, `margince_mcp_app_build_skew{uri="`+secondViewURI+`"} 0`) {
@@ -501,15 +501,15 @@ func TestAMatchingStampClearsTheSkewGauge(t *testing.T) {
 	buildinfo.Revision = "aaaaaaaa"
 
 	tier, p := newWebTier(t)
-	tier.answer(DuplicateURI, ok(stampedBrief("bbbbbbbb")))
+	tier.answer(CreateFollowupsURI, ok(stampedBrief("bbbbbbbb")))
 	if err := p.Prime(t.Context()); err != nil {
 		t.Fatalf("priming: %v", err)
 	}
-	tier.answer(DuplicateURI, ok(stampedBrief("aaaaaaaa")))
+	tier.answer(CreateFollowupsURI, ok(stampedBrief("aaaaaaaa")))
 	p.Refresh(t.Context())
 	var out strings.Builder
 	p.WriteMetrics(&out)
-	if !strings.Contains(out.String(), `margince_mcp_app_build_skew{uri="`+DuplicateURI+`"} 0`) {
+	if !strings.Contains(out.String(), `margince_mcp_app_build_skew{uri="`+CreateFollowupsURI+`"} 0`) {
 		t.Fatalf("the skew gauge stayed raised after the rollout finished:\n%s", out.String())
 	}
 }
@@ -531,20 +531,20 @@ func TestAnUnknownStampOnEitherSideSkipsTheComparison(t *testing.T) {
 			buildinfo.Revision = tc.api
 
 			tier, p := newWebTier(t)
-			body := documentFor(DuplicateURI)
+			body := documentFor(CreateFollowupsURI)
 			if tc.document != "" {
 				body = stampedBrief(tc.document)
 			}
-			tier.answer(DuplicateURI, ok(body))
+			tier.answer(CreateFollowupsURI, ok(body))
 			if err := p.Prime(t.Context()); err != nil {
 				t.Fatalf("priming: %v", err)
 			}
-			if !p.Holds(DuplicateURI) {
+			if !p.Holds(CreateFollowupsURI) {
 				t.Fatal("an unknown revision took the view down")
 			}
 			var out strings.Builder
 			p.WriteMetrics(&out)
-			if !strings.Contains(out.String(), `margince_mcp_app_build_skew{uri="`+DuplicateURI+`"} 0`) {
+			if !strings.Contains(out.String(), `margince_mcp_app_build_skew{uri="`+CreateFollowupsURI+`"} 0`) {
 				t.Errorf("an unknown revision on one side raised the skew gauge:\n%s", out.String())
 			}
 		})
@@ -563,17 +563,17 @@ func TestPrimeWaitsForAnOriginThatIsStillStarting(t *testing.T) {
 	// yet" — without a sleep anywhere.
 	tier, p := newWebTier(t)
 	var attempts atomic.Int64
-	tier.answer(DuplicateURI, func(w http.ResponseWriter) {
+	tier.answer(CreateFollowupsURI, func(w http.ResponseWriter) {
 		if attempts.Add(1) <= 2 {
 			w.WriteHeader(http.StatusServiceUnavailable)
 			return
 		}
-		ok(documentFor(DuplicateURI))(w)
+		ok(documentFor(CreateFollowupsURI))(w)
 	})
 	if err := p.Prime(t.Context()); err != nil {
 		t.Fatalf("priming: %v", err)
 	}
-	if !p.Holds(DuplicateURI) {
+	if !p.Holds(CreateFollowupsURI) {
 		t.Fatal("a view whose origin was merely still starting was left permanently unadvertised")
 	}
 	if attempts.Load() < 3 {
@@ -592,7 +592,7 @@ func TestPrimeGivesUpAtItsDeadlineRatherThanBlockingBoot(t *testing.T) {
 	// here would make the healthy view's fetch race a stopwatch on a loaded
 	// machine.
 	var attempts atomic.Int64
-	tier.answer(DuplicateURI, func(w http.ResponseWriter) {
+	tier.answer(CreateFollowupsURI, func(w http.ResponseWriter) {
 		if attempts.Add(1) >= 2 {
 			cancel()
 		}
@@ -601,7 +601,7 @@ func TestPrimeGivesUpAtItsDeadlineRatherThanBlockingBoot(t *testing.T) {
 	if err := p.Prime(deadline); err != nil {
 		t.Fatalf("priming against a down origin answered an error; only an operator-fixable condition should: %v", err)
 	}
-	if p.Holds(DuplicateURI) {
+	if p.Holds(CreateFollowupsURI) {
 		t.Error("a view the origin never served is being served")
 	}
 	if !p.Holds(secondViewURI) {
@@ -617,14 +617,14 @@ func TestPrimeDoesNotReAskARefusalThatCannotChange(t *testing.T) {
 	// the app shell at the view's path, 200 and text/html, refused by admission.
 	tier, p := newWebTier(t)
 	var attempts atomic.Int64
-	tier.answer(DuplicateURI, func(w http.ResponseWriter) {
+	tier.answer(CreateFollowupsURI, func(w http.ResponseWriter) {
 		attempts.Add(1)
-		ok(documentFor(DuplicateURI) + `<script src="/assets/app.js"></script>`)(w)
+		ok(documentFor(CreateFollowupsURI) + `<script src="/assets/app.js"></script>`)(w)
 	})
 	if err := p.Prime(t.Context()); err != nil {
 		t.Fatalf("priming: %v", err)
 	}
-	if p.Holds(DuplicateURI) {
+	if p.Holds(CreateFollowupsURI) {
 		t.Fatal("a refused document is being served")
 	}
 	if attempts.Load() != 1 {
@@ -641,7 +641,7 @@ func TestAFailedRefreshSaysTheViewIsStillBeingServed(t *testing.T) {
 	}
 	var logged strings.Builder
 	p.log = slog.New(slog.NewTextHandler(&logged, &slog.HandlerOptions{Level: slog.LevelWarn}))
-	tier.answer(DuplicateURI, broken(http.StatusBadGateway))
+	tier.answer(CreateFollowupsURI, broken(http.StatusBadGateway))
 	p.Refresh(t.Context())
 	if strings.Contains(logged.String(), "is not being served") {
 		t.Errorf("a refresh failure was reported as an outage:\n%s", logged.String())
@@ -660,7 +660,7 @@ func TestAShutdownIsNotReportedAsAFailure(t *testing.T) {
 	}
 	var logged strings.Builder
 	p.log = slog.New(slog.NewTextHandler(&logged, &slog.HandlerOptions{Level: slog.LevelWarn}))
-	tier.answer(DuplicateURI, broken(http.StatusBadGateway))
+	tier.answer(CreateFollowupsURI, broken(http.StatusBadGateway))
 	stopping, cancel := context.WithCancel(t.Context())
 	cancel()
 	p.Refresh(stopping)
@@ -732,7 +732,7 @@ func TestTheBootWarningDoesNotNameAViewItIsServing(t *testing.T) {
 	if !strings.Contains(line, secondViewURI) {
 		t.Errorf("the warning does not name the view that is missing:\n%s", line)
 	}
-	if strings.Contains(line, DuplicateURI) {
+	if strings.Contains(line, CreateFollowupsURI) {
 		t.Errorf("the warning names a view that IS served, so a reader cannot tell which to chase:\n%s", line)
 	}
 }

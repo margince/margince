@@ -132,6 +132,9 @@ type createdRecord struct {
 	// which is the common case. Present and non-empty means a human has been
 	// asked about this record — see the warning that travels with it.
 	DuplicateCandidates []DuplicateCandidate `json:"duplicate_candidates,omitempty"`
+	// TagOffer is present only when the caller proposed a word with offer_tag
+	// and it can be offered. It records an offer; nothing was applied.
+	TagOffer *TagOffer `json:"tag_offer,omitempty"`
 }
 
 // reportDuplicates tells the caller what this create filed for review.

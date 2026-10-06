@@ -91,7 +91,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	approvalsSvc := decidingApprovalsService(pool, send, log)
 	registry := agents.NewRegistry(approvalsAdapter{svc: approvalsSvc}, gate, opts...)
 	agents.RegisterCoreTools(registry, provider, provider, provider, fieldOwnership{pool: pool}, newConsumerMailSeam(db),
-		openDuplicatesFor(pool))
+		openDuplicatesFor(pool), tagOfferSeam(pool))
 	agents.RegisterListTool(registry, provider, provider)
 	relinker, disqualifier, demoter, advancer := lifecycleSeams(pool)
 	agents.RegisterLifecycleTools(registry, provider, relinker, disqualifier, demoter, advancer)

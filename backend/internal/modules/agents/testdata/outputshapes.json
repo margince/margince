@@ -1874,6 +1874,29 @@
           "record_type": {
             "type": "string"
           },
+          "tag_offer": {
+            "type": "object",
+            "properties": {
+              "exists": {
+                "type": "boolean"
+              },
+              "may_create": {
+                "type": "boolean"
+              },
+              "name": {
+                "type": "string"
+              },
+              "tag_id": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            "required": [
+              "exists",
+              "may_create",
+              "name"
+            ]
+          },
           "trust_tier": {
             "type": "string"
           },

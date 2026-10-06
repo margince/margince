@@ -1,3 +1,11 @@
 {
-  "duplicate": ["merge_records", "decide_duplicate"]
+  "approval": ["decide_approval"],
+  "field-conflict": ["decide_approval", "update_record"],
+  "create-followups": [
+    "merge_records",
+    "decide_duplicate",
+    "apply_tag",
+    "create_tag",
+    "remove_tag"
+  ]
 }

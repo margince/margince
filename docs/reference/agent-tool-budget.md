@@ -57,7 +57,7 @@ spends it on every run of every agent.
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 5 | 5 of 82 | 1890 | 1288 | 3765 | 11% | 19445 | 0 | 5 |
 | `overnight_at_risk_sweep` | 7 | 7 of 82 | 2737 | 1814 | 5138 | 15% | 18072 | 7 | 6 |
-| _whole served catalog's listing, for scale; no run is offered it_ | 82 |  | 28888 |  |  | 88% |  |  |  |
+| _whole served catalog's listing, for scale; no run is offered it_ | 82 |  | 28965 |  |  | 88% |  |  |  |
 
 ### `morning_brief`
 
@@ -146,7 +146,7 @@ would replace it is sampling real runs for chosen-vs-wanted.
 
 ## What each tool costs, largest first
 
-Median 292 tokens, mean 351, across 82 served tools.
+Median 292 tokens, mean 352, across 82 served tools.
 
 Each row is one tool rendered alone, so the rows do not add up to the catalog total:
 every row carries its own rounding, and the catalog figure divides the whole rendered
@@ -163,9 +163,9 @@ listing once. Read a row as what that tool costs a menu.
 | `bulk_update_records` | 720 |  |
 | `read_lists` | 699 |  |
 | `log_activity` | 685 | 3 scenarios |
+| `create_record` | 663 |  |
 | `send_message` | 603 |  |
 | `change_lists` | 592 |  |
-| `create_record` | 586 |  |
 | `update_record` | 581 |  |
 | `forecast_readings` | 553 |  |
 | `query_workspace` | 530 |  |

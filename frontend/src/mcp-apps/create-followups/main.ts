@@ -1,9 +1,10 @@
-// The duplicate card: what create_record filed for review, with the choice the
+// The card create_record offers after a create: what it filed for review, and a
+// tag word it was asked to offer. Each panel draws only when the result carries
+// its decision, because the card is bound to the tool and every create reaches it.
+//
+// The duplicate panel is what create_record filed for review, with the choice the
 // create itself could not offer. Merge folds the new record into the one
 // already on file; "Not the same" tells the queue the pair is two contacts.
-//
-// A result with no candidate draws nothing, because the card is bound to the
-// tool and every create reaches it, filed or not.
 //
 // Each click calls a tool the host runs under the connected assistant's own
 // passport; the card shows what came back and never decides on its own what
@@ -26,9 +27,10 @@ import {
   asText,
   type Warning,
 } from "../types";
+import { tagOfferPanel } from "./tag-offer";
 import "../view.css";
 
-declareActions(actions.duplicate);
+declareActions(actions["create-followups"]);
 
 /** The record types merge_records folds; a lead has no merge. */
 const MERGEABLE = new Set(["contact", "company"]);
@@ -121,15 +123,19 @@ export function render(
 ): void {
   root.replaceChildren();
   const created = asRecord(data);
+  const again = () => render(root, data, warnings);
   const candidates = candidatesOf(created);
-  if (candidates.length === 0) return;
+  const tag = tagOfferPanel(root, created, again);
+  if (candidates.length === 0) {
+    if (tag !== null) root.appendChild(tag);
+    return;
+  }
   const recordType = asText(created.record_type);
   const createdID = asText(created.id);
   const name = nameOf(created);
   const outcomes = outcomesOf(root);
-  const again = () => render(root, data, warnings);
 
-  const card = panel("Possible duplicate", { level: "h1" });
+  const card = panel("Next steps for this record", { level: "h1" });
   for (const candidate of candidates) {
     const body = panelBody();
     body.append(
@@ -146,6 +152,7 @@ export function render(
     card.appendChild(body);
   }
   root.appendChild(card);
+  if (tag !== null) root.appendChild(tag);
 }
 
 function choices(

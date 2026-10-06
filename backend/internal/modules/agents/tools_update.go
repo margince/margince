@@ -13,6 +13,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/margince/margince/backend/internal/modules/agents/apps"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -61,6 +62,10 @@ func (t updateRecord) Spec() mcp.ToolSpec {
 			"additionalProperties":false}`),
 		UnkeyedArguments: recordFieldsUnkeyed(),
 		OutputSchema:     schemaFor[UpdateWithStagedApprovalResult](),
+		// Both audiences: the card redeems an approved overwrite by sending this
+		// tool the replay the result carried, which is why apps/actions.json
+		// names it for the field-conflict view.
+		UI: &mcp.ToolUI{ResourceURI: apps.FieldConflictURI},
 	}
 }
 

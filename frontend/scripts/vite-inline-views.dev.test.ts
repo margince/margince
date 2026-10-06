@@ -65,13 +65,13 @@ afterAll(async () => {
 });
 
 it("serves a document the admission check would accept", async () => {
-  const res = await fetch(`${base}/mcp-apps/duplicate.html`);
+  const res = await fetch(`${base}/mcp-apps/create-followups.html`);
   expect(res.status).toBe(200);
   expect(res.headers.get("content-type")).toMatch(/text\/html/);
   const doc = await res.text();
-  expect(validateDocument(doc, actions.duplicate)).toEqual([]);
+  expect(validateDocument(doc, actions["create-followups"])).toEqual([]);
   expect(inspectDocument(doc)).toEqual([]);
-  expect(doc).toContain("<title>Possible duplicate</title>");
+  expect(doc).toContain("<title>Next steps for this record</title>");
   expect(doc).toContain("SPDX-License-Identifier: BUSL-1.1");
 }, 30_000);
 
@@ -111,7 +111,7 @@ it("lets a second server stand beside the first", async () => {
     await second.listen();
     const other = servedAt(second);
     expect(other).not.toBe(base);
-    const res = await fetch(`${other}/mcp-apps/duplicate.html`);
+    const res = await fetch(`${other}/mcp-apps/create-followups.html`);
     expect(res.status).toBe(200);
   } finally {
     await second.close();

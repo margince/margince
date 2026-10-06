@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { duplicateFixture } from "./fixture";
+import { createFollowupsFixture } from "./fixture";
 
 const calls: { tool: string; args: Record<string, unknown> }[] = [];
 const asked: string[] = [];
@@ -28,7 +28,7 @@ vi.mock("../actions", () => ({
 
 const { render } = await import("./main");
 
-function mount(data: unknown = duplicateFixture.data): HTMLElement {
+function mount(data: unknown = createFollowupsFixture.data): HTMLElement {
   const root = document.createElement("main");
   document.body.replaceChildren(root);
   render(root, data, []);
@@ -97,7 +97,7 @@ describe("the duplicate card", () => {
       "Merged into the record already on file.",
     );
     expect(labels(root)).toEqual([]);
-    render(root, duplicateFixture.data, []);
+    render(root, createFollowupsFixture.data, []);
     expect(root.textContent).toContain(
       "Merged into the record already on file.",
     );
@@ -137,7 +137,7 @@ describe("the duplicate card", () => {
 
   it("offers no merge for a record type that has none", () => {
     const root = mount({
-      ...(duplicateFixture.data as object),
+      ...(createFollowupsFixture.data as object),
       record_type: "lead",
     });
     expect(labels(root)).toEqual(["Not the same"]);
@@ -150,5 +150,87 @@ describe("the duplicate card", () => {
     await press(root, "Ask the assistant to decide");
     expect(calls).toHaveLength(0);
     expect(asked[0]).toContain("0195c3a0-0000-7000-8000-000000000002");
+  });
+});
+
+describe("the tag offer", () => {
+  const withOffer = (offer: object, recordType = "contact") => ({
+    ...(createFollowupsFixture.data as object),
+    record_type: recordType,
+    duplicate_candidates: [],
+    tag_offer: offer,
+  });
+  const existing = {
+    name: "K5 Conference 2026",
+    tag_id: "0195c3a0-0000-7000-8000-0000000000e1",
+    exists: true,
+    may_create: false,
+  };
+
+  it("draws no panel when the create carried no offer", () => {
+    const root = mount({ record_type: "contact", id: "x", fields: {} });
+    expect(root.childElementCount).toBe(0);
+  });
+
+  it("applies an existing word by its id, and offers an undo that takes it off", async () => {
+    const root = mount(withOffer(existing));
+    expect(labels(root)).toEqual(["Tag it", "No thanks"]);
+    await press(root, "Tag it");
+    expect(calls).toEqual([
+      {
+        tool: "apply_tag",
+        args: {
+          record_type: "contact",
+          record_id: "0195c3a0-0000-7000-8000-000000000002",
+          tag_id: existing.tag_id,
+        },
+      },
+    ]);
+    expect(root.textContent).toContain("Tagged “K5 Conference 2026”.");
+    await press(root, "Undo");
+    expect(calls[1].tool).toBe("remove_tag");
+    expect(root.textContent).toContain("Not tagged.");
+  });
+
+  it("coins a new word first when the seat may, and applies it by name", async () => {
+    const root = mount(
+      withOffer({ name: "Fair", exists: false, may_create: true }),
+    );
+    expect(labels(root)).toEqual(["Add the tag and tag it", "No thanks"]);
+    await press(root, "Add the tag and tag it");
+    expect(calls.map((c) => c.tool)).toEqual(["create_tag", "apply_tag"]);
+    expect(calls[0].args).toEqual({ name: "Fair" });
+    expect(calls[1].args.tag_name).toBe("Fair");
+  });
+
+  it("offers no button for a word the seat cannot add", () => {
+    const root = mount(
+      withOffer({ name: "Fair", exists: false, may_create: false }),
+    );
+    expect(labels(root)).toEqual([]);
+    expect(root.querySelector(".refusal")?.textContent).toContain(
+      "cannot add one",
+    );
+  });
+
+  it("declining makes no call", async () => {
+    const root = mount(withOffer(existing));
+    await press(root, "No thanks");
+    expect(calls).toHaveLength(0);
+    expect(root.textContent).toContain("Not tagged.");
+  });
+
+  it("says why when the tag could not be applied", async () => {
+    answer = { ok: false, reason: "That tag was archived." };
+    const root = mount(withOffer(existing));
+    await press(root, "Tag it");
+    expect(root.querySelector(".refusal")?.textContent).toBe(
+      "That tag was archived.",
+    );
+    expect(labels(root)).toEqual(["Tag it", "No thanks"]);
+  });
+
+  it("is not drawn for a record type a tag cannot sit on", () => {
+    expect(mount(withOffer(existing, "activity")).childElementCount).toBe(0);
   });
 });

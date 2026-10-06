@@ -63,10 +63,10 @@ type StageResolver interface {
 // Every verb the contract declares with `x-mcp-tool` is registered by one of
 // those functions. A declared verb with no tool is not a gap to describe here:
 // TestEveryDeclaredToolVerbIsRegistered fails the build for it.
-func RegisterCoreTools(r *Registry, p datasource.SystemOfRecordProvider, stages StageResolver, promoter LeadPromoter, ownership FieldOwnership, consumerMail ConsumerMail, duplicates OpenDuplicatesFor) {
+func RegisterCoreTools(r *Registry, p datasource.SystemOfRecordProvider, stages StageResolver, promoter LeadPromoter, ownership FieldOwnership, consumerMail ConsumerMail, duplicates OpenDuplicatesFor, tagOffer TagOfferFor) {
 	r.Register(searchRecords{p: p, name: r.seats})
 	r.Register(readRecord{p: p, name: r.seats})
-	r.Register(createRecord{p: p, duplicates: duplicates, language: r.language})
+	r.Register(createRecord{p: p, duplicates: duplicates, tagOffer: tagOffer, language: r.language})
 	r.Register(updateRecord{p: p, ownership: ownership, staging: r.approvals, language: r.language})
 	r.Register(logActivity{p: p})
 	r.Register(createTask{p: p})
@@ -248,7 +248,10 @@ type createRecord struct {
 	// failing: silence is what this surface did before, so it is the safe
 	// degradation.
 	duplicates OpenDuplicatesFor
-	language   baselanguage.Resolver
+	// tagOffer says what accepting a proposed tag word would take. Nil where no
+	// vocabulary is bound, and a nil seam offers nothing.
+	tagOffer TagOfferFor
+	language baselanguage.Resolver
 }
 
 func (t createRecord) Spec() mcp.ToolSpec {
@@ -261,6 +264,7 @@ func (t createRecord) Spec() mcp.ToolSpec {
 		InputSchema: schema(`{"type":"object","required":["record_type","fields"],"properties":{
 			"record_type":{"type":"string","enum":["contact","company","deal","lead","activity","project","relationship"]},
 			"fields":{"type":"object","description":` + jsonString(recordFieldsDescription) + `},
+			"offer_tag":{"type":"string","description":"A tag word the user said fits this record, such as the event they met at. It offers the tag to the user and applies nothing."},
 			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
 			"additionalProperties":false}`),
 		UnkeyedArguments: recordFieldsUnkeyed(),
@@ -269,7 +273,7 @@ func (t createRecord) Spec() mcp.ToolSpec {
 		// the card is the second renderer of an answer the text already gives.
 		// Model-only: a view acts through the tools apps/actions.json names,
 		// and creating a record is not one of them.
-		UI: &mcp.ToolUI{ResourceURI: apps.DuplicateURI, Visibility: []string{mcp.VisibilityModel}},
+		UI: &mcp.ToolUI{ResourceURI: apps.CreateFollowupsURI, Visibility: []string{mcp.VisibilityModel}},
 	}
 }
 
@@ -277,6 +281,7 @@ func (t createRecord) Handle(ctx context.Context, in json.RawMessage) (json.RawM
 	var args struct {
 		RecordType string          `json:"record_type"`
 		Fields     json.RawMessage `json:"fields"`
+		OfferTag   string          `json:"offer_tag"`
 	}
 	if err := decodeArgs(in, &args); err != nil {
 		return nil, err
@@ -299,6 +304,7 @@ func (t createRecord) Handle(ctx context.Context, in json.RawMessage) (json.RawM
 	return marshalResult(createdRecord{
 		wireRecord:          rec,
 		DuplicateCandidates: t.reportDuplicates(ctx, args.RecordType, ref.ID),
+		TagOffer:            t.offerTag(ctx, args.OfferTag),
 	}, nil)
 }
 

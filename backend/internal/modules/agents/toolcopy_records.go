@@ -63,7 +63,9 @@ var createRecordCopy = toolCopy{
 		"until the reviewer decides. Several contacts, companies or leads at once — a pasted list, " +
 		"a CSV — go through preview_import, which checks " +
 		"every row and writes nothing; creating them one by one skips that check.",
-	Retain: "The new record's id comes back in the result; keep it for anything that links to it.",
+	Retain: "The new record's id comes back in the result; keep it for anything that links to it. " +
+		"When the user says where they met the contact, pass that word as offer_tag: it only offers " +
+		"the tag, and apply_tag still needs their yes.",
 }
 
 var updateRecordCopy = toolCopy{

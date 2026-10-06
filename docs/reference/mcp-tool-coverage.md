@@ -383,8 +383,8 @@ Driven, and not every run passed. Open the case to see what was asked.
 | `bulk_update_records` | 0.67 | 2/3 | - | `case47_tidy_the_fair_list` |
 | `read_lists` | 0.67 | 2/3 | - | `case47_tidy_the_fair_list` |
 | `log_activity` | 0.67 | 4/6 | - | `case1_log_it`, `case42_can_i_answer_on_whatsapp` |
-| `change_lists` | 0.67 | 2/3 | - | `case47_tidy_the_fair_list` |
 | `create_record` | 0.83 | 5/6 | - | `case1_log_it`, `case2_business_card` |
+| `change_lists` | 0.67 | 2/3 | - | `case47_tidy_the_fair_list` |
 | `search_context` | 0.67 | 2/3 | - | `case6_ask_the_company` |
 | `demote_lead` | 0.67 | 2/3 | - | `case47_tidy_the_fair_list` |
 | `list_channel_providers` | 0.67 | 2/3 | - | `case42_can_i_answer_on_whatsapp` |

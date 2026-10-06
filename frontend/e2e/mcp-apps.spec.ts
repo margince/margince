@@ -18,7 +18,35 @@ import { expect, test } from "@playwright/test";
 // rendering a populated list may still fetch something on the empty state, on a
 // warning, on a malformed payload, or when the host changes the theme.
 
-const VIEWS = [{ file: "duplicate" }] as const;
+const APPROVAL = {
+  staged_action_id: "0195c3a0-0000-7000-8000-0000000000b1",
+  kind: "advance_deal",
+  status: "pending",
+  summary: "Move Acme renewal to Negotiation",
+  proposed_by: "agent:claude",
+  proposed_change: { stage: "Negotiation" },
+};
+
+const HELD = {
+  record_type: "contact",
+  id: "0195c3a0-0000-7000-8000-000000000003",
+  fields: { job_title: "Head of Sales" },
+  staged_approval: {
+    approval_id: "0195c3a0-0000-7000-8000-0000000000c1",
+    fields: ["job_title"],
+    replay: {
+      record_type: "contact",
+      id: "0195c3a0-0000-7000-8000-000000000003",
+      fields: { job_title: "VP Sales" },
+    },
+  },
+};
+
+const VIEWS = [
+  { file: "create-followups", populated: () => FILED },
+  { file: "approval", populated: () => APPROVAL },
+  { file: "field-conflict", populated: () => HELD },
+] as const;
 
 const FILED = {
   record_type: "contact",
@@ -41,9 +69,8 @@ const FILED = {
 };
 
 /** The five payload/host states each view is driven through. */
-function states() {
-  const populated = FILED;
-  const empty = { record_type: "contact", id: "x", fields: {} };
+function states(populated: unknown) {
+  const empty = { record_type: "contact", id: "x", fields: {}, approvals: [] };
   return [
     { name: "populated", data: populated, warnings: [], theme: "light" },
     { name: "empty", data: empty, warnings: [], theme: "light" },
@@ -84,7 +111,7 @@ for (const view of VIEWS) {
     );
     const before = requests.length;
 
-    for (const state of states()) {
+    for (const state of states(view.populated())) {
       await page.evaluate(
         async ({ html, state }) => {
           const frame = document.getElementById("view") as HTMLIFrameElement;
@@ -172,7 +199,7 @@ for (const view of VIEWS) {
 test("the duplicate card asks its host for exactly the tools it declares and reaches no network", async ({
   browser,
 }) => {
-  const html = await readFile("dist/mcp-apps/duplicate.html", "utf8");
+  const html = await readFile("dist/mcp-apps/create-followups.html", "utf8");
   const context = await browser.newContext({ serviceWorkers: "block" });
   const requests: string[] = [];
   context.on("request", (r) => requests.push(r.url()));

@@ -12,10 +12,10 @@ receives it. This page is rendered from that file.
 | | |
 |---|---:|
 | Tools | 82 |
-| Resources | 7 |
-| Tool catalog | 250.7 KB |
-| Resource catalog | 2.7 KB |
-| Approx. wire tokens | 64858 |
+| Resources | 9 |
+| Tool catalog | 251.2 KB |
+| Resource catalog | 3.5 KB |
+| Approx. wire tokens | 65185 |
 | Largest tool | `prep_for_meeting` (9.1 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,18 +29,18 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 109.3 KB | 43% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 65.2 KB | 26% | Yes, every step |
-| Input schemas | 56.3 KB | 22% | Yes, every step |
-| _Names, annotations, punctuation_ | 19.9 KB | 7% | Partly |
-| **Description + input schema** | **121.5 KB** | **48%** | **the recurring cost** |
+| Output schemas | 109.5 KB | 43% | **No**: a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 65.3 KB | 26% | Yes, every step |
+| Input schemas | 56.5 KB | 22% | Yes, every step |
+| _Names, annotations, punctuation_ | 19.8 KB | 7% | Partly |
+| **Description + input schema** | **121.8 KB** | **48%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
 
 ## Index
 
-### Resources (7)
+### Resources (9)
 
 - [`margince://capabilities`](#capabilities): What this installation can do
 - [`margince://schema/query`](#query_vocabulary): Workspace query vocabulary
@@ -48,7 +48,9 @@ descriptions and input schemas are what each step pays for.
 - [`margince://schema/reports`](#report_vocabulary): Report plan vocabulary
 - [`margince://schema/report-blocks`](#report_blocks): Report block grammar
 - [`margince://schema/analytics`](#analytics-schema): Analytics query vocabulary
-- [`ui://margince/duplicate.html`](#duplicate_view): Possible duplicate
+- [`ui://margince/create-followups.html`](#create_followups_view): Next steps for this record
+- [`ui://margince/approval.html`](#approval_view): Waiting for a decision
+- [`ui://margince/field-conflict.html`](#field_conflict_view): Edited by hand
 
 ### Tools (82)
 
@@ -57,7 +59,7 @@ descriptions and input schemas are what each step pays for.
 | [`advance_deal`](#advance_deal) | Advance a deal to a stage |  | [``](#_view) | 3.1 KB |
 | [`advance_project_phase`](#advance_project_phase) | Move a project to a phase |  | [``](#_view) | 2.8 KB |
 | [`annotate_brief`](#annotate_brief) | Write findings onto the morning brief |  | [``](#_view) | 2.9 KB |
-| [`apply_tag`](#apply_tag) | Apply a tag to a record |  | [``](#_view) | 2.2 KB |
+| [`apply_tag`](#apply_tag) | Apply a tag to a record |  |  | 2.2 KB |
 | [`archive_record`](#archive_record) | Archive a record |  | [``](#_view) | 2.4 KB |
 | [`at_risk_relationships`](#at_risk_relationships) | Relationships going cold | yes | [``](#_view) | 2.7 KB |
 | [`book_meeting`](#book_meeting) | Book a meeting |  | [``](#_view) | 2.5 KB |
@@ -68,11 +70,11 @@ descriptions and input schemas are what each step pays for.
 | [`commit_import`](#commit_import) | Commit an import |  | [``](#_view) | 2.2 KB |
 | [`company_coverage`](#company_coverage) | Relationship coverage on a deal | yes | [``](#_view) | 3.2 KB |
 | [`compose_analytics_report`](#compose_analytics_report) | Compose an analytics report | yes | [``](#_view) | 4.2 KB |
-| [`create_record`](#create_record) | Create a record |  | [`ui://margince/duplicate.html`](#duplicate_view) | 4.1 KB |
-| [`create_tag`](#create_tag) | Create a tag |  | [``](#_view) | 2.0 KB |
+| [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 4.6 KB |
+| [`create_tag`](#create_tag) | Create a tag |  |  | 1.9 KB |
 | [`create_task`](#create_task) | Create a task |  | [``](#_view) | 2.2 KB |
 | [`data_coverage`](#data_coverage) | How current the sources are | yes | [``](#_view) | 2.1 KB |
-| [`decide_approval`](#decide_approval) | Approve or reject one staged action |  | [``](#_view) | 3.2 KB |
+| [`decide_approval`](#decide_approval) | Approve or reject one staged action |  |  | 3.2 KB |
 | [`decide_approval_bundle`](#decide_approval_bundle) | Approve or reject one act's proposals together |  | [``](#_view) | 3.0 KB |
 | [`decide_duplicate`](#decide_duplicate) | Decide a flagged duplicate pair |  |  | 2.0 KB |
 | [`demote_lead`](#demote_lead) | Reverse a lead promotion |  | [``](#_view) | 2.4 KB |
@@ -109,7 +111,7 @@ descriptions and input schemas are what each step pays for.
 | [`promote_lead`](#promote_lead) | Promote a lead to a contact |  | [``](#_view) | 2.6 KB |
 | [`qualify_lead`](#qualify_lead) | Qualify a lead |  | [``](#_view) | 2.4 KB |
 | [`query_workspace`](#query_workspace) | Query the workspace | yes | [``](#_view) | 4.2 KB |
-| [`read_approval`](#read_approval) | Read one staged action in full | yes | [``](#_view) | 2.4 KB |
+| [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 2.4 KB |
 | [`read_brief`](#read_brief) | Read the morning brief | yes | [``](#_view) | 3.2 KB |
 | [`read_import_report`](#read_import_report) | Read an import report | yes | [``](#_view) | 3.0 KB |
 | [`read_import_run`](#read_import_run) | Read an import run | yes | [``](#_view) | 1.5 KB |
@@ -120,7 +122,7 @@ descriptions and input schemas are what each step pays for.
 | [`relink_activities`](#relink_activities) | Re-associate a set of activities to a record |  | [``](#_view) | 2.3 KB |
 | [`relink_activity`](#relink_activity) | Re-associate an activity to a record |  | [``](#_view) | 2.5 KB |
 | [`relink_thread`](#relink_thread) | Re-associate a whole conversation to a record |  | [``](#_view) | 2.2 KB |
-| [`remove_tag`](#remove_tag) | Take a tag off a record |  | [``](#_view) | 2.0 KB |
+| [`remove_tag`](#remove_tag) | Take a tag off a record |  |  | 1.9 KB |
 | [`resolve_entities`](#resolve_entities) | Resolve contacts and companies | yes | [``](#_view) | 3.6 KB |
 | [`review_commitments`](#review_commitments) | Review open commitments | yes | [``](#_view) | 3.4 KB |
 | [`run_analytics_query`](#run_analytics_query) | Run an analytics query | yes | [``](#_view) | 3.4 KB |
@@ -131,10 +133,10 @@ descriptions and input schemas are what each step pays for.
 | [`send_company_email`](#send_company_email) | Start an email conversation from a record |  | [``](#_view) | 4.6 KB |
 | [`send_email`](#send_email) | Send an email |  | [``](#_view) | 4.3 KB |
 | [`send_message`](#send_message) | Reply on a channel conversation |  | [``](#_view) | 3.6 KB |
-| [`update_record`](#update_record) | Update a record |  | [``](#_view) | 3.8 KB |
+| [`update_record`](#update_record) | Update a record |  | [`ui://margince/field-conflict.html`](#field_conflict_view) | 3.9 KB |
 | [`update_tag`](#update_tag) | Rename or recolour a tag |  | [``](#_view) | 2.1 KB |
 | [`whats_slipping_this_week`](#whats_slipping_this_week) | What's slipping this week | yes | [``](#_view) | 2.3 KB |
-| [`who_knows`](#who_knows) | Possible duplicate | yes | [``](#_view) | 2.2 KB |
+| [`who_knows`](#who_knows) | Next steps for this record | yes | [``](#_view) | 2.2 KB |
 | [`whoami`](#whoami) | Who this passport acts for | yes | [``](#_view) | 1.8 KB |
 
 ## Resources
@@ -213,15 +215,72 @@ The populations a run_analytics_query plan may name, each with its group_by dime
 measures, derived for this seat. run_analytics_query names this document instead of carrying it.
 ```
 
-### duplicate_view
+### create_followups_view
 
-`ui://margince/duplicate.html` · text/html;profile=mcp-app
+`ui://margince/create-followups.html` · text/html;profile=mcp-app
 
-**Possible duplicate**
+**Next steps for this record**
 
 ```text
-A record that looks like one already on file, with the values that matched and the choice to merge
-them or keep them apart.
+What a new record leaves to decide: a possible duplicate with the choice to merge it or keep it
+apart, and a tag word offered for it.
+```
+
+<details><summary>Sandbox policy (<code>_meta.ui</code>)</summary>
+
+```json
+{
+  "ui": {
+    "csp": {
+      "baseUriDomains": [],
+      "connectDomains": [],
+      "frameDomains": [],
+      "resourceDomains": []
+    },
+    "prefersBorder": true
+  }
+}
+```
+
+</details>
+
+### approval_view
+
+`ui://margince/approval.html` · text/html;profile=mcp-app
+
+**Waiting for a decision**
+
+```text
+A change an assistant proposed, what it would do, and the choice to approve or reject it.
+```
+
+<details><summary>Sandbox policy (<code>_meta.ui</code>)</summary>
+
+```json
+{
+  "ui": {
+    "csp": {
+      "baseUriDomains": [],
+      "connectDomains": [],
+      "frameDomains": [],
+      "resourceDomains": []
+    },
+    "prefersBorder": true
+  }
+}
+```
+
+</details>
+
+### field_conflict_view
+
+`ui://margince/field-conflict.html` · text/html;profile=mcp-app
+
+**Edited by hand**
+
+```text
+Fields last edited by hand that an update would overwrite, with the value on the record beside the
+one proposed and the choice to keep or replace it.
 ```
 
 <details><summary>Sandbox policy (<code>_meta.ui</code>)</summary>
@@ -787,8 +846,6 @@ or ops seat can add a word to the vocabulary. A name matches case-insensitively;
 refused as archived rather than as unknown. Prefer a tag_id from list_tags. The same tag twice is a
 conflict. (Governance: runs immediately; requires passport scope "write".)
 ```
-
-Renders its result in [``](#_view), visible to `model`.
 
 <details><summary>Input schema</summary>
 
@@ -3366,11 +3423,12 @@ phone or employer, is not proof of a duplicate: create it — the create files t
 and you report the pair as filed, unresolved until the reviewer decides. Several contacts, companies
 or leads at once — a pasted list, a CSV — go through preview_import, which checks every row and
 writes nothing; creating them one by one skips that check. The new record's id comes back in the
-result; keep it for anything that links to it. (Governance: runs immediately; requires passport
-scope "write".)
+result; keep it for anything that links to it. When the user says where they met the contact, pass
+that word as offer_tag: it only offers the tag, and apply_tag still needs their yes. (Governance:
+runs immediately; requires passport scope "write".)
 ```
 
-Renders its result in [`ui://margince/duplicate.html`](#duplicate_view), visible to `model`.
+Renders its result in [`ui://margince/create-followups.html`](#create_followups_view), visible to `model`.
 
 <details><summary>Input schema</summary>
 
@@ -3390,6 +3448,10 @@ Renders its result in [`ui://margince/duplicate.html`](#duplicate_view), visible
     "idempotency_key": {
       "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
+      "type": "string"
+    },
+    "offer_tag": {
+      "description": "A tag word the user said fits this record, such as the event they met at. It offers the tag to the user and applies nothing.",
       "type": "string"
     },
     "record_type": {
@@ -3480,6 +3542,29 @@ Renders its result in [`ui://margince/duplicate.html`](#duplicate_view), visible
         },
         "record_type": {
           "type": "string"
+        },
+        "tag_offer": {
+          "properties": {
+            "exists": {
+              "type": "boolean"
+            },
+            "may_create": {
+              "type": "boolean"
+            },
+            "name": {
+              "type": "string"
+            },
+            "tag_id": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          "required": [
+            "exists",
+            "may_create",
+            "name"
+          ],
+          "type": "object"
         },
         "trust_tier": {
           "type": "string"
@@ -3589,8 +3674,6 @@ including a RETIRED word holding it, which a contact restores in Settings; no to
 tag.create grant, which an ordinary seat does not hold. (Governance: runs immediately; requires
 passport scope "write".)
 ```
-
-Renders its result in [``](#_view), visible to `model`.
 
 <details><summary>Input schema</summary>
 
@@ -4098,8 +4181,6 @@ when they have not seen what it holds; decide_approval_bundle for every proposal
 the proposal is your OWN refused call, approving does not perform it — re-issue that same call
 with approval_id set. (Governance: runs immediately; requires passport scope "write".)
 ```
-
-Renders its result in [``](#_view), visible to `model`.
 
 <details><summary>Input schema</summary>
 
@@ -11759,7 +11840,7 @@ does. list_approvals yields the id; decide_approval answers it. Keep the staged_
 bundle_id if the item names one. (Governance: runs immediately; requires passport scope "read".)
 ```
 
-Renders its result in [``](#_view), visible to `model`.
+Renders its result in [`ui://margince/approval.html`](#approval_view), visible to `model`.
 
 <details><summary>Input schema</summary>
 
@@ -14511,8 +14592,6 @@ is not there succeeds. archive_record on a tag retires it for all. (Governance: 
 requires passport scope "write".)
 ```
 
-Renders its result in [``](#_view), visible to `model`.
-
 <details><summary>Input schema</summary>
 
 ```json
@@ -17132,7 +17211,7 @@ same change once a human has released it. (Governance: runs immediately; require
 "write".)
 ```
 
-Renders its result in [``](#_view), visible to `model`.
+Renders its result in [`ui://margince/field-conflict.html`](#field_conflict_view), visible to `model`, `app`.
 
 <details><summary>Input schema</summary>
 
@@ -17678,7 +17757,7 @@ Renders its result in [``](#_view), visible to `model`.
 
 ### who_knows
 
-**Possible duplicate**
+**Next steps for this record**
 
 ```text
 Answer "who here knows this contact?": the colleagues with a relationship to one contact, warmest

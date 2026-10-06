@@ -39,11 +39,19 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
-// DuplicateURI is the card create_record offers when a create filed a pair for
-// review. It is exported so the tool's declaration and the document that
+// CreateFollowupsURI is the card create_record offers after a create: the pair it
+// filed for review, and a tag word it was asked to offer. It is exported so the tool's declaration and the document that
 // answers it read the same constant; the composed-surface sweep proves every URI
 // a tool names is published.
-const DuplicateURI = "ui://margince/duplicate.html"
+const CreateFollowupsURI = "ui://margince/create-followups.html"
+
+// ApprovalURI is the card read_approval offers: one proposal a human has to
+// release, with Approve and Reject beside it.
+const ApprovalURI = "ui://margince/approval.html"
+
+// FieldConflictURI is the card update_record offers when part of a patch was
+// held because those fields were last edited by hand.
+const FieldConflictURI = "ui://margince/field-conflict.html"
 
 // view is one published document's identity. The document itself is not here:
 // it is fetched, admitted and held at run time, so this is the half that is a
@@ -60,10 +68,22 @@ type view struct {
 // is derived from the URI rather than listed beside it.
 var catalog = []view{
 	{
-		uri:         DuplicateURI,
-		name:        "duplicate_view",
-		title:       "Possible duplicate",
-		description: "A record that looks like one already on file, with the values that matched and the choice to merge them or keep them apart.",
+		uri:         CreateFollowupsURI,
+		name:        "create_followups_view",
+		title:       "Next steps for this record",
+		description: "What a new record leaves to decide: a possible duplicate with the choice to merge it or keep it apart, and a tag word offered for it.",
+	},
+	{
+		uri:         ApprovalURI,
+		name:        "approval_view",
+		title:       "Waiting for a decision",
+		description: "A change an assistant proposed, what it would do, and the choice to approve or reject it.",
+	},
+	{
+		uri:         FieldConflictURI,
+		name:        "field_conflict_view",
+		title:       "Edited by hand",
+		description: "Fields last edited by hand that an update would overwrite, with the value on the record beside the one proposed and the choice to keep or replace it.",
 	},
 }
 

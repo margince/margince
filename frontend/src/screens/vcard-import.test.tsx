@@ -96,7 +96,7 @@ describe("VCardImport", () => {
     expect(screen.getByText("Grace Hopper")).toBeInTheDocument();
     // The card written nowhere is the one a reader must act on, so it says so
     // rather than sitting silently under a success message.
-    expect(screen.getByText("Possible duplicate")).toBeInTheDocument();
+    expect(screen.getByText("Next steps for this record")).toBeInTheDocument();
     // A skipped card names its reason, or nobody can tell who is missing.
     expect(
       screen.getByText("the card carried no usable name"),

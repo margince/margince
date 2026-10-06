@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 82,
     "system_frame_tokens": 586,
-    "tokens": 28888,
+    "tokens": 28965,
     "median_tool_tokens": 292,
-    "mean_tool_tokens": 351
+    "mean_tool_tokens": 352
   },
   "agents": [
     {
@@ -123,16 +123,16 @@
       "tokens": 685
     },
     {
+      "name": "create_record",
+      "tokens": 663
+    },
+    {
       "name": "send_message",
       "tokens": 603
     },
     {
       "name": "change_lists",
       "tokens": 592
-    },
-    {
-      "name": "create_record",
-      "tokens": 586
     },
     {
       "name": "update_record",
