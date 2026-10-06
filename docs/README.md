@@ -22,8 +22,7 @@ web app parts is in
 [frontend/src/design-system/README.md](../frontend/src/design-system/README.md).
 
 **New to the backend?** Start with [tutorials/getting-started.md](tutorials/getting-started.md), then
-[explanation/backend-onboarding.md](explanation/backend-onboarding.md). That page maps the code and
-links every page below.
+follow the [reading order](#reading-order-for-a-new-developer) below.
 
 ## Map
 
