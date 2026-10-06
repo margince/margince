@@ -55,6 +55,15 @@ export const RECORD_KINDS: Readonly<Record<BulkRecordType, RecordKind>> = {
     done: "bulk.doneLeads",
     undone: "bulk.undoneLeads",
   },
+  // A task or a promise on the Worklist. The task's own reads sit under
+  // ["activity", id], and the Worklist under its own key.
+  worklist_item: {
+    list: "worklist",
+    record: "activity",
+    unit: "unit.worklistItems",
+    done: "bulk.doneWorklistItems",
+    undone: "bulk.undoneWorklistItems",
+  },
 };
 
 export function isListVerb(verb: BulkVerb): boolean {
@@ -81,8 +90,11 @@ const SKIP_REASONS: Readonly<Record<BulkSkipReason, MessageKey>> = {
 };
 
 // `no_change` means what the verb could not change: the owner, the Shortlist
-// membership or the tag was already as asked.
+// membership, the tag or the done state was already as asked.
 function noChangeReason(verb: BulkVerb): MessageKey {
+  if (verb === "complete") {
+    return "bulk.reason.no_change_done";
+  }
   if (isListVerb(verb)) {
     return "bulk.reason.no_change_list";
   }
@@ -151,6 +163,11 @@ export function SampleState({
       </span>
     );
   }
+  if (verb === "complete") {
+    return (
+      <span>{state.done ? t("bulk.stateDone") : t("bulk.stateOpen")}</span>
+    );
+  }
   return state.archived ? (
     <Badge tone="warning">{t("record.archived")}</Badge>
   ) : (
@@ -164,7 +181,8 @@ type DialogWords = Readonly<{
   danger: boolean;
 }>;
 
-// The words of a verb that writes beside the record: a Shortlist, a tag, a task.
+// The words of a verb that writes beside the record — a Shortlist, a tag, a
+// task — or marks a Worklist item done.
 function besideWords(
   request: BulkChangeRequest,
   unit: string,
@@ -201,6 +219,12 @@ function besideWords(
       return {
         title: t("bulk.titleCreateTask", { unit }),
         confirm: t("bulk.confirmCreateTask"),
+        danger: false,
+      };
+    case "complete":
+      return {
+        title: t("bulk.titleComplete", { unit }),
+        confirm: t("bulk.confirmComplete"),
         danger: false,
       };
     default:

@@ -5,7 +5,12 @@ import { formatMoney, formatNumber, ordinalNumber } from "../format/format";
 import { useLocale } from "../i18n";
 import { Badge, Button } from "./atoms";
 import type { ListChip } from "./listsurface";
-import { CellStrip, type ListColumn, ListTable } from "./listtable";
+import {
+  CellStrip,
+  type ListColumn,
+  ListTable,
+  SelectionBar,
+} from "./listtable";
 
 // The list surface every record screen renders into: header, controls, rows and
 // footer as one block. The query dials are CONTROLLED and server-backed in the
@@ -392,6 +397,18 @@ function SelectableSurface() {
 
 export const Selectable: Story = {
   render: () => <SelectableSurface />,
+};
+
+// The same bar over a list that is not a table: the count and the verbs, in
+// the box the table draws over its grid.
+export const SelectionBarAlone: Story = {
+  render: () => (
+    <SelectionBar>
+      <span className="t-caption">3 selected</span>
+      <Button>Clear selection</Button>
+      <Button variant="primary">Mark done</Button>
+    </SelectionBar>
+  ),
 };
 
 // The state the settings tree put this surface in, and the one it read as

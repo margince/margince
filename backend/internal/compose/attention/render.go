@@ -406,6 +406,7 @@ func commitmentItem(promise Commitment, asOf time.Time) crmcontracts.AttentionIt
 	body := promise.Body
 	quote := promise.Quote
 	due := promise.DueAt
+	version := promise.Version
 	past := deadline.Passed(&due, asOf)
 	item := crmcontracts.AttentionItem{
 		Id:      promise.ID.String(),
@@ -415,6 +416,7 @@ func commitmentItem(promise Commitment, asOf time.Time) crmcontracts.AttentionIt
 		Subject: subjectOf("contact", promise.ContactID),
 		DueAt:   &due,
 		Overdue: &past,
+		Version: &version,
 		Actions: []crmcontracts.AttentionItemActions{
 			crmcontracts.AttentionItemActionsComplete,
 			actionOpen,

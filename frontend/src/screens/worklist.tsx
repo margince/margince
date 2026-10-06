@@ -18,6 +18,13 @@ import {
   unbandedRows,
 } from "./worklist.bands";
 import { TeamBoard } from "./worklist.board";
+import {
+  bulkDoneEligible,
+  RowPick,
+  useWorklistPicks,
+  WorklistBulkBar,
+  type WorklistPicks,
+} from "./worklist.bulkdone";
 import { clearSentence } from "./worklist.clear";
 import { sourceUnavailableText } from "./worklist.copy";
 import {
@@ -159,6 +166,8 @@ type RowContext = Readonly<{
   onSelect: (next: string) => void;
   onOpenEmail: (activityId: string) => void;
   onFilter: (next: WorklistFilter) => void;
+  // The rows ticked for Mark done; each task or promise row draws its box.
+  picks: WorklistPicks;
 }>;
 
 // A run of rows under one heading, or the unbanded tail.
@@ -174,6 +183,7 @@ function QueueRows({
   onSelect,
   onOpenEmail,
   onFilter,
+  picks,
 }: RowContext & Readonly<{ items: readonly WorklistItem[] }>) {
   return (
     <ol className="worklist-list">
@@ -199,6 +209,11 @@ function QueueRows({
                 : undefined
             }
             onOpenEmail={onOpenEmail}
+            pick={
+              bulkDoneEligible(item) ? (
+                <RowPick item={item} picks={picks} />
+              ) : undefined
+            }
             onReview={() => onFilter(reviewFilter(item))}
             // The ORDER the Brief's card reads in, on every row of the queue:
             // the set-asides lead, the prepared move closes. The queue is a
@@ -286,6 +301,7 @@ function WorklistBody({
     review.length,
     day.summary.buckets?.review,
   );
+  const selection = useWorklistPicks(queue);
 
   const rowProps: RowContext = {
     // Numbered WITHIN the panel each row is drawn in, not across the day.
@@ -309,6 +325,7 @@ function WorklistBody({
     onSelect,
     onOpenEmail,
     onFilter,
+    picks: selection.picks,
   };
   return (
     <>
@@ -407,59 +424,64 @@ function WorklistBody({
             // hasPane is asked BEFORE the element is made: a component returning
             // null is still an element, and an element still gets the aside column
             // and its landmark. The rule lives beside the component that obeys it.
-            <PageZonesWhenPaned
-              active={selectedId !== ""}
-              onClose={() => onSelect(NOTHING_IN_HAND)}
-              pane={
-                // NOT IN THE DRAWER, and this is the one surface it is
-                // withheld from. The pane says whom a row is about, when they
-                // last wrote and when we did — and the ROW now says all three
-                // itself, on every surface that draws it. On the queue's own
-                // page the column beside it is free and the pane adds the
-                // record's own reading to that; in a drawer it is a third of
-                // an already narrow list spent repeating the line above it.
-                !embedded && selected && hasPane(selected) ? (
-                  <WorklistPane item={selected} />
-                ) : null
-              }
-              label={t("worklist.pane.title")}
-              queue={
-                <Panel
-                  // INDIGO, the band the Brief's Focus panel wears and a
-                  // record's "what needs you today" pane before it: these rows
-                  // are the agent's reading of the day — what it ranked and
-                  // what it prepared — and indigo is the one claim the product
-                  // makes about who did that. The same panel is drawn on this
-                  // page and in the queue drawer, so the claim is made once
-                  // and reads the same in both.
-                  tone="ai"
-                  title={t("worklist.queue")}
-                  titleAction={
-                    <Badge tone="ai">{t("co.assistant.aiTag")}</Badge>
-                  }
-                >
-                  {/* The headings come from the SERVER's band list, in its draw
+            //
+            // Above it, the bar that marks several tasks and promises done.
+            <>
+              <WorklistBulkBar selection={selection} />
+              <PageZonesWhenPaned
+                active={selectedId !== ""}
+                onClose={() => onSelect(NOTHING_IN_HAND)}
+                pane={
+                  // NOT IN THE DRAWER, and this is the one surface it is
+                  // withheld from. The pane says whom a row is about, when they
+                  // last wrote and when we did — and the ROW now says all three
+                  // itself, on every surface that draws it. On the queue's own
+                  // page the column beside it is free and the pane adds the
+                  // record's own reading to that; in a drawer it is a third of
+                  // an already narrow list spent repeating the line above it.
+                  !embedded && selected && hasPane(selected) ? (
+                    <WorklistPane item={selected} />
+                  ) : null
+                }
+                label={t("worklist.pane.title")}
+                queue={
+                  <Panel
+                    // INDIGO, the band the Brief's Focus panel wears and a
+                    // record's "what needs you today" pane before it: these rows
+                    // are the agent's reading of the day — what it ranked and
+                    // what it prepared — and indigo is the one claim the product
+                    // makes about who did that. The same panel is drawn on this
+                    // page and in the queue drawer, so the claim is made once
+                    // and reads the same in both.
+                    tone="ai"
+                    title={t("worklist.queue")}
+                    titleAction={
+                      <Badge tone="ai">{t("co.assistant.aiTag")}</Badge>
+                    }
+                  >
+                    {/* The headings come from the SERVER's band list, in its draw
                   order, rather than from the rows — which is the only way a
                   band holding nothing can say so. Ranks are still counted over
                   the whole queue, so a row's number is its place on the page
                   and not its place within its heading. */}
-                  {bandSections(day, today).map((section) => (
-                    <QueueBand
-                      key={section.band}
-                      section={section}
-                      canReportEmpty={canReportEmptyBands(hasMore)}
-                      rows={QueueRows}
-                      rowProps={rowProps}
-                    />
-                  ))}
-                  {/* Rows an older server sent with no band. Real work, drawn under
+                    {bandSections(day, today).map((section) => (
+                      <QueueBand
+                        key={section.band}
+                        section={section}
+                        canReportEmpty={canReportEmptyBands(hasMore)}
+                        rows={QueueRows}
+                        rowProps={rowProps}
+                      />
+                    ))}
+                    {/* Rows an older server sent with no band. Real work, drawn under
                   no heading rather than dropped to keep the sections tidy. */}
-                  {unbandedRows(today).length > 0 && (
-                    <QueueRows items={unbandedRows(today)} {...rowProps} />
-                  )}
-                </Panel>
-              }
-            />
+                    {unbandedRows(today).length > 0 && (
+                      <QueueRows items={unbandedRows(today)} {...rowProps} />
+                    )}
+                  </Panel>
+                }
+              />
+            </>
           )}
           {/* What is NOT the seller's to execute, below their day rather than
           inside it.

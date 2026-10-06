@@ -73,6 +73,8 @@ type CommitmentDue struct {
 	SourceLabel string
 	OccurredAt  time.Time
 	DueAt       time.Time
+	// Version is the claim's, which settling it is conditioned on.
+	Version int64
 }
 
 // OpenCommitmentsDue reads the acting rep's own promises falling due by the
@@ -217,7 +219,7 @@ func openCommitmentsDue(
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT c.id, c.contact_id, c.body, c.source_quote,
 		       coalesce(pr.full_name, ''), coalesce(a.subject, ''),
-		       a.occurred_at, c.due_at`+openCommitmentsDueFrom+`
+		       a.occurred_at, c.due_at, c.version`+openCommitmentsDueFrom+`
 		 ORDER BY c.due_at ASC, c.id
 		 LIMIT %[5]d`,
 		fmt.Sprintf("pr.owner_id = $%d", ownerPos), byPos, activityScope, contactScope,
@@ -230,7 +232,7 @@ func openCommitmentsDue(
 	for rows.Next() {
 		var due CommitmentDue
 		if err := rows.Scan(&due.ID, &due.ContactID, &due.Body, &due.SourceQuote,
-			&due.ContactName, &due.SourceLabel, &due.OccurredAt, &due.DueAt); err != nil {
+			&due.ContactName, &due.SourceLabel, &due.OccurredAt, &due.DueAt, &due.Version); err != nil {
 			return nil, fmt.Errorf("scan a commitment coming due: %w", err)
 		}
 		out = append(out, due)

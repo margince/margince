@@ -201,7 +201,11 @@ func handBack(
 		Before: crmcontracts.BulkRecordState{OwnerId: wireOwner(row.ownerID)},
 		After:  crmcontracts.BulkRecordState{OwnerId: before},
 	}
-	return sample, crmcontracts.BulkSkip{}, target.reassign(ctx, tx, id, ids.From[ids.UserKind](owner), item.Version)
+	reassigner, err := reassignerOf(target)
+	if err != nil {
+		return crmcontracts.BulkSampleRow{}, crmcontracts.BulkSkip{}, err
+	}
+	return sample, crmcontracts.BulkSkip{}, reassigner.reassign(ctx, tx, id, ids.From[ids.UserKind](owner), item.Version)
 }
 
 // undoSkipFor is bulkSkipFor for an undo, where a version that moved means the

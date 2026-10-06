@@ -72,6 +72,7 @@ func (c attentionCommitments) DueBy(ctx context.Context, by time.Time, limit int
 			SourceLabel: row.SourceLabel,
 			OccurredAt:  row.OccurredAt,
 			DueAt:       row.DueAt,
+			Version:     row.Version,
 		})
 	}
 	return promises, nil

@@ -383,6 +383,8 @@ type Commitment struct {
 	SourceLabel string
 	OccurredAt  time.Time
 	DueAt       time.Time
+	// Version is the claim's, which a Worklist row's Done is conditioned on.
+	Version int64
 }
 
 // DealFacts answers the figures behind deals a row names but does not carry.
