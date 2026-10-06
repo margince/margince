@@ -57,7 +57,7 @@ import (
 // ruleVersion stamps the ladder that selected a moment. It changes whenever a
 // rung's condition or order changes, so the same evidence rendering differently
 // across two clients is visible rather than silent.
-const ruleVersion = "contact-moment-ladder-v4"
+const ruleVersion = "contact-moment-ladder-v5"
 
 // meetingHorizonHours is how far ahead a meeting is worth preparing for
 // (ADR-0096 D2 rung 1). Three days, not the week the earlier ladder used: a
@@ -83,7 +83,7 @@ const prefillIntent = "intent"
 // dismissal the viewer has already made against the same evidence.
 //
 // It runs LAST among the sections so it can read what the others gathered.
-func (s *Service) momentsSection(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, now time.Time, out *crmcontracts.Contact360) error {
+func (s *Service) momentsSection(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, now time.Time, opts AssembleOptions, out *crmcontracts.Contact360) error {
 	var readErr error
 	dismissed := func(moment crmcontracts.ContactMoment) bool {
 		if readErr != nil {
@@ -95,7 +95,13 @@ func (s *Service) momentsSection(ctx context.Context, tx pgx.Tx, contactID ids.C
 		}
 		return put
 	}
-	moment := deriveMomentPast(ctx, now, out, dismissed)
+	// A reader who may not read activity sees no email to cite, so their
+	// promise cards stay as they are.
+	sent, err := lastWroteTo(ctx, tx, contactID, now, opts)
+	if err != nil && !errors.Is(err, apperrors.ErrPermissionDenied) {
+		return err
+	}
+	moment := deriveMomentPast(ctx, now, out, dismissed, proposer(out, sent, dismissed))
 	if readErr != nil {
 		return readErr
 	}
@@ -160,7 +166,8 @@ func (s *Service) momentDismissed(ctx context.Context, tx pgx.Tx, contactID ids.
 // inputs this build does not have, and a rule that cannot fire belongs nowhere
 // on the page.
 func deriveMoment(ctx context.Context, now time.Time, page *crmcontracts.Contact360) crmcontracts.ContactMoment {
-	return deriveMomentPast(ctx, now, page, func(crmcontracts.ContactMoment) bool { return false })
+	return deriveMomentPast(ctx, now, page, func(crmcontracts.ContactMoment) bool { return false },
+		func(moment crmcontracts.ContactMoment) crmcontracts.ContactMoment { return moment })
 }
 
 // deriveMomentPast walks the same ladder and skips the rungs whose card this
@@ -179,8 +186,10 @@ func deriveMoment(ctx context.Context, now time.Time, page *crmcontracts.Contact
 func deriveMomentPast(
 	ctx context.Context, now time.Time, page *crmcontracts.Contact360,
 	dismissed func(crmcontracts.ContactMoment) bool,
+	propose func(crmcontracts.ContactMoment) crmcontracts.ContactMoment,
 ) crmcontracts.ContactMoment {
-	for _, rung := range momentLadder {
+	for _, plain := range momentLadder {
+		rung := proposing(plain, propose)
 		moment, ok := rung(ctx, now, page)
 		if !ok || !dismissed(moment) {
 			if ok {
@@ -201,13 +210,16 @@ func deriveMomentPast(
 	return nothingNeededMoment(ctx, now, page)
 }
 
+// ladderRung answers one rung's question over the assembled page.
+type ladderRung = func(context.Context, time.Time, *crmcontracts.Contact360) (crmcontracts.ContactMoment, bool)
+
 // momentLadder is the ladder itself, named so a test can walk every rung.
 //
 // A rule that is only reachable through deriveMoment can only be tested by
 // constructing a page that makes it win, and the rungs below it then never run
 // at all - which is how three dead buttons sat on untested rungs while a test
 // claiming to be a general rule covered two.
-var momentLadder = []func(context.Context, time.Time, *crmcontracts.Contact360) (crmcontracts.ContactMoment, bool){
+var momentLadder = []ladderRung{
 	meetingPrepMoment,    // 1. a meeting within 72 hours
 	reEngagedMoment,      // 2. new inbound after a material quiet period
 	overduePromiseMoment, // 4. a promise of ours is past its date, from mail or the task list

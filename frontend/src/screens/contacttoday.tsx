@@ -8,6 +8,7 @@ import { PanelBody } from "../design-system/panel";
 import { formatDate, formatNumber } from "../format/format";
 import { daysPast } from "../format/lateness";
 import { type Locale, useLocale, useT } from "../i18n";
+import { MayBeDoneVerbs } from "./contactmaybedone";
 import { contactTabRoute } from "./contacttab";
 import { useRoster } from "./entityref";
 import { MoveButton } from "./movebutton";
@@ -162,27 +163,35 @@ function MomentMove({
         ) : undefined
       }
       action={
-        // A fragment, not a column of its own: FoundMove owns the one
-        // `.today-actions` column its row draws, defer included, so a second
-        // column nested inside it laid the defer button beside these verbs
-        // in a row instead of under them.
-        <>
-          <ActionVerb
-            action={moment.recommended_action}
-            primary
-            onAction={onAction}
+        moment.may_be_done ? (
+          <MayBeDoneVerbs
+            moment={moment}
+            question={moment.may_be_done}
+            view={view}
           />
-          {/* Every other verb the moment carries, beside the one it leads with
-              rather than in a second list elsewhere on the page, which would
-              let the two disagree about what to do next. */}
-          {secondary.map((action) => (
+        ) : (
+          // A fragment, not a column of its own: FoundMove owns the one
+          // `.today-actions` column its row draws, defer included, so a second
+          // column nested inside it laid the defer button beside these verbs
+          // in a row instead of under them.
+          <>
             <ActionVerb
-              key={action.label}
-              action={action}
+              action={moment.recommended_action}
+              primary
               onAction={onAction}
             />
-          ))}
-        </>
+            {/* Every other verb the moment carries, beside the one it leads with
+              rather than in a second list elsewhere on the page, which would
+              let the two disagree about what to do next. */}
+            {secondary.map((action) => (
+              <ActionVerb
+                key={action.label}
+                action={action}
+                onAction={onAction}
+              />
+            ))}
+          </>
+        )
       }
     />
   );

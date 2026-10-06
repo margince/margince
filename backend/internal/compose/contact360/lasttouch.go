@@ -71,16 +71,12 @@ func LastTouchFor(ctx context.Context, tx pgx.Tx, contactIDs []ids.ContactID, op
 	if visible == "" {
 		visible = scopeAll
 	}
-	scope, err := activityDiscoverScope(ctx, arg)
+	// The activities this contact is on, shared by both directions; the
+	// inbound arm adds authorship on top.
+	reached, err := touchesOf(ctx, "c.id", opts, arg)
 	if err != nil {
 		return nil, err
 	}
-	// The activities this contact is on, shared by both directions; the
-	// inbound arm adds authorship on top.
-	reached := fmt.Sprintf(`FROM activity a
-		WHERE a.archived_at IS NULL AND %s AND (%s)%s%s`,
-		fmt.Sprintf(contactReachesActivity, "c.id"), scope, projectScope(opts, arg),
-		auth.AudienceWorkspaceOnly("a"))
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT c.id,
 		       (SELECT max(a.occurred_at) %[1]s AND a.direction = 'inbound' AND %[2]s),
@@ -104,4 +100,19 @@ func LastTouchFor(ctx context.Context, tx pgx.Tx, contactIDs []ids.ContactID, op
 		return nil, err
 	}
 	return out, nil
+}
+
+// touchesOf is the FROM and WHERE of every activity the contact under
+// contactExpr is on, as the last-touch dates count them. The "you wrote to
+// them" proposal reads the same rows, so its date and the page's last-outbound
+// date cannot disagree about which messages count.
+func touchesOf(ctx context.Context, contactExpr string, opts AssembleOptions, arg func(any) int) (string, error) {
+	scope, err := activityDiscoverScope(ctx, arg)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf(`FROM activity a
+		WHERE a.archived_at IS NULL AND %s AND (%s)%s%s`,
+		fmt.Sprintf(contactReachesActivity, contactExpr), scope, projectScope(opts, arg),
+		auth.AudienceWorkspaceOnly("a")), nil
 }

@@ -10026,6 +10026,7 @@ export const vi = {
   "contact.memory.replied": "Đã hồi đáp",
   "contact.memory.unanswered": "Chưa hồi đáp",
 
+  "contact.mayBeDone.notYet": "Chưa xong",
   "contact.rail.blocked": "Bị chặn",
   "contact.rail.direction": "Chiều",
   "contact.rail.lastReply": "Hồi đáp gần nhất",
