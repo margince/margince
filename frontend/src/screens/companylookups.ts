@@ -165,30 +165,40 @@ export const HEALTH_DIMENSION_MEANS: Record<
 type HealthDimension = components["schemas"]["HealthDimension"];
 type HealthReasonCode = components["schemas"]["HealthDimensionReasonCode"];
 
-// The sentence each reason code stands for, and the value a sentence that
-// changes with a number is counted by. The server also sends the English
-// sentence, which a dimension without a code (payment, rated here) and a code
-// this build does not know fall back to.
-type ReasonMessage =
+// The sentence each reason code stands for, the values it cannot be said
+// without, and the one a sentence that changes with a number is counted by.
+// The server also sends the English sentence, which a dimension without a code
+// (payment, rated here), a code this build does not know and a code missing a
+// value it needs all fall back to.
+type ReasonParam = "days" | "count" | "total" | "at";
+type ReasonMessage = { needs: readonly ReasonParam[] } & (
   | { key: MessageKey }
-  | { plural: PluralBase; by: "days" | "count" };
+  | { plural: PluralBase; by: "days" | "count" }
+);
 
 const HEALTH_REASON: Record<HealthReasonCode, ReasonMessage> = {
-  never_written: { key: "co.health.reason.neverWritten" },
-  quiet: { plural: "co.health.reason.quiet", by: "days" },
-  meeting_booked: { key: "co.health.reason.meetingBooked" },
-  last_met: { plural: "co.health.reason.lastMet", by: "days" },
-  single_threaded: { key: "co.health.reason.singleThreaded" },
-  several_contacts: { plural: "co.health.reason.severalContacts", by: "count" },
+  never_written: { needs: [], key: "co.health.reason.neverWritten" },
+  quiet: { needs: ["days"], plural: "co.health.reason.quiet", by: "days" },
+  meeting_booked: { needs: ["at"], key: "co.health.reason.meetingBooked" },
+  last_met: { needs: ["days"], plural: "co.health.reason.lastMet", by: "days" },
+  single_threaded: { needs: [], key: "co.health.reason.singleThreaded" },
+  several_contacts: {
+    needs: ["count"],
+    plural: "co.health.reason.severalContacts",
+    by: "count",
+  },
   deals_all_stalled: {
+    needs: ["count"],
     plural: "co.health.reason.dealsAllStalled",
     by: "count",
   },
   deals_some_stalled: {
+    needs: ["count", "total"],
     plural: "co.health.reason.dealsSomeStalled",
     by: "count",
   },
   deals_none_stalled: {
+    needs: ["count"],
     plural: "co.health.reason.dealsNoneStalled",
     by: "count",
   },
@@ -205,10 +215,10 @@ export function useHealthReason(): (
   return (dimension) => {
     const message =
       dimension.reason_code && HEALTH_REASON[dimension.reason_code];
-    if (!message) {
+    const values = dimension.reason_params ?? {};
+    if (!message || message.needs.some((name) => values[name] == null)) {
       return dimension.reason;
     }
-    const values = dimension.reason_params ?? {};
     const params: Record<string, string> = {};
     for (const name of ["days", "count", "total"] as const) {
       const value = values[name];
@@ -216,8 +226,8 @@ export function useHealthReason(): (
         params[name] = formatNumber(value, locale);
       }
     }
-    if (values.on) {
-      params.on = formatDateAbbrev(values.on, locale, zone);
+    if (values.at) {
+      params.at = formatDateAbbrev(values.at, locale, zone);
     }
     if ("key" in message) {
       return t(message.key, params);

@@ -1816,7 +1816,7 @@ export const en = {
     "They have never written to you, and you have never met them.",
   "co.health.reason.quiet_one": "No reply and no meeting for {days} day.",
   "co.health.reason.quiet_other": "No reply and no meeting for {days} days.",
-  "co.health.reason.meetingBooked": "A meeting is booked for {on}.",
+  "co.health.reason.meetingBooked": "A meeting is booked for {at}.",
   "co.health.reason.lastMet_one": "Last met them {days} day ago.",
   "co.health.reason.lastMet_other": "Last met them {days} days ago.",
   "co.health.reason.singleThreaded":

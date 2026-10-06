@@ -34420,7 +34420,7 @@ type HealthDimension struct {
 	//
 	// - `never_written`: no message from them and no meeting with them, ever.
 	// - `quiet`: no message from them and no meeting with them for `days` days.
-	// - `meeting_booked`: quiet, but a meeting is booked for `on`.
+	// - `meeting_booked`: quiet, but a meeting is booked to start at `at`.
 	// - `last_met`: in touch through a meeting `days` days ago.
 	// - `single_threaded`: in touch, but one contact carries the whole account.
 	// - `several_contacts`: `count` contacts here are in touch with us.
@@ -34441,7 +34441,7 @@ type HealthDimensionRating string
 //
 // - `never_written`: no message from them and no meeting with them, ever.
 // - `quiet`: no message from them and no meeting with them for `days` days.
-// - `meeting_booked`: quiet, but a meeting is booked for `on`.
+// - `meeting_booked`: quiet, but a meeting is booked to start at `at`.
 // - `last_met`: in touch through a meeting `days` days ago.
 // - `single_threaded`: in touch, but one contact carries the whole account.
 // - `several_contacts`: `count` contacts here are in touch with us.
@@ -34452,10 +34452,11 @@ type HealthDimensionReasonCode string
 
 // HealthDimensionReasonParams The values the reason names. Each code lists which it reads.
 type HealthDimensionReasonParams struct {
-	Count *int                `json:"count,omitempty"`
-	Days  *int                `json:"days,omitempty"`
-	On    *openapi_types.Date `json:"on,omitempty"`
-	Total *int                `json:"total,omitempty"`
+	// At An instant, so the client names its day in the record's own zone.
+	At    *time.Time `json:"at,omitempty"`
+	Count *int       `json:"count,omitempty"`
+	Days  *int       `json:"days,omitempty"`
+	Total *int       `json:"total,omitempty"`
 }
 
 // HeldEntityType defines model for HeldEntityType.

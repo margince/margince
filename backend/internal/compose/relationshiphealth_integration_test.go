@@ -148,3 +148,38 @@ func TestAnOldOrCanceledMeetingLeavesTheRelationshipAtRisk(t *testing.T) {
 			strength.LastInteraction)
 	}
 }
+
+// Status and clock decide together. A booking whose start passed without
+// anyone confirming it was held is not contact we had, and a row marked held
+// but dated ahead is not a booking to keep the account off at risk.
+func TestAMeetingCountsOnlyAsWhatItsStatusAndTimeSay(t *testing.T) {
+	cases := []struct {
+		name   string
+		status string
+		days   int // negative is ahead
+		want   crmcontracts.HealthDimensionReasonCode
+	}{
+		{"booked, start passed, never confirmed", "booked", 5, crmcontracts.HealthDimensionReasonCodeQuiet},
+		{"marked held but dated ahead", "held", -2, crmcontracts.HealthDimensionReasonCodeQuiet},
+		{"marked held last week", "held", 7, crmcontracts.HealthDimensionReasonCodeLastMet},
+		{"booked ahead", "booked", -2, crmcontracts.HealthDimensionReasonCodeMeetingBooked},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			e := integration.Setup(t)
+			acct := seedQuietAccount(t, e)
+			subject, at := "Status check", acct.now.AddDate(0, 0, -tc.days)
+			if _, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+				Kind: "meeting", Subject: &subject, MeetingStatus: &tc.status, OccurredAt: &at, Source: "manual",
+				Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: acct.contact}},
+			}); err != nil {
+				t.Fatalf("logging the meeting: %v", err)
+			}
+
+			got := relationshipOf(t, e, acct)
+			if got.ReasonCode == nil || *got.ReasonCode != tc.want {
+				t.Fatalf("reason code = %v (%q), want %q", got.ReasonCode, got.Reason, tc.want)
+			}
+		})
+	}
+}

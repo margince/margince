@@ -104,7 +104,7 @@ func TestRelationshipReadsWhetherWeAreInTouch(t *testing.T) {
 			name: "old message but a meeting booked ahead", activeContacts: 2,
 			lastInbound: healthDaysAgo(77), nextMeeting: healthDaysAgo(-2),
 			want: crmcontracts.HealthDimensionRatingGood, code: crmcontracts.HealthDimensionReasonCodeMeetingBooked,
-			reasonHas: "booked for 8 October 2026",
+			reasonHas: "is booked",
 		},
 		{
 			name: "only meetings, never a message", activeContacts: 2, lastMeeting: healthDaysAgo(5),
@@ -164,8 +164,8 @@ func TestRelationshipReasonCarriesTheValuesItNames(t *testing.T) {
 	rateHealthDimensions(&health, nil, relstrength.ReadInTouch(healthDaysAgo(77), nil, healthDaysAgo(-2), healthNow))
 
 	params := health.Relationship.ReasonParams
-	if params == nil || params.On == nil || params.On.Format("2006-01-02") != "2026-10-08" {
-		t.Fatalf("reason params = %+v, want the booked meeting's date 2026-10-08", params)
+	if params == nil || params.At == nil || !params.At.Equal(*healthDaysAgo(-2)) {
+		t.Fatalf("reason params = %+v, want the booked meeting's start, as an instant", params)
 	}
 }
 

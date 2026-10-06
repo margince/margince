@@ -1733,7 +1733,7 @@ export const vi = {
     "Không có phản hồi và không có cuộc gặp nào trong {days} ngày.",
   "co.health.reason.quiet_other":
     "Không có phản hồi và không có cuộc gặp nào trong {days} ngày.",
-  "co.health.reason.meetingBooked": "Đã đặt một cuộc họp vào {on}.",
+  "co.health.reason.meetingBooked": "Đã đặt một cuộc họp vào {at}.",
   "co.health.reason.lastMet_one": "Lần gặp gần nhất cách đây {days} ngày.",
   "co.health.reason.lastMet_other": "Lần gặp gần nhất cách đây {days} ngày.",
   "co.health.reason.singleThreaded":

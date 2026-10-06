@@ -18,17 +18,31 @@ import (
 // with an account no longer counts as current.
 const InTouchDays = 30
 
-// MeetingCountsSQL is the predicate a meeting row passes to count as contact:
-// not canceled and not a no-show. A NULL status is a hand-logged meeting
-// nobody tracks a status on, which is a real meeting. alias is a compile-time
-// literal at every call site.
+// MeetingCountsSQL is the predicate a meeting row passes to count toward
+// contact strength: not canceled and not a no-show. It asks nothing about
+// time; MeetingHeldSQL and MeetingBookedSQL split it by the clock. alias, and
+// now in the two below, are compile-time literals or bind placeholders.
 func MeetingCountsSQL(alias string) string {
 	return "(" + alias + ".meeting_status IS NULL OR " + alias + ".meeting_status IN ('booked', 'held'))"
 }
 
-// InteractionCountsSQL is the whole test for an activity row that counts as
-// contact: an interaction kind, and if it is a meeting, one that took place
-// or still will.
+// MeetingHeldSQL is a meeting that took place: marked held, or carrying no
+// status and already started. A calendar import writes no status, and nothing
+// said it was off. A `booked` row whose start has passed was never confirmed.
+func MeetingHeldSQL(alias, now string) string {
+	return "(" + alias + ".meeting_status = 'held' OR (" + alias + ".meeting_status IS NULL AND " +
+		alias + ".occurred_at < " + now + "))"
+}
+
+// MeetingBookedSQL is a meeting still ahead that nobody called off.
+func MeetingBookedSQL(alias, now string) string {
+	return "((" + alias + ".meeting_status IS NULL OR " + alias + ".meeting_status = 'booked') AND " +
+		alias + ".occurred_at > " + now + ")"
+}
+
+// InteractionCountsSQL is the whole test for an activity row that counts
+// toward contact strength: an interaction kind, and if it is a meeting, one
+// nobody called off.
 func InteractionCountsSQL(alias string) string {
 	return alias + ".kind IN " + InteractionKindSQLGroup() +
 		" AND (" + alias + ".kind <> 'meeting' OR " + MeetingCountsSQL(alias) + ")"

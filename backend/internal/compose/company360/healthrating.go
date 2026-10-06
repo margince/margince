@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"time"
 
-	openapi_types "github.com/oapi-codegen/runtime/types"
-
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -58,10 +56,10 @@ func rateRelationship(touch relstrength.InTouch, active int, single bool) *crmco
 			crmcontracts.HealthDimensionReasonParams{Days: &touch.Days},
 			fmt.Sprintf("No reply and no meeting for %d days.", touch.Days))
 	case touch.Basis == relstrength.InTouchBooked:
-		on := openapi_types.Date{Time: touch.BookedAt.UTC()}
+		// The instant, not a day: which day it falls on depends on the record's
+		// zone, which the client holds and this read does not.
 		return dimension(crmcontracts.HealthDimensionRatingGood, crmcontracts.HealthDimensionReasonCodeMeetingBooked,
-			crmcontracts.HealthDimensionReasonParams{On: &on},
-			"A meeting is booked for "+touch.BookedAt.UTC().Format("2 January 2006")+".")
+			crmcontracts.HealthDimensionReasonParams{At: touch.BookedAt}, "A meeting with them is booked.")
 	case touch.Basis == relstrength.InTouchMet:
 		// The meeting is named even on a single-threaded account: it is what
 		// keeps the rating off at risk, and SingleThreaded still says the rest.
@@ -121,11 +119,11 @@ func dimension(
 // meetingsAround reads the account's last meeting already held and its next
 // one booked ahead, in one round trip of two LIMIT-1 arms.
 //
-// Both pass relstrength.MeetingCountsSQL, so a canceled meeting or a no-show
-// is not contact in either direction, on the same terms the contact strength
-// fold counts. Nil is "no meeting on record", a fact about the reading rather
-// than a claim that none happened: the caller may hold no scope over the
-// activity that would prove otherwise.
+// The held arm reads relstrength.MeetingHeldSQL and the booked arm
+// relstrength.MeetingBookedSQL, so a canceled meeting, a no-show and a booking
+// whose start passed unconfirmed count in neither. Nil is "no meeting on
+// record", a fact about the reading rather than a claim that none happened:
+// the caller may hold no scope over the activity that would prove otherwise.
 func (a *assembly) meetingsAround() (last, next *time.Time, err error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
@@ -141,17 +139,18 @@ func (a *assembly) meetingsAround() (last, next *time.Time, err error) {
 	// The body of work, on the same terms as every other activity read on this
 	// page: a page narrowed to one project must not rate its health from
 	// another project's meeting.
-	where := fmt.Sprintf(`a.kind = 'meeting' AND a.archived_at IS NULL AND %s AND %s AND %s`,
-		relstrength.MeetingCountsSQL("a"), activityScope,
-		activities.CompanyLinkedActivityExists(companyPos)) + a.opts.projectScope(arg)
+	where := fmt.Sprintf(`a.kind = 'meeting' AND a.archived_at IS NULL AND %s AND %s`,
+		activityScope, activities.CompanyLinkedActivityExists(companyPos)) + a.opts.projectScope(arg)
+	now := fmt.Sprintf("$%d", nowPos)
 	rows, err := a.tx.Query(a.ctx, fmt.Sprintf(`
 		(SELECT 'last' AS side, a.occurred_at FROM activity a
-		  WHERE %[1]s AND a.occurred_at <= $%[2]d
+		  WHERE %[1]s AND %[2]s AND a.occurred_at <= %[4]s
 		  ORDER BY a.occurred_at DESC, a.id DESC LIMIT 1)
 		UNION ALL
 		(SELECT 'next', a.occurred_at FROM activity a
-		  WHERE %[1]s AND a.occurred_at > $%[2]d
-		  ORDER BY a.occurred_at, a.id LIMIT 1)`, where, nowPos), args...)
+		  WHERE %[1]s AND %[3]s
+		  ORDER BY a.occurred_at, a.id LIMIT 1)`,
+		where, relstrength.MeetingHeldSQL("a", now), relstrength.MeetingBookedSQL("a", now), now), args...)
 	if err != nil {
 		return nil, nil, fmt.Errorf("read the account's meetings: %w", err)
 	}

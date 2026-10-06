@@ -24205,7 +24205,7 @@ export interface components {
          *
          *     - `never_written`: no message from them and no meeting with them, ever.
          *     - `quiet`: no message from them and no meeting with them for `days` days.
-         *     - `meeting_booked`: quiet, but a meeting is booked for `on`.
+         *     - `meeting_booked`: quiet, but a meeting is booked to start at `at`.
          *     - `last_met`: in touch through a meeting `days` days ago.
          *     - `single_threaded`: in touch, but one contact carries the whole account.
          *     - `several_contacts`: `count` contacts here are in touch with us.
@@ -24220,8 +24220,11 @@ export interface components {
             days?: number;
             count?: number;
             total?: number;
-            /** Format: date */
-            on?: string;
+            /**
+             * Format: date-time
+             * @description An instant, so the client names its day in the record's own zone.
+             */
+            at?: string;
         };
         /**
          * @description How the relationship stands, in the parts a reader can act on (AC-company-3).

@@ -34376,7 +34376,7 @@ components:
 
         - `never_written`: no message from them and no meeting with them, ever.
         - `quiet`: no message from them and no meeting with them for `days` days.
-        - `meeting_booked`: quiet, but a meeting is booked for `on`.
+        - `meeting_booked`: quiet, but a meeting is booked to start at `at`.
         - `last_met`: in touch through a meeting `days` days ago.
         - `single_threaded`: in touch, but one contact carries the whole account.
         - `several_contacts`: `count` contacts here are in touch with us.
@@ -34393,7 +34393,10 @@ components:
         days: { type: integer }
         count: { type: integer }
         total: { type: integer }
-        'on': { type: string, format: date }
+        at:
+          type: string
+          format: date-time
+          description: An instant, so the client names its day in the record's own zone.
 
     Company360Health:
       type: object

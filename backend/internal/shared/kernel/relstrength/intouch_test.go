@@ -92,3 +92,22 @@ func optionalDaysAhead(n int) *time.Time {
 	}
 	return daysAgo(-n)
 }
+
+// Held and booked split a meeting by the clock as well as its status: an
+// untracked meeting is held only once it started, and only `held` is held
+// without asking the time, so a booking whose start passed is neither.
+func TestHeldAndBookedSplitByTheClock(t *testing.T) {
+	t.Parallel()
+	held := MeetingHeldSQL("m", "$9")
+	if !strings.Contains(held, "m.meeting_status = 'held'") ||
+		!strings.Contains(held, "m.meeting_status IS NULL AND m.occurred_at < $9") {
+		t.Errorf("held = %q, want held, or untracked and already started", held)
+	}
+	if strings.Contains(held, "booked") {
+		t.Errorf("held = %q admits a booking, which nobody confirmed took place", held)
+	}
+	booked := MeetingBookedSQL("m", "$9")
+	if !strings.Contains(booked, "m.occurred_at > $9") || strings.Contains(booked, "held") {
+		t.Errorf("booked = %q, want an untracked or booked meeting still ahead", booked)
+	}
+}
