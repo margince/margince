@@ -753,7 +753,6 @@ export const vi = {
   "brief.readings.unavailable.decisions": "Nguồn không khả dụng",
   "brief.feed.incomplete":
     "Chưa tải được mục nào. Không thể kiểm tra một phần công việc.",
-  "brief.feed.fullWorklist": "Mở danh sách công việc đầy đủ",
   "brief.week.workRecorded": "Có công việc hoàn thành trong tuần.",
   "brief.week.leads_one": "Đã phân công {count} khách hàng tiềm năng.",
   "brief.week.leads_other": "Đã phân công {count} khách hàng tiềm năng.",
