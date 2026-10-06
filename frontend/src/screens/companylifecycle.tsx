@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { components } from "../api/schema";
 import { useCanWriteRecord } from "../app/capability";
 import { Badge, Field } from "../design-system/atoms";
@@ -68,6 +68,13 @@ export function CompanyLifecycleControl({
     setPending(null);
     setFailure(null);
   }
+  // Which stored stage a save was started against. A save still out when the
+  // stage changes elsewhere settles against a record that has moved on, so
+  // its refusal is not drawn over the stage that replaced it.
+  const storedEpoch = useRef(0);
+  useEffect(() => {
+    storedEpoch.current += 1;
+  }, [stored]);
   const label = (value: string) => t(LIFECYCLE_LABELS[value as Lifecycle]);
   if (!canUpdate || readOnlyReason) {
     // A reader who may not change the stage is shown the stage. A button that
@@ -95,13 +102,16 @@ export function CompanyLifecycleControl({
     setPending(next);
     setSaving(true);
     setFailure(null);
+    const startedAt = storedEpoch.current;
     try {
       await patch({
         lifecycle: next as NonNullable<UpdateCompanyRequest["lifecycle"]>,
       });
       setPending(null);
     } catch (err) {
-      setFailure(problemMessageOf(err, t));
+      if (storedEpoch.current === startedAt) {
+        setFailure(problemMessageOf(err, t));
+      }
     } finally {
       setSaving(false);
     }
