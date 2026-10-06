@@ -56,10 +56,10 @@ var whereClause = regexp.MustCompile(`(?is)\bWHERE\b(.*)$`)
 // census may find and still be believed. Set well below the real count, because
 // its job is to catch a reader that has gone quiet, not to track the tree.
 //
-// It rose with the corpus: the census used to ask only of tables carrying a
-// version column, which left every by-id write on the other 82 outside it by
-// construction, and a floor set for that smaller reading would not notice the
-// wider one collapsing back to it.
+// It rose with the corpus. The census used to ask only of tables carrying a
+// version column, which left every by-id write on the other 82 outside it, and
+// a floor set for that smaller reading would not notice the wider one
+// collapsing back to it.
 //
 // It is the coarser of the two under-recognition alarms and covers the UNWAIVED
 // remainder. The sharper one is unguardedByIDUpdates.AssertAllMatched: a waived
@@ -121,20 +121,35 @@ func versionedTables(t *testing.T) map[string]bool {
 // an entry without one is a finding, and one matching no function is
 // stale and fails.
 var unguardedByIDUpdates = gatekit.Waive(map[string]string{
-	"internal/compose/briefs:writeRunNarrative":            "the run's narrative, written under the FOR UPDATE briefannotate.go takes on that day's run before it composes one \u2014 two passes reaching one rep's morning are ordered by it rather than racing",
+	"internal/modules/activities:updateActivityInTx":       "held FOR UPDATE via lockActivityForWrite, one hop past what this witness's AST walk follows — see the shared rationale above",
+	"internal/modules/collections:ArchiveSavedView":        "absolute idempotent archive transition; the RETURNING + archived_at IS NULL predicate makes a lost race read as already archived",
+	"internal/modules/collections:ArchiveTag":              "absolute idempotent archive transition; the RETURNING + archived_at IS NULL predicate makes a lost race read as already archived",
+	"internal/modules/contacts:absorbCompanyReferences":    "runs under the merge pair lock (storekit.LockPair on both company rows) taken by MergeCompany",
+	"internal/modules/contacts:bindSiteReadLogo":           "the bind is conditioned on logo_object_key IS NULL AND archived_at IS NULL, and ErrNoRows means the record already wears a mark or was archived, which releases the parked object instead",
+	"internal/modules/deals:ArchiveOffer":                  "runs under the offer row lock taken by visibleOfferLocked, and the write itself is an absolute archive transition",
+	"internal/modules/deals:ArchiveOfferTemplate":          "absolute idempotent archive transition; concurrent archives converge, the visibility pre-read only feeds the response",
+	"internal/modules/deals:ArchiveProduct":                "absolute idempotent archive transition; concurrent archives converge, the visibility pre-read only feeds the response",
+	"internal/modules/deals:markLadderChanged":             "runs only under its callers' lock on the same pipeline row — lockLadder (FOR NO KEY UPDATE), one hop past what this witness's AST walk follows — and the write is the version bump itself, which no version could guard",
+	"internal/modules/deals:movePipeline":                  "runs only inside ReorderPipelines, under lockCatalog's FOR UPDATE on every live pipeline, taken in id order before any move",
+	"internal/modules/deals:recomputeOfferTotals":          "every caller holds the offer row lock via visibleOfferLocked, except createOfferTx where the offer row was inserted in the same transaction",
+	"internal/modules/privacy:anonymizeLeadTwins":          "terminal absolute write: the same erasure statement as anonymizeSubjectRows, extracted for length — it overwrites the lead twin's PII columns regardless of concurrent state, by design",
+	"internal/modules/privacy:archiveLead":                 "terminal absolute write: the retention sweep archives an over-age unconverted lead regardless of concurrent state, by design; archived_at IS NULL keeps a second pass from restamping it",
+	"internal/modules/signals:ArchiveSignal":               "absolute idempotent archive transition; concurrent archives converge, the visibility pre-read only feeds the response",
+	"internal/modules/webhooks:ArchiveSubscription":        "absolute idempotent archive transition; the RETURNING + archived_at IS NULL predicate makes a lost race read as already archived (delivery stops at archive)",
+	"internal/compose/briefs:writeRunNarrative":            "the run's narrative, written under the FOR UPDATE briefannotate.go takes on that day's run before it composes one, so two passes reaching one rep's morning are ordered by it",
 	"internal/compose/briefs:markItem":                     "lockItemForMark reads the queue item FOR UPDATE and this fills it in, so the state the mark validated is the state it writes over",
-	"internal/compose/briefs:MarkUnsnoozed":                "the unsnooze clears what the snooze set, to constants: state, state_at, snoozed_until and the reopen stamp are assigned outright, so two passes waking one item write the same row rather than one losing the other's edit",
+	"internal/compose/briefs:MarkUnsnoozed":                "the unsnooze clears what the snooze set, to constants: state, state_at, snoozed_until and the reopen stamp are assigned outright, so two passes waking one item write the same row",
 	"internal/modules/agents/runner:FinishJob":             "the job was claimed by this worker under ClaimDueJobs' FOR UPDATE SKIP LOCKED, so no second worker holds it to finish",
-	"internal/modules/agents/runner:MarkFailed":            "the run belongs to the job this worker claimed under FOR UPDATE SKIP LOCKED; a run nobody else holds cannot be settled twice",
-	"internal/modules/agents/runner:SaveOutcome":           "the same claimed run as MarkFailed, and the statement says in its own comment that a correction of a settled run is a new attempt rather than an edit of this one",
-	"internal/modules/consent:AssignNoticeCase":            "lockNoticeCase reads the case FOR UPDATE first, which the file's own comment names as what orders two owners arriving together",
+	"internal/modules/agents/runner:MarkFailed":            "the run belongs to the job this worker claimed under FOR UPDATE SKIP LOCKED, and a run nobody else holds cannot be settled twice",
+	"internal/modules/agents/runner:SaveOutcome":           "the same claimed run as MarkFailed, and the statement's own comment states that a correction of a settled run is a new attempt rather than an edit of this one",
+	"internal/modules/consent:AssignNoticeCase":            "lockNoticeCase reads the case FOR UPDATE first, which the file names as what orders two owners arriving together",
 	"internal/modules/consent:ExcuseNoticeCase":            "the excuse path takes the same lockNoticeCase FOR UPDATE before deciding, so the state it validated is the state it writes",
 	"internal/modules/consent:closeOwedCasesTx":            "closes the cases a subject's own reply settles, under the notice case lock the caller took; the statement names the reply as the cause rather than carrying a state it read",
 	"internal/modules/consent:markResolvedTx":              "the submission is held FOR UPDATE by the review that decides it, so the resolution it writes is the one it read",
 	"internal/modules/consent:UpdateDSR":                   "every column coalesces onto the row's own value, so a field this caller did not set keeps what the row holds rather than what this caller last read",
 	"internal/modules/contacts:recordSiteReadConfirmation": "the confirmation rides the company lock the scan took before reading what to confirm",
-	"internal/modules/contacts:collapseGroup":              "the re-normalizer locks its grouping FOR UPDATE before deciding which rows collapse (holdsItsGrouping), which is the lock an interleaved import must wait on; that lock is why a sweep can no longer delete a row that stopped being a duplicate",
-	"internal/modules/dealrooms:revokeTx":                  "revoked_at = now() on a seat the caller holds; a seat revoked twice is revoked, and the stamp carries no state read beforehand",
+	"internal/modules/contacts:collapseGroup":              "the re-normalizer locks its grouping FOR UPDATE before deciding which rows collapse (holdsItsGrouping), which is the lock an interleaved import waits on; that lock is why a sweep can no longer delete a row that stopped being a duplicate",
+	"internal/modules/dealrooms:revokeTx":                  "revoked_at = now() on a seat the caller holds, and a seat revoked twice is revoked; the stamp carries no state read beforehand",
 	"internal/modules/identity:OperatorResetPassword":      "the operator reset writes a hash it just computed and clears the lockout counters to constants, under the app_user row the reset path holds",
 	"internal/modules/integrations:cancelWithdrawn":        "leaseForSubmit holds the run FOR UPDATE from the top of the transaction, and this is the branch it takes when the grant was withdrawn before anything was sent",
 	"internal/modules/integrations:parkUnknown":            "the same lease's FOR UPDATE; parking a run whose submission is unknown is the settle branch of the transaction that took it",
@@ -144,19 +159,26 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	"internal/modules/integrations:terminalize":            "the poll settles a run it holds FOR UPDATE, to terminal constants",
 	"internal/modules/integrations:markSkipped":            "a run skipped before it ran, under the lock the selector took to decide that",
 	"internal/modules/privacy:Update":                      "the retention policy is read FOR UPDATE by the caller that edits it",
-	"internal/modules/integrations:bumpClaimAttempt":       "attempt_count = attempt_count + 1 is the read and the write in one statement, so the database orders two bumps and no count is read into Go to be written back; the backoff that follows is computed FROM the returned value",
-	"internal/modules/activities:ArchiveAttachment":        "archived_at = now() unconditionally, with no state derived from a pre-read: an attachment archived twice is archived",
+	"internal/modules/integrations:bumpClaimAttempt":       "attempt_count = attempt_count + 1 is the read and the write in one statement, so the database orders two bumps and no count is read into Go to be written back; the backoff that follows is computed from the returned value",
+	"internal/modules/activities:ArchiveAttachment":        "archived_at = now() with no state derived from a pre-read, and an attachment archived twice is archived",
 	"internal/modules/capture:stamp":                       "parts_slimmed_at = now() records that the sweep considered the row and changes nothing else, so two sweeps stamping it write the same fact",
-	"internal/modules/capture:MarkWithheldFromWorkspaceTx": "withheld_from_workspace = true is a one-way constant; withholding twice withholds",
-	"internal/modules/comms:ClearPayloadRef":               "payload_ref = NULL after the vault entry is already destroyed, and one clearing is one clearing \u2014 the order is the point and the file says so",
+	"internal/modules/capture:MarkWithheldFromWorkspaceTx": "withheld_from_workspace = true is a one-way constant, and withholding twice withholds",
+	"internal/modules/comms:ClearPayloadRef":               "payload_ref = NULL after the vault entry is already destroyed, and one clearing is one clearing; the order is what the file explains",
 	"internal/modules/comms:reKey":                         "the re-key writes the provider's own message id and derives the thread key in SQL from the row's current one, so nothing read into Go is written back",
-	"internal/modules/identity:checkCredentials":           "failed_login_count = 0 and locked_until = NULL on a successful sign-in: constants, and two sign-ins clearing one lockout clear it once",
-	"internal/modules/identity:Authenticate":               "the idle window rolls forward in SQL from now(), never from a value read into Go; two requests on one session both move it forward",
+	"internal/modules/identity:checkCredentials":           "failed_login_count = 0 and locked_until = NULL on a successful sign-in are constants, and two sign-ins clearing one lockout clear it once",
+	"internal/modules/identity:Authenticate":               "the idle window rolls forward in SQL from now(), never from a value read into Go, so two requests on one session both move it forward",
 	"internal/modules/integrations:applyOneStored":         "applied_at = now() marks one stored row as applied, and the selector that chose it will not choose it again",
 	"internal/modules/integrations:discardClaims":          "claims_unwritten = true and next_attempt_at = NULL are constants naming what the run could not do, not a state this caller read",
 	"internal/modules/knowledge:replacePage":               "the handbook seeder replaces a page with the file it just read, which is the source of truth rather than a value read from this row",
-	"internal/modules/migration:failRun":                   "error = $2 is the failure that just happened; nothing was read from the row to compute it",
+	"internal/modules/migration:failRun":                   "error = $2 is the failure that just happened, and nothing was read from the row to compute it",
 	"internal/modules/migration:storeReport":               "report = $2 is the report the run just produced, written once at the end of it",
+	"internal/modules/capture:MarkEchoed":                  "echoed_at = now() on the sent row, with user_id beside the id as a second key; a probe echoed twice is echoed",
+	"internal/modules/contacts:foldGhostInto":              "the fold coalesces every column onto the survivor's own value in SQL, so the new value is computed from the two rows as the statement sees them rather than from a value read into Go; the grouping is held FOR UPDATE by holdsItsGrouping first",
+	"internal/modules/dealrooms:touchSession":              "last_seen_at = now() on a session the visitor already holds, with room_id beside the id as a second key",
+	"internal/modules/identity:SaveMyLocale":               "the member writes their own locale under the live-member predicate that keeps a retired seat from writing at all, and the value is what they chose rather than a state read from the row",
+	"internal/modules/identity:SaveMyDelivery":             "the member's own delivery preferences, written from what they chose under the same live-member predicate",
+	"internal/modules/knowledge:ArchiveCorpus":             "archived_at = now() on the corpus and, set-based, on its chunks and documents; a corpus archived twice is archived",
+	"internal/modules/knowledge:setReindexing":             "the reindex flag is the value the caller chose rather than one it read, and the liveness predicate beside the id only keeps an archived corpus from being marked",
 	"internal/modules/contacts:touchRevertedContact":       "the aggregate bump after a revert removed a child row. RevertProviderFills holds this contact FOR UPDATE from the top of its transaction — LockRow with IncludeArchived, because the contact may be archived — so the guard is the caller's lock rather than a second one here; re-taking it would be the liveness refusal this function exists to avoid",
 	// Both hold the row FOR UPDATE before this UPDATE runs, through
 	// lockActivityForWrite (retentionhold.go) rather than a direct
@@ -302,26 +324,6 @@ var lockMarkers = map[string]bool{"LockRow": true, "LockPair": true}
 // because Postgres accepts lowercase keywords and a witness that missed `for
 // update` would report a guarded function as unguarded.
 var lockingRead = regexp.MustCompile(`(?i)\bFOR\s+UPDATE\b`)
-
-// idOnlyWhere is a WHERE that constrains nothing but the primary key. A claim
-// needs a predicate BESIDE it — the state the caller read — so this is what
-// tells the two apart.
-var idOnlyWhere = regexp.MustCompile(`(?is)^\s*(?:[a-z]\.)?id\s*=\s*\$\d+\s*$`)
-
-// returningClause ends the WHERE: the tail whereClause captures runs to the end
-// of the statement, and RETURNING is not a predicate.
-var returningClause = regexp.MustCompile(`(?i)\bRETURNING\b`)
-
-// conditionalWrite reports whether a by-id UPDATE constrains anything beyond the
-// primary key — the state the caller read, which is what makes the write a
-// compare-and-set rather than a blind overwrite.
-func conditionalWrite(lit string) bool {
-	w := whereClause.FindStringSubmatch(lit)
-	if w == nil {
-		return false
-	}
-	return !idOnlyWhere.MatchString(returningClause.Split(w[1], 2)[0])
-}
 
 // advisoryLock names no table — it is a workspace-wide mutex — so it keeps an
 // unattributed credit rather than being resolved to one.
@@ -801,19 +803,16 @@ func TestEveryByIDUpdateCarriesAConcurrencyGuard(t *testing.T) {
 							versionPredicate.MatchString(w[1]) {
 							guarded = true
 						}
-						// A predicate BESIDE the id is the same
-						// compare-and-set the version makes, over a column that
-						// carries state instead of a counter: an interleaved
-						// writer leaves the state the predicate names and the
-						// UPDATE matches nothing. `WHERE id = $1 AND status IN
-						// ('queued','running')` cannot clobber a backfill
-						// somebody else finished.
+						// A predicate beside the id is the same compare-and-set
+						// over a column carrying state instead of a counter: an
+						// interleaved writer leaves the state the predicate
+						// names and the update matches nothing. A status filter
+						// cannot overwrite a backfill somebody else finished.
 						//
-						// What this does NOT ask is whether the caller READS the
-						// outcome. An unchecked conditional write is safe from
-						// the lost update and still reports success for a row it
-						// never touched — a different obligation, tracked in
-						// #6986 rather than conflated with this one.
+						// Whether the caller reads the outcome is a separate
+						// question, tracked in #6986: an unchecked conditional
+						// write is safe from the lost update and still reports
+						// success for a row it never touched.
 						if conditionalWrite(lit) {
 							guarded = true
 						}
@@ -866,11 +865,10 @@ func TestEveryByIDUpdateCarriesAConcurrencyGuard(t *testing.T) {
 						continue
 					}
 					// The table's own schema says which guard is expected, so
-					// the finding names it rather than listing every shape at a
-					// reader who can only use one of them.
+					// the finding names that one rather than listing every
+					// shape at a reader who can only use one of them.
 					advice := "lock the row first (LockRow/LockPair/FOR UPDATE/advisory lock), " +
-						"claim it with a predicate beyond the id and read whether you won, " +
-						"or check RowsAffected as a CAS"
+						"constrain state beside the id, or check RowsAffected as a CAS"
 					for tbl := range updated {
 						if versioned[tbl] {
 							advice = "the table carries a version, so the guard is the version " +
@@ -879,7 +877,7 @@ func TestEveryByIDUpdateCarriesAConcurrencyGuard(t *testing.T) {
 							break
 						}
 					}
-					t.Errorf("%s: %s runs a by-id UPDATE with no concurrency guard — %s; a real "+
+					t.Errorf("%s: %s runs a by-id UPDATE with no concurrency guard: %s. A real "+
 						"exception is ratified in unguardedByIDUpdates", path, fn.Name.Name, advice)
 				}
 			}
