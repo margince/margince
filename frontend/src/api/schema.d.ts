@@ -34783,8 +34783,13 @@ export interface components {
             undid_audit_log_id?: string | null;
             edge?: components["schemas"]["HistoryEdge"];
             undoable?: components["schemas"]["Undoability"];
-            /** @description Set on the answer to putting back an archive, and omitted everywhere else: what the archive took down with the record that the restore could not bring back (a link the record's owner has since replaced, a list or tag archived in between). `id` is the restored record, as in a bulk undo's `left_behind`. Absent means nothing was left. */
-            left_behind?: components["schemas"]["BulkLeftBehind"][];
+            /** @description Set on the answer to putting back an archive, and omitted everywhere else: what the archive took down with the record that the restore could not bring back (a link the record's owner has since replaced, a list or tag archived in between). One entry per thing, by kind only: a caller allowed to restore the record is not thereby allowed to read a list, tag or link, so no id is returned. Absent means nothing was left. */
+            left_behind?: components["schemas"]["RestoreLeftBehind"][];
+        };
+        /** @description One thing a restore of an archive could not bring back with the record. */
+        RestoreLeftBehind: {
+            /** @enum {string} */
+            kind: "contact_email" | "contact_phone" | "contact_channel_identity" | "relationship" | "company_domain" | "company_relationship_type" | "partner" | "list" | "tag";
         };
         /**
          * @description Set when this history entry changed a LINK between two records rather than a field

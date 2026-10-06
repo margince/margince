@@ -119,20 +119,36 @@ describe("putting one change back", () => {
   });
 
   // A restore that answers 200 and says nothing of what stayed archived reads
-  // as a whole record; the answer names it and the panel says so.
+  // as a whole record. The answer names it, and the panel keeps saying so
+  // after the refetch regroups the pressed entry into a reversal pair.
   it("says what an archive's restore could not bring back", async () => {
+    const archived = {
+      ...restorable,
+      action: "archive",
+      before: null,
+      after: { archived_at: "2026-07-14T10:00:00Z" },
+    };
+    const reversal = {
+      ...repriced,
+      id: "h2",
+      action: "restore",
+      undid_audit_log_id: "h1",
+      occurred_at: "2026-07-14T11:00:00Z",
+    };
+    let restored = false;
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input instanceof Request ? input.url : input);
       if (url.includes("/restore")) {
+        restored = true;
         return jsonResponse({
-          ...repriced,
-          left_behind: [
-            { id: "d1", kind: "relationship", ref_id: "r1" },
-            { id: "d1", kind: "tag", ref_id: "t1" },
-          ],
+          ...reversal,
+          left_behind: [{ kind: "relationship" }, { kind: "tag" }],
         });
       }
-      return jsonResponse({ data: [restorable], page: { next_cursor: null } });
+      return jsonResponse({
+        data: restored ? [reversal, archived] : [archived],
+        page: { next_cursor: null },
+      });
     });
     vi.stubGlobal("fetch", fetchMock);
     const user = userEvent.setup();
@@ -141,10 +157,17 @@ describe("putting one change back", () => {
     );
 
     await user.click(await screen.findByRole("button", { name: /^undo$/i }));
+    await user.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: /^undo$/i,
+      }),
+    );
 
     expect(
       await screen.findByText(/2 links, tags or list memberships could not/i),
     ).toBeTruthy();
+    await waitFor(() => expect(restored).toBe(true));
+    expect(screen.getByText(/2 links, tags or list memberships/i)).toBeTruthy();
   });
 
   // A greyed control that says nothing is the shape this feature exists to

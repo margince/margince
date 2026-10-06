@@ -120,17 +120,16 @@ func recordHistoryEntryToWire(e RecordHistoryEntry) crmcontracts.AuditHistoryEnt
 	return out
 }
 
-// leftBehindToWire names what a restore of the record's archive could not
-// bring back, against the restored record.
-func leftBehindToWire(record crmcontracts.Id, left []storekit.LeftBehind) *[]crmcontracts.BulkLeftBehind {
+// leftBehindToWire names the kinds of thing a restore of the record's archive
+// could not bring back. Their ids stay out: restoring a record does not entitle
+// the caller to read a list, tag or link.
+func leftBehindToWire(left []storekit.LeftBehind) *[]crmcontracts.RestoreLeftBehind {
 	if len(left) == 0 {
 		return nil
 	}
-	out := make([]crmcontracts.BulkLeftBehind, len(left))
+	out := make([]crmcontracts.RestoreLeftBehind, len(left))
 	for i, one := range left {
-		out[i] = crmcontracts.BulkLeftBehind{
-			Id: record, Kind: crmcontracts.BulkLeftBehindKind(one.Kind), RefId: openapi_types.UUID(one.ID),
-		}
+		out[i] = crmcontracts.RestoreLeftBehind{Kind: crmcontracts.RestoreLeftBehindKind(one.Kind)}
 	}
 	return &out
 }

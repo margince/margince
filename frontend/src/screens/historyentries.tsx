@@ -140,6 +140,10 @@ export type RecordRestore = Readonly<{
   // must arrive together or the new `restore` entry describes a record on
   // screen that does not yet show it.
   onRestored: () => void;
+  // Set by the history panel itself, never by a caller: the notice about what
+  // an archive's restore left behind belongs to the panel, because the refetch
+  // after the press regroups the entry and unmounts the button that pressed.
+  onLeftBehind?: (count: number) => void;
 }>;
 
 // A refusal in the reader's own words.
@@ -203,21 +207,18 @@ function UndoButton({
   // advisory answer below because the two can differ: the read cannot hold a
   // lock, so a change that looked restorable a moment ago may not be one now.
   const [refused, setRefused] = useState<string | null>(null);
-  // What an archive's restore could not bring back, said where it was pressed
-  // so a "done" does not read as a whole record when it is not.
-  const [leftBehind, setLeftBehind] = useState(0);
 
   const putBack = useRecordRestore({
     onSuccess: (done) => {
       setRefused(null);
-      setLeftBehind(done.left_behind?.length ?? 0);
+      restore.onLeftBehind?.(done.left_behind?.length ?? 0);
       setConfirming(false);
       client.invalidateQueries({ queryKey: ["record-history", kind, id] });
       client.invalidateQueries({ queryKey: ["field-history", kind, id] });
       restore.onRestored();
     },
     onError: (error) => {
-      setLeftBehind(0);
+      restore.onLeftBehind?.(0);
       const code = problemCodeOf(error);
       if (code === VERSION_SKEW_CODE) {
         // The record moved rather than the change being unrestorable. Re-read
@@ -278,13 +279,6 @@ function UndoButton({
         {t(label)}
       </Button>
       {refused && <span>{refused}</span>}
-      {leftBehind > 0 && (
-        <span>
-          {plural("history.undo.leftBehind", leftBehind, {
-            count: formatNumber(leftBehind, locale),
-          })}
-        </span>
-      )}
       <ConfirmModal
         open={confirming}
         onClose={() => setConfirming(false)}
@@ -416,8 +410,13 @@ export function RecordHistory({
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const plural = usePlural();
   const query = useRecordHistory(kind, id);
   const entries = query.data?.pages.flatMap((page) => page.data) ?? [];
+  // What an archive's restore could not bring back, said above the list so a
+  // "done" does not read as a whole record when it is not.
+  const [leftBehind, setLeftBehind] = useState(0);
+  const panelRestore = restore && { ...restore, onLeftBehind: setLeftBehind };
 
   // Honest state matrix (§3a): the pending/error halves are QueryStates'
   // (shared with FieldHistoryTimeline and QueryGate); empty vs. the list is
@@ -444,7 +443,7 @@ export function RecordHistory({
                   id={id}
                   locale={locale}
                   currency={currency}
-                  restore={restore}
+                  restore={panelRestore}
                   undoLabel="history.undo.redo"
                 />
                 <HistoryEntryRow
@@ -453,7 +452,7 @@ export function RecordHistory({
                   id={id}
                   locale={locale}
                   currency={currency}
-                  restore={restore}
+                  restore={panelRestore}
                   note={t("history.reversal.undoneBy", {
                     undoer: actorName(row.reversal.actor_name, t),
                   })}
@@ -467,7 +466,7 @@ export function RecordHistory({
                 id={id}
                 locale={locale}
                 currency={currency}
-                restore={restore}
+                restore={panelRestore}
                 note={
                   row.kind === "unpairedReversal"
                     ? t("history.reversal.unpaired")
@@ -489,6 +488,13 @@ export function RecordHistory({
 
   return (
     <Card className="history-card">
+      {leftBehind > 0 && (
+        <p role="status">
+          {plural("history.undo.leftBehind", leftBehind, {
+            count: formatNumber(leftBehind, locale),
+          })}
+        </p>
+      )}
       <QueryStates query={query} pendingLabel={t("tab.timeline")}>
         {body}
       </QueryStates>

@@ -14074,6 +14074,45 @@ func (e ResolveInputCheckOutcome) Valid() bool {
 	}
 }
 
+// Defines values for RestoreLeftBehindKind.
+const (
+	RestoreLeftBehindKindCompanyDomain           RestoreLeftBehindKind = "company_domain"
+	RestoreLeftBehindKindCompanyRelationshipType RestoreLeftBehindKind = "company_relationship_type"
+	RestoreLeftBehindKindContactChannelIdentity  RestoreLeftBehindKind = "contact_channel_identity"
+	RestoreLeftBehindKindContactEmail            RestoreLeftBehindKind = "contact_email"
+	RestoreLeftBehindKindContactPhone            RestoreLeftBehindKind = "contact_phone"
+	RestoreLeftBehindKindList                    RestoreLeftBehindKind = "list"
+	RestoreLeftBehindKindPartner                 RestoreLeftBehindKind = "partner"
+	RestoreLeftBehindKindRelationship            RestoreLeftBehindKind = "relationship"
+	RestoreLeftBehindKindTag                     RestoreLeftBehindKind = "tag"
+)
+
+// Valid indicates whether the value is a known member of the RestoreLeftBehindKind enum.
+func (e RestoreLeftBehindKind) Valid() bool {
+	switch e {
+	case RestoreLeftBehindKindCompanyDomain:
+		return true
+	case RestoreLeftBehindKindCompanyRelationshipType:
+		return true
+	case RestoreLeftBehindKindContactChannelIdentity:
+		return true
+	case RestoreLeftBehindKindContactEmail:
+		return true
+	case RestoreLeftBehindKindContactPhone:
+		return true
+	case RestoreLeftBehindKindList:
+		return true
+	case RestoreLeftBehindKindPartner:
+		return true
+	case RestoreLeftBehindKindRelationship:
+		return true
+	case RestoreLeftBehindKindTag:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for RetentionAction.
 const (
 	RetentionActionAnonymize RetentionAction = "anonymize"
@@ -24619,9 +24658,9 @@ type AuditHistoryEntry struct {
 	Edge *HistoryEdge       `json:"edge,omitempty"`
 	Id   openapi_types.UUID `json:"id"`
 
-	// LeftBehind Set on the answer to putting back an archive, and omitted everywhere else: what the archive took down with the record that the restore could not bring back (a link the record's owner has since replaced, a list or tag archived in between). `id` is the restored record, as in a bulk undo's `left_behind`. Absent means nothing was left.
-	LeftBehind *[]BulkLeftBehind `json:"left_behind,omitempty"`
-	OccurredAt time.Time         `json:"occurred_at"`
+	// LeftBehind Set on the answer to putting back an archive, and omitted everywhere else: what the archive took down with the record that the restore could not bring back (a link the record's owner has since replaced, a list or tag archived in between). One entry per thing, by kind only: a caller allowed to restore the record is not thereby allowed to read a list, tag or link, so no id is returned. Absent means nothing was left.
+	LeftBehind *[]RestoreLeftBehind `json:"left_behind,omitempty"`
+	OccurredAt time.Time            `json:"occurred_at"`
 
 	// OnBehalfOf Granting human's user id for agent actions.
 	OnBehalfOf *openapi_types.UUID `json:"on_behalf_of,omitempty"`
@@ -41508,6 +41547,14 @@ type ResponseMetrics struct {
 	// To The end of the window, exclusive — so consecutive windows partition time and a message on a boundary is counted once.
 	To time.Time `json:"to"`
 }
+
+// RestoreLeftBehind One thing a restore of an archive could not bring back with the record.
+type RestoreLeftBehind struct {
+	Kind RestoreLeftBehindKind `json:"kind"`
+}
+
+// RestoreLeftBehindKind defines model for RestoreLeftBehind.Kind.
+type RestoreLeftBehindKind string
 
 // RestrictedRecord defines model for RestrictedRecord.
 type RestrictedRecord struct {

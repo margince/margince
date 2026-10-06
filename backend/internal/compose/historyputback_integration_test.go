@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func opsSeat(e *integration.Env) context.Context {
@@ -231,7 +232,15 @@ func TestSocialLinksWalkBackThroughTheirOwnHistory(t *testing.T) {
 func TestAReadOnlySeatIsToldItMayNotWriteAContactCompanyOrDealChange(t *testing.T) {
 	e := integration.Setup(t)
 	admin := e.Admin()
-	viewer := e.As(e.Rep3, []ids.UUID{e.Team2}, integration.ReadOnlyPerms)
+	// ReadOnlyPerms reads no company, which would refuse the company case for
+	// want of a read; the seat here reads all three and writes none.
+	readOnly := integration.ReadOnlyPerms
+	readOnly.Objects = map[string]principal.ObjectGrant{}
+	for object, grant := range integration.ReadOnlyPerms.Objects {
+		readOnly.Objects[object] = grant
+	}
+	readOnly.Objects["company"] = principal.ObjectGrant{Read: true}
+	viewer := e.As(e.Rep3, []ids.UUID{e.Team2}, readOnly)
 	title, industry, renamed := "VP", "Software", "Renamed"
 	contact := e.SeedContact(t, "Read Only Contact", nil)
 	if _, err := e.Contacts.UpdateContact(admin, ids.From[ids.ContactKind](contact), contacts.UpdateContactInput{Title: &title}); err != nil {

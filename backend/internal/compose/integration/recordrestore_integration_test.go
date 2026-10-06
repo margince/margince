@@ -891,11 +891,7 @@ func TestEndToEnd_anArchiveRestoreNamesTheLinkItCouldNotBringBack(t *testing.T) 
 		t.Fatal("the company's history holds no archive entry")
 	}
 	var answer struct {
-		LeftBehind []struct {
-			ID    string `json:"id"`
-			Kind  string `json:"kind"`
-			RefID string `json:"ref_id"`
-		} `json:"left_behind"`
+		LeftBehind []map[string]any `json:"left_behind"`
 	}
 	var version struct {
 		Version int64 `json:"version"`
@@ -909,7 +905,9 @@ func TestEndToEnd_anArchiveRestoreNamesTheLinkItCouldNotBringBack(t *testing.T) 
 	if status != 200 {
 		t.Fatalf("restore → %d", status)
 	}
-	if len(answer.LeftBehind) != 1 || answer.LeftBehind[0].Kind != "relationship" || answer.LeftBehind[0].ID != oldCo.ID {
-		t.Errorf("left_behind = %+v, want the one employment link, named against the restored company", answer.LeftBehind)
+	// By kind alone: restoring a company does not entitle the caller to read
+	// the link, so its id is not in the answer.
+	if len(answer.LeftBehind) != 1 || len(answer.LeftBehind[0]) != 1 || answer.LeftBehind[0]["kind"] != "relationship" {
+		t.Errorf("left_behind = %+v, want the one employment link, named by kind only", answer.LeftBehind)
 	}
 }
