@@ -8929,11 +8929,10 @@ export const en = {
   // Two sentences, no dash (VOICE-RULE-5).
   "users.link.body":
     "Send this link to the member through a trusted channel. It works once and is shown only now. A new link can be created from the member’s row.",
-  "users.link.urlLabel": "Set-password link",
   "users.link.copy": "Copy link",
   "users.link.copied": "Copied",
   "users.link.copyFailed":
-    "Copy failed. Select the link in the field and copy it manually.",
+    "Copy failed. Select the link above and copy it manually.",
   "users.link.expires": "Expires {when}.",
   "users.link.failedTitle": "Link not created",
   "users.link.failed":

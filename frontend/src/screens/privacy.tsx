@@ -523,7 +523,8 @@ function transitionLabelKey(status: DsrStatus): MessageKey {
 // `current` is the request's own assignee when this list does not offer them
 // (deactivated, past the walk's bound, or a withheld agent seat). Without it the
 // select paints the unassigned em dash, and a DPO would reassign an erasure
-// request off its holder with a statutory clock running.
+// request off its holder with a statutory clock running. It leads the list
+// because it is the state the field is in.
 function assigneeOptions(
   users: readonly User[],
   current: SelectOption | null,
@@ -573,9 +574,6 @@ function unofferedAssignee({
   };
 }
 
-// One DSR row: a summary that opens the case-work panel. Which row is open is
-// the CARD's state, so `expanded` arrives as a prop and useRoster fetches the
-// roster only for the open row.
 /**
  * The verbs that move one request through its statuses.
  *
@@ -625,6 +623,9 @@ function DsrTransitions({
   );
 }
 
+// One DSR row: a summary that opens the case-work panel. Which row is open is
+// the CARD's state, because a queue keeps sibling rows visible while one case
+// is worked; `expanded` arrives as a prop, and only that row reads the roster.
 function DsrRow({
   dsr,
   expanded,

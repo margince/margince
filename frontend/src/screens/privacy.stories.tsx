@@ -2,7 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { screen, userEvent, within } from "storybook/test";
+import {
+  expect,
+  fireEvent,
+  screen,
+  userEvent,
+  waitFor,
+  within,
+} from "storybook/test";
 import type { GrantSpec } from "../app/mefixture";
 import { PrivacyInboxCard } from "./privacy";
 import {
@@ -142,6 +149,61 @@ export const NewRequestForm: Story = {
     await userEvent.click(
       await canvas.findByRole("button", { name: /new request/i }),
     );
+  },
+};
+
+// Enter in the contact search, once a contact is picked and the form is
+// complete, opens nothing: a submitting Enter would file the request for the
+// earlier contact while the officer was looking for another. A scripted key
+// never submits a form, so the play asserts the browser's own Enter action is
+// cancelled, then that the form was complete enough for it to have submitted.
+const openedRequests: unknown[] = [];
+export const ErasureSearchEnter: Story = {
+  render: inbox({
+    "GET /data-subject-requests": () => jsonResponse(DSRS),
+    "GET /contacts": () =>
+      jsonResponse({
+        data: [
+          { id: "c-anna", full_name: "Anna Weber" },
+          { id: "c-ben", full_name: "Ben Ostrowski" },
+        ],
+        page: { next_cursor: null, has_more: false },
+      }),
+    "POST /data-subject-requests": (body) => {
+      openedRequests.push(body);
+      return jsonResponse({ ...DSRS.data[0], subject_ref: "c-anna" }, 201);
+    },
+  }),
+  play: async ({ canvasElement }) => {
+    openedRequests.length = 0;
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", {
+        name: /new request/i,
+      }),
+    );
+    await userEvent.click(
+      await screen.findByRole("combobox", { name: "Kind" }),
+    );
+    await userEvent.click(
+      await screen.findByRole("option", { name: "erasure" }),
+    );
+    const search = await screen.findByRole("searchbox", { name: "Contact" });
+    await userEvent.type(search, "anna");
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Anna Weber" }),
+    );
+    fireEvent.change(screen.getByLabelText("Due"), {
+      target: { value: "2026-08-01" },
+    });
+    await userEvent.type(search, "ben");
+    const enter = new KeyboardEvent("keydown", {
+      key: "Enter",
+      bubbles: true,
+      cancelable: true,
+    });
+    await expect(search.dispatchEvent(enter)).toBe(false);
+    await userEvent.click(screen.getByRole("button", { name: "Open request" }));
+    await waitFor(() => expect(openedRequests).toHaveLength(1));
   },
 };
 

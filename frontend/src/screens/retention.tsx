@@ -274,25 +274,26 @@ function PolicyRow({
               </Button>
             </span>
           )}
-          {/* Closing abandons the draft: the fields re-seed on the next open. */}
-          <Button onClick={toggleEditor}>{t("deals.cancel")}</Button>
-          <Button
-            variant="primary"
-            disabled={days === null || patch.isPending}
-            onClick={() =>
-              days !== null &&
-              patch.mutate({
-                intent: "save",
-                body: {
-                  retain_days: days,
-                  action,
-                  lawful_basis: lawfulBasis.trim() || null,
-                },
-              })
-            }
-          >
-            {t("retention.save")}
-          </Button>
+          <span className="actions-pair">
+            <Button onClick={toggleEditor}>{t("deals.cancel")}</Button>
+            <Button
+              variant="primary"
+              disabled={days === null || patch.isPending}
+              onClick={() =>
+                days !== null &&
+                patch.mutate({
+                  intent: "save",
+                  body: {
+                    retain_days: days,
+                    action,
+                    lawful_basis: lawfulBasis.trim() || null,
+                  },
+                })
+              }
+            >
+              {t("retention.save")}
+            </Button>
+          </span>
         </div>
       </Modal>
     </>

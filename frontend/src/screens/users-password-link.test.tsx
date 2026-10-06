@@ -236,9 +236,8 @@ describe("admin-issued set-password link", () => {
     await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
 
     await clickLinkAction();
-    const field =
-      await screen.findByLabelText<HTMLInputElement>("Set-password link");
-    expect(field.value).toBe(LINK_URL);
+    const link = await screen.findByTestId("password-link-url");
+    expect(link.textContent).toBe(LINK_URL);
     expect(
       calls.some((url) => url.includes("/users/u-active/password-link")),
     ).toBe(true);
@@ -259,9 +258,8 @@ describe("admin-issued set-password link", () => {
 
     // Without this the admin walks away from a successful invite holding
     // nothing, and the member can never sign in — the whole defect.
-    const field =
-      await screen.findByLabelText<HTMLInputElement>("Set-password link");
-    expect(field.value).toBe(LINK_URL);
+    const link = await screen.findByTestId("password-link-url");
+    expect(link.textContent).toBe(LINK_URL);
     expect(
       calls.some((url) => url.includes("/users/u-new/password-link")),
     ).toBe(true);
@@ -295,7 +293,7 @@ describe("admin-issued set-password link", () => {
     await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
 
     await clickLinkAction();
-    await screen.findByLabelText("Set-password link");
+    await screen.findByTestId("password-link-url");
     await userEvent.click(screen.getByRole("button", { name: /copy link/i }));
     // The admin is told to copy by hand rather than left with a dead button:
     // the heading says the copy did not happen, the body says what to do.
@@ -412,17 +410,14 @@ describe("admin-issued set-password link", () => {
     await open();
     await userEvent.click(screen.getByRole("button", { name: /done/i }));
     await open();
-    const field =
-      await screen.findByLabelText<HTMLInputElement>("Set-password link");
-    expect(field.value).toBe(LINK_URL);
+    const link = await screen.findByTestId("password-link-url");
+    expect(link.textContent).toBe(LINK_URL);
 
     // The stale failure lands now. It must change nothing.
     releaseFirst();
     await waitFor(() => expect(call).toBe(2));
     expect(screen.queryByText(/server could not be reached/i)).toBeNull();
-    expect(
-      screen.getByLabelText<HTMLInputElement>("Set-password link").value,
-    ).toBe(LINK_URL);
+    expect(screen.getByTestId("password-link-url").textContent).toBe(LINK_URL);
   });
 
   it("keeps a failed mint visible with a retry rather than reporting success", async () => {
@@ -438,6 +433,6 @@ describe("admin-issued set-password link", () => {
     // here would leave an account nobody can sign into and no visible sign of it.
     expect(await screen.findByRole("alert")).toBeTruthy();
     expect(screen.getByRole("button", { name: /retry/i })).toBeTruthy();
-    expect(screen.queryByLabelText("Set-password link")).toBeNull();
+    expect(screen.queryByTestId("password-link-url")).toBeNull();
   });
 });

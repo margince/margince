@@ -250,7 +250,8 @@ export function InviteUserForm({
           </Callout>
         )}
       </form>
-      {/* `.form-actions` lays the row out where no dialog's `.actions` does. */}
+      {/* Outside a dialog (the onboarding team step) `.form-actions` aligns
+          the row; inside one `.modal .actions` does. */}
       <div className="actions form-actions">
         <Button
           variant="primary"

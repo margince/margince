@@ -165,6 +165,11 @@ export function RecordPicker({
         value={term}
         disabled={disabled}
         onChange={(event) => setTerm(event.target.value)}
+        // Inside a form, Enter here would submit the record picked BEFORE this
+        // search; a pick is a click on a candidate, never this keystroke.
+        onKeyDown={(event) => {
+          if (event.key === "Enter") event.preventDefault();
+        }}
       />
       {searchFailure !== null && (
         <ErrorLine>{problemMessageOf(searchFailure.cause, t)}</ErrorLine>

@@ -8701,11 +8701,9 @@ export const vi = {
   // Two sentences, no dash (VOICE-RULE-5).
   "users.link.body":
     "Hãy gửi liên kết này cho thành viên qua một kênh bạn tin tưởng. Nó chỉ dùng được một lần và chỉ hiện lúc này. Đóng đi rồi bạn vẫn tạo được liên kết mới từ dòng của họ.",
-  "users.link.urlLabel": "Liên kết đặt mật khẩu",
   "users.link.copy": "Sao chép liên kết",
   "users.link.copied": "Đã sao chép",
-  "users.link.copyFailed":
-    "Hãy bôi đen liên kết trong trường rồi sao chép thủ công.",
+  "users.link.copyFailed": "Hãy bôi đen liên kết ở trên rồi sao chép thủ công.",
   "users.link.expires": "Hết hạn {when}.",
   "users.link.failedTitle": "Không tạo được liên kết",
   "users.link.failed":

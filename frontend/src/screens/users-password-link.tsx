@@ -180,21 +180,13 @@ function CopyableLink({ url }: Readonly<{ url: string }>) {
   });
   return (
     <div className="users-link-row">
-      {/* Read-only rather than plain text so the admin can still select and
-          copy by hand when the clipboard API is unavailable (an insecure
-          origin, or a browser that refuses the permission). */}
-      <input
-        className="input"
-        readOnly
-        value={url}
-        aria-label={t("users.link.urlLabel")}
-        onFocus={(e) => e.currentTarget.select()}
-      />
+      {/* The shared one-time-secret block, so the whole URL wraps in view and
+          stays selectable by hand when the clipboard API is refused. */}
+      <pre className="code-block" data-testid="password-link-url">
+        {url}
+      </pre>
       <Button onClick={copy.copy}>{copy.label}</Button>
-      {/* The link itself is fine and on screen in the field beside this, which
-          is exactly why it is a read-only input: selecting it by hand is the
-          way out. The BOX takes the whole line; a notice owns no layout of its
-          own. */}
+      {/* The BOX takes the whole line; a notice owns no layout of its own. */}
       {copy.notice !== null && (
         <div className="users-formerror">{copy.notice}</div>
       )}

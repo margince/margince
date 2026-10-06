@@ -340,6 +340,28 @@ describe("RecordPicker", () => {
     ).toBeNull();
   });
 
+  it("never submits an enclosing form when Enter is pressed in its search box", async () => {
+    const submit = vi.fn();
+    rtlRender(
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          submit();
+        }}
+      >
+        <RecordPicker
+          label="Search…"
+          searchTargets={vi.fn().mockResolvedValue(candidates)}
+          onPick={vi.fn()}
+        />
+        <button type="submit">Open request</button>
+      </form>,
+    );
+
+    await userEvent.type(screen.getByRole("searchbox"), "anna{Enter}");
+    expect(submit).not.toHaveBeenCalled();
+  });
+
   it("takes its name from a Field's label, once, and from its own label standing alone", () => {
     rtlRender(
       <>
