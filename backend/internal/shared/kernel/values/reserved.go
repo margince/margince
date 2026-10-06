@@ -5,6 +5,21 @@ package values
 
 import "strings"
 
+// ErasedEmail is the address an Art. 17 erasure writes over a record it cannot
+// delete, and the one address ParseEmail refuses outright.
+//
+// Reserved in a second, stronger sense than the RFC 2606 names below. Those cannot
+// receive mail but are perfectly storable — the test mailbox exists to send to them,
+// and fixtures all over the tree seed contacts under .example and .test. This one may
+// not be STORED at all, because its value is that no live record holds it: a deal-room
+// seat is resolved by ADDRESS, so once an erasure has written this over one, the
+// address names every seat any erasure ever wiped. A subject who also held it would be
+// indistinguishable from them, and no predicate could separate the two.
+//
+// The eraser writes it in SQL and never through the parser, so reserving it costs the
+// erasure nothing.
+const ErasedEmail = "erased@example.invalid"
+
 // reservedNames are the RFC 2606 names no real mailbox can live under. The
 // three named domains admit their subdomains; the four bare labels are TLDs,
 // so any host ending in one is reserved at any depth.
@@ -37,7 +52,7 @@ func IsReservedHost(host string) bool {
 // domain behind one never hides it. A malformed address is not reserved:
 // nothing here can tell where it would go.
 func IsReservedAddress(addr string) bool {
-	email, err := ParseEmail(addr)
+	email, err := parseAddress(addr)
 	if err != nil {
 		return false
 	}

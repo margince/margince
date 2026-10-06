@@ -41,13 +41,16 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // erasedEmail is the address a wiped seat carries. It is a syntactically valid
 // address in the reserved example domain, because the column is NOT NULL and
 // carries a lowercase CHECK: a tombstone that cannot be stored is not a
 // tombstone. Nothing can be delivered to it.
-const erasedEmail = "erased@example.invalid"
+// erasedEmail is the reserved address, read from the type that owns it: values refuses
+// it at every parse, so no live record can hold what this writes.
+const erasedEmail = values.ErasedEmail
 
 // eraseDealRoomSeats is the whole Deal Room step of an erasure: wipe the seats
 // carrying one of the subject's addresses, purge what those seats still betray,
@@ -58,8 +61,9 @@ const erasedEmail = "erased@example.invalid"
 // destroys.
 func eraseDealRoomSeats(ctx context.Context, tx pgx.Tx, emails []string, reason string) error {
 	// A subject holding the tombstone address is refused rather than half-erased.
-	// ParseEmail admits erased@example.invalid, so a contact can carry it — and a seat
-	// is resolved by ADDRESS alone, so after one erasure that address names every seat
+	// values.ParseEmail refuses that address now, so no contact written since can carry
+	// it — but one written before can, and a seat is resolved by ADDRESS alone, so after
+	// one erasure that address names every seat
 	// any erasure has ever wiped. Proceeding would either destroy other subjects'
 	// comments or skip this subject's own seat, leaving their sessions live; there is no
 	// third answer, because the data no longer distinguishes them.
