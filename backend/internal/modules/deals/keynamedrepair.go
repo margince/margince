@@ -17,6 +17,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
@@ -37,7 +38,8 @@ const (
 	KeyNameNoMatch KeyNameOutcome = "no-match"
 	// KeyNameAmbiguous means more than one live deal shares the key, so none is touched.
 	KeyNameAmbiguous KeyNameOutcome = "ambiguous"
-	// KeyNameNoCompany means neither a title nor a company gives a better name.
+	// KeyNameNoCompany means neither a title nor a company gives a name other
+	// than the key.
 	KeyNameNoCompany KeyNameOutcome = "no-company"
 )
 
@@ -50,13 +52,18 @@ type KeyNameResult struct {
 }
 
 // keyNameReplacement picks the name a key-named deal should carry, and reports
-// false when nothing better than the key is known.
+// false when nothing better than the key is known. Company and stage names are
+// anyone's to edit in the app, so the fallback keeps only the one line a reader sees.
 func keyNameReplacement(key, title, company, stage string) (string, bool) {
 	if t := strings.TrimSpace(title); t != "" && t != key {
 		return t, true
 	}
-	if c := strings.TrimSpace(company); c != "" {
-		return c + " · " + stage, true
+	c := draftfloor.OneLine(company)
+	if c == "" {
+		return "", false
+	}
+	if fallback := c + " · " + draftfloor.OneLine(stage); fallback != key {
+		return fallback, true
 	}
 	return "", false
 }

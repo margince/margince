@@ -80,6 +80,14 @@ func (f keyNamedFixture) updateAudits(t *testing.T, id ids.DealID) int {
 	return f.e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_id = $1 AND action = 'update'`, id)
 }
 
+func (f keyNamedFixture) updatedEvents(t *testing.T, id ids.DealID) int {
+	t.Helper()
+	return f.e.WsCount(t, `
+		SELECT count(*) FROM event_outbox
+		 WHERE envelope->>'type' = 'deal.updated'
+		   AND envelope->'entity'->>'id' = $1`, id.String())
+}
+
 func exportRow(key, title string) deals.KeyNamedDeal {
 	return deals.KeyNamedDeal{SourceSystem: keyNamedSource, SourceKey: key, SourceTitle: title}
 }
@@ -98,6 +106,9 @@ func TestADryRunReportsTheRenameAndWritesNothing(t *testing.T) {
 	}
 	if n := f.updateAudits(t, id); n != 0 {
 		t.Errorf("a dry run wrote %d update audit rows", n)
+	}
+	if n := f.updatedEvents(t, id); n != 0 {
+		t.Errorf("a dry run wrote %d deal.updated events", n)
 	}
 }
 
@@ -119,10 +130,7 @@ func TestApplyingRenamesToTheSourceTitleWithItsOwnAuditAndEvent(t *testing.T) {
 		   AND actor_type = 'system' AND evidence->>'source_key' = $2`, id, "acme-q3"); n != 1 {
 		t.Errorf("%d system update audit rows naming the source key, want 1", n)
 	}
-	if n := f.e.WsCount(t, `
-		SELECT count(*) FROM event_outbox
-		 WHERE envelope->>'type' = 'deal.updated'
-		   AND envelope->'entity'->>'id' = $1`, id.String()); n != 1 {
+	if n := f.updatedEvents(t, id); n != 1 {
 		t.Errorf("%d deal.updated events for the renamed deal, want 1", n)
 	}
 }

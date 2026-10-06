@@ -23,6 +23,7 @@ import (
 	"strings"
 	"text/tabwriter"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -126,6 +127,8 @@ func readKeyNamedDeals(r io.Reader) ([]deals.KeyNamedDeal, error) {
 			return nil, fmt.Errorf("deal-key-names: line %d: source_system is empty", line)
 		case entry.SourceKey == "":
 			return nil, fmt.Errorf("deal-key-names: line %d: source_key is empty", line)
+		case slices.ContainsFunc(record, isNotUTF8):
+			return nil, fmt.Errorf("deal-key-names: line %d: a field is not valid UTF-8; save the export as UTF-8", line)
 		case slices.ContainsFunc(record, hasControlCharacter):
 			return nil, fmt.Errorf("deal-key-names: line %d: a field holds a control character", line)
 		}
@@ -172,6 +175,10 @@ func writeKeyNameReport(stdout io.Writer, results []deals.KeyNameResult, applied
 		_, _ = fmt.Fprintln(stdout, "Nothing was written. Run again with --apply to rename the deals marked would-rename.")
 	}
 	return nil
+}
+
+func isNotUTF8(field string) bool {
+	return !utf8.ValidString(field)
 }
 
 func hasControlCharacter(field string) bool {

@@ -34,8 +34,8 @@ A deal imported without a `source_system` carries none, and the repair cannot
 match it.
 
 The run refuses the whole file, naming the line, when the header differs, a
-system or key is empty, a field holds a control character such as a tab, the
-same system and key appear twice, or there are no rows.
+system or key is empty, a field is not UTF-8 or holds a control character such
+as a tab, the same system and key appear twice, or there are no rows.
 
 ## Run it
 
@@ -71,7 +71,7 @@ The report has one row per export row, with the columns `OUTCOME`, `DEAL`,
 | `renamed` | The deal now carries `NEW NAME`. | Nothing. |
 | `no-match` | No live deal of that source is still named by the key. | Nothing, when it was renamed already (by this repair or by a user) or is archived. Otherwise the system or key in the file is not what the deal carries: fix the file. |
 | `ambiguous` | More than one live deal shares the key, so none is touched. | Rename them by hand in the app. |
-| `no-company` | The export has no title and the deal has no company to name it after. | Rename it by hand in the app. |
+| `no-company` | Neither the export nor the deal gives a name other than the key: the title is empty or equals the key, and the deal has no company, or `<company> · <stage>` is the key itself. | Rename it by hand in the app. |
 
 A dry run where every row is `no-match` most likely means the `source_system`
 value is wrong; check it against the query above first.
@@ -81,8 +81,9 @@ value is wrong; check it against the query above first.
 - A deal is renamed only while its name still equals the key. A name a user
   has edited stays.
 - Archived deals are untouched.
-- The new name is `source_title` when the export has one, otherwise
-  `<company> · <stage>`.
+- The new name is `source_title` when the export has one that differs from
+  the key, otherwise `<company> · <stage>`, folded to one line with control
+  characters dropped.
 - Each rename goes through the ordinary update path: its own audit entry and
   `deal.updated` event, written by `system:deal_key_names`.
 

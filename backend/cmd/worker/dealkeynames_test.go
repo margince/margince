@@ -36,6 +36,7 @@ func TestAnExportTheRepairCannotTrustIsRefusedWhole(t *testing.T) {
 		"no rows at all":  "source_system,source_key,source_title\n",
 		"escape in title": "source_system,source_key,source_title\nlegacy,acme-q3,Acme\x1b[2K\n",
 		"tab in key":      "source_system,source_key,source_title\nlegacy,\"acme\tq3\",Acme\n",
+		"latin-1 title":   "source_system,source_key,source_title\nlegacy,acme-q3,K\xf6nigs\n",
 	} {
 		t.Run(name, func(t *testing.T) {
 			if _, err := readKeyNamedDeals(strings.NewReader(body)); err == nil {
