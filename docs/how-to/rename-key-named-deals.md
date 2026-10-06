@@ -33,15 +33,16 @@ SELECT source_system, count(*) FROM deal
 A deal imported without a `source_system` carries none, and the repair cannot
 match it.
 
-The run refuses the whole file, naming the line, when the header differs, a
-system or key is empty, a field is not UTF-8 or holds a control character such
-as a tab, the same system and key appear twice, or there are no rows.
+The run refuses the whole file and names the line when the header differs, a
+system or key is empty, or the same system and key appear twice. It also
+refuses a field that is not UTF-8 or holds a control character such as a tab,
+and a file with no rows.
 
 ## Run it
 
 The worker reads its database from `MARGINCE_DSN` like any other worker run.
 `--workspace` takes the installation's workspace id, which the API does not
-return; read it from that database and pass it exactly:
+return; read it from that database and pass it unchanged:
 
 ```
 SELECT id, slug FROM workspace WHERE archived_at IS NULL;
