@@ -168,9 +168,6 @@ func (s *RoutingStore) probeProviderSettings(ctx context.Context, stored Routing
 	if err != nil {
 		return err
 	}
-	if err := candidate.ResidencyGap(); err != nil {
-		return invalidRouting(err)
-	}
 	if err := s.probeVertexBindings(ctx, stored, candidate); err != nil {
 		return invalidRouting(err)
 	}
@@ -183,11 +180,6 @@ func (s *RoutingStore) probeCandidate(ctx context.Context, stored, next RoutingC
 	_, candidate, err := next.replacing(stored)
 	if err != nil {
 		return err
-	}
-	// The probe is a call to the bound location, so a location the profile
-	// refuses is refused before it is asked anything.
-	if err := candidate.ResidencyGap(); err != nil {
-		return invalidRouting(err)
 	}
 	if err := s.probeVertexBindings(ctx, stored, candidate); err != nil {
 		return invalidRouting(err)

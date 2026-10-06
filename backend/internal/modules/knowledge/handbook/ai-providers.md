@@ -84,8 +84,7 @@ If **Test** says Google accepted the key but refused the call, the service
 account is missing the **Vertex AI User** role or the project has not enabled
 the Vertex AI API.
 The **Location** is where Google processes every call: **eu**, the EU
-multi-region, keeps processing in the EU and is the usual choice. When your
-installation requires EU hosting, only EU locations can be chosen.
+multi-region, keeps processing in the EU and is the usual choice.
 Changing the location asks Google whether it serves every model you have bound
 on Gemini on Vertex AI. If one is not served there, the change is refused and
 names the model.

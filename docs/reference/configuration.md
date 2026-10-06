@@ -1620,7 +1620,7 @@ is missing.
 | `openai_compatible` | `OPENAI_COMPATIBLE_API_KEY` | **required** | BYOK cloud, generic OpenAI wire (OpenAI, Mistral, DeepSeek, Groq, Together, OpenRouter, …) |
 | `openai` | `OPENAI_API_KEY` | optional (default `api.openai.com`) | BYOK cloud, native Responses API |
 | `gemini` | `GEMINI_API_KEY` | optional (default `generativelanguage.googleapis.com/v1beta`) | BYOK cloud, native `generateContent` |
-| `gemini_vertex` | `GEMINI_VERTEX_SA_JSON` (the service-account key file's JSON) | **refused**: the host follows from `location` | BYOK cloud, the `gemini` wire served by Vertex AI; **`location` required**, and an EU one under `eu_hosted` |
+| `gemini_vertex` | `GEMINI_VERTEX_SA_JSON` (the service-account key file's JSON) | **refused**: the host follows from `location` | BYOK cloud, the `gemini` wire served by Vertex AI; **`location` required** |
 | `jev` | `TYPESAFE_API_KEY` | optional (default `https://api.typesafe.ai/v1/systemone`, the full endpoint) | decisions lane only; TypeSafe's own API |
 | `jev_compatible` | `JEV_COMPATIBLE_API_KEY` (**optional**: sent when held, never demanded) | **required**, the full endpoint | decisions lane only; any server on the Jev wire: OpenRouter (`https://openrouter.ai/api/alpha/decisions`, key = your OpenRouter key) or a self-hosted server (`http://127.0.0.1:8767/v1/systemone`, usually keyless) |
 
@@ -1651,10 +1651,9 @@ overridden on `embeddings:`), and refused on any other provider.
 - It names the Vertex AI location that serves the call and processes the prompt:
   `eu`, `us`, `global`, or a region such as `europe-west4`. The API host follows
   from it, so no `base_url` is accepted.
-- Under `profile: eu_hosted` it must be `eu` or an EU region (`europe-west1`,
-  `-west3`, `-west4`, `-west8`, `-west9`, `-west10`, `-west12`, `-north1`,
-  `-north2`, `-central2`, `-southwest1`). London `europe-west2`, Zürich
-  `europe-west6`, `global` and `us` are refused.
+- `eu` and the EU regions keep processing in the EU; London `europe-west2`,
+  Zürich `europe-west6`, `global` and `us` do not. `eu_hosted` and `cloud_frontier`
+  admit every location; `sovereign` refuses `gemini_vertex` at any location.
 - Saving a `gemini_vertex` binding asks Google whether the location serves the
   model and refuses it with a 422 if not; so does moving the provider's
   location, for every bound model.
