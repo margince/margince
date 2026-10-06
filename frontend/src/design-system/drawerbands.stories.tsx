@@ -74,7 +74,9 @@ const bodyScrollsToItsEnd = async () => {
   const save = within(dialog).getByRole("button", { name: "Save 3 claims" });
   const footTop = save.getBoundingClientRect().top;
   body.scrollTop = body.scrollHeight;
-  const last = within(body).getAllByText(/^Claim \d+:/).at(-1);
+  const last = within(body)
+    .getAllByText(/^Claim \d+:/)
+    .at(-1);
   if (!last) throw new Error("The drawer body drew no claims.");
   await waitFor(() =>
     expect(last.getBoundingClientRect().bottom).toBeLessThanOrEqual(
