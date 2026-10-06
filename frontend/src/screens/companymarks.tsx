@@ -16,8 +16,9 @@ type Company = components["schemas"]["Company"];
  * lifecycle is the header's one real control and sits beside the name
  * (CompanyLifecycleControl), because as a pill in this row it read as one more
  * tag a reader could not act on. All are tags ON the record, the contact
- * page's `ContactMarks` in the account's own terms. Archived leads because it outranks the rest: among the
- * verbs it read as one more control, and a reader scanning the name missed it.
+ * page's `ContactMarks` in the account's own terms. Archived leads because it
+ * outranks the rest: among the verbs it read as one more control, and a reader
+ * scanning the name missed it.
  */
 export function CompanyMarks({ company }: Readonly<{ company: Company }>) {
   const t = useT();

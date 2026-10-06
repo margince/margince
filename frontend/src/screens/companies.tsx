@@ -1289,7 +1289,9 @@ function CompanyPage({
         // the name's own line, the contact record's own shape.
         nameBadge={
           <>
-            <CompanyLifecycleControl company={company} />
+            {/* Keyed by the record: a refused pick belongs to this account and
+                must not carry over when the page moves to the next one. */}
+            <CompanyLifecycleControl key={company.id} company={company} />
             <CompanySubtitle company={company} />
           </>
         }

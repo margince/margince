@@ -380,6 +380,9 @@ function TriggerButton({
           .join(" ")}
         disabled={field.disabled}
         pending={field["aria-busy"]}
+        // `pending` swallows the press; the keys that open the list are
+        // refused here, or a keyboard reader could pick mid-write.
+        onKeyDown={field["aria-busy"] ? undefined : listbox.onKeyDown}
       >
         {content}
         <ChevronDown className="select-chevron" aria-hidden="true" />

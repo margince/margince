@@ -250,6 +250,21 @@ describe("the button appearance", () => {
     expect(trigger.getAttribute("aria-disabled")).toBe("true");
     expect(trigger.hasAttribute("disabled")).toBe(false);
   });
+
+  // Busy refuses the keyboard as it refuses the pointer: a list opened
+  // mid-write would offer a pick the write in flight then drops.
+  it("opens no list from the keyboard while busy", async () => {
+    const user = userEvent.setup();
+    const { trigger } = renderSelect({
+      appearance: "button",
+      "aria-busy": true,
+    });
+    trigger.focus();
+    await user.keyboard("{Enter}");
+    await user.keyboard(" ");
+    await user.keyboard("{ArrowDown}");
+    expect(screen.queryByRole("listbox")).toBeNull();
+  });
 });
 
 describe("the popup", () => {
