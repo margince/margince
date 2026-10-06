@@ -53,7 +53,7 @@ func (r dedupeResolver) Subject(ctx context.Context, cmd DedupeCommand) (StageIn
 		sentence = words.reopenDuplicate
 	}
 	return StageInfo{
-		TargetType: "contact",
+		TargetType: importObjectContact,
 		TargetID:   cmd.ID,
 		Summary:    fmt.Sprintf(sentence, cmd.ID),
 	}, nil

@@ -4,10 +4,9 @@
 package auth
 
 import (
+	"context"
 	"errors"
 	"fmt"
-
-	"context"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"

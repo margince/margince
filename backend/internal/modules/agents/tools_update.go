@@ -13,9 +13,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/margince/margince/backend/internal/modules/agents/apps"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/modules/agents/apps"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"

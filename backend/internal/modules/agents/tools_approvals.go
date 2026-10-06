@@ -21,9 +21,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/margince/margince/backend/internal/modules/agents/apps"
 	"time"
 
+	"github.com/margince/margince/backend/internal/modules/agents/apps"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"

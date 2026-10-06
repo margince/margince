@@ -21,6 +21,7 @@ const notADuplicate = "not_a_duplicate"
 // the same write-authority probe over both records and write the same audit row.
 type duplicateQueue struct{ store *contacts.Store }
 
+//nolint:ireturn // the seam is an interface by design: agents may not import the contacts module
 func duplicateQueueSeam(pool *pgxpool.Pool) agents.DuplicateQueue {
 	return duplicateQueue{store: contacts.NewStore(InstallationDB(pool))}
 }
