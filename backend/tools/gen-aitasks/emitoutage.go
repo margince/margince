@@ -74,14 +74,14 @@ Three rules decide every row:
 - **A blocked rung is skipped with no call.** A task whose ladder has another
   rung on a provider that still answers is served by that rung, so one
   provider's outage costs it nothing but the model it would have used.
-- **Only a ladder blocked end to end reaches the outage column.** A background
-  task then returns a deferral to the carrier that owns its work: the item
+- **A fully blocked ladder** is what the outage column describes. A background
+  task then returns a deferral to the carrier that owns its work. The item
   waits until the provider's next check and its attempt is refunded, so an
   outage never parks mail as unsure or burns an enrichment's retries. An
   interactive task fails fast with ` + "`" + `provider_unavailable` + "`" + `,
   ` + "`" + `provider_out_of_credit` + "`" + ` or ` + "`" + `provider_unauthorized` + "`" + `, telling the user to
   contact their administrator.
-- **A decision model is tried first and never waited on.** If its call fails,
+- **A decision model** is tried first and never waited on. If its call fails,
   the task's own ladder answers.
 
 Each process blocks a provider on what its own calls saw: the API and the
@@ -89,10 +89,10 @@ worker each learn an outage from their own failures. The status they share is
 for display, so Settings → System health lists a provider either one found
 blocked.
 
-Settings → AI models shows it per row: the dot before a task's name turns red
-when every model on its ladder is blocked — and also while the task waits on the
-allowance or has no model bound — and the name opens what the task does in this
-state.
+Settings → AI models shows it per row. The dot before a task's name turns red
+when every model on its ladder is blocked. It also turns red while the task
+waits on the allowance or has no model bound. The task's name opens what it
+does in this state.
 
 | Task | Name | Mode | Ladder | Every rung blocked | Decision model |
 | --- | --- | --- | --- | --- | --- |
@@ -103,7 +103,7 @@ const outageReading = `
 
 Work that waited resumes by itself at the provider's next check; raising the AI
 allowance does not hasten it, because the allowance was never what stopped it.
-Work that spent its attempts before the provider was marked blocked — the
-calls that tripped it — is reopened by hand:
+Work that spent its attempts before the provider was marked blocked (the
+calls that tripped it) is reopened by hand:
 [recover-after-a-provider-outage.md](../how-to/recover-after-a-provider-outage.md).
 `

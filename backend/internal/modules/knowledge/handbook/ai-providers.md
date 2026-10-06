@@ -141,8 +141,8 @@ Margince checks again by itself; a successful key **Test** clears it at once, an
 Also called: provider badge, provider status, credit exhausted, 401, API key refused.
 
 ### What happens to an AI task while its provider is down?
-While a provider is out of credit, rejecting its key or unreachable (including after three server errors in a row), Margince skips it, and a task with another model on a working provider uses that one. Timeouts only mark it **Degraded**, which skips nothing.
-When every model a task can use is blocked, background work such as mail checks and enrichment waits and tries again at the provider's next check without using up its attempts, and a request someone makes in the app fails at once with a message to contact their administrator. Search indexing is the exception: it is refused and tries again on its own schedule.
+While a provider is out of credit, rejecting its key or unreachable, Margince skips it. Three server errors in a row also count as unreachable. A task with another model on a working provider uses that one. Timeouts only mark a provider **Degraded**, which skips nothing.
+When every model a task can use is blocked, background work such as mail checks and enrichment waits. It tries again at the provider's next check without using up its attempts. A request someone makes in the app fails at once with a message to contact their administrator. Search indexing is the exception: it is refused and tries again on its own schedule.
 Under **Settings**, then **AI models**, the dot before such a task in **AI tasks** turns red; select the task's name to read what it does in this state.
 Also called: AI task stuck, task waiting, deferred AI work, AI outage per task.
 
