@@ -110,8 +110,8 @@ export const MomentsWithheld: Story = {
   },
 };
 
-// A row about an account says which side wrote last in the same two terms a
-// contact's row does: they wrote in March, nobody here has since.
+// A row about an account says which side wrote last, in terms that name the
+// company: they wrote in March, nobody here has since.
 export const AccountWhoWroteLast: Story = {
   args: {
     item: {
