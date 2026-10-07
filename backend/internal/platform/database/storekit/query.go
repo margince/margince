@@ -151,8 +151,40 @@ func (q Query) selectCapped(ctx context.Context, tx pgx.Tx, where string, args [
 	if limit <= 0 || limit > PredicateRowLimit {
 		limit = PredicateRowLimit
 	}
-	sql := fmt.Sprintf("SELECT t.id FROM %s t WHERE %s ORDER BY t.id LIMIT %d",
-		q.Table, where, limit)
+	return q.selectOrdered(ctx, tx, where, args, fmt.Sprintf(" LIMIT %d", limit))
+}
+
+// ExportRowLimit bounds one export: a file is built in memory, so a slice past
+// it is refused rather than read. It is far above PredicateRowLimit, which
+// bounds a page of a list.
+const ExportRowLimit = 50000
+
+// SelectExportIDs is SelectIDs for an export: every row the predicate selects
+// for this caller, up to ExportRowLimit. It answers one more than the limit
+// when the slice is larger, so the caller can refuse it instead of handing out
+// a file that is silently short.
+func (q Query) SelectExportIDs(ctx context.Context, tx pgx.Tx, p Predicate) ([]ids.UUID, error) {
+	where, args, err := q.predicateWhere(ctx, p)
+	if err != nil {
+		return nil, err
+	}
+	return q.selectOrdered(ctx, tx, where, args, fmt.Sprintf(" LIMIT %d", ExportRowLimit+1))
+}
+
+// SelectExportMemberIDs is SelectExportIDs over a list's members.
+func (q Query) SelectExportMemberIDs(ctx context.Context, tx pgx.Tx, members ListMemberFilter) ([]ids.UUID, error) {
+	where, args, err := q.scopedWhere(ctx, func(arg func(any) int) (string, error) {
+		return members("t.id", arg)
+	})
+	if err != nil {
+		return nil, err
+	}
+	return q.selectOrdered(ctx, tx, where, args, fmt.Sprintf(" LIMIT %d", ExportRowLimit+1))
+}
+
+func (q Query) selectOrdered(ctx context.Context, tx pgx.Tx, where string, args []any, limitClause string) ([]ids.UUID, error) {
+	sql := fmt.Sprintf("SELECT t.id FROM %s t WHERE %s ORDER BY t.id%s",
+		q.Table, where, limitClause)
 	rows, err := tx.Query(ctx, sql, args...)
 	if err != nil {
 		return nil, fmt.Errorf("predicate query on %s: %w", q.Table, err)

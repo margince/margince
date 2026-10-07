@@ -15,7 +15,9 @@ var readListsCopy = toolCopy{
 		"with very many lists one can wait longer (last_check says when); a record that joined and " +
 		"left between two checks is not recorded. A preview is logged as a read of those records. " +
 		"A list with health retired_field still works but filters on a retired custom field, named " +
-		"in retired_fields; its steward should replace that clause.",
+		"in retired_fields; its steward should replace that clause. A list with health retired_tag " +
+		"filters on an archived or merged-away tag, named in retired_tags, so it reads empty until " +
+		"its steward names the live tag.",
 	Instead: "search_records finds records by name; tags are applied with apply_tag, not lists.",
 	Retain:  "Keep list_id, the version for a later change, and next_cursor to read the next page.",
 }

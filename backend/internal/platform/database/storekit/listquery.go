@@ -160,13 +160,24 @@ func ParseListSort(ctx context.Context, spec *string, vocab map[string]SortField
 	return sorted, nil
 }
 
+// sortKeyPrefixChars bounds a text sort's key. The cursor carries the last
+// row's key and travels in a URL, so an unbounded one makes a long value's next
+// page unrequestable. The ordering itself uses the bounded key, so the page and
+// its continuation still agree exactly; rows that share this many leading
+// characters order among themselves by the (created_at, id) tie-breaker.
+const sortKeyPrefixChars = 256
+
 // orderExpr is what this sort orders and continues by: the field's own
-// expression, or the column of its name.
+// expression, or the column of its name, cut to sortKeyPrefixChars when text.
 func (s *ListSort) orderExpr() string {
-	if s.expr != "" {
-		return s.expr
+	expr := s.expr
+	if expr == "" {
+		expr = quoteColumnIdentifier(s.name)
 	}
-	return quoteColumnIdentifier(s.name)
+	if listBindCast(s.kind) == "::text" {
+		return fmt.Sprintf("left(%s, %d)", expr, sortKeyPrefixChars)
+	}
+	return expr
 }
 
 // OrderBy renders the ORDER BY clause: the sort field first (NULLS LAST

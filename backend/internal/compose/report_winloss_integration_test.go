@@ -266,6 +266,13 @@ func TestWinLossPeriodBucketsFollowTheInstallationFiscalYear(t *testing.T) {
 		if len(result.Rows) != 1 {
 			t.Fatalf("%s: %d rows, want the 1 seeded deal: %+v", dimension, len(result.Rows), result.Rows)
 		}
+		// A bucket the report renders must be one its own filter admits, under
+		// every fiscal start, or a caller could not filter by what they read.
+		if text, ok := result.Rows[0][dimension].(string); ok {
+			if err := checkPeriodValue(dimension, text); err != nil {
+				t.Errorf("the report renders %s %q, which its own filter refuses: %v", dimension, text, err)
+			}
+		}
 		return result.Rows[0][dimension]
 	}
 

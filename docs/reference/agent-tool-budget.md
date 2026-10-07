@@ -57,7 +57,7 @@ spends it on every run of every agent.
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 5 | 5 of 82 | 1890 | 1288 | 3765 | 11% | 19445 | 0 | 5 |
 | `overnight_at_risk_sweep` | 7 | 7 of 82 | 2737 | 1814 | 5138 | 15% | 18072 | 7 | 6 |
-| _whole served catalog's listing, for scale; no run is offered it_ | 82 |  | 29058 |  |  | 88% |  |  |  |
+| _whole served catalog's listing, for scale; no run is offered it_ | 82 |  | 29096 |  |  | 88% |  |  |  |
 
 ### `morning_brief`
 
@@ -160,8 +160,8 @@ listing once. Read a row as what that tool costs a menu.
 | `list_records` | 794 | 2 scenarios |
 | `compose_analytics_report` | 772 |  |
 | `send_email` | 754 |  |
+| `read_lists` | 737 |  |
 | `preview_import` | 725 |  |
-| `read_lists` | 699 |  |
 | `log_activity` | 685 | 3 scenarios |
 | `create_record` | 667 |  |
 | `send_message` | 603 |  |

@@ -29,6 +29,9 @@ const (
 	// healthRetiredField is a Live List still evaluating on a retired custom
 	// field's kept values, whose clause its steward should replace.
 	healthRetiredField = "retired_field"
+	// healthRetiredTag is a Live List whose filter names an archived tag, so
+	// its clause matches nothing and its steward should name the live one.
+	healthRetiredTag = "retired_tag"
 )
 
 // ExportDetailListID is the system_log detail key a filtered export of a list
@@ -48,10 +51,12 @@ type listSummary struct {
 	Dependencies []listDependency
 	// RetiredFields is the retired custom fields a Live List's filter names.
 	RetiredFields []string
-	LastCheck     *listCheck
-	Pulse         *listPulse
-	Joined        []ids.UUID
-	Changes       *changeSummary
+	// RetiredTags is the archived tags a Live List's filter names.
+	RetiredTags []ids.UUID
+	LastCheck   *listCheck
+	Pulse       *listPulse
+	Joined      []ids.UUID
+	Changes     *changeSummary
 }
 
 type listDependency struct {
@@ -100,6 +105,9 @@ func (s *Store) summarize(ctx context.Context, l listRow) (listSummary, error) {
 	if out.RetiredFields, err = s.retiredFieldsOf(ctx, l); err != nil {
 		return listSummary{}, err
 	}
+	if out.RetiredTags, err = s.retiredTagsOf(ctx, l); err != nil {
+		return listSummary{}, err
+	}
 	gone, err := s.stewardGone(ctx, l)
 	switch {
 	case err != nil:
@@ -108,6 +116,8 @@ func (s *Store) summarize(ctx context.Context, l listRow) (listSummary, error) {
 		out.Health = healthOwnerless
 	case len(out.RetiredFields) > 0:
 		out.Health = healthRetiredField
+	case len(out.RetiredTags) > 0:
+		out.Health = healthRetiredTag
 	}
 	return out, nil
 }

@@ -10909,6 +10909,7 @@ const (
 	ListHealthOk           ListHealth = "ok"
 	ListHealthOwnerless    ListHealth = "ownerless"
 	ListHealthRetiredField ListHealth = "retired_field"
+	ListHealthRetiredTag   ListHealth = "retired_tag"
 )
 
 // Valid indicates whether the value is a known member of the ListHealth enum.
@@ -10921,6 +10922,8 @@ func (e ListHealth) Valid() bool {
 	case ListHealthOwnerless:
 		return true
 	case ListHealthRetiredField:
+		return true
+	case ListHealthRetiredTag:
 		return true
 	default:
 		return false
@@ -36427,7 +36430,7 @@ type List struct {
 	Dependencies *[]ListDependency `json:"dependencies,omitempty"`
 	EntityType   ListEntityType    `json:"entity_type"`
 
-	// Health `ownerless` when nobody looks after the list — no steward, or one who can no longer sign in — so somebody should take it over. `invalid` when a Live List's filter no longer compiles. `retired_field` when a Live List's filter names a custom field that has been retired: the list still evaluates on the kept values, and its steward should replace the clause. `invalid` outranks `ownerless`, which outranks `retired_field`.
+	// Health `ownerless` when nobody looks after the list — no steward, or one who can no longer sign in — so somebody should take it over. `invalid` when a Live List's filter no longer compiles. `retired_field` when a Live List's filter names a custom field that has been retired: the list still evaluates on the kept values, and its steward should replace the clause. `retired_tag` when a Live List's filter names a tag that has been archived or merged away: the clause matches no record, so the list reads empty, and its steward should name the tag that took its place. `invalid` outranks `ownerless`, which outranks `retired_field`, which outranks `retired_tag`.
 	Health ListHealth         `json:"health"`
 	Id     openapi_types.UUID `json:"id"`
 
@@ -36445,6 +36448,9 @@ type List struct {
 
 	// RetiredFields The retired custom fields a Live List's filter names, by column name. Absent when it names none.
 	RetiredFields *[]string `json:"retired_fields,omitempty"`
+
+	// RetiredTags The archived or merged-away tags a Live List's filter names. Absent when it names none.
+	RetiredTags *[]openapi_types.UUID `json:"retired_tags,omitempty"`
 
 	// Sharing Who may FIND the list. Never who may see its members: every member read applies the reader's own row scope.
 	Sharing        ListSharing `json:"sharing"`
@@ -36466,7 +36472,7 @@ type List struct {
 // ListEntityType defines model for List.EntityType.
 type ListEntityType string
 
-// ListHealth `ownerless` when nobody looks after the list — no steward, or one who can no longer sign in — so somebody should take it over. `invalid` when a Live List's filter no longer compiles. `retired_field` when a Live List's filter names a custom field that has been retired: the list still evaluates on the kept values, and its steward should replace the clause. `invalid` outranks `ownerless`, which outranks `retired_field`.
+// ListHealth `ownerless` when nobody looks after the list — no steward, or one who can no longer sign in — so somebody should take it over. `invalid` when a Live List's filter no longer compiles. `retired_field` when a Live List's filter names a custom field that has been retired: the list still evaluates on the kept values, and its steward should replace the clause. `retired_tag` when a Live List's filter names a tag that has been archived or merged away: the clause matches no record, so the list reads empty, and its steward should name the tag that took its place. `invalid` outranks `ownerless`, which outranks `retired_field`, which outranks `retired_tag`.
 type ListHealth string
 
 // ListListType defines model for List.ListType.
