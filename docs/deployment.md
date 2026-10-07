@@ -44,7 +44,7 @@ an exempt runtime role. Two such roles are required:
 
 The worker does not schedule River's nightly index rebuild, which needs the
 index owner. If queue fetches slow down, reindex as `margince_owner`, for example
-`REINDEX INDEX CONCURRENTLY river_job_pkey`.
+`REINDEX INDEX CONCURRENTLY river_job_prioritized_fetching_index`.
 
 Create the roles + database + extensions **once**, as a Postgres superuser
 (pgvector is not a "trusted" extension, so a non-superuser cannot install it from
