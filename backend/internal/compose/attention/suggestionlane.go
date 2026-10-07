@@ -50,7 +50,7 @@ func (s *Service) openSuggestionItems(
 	}
 	var list []crmcontracts.DealSuggestion
 	var open int
-	err := s.degradable(ctx, func(ctx context.Context) error {
+	err := s.degradable(ctx, laneBudget, func(ctx context.Context) error {
 		var err error
 		if list, err = s.suggestions.OpenSuggestions(ctx, depth); err != nil {
 			return err

@@ -57,12 +57,17 @@ func MeetingAheadSQL(alias, now string) string {
 		alias + ".occurred_at > " + now + ")"
 }
 
+// NotCalledOffSQL admits any activity row except a meeting that was canceled or
+// a no-show. last_activity_of_deal carries this text verbatim.
+func NotCalledOffSQL(alias string) string {
+	return "(" + alias + ".kind <> '" + kindMeeting + "' OR " + MeetingCountsSQL(alias) + ")"
+}
+
 // InteractionCountsSQL is the whole test for an activity row that counts
 // toward contact strength: an interaction kind, and if it is a meeting, one
 // nobody called off.
 func InteractionCountsSQL(alias string) string {
-	return alias + ".kind IN " + InteractionKindSQLGroup() +
-		" AND (" + alias + ".kind <> '" + kindMeeting + "' OR " + MeetingCountsSQL(alias) + ")"
+	return alias + ".kind IN " + InteractionKindSQLGroup() + " AND " + NotCalledOffSQL(alias)
 }
 
 // How an account's contact stands, by what made it so.

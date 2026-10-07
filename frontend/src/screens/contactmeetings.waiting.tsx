@@ -155,10 +155,7 @@ export function WaitingSection({
       )}
       <ConfirmModal
         open={withdrawing !== null}
-        onClose={() => {
-          // The DELETE is already out: closing now would hide how it ends.
-          if (!withdraw.isPending) setWithdrawing(null);
-        }}
+        onClose={() => setWithdrawing(null)}
         returnFocusTo={() => (withdrawn.current ? afterWithdraw() : null)}
         title={t("contact.meetings.withdrawTitle")}
         confirmLabel={t("contact.meetings.withdrawConfirm")}

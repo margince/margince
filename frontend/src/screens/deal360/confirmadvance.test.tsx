@@ -65,7 +65,7 @@ it("keeps naming the stage it asked about while the dialog animates out", () => 
   exits.mockRestore();
 });
 
-it("lets an advance abandoned mid-write leave the next one alone", async () => {
+it("holds the dialog through a write and closes it on the answer", async () => {
   vi.stubGlobal(
     "fetch",
     vi.fn(async () => Response.json({ data: [] })),
@@ -75,11 +75,11 @@ it("lets an advance abandoned mid-write leave the next one alone", async () => {
   let land: (deal: unknown) => void = () => {};
   const onClose = vi.fn();
   const onClosed = vi.fn();
-  const view = (pending: PendingAdvance | null) => (
+  render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
         <ConfirmAdvanceModal
-          pending={pending}
+          pending={{ dealId: "deal-a", version: 3, toStage: WON }}
           onClose={onClose}
           onClosed={onClosed}
           onConfirm={() =>
@@ -89,23 +89,50 @@ it("lets an advance abandoned mid-write leave the next one alone", async () => {
           }
         />
       </LocaleProvider>
-    </QueryClientProvider>
-  );
-  const { rerender } = render(
-    view({ dealId: "deal-a", version: 3, toStage: WON }),
+    </QueryClientProvider>,
   );
   await user.click(screen.getByRole("button", { name: "Confirm" }));
   await user.keyboard("{Escape}");
-  expect(onClose).toHaveBeenCalledTimes(1);
-  rerender(view(null));
-  rerender(view({ dealId: "deal-b", version: 7, toStage: LOST }));
-
+  expect(onClose).not.toHaveBeenCalled();
   expect(
-    screen.getByRole<HTMLButtonElement>("button", { name: "Cancel" }).disabled,
-  ).toBe(false);
-  await act(async () => land({ id: "deal-a", version: 4 }));
+    screen.getByRole("button", { name: "Confirm" }).getAttribute("aria-busy"),
+  ).toBe("true");
 
+  await act(async () => land({ id: "deal-a", version: 4 }));
+  expect(onClosed).toHaveBeenCalledTimes(1);
   expect(onClose).toHaveBeenCalledTimes(1);
-  expect(onClosed).not.toHaveBeenCalled();
-  expect(screen.getByRole("heading").textContent).toContain("Closed lost");
+});
+
+it("lets go of the dialog when the write rejects instead of holding it busy", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => Response.json({ data: [] })),
+  );
+  const user = userEvent.setup();
+  const client = new QueryClient();
+  const onClose = vi.fn();
+  let refuse: (error: Error) => void = () => {};
+  const write = new Promise((_, reject) => {
+    refuse = reject;
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">
+        <ConfirmAdvanceModal
+          pending={{ dealId: "deal-a", version: 3, toStage: WON }}
+          onClose={onClose}
+          onConfirm={() => write}
+        />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  await user.click(screen.getByRole("button", { name: "Confirm" }));
+  await act(async () => {
+    refuse(new Error("network down"));
+    await write.catch(() => undefined);
+  });
+  expect(onClose).toHaveBeenCalledTimes(1);
+  expect(
+    screen.getByRole("button", { name: "Confirm" }).getAttribute("aria-busy"),
+  ).toBeNull();
 });

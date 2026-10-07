@@ -3393,6 +3393,8 @@ export const vi = {
   "deals.totalsOwnerNotMeasurable":
     "Chỉ phần đã tải — bạn không được xem tổng của người phụ trách này",
   "deals.totalsNoTagFilter": "Chỉ phần đã tải — không có tổng khi lọc theo thẻ",
+  "deals.totalsNoSearch":
+    "Chỉ phần đã tải — tổng theo giai đoạn không áp dụng tìm kiếm nên không hiển thị",
   "deals.filterPartner": "Đối tác",
   "deals.filterPartnerAnyOne": "Mọi đối tác",
   "deals.filterMotion": "Loại giao dịch",
@@ -3409,7 +3411,6 @@ export const vi = {
   "deals.filterStalledAll": "Mọi deal",
   "deals.filterOwnerAll": "Mọi người phụ trách",
   "deals.filterPartnerAll": "Mọi nguồn",
-  "deals.sortNewest": "Mới nhất",
   "deals.unit": "deal",
   "deals.bulkStage": "Chuyển sang giai đoạn",
   "deals.bulkStagePick": "Chọn giai đoạn",
@@ -4287,9 +4288,6 @@ export const vi = {
   "files.hide": "Ẩn khỏi deal này",
   "files.unhide": "Hiện lại trên deal này",
   "files.delete": "Xóa",
-  "files.hideTitle": "Ẩn {name} khỏi deal này?",
-  "files.hideBody":
-    "Tin nhắn và tệp đính kèm vẫn ở trên hoạt động và trong thư viện của công ty. Chỉ deal này không còn liệt kê nó.",
   "files.deleteTitle": "Xóa {name}?",
   "files.deleteBody":
     "Tệp bị gỡ khỏi deal này, và khỏi mọi Deal Room đang chia sẻ nó.",
@@ -11209,6 +11207,8 @@ export const vi = {
   "worklist.pane.nothing": "Chưa ghi nhận gì.",
   "worklist.pane.lastInbound": "Liên hệ này viết lần cuối",
   "worklist.pane.lastOutbound": "Chúng ta viết cho liên hệ này lần cuối",
+  "worklist.pane.lastFromCompany": "Công ty này viết lần cuối",
+  "worklist.pane.lastToCompany": "Chúng ta viết cho công ty này lần cuối",
   "worklist.pane.never": "Chưa bao giờ",
   "worklist.pane.company": "Làm việc cho",
   "worklist.pane.role": "Vai trò của họ",
@@ -11334,6 +11334,18 @@ export const vi = {
   "worklist.board.atRisk": "Deal có rủi ro",
   "worklist.board.overdue": "Quá hạn",
   "worklist.board.nobody": "Công việc chưa phân công",
+  "worklist.board.notMeasured": "Chưa đo",
+  "worklist.planCoverage.all_one":
+    "Đã đọc kế hoạch tuần của một thành viên nhóm.",
+  "worklist.planCoverage.all_other":
+    "Đã đọc kế hoạch tuần của cả {count} thành viên nhóm.",
+  "worklist.planCoverage.some_one":
+    "Đã đọc kế hoạch tuần của {read} trên một thành viên nhóm.",
+  "worklist.planCoverage.some_other":
+    "Đã đọc kế hoạch tuần của {read} trên {count} thành viên nhóm.",
+  "worklist.planCoverage.unread": "Chưa đọc: {names}.",
+  "worklist.planCoverage.truncated":
+    "Danh sách nhóm đã bị cắt ngắn, các thành viên phía sau chưa được kiểm tra.",
   "worklist.coaching.title": "Đáng trao đổi sáng nay",
   "worklist.coaching.promises_one":
     "{name} còn {count} cam kết đã đến hạn — khách hàng đang chờ.",

@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import type { components } from "../../api/schema";
 import { useAgentTierMap, verbTier } from "../../app/autonomy";
 import { Field, TextInput } from "../../design-system/atoms";
@@ -89,12 +89,10 @@ export function ConfirmAdvanceModal({
   // deal the server handed back and the reason this dialog required, and only
   // on a terminal move that actually succeeded.
   onClosed?: (deal: Deal, reason: string) => void;
-  // Resolves when the advance settles, so this dialog acts on the outcome of
-  // THIS attempt. It returns the SAVED DEAL on success and the error on
-  // failure rather than throwing: the caller's own error surface still reports
-  // the failure, and a rejection here would be an unhandled one in an event
-  // handler.
-  onConfirm: (input: AdvanceInput) => Promise<Deal | unknown>;
+  // Settles with the SAVED DEAL, which the review offered next needs. A
+  // rejection is read as the outcome, not thrown: the caller's own error surface
+  // reports it, and thrown from a click handler it would be unhandled.
+  onConfirm: (input: AdvanceInput) => Promise<unknown>;
 }>) {
   const t = useT();
   const tierMap = useAgentTierMap();
@@ -118,16 +116,12 @@ export function ConfirmAdvanceModal({
     setLastAsked(pending);
   }
   const shown = pending ?? lastAsked;
-  // Escape leaves while a write is in flight, so a late answer must not close
-  // or unbusy the dialog asked next.
-  const inFlight = useRef<PendingAdvance | null>(null);
 
   // EVERY way out of this dialog clears what was typed — the buttons, Escape,
   // and the backdrop alike. The component stays mounted between openings, so a
   // reason typed and then abandoned would otherwise still be sitting there the
   // next time a deal is closed, and it would describe a different deal.
   const dismiss = () => {
-    inFlight.current = null;
     setSubmitting(false);
     setLostReason("");
     setWonReason("");
@@ -148,7 +142,6 @@ export function ConfirmAdvanceModal({
     wonReason === WON_REASON_NEEDING_DETAIL && !saysSomething(wonDetail);
 
   const confirm = async (asked: PendingAdvance) => {
-    inFlight.current = asked;
     setSubmitting(true);
     // Captured BEFORE the await: `dismiss()` clears what was typed, and the
     // review starts from the words this reader actually wrote for THIS close.
@@ -165,11 +158,7 @@ export function ConfirmAdvanceModal({
       toStage: asked.toStage,
       lostReason: lostReason.trim() || undefined,
       ...wonAnswer(needsWonReason, wonReason, wonDetail),
-    });
-    if (inFlight.current !== asked) {
-      return;
-    }
-    inFlight.current = null;
+    }).catch((error: unknown) => error);
     setSubmitting(false);
     // Only the missing-evidence refusal stays open: the reader can answer it
     // here, and any other error renders on the screen behind this dialog.

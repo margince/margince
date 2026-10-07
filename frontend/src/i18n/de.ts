@@ -3425,6 +3425,8 @@ export const de = {
     "Nur geladene Deals. Die Summen der zuständigen Person darfst du nicht auswerten.",
   "deals.totalsNoTagFilter":
     "Nur geladene Deals. Keine Summe, solange ein Tag-Filter aktiv ist.",
+  "deals.totalsNoSearch":
+    "Nur geladene Deals. Die Phasensummen kennen keine Suche, daher wird keine gezeigt.",
   "deals.filterPartner": "Partner",
   "deals.filterPartnerAnyOne": "Beliebiger Partner",
   "deals.filterMotion": "Geschäftsart",
@@ -3441,7 +3443,6 @@ export const de = {
   "deals.filterStalledAll": "Alle Deals",
   "deals.filterOwnerAll": "Alle Zuständigen",
   "deals.filterPartnerAll": "Alle Quellen",
-  "deals.sortNewest": "Neueste",
   "deals.unit": "Deals",
   "deals.bulkStage": "In Phase verschieben",
   "deals.bulkStagePick": "Phase wählen",
@@ -4333,9 +4334,6 @@ export const de = {
   "files.hide": "An diesem Deal ausblenden",
   "files.unhide": "Wieder an diesem Deal anzeigen",
   "files.delete": "Löschen",
-  "files.hideTitle": "{name} bei diesem Deal ausblenden?",
-  "files.hideBody":
-    "Die Nachricht und ihr Anhang bleiben an der Aktivität und in der Dateibibliothek des Unternehmens. Nur dieser Deal führt sie nicht mehr auf.",
   "files.deleteTitle": "{name} löschen?",
   "files.deleteBody":
     "Die Datei wird aus diesem Deal entfernt und aus jedem Deal Room, der sie teilt.",
@@ -11306,6 +11304,8 @@ export const de = {
   "worklist.pane.nothing": "Noch nichts erfasst.",
   "worklist.pane.lastInbound": "Letzte Nachricht von diesem Kontakt",
   "worklist.pane.lastOutbound": "Letzte Nachricht an diesen Kontakt",
+  "worklist.pane.lastFromCompany": "Letzte Nachricht von diesem Unternehmen",
+  "worklist.pane.lastToCompany": "Letzte Nachricht an dieses Unternehmen",
   "worklist.pane.never": "Nie",
   "worklist.pane.company": "Unternehmen",
   "worklist.pane.role": "Rolle",
@@ -11430,6 +11430,17 @@ export const de = {
   "worklist.board.atRisk": "Gefährdete Deals",
   "worklist.board.overdue": "Überfällig",
   "worklist.board.nobody": "Nicht zugewiesene Arbeit",
+  "worklist.board.notMeasured": "Nicht gemessen",
+  "worklist.planCoverage.all_one": "Wochenplan von einem Teammitglied gelesen.",
+  "worklist.planCoverage.all_other":
+    "Wochenpläne aller {count} Teammitglieder gelesen.",
+  "worklist.planCoverage.some_one":
+    "Wochenplan gelesen: {read} von einem Teammitglied.",
+  "worklist.planCoverage.some_other":
+    "Wochenpläne gelesen: {read} von {count} Teammitgliedern.",
+  "worklist.planCoverage.unread": "Nicht gelesen: {names}.",
+  "worklist.planCoverage.truncated":
+    "Die Teamliste wurde gekürzt, spätere Teammitglieder wurden nicht geprüft.",
   "worklist.coaching.title": "Coaching-Vorschläge",
   "worklist.coaching.promises_one": "{name} hat {count} fällige Kundenzusage",
   "worklist.coaching.promises_other":

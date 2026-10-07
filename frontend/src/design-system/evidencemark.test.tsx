@@ -108,7 +108,12 @@ describe("evidence mark", () => {
             snippet: "Founded in 1998",
           }}
         />
-        <Modal open={dialogOpen} onClose={onDialogClose} labelledBy="edit">
+        <Modal
+          open={dialogOpen}
+          onClose={onDialogClose}
+          labelledBy="edit"
+          intent="form"
+        >
           <Heading size="large" id="edit">
             Edit deal
           </Heading>

@@ -35,31 +35,21 @@ export function intentForFieldCount(fields: number): "form" | "drawer" {
   return fields <= FORM_DIALOG_MAX_FIELDS ? "form" : "drawer";
 }
 
-// The legacy pair stays until every call names an intent; one call takes one or
-// the other, and modal-legacy-census.test.ts counts the pair down.
-export type ModalBox =
-  | { intent: ModalIntent; size?: never; placement?: never }
-  | {
-      intent?: never;
-      size?: "default" | "wide" | "split";
-      placement?: "center" | "right" | "full";
-    };
-
 export function Modal({
   open,
   onClose,
   labelledBy,
   intent,
-  size = "default",
-  placement = "center",
   returnFocusTo,
   initialFocusTo,
   closeReason,
+  closeDisabled,
   children,
 }: Readonly<{
   open: boolean;
   onClose: () => void;
   labelledBy: string;
+  intent: ModalIntent;
   // Resolve at close time when a mutation replaces the opener (for example,
   // Deactivate becoming Reactivate). A callback can find the newly mounted control.
   returnFocusTo?: () => HTMLElement | null;
@@ -77,9 +67,10 @@ export function Modal({
    * of a surface covering their page.
    */
   closeReason?: string;
+  /** Holds the corner X while a write the dialog started is still out. */
+  closeDisabled?: boolean;
   children: ReactNode;
-}> &
-  ModalBox) {
+}>) {
   const t = useT();
   const dialog = useRef<HTMLDivElement | null>(null);
   const overlay = useRef<HTMLDivElement | null>(null);
@@ -104,7 +95,7 @@ export function Modal({
     return null;
   }
   const leaving = state === "closing";
-  const box = modalClass(intent, size, placement);
+  const box = modalClass(intent);
   // Portalled to the document body rather than rendered in place: a dialog
   // opened from inside a collapsed container — the record header's overflow
   // menu — would otherwise be hidden along with it, and the click that opened
@@ -117,7 +108,7 @@ export function Modal({
     // path, and it is `useDialogFocus`'s, not this element's.
     <div // NOSONAR: backdrop dismiss only; keyboard path (Esc) handled by the effect above
       className={
-        box.split(" ").includes("modal-drawer")
+        box?.split(" ").includes("modal-drawer")
           ? "overlay overlay-right"
           : "overlay"
       }
@@ -172,6 +163,7 @@ export function Modal({
             label={t("common.close")}
             icon={<X aria-hidden="true" />}
             reason={closeReason}
+            disabled={closeDisabled}
             onClick={onClose}
           />
         </div>
@@ -181,13 +173,8 @@ export function Modal({
   );
 }
 
-// An intent alone decides the box. The legacy pair maps onto the same classes
-// where an intent exists for it; centred wide and the split drawer keep their own.
-function modalClass(
-  intent: ModalIntent | undefined,
-  size: "default" | "wide" | "split",
-  placement: "center" | "right" | "full",
-) {
+// Written as branches because dialoglayout.ts runs them to learn each box.
+function modalClass(intent: ModalIntent) {
   if (intent === "confirm") return "modal modal-confirm";
   if (intent === "form") return "modal modal-form";
   if (intent === "drawer") return "modal modal-drawer";
@@ -195,15 +182,4 @@ function modalClass(
     return "modal modal-drawer modal-drawer-wide";
   }
   if (intent === "full") return "modal modal-full";
-  if (placement === "full") return "modal modal-full";
-  if (placement === "right") {
-    if (size === "split") {
-      return "modal modal-drawer modal-drawer-wide modal-drawer-split";
-    }
-    return size === "wide"
-      ? "modal modal-drawer modal-drawer-wide"
-      : "modal modal-drawer";
-  }
-  // Centred, a split has no second column to hold, so it takes the roomy box.
-  return size === "default" ? "modal" : "modal modal-wide";
 }

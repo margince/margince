@@ -977,8 +977,7 @@ export function modalBoxes(
     if (!out) throw unread(fn, `returns no class for ${combo.join("/")} in`);
     return out;
   });
-  // An intent leaves the legacy pair nothing to vary, so most combinations
-  // draw one box; it is judged once.
+  // Combinations that draw the same box are judged once.
   return [...new Set(boxes)].map((out) => out.split(/\s+/));
 }
 

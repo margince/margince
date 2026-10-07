@@ -12,82 +12,31 @@ package company360
 // date that hid which side it belonged to.
 
 import (
-	"fmt"
 	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
-// readLastTouch answers which direction went last, and when — the pair that
-// replaced the header's 0-100 score (AC-company-2, ADR-0079 arc).
-//
-// Two timestamps rather than one "last touch", because which side wrote last
-// IS the question: an account we mailed a fortnight ago with no reply and one
-// that wrote to us this morning have the same last-touch date and opposite
-// meanings.
-//
-// It walks the same three links the timeline does (activities.CompanyLinkedActivityExists),
-// so the header can never disagree with the list under it, and
-// it carries the caller's activity row scope, so a rep sees the last message
-// THEY may read rather than the account's true last message.
+// readLastTouch is LastTouchFor over a set of one, so the header and a queue
+// row naming this account read the same statement.
 func (a *assembly) readLastTouch() error {
-	if err := auth.Require(a.ctx, "activity", principal.ActionRead); err != nil {
-		return err
-	}
-	args := []any{a.companyID.UUID}
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	scope, err := auth.ActivityDiscoverClause(a.ctx, "a", arg)
+	touched, err := LastTouchFor(a.ctx, a.tx, []ids.CompanyID{a.companyID}, a.now, a.opts)
 	if err != nil {
 		return err
 	}
-	where := "a.archived_at IS NULL AND " + activities.CompanyLinkedActivityExists(1)
-	if scope != "" {
-		where += " AND " + scope
-	}
-	where += a.opts.projectScope(arg)
-	// A message dated after the read has not been sent yet, so it is neither
-	// side's last word: a scheduled send must not hide the real last one.
-	where += fmt.Sprintf(" AND a.occurred_at <= $%d", arg(a.now))
-	// Two ordered LIMIT-1 arms in ONE round trip, rather than two FILTERed
-	// max() aggregates. An aggregate has to see every qualifying row before it
-	// can answer; each arm here stops at the first, so the cost is bounded by
-	// how far back the newest message of that direction is rather than by the
-	// account's whole history.
-	rows, err := a.tx.Query(a.ctx, `
-		(SELECT 'inbound' AS direction, a.occurred_at FROM activity a
-		  WHERE `+where+` AND a.direction = 'inbound'
-		  ORDER BY a.occurred_at DESC LIMIT 1)
-		UNION ALL
-		(SELECT 'outbound', a.occurred_at FROM activity a
-		  WHERE `+where+` AND a.direction = 'outbound'
-		  ORDER BY a.occurred_at DESC LIMIT 1)`, args...)
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var direction string
-		var at time.Time
-		if err := rows.Scan(&direction, &at); err != nil {
-			return err
-		}
-		// A direction with no message returns no row at all, which is how the
-		// null reaches the wire: nothing of that direction was ever captured.
-		when := at
-		if direction == "inbound" {
-			a.out.LastInboundAt = &when
-			continue
-		}
-		a.out.LastOutboundAt = &when
-	}
-	return rows.Err()
+	// An absent direction is how the null reaches the wire: nothing of that
+	// direction was ever captured.
+	touch := touched[a.companyID]
+	a.out.LastInboundAt = touch.InboundAt
+	a.out.LastOutboundAt = touch.OutboundAt
+	return nil
 }
 
 // readStateStrip is the three readings the overview leads with (AC-company-13).

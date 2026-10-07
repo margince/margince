@@ -297,6 +297,9 @@ describe("PassportCard — minting", () => {
       name: "Cancel",
     });
     expect(cancel).toBeDisabled();
+    expect(
+      within(dialog).getByRole("button", { name: "Close" }),
+    ).toBeDisabled();
     await user.keyboard("{Escape}");
     expect(screen.getByRole("dialog")).toBeTruthy();
   });

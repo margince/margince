@@ -288,6 +288,8 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		// When the contact a row names last wrote to us and when we last wrote
 		// to them, from the same reader the contact's own page uses.
 		WithContactTouch(attentionContactTouch{pool: pool}).
+		// And the same pair for a row about an account, from the company page's reader.
+		WithCompanyTouch(attentionCompanyTouch{pool: pool, now: now}).
 		// Which account a meeting row's contact works for, from the employer
 		// read every contact page carries.
 		WithContactEmployers(contacts.NewStore(db)).

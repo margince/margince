@@ -154,17 +154,6 @@ export function ProjectLinks({
   // second, because that is what the write does.
   const moving = !adapter.allowsMany && adapter.linked.length > 0;
 
-  // A dialog cannot be dismissed while its write is in flight. Escape and the
-  // backdrop both reach onClose, and closing there loses the refusal the write
-  // is about to return — the caller sees nothing and believes it worked.
-  function closeWhenIdle(close: () => void) {
-    return () => {
-      if (!busy) {
-        close();
-      }
-    };
-  }
-
   async function run(work: () => Promise<void>, done: () => void) {
     setBusy(true);
     setRefusal(null);
@@ -245,7 +234,7 @@ export function ProjectLinks({
         busy={busy}
         refusal={refusal}
         words={said}
-        onClose={closeWhenIdle(() => setPicking(false))}
+        onClose={() => setPicking(false)}
         onPick={(id) =>
           run(
             () => adapter.attach(id, role),
@@ -260,7 +249,7 @@ export function ProjectLinks({
         refusal={refusal}
         returnFocusTo={() => section.current}
         words={said}
-        onClose={closeWhenIdle(() => setDetaching(null))}
+        onClose={() => setDetaching(null)}
         onConfirm={(id) =>
           run(
             () => adapter.detach?.(id) ?? Promise.resolve(),

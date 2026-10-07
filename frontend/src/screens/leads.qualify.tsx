@@ -187,11 +187,7 @@ export function QualifyDialog({
     },
   });
 
-  // A promotion in flight is not something to walk away from: the dialog
-  // stays until the server has answered, then closes on success or shows
-  // the refusal.
   const close = () => {
-    if (qualify.isPending) return;
     qualify.reset();
     onClose();
   };

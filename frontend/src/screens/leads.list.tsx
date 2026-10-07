@@ -8,11 +8,9 @@ import { usePageName } from "../app/pagemeta";
 import { useRecordZone } from "../app/recordzone";
 import { readStored, STORAGE_KEYS, writeStored } from "../app/storage";
 import { replaceDial, useUrlParams } from "../app/urlstate";
-import { Badge, SegmentedControl } from "../design-system/atoms";
+import { SegmentedControl } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
-import { CellStrip } from "../design-system/listtable";
 import { useOwnToast } from "../design-system/toast";
-import { formatDateAbbrev, formatNumber } from "../format/format";
 import { leadIdentityName } from "../format/leadname";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -21,22 +19,14 @@ import { ProblemError, QueryGate, throwProblem, useMe } from "./common";
 import { CreateAction, type CreateField } from "./create";
 import { useObjectCustomFields } from "./customfields.form";
 import { LeadBulkBar } from "./leadbulk";
-import {
-  LEAD_STATUS_FILTER_OPTIONS,
-  LeadBoard,
-  SlaBadge,
-  StatusBadge,
-  scoreFactorLabel,
-  scoreTone,
-} from "./leadpresentation";
+import { LEAD_STATUS_FILTER_OPTIONS, LeadBoard } from "./leadpresentation";
+import { leadColumns } from "./leads.columns";
 import {
   sourceFilterOptions,
-  sourceLabelFor,
   sourcePickOptions,
   useLeadSettings,
   useLeadSources,
 } from "./leadsources";
-import { terminalBadge } from "./leadstanding";
 import {
   type ListPage,
   type ListQuery,
@@ -45,13 +35,7 @@ import {
   useListQuery,
   useOwnerChips,
 } from "./listquery";
-import {
-  createdColumn,
-  lastActivityColumn,
-  mineEmptyNote,
-  ownerColumn,
-  standardViews,
-} from "./recordlist";
+import { mineEmptyNote, standardViews } from "./recordlist";
 import { SaveViewAction, useSavedViewTabs } from "./savedviews";
 import "./leads.css";
 
@@ -354,93 +338,7 @@ function LeadsWorkbench({
             ]}
           />
         }
-        columns={[
-          {
-            key: "name",
-            header: t("contacts.name"),
-            cell: (lead: Lead) => {
-              const terminal = terminalBadge(lead);
-              return (
-                <span>
-                  <strong>{leadIdentityName(lead) || t("lead.unnamed")}</strong>
-                  {lead.company_name && (
-                    <span className="t-caption"> · {lead.company_name}</span>
-                  )}
-                  {terminal && (
-                    <Badge tone={terminal.tone}>{t(terminal.label)}</Badge>
-                  )}
-                </span>
-              );
-            },
-            // `full_name` is in the server's lead sort vocabulary, so the
-            // header is live and the attribute joins the sort menu — which is
-            // the only place an alphabetical order is offered now that no view
-            // tab spells one.
-            sort: "full_name",
-            fixed: true,
-          },
-          {
-            key: "score",
-            header: t("lead.score"),
-            cell: (lead: Lead) => (
-              <CellStrip>
-                <Badge tone={scoreTone(lead.score)}>
-                  {formatNumber(lead.score, locale)}
-                </Badge>
-                <span className="t-caption">
-                  {lead.score_reason
-                    ? scoreFactorLabel(lead.score_reason, t)
-                    : t("lead.scoreNoSignals")}
-                </span>
-              </CellStrip>
-            ),
-            sort: "score",
-            numeric: true,
-          },
-          {
-            key: "status",
-            header: t("lead.status"),
-            sort: "status",
-            cell: (lead: Lead) => (
-              <span className="lead-status-cell">
-                <StatusBadge status={lead.status} />
-                <SlaBadge state={lead.sla_state} />
-              </span>
-            ),
-          },
-          {
-            key: "nextTask",
-            header: t("lead.nextTask"),
-            sort: "next_task_due_at", // the deadline, not the title
-
-            cell: (lead: Lead) => (
-              <span>
-                {lead.next_task_subject ?? t("lead.noNextTask")}
-                {lead.open_task_count
-                  ? ` · ${t("lead.openTaskCount", {
-                      count: formatNumber(lead.open_task_count, locale),
-                    })}`
-                  : ""}
-                {lead.next_task_due_at
-                  ? ` · ${formatDateAbbrev(lead.next_task_due_at, locale, recordZone)}`
-                  : ""}
-              </span>
-            ),
-          },
-          // The shared column, now that this header can offer a sort.
-          lastActivityColumn<Lead>(t, locale, recordZone),
-          {
-            key: "source",
-            header: t("lead.source"),
-            sort: "source", // the catalog's label, which is what the cell prints
-
-            cell: (lead: Lead) => (
-              <span>{sourceLabelFor(lead, sources.data?.data, t)}</span>
-            ),
-          },
-          ownerColumn<Lead>(t),
-          createdColumn<Lead>(t, locale, recordZone),
-        ]}
+        columns={leadColumns(t, locale, recordZone, sources.data?.data)}
         rowKey={(lead) => lead.id}
         selection={{
           selected: liveSelection,

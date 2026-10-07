@@ -165,7 +165,12 @@ import { RecordReading, RecordReadingPair, TimelineThread } from "./record360";
 import { RecordCustomFields } from "./recordcustomfields";
 import { saveRecordEdit } from "./recordedit";
 import { RecordFields, rawRecord } from "./recordfields";
-import { ownerColumn, tagsColumn } from "./recordlist";
+import {
+  mineEmptyNote,
+  ownerColumn,
+  standardViews,
+  tagsColumn,
+} from "./recordlist";
 import { RecordListsPanel } from "./recordlists";
 import { useRecordOwners } from "./recordreferences";
 import { RecordTeam } from "./recordteam";
@@ -217,6 +222,7 @@ function usePipeline(pipelineId?: string | null) {
 
 type DealFilters = {
   pipelineId: string;
+  q: string;
   sort: string;
   includeArchived: boolean;
   filters: Record<string, string>;
@@ -265,6 +271,7 @@ function dealsQueryParams(f: DealFilters) {
     limit: 100,
     include_archived: f.includeArchived || undefined,
     pipeline_id: f.pipelineId || undefined,
+    q: f.q || undefined,
     sort: f.sort || undefined,
     stage_id: filters.stage_id || undefined,
     owner_id: filters.owner_id || undefined,
@@ -351,14 +358,15 @@ function dealsByStageReportFilters(f: DealFilters): Record<string, unknown> {
 // have told a reader whose report answered 422 to press a filter instead of
 // showing them the failure.
 //
-// A TAG has no filter field on the report — sending one is a 422 — so the
-// totals would count deals the board is not showing. Every other dial is one
-// the report takes, and the report measures every deal the reader may see,
-// which is the set `GET /deals` draws as cards.
+// A TAG and a SEARCH have no filter field on the report — sending one is a
+// 422 — so the totals would count deals the board is not showing. Every other
+// dial is one the report takes, and the report measures every deal the reader
+// may see, which is the set `GET /deals` draws as cards.
 function totalsWithheldBecause(f: DealFilters): MessageKey | undefined {
   if (parseTagIDs(f.filters.tag_id).length > 0) {
     return "deals.totalsNoTagFilter";
   }
+  if (f.q) return "deals.totalsNoSearch";
   return undefined;
 }
 
@@ -1805,6 +1813,7 @@ function useDealScreenDials({
     pipelines?.[0];
   const dealFilters: DealFilters = {
     pipelineId: effectivePipeline?.id ?? "",
+    q: query.q,
     sort: query.sort,
     includeArchived: query.includeArchived,
     filters: query.filters,
@@ -2042,6 +2051,7 @@ export function DealsScreen({
   const cf = useObjectCustomFields("deal");
   const pipelinesQuery = usePipelines();
   const meQuery = useMe();
+  const viewerId = useViewerId();
   const savedViews = useSavedViewTabs("deals");
   const {
     query,
@@ -2214,7 +2224,6 @@ export function DealsScreen({
         columns={dealColumns(t, locale, recordZone, stageName)}
         rowKey={(deal) => deal.id}
         rowRoute={(deal) => ({ screen: "deals", id: deal.id })}
-        searchable={false}
         action={createAction}
         tools={tools}
         saveView={saveView}
@@ -2241,23 +2250,19 @@ export function DealsScreen({
           acquisitionSources: acquisitionSources,
           retiredSuffix: t("deal.acquisitionRetired"),
         })}
-        views={[{ label: "deals.sortNewest", sort: "-created_at" }]}
+        views={[...standardViews(viewerId, { sort: "" })]}
+        emptyNote={mineEmptyNote({
+          t,
+          state: dealsListState,
+          viewerId,
+          unit: "unit.deals",
+        })}
       />
       <ErrorLine error={advance.error} />
       <ConfirmAdvanceModal
         pending={pending}
         onClose={() => setPending(null)}
-        onConfirm={(input) =>
-          // mutateAsync REJECTS on failure; this dialog wants the outcome, and
-          // an unhandled rejection in a click handler is not one. onError still
-          // runs, so the screen's own error surface is unaffected. The SAVED
-          // DEAL comes back on success, because the review offered next needs
-          // the closing the server just recorded.
-          advance.mutateAsync(input).then(
-            (deal) => deal,
-            (error: unknown) => error,
-          )
-        }
+        onConfirm={(input) => advance.mutateAsync(input)}
         onClosed={(deal, reason) => setClosed(closedDealOf(deal, reason))}
       />
       {/* Offered the moment a deal closes, from the list as from the record
@@ -3127,12 +3132,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                 <ConfirmAdvanceModal
                   pending={pending}
                   onClose={() => setPending(null)}
-                  onConfirm={(input) =>
-                    advance.mutateAsync(input).then(
-                      (deal) => deal,
-                      (error: unknown) => error,
-                    )
-                  }
+                  onConfirm={(input) => advance.mutateAsync(input)}
                   onClosed={(deal, reason) =>
                     setClosed(closedDealOf(deal, reason))
                   }

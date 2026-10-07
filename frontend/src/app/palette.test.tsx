@@ -692,7 +692,12 @@ function ShellWithDialog({
         onClose={() => setPaletteOpen(false)}
         commands={commands}
       />
-      <Modal open={dialogOpen} onClose={onDialogClose} labelledBy="edit-deal">
+      <Modal
+        open={dialogOpen}
+        onClose={onDialogClose}
+        labelledBy="edit-deal"
+        intent="form"
+      >
         <Heading size="large" id="edit-deal">
           Edit deal
         </Heading>

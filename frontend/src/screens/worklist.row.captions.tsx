@@ -8,6 +8,7 @@ import { formatNumber } from "../format/format";
 import { translatePlural, useLocale, useT } from "../i18n";
 import { subjectHref } from "./worklist.copy";
 import { employerOf } from "./worklist.meetingparties";
+import type { HeldTouch } from "./worklist.pane";
 import type { WorklistItem } from "./worklist.queries";
 import { withWorklistReturn } from "./worklist.return";
 import type { RowReadings } from "./worklist.row.compact";
@@ -88,15 +89,28 @@ export function aboutRecord(
 }
 
 /**
- * How the silence runs both ways, on every row the server put a contact on.
- * The triage shape names them under the row itself (brief.feed.tsx) and
- * withholds this, as it withholds the about line.
+ * How the silence runs both ways with whoever the row is about. A contact on
+ * the row outranks its account, since the pair belongs to whoever a reply would
+ * go to; the account's shows only on a row naming no one. Keyed on which
+ * record is present rather than on which pair is, so a contact whose moments
+ * were withheld never borrows the account's.
+ */
+export function rowTouch(item: WorklistItem): HeldTouch {
+  return item.contact
+    ? { holder: "contact", moments: item.contact.touch }
+    : { holder: "company", moments: item.company?.touch };
+}
+
+/**
+ * The pair as the queue's row prints it. The triage shape names them under
+ * the row itself (brief.feed.tsx) and withholds this, as it withholds the
+ * about line.
  */
 export function touchOf(
   item: WorklistItem,
   framed: boolean,
-): NonNullable<WorklistItem["contact"]>["touch"] | undefined {
-  return framed ? undefined : item.contact?.touch;
+): HeldTouch | undefined {
+  return framed ? undefined : rowTouch(item);
 }
 
 /**

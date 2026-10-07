@@ -3480,6 +3480,8 @@ export const en = {
     "Loaded deals only. This owner’s totals are outside what you may measure.",
   "deals.totalsNoTagFilter":
     "Loaded deals only. No total while a tag filter is on.",
+  "deals.totalsNoSearch":
+    "Loaded deals only. The stage totals cannot apply a search, so none is shown.",
   "deals.filterPartner": "Partner",
   "deals.filterPartnerAnyOne": "Any partner",
   "deals.filterMotion": "Motion",
@@ -3496,7 +3498,6 @@ export const en = {
   "deals.filterStalledAll": "All deals",
   "deals.filterOwnerAll": "All owners",
   "deals.filterPartnerAll": "All sources",
-  "deals.sortNewest": "Newest",
   "deals.unit": "deals",
   "deals.bulkStage": "Move to stage",
   "deals.bulkStagePick": "Pick a stage",
@@ -4435,9 +4436,6 @@ export const en = {
   "files.hide": "Hide from this deal",
   "files.unhide": "Show on this deal again",
   "files.delete": "Delete",
-  "files.hideTitle": "Hide {name} from this deal?",
-  "files.hideBody":
-    "The message and its attachment stay on the activity and in the company library. Only this deal stops listing it.",
   "files.deleteTitle": "Delete {name}?",
   "files.deleteBody":
     "The file is removed from this deal, and from any Deal Room sharing it.",
@@ -11448,6 +11446,8 @@ export const en = {
   "worklist.pane.nothing": "Nothing recorded yet.",
   "worklist.pane.lastInbound": "Last from this contact",
   "worklist.pane.lastOutbound": "Last to this contact",
+  "worklist.pane.lastFromCompany": "Last from this company",
+  "worklist.pane.lastToCompany": "Last to this company",
   "worklist.pane.never": "Never",
   "worklist.pane.company": "Company",
   "worklist.pane.role": "Role",
@@ -11567,6 +11567,18 @@ export const en = {
   "worklist.board.atRisk": "Deals at risk",
   "worklist.board.overdue": "Overdue",
   "worklist.board.nobody": "Unassigned work",
+  "worklist.board.notMeasured": "Not measured",
+  "worklist.planCoverage.all_one":
+    "Weekly plan read for the team’s one member.",
+  "worklist.planCoverage.all_other":
+    "Weekly plans read for all {count} teammates.",
+  "worklist.planCoverage.some_one":
+    "Weekly plan read for {read} of the team’s one member.",
+  "worklist.planCoverage.some_other":
+    "Weekly plans read for {read} of {count} teammates.",
+  "worklist.planCoverage.unread": "Not read: {names}.",
+  "worklist.planCoverage.truncated":
+    "The team list was cut short, so later teammates were not checked.",
   "worklist.coaching.title": "Coaching suggestions",
   "worklist.coaching.promises_one":
     "{name} has {count} customer commitment due",

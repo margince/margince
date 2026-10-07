@@ -7,6 +7,7 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ConfirmModal } from "./confirmmodal";
 import type { ModalIntent } from "./modal";
@@ -202,6 +203,39 @@ describe("ConfirmModal", () => {
     expect(onConfirm).not.toHaveBeenCalled();
   });
 
+  it("holds Escape, the backdrop and the corner X until the write settles", async () => {
+    const user = userEvent.setup();
+    function Archiving({ pending }: Readonly<{ pending: boolean }>) {
+      const [open, setOpen] = useState(true);
+      return (
+        <ConfirmModal
+          open={open}
+          onClose={() => setOpen(false)}
+          title="Archive this contact?"
+          confirmLabel="Archive"
+          onConfirm={vi.fn()}
+          pending={pending}
+        >
+          <p>Body copy</p>
+        </ConfirmModal>
+      );
+    }
+    const { rerender } = rtlRender(<Archiving pending />);
+    const backdrop = document.querySelector(".overlay");
+    if (!backdrop) throw new Error("the dialog drew no backdrop");
+    await user.keyboard("{Escape}");
+    await user.click(backdrop);
+    const corner = screen.getByRole("button", { name: "Close" });
+    expect(corner).toBeDisabled();
+    await user.click(corner);
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+    rerender(<Archiving pending={false} />);
+    expect(screen.getByRole("button", { name: "Close" })).toBeEnabled();
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
   it("leaves both buttons enabled when not pending", () => {
     rtlRender(
       <ConfirmModal
@@ -303,11 +337,7 @@ describe("ConfirmModal", () => {
 });
 
 describe("the box a confirm sits in", () => {
-  function boxOf(
-    box:
-      | { intent?: Exclude<ModalIntent, "full"> }
-      | { size?: "wide"; placement?: "right" },
-  ) {
+  function boxOf(box: { intent?: Exclude<ModalIntent, "full"> }) {
     rtlRender(
       <ConfirmModal
         open
@@ -331,12 +361,6 @@ describe("the box a confirm sits in", () => {
     expect(boxOf({ intent: "form" })).toBe("modal modal-form");
   });
 
-  it("hands a legacy pair to Modal as it is", () => {
-    expect(boxOf({ placement: "right", size: "wide" })).toBe(
-      "modal modal-drawer modal-drawer-wide",
-    );
-  });
-
   it("refuses the lightbox, which clips a body past the viewport", () => {
     rtlRender(
       <ConfirmModal
@@ -352,23 +376,5 @@ describe("the box a confirm sits in", () => {
       </ConfirmModal>,
     );
     expect(screen.getByRole("dialog", { name: "Full" })).toBeInTheDocument();
-  });
-
-  it("refuses an intent beside a legacy prop", () => {
-    rtlRender(
-      <ConfirmModal
-        open
-        onClose={vi.fn()}
-        title="Both"
-        confirmLabel="Go"
-        onConfirm={vi.fn()}
-        intent="form"
-        // @ts-expect-error one call takes an intent or the legacy pair
-        placement="right"
-      >
-        <p>Body</p>
-      </ConfirmModal>,
-    );
-    expect(screen.getByRole("dialog", { name: "Both" })).toBeInTheDocument();
   });
 });

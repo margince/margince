@@ -10909,6 +10909,7 @@ const (
 	ListHealthOk           ListHealth = "ok"
 	ListHealthOwnerless    ListHealth = "ownerless"
 	ListHealthRetiredField ListHealth = "retired_field"
+	ListHealthRetiredTag   ListHealth = "retired_tag"
 )
 
 // Valid indicates whether the value is a known member of the ListHealth enum.
@@ -10921,6 +10922,8 @@ func (e ListHealth) Valid() bool {
 	case ListHealthOwnerless:
 		return true
 	case ListHealthRetiredField:
+		return true
+	case ListHealthRetiredTag:
 		return true
 	default:
 		return false
@@ -15751,6 +15754,24 @@ func (e TaggableEntityType) Valid() bool {
 	case TaggableEntityTypeLead:
 		return true
 	case TaggableEntityTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TeamBoardMemberActivation.
+const (
+	TeamBoardMemberActivationActive  TeamBoardMemberActivation = "active"
+	TeamBoardMemberActivationInvited TeamBoardMemberActivation = "invited"
+)
+
+// Valid indicates whether the value is a known member of the TeamBoardMemberActivation enum.
+func (e TeamBoardMemberActivation) Valid() bool {
+	switch e {
+	case TeamBoardMemberActivationActive:
+		return true
+	case TeamBoardMemberActivationInvited:
 		return true
 	default:
 		return false
@@ -36427,7 +36448,7 @@ type List struct {
 	Dependencies *[]ListDependency `json:"dependencies,omitempty"`
 	EntityType   ListEntityType    `json:"entity_type"`
 
-	// Health `ownerless` when nobody looks after the list — no steward, or one who can no longer sign in — so somebody should take it over. `invalid` when a Live List's filter no longer compiles. `retired_field` when a Live List's filter names a custom field that has been retired: the list still evaluates on the kept values, and its steward should replace the clause. `invalid` outranks `ownerless`, which outranks `retired_field`.
+	// Health `ownerless` when nobody looks after the list — no steward, or one who can no longer sign in — so somebody should take it over. `invalid` when a Live List's filter no longer compiles. `retired_field` when a Live List's filter names a custom field that has been retired: the list still evaluates on the kept values, and its steward should replace the clause. `retired_tag` when a Live List's filter names a tag that has been archived or merged away: that tag no longer matches any record, so a clause on it selects nothing, and its steward should name the tag that took its place. `invalid` outranks `ownerless`, which outranks `retired_field`, which outranks `retired_tag`.
 	Health ListHealth         `json:"health"`
 	Id     openapi_types.UUID `json:"id"`
 
@@ -36445,6 +36466,9 @@ type List struct {
 
 	// RetiredFields The retired custom fields a Live List's filter names, by column name. Absent when it names none.
 	RetiredFields *[]string `json:"retired_fields,omitempty"`
+
+	// RetiredTags The archived or merged-away tags a Live List's filter names. Absent when it names none.
+	RetiredTags *[]openapi_types.UUID `json:"retired_tags,omitempty"`
 
 	// Sharing Who may FIND the list. Never who may see its members: every member read applies the reader's own row scope.
 	Sharing        ListSharing `json:"sharing"`
@@ -36466,7 +36490,7 @@ type List struct {
 // ListEntityType defines model for List.EntityType.
 type ListEntityType string
 
-// ListHealth `ownerless` when nobody looks after the list — no steward, or one who can no longer sign in — so somebody should take it over. `invalid` when a Live List's filter no longer compiles. `retired_field` when a Live List's filter names a custom field that has been retired: the list still evaluates on the kept values, and its steward should replace the clause. `invalid` outranks `ownerless`, which outranks `retired_field`.
+// ListHealth `ownerless` when nobody looks after the list — no steward, or one who can no longer sign in — so somebody should take it over. `invalid` when a Live List's filter no longer compiles. `retired_field` when a Live List's filter names a custom field that has been retired: the list still evaluates on the kept values, and its steward should replace the clause. `retired_tag` when a Live List's filter names a tag that has been archived or merged away: that tag no longer matches any record, so a clause on it selects nothing, and its steward should name the tag that took its place. `invalid` outranks `ownerless`, which outranks `retired_field`, which outranks `retired_tag`.
 type ListHealth string
 
 // ListListType defines model for List.ListType.
@@ -43594,6 +43618,10 @@ type TeamBoard struct {
 	// ordered by display name. Never empty: a caller on no team is their own single
 	// row, because "only you" and "nobody" are different answers and the second reads
 	// as an outage.
+	//
+	// For a named team (`team`), invited seats that have not signed in yet appear
+	// too, marked by `activation`, so a lead sees who is on the team rather than only
+	// who has arrived.
 	Members []TeamBoardMember `json:"members"`
 
 	// Truncated True when a count was read to its work bound, so the real figure may be higher
@@ -43632,6 +43660,10 @@ type TeamBoardCounts struct {
 
 // TeamBoardMember One teammate and the work they are answerable for.
 type TeamBoardMember struct {
+	// Activation `invited` is a seat that has not signed in yet. Its workload is not measured, so
+	// its `counts` carry no meaning — a client draws "not measured" for it, never zero.
+	Activation TeamBoardMemberActivation `json:"activation"`
+
 	// Counts Counts of work somebody owes, all read under the CALLER's visibility rather than the
 	// teammate's — so this is how much of their load the reader can see.
 	Counts TeamBoardCounts `json:"counts"`
@@ -43643,6 +43675,10 @@ type TeamBoardMember struct {
 	// drill-down the board routes to.
 	UserId openapi_types.UUID `json:"user_id"`
 }
+
+// TeamBoardMemberActivation `invited` is a seat that has not signed in yet. Its workload is not measured, so
+// its `counts` carry no meaning — a client draws "not measured" for it, never zero.
+type TeamBoardMemberActivation string
 
 // TeamException One condition on a lead's team that a contact can act on, with the evidence that
 // raised it and the basis it was judged against.
@@ -46211,6 +46247,14 @@ type Worklist struct {
 	// once.
 	NextCursor *string `json:"next_cursor,omitempty"`
 
+	// PlanCoverage Whose weekly plans this read looked at, present only when `scope` is `team` and the
+	// due commitments were read across the team roster. Absent under every other scope.
+	//
+	// It exists because "nothing due" and "not looked at" differ. A teammate whose plan
+	// could not be read contributes no rows, and without this a lead would read their
+	// silence as a week with nothing owed.
+	PlanCoverage *WorklistPlanCoverage `json:"plan_coverage,omitempty"`
+
 	// Queue Everything actionable, best-first. The order is the product of this endpoint.
 	Queue []WorklistItem `json:"queue"`
 
@@ -46433,6 +46477,31 @@ type WorklistBuckets struct {
 	Urgent int `json:"urgent"`
 }
 
+// WorklistCompanyFacts The account behind the row, and how the silence runs both ways, so a reader
+// knows whether the account or we wrote last before choosing a verb.
+//
+// Present on every row whose `subject` is a company. Absent on a row about
+// anything else — a contact's row names its human in `contact`, and the account
+// that human works for is not this row's subject.
+//
+// The `id` is the producer's claim and always travels. The moments are the
+// READER's, filled under their own grants, and absent where the reader may not
+// have them, which is not the same as never.
+type WorklistCompanyFacts struct {
+	Id openapi_types.UUID `json:"id"`
+
+	// Touch When they last wrote to us and when we last wrote to them — the same two dates,
+	// over the same walk, that the record's own page reports: the contact page's
+	// `last_inbound_at` and `last_outbound_at` for a contact, the company page's
+	// engagement strip for an account. A queue row and the record it opens cannot
+	// disagree about who wrote last.
+	//
+	// Absent from the row when the caller may not read activity, or may not read this
+	// contact or account: a withheld answer. Present with both nulls for a record
+	// nobody has ever exchanged a message with.
+	Touch *WorklistContactTouch `json:"touch,omitempty"`
+}
+
 // WorklistComparison The first tie-break at which this item beat the one below it, with both sides'
 // values — so a row can say "above the next because it closes sooner" instead of
 // asking the reader to trust the order.
@@ -46496,24 +46565,26 @@ type WorklistContactFacts struct {
 	Label *string `json:"label,omitempty"`
 
 	// Touch When they last wrote to us and when we last wrote to them — the same two dates,
-	// over the same walk, that the contact's own page reports as `last_inbound_at` and
-	// `last_outbound_at`, so a queue row and the record it opens cannot disagree about
-	// who wrote last.
+	// over the same walk, that the record's own page reports: the contact page's
+	// `last_inbound_at` and `last_outbound_at` for a contact, the company page's
+	// engagement strip for an account. A queue row and the record it opens cannot
+	// disagree about who wrote last.
 	//
 	// Absent from the row when the caller may not read activity, or may not read this
-	// contact: a withheld answer. Present with both nulls for a contact nobody has ever
-	// exchanged a message with.
+	// contact or account: a withheld answer. Present with both nulls for a record
+	// nobody has ever exchanged a message with.
 	Touch *WorklistContactTouch `json:"touch,omitempty"`
 }
 
 // WorklistContactTouch When they last wrote to us and when we last wrote to them — the same two dates,
-// over the same walk, that the contact's own page reports as `last_inbound_at` and
-// `last_outbound_at`, so a queue row and the record it opens cannot disagree about
-// who wrote last.
+// over the same walk, that the record's own page reports: the contact page's
+// `last_inbound_at` and `last_outbound_at` for a contact, the company page's
+// engagement strip for an account. A queue row and the record it opens cannot
+// disagree about who wrote last.
 //
 // Absent from the row when the caller may not read activity, or may not read this
-// contact: a withheld answer. Present with both nulls for a contact nobody has ever
-// exchanged a message with.
+// contact or account: a withheld answer. Present with both nulls for a record
+// nobody has ever exchanged a message with.
 type WorklistContactTouch struct {
 	// LastInboundAt When they last wrote to us. Null means nothing inbound was ever captured.
 	LastInboundAt *time.Time `json:"last_inbound_at"`
@@ -46802,6 +46873,18 @@ type WorklistItem struct {
 	// Absent when there is no run today to compare against, which is different from
 	// false: false says the night saw this, absent says there was no night.
 	ChangedSinceBrief *bool `json:"changed_since_brief,omitempty"`
+
+	// Company The account behind the row, and how the silence runs both ways, so a reader
+	// knows whether the account or we wrote last before choosing a verb.
+	//
+	// Present on every row whose `subject` is a company. Absent on a row about
+	// anything else — a contact's row names its human in `contact`, and the account
+	// that human works for is not this row's subject.
+	//
+	// The `id` is the producer's claim and always travels. The moments are the
+	// READER's, filled under their own grants, and absent where the reader may not
+	// have them, which is not the same as never.
+	Company *WorklistCompanyFacts `json:"company,omitempty"`
 
 	// Consequence What happens if the reader does nothing. Derived per ITEM rather than per
 	// source, because one source has several honest answers: a deal past its close
@@ -47245,6 +47328,37 @@ type WorklistPinRequest struct {
 	// identifies a row: the lanes mint ids independently, so an id alone can name a
 	// row in a lane the caller was not looking at.
 	Source string `json:"source"`
+}
+
+// WorklistPlanCoverage Whose weekly plans this read looked at, present only when `scope` is `team` and the
+// due commitments were read across the team roster. Absent under every other scope.
+//
+// It exists because "nothing due" and "not looked at" differ. A teammate whose plan
+// could not be read contributes no rows, and without this a lead would read their
+// silence as a week with nothing owed.
+type WorklistPlanCoverage struct {
+	// Members One entry per member of the roster as read (up to its cap), in roster order —
+	// including a teammate whose plan was never asked for because the team read ran
+	// out of time, who reads as `read: false`.
+	Members []WorklistPlanCoverageMember `json:"members"`
+
+	// Truncated True when the roster came back at its cap, so teammates past it were never asked
+	// for a plan at all — the same admission `scope_truncated` makes for the page.
+	Truncated bool `json:"truncated"`
+}
+
+// WorklistPlanCoverageMember One teammate and whether their weekly plan was read.
+type WorklistPlanCoverageMember struct {
+	// DisplayName The teammate, as the roster names them.
+	DisplayName string `json:"display_name"`
+
+	// Read True when the plan was read, whether or not anything in it was due. False when the
+	// read failed, was refused, or was never made because the team read ran out of time,
+	// so this teammate's commitments are unknown rather than absent.
+	Read bool `json:"read"`
+
+	// UserId Whose plan this entry is about.
+	UserId openapi_types.UUID `json:"user_id"`
 }
 
 // WorklistReach What one source contributed, in numbers that say what they counted.
@@ -50395,10 +50509,13 @@ type ListDealsParams struct {
 	PipelineId      *openapi_types.UUID `form:"pipeline_id,omitempty" json:"pipeline_id,omitempty"`
 
 	// StageId Read one Kanban column.
-	StageId   *openapi_types.UUID    `form:"stage_id,omitempty" json:"stage_id,omitempty"`
-	OwnerId   *openapi_types.UUID    `form:"owner_id,omitempty" json:"owner_id,omitempty"`
-	CompanyId *openapi_types.UUID    `form:"company_id,omitempty" json:"company_id,omitempty"`
-	Status    *ListDealsParamsStatus `form:"status,omitempty" json:"status,omitempty"`
+	StageId   *openapi_types.UUID `form:"stage_id,omitempty" json:"stage_id,omitempty"`
+	OwnerId   *openapi_types.UUID `form:"owner_id,omitempty" json:"owner_id,omitempty"`
+	CompanyId *openapi_types.UUID `form:"company_id,omitempty" json:"company_id,omitempty"`
+
+	// Q Full-text query over the deal's name and description, plus a substring match on the name.
+	Q      *string                `form:"q,omitempty" json:"q,omitempty"`
+	Status *ListDealsParamsStatus `form:"status,omitempty" json:"status,omitempty"`
 
 	// ForecastCategory One of the forecast's named buckets. The same `deal.forecast_category` the forecast
 	// reads, so a tile's figure and the list behind it are one answer rather than two
@@ -88409,6 +88526,19 @@ func (siw *ServerInterfaceWrapper) ListDeals(w http.ResponseWriter, r *http.Requ
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "company_id"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "company_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "q" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "q", r.URL.Query(), &params.Q, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "q"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
 		}
 		return
 	}

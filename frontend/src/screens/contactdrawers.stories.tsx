@@ -58,8 +58,8 @@ const readyRun = {
 };
 
 // The record the drawer opens OVER, drawn behind it. Two things ride on it:
-// `placement="right"` exists so the record stays legible beside the drawer, and
-// a story with nothing behind shows the one thing the placement is for as an
+// the drawer opens at the side so the record stays legible beside it, and
+// a story with nothing behind shows the one thing the drawer is for as an
 // empty canvas — and the drawer PORTALS out of the story root, so without a
 // stage the root is empty and fe-uat reads the render as a failure.
 function ContactBehind() {
