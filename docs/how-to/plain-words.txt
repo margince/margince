@@ -125,6 +125,7 @@ certification
 certify
 change
 channel
+character
 chat
 check
 checklist
@@ -212,6 +213,7 @@ detail
 developer
 dialog
 different
+digit
 disagree
 dismiss
 dispatcher
@@ -249,6 +251,7 @@ envelope
 environment
 equal
 erase
+erasure
 error
 even
 event
@@ -279,6 +282,7 @@ finance
 find
 finish
 first
+fitness
 five
 fix
 fixture
@@ -286,7 +290,6 @@ flat
 floor
 focus
 fold
-folder
 follow
 font
 for
@@ -310,7 +313,6 @@ give
 glow
 go
 grade
-grader
 gradient
 grant
 green
@@ -642,6 +644,7 @@ same
 save
 say
 scan
+scenario
 schedule
 schema
 scope
@@ -717,6 +720,7 @@ statement
 status
 stay
 step
+steward
 still
 stop
 store
@@ -786,6 +790,7 @@ tool
 tooltip
 top
 touch
+trace
 track
 transaction
 transport
