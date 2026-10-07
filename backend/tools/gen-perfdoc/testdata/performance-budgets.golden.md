@@ -24,17 +24,17 @@ here changes until somebody measures by hand.
 | ID | Operation | Published budget | Measured p95 | Verdict | Measured on |
 |---|---|---|---|---|---|
 | `PERF-1` | Record open (contact/company/deal) | < 100 ms server | 3.2 ms | within budget | 2026-08-15 |
-| `PERF-2` | List/table view (50 rows, filtered) | < 150 ms server |  | **not measured** |  |
-| `PERF-3` | Search (full-text) | < 200 ms | 76.5 ms | within budget | 2026-08-15 |
-| `PERF-4` | Save/mutation | < 150 ms server | 6.1 ms | within budget | 2026-08-15 |
+| `PERF-2` | List/table view (50 rows, filtered) | < 150 ms server | 95.0 ms | within budget | 2026-10-07 |
+| `PERF-3` | Search (full-text) | < 200 ms |  | **not measured** |  |
+| `PERF-4` | Save/mutation | < 150 ms server | 151 ms | **OVER BUDGET** | 2026-08-15 |
 | `PERF-5` | AI baseline action (summary/draft) | first token < 1.5 s |  | **not measured** |  |
 | `PERF-6` | Cold start (single binary) | < 2 s |  | **not measured** |  |
-| `PERF-7` | Context-graph assembly | < 300 ms at mid-market | 9.9 ms | within budget | 2026-08-15 |
-| `PERF-8` | Worklist and Home, as the screen calls them | < 1 s |  | **not measured** |  |
+| `PERF-7` | Context-graph assembly | < 300 ms at mid-market |  | **not measured** |  |
+| `PERF-8` | Worklist and Home, as the screen calls them | < 1 s | 3100 ms | over budget (#4912) | 2026-10-07 |
 | `PERF-9` | Analytics screen | < 300 ms |  | **not measured** |  |
-| `PERF-10` | Search as the screen calls it | < 1 s |  | **not measured** |  |
-| `CAP-PARAM-1` | Capture to timeline | 60 s p95 | 39.2 ms | within budget | 2026-08-15 |
-| `MOBILE-AC-2` | Record open, perceived, Fast-3G | < 300 ms perceived | 61.0 ms | within budget | 2026-09-11 |
+| `PERF-10` | Search as the screen calls it | < 1 s | 420 ms | within budget | 2026-10-07 |
+| `CAP-PARAM-1` | Capture to timeline | 60 s p95 |  | **not measured** |  |
+| `MOBILE-AC-2` | Record open, perceived, Fast-3G | < 300 ms perceived |  | **not measured** |  |
 
 ### Still unmeasured
 
@@ -43,55 +43,33 @@ omitted, because a budget missing from this page reads as one that holds.
 
 ## Daily use (`make bench-daily`)
 
-Not measured yet: `make bench-daily` fills this section.
+The screens a rep and a manager open every day, timed over HTTP as the screen calls them.
+A row with no data answered 404 on every try; a row not gated is reported without a budget.
+
+| measurement | seat | p50 | p95 | budget | samples | verdict | notes |
+|---|---|---|---|---|---|---|---|
+| `worklist` | rep | 2900 ms | 3100 ms | 1000 ms | 30 | over budget (#4912) |  |
+| `palette_search` | manager | 180 ms | 420 ms | 1000 ms | 30 | within budget |  |
+| `palette_search` | rep | 120 ms | 210 ms | 1000 ms | 30 | within budget |  |
+| `home_digest` | rep |  |  | 1000 ms | 0 | no data |  |
+| `worklist_first_load` | rep | 5200 ms | 5200 ms | 1000 ms | 1 | not gated |  |
+| `morning_load_cheap_route` | team | 40.0 ms | 95.0 ms | 150 ms | 120 | within budget | pool wait 1250 ms in all, 48.0 ms at most, over 3200 acquires |
 
 ## Machines
 
 A latency is only true of the machine that produced it.
 
-### `make bench-capture` · measured 2026-08-15
+### `make bench-daily` · measured 2026-10-07
 
 | | |
 |---|---|
 | os / arch | darwin / arm64 |
 | cpu | Apple M4 (10 cores) |
 | memory | 24 GiB |
-| toolchain | go1.26.6 |
+| toolchain | go1.27.1 |
 | postgres | 16.14 |
 
-| measurement | p50 | p95 | p99 | budget | samples |
-|---|---|---|---|---|---|
-| `capture_to_timeline` | 27.8 ms | 39.2 ms | 42.9 ms | 60000 ms | 20 |
-
-### `make bench-mobile` · measured 2026-09-11
-
-| | |
-|---|---|
-| os / arch | darwin / arm64 |
-| cpu | Apple M1 Pro (8 cores) |
-| memory | 16 GiB |
-| toolchain | node 24.19.0 |
-| network | throttled Fast-3G (MOBILE-PARAM-2) |
-| viewport | 390x844 |
-
-| measurement | p50 | p95 | p99 | budget | samples |
-|---|---|---|---|---|---|
-| `record_open_perceived` | 48.0 ms | 61.0 ms | 65.0 ms | 300 ms | 20 |
-
-### `make bench-perf` · measured 2026-08-15
-
-| | |
-|---|---|
-| os / arch | darwin / arm64 |
-| cpu | Apple M4 (10 cores) |
-| memory | 24 GiB |
-| toolchain | go1.26.6 |
-| postgres | 16.14 |
-
-| measurement | p50 | p95 | p99 | budget | samples |
-|---|---|---|---|---|---|
-| `search_fts (mid_market tier)` | 72.7 ms | 76.5 ms | 81.4 ms | 200 ms | 20 |
-| `context_graph (mid_market tier)` | 8.0 ms | 9.9 ms | 10.0 ms | 300 ms | 20 |
+Its rows are listed per seat under [Daily use](#daily-use-make-bench-daily).
 
 ### `make bench-record` · measured 2026-08-15
 
@@ -106,7 +84,5 @@ A latency is only true of the machine that produced it.
 | measurement | p50 | p95 | p99 | budget | samples |
 |---|---|---|---|---|---|
 | `record_open_contact` | 2.9 ms | 3.2 ms | 3.4 ms | 100 ms | 30 |
-| `record_open_company` | 2.8 ms | 3.2 ms | 3.3 ms | 100 ms | 30 |
-| `record_open_deal` | 2.3 ms | 2.5 ms | 2.7 ms | 100 ms | 30 |
-| `record_save_contact` | 5.6 ms | 6.1 ms | 6.4 ms | 150 ms | 30 |
+| `record_save_contact` | 140 ms | 151 ms | 160 ms | 150 ms | 30 |
 

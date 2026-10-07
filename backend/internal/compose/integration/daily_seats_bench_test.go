@@ -28,21 +28,21 @@ const (
 	dailySeatPassword = "daily-bench-seat-password"
 )
 
-// Seat is one signed-in person: their own client and cookie jar, so every
+// Seat is one signed-in user: their own client and cookie jar, so every
 // request is gated on that seat's role and row scope, not the admin's.
 type Seat struct {
 	Name, Role, UserID, Email string
 	Client                    *http.Client
 }
 
-// Seats are the bench's people. Managers[i] leads Teams[i].
+// Seats are the bench's signed-in users. Managers[i] leads Teams[i].
 type Seats struct {
 	Managers, Reps []Seat
 	Teams          [2]string
 }
 
 // createDailySeats invites every seat through the admin's session and signs
-// each one in the way a person does, through a set-password link; no password
+// each one in the way a user does, through a set-password link; no password
 // hash or role row is written behind the product's back.
 func createDailySeats(t *testing.T, e *apptest.AppEnv) Seats {
 	t.Helper()
@@ -115,7 +115,7 @@ func passwordLinkToken(t *testing.T, link string) string {
 }
 
 // seatClient clones the harness transport rather than sharing it, so each
-// seat holds its own connection pool the way each person's browser does and
+// seat holds its own connection pool the way each user's browser does and
 // one seat's burst never waits on another's idle connections.
 func seatClient(t *testing.T, e *apptest.AppEnv) *http.Client {
 	t.Helper()

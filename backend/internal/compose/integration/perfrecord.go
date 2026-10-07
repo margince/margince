@@ -102,6 +102,19 @@ type BudgetMeasurement struct {
 	// be reporting a number that satisfies a bound it was never measured
 	// against — true arithmetic, false claim.
 	Caveat string `json:"caveat,omitempty"`
+	// The fields below are written by the daily-use bench and read by
+	// tools/gen-perfdoc's measurement struct, which mirrors them; older
+	// records leave them empty and render as they always did.
+	Seat string `json:"seat,omitempty"`
+	Flow string `json:"flow,omitempty"`
+	// Verdict is a DailyVerdict string; gen-perfdoc refuses any other value.
+	Verdict       string  `json:"verdict,omitempty"`
+	KnownIssue    int     `json:"known_issue,omitempty"`
+	Status5xx     int     `json:"status_5xx,omitempty"`
+	Status422     int     `json:"status_422,omitempty"`
+	PoolWaitMs    float64 `json:"pool_wait_ms,omitempty"`
+	PoolWaitMaxMs float64 `json:"pool_wait_max_ms,omitempty"`
+	Acquires      int64   `json:"acquires,omitempty"`
 }
 
 // PerfRecord is one target's whole run: the machine, the day, and every budget

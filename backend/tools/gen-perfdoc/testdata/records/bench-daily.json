@@ -1,0 +1,21 @@
+{
+  "target": "bench-daily",
+  "measured_on": "2026-10-07",
+  "machine": {
+    "os": "darwin",
+    "arch": "arm64",
+    "cpu": "Apple M4",
+    "cores": 10,
+    "memory_gib": 24,
+    "toolchain": "go1.27.1",
+    "postgres": "16.14"
+  },
+  "budgets": [
+    {"id": "PERF-8", "name": "worklist", "seat": "rep", "flow": "worklist", "p50_ms": 2900, "p95_ms": 3100, "p99_ms": 3300, "budget_ms": 1000, "samples": 30, "verdict": "over budget", "known_issue": 4912},
+    {"id": "PERF-10", "name": "palette_search", "seat": "manager", "flow": "palette_search", "p50_ms": 180, "p95_ms": 420, "p99_ms": 510, "budget_ms": 1000, "samples": 30, "verdict": "within budget"},
+    {"id": "PERF-10", "name": "palette_search", "seat": "rep", "flow": "palette_search", "p50_ms": 120, "p95_ms": 210, "p99_ms": 260, "budget_ms": 1000, "samples": 30, "verdict": "within budget"},
+    {"id": "PERF-8", "name": "home_digest", "seat": "rep", "flow": "home", "p50_ms": 0, "p95_ms": 0, "p99_ms": 0, "budget_ms": 1000, "samples": 0, "verdict": "no data"},
+    {"id": "PERF-8", "name": "worklist_first_load", "seat": "rep", "p50_ms": 5200, "p95_ms": 5200, "p99_ms": 5200, "budget_ms": 1000, "samples": 1, "verdict": "not gated"},
+    {"id": "PERF-2", "name": "morning_load_cheap_route", "seat": "team", "flow": "morning_load", "p50_ms": 40, "p95_ms": 95, "p99_ms": 140, "budget_ms": 150, "samples": 120, "verdict": "within budget", "status_422": 0, "pool_wait_ms": 1250, "pool_wait_max_ms": 48, "acquires": 3200}
+  ]
+}
