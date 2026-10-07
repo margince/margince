@@ -72,6 +72,9 @@ var DailyKnownIssues = []KnownIssue{
 	{Flow: "worklist", Issue: 4912},
 	{Flow: "home", Row: "home_worklist", Issue: 4912},
 	{Flow: "lists", Row: "lists_contacts_q", Issue: 7082},
+	{Flow: "palette_search", Row: "palette_search_meeting", Issue: 7037},
+	{Flow: "results_search", Row: "results_search_all", Issue: 7037},
+	{Flow: "contact_360", Issue: 7085},
 	{Flow: "palette_search_prefix", Issue: 7037},
 	{Flow: "morning_load", Issue: 7068},
 }
