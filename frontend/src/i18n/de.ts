@@ -3152,7 +3152,7 @@ export const de = {
   "lead.evidenceNote": "Notiz zum Beleg (optional)",
   "lead.segregationTitle": "Leads bleiben von Kontakten getrennt",
   "lead.segregation":
-    "Ein Lead wird erst zum Kontakt, wenn du ihn qualifizierst.",
+    "Qualifizierst du einen Lead, wird er zum Kontakt. Einen vorhandenen Kontakt öffnest du und wählst „Als Lead bearbeiten“.",
   "lead.segregationDismiss": "Hinweis ausblenden",
   "list.emptyMine": "Keine {unit}, für die du zuständig bist.",
   "list.showAll": "Alle anzeigen",
@@ -4094,6 +4094,9 @@ export const de = {
   "create.region": "Bundesland oder Region",
   "create.postalCode": "Postleitzahl",
   "create.country": "Ländercode (ISO 3166)",
+  "lead.fillFromContact": "Aus einem Kontakt übernehmen",
+  "lead.fillFromContactSearch": "Kontakte nach Name oder E-Mail suchen",
+  "lead.create.fromContact": "Aus diesem Kontakt übernommen.",
   "create.companyName": "Unternehmen",
   "create.companyPicked":
     "Ordnet den Kontakt diesem bestehenden Unternehmen zu.",
@@ -10174,6 +10177,7 @@ export const de = {
     "Keine Adresse und kein Thread, auf den geantwortet werden kann.",
   "contact.action.call": "Anrufen",
   "contact.action.meetings": "Termine",
+  "contact.action.workAsLead": "Als Lead bearbeiten",
   "contact.action.addTask": "Aufgabe hinzufügen",
   "contact.action.research": "Recherche",
 

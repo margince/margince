@@ -16,7 +16,10 @@ import (
 	"errors"
 	"testing"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
@@ -216,5 +219,18 @@ func TestTheRecordImporterDoorsAdmitTheirNamespaceAndNothingElse(t *testing.T) {
 	}
 	if _, err := companyCreateInput(crmcontracts.CreateCompanyRequest{DisplayName: "Planted", SourceSystem: &namespaced}); err == nil {
 		t.Error("the company client door admitted the importer namespace")
+	}
+}
+
+// A lead filled from a contact is not an import: the importer's replay cannot
+// promise the same lead when the contact may change between two runs.
+func TestALeadFromAContactNamesNoSourceSystem(t *testing.T) {
+	namespaced := "mirror:hubspot"
+	contact := openapi_types.UUID(ids.NewV7())
+	_, err := leadCreateInputFromImporter(crmcontracts.CreateLeadRequest{
+		ContactId: &contact, SourceSystem: &namespaced, SourceId: ptr("501"),
+	})
+	if err == nil {
+		t.Fatal("a lead naming both a contact and a source system was admitted")
 	}
 }

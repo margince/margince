@@ -16,11 +16,12 @@ import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useAssignableUserOptions } from "./assigneepicker";
 import { ProblemError, QueryGate, throwProblem, useMe } from "./common";
-import { CreateAction, type CreateField } from "./create";
+import { CreateAction } from "./create";
 import { useObjectCustomFields } from "./customfields.form";
 import { LeadBulkBar } from "./leadbulk";
 import { LEAD_STATUS_FILTER_OPTIONS, LeadBoard } from "./leadpresentation";
 import { leadColumns } from "./leads.columns";
+import { leadIdentityFields } from "./leads.contactoffers";
 import {
   sourceFilterOptions,
   sourcePickOptions,
@@ -83,6 +84,7 @@ export function mapLeadBody(values: Record<string, string>): CreateLeadRequest {
     linkedin_url: values.linkedin_url?.trim() || undefined,
     title: values.title?.trim() || undefined,
     company_name: values.company_name?.trim() || undefined,
+    contact_id: values.contact_id || undefined,
     owner_id:
       values.owner_id === UNASSIGNED_OWNER
         ? undefined
@@ -97,14 +99,6 @@ export function mapLeadBody(values: Record<string, string>): CreateLeadRequest {
 // do not skip the question. The server reads an omitted owner_id as exactly
 // that: an unassigned lead for routing or a claim to pick up.
 export const UNASSIGNED_OWNER = "unassigned";
-
-const leadCreateFields: CreateField[] = [
-  { key: "full_name", label: "create.fullName", required: true },
-  { key: "email", label: "create.email", type: "email" },
-  { key: "linkedin_url", label: "create.linkedinUrl" },
-  { key: "title", label: "create.contactTitle" },
-  { key: "company_name", label: "create.companyName" },
-];
 
 const leadStatusFilterOptions = LEAD_STATUS_FILTER_OPTIONS;
 
@@ -324,7 +318,7 @@ function LeadsWorkbench({
             create={(values) => createLead(values, cf.toBody(values), t)}
             resolveExisting={(_code, id) => ({ screen: "leads", id })}
             fields={[
-              ...leadCreateFields,
+              ...leadIdentityFields,
               {
                 key: "owner_id",
                 label: "lead.ownerLabel",
