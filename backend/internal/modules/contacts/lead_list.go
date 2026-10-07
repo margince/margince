@@ -26,8 +26,7 @@ const leadEntity = "lead"
 // clauses that read them agree by construction rather than by two contacts
 // spelling the same column the same way.
 const (
-	// leadNameColumn is the display column: the quick-find target and the
-	// name sort key.
+	// leadNameColumn is the display column and the name sort key.
 	leadNameColumn    = "full_name"
 	leadCompanyColumn = "company_name"
 	leadStatusColumn  = "status"
@@ -158,11 +157,16 @@ func (s *Store) ListLeads(ctx context.Context, in ListLeadsInput) ([]crmcontract
 	})
 }
 
+// leadQuickFindExpr is the substring target: the person and the company they
+// sit at. It is spelled exactly as idx_lead_name_trgm indexes it, so a
+// fragment of either is one index read rather than a scan of every lead.
+const leadQuickFindExpr = `(coalesce(full_name, '') || ' ' || coalesce(company_name, ''))`
+
 func leadQuickFindClause(query string, arg func(any) int) string {
 	pos := arg(strings.TrimSpace(query))
 	return storekit.SQLf(`(%s OR email = lower($%d)
 		OR lower(rtrim(linkedin_url, '/')) = lower(rtrim($%d, '/')))`,
-		storekit.QuickFindClause(pos, leadNameColumn), pos, pos)
+		storekit.QuickFindClause(pos, leadQuickFindExpr), pos, pos)
 }
 
 // scanLeadPage drains one list query's rows: each lead plus, under a
