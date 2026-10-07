@@ -3420,7 +3420,7 @@ export const de = {
   "deals.totalsNoTagFilter":
     "Nur geladene Deals. Keine Summe, solange ein Tag-Filter aktiv ist.",
   "deals.totalsNoSearch":
-    "Nur geladene Deals. Die Stufensummen kennen keine Suche, daher wird keine gezeigt.",
+    "Nur geladene Deals. Die Phasensummen kennen keine Suche, daher wird keine gezeigt.",
   "deals.filterPartner": "Partner",
   "deals.filterPartnerAnyOne": "Beliebiger Partner",
   "deals.filterMotion": "Geschäftsart",
