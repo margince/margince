@@ -410,8 +410,8 @@ they are not the same finding:
   rather than a finding about the tree. A red that blames the tree for the lane
   is what teaches a reader to ignore a scheduled lane, so rule this out first.
 
-Reproduce locally with \`make backend-clock-drift\`, which defaults to the database
-applier. Read a green from it as weaker than this lane's: \`CURRENT_TIMESTAMP\` and
+Reproduce locally with \`BACKEND_CLOCK_SKEW=database:200 make backend-clock-drift\`.
+Read a green from it as weaker than this lane's: \`CURRENT_TIMESTAMP\` and
 stored column \`DEFAULT\`s keep the real date under that applier."\
     || unreported=1
 elif [[ "${BACKEND_CLOCK_RESULT:-}" = "success" ]]; then

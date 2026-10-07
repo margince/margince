@@ -211,9 +211,9 @@ Notes on the jobs:
 - Every step that needs the network finishes before the jump, because 200 days
   expires the TLS certificates those steps verify. The clock is restored even on
   failure, so the runner does not return to the pool 200 days ahead.
-  `make backend-clock-drift` reproduces the lane locally under the weaker
-  database applier, and `backend/internal/shared/clockskew` says what each
-  applier reaches.
+  `BACKEND_CLOCK_SKEW=database:200 make backend-clock-drift` reproduces the
+  lane locally under the weaker database applier, and
+  `backend/internal/shared/clockskew` says what each applier reaches.
 - The model lane costs real tokens. It skips rather than fails when
   `ANTHROPIC_API_KEY` is absent, so an unfunded lane does not turn `main` red
   every Monday; a skipped job says "not configured" where a red one says
