@@ -111,6 +111,13 @@
   gap: var(--space-2);
   min-width: 0;
 }
+/* Only the address gives way: the column's inherited `anywhere` would
+   otherwise break a squeezed kind or mark at every letter ("W/or/k"). */
+.fieldgrid-handle > .t-caption,
+.fieldgrid-handle > .evmark {
+  flex: none;
+  white-space: nowrap;
+}
 /* An editable value and its evidence mark are true siblings in this slot —
    InlineText makes the value itself the button that starts an edit, so the
    mark cannot sit inside it and reads beside it instead. Neither is a flex

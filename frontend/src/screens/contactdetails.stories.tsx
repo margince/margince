@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { ContactDetails } from "./contactdetails";
 import {
@@ -128,4 +129,105 @@ export const BoughtValues: Story = {
 export const BoughtValuesDark: Story = {
   args: { contact: boughtFixture, profiles: boughtProfiles },
   globals: { theme: "dark" },
+};
+
+const longEmail = (
+  local: string,
+  id: string,
+  type: "work" | "personal" | "other",
+) => ({
+  id,
+  email: `${local}@very-long-company-domain-example.com`,
+  email_type: type,
+  is_primary: id === "e-1",
+  position: Number(id.slice(2)) - 1,
+  source: "manual",
+  captured_by: "human:u1",
+});
+const longFixture: components["schemas"]["Contact"] = {
+  ...fixture,
+  emails: [
+    longEmail("alexandra.konstantinopoulou", "e-1", "work"),
+    longEmail("alexandra.k.private.mailbox", "e-2", "personal"),
+    longEmail("a.konstantinopoulou.assistant", "e-3", "other"),
+    longEmail("konstantinopoulou.alexandra", "e-4", "work"),
+  ],
+  phones: [
+    {
+      id: "p-1",
+      phone: "+4915112345678",
+      phone_type: "mobile",
+      is_primary: true,
+      position: 0,
+      source: "manual",
+      captured_by: "human:u1",
+    },
+  ],
+  bought_fields: [
+    {
+      target: "email:e-4",
+      provider: "surfe",
+      applied_at: "2026-06-02T12:00:00Z",
+    },
+  ],
+};
+
+// Each kind stays one line beside its value, and the value wraps inside the
+// column instead of pushing the row past the card.
+async function expectKindsBesideWrappedValues(canvasElement: HTMLElement) {
+  await within(canvasElement).findByText(
+    "alexandra.konstantinopoulou@very-long-company-domain-example.com",
+  );
+  const handles = [
+    ...canvasElement.querySelectorAll<HTMLElement>(".fieldgrid-handle"),
+  ];
+  await expect(handles).toHaveLength(5);
+  for (const handle of handles) {
+    const value = handle.firstElementChild;
+    const kind = handle.querySelector<HTMLElement>(":scope > .t-caption");
+    const column = handle.closest(".fieldgrid-value");
+    if (!value || !kind || !column) {
+      throw new Error("a handle lost its value, its kind or its column");
+    }
+    const lines = document.createRange();
+    lines.selectNodeContents(kind);
+    await expect(lines.getClientRects()).toHaveLength(1);
+    await expect(kind.getBoundingClientRect().left).toBeGreaterThanOrEqual(
+      value.getBoundingClientRect().right,
+    );
+    await expect(handle.getBoundingClientRect().right).toBeLessThanOrEqual(
+      column.getBoundingClientRect().right + 0.5,
+    );
+  }
+  const first = handles[0].firstElementChild?.getBoundingClientRect();
+  const firstKind = handles[0]
+    .querySelector(".t-caption")
+    ?.getBoundingClientRect();
+  await expect(first?.height).toBeGreaterThan((firstKind?.height ?? 0) * 1.5);
+  await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(
+    document.documentElement.clientWidth,
+  );
+}
+
+export const LongAddresses: Story = {
+  args: { contact: longFixture },
+  // A rail-width card, so a long address outruns its value column.
+  decorators: [
+    (Story) => (
+      <div style={{ maxWidth: 360 }}>
+        <Story />
+      </div>
+    ),
+  ],
+  play: ({ canvasElement }) => expectKindsBesideWrappedValues(canvasElement),
+};
+export const LongAddressesDark: Story = {
+  ...LongAddresses,
+  globals: { theme: "dark" },
+};
+export const LongAddressesPhone: Story = {
+  args: { contact: longFixture },
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  play: ({ canvasElement }) => expectKindsBesideWrappedValues(canvasElement),
 };
