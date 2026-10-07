@@ -10,9 +10,8 @@ package gates
 //
 // The column is folded by the last_activity_of_* SQL functions, which cannot
 // call Go, so their migration carries the rule's rendered text. This gate holds
-// every arm of each to relstrength.NotCalledOffSQL, and holds deal health's
-// evidence read, which must name the row the deal's clock counts, to the same
-// call.
+// every arm of each to relstrength.NotCalledOffSQL, and holds the Go reads that
+// ask the same question without the stored column to the same call.
 
 import (
 	"os"
@@ -26,7 +25,13 @@ import (
 // move. last_activity_of_project keeps its own rule and is not one of them.
 var meetingRuleClocks = []string{"last_activity_of_deal", "last_activity_of_contact", "last_activity_of_company"}
 
-const dealHealthReader = "internal/modules/deals/health.go"
+// gatekit:fixture the Go reads of a record's last touch that do not read
+// last_activity_at, each with what it computes.
+var meetingRuleReaders = map[string]string{
+	"internal/modules/deals/health.go":         "deal health's recency evidence",
+	"internal/modules/activities/lasttouch.go": "the quiet-record scan",
+	"internal/modules/contacts/lead_read.go":   "a lead's last activity",
+}
 
 func TestNoLastActivityClockCountsACalledOffMeeting(t *testing.T) {
 	t.Parallel()
@@ -49,12 +54,15 @@ func TestNoLastActivityClockCountsACalledOffMeeting(t *testing.T) {
 				"with the rule's current text in every arm.", name, arms, got, rule)
 		}
 	}
-	src, err := os.ReadFile(dealHealthReader)
-	if err != nil {
-		t.Fatalf("%s: %v", dealHealthReader, err)
-	}
-	if !strings.Contains(string(src), "relstrength.NotCalledOffSQL(") {
-		t.Errorf("%s no longer calls relstrength.NotCalledOffSQL, so its recency evidence can cite "+
-			"a called-off meeting that last_activity_of_deal does not count", dealHealthReader)
+	for file, what := range meetingRuleReaders {
+		src, err := os.ReadFile(file)
+		if err != nil {
+			t.Errorf("%s (%s): %v", file, what, err)
+			continue
+		}
+		if !strings.Contains(string(src), "relstrength.NotCalledOffSQL(") {
+			t.Errorf("%s no longer calls relstrength.NotCalledOffSQL, so %s can count a called-off "+
+				"meeting as a touch", file, what)
+		}
 	}
 }
