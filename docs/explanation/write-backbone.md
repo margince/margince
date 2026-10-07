@@ -249,7 +249,7 @@ time reports it.
 | `cg:cohort-promote` | link a contact's earlier captured mail when the contact shows up or gets an address | **live** |
 | `cg:commissions` | add a partner's commission when a deal reaches `won`, and take it back if the deal opens again | **live** (worker) |
 | `cg:stage-evidence` | write the evidence a proposed stage move rests on, from captured mail, contracts and Deal Rooms | **live** |
-| `cg:stage-progression-outcome` | count how users answered each proposed stage move, including time-outs | **live** |
+| `cg:stage-progression-outcome` | count the outcome of each proposed stage move, including time-outs | **live** |
 | `cg:deal-room-timeline` | write what happened in a Deal Room into the deal's history | **live** (worker) |
 | `cg:ai-activity` | write every action that AI does into `ai_task_run`, the table the AI rail will read once its read moves there | **live** (worker) |
 | `cg:ai-budget-resume` | start again AI work that a budget limit put off, once the budget allows | **live** |
@@ -274,7 +274,7 @@ time reports it.
 A `Handler` declares a `Spec` (name + trigger + tier), a `Match` check with no side effects, and a
 `Plan`. The plan works out a **typed `Effect`** *without doing it*, so a dry run can show the
 changes. Its `Apply` then does the effect: 🟢 effects run on their own, and 🟡 effects need an
-approval token. `Apply` runs once per key, on the idempotency key of the handler.
+approval token. `Apply` must be idempotent on the idempotency key of the handler.
 
 Effects are a **closed** set of actions
 (`create_record`, `update_record`, `assign_owner`, `advance_deal`, `send_email`, …), which keeps the

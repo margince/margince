@@ -415,8 +415,8 @@ not strangers. Its own comment still names the risk:
 Two writers are enough.
 
 If a task with real effects must carry text from several writers, copy the
-shape of `propose_roles`. Every claim must point to the message it comes from,
-and the writer of that message must be the one the claim is about.
+shape of `propose_roles`. Every claim must quote, word for word, the message it comes from.
+The writer of that message must be the one the claim is about.
 
 ### If a task must still batch untrusted text
 

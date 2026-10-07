@@ -48,8 +48,7 @@ anyway
 apart
 app
 appear
-applied
-applies
+apply
 approval
 approve
 architecture
@@ -103,7 +102,7 @@ beside
 between
 binary
 bind
-bindings
+binding
 blank
 block
 board
@@ -484,7 +483,7 @@ help
 here
 hide
 history
-holds
+hold
 hole
 home
 hook
@@ -552,9 +551,7 @@ kit
 know
 label
 ladder
-landed
-landing
-lands
+land
 lane
 language
 last
@@ -574,7 +571,7 @@ legal
 length
 less
 let
-lettered
+letter
 level
 library
 license
@@ -622,7 +619,7 @@ mean
 measure
 media
 meet
-meetings
+meeting
 member
 membership
 menu
@@ -829,7 +826,7 @@ re
 reach
 read
 readiness
-readings
+reading
 ready
 real
 reason
@@ -862,8 +859,7 @@ rep
 repair
 replace
 replay
-replied
-replies
+reply
 report
 repository
 request
@@ -934,9 +930,7 @@ secret
 section
 security
 see
-seeded
-seeding
-seeds
+seed
 selection
 selector
 self
@@ -952,7 +946,7 @@ server's
 service
 session
 set
-settings
+setting
 settle
 setup
 several
@@ -1002,8 +996,7 @@ sovereign
 space
 specification
 speed
-spell
-spellings
+spelling
 spend
 spine
 split
@@ -1080,7 +1073,7 @@ then
 there
 these
 they
-things
+thing
 think
 third
 this

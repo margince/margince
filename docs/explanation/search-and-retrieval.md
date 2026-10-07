@@ -69,7 +69,7 @@ comes from is in [ai-runtime.md](ai-runtime.md); who may see a row is in
   index. The query per branch, kept to one identity, reads the table in order. An index over a
   column that holds vectors of more than one length could not be used in any case.
 - **The merge is RRF**, `k = 60` (`rrfK`). Each lane adds `1/(k + rank)`, so an entity both lanes
-  agree on ranks above the top entry of either lane alone. Both lanes fetch `3 × limit` rows, because
+  agree on can rank above the top entry of either lane alone. Both lanes fetch `3 × limit` rows, because
   an entity ranked right past `limit` in each lane can still merge into the top set. The `Score` of
   each returned hit is the **merged** score, not the lane score it comes with.
 - **The vector arm drops back to lexical.** Take a nil embedder, or an embedder with a binding whose
@@ -348,7 +348,7 @@ even when it carries a human `captured_by`. An import runs as the user who start
 writes names that admin, and would wrongly read as their own words. Graph items carry no query
 match, because there is no query. So their rank is recency × trust, with the same numbers.
 
-A **contact** anchor also carries a `who_knows` section. It lists which users meet or write to this
+A **contact** anchor also carries a `who_knows` section. It lists which users interact with this
 contact, the most in touch first. Each comes with its band and interaction count. So a model that gets
 the list cannot take the first name without looking. That section reads the `graph_interaction_edge`
 projection, which has its own rules for how it stays current; see
@@ -411,7 +411,6 @@ projection, which has its own rules for how it stays current; see
 
 - [authorization.md](authorization.md): the gate every branch calls.
 - [ai-runtime.md](ai-runtime.md): where the model for the embed lane comes from.
--
-[write-backbone.md](write-backbone.md): the outbox the indexer consumes.
+- [write-backbone.md](write-backbone.md): the outbox the indexer consumes.
 - [relationship-graph.md](relationship-graph.md).
 - [../reference/configuration.md](../reference/configuration.md).
