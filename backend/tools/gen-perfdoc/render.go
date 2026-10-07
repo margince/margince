@@ -163,6 +163,20 @@ func renderDaily(b *strings.Builder, records map[string]record) {
 			m.Name, m.Seat, p50, p95Cell(m), millis(m.BudgetMs), m.Samples, verdict(m), dailyNotes(m))
 	}
 	b.WriteString("\n")
+	renderAdvisories(b, r.Advisories)
+}
+
+// renderAdvisories lists the known-issue entries the run found clear of their
+// budget. The run passed regardless; the list asks an engineer to tidy up.
+func renderAdvisories(b *strings.Builder, advisories []string) {
+	if len(advisories) == 0 {
+		return
+	}
+	b.WriteString("### Known-issue entries that could be removed\n\n")
+	for _, advisory := range advisories {
+		fmt.Fprintf(b, "- %s\n", advisory)
+	}
+	b.WriteString("\n")
 }
 
 // dailyNotes carries the row's note and the counts a verdict alone does not show.

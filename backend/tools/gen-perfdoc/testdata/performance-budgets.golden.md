@@ -58,6 +58,10 @@ A row with no data had nothing to time, and its note says why; a row not gated i
 | `worklist_first_load` | rep | 5200 ms | 5200 ms | 1000 ms | 1 | not gated |  |
 | `morning_load_cheap_route` | team | 60.0 ms | 240 ms | 150 ms | 40 | over budget (#7068) | pool wait 1250 ms in all, 48.0 ms at most, over 3200 acquires on a pool of 16 |
 
+### Known-issue entries that could be removed
+
+- flow contact_360 is at or under 80% of its budget for every seat: remove the row for #7085
+
 ## Machines
 
 A latency is only true of the machine that produced it.

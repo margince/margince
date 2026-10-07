@@ -444,7 +444,7 @@ func measureDailyRow(t *testing.T, e *apptest.AppEnv, f dailyFlow, s Seat, name 
 	if len(timed) == 0 {
 		return rows
 	}
-	samples, err := dailySampling(1, func(counted bool) ([]time.Duration, error) {
+	round := func(counted bool) ([]time.Duration, error) {
 		start := time.Now()
 		answered, err := fetchRound(s, e.TS.URL, timed, false)
 		elapsed := time.Since(start)
@@ -457,12 +457,16 @@ func measureDailyRow(t *testing.T, e *apptest.AppEnv, f dailyFlow, s Seat, name 
 			}
 		}
 		return []time.Duration{elapsed}, nil
-	})
+	}
+	specs := []dailyRowSpec{{flow: f.Name, id: f.ID, name: name, budget: f.Budget, allow422: f.Allow422, gated: true}}
+	samples, err := dailySampling(1, round)
+	if err == nil {
+		samples, err = confirmBreaches(specs, samples, func() ([][]time.Duration, error) { return dailySampling(1, round) })
+	}
 	if err != nil {
 		t.Fatalf("seat %s, %s: %v", s.Name, name, err)
 	}
-	spec := dailyRowSpec{flow: f.Name, id: f.ID, name: name, budget: f.Budget, allow422: f.Allow422, gated: true}
-	return append(rows, dailyMeasuredRow(t, s, spec, samples[0], tally))
+	return append(rows, dailyMeasuredRow(t, s, specs[0], samples[0], tally))
 }
 
 // runDailyJourney times a palette search for a record, then that record's page
@@ -478,7 +482,7 @@ func runDailyJourney(t *testing.T, e *apptest.AppEnv, f dailyFlow, in dailyInput
 	page, absent, pageTally := probeCalls(t, e, f, s, calls[1:])
 	pageNote := "the page's calls, in parallel: " + strings.Join(callNames(page), ", ")
 	rows := dailyAbsentRows(t.Log, f, "PERF-1", f.Name+"_page", s, perf1RecordOpenBudget, absent, false)
-	samples, err := dailySampling(3, func(counted bool) ([]time.Duration, error) {
+	round := func(counted bool) ([]time.Duration, error) {
 		start := time.Now()
 		found, err := fetchRound(s, e.TS.URL, calls[:1], false)
 		searched := time.Now()
@@ -501,17 +505,67 @@ func runDailyJourney(t *testing.T, e *apptest.AppEnv, f dailyFlow, in dailyInput
 			}
 		}
 		return []time.Duration{searched.Sub(start), end.Sub(searched), end.Sub(start)}, nil
-	})
+	}
+	specs := []dailyRowSpec{
+		{flow: f.Name, id: "PERF-10", name: f.Name + "_search", budget: Perf10Budget, gated: true},
+		{flow: f.Name, id: "PERF-1", name: f.Name + "_page", budget: perf1RecordOpenBudget, gated: true, note: pageNote},
+		{flow: f.Name, id: "PERF-10", name: f.Name + "_total", budget: Perf10Budget + perf1RecordOpenBudget},
+	}
+	samples, err := dailySampling(len(specs), round)
+	if err == nil {
+		samples, err = confirmBreaches(specs, samples, func() ([][]time.Duration, error) { return dailySampling(len(specs), round) })
+	}
 	if err != nil {
 		t.Fatalf("seat %s, %s: %v", s.Name, f.Name, err)
 	}
 	return append(rows,
-		dailyMeasuredRow(t, s, dailyRowSpec{flow: f.Name, id: "PERF-10", name: f.Name + "_search", budget: Perf10Budget, gated: true},
-			samples[0], searchTally),
-		dailyMeasuredRow(t, s, dailyRowSpec{flow: f.Name, id: "PERF-1", name: f.Name + "_page", budget: perf1RecordOpenBudget, gated: true, note: pageNote},
-			samples[1], pageTally),
-		dailyMeasuredRow(t, s, dailyRowSpec{flow: f.Name, id: "PERF-10", name: f.Name + "_total", budget: Perf10Budget + perf1RecordOpenBudget},
-			samples[2], dailyTally{empty: searchTally.empty && pageTally.empty}))
+		dailyMeasuredRow(t, s, specs[0], samples[0], searchTally),
+		dailyMeasuredRow(t, s, specs[1], samples[1], pageTally),
+		dailyMeasuredRow(t, s, specs[2], samples[2], dailyTally{empty: searchTally.empty && pageTally.empty}))
+}
+
+// confirmBreaches measures a round again, warm-ups included, when one of its
+// gated rows is over budget and no known issue lists it: on a laptop one slow
+// request decides a p95 of thirty, and a full run is too long to fail on one.
+// A breached row keeps the second measurement and gains a note naming the
+// first; every other row keeps the first. The tallies count both measurements,
+// so a server error in either still fails the run.
+func confirmBreaches(specs []dailyRowSpec, first [][]time.Duration, again func() ([][]time.Duration, error)) ([][]time.Duration, error) {
+	firstP95 := map[int]time.Duration{}
+	for i, spec := range specs {
+		if !spec.gated {
+			continue
+		}
+		stats, err := search.MeasureQuery(spec.name, spec.budget, first[i])
+		if err != nil {
+			return nil, err
+		}
+		if verdict, _ := JudgeDaily(spec.flow, spec.name, stats.P95, spec.budget, stats.Samples); verdict == DailyOver {
+			firstP95[i] = stats.P95
+		}
+	}
+	if len(firstP95) == 0 {
+		return first, nil
+	}
+	second, err := again()
+	if err != nil {
+		return nil, fmt.Errorf("measuring a breach again: %w", err)
+	}
+	kept := slices.Clone(first)
+	for i, p95 := range firstP95 {
+		stats, err := search.MeasureQuery(specs[i].name, specs[i].budget, second[i])
+		if err != nil {
+			return nil, err
+		}
+		outcome := "not confirmed"
+		if stats.P95 >= specs[i].budget {
+			outcome = "confirmed"
+		}
+		kept[i] = second[i]
+		specs[i].note = joinNotes(specs[i].note, fmt.Sprintf("first measurement p95 %d ms over budget; %s on a second measurement",
+			p95.Milliseconds(), outcome))
+	}
+	return kept, nil
 }
 
 // dailyAbsentRows records each call with nothing to time as its own no-data

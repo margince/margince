@@ -119,6 +119,8 @@ type record struct {
 	Machine    machine       `json:"machine"`
 	Budgets    []measurement `json:"budgets"`
 	Corpus     *corpus       `json:"corpus,omitempty"`
+	// Advisories mirrors PerfRecord's: known-issue entries the run found clear.
+	Advisories []string `json:"advisories,omitempty"`
 }
 
 const (

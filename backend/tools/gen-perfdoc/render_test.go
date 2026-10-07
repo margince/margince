@@ -81,6 +81,27 @@ func TestADailyRowIsListedPerSeatWithItsOwnVerdict(t *testing.T) {
 	}
 }
 
+func TestAnEntryThatCouldGoIsListedUnderDailyUseAlone(t *testing.T) {
+	records := fixtureRecords(t)
+	want := "- flow contact_360 is at or under 80% of its budget for every seat: remove the row for #7085"
+	_, section, _ := strings.Cut(render(records), "## Daily use (`make bench-daily`)")
+	section, _, _ = strings.Cut(section, "## Machines")
+	if !strings.Contains(section, "### Known-issue entries that could be removed\n\n"+want+"\n") {
+		t.Errorf("the daily-use section lacks the advisory\n%s", want)
+	}
+	if strings.Contains(renderPlain(records), "#7085") {
+		t.Error("an advisory is for engineers and never reaches the plain page")
+	}
+}
+
+func TestADailyRecordWithoutAdvisoriesHasNoAdvisoryHeading(t *testing.T) {
+	daily := fixtureRecords(t)[dailyTarget]
+	daily.Advisories = nil
+	if strings.Contains(render(map[string]record{dailyTarget: daily}), "could be removed") {
+		t.Error("a run with nothing to remove must not print the heading")
+	}
+}
+
 func TestADevelopmentRecordBesideThePublishedOnesIsNeverRead(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(dir, "dev"), 0o750); err != nil {

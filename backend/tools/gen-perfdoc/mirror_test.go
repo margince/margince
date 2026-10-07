@@ -24,7 +24,7 @@ func TestTheMeasurementMirrorsTheRecordersJSONFields(t *testing.T) {
 }
 
 func TestTheRecordAndItsCorpusMirrorTheRecorders(t *testing.T) {
-	assertMirrors(t, "PerfRecord", reflect.TypeFor[record](), 5)
+	assertMirrors(t, "PerfRecord", reflect.TypeFor[record](), 6)
 	assertMirrors(t, "CorpusFacts", reflect.TypeFor[corpus](), 9)
 }
 

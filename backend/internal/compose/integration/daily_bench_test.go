@@ -103,6 +103,10 @@ func TestDailyUseBudgets(t *testing.T) {
 	}
 	record := newPerfRecord("bench-daily", benchPostgresVersion(e.Owner), measurements)
 	record.Corpus = dailyCorpusFacts(scale, seats)
+	record.Advisories = DailyAdvisories(results, scale)
+	for _, advisory := range record.Advisories {
+		t.Logf("advisory: %s", advisory)
+	}
 	writePerfRecordTo(t, dailyRecordDir(t, scale), record)
 	if err := DailyGate(results, scale); err != nil {
 		t.Fatalf("daily-use budget gate is red: %v", err)

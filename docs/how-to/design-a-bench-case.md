@@ -109,8 +109,10 @@ An over-budget row fails the run. If an open issue already tracks it, add an ent
 table: the flow and the issue number, plus the row name when only that row is slow. An entry naming a row
 covers that row alone, and the flow's other rows are still judged; an entry without one covers every row
 of the flow. The run then records "over budget" against that issue and passes. When everything an entry
-covers comes back at or under 80% of its budget for every seat at full scale, the run fails and asks you
-to remove the entry. The margin keeps a row near the line from flipping between the two each run. A 5xx
+covers comes back at or under 80% of its budget for every seat at full scale, the run still passes. The test
+log prints an `advisory:` line, and the Daily use section of performance-budgets.md lists the entry under
+"Known-issue entries that could be removed". The margin keeps a row near the line from flipping between the
+two each run. A 5xx
 fails the run unless the entry covering its row sets `Allow5xx`, which is rare and kept for an issue whose
 evidence shows the server errors as its own symptom. A 422 is allowed only on a flow listed for it.
 
@@ -118,7 +120,9 @@ evidence shows the server errors as its own symptom. A 422 is allowed only on a 
 
 1. **Latency.** Warm-ups, then sequential samples per flow and seat, reported as p50, p95 and p99. Only
    the samples count toward a row's 5xx and 422 tallies. A row with fewer than 30 samples is recorded as
-   "no data", never as a p95.
+   "no data", never as a p95. A gated row over budget with no known-issue entry is measured once more,
+   warm-ups included, and judged on that second measurement; its note gives the first p95 and whether
+   the second confirmed it. The morning load is not measured twice.
 2. **Repeat on prepared statements.** The latency samples share one pool that keeps its connections
    and prepares statements, as the app's pool does (`make bench-daily` sets `cache_statement`). After its
    fifth run, Postgres may switch a prepared statement to a generic plan, which shows as samples that

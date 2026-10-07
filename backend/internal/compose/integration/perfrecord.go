@@ -148,6 +148,9 @@ type PerfRecord struct {
 	Machine    MachineFacts        `json:"machine"`
 	Budgets    []BudgetMeasurement `json:"budgets"`
 	Corpus     *CorpusFacts        `json:"corpus,omitempty"`
+	// Advisories are known-issue entries the daily bench found clear of their
+	// budget; the run passes, and the page lists them for somebody to remove.
+	Advisories []string `json:"advisories,omitempty"`
 }
 
 // RecordingEnabled reports whether this run should leave a record.
