@@ -46,3 +46,9 @@ export const MayNotCreateLeads: Story = {
     );
   },
 };
+
+/** The same row in dark, where the button's tones are re-derived. */
+export const MayCreateLeadsDark: Story = {
+  ...MayCreateLeads,
+  globals: { theme: "dark" },
+};

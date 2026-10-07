@@ -71,13 +71,21 @@ export function OfferedNameControl({
       onChange={(next) => {
         const picked = results.find((result) => result.value === next);
         const memo = `${offers.pickedKey}:filled`;
+        // What this pick writes, and only that, is remembered as the pick's:
+        // a field the reader had already typed stays theirs for the next pick.
+        const written = picked
+          ? {
+              ...refilled(values, picked.fills, values[memo]),
+              [fieldKey]: picked.label,
+            }
+          : {};
         // Any keystroke after a pick is a new name, so the id goes with it.
         setValues({
           ...values,
-          ...(picked ? refilled(values, picked.fills, values[memo]) : {}),
+          ...written,
           [fieldKey]: picked ? picked.label : next,
           [offers.pickedKey]: picked ? picked.value : "",
-          ...(picked ? { [memo]: JSON.stringify(picked.fills ?? {}) } : {}),
+          ...(picked ? { [memo]: JSON.stringify(written) } : {}),
         });
       }}
     />

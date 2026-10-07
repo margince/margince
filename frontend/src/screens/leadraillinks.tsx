@@ -71,7 +71,7 @@ export function LeadRail({
     // way the same two read on an account.
     <div className="co-rail">
       {details}
-      <LeadFillFromContact lead={lead} writer={writer} reasonId={reasonId} />
+      <LeadFillFromContact writer={writer} reasonId={reasonId} />
       <Panel>
         <LeadDealSection
           lead={lead}

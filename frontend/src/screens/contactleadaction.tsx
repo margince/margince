@@ -33,10 +33,16 @@ export function WorkAsLeadAction({
   const canCreate = useCanWrite("lead", "create");
   const toast = useOwnToast();
   const create = useMutation({
-    mutationFn: async (owner: string | undefined): Promise<Lead> => {
+    mutationFn: async ({
+      contact,
+      owner,
+    }: Readonly<{
+      contact: string;
+      owner: string | undefined;
+    }>): Promise<Lead> => {
       const { data, error } = await api.POST("/leads", {
         body: {
-          contact_id: contactId,
+          contact_id: contact,
           owner_id: owner,
           status: "new",
           source: "manual",
@@ -64,7 +70,9 @@ export function WorkAsLeadAction({
   return (
     <Button
       disabled={create.isPending || !me.data}
-      onClick={() => create.mutate(me.data?.user.id)}
+      onClick={() =>
+        create.mutate({ contact: contactId, owner: me.data?.user.id })
+      }
     >
       {t("contact.action.workAsLead")}
     </Button>

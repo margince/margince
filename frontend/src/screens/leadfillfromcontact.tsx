@@ -12,7 +12,6 @@ import { problemMessageOf } from "./common";
 import type { LeadWriter } from "./leads";
 import { leadFillsFrom, searchContacts } from "./leads.contactoffers";
 
-type Lead = components["schemas"]["Lead"];
 type Contact = components["schemas"]["Contact"];
 
 /**
@@ -23,10 +22,9 @@ type Contact = components["schemas"]["Contact"];
  * writes; what the contact does not hold is left as the lead has it.
  */
 export function LeadFillFromContact({
-  lead,
   writer,
   reasonId,
-}: Readonly<{ lead: Lead; writer: LeadWriter; reasonId?: string }>) {
+}: Readonly<{ writer: LeadWriter; reasonId?: string }>) {
   const t = useT();
   const [open, setOpen] = useState(false);
   // The rows a search answered, by id, so a pick can read the whole contact
@@ -79,13 +77,18 @@ export function LeadFillFromContact({
           if (!contact) {
             return;
           }
-          const fills = leadFillsFrom(contact);
-          writer.save({
-            full_name: fills.full_name,
-            email: fills.email || lead.email,
-            title: fills.title || lead.title,
-            company_name: fills.company_name || lead.company_name,
-          });
+          // Only what the contact holds is sent: a field it lacks is left as
+          // the server has it, never rewritten from this page's copy of the
+          // lead, which may predate a save still settling.
+          const { full_name, email, title, company_name } =
+            leadFillsFrom(contact);
+          writer.save(
+            Object.fromEntries(
+              Object.entries({ full_name, email, title, company_name }).filter(
+                ([, value]) => value,
+              ),
+            ),
+          );
         }}
         pending={writer.patch.isPending}
         error={failed ? problemMessageOf(writer.patch.error, t) : undefined}

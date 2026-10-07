@@ -30958,7 +30958,7 @@ export interface components {
             project_id?: string | null;
             /**
              * Format: uuid
-             * @description An existing contact this lead is worked from. Its name, primary email, title, LinkedIn profile and current employer fill whichever of those fields this request leaves out, so a lead for a contact the CRM already holds is never retyped or left unnamed. The contact must be one the caller may read (422 otherwise); it is not linked to the lead or changed.
+             * @description An existing contact this lead is worked from. Its name, primary email, title, LinkedIn profile and current employer fill whichever of those fields this request leaves out, so a lead for a contact the CRM already holds is never retyped or left unnamed. The contact must be one the caller may read (422 otherwise); it is not linked to the lead or changed. Not combinable with `source_system` (422): a lead filled from a contact is not an import.
              */
             contact_id?: string | null;
             /**

@@ -6,6 +6,7 @@ package contacts
 import (
 	"context"
 	"errors"
+	"net/url"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -47,11 +48,35 @@ func (s *Store) fillLeadFromContact(ctx context.Context, in CreateLeadInput) (Cr
 		in.CompanyName = keptOrContact(in.CompanyName, contact.Employer.CompanyName)
 	}
 	if contact.Social != nil {
-		if linkedin, ok := (*contact.Social)["linkedin"].(string); ok {
-			in.LinkedInURL = keptOrContact(in.LinkedInURL, linkedin)
+		if raw, ok := (*contact.Social)["linkedin"].(string); ok {
+			if profile, isProfile := linkedInProfileOf(raw); isProfile {
+				in.LinkedInURL = keptOrContact(in.LinkedInURL, profile)
+			}
 		}
 	}
 	return in, nil
+}
+
+// linkedInProfileOf answers the contact's LinkedIn value as a profile URL, or
+// false when it is not one. A contact's slot may hold a bare handle, and on a
+// lead the profile URL is an exact dedupe key: a handle read as "https://jane"
+// would claim an identity nobody has.
+func linkedInProfileOf(raw string) (string, bool) {
+	normalized, err := NormalizeLinkedInURL(raw)
+	if err != nil {
+		return "", false
+	}
+	parsed, err := url.Parse(normalized)
+	if err != nil {
+		return "", false
+	}
+	host := strings.TrimPrefix(parsed.Hostname(), "www.")
+	for _, slot := range LinkedInSlotHosts() {
+		if host == slot || strings.HasSuffix(host, "."+slot) {
+			return normalized, true
+		}
+	}
+	return "", false
 }
 
 // keptOrContact keeps what the caller sent and falls back to the contact's value.

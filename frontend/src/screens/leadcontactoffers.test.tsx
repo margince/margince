@@ -171,6 +171,9 @@ describe("a lead's identity, offered from the contacts", () => {
     const form = within(screen.getByRole("dialog"));
     await user.type(form.getByRole("combobox", { name: /Full name/ }), "Ben");
     await user.click(await screen.findByRole("option", { name: /Ben Sample/ }));
+    // Typed by the reader after the first pick, so no pick may take it back.
+    await user.clear(form.getByLabelText("Title"));
+    await user.type(form.getByLabelText("Title"), "VP Sales");
     const email = form.getByRole("combobox", { name: "Email" });
     await user.clear(email);
     await user.type(email, "anna");
@@ -186,7 +189,7 @@ describe("a lead's identity, offered from the contacts", () => {
       company_name: "Northwind Traders",
       contact_id: "c-anna",
     });
-    expect(writes[0]?.body).not.toHaveProperty("title");
+    expect(writes[0]?.body).toMatchObject({ title: "VP Sales" });
   });
 
   it("fills an unnamed lead from a contact in one save", async () => {

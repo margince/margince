@@ -71,3 +71,9 @@ export const PickingAContact: Story = {
     await panel.findByRole("option", { name: /Jonas Petersen/ });
   },
 };
+
+/** The same picker over the lead page in dark. */
+export const PickingAContactDark: Story = {
+  ...PickingAContact,
+  globals: { theme: "dark" },
+};
