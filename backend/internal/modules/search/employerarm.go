@@ -72,9 +72,9 @@ func employerArmSQL(ctx context.Context, headPos, tailPos int, hasFragment bool,
 	companyMatch := matchExpression(entityCompany, headPos, tailPos, hasFragment)
 	// Wrapped, so DISTINCT ON's ORDER BY binds to the arm and not to the union.
 	// The score -1/(1+rank) lies in [-1, 0), below every own-text hit's
-	// ts_rank_cd, so the keyset cursor needs no second ordering. DISTINCT ON
-	// keeps one row per contact: their best-matching employer, the primary job
-	// first where they hold two there.
+	// scoreExpression, which is never negative, so the keyset cursor needs no
+	// second ordering. DISTINCT ON keeps one row per contact: their
+	// best-matching employer, the primary job first where they hold two there.
 	return fmt.Sprintf(`SELECT '%[1]s'::text AS rtype, e.id, e.title, NULL::text AS snippet, e.score,
 	       e.employer_id, e.employer_name
 	  FROM (
@@ -82,7 +82,7 @@ func employerArmSQL(ctx context.Context, headPos, tailPos int, hasFragment bool,
 	               (-1.0 / (1.0 + m.match_rank))::float8 AS score,
 	               m.id AS employer_id, m.name AS employer_name
 	          FROM (
-	                SELECT o.id, %[3]s AS name, ts_rank_cd(o.search_tsv, %[4]s)::float8 AS match_rank
+	                SELECT o.id, %[3]s AS name, %[10]s::float8 AS match_rank
 	                  FROM company o
 	                 WHERE o.search_tsv @@ %[4]s AND %[5]s
 	                 ORDER BY match_rank DESC, o.id
@@ -95,7 +95,8 @@ func employerArmSQL(ctx context.Context, headPos, tailPos int, hasFragment bool,
 	       ) e`,
 		contactBranch.entity, contactBranch.title, companyBranch.title, companyMatch, companyWhere,
 		arg(employerArmCompanies), edgeWhere, contactWhere,
-		matchExpression(entityContact, headPos, tailPos, hasFragment)), nil
+		matchExpression(entityContact, headPos, tailPos, hasFragment),
+		scoreExpression(entityCompany, "o", headPos, tailPos, hasFragment)), nil
 }
 
 // conjunction ANDs the clauses that are present, each parenthesised so a

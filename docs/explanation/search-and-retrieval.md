@@ -59,6 +59,11 @@ who-knows-whom projection used here is [relationship-graph.md](relationship-grap
   concurrent writes. Name fields parse `simple` and unaccented (`Muller` finds `Müller`), OR-ed with
   the apostrophe-collapsed parse (`oreilly` finds `O'Reilly`). The activity branch also ORs the
   German and English stemmed parses, so `Vertrag` reaches a row that stemmed `Verträge`.
+- **A whole word outranks a prefix.** The word still being typed matches as a prefix, so `philip`
+  reaches both Philip and Philipp, and `ts_rank_cd` scores them alike. `scoreExpression` therefore
+  normalises the rank into `[0, 1)`. It adds 1 when the record carries that word whole, unstemmed,
+  in any field it indexes. A whole-word hit then ranks above every hit the prefix alone supports,
+  so a per-type cap of three cannot drop Philip on an id tie.
 - **The vector arm** is one row per `(entity, chunk_ix)` in `embedding`, ranked by cosine distance
   (`<=>`) and always filtered to the current embed identity (next section). There is no HNSW index:
   the identity-filtered per-branch query sequential-scans, and an index over a mixed-width column
@@ -111,8 +116,8 @@ type. The arm:
   text, and keeps one row per contact (`DISTINCT ON`): the best-matching employer, the primary job
   first. Each hit carries that company as `works_at`;
 - **ranks below every own-text hit**: its score is `-1/(1+rank)`, in `[-1, 0)`, under any
-  `ts_rank_cd`. Both page shapes therefore put a contact matched by name first, and the
-  `(score, type, id)` cursor needs no second ordering. On a grouped page the arm is capped like any
+  own-text score, which is never negative. Both page shapes therefore put a contact matched by
+  name first, and the `(score, type, id)` cursor needs no second ordering. On a grouped page the arm is capped like any
   branch and `page()` counts by type, so `per_type` still bounds the contacts shown and
   `types_with_more` stays true.
 
