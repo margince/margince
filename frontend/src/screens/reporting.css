@@ -21,6 +21,11 @@
 .reporting-toolbar > * {
   min-width: 8rem;
 }
+/* A toolbar whose verbs the reader may not use renders nothing, and its margin
+   would still open a gap in the page. */
+.reporting-toolbar:empty {
+  display: none;
+}
 .reporting-header {
   display: flex;
   justify-content: space-between;

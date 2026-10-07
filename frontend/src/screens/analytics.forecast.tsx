@@ -302,27 +302,31 @@ function ForecastAnswer({
 
       {/* EVERY slot declares the narrow shape, the landing pair included: the
           fold is the strip's, so a card that did not declare it would keep its
-          box while the rows beside it lost theirs. */}
-      <StatStrip>
-        {/* Both are absent for a managed-teams reading, which covers several
-            populations at once: a landing summed across books that are called
-            separately, and a coverage rate blended over them, would each
-            describe none of them. */}
-        {readings.landing && (
-          <LandingCard
-            landing={readings.landing}
-            currency={currency}
-            locale={locale}
-          />
-        )}
-        {readings.sufficiency && (
-          <SufficiencyCard
-            sufficiency={readings.sufficiency}
-            currency={currency}
-            locale={locale}
-          />
-        )}
-      </StatStrip>
+          box while the rows beside it lost theirs.
+
+          Both are absent for a managed-teams reading, which covers several
+          populations at once: a landing summed across books that are called
+          separately, and a coverage rate blended over them, would each
+          describe none of them. With neither, no strip: an empty one still
+          takes its row and its gaps. */}
+      {(readings.landing || readings.sufficiency) && (
+        <StatStrip>
+          {readings.landing && (
+            <LandingCard
+              landing={readings.landing}
+              currency={currency}
+              locale={locale}
+            />
+          )}
+          {readings.sufficiency && (
+            <SufficiencyCard
+              sufficiency={readings.sufficiency}
+              currency={currency}
+              locale={locale}
+            />
+          )}
+        </StatStrip>
+      )}
     </>
   );
 }
