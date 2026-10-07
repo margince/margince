@@ -4734,11 +4734,13 @@ public.lead.disqualify_reason_id uuid gen=- def=-
 public.lead.email text gen=- def=-
 public.lead.entered_at timestamp with time zone NOT NULL gen=- def=now()
 public.lead.first_response_at timestamp with time zone gen=- def=-
+public.lead.from_contact_id uuid gen=- def=-
 public.lead.full_name text gen=- def=-
 public.lead.id uuid NOT NULL gen=- def=uuidv7()
 public.lead.lead_disqualify_reason_id_fkey FOREIGN KEY (disqualify_reason_id) REFERENCES lead_disqualify_reason(id) ON DELETE RESTRICT
 public.lead.lead_email_norm CHECK (((email IS NULL) OR (email = lower(email))))
 public.lead.lead_first_response_follows_creation CHECK (((first_response_at IS NULL) OR (first_response_at >= created_at)))
+public.lead.lead_from_contact_id_fkey FOREIGN KEY (from_contact_id) REFERENCES contact(id) ON DELETE SET NULL
 public.lead.lead_merged_into_id_fkey FOREIGN KEY (merged_into_id) REFERENCES lead(id) ON DELETE SET NULL (merged_into_id)
 public.lead.lead_override_retains_the_computed_score CHECK (((score_override_reason IS NULL) OR (score_computed IS NOT NULL)))
 public.lead.lead_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE SET NULL (owner_id)
@@ -6974,6 +6976,7 @@ public.uq_forecast_snapshot_daily_workspace CREATE UNIQUE INDEX uq_forecast_snap
 public.uq_forecast_snapshot_period_close CREATE UNIQUE INDEX uq_forecast_snapshot_period_close ON public.forecast_snapshot USING btree (period_start, period_end, scope_kind, scope_id, local_day) WHERE (trigger = 'period_close'::text)
 public.uq_forecast_snapshot_period_close_workspace CREATE UNIQUE INDEX uq_forecast_snapshot_period_close_workspace ON public.forecast_snapshot USING btree (period_start, period_end, local_day) WHERE ((trigger = 'period_close'::text) AND (scope_id IS NULL))
 public.uq_lead_email_dedupe CREATE UNIQUE INDEX uq_lead_email_dedupe ON public.lead USING btree (email) WHERE ((email IS NOT NULL) AND (archived_at IS NULL))
+public.uq_lead_from_contact_live CREATE UNIQUE INDEX uq_lead_from_contact_live ON public.lead USING btree (from_contact_id) WHERE ((from_contact_id IS NOT NULL) AND (archived_at IS NULL))
 public.uq_lead_manual_signal_live CREATE UNIQUE INDEX uq_lead_manual_signal_live ON public.lead_manual_signal USING btree (lead_id, factor) WHERE (superseded_at IS NULL)
 public.uq_lead_source CREATE UNIQUE INDEX uq_lead_source ON public.lead USING btree (source_system, source_id) WHERE ((source_system IS NOT NULL) AND (source_id IS NOT NULL))
 public.uq_lead_source_key CREATE UNIQUE INDEX uq_lead_source_key ON public.lead_source USING btree (key)
