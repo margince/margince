@@ -127,7 +127,8 @@ func (c *firstDraftCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 	if err != nil {
 		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: err.Error()}
 	}
-	if err := validateReplyDraft(draft); err != nil {
+	// Judged as served: the floor's greeting counts against the bounds.
+	if _, err := c.data.greeted(draft); err != nil {
 		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: err.Error()}
 	}
 	return aitasks.Outcome{Result: aitasks.OutcomeAccepted}
