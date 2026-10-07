@@ -64,15 +64,11 @@ func ensureLeadEmailUnclaimed(ctx context.Context, tx pgx.Tx, email *string) err
 	if err != nil || !found {
 		return err
 	}
-	dup := &DuplicateLeadError{Email: *email}
-	visible, err := auth.VisibleTo(ctx, tx, "lead", existing.UUID)
+	named, err := nameableLead(ctx, tx, existing)
 	if err != nil {
 		return err
 	}
-	if visible {
-		dup.ExistingID = existing
-	}
-	return dup
+	return &DuplicateLeadError{Email: *email, ExistingID: named}
 }
 
 // lockLeadLinkedInIdentity takes the LinkedIn write identity BEFORE either
@@ -109,15 +105,11 @@ func ensureLeadLinkedInUnclaimed(ctx context.Context, tx pgx.Tx, url *string) er
 	if err != nil || !found {
 		return err
 	}
-	dup := &DuplicateLeadLinkedInError{URL: *url}
-	visible, err := auth.VisibleTo(ctx, tx, "lead", existing.UUID)
+	named, err := nameableLead(ctx, tx, existing)
 	if err != nil {
 		return err
 	}
-	if visible {
-		dup.ExistingID = existing
-	}
-	return dup
+	return &DuplicateLeadLinkedInError{URL: *url, ExistingID: named}
 }
 
 // DuplicateContactLeadError refuses a second live lead worked from one
@@ -154,13 +146,20 @@ func ensureContactNotWorked(ctx context.Context, tx pgx.Tx, contactID *ids.Conta
 	if err != nil {
 		return fmt.Errorf("probe lead worked from contact: %w", err)
 	}
-	dup := &DuplicateContactLeadError{}
-	visible, err := auth.VisibleTo(ctx, tx, "lead", existing.UUID)
+	named, err := nameableLead(ctx, tx, existing)
 	if err != nil {
 		return err
 	}
-	if visible {
-		dup.ExistingID = existing
+	return &DuplicateContactLeadError{ExistingID: named}
+}
+
+// nameableLead is the lead a duplicate refusal may name: the incumbent when the
+// caller could read it, and the zero id otherwise, so the 409 never discloses a
+// lead outside their sight. It decides nothing about the row being written.
+func nameableLead(ctx context.Context, tx pgx.Tx, existing ids.LeadID) (ids.LeadID, error) {
+	visible, err := auth.VisibleTo(ctx, tx, "lead", existing.UUID)
+	if err != nil || !visible {
+		return ids.LeadID{}, err
 	}
-	return dup
+	return existing, nil
 }
