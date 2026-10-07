@@ -3,6 +3,8 @@
 
 //gate:kind census H2
 
+//go:build !integration
+
 package gates
 
 // Every list quick-find is proved to read its trigram index.
@@ -26,10 +28,18 @@ import (
 	"testing"
 )
 
-var quickFindCallText = regexp.MustCompile(`storekit\.QuickFindClause(With)?\(`)
+const (
+	storekitImport      = "github.com/margince/margince/backend/internal/platform/database/storekit"
+	quickFindTestImport = storekitImport + "/quickfindtest"
+)
 
-// quickFindSite is one call outside storekit, with the identifiers whose value
-// reaches the name argument.
+// quickFindCallText counts the calls in plain text, under any package name, so
+// a call the syntax walk fails to resolve shows as a mismatch.
+var quickFindCallText = regexp.MustCompile(`\bQuickFindClause(With)?\(`)
+
+// quickFindSite is one call outside storekit, with the names a plan test has
+// to mention for it: the expression's identifier, or the functions that build
+// the struct the expression is read from.
 type quickFindSite struct {
 	pos   string
 	names []string
@@ -51,16 +61,16 @@ func TestEveryQuickFindHasAPlanTestNamingItsExpression(t *testing.T) {
 		t.Fatal("found no quick-find call at all; the walk is reading the wrong tree")
 	}
 	for dir, packageSites := range sites {
-		proof := planTestText(t, dir)
-		if proof == "" {
+		named := planTestNames(t, dir)
+		if len(named) == 0 {
 			t.Errorf("%s calls storekit.QuickFindClause but no integration test there calls "+
 				"quickfindtest.AssertIndexed, so nothing proves the search reads an index", dir)
 			continue
 		}
 		for _, site := range packageSites {
 			for _, name := range site.names {
-				if !regexp.MustCompile(`\b` + regexp.QuoteMeta(name) + `\b`).MatchString(proof) {
-					t.Errorf("%s passes %s as the quick-find expression, and no plan test in %s names it",
+				if !named[name] {
+					t.Errorf("%s reaches the quick-find through %s, and no plan test in %s names it",
 						site.pos, name, dir)
 				}
 			}
@@ -68,8 +78,8 @@ func TestEveryQuickFindHasAPlanTestNamingItsExpression(t *testing.T) {
 	}
 }
 
-// quickFindSites collects the calls by package directory, and how many calls the
-// plain text holds, so a call the syntax walk misses shows as a mismatch.
+// quickFindSites collects the calls by package directory, and how many calls
+// the plain text holds.
 func quickFindSites(t *testing.T, root string) (map[string][]quickFindSite, int) {
 	t.Helper()
 	sites := map[string][]quickFindSite{}
@@ -78,8 +88,9 @@ func quickFindSites(t *testing.T, root string) (map[string][]quickFindSite, int)
 		if err != nil {
 			return err
 		}
-		// The plan check renders the clause to explain it; it is the proof, not a caller.
-		if d.IsDir() && d.Name() == "quickfindtest" {
+		// storekit defines the clause and quickfindtest renders it to explain
+		// it; neither is a caller.
+		if d.IsDir() && (path == filepath.Join(root, "platform/database/storekit") || d.Name() == "quickfindtest") {
 			return filepath.SkipDir
 		}
 		if d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
@@ -97,7 +108,8 @@ func quickFindSites(t *testing.T, root string) (map[string][]quickFindSite, int)
 		}
 		ast.Inspect(file, func(n ast.Node) bool {
 			call, ok := n.(*ast.CallExpr)
-			if !ok || !isStorekitQuickFind(call) || len(call.Args) < 2 {
+			if !ok || !(callsPackageFunc(file, call.Fun, storekitImport, "QuickFindClause") ||
+				callsPackageFunc(file, call.Fun, storekitImport, "QuickFindClauseWith")) {
 				return true
 			}
 			dir := filepath.Dir(path)
@@ -106,7 +118,7 @@ func quickFindSites(t *testing.T, root string) (map[string][]quickFindSite, int)
 			case *ast.Ident:
 				site.names = []string{arg.Name}
 			case *ast.SelectorExpr:
-				site.names = fieldValues(t, dir, arg.Sel.Name)
+				site.names = literalBuilders(t, dir, arg.Sel.Name)
 			default:
 				t.Errorf("%s: the quick-find expression is neither a name nor a field, so this gate cannot "+
 					"tell which index it needs", site.pos)
@@ -122,19 +134,9 @@ func quickFindSites(t *testing.T, root string) (map[string][]quickFindSite, int)
 	return sites, textual
 }
 
-func isStorekitQuickFind(call *ast.CallExpr) bool {
-	sel, ok := call.Fun.(*ast.SelectorExpr)
-	if !ok {
-		return false
-	}
-	pkg, ok := sel.X.(*ast.Ident)
-	return ok && pkg.Name == "storekit" && (sel.Sel.Name == "QuickFindClause" || sel.Sel.Name == "QuickFindClauseWith")
-}
-
-// fieldValues lists the identifiers the package's struct literals put in field,
-// except in a literal that also sets Query to nil: that list never searches
-// through the shared clause, so its name column never reaches it.
-func fieldValues(t *testing.T, dir, field string) []string {
+// literalBuilders names the functions in dir whose struct literals set field,
+// so a plan test that runs those builders explains what production passes.
+func literalBuilders(t *testing.T, dir, field string) []string {
 	t.Helper()
 	paths, err := filepath.Glob(filepath.Join(dir, "*.go"))
 	if err != nil {
@@ -149,63 +151,71 @@ func fieldValues(t *testing.T, dir, field string) []string {
 		if err != nil {
 			t.Fatalf("parsing %s: %v", path, err)
 		}
-		names = append(names, literalValues(file, field)...)
+		for _, decl := range file.Decls {
+			fn, ok := decl.(*ast.FuncDecl)
+			if ok && fn.Body != nil && setsField(fn.Body, field) {
+				names = append(names, fn.Name.Name)
+			}
+		}
 	}
 	if len(names) == 0 {
-		t.Errorf("%s: no struct literal sets %s, so this gate cannot tell which expression reaches the quick-find", dir, field)
+		t.Errorf("%s: no function sets %s in a struct literal, so this gate cannot tell which expression "+
+			"reaches the quick-find", dir, field)
 	}
 	return names
 }
 
-// planTestText is the source of every integration test in dir that calls the
-// plan check, or "" when none does.
-func planTestText(t *testing.T, dir string) string {
+func setsField(body ast.Node, field string) bool {
+	found := false
+	ast.Inspect(body, func(n ast.Node) bool {
+		if kv, ok := n.(*ast.KeyValueExpr); ok {
+			if key, isIdent := kv.Key.(*ast.Ident); isIdent && key.Name == field {
+				found = true
+			}
+		}
+		return !found
+	})
+	return found
+}
+
+// planTestNames lists every identifier used inside the integration-test
+// functions in dir that call quickfindtest.AssertIndexed. Comments and strings
+// are not identifiers, so a mention there counts for nothing.
+func planTestNames(t *testing.T, dir string) map[string]bool {
 	t.Helper()
 	files, err := filepath.Glob(filepath.Join(dir, "*_integration_test.go"))
 	if err != nil {
 		t.Fatalf("listing integration tests in %s: %v", dir, err)
 	}
-	var proof strings.Builder
+	names := map[string]bool{}
 	for _, path := range files {
-		src, err := os.ReadFile(path)
+		file, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
 		if err != nil {
-			t.Fatalf("reading %s: %v", path, err)
+			t.Fatalf("parsing %s: %v", path, err)
 		}
-		if strings.Contains(string(src), "quickfindtest.AssertIndexed(") {
-			proof.Write(src)
-		}
-	}
-	return proof.String()
-}
-
-// literalValues is what file's searching struct literals put in field.
-func literalValues(file *ast.File, field string) []string {
-	var names []string
-	ast.Inspect(file, func(n ast.Node) bool {
-		lit, ok := n.(*ast.CompositeLit)
-		if !ok {
-			return true
-		}
-		value, searches := "", true
-		for _, elt := range lit.Elts {
-			kv, ok := elt.(*ast.KeyValueExpr)
-			if !ok {
+		for _, decl := range file.Decls {
+			fn, ok := decl.(*ast.FuncDecl)
+			if !ok || fn.Body == nil || !callsAssertIndexed(file, fn.Body) {
 				continue
 			}
-			key, _ := kv.Key.(*ast.Ident)
-			ident, _ := kv.Value.(*ast.Ident)
-			switch {
-			case key == nil || ident == nil:
-			case key.Name == field:
-				value = ident.Name
-			case key.Name == "Query" && ident.Name == "nil":
-				searches = false
-			}
+			ast.Inspect(fn.Body, func(n ast.Node) bool {
+				if ident, ok := n.(*ast.Ident); ok {
+					names[ident.Name] = true
+				}
+				return true
+			})
 		}
-		if value != "" && searches {
-			names = append(names, value)
-		}
-		return true
-	})
+	}
 	return names
+}
+
+func callsAssertIndexed(file *ast.File, body ast.Node) bool {
+	found := false
+	ast.Inspect(body, func(n ast.Node) bool {
+		if call, ok := n.(*ast.CallExpr); ok && callsPackageFunc(file, call.Fun, quickFindTestImport, "AssertIndexed") {
+			found = true
+		}
+		return !found
+	})
+	return found
 }

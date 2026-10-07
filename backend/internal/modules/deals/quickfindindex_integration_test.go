@@ -8,9 +8,10 @@ package deals
 import (
 	"testing"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/database/storekit/quickfindtest"
 )
 
 func TestTheDealQuickFindReadsItsTrigramIndex(t *testing.T) {
-	quickfindtest.AssertIndexed(t, "deal", dealNameColumn, "idx_deal_name_trgm")
+	quickfindtest.AssertIndexed(t, "deal", dealNameColumn, "idx_deal_name_trgm", storekit.Identifier{})
 }

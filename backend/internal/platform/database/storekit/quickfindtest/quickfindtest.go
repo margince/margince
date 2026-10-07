@@ -26,8 +26,10 @@ import (
 //
 //nolint:tagliatelle // fixed by the server's plan format
 type planNode struct {
-	IndexName string     `json:"Index Name"`
-	Plans     []planNode `json:"Plans"`
+	NodeType     string     `json:"Node Type"`
+	RelationName string     `json:"Relation Name"`
+	IndexName    string     `json:"Index Name"`
+	Plans        []planNode `json:"Plans"`
 }
 
 // explained is one statement in EXPLAIN's JSON array.
@@ -37,23 +39,19 @@ type explained struct {
 	Plan planNode `json:"Plan"`
 }
 
-func (n planNode) uses(index string) bool {
-	if n.IndexName == index {
-		return true
-	}
+func (n planNode) walk(visit func(planNode)) {
+	visit(n)
 	for _, child := range n.Plans {
-		if child.uses(index) {
-			return true
-		}
+		child.walk(visit)
 	}
-	return false
 }
 
-// AssertIndexed fails t unless the quick-find over table, matching nameExpr,
-// can be answered from index. Sequential scans are priced out for the one
-// statement, so a plan without the index means the planner could not use it,
-// not that it chose not to on a small table.
-func AssertIndexed(t *testing.T, table, nameExpr, index string) {
+// AssertIndexed fails t unless the quick-find over table, matching nameExpr and
+// the identifier arm id (zero when the list has none), reads index and scans no
+// table. Sequential scans are priced out for the one statement, so a scan left
+// in the plan means the planner had no index to use, not that it chose not to
+// on a small table.
+func AssertIndexed(t *testing.T, table, nameExpr, index string, id storekit.Identifier) {
 	t.Helper()
 	dsn := os.Getenv("MARGINCE_TEST_DSN")
 	if dsn == "" {
@@ -85,7 +83,7 @@ func AssertIndexed(t *testing.T, table, nameExpr, index string) {
 		t.Fatalf("pricing out sequential scans: %v", err)
 	}
 	statement := `EXPLAIN (FORMAT JSON) SELECT id FROM ` + pgx.Identifier{table}.Sanitize() +
-		` WHERE ` + storekit.QuickFindClause(1, nameExpr)
+		` WHERE ` + storekit.QuickFindClauseWith(1, nameExpr, id)
 	var raw []byte
 	if err := tx.QueryRow(ctx, statement, "fragment").Scan(&raw); err != nil {
 		t.Fatalf("explaining the %s quick-find: %v", table, err)
@@ -94,8 +92,16 @@ func AssertIndexed(t *testing.T, table, nameExpr, index string) {
 	if err := json.Unmarshal(raw, &plans); err != nil || len(plans) != 1 {
 		t.Fatalf("reading the %s quick-find plan (%v): %s", table, err, raw)
 	}
-	if !plans[0].Plan.uses(index) {
-		t.Errorf("the %s quick-find over %s does not read %s, so every search scans the table; "+
-			"index the exact expression the query matches. Plan: %s", table, nameExpr, index, raw)
+	used := false
+	plans[0].Plan.walk(func(n planNode) {
+		used = used || n.IndexName == index
+		if n.NodeType == "Seq Scan" {
+			t.Errorf("the %s quick-find scans %s, so every search reads that whole table. Plan: %s",
+				table, n.RelationName, raw)
+		}
+	})
+	if !used {
+		t.Errorf("the %s quick-find over %s does not read %s; index the exact expression the query "+
+			"matches. Plan: %s", table, nameExpr, index, raw)
 	}
 }
