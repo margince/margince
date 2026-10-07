@@ -156,7 +156,7 @@ required. The override stops the score being updated until you clear it.
 The score falls over time: the screen shows it as "{base}, halved every 14
 days".
 
-There is an optional target for the first response to a lead, **off by default**, set
+There is an optional target for the first answer, **off by default**, set
 between 15 minutes and 7 days. When it is on, leads show as **On time**, **Due
 soon** or **Overdue**.
 

@@ -133,8 +133,8 @@ number is built** and gives you three things:
    right now. The panel says so: "If an exchange rate changed since, they may
    not match the number you clicked."
 
-Record IDs are hidden only when *every* row carries a name. If some rows
-have no name, the IDs stay, so a record you may not open can still be
+Record numbers are hidden only when *every* row carries a name. If some rows
+have no name, the numbers stay, so a record you may not open can still be
 picked out.
 
 Weighting is rounded per deal and then added up, here and on the board. So the
@@ -317,8 +317,8 @@ The **Deal value needed** card shows how much open pipeline it would take to
 reach the reference. It shows this as a number out of 100, with a bar under it.
 
 The reference comes from outside the current pipeline. A manager call comes
-first. Without one, it takes the amounts won in the last four finished periods
-of the same kind. It sorts them and takes the average of the two middle ones. Measuring open deals against a figure worked out from those same
+first. Without one, it is the middle value of the last four finished periods of
+the same kind. Measuring open deals against a figure worked out from those same
 deals would always look like enough.
 
 This figure is not a target. Targets are set on their own under **Analytics →

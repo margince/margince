@@ -32,7 +32,7 @@ To change a proposal before it runs, open it with **Decide** and choose **Edit**
 Also called: amend, modify, correct an agent draft.
 
 ### How do I reject a proposal?
-To turn a proposal down, open it with **Decide** and choose **Reject**. In the app this is one press with no reason form. Nothing is applied and no record changes. Rejecting needs the same authority as approving it, and it is recorded the same way.
+To turn a proposal down, open it with **Decide** and choose **Reject**. In the app this is one press with no reason form. Nothing is saved and no record changes. Rejecting needs the same authority as approving it, and it is recorded the same way.
 Also called: decline, deny, dismiss an agent action.
 
 ### What happens if an approval expires?

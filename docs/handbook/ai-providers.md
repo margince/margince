@@ -61,8 +61,8 @@ To keep OpenRouter processing inside the EU, choose **OpenRouter (EU)** under
 address of OpenRouter. It handles them only inside the EU and sends them only
 to providers there. It counts as EU processing when your installation requires
 EU hosting, which the screen calls the **eu_hosted** profile.
-It needs an OpenRouter Business or Enterprise plan, and only models that
-OpenRouter offers in the EU are served there.
+It needs an OpenRouter Business or Enterprise plan, and only models allowed in
+the EU are served there.
 
 ### How do I set up Gemini on Vertex AI?
 To set up Gemini on Vertex AI in Margince, give Margince a Google Cloud
@@ -138,7 +138,7 @@ of their own. Open that provider's sheet under **Providers**, pick its
 To see whether an AI provider is working in Margince, open **Settings**, then **System health**, and read the **AI provider status** card.
 **AI models** also shows a second badge on each provider under **Providers**.
 The card lists only providers that are not answering as normal, with why, **Started** and **Next check**. With none listed, it reads "All AI providers are answering."
-It shows what the server and the background worker found in their calls, and only roles with **AI diagnostics read** can open it.
+It shows what the server and the background worker found in their calls, and only roles with access to AI checks can open it.
 Also called: is the AI down, AI outage, model provider health, AI provider status.
 
 ### What does "Out of credit", "Key rejected", "Unreachable" or "Degraded" mean on an AI provider?
