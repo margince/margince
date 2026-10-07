@@ -46,8 +46,8 @@ export const PALETTE_PER_TYPE = 3;
 // as typing on or backspacing does, rather than the box having changed subject.
 // Case-blind, as the search itself is.
 function sameSubject(asked: string, typed: string): boolean {
-  const a = asked.toLocaleLowerCase();
-  const b = typed.toLocaleLowerCase();
+  const a = asked.toLowerCase();
+  const b = typed.toLowerCase();
   return b.startsWith(a) || a.startsWith(b);
 }
 
