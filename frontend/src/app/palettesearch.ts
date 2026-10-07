@@ -42,6 +42,12 @@ export const SEARCH_PENDING_DELAY_MS = 300;
 // screen; the rest are on the results page, one row away.
 export const PALETTE_PER_TYPE = 3;
 
+// Whether an answer for `asked` still speaks to `typed`: one extends the other,
+// as typing on or backspacing does, rather than the box having changed subject.
+function sameSubject(asked: string, typed: string): boolean {
+  return typed.startsWith(asked) || asked.startsWith(typed);
+}
+
 // What the live search arm has to say: the rows it found, and whether it is
 // still working or gave up. The two flags are returned rather than swallowed —
 // the palette used to answer a failed search with an empty array, which is the
@@ -131,7 +137,13 @@ export function useSearchCommands(query: string): SearchArm {
   // each kind lives. An activity that is not a message has no page and drops
   // out by answering null; an EMAIL goes to the results screen with that
   // message open, the one page that already owns its drawer.
-  const answer = enabled ? result.data : undefined;
+  // Kept-over hits and failures go once the words change subject: `settled`
+  // lags a burst, and another word's answer under the box misleads.
+  const answer =
+    enabled && result.data && sameSubject(result.data.q, typed)
+      ? result.data
+      : undefined;
+  const failed = enabled && result.isError && sameSubject(settled, typed);
   const commands = groupSearchHits(answer?.hits ?? []).flatMap(
     ({ group, hits }) =>
       hits.flatMap((hit): Command[] => {
@@ -174,8 +186,10 @@ export function useSearchCommands(query: string): SearchArm {
     commands,
     // `isFetching` rather than `isPending`: a disabled query reports pending
     // forever, and the palette opens with an empty box every time.
+    // Not gated by subject: the wait is real, and an empty list beside no bar
+    // would read as "no matches".
     pending: enabled && result.isFetching,
-    failed: enabled && result.isError,
+    failed,
     failure: problemMessageOf(result.error, t, t("palette.searchFailed")),
   };
 }

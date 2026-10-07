@@ -190,3 +190,61 @@ describe("a search the server refuses as too broad", () => {
     expect(await screen.findByText(advice)).toBeTruthy();
   });
 });
+
+describe("words typed before the pause after an earlier answer", () => {
+  function answering(title: string) {
+    return vi.fn(async () =>
+      json({
+        data: [{ type: "company", id: "o1", title }],
+        page: { next_cursor: null, has_more: false },
+      }),
+    );
+  }
+
+  it("drops the earlier hits once the words change subject", async () => {
+    const user = steppedClock();
+    vi.stubGlobal("fetch", answering("Abbott AG"));
+    renderPalette();
+    const box = screen.getByRole("searchbox");
+
+    await user.type(box, "ab");
+    await pause();
+    await screen.findByRole("button", { name: "Abbott AG" });
+    await user.clear(box);
+    await user.type(box, "nor");
+
+    expect(screen.queryByRole("button", { name: "Abbott AG" })).toBeNull();
+  });
+
+  it("keeps the earlier hits while the words only grow", async () => {
+    const user = steppedClock();
+    vi.stubGlobal("fetch", answering("Acme GmbH"));
+    renderPalette();
+    const box = screen.getByRole("searchbox");
+
+    await user.type(box, "acme");
+    await pause();
+    await screen.findByRole("button", { name: "Acme GmbH" });
+    await user.type(box, " log");
+
+    expect(screen.getByRole("button", { name: "Acme GmbH" })).toBeTruthy();
+  });
+
+  it("drops the earlier failure once the words change subject", async () => {
+    const user = steppedClock();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("{}", { status: 500 })),
+    );
+    renderPalette();
+    const box = screen.getByRole("searchbox");
+
+    await user.type(box, "ab");
+    await pause();
+    await screen.findByText("Search failed");
+    await user.clear(box);
+    await user.type(box, "nor");
+
+    expect(screen.queryByText("Search failed")).toBeNull();
+  });
+});
