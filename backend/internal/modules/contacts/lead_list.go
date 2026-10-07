@@ -123,38 +123,57 @@ func (s *Store) ListLeads(ctx context.Context, in ListLeadsInput) ([]crmcontract
 			if err != nil {
 				return nil, err
 			}
-			if in.Query != nil && *in.Query != "" {
-				where = append(where, leadQuickFindClause(*in.Query, arg))
-			}
-			// The lead's own narrowing, alongside the shared chain.
-			if in.Status != nil {
-				where = append(where, storekit.SQLf(leadStatusColumn+" = $%d", arg(*in.Status)))
-			}
-			if in.OwedAReply != nil && *in.OwedAReply {
-				where = append(where, leadOwesAReplySQL)
-			}
-			if in.MinScore != nil {
-				where = append(where, storekit.SQLf(leadScoreColumn+" >= $%d", arg(*in.MinScore)))
-			}
-			if in.Source != nil {
-				where = append(where, leadSourceClause(*in.Source, arg))
-			}
-			if in.SLAState != nil {
-				where = append(where, slaStateClause(ctx, policy, *in.SLAState, arg))
-			}
-			return where, nil
+			return append(where, leadNarrowing(ctx, in, policy, arg)...), nil
 		},
 		scan: func(rows pgx.Rows, active []fieldcatalog.Column, sorted *storekit.ListSort) ([]crmcontracts.Lead, []*string, error) {
 			return scanLeadPage(rows, active, sorted, policy)
 		},
-		// A lead is one flat row: no child tables to load alongside the page.
-		// The one thing the page still owes each row is whether it is this
-		// caller's to change, which is one statement for the whole page.
-		attach: stampLeadsWritable,
+		attach: attachLeadRows,
 		cursorKey: func(last crmcontracts.Lead) (time.Time, ids.UUID) {
 			return last.CreatedAt, ids.UUID(last.Id)
 		},
 	})
+}
+
+// leadNarrowing is the lead's own filters, after the shared chain. Both reads
+// of the list — the sorted page and the default work queue — narrow by it, so
+// a filter added here reaches both or neither.
+func leadNarrowing(ctx context.Context, in ListLeadsInput, policy leadSLAPolicy, arg func(any) int) []string {
+	var where []string
+	if in.Query != nil && *in.Query != "" {
+		where = append(where, leadQuickFindClause(*in.Query, arg))
+	}
+	if in.Status != nil {
+		where = append(where, storekit.SQLf(leadStatusColumn+" = $%d", arg(*in.Status)))
+	}
+	if in.OwedAReply != nil && *in.OwedAReply {
+		where = append(where, leadOwesAReplySQL)
+	}
+	if in.MinScore != nil {
+		where = append(where, storekit.SQLf(leadScoreColumn+" >= $%d", arg(*in.MinScore)))
+	}
+	if in.Source != nil {
+		where = append(where, leadSourceClause(*in.Source, arg))
+	}
+	if in.SLAState != nil {
+		where = append(where, slaStateClause(ctx, policy, *in.SLAState, arg))
+	}
+	if clause := storekit.TagFilterClause(ctx, leadEntity, "lead.id", in.TagIDs, in.TagMode, arg); clause != "" {
+		where = append(where, clause)
+	}
+	return where
+}
+
+// attachLeadRows is what a page of leads owes each row beyond its own columns:
+// whether this caller may change it, and the tags it carries. Both reads of
+// the list attach through here.
+func attachLeadRows(ctx context.Context, tx pgx.Tx, leads []crmcontracts.Lead) error {
+	if err := stampLeadsWritable(ctx, tx, leads); err != nil {
+		return err
+	}
+	return storekit.AttachRowTags(ctx, tx, leadEntity, leads,
+		func(l crmcontracts.Lead) ids.UUID { return ids.UUID(l.Id) },
+		func(l *crmcontracts.Lead, tags []storekit.RowTag) { l.Tags = wireRowTags(tags) })
 }
 
 // leadQuickFindExpr is the substring target: the lead's name and the company

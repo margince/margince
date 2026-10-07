@@ -182,6 +182,16 @@ func TestReplyDraftCaseReportsWhatTheDrafterRefused(t *testing.T) {
 			wantResult: aitasks.OutcomeInvalid,
 			wantDetail: "body is empty",
 		},
+		{
+			// The model's own body sits at the bound; the floor's greeting is
+			// what carries it past, and the served draft is what is judged.
+			name:       "a body the greeting carries past its bound",
+			fixture:    replyDraftPlainFixture(),
+			register:   replyDraftRegisterPlain,
+			replies:    []string{`{"subject":"Re: plan","body":"` + strings.Repeat("b", replyDraftBodyMaxRunes) + `"}`},
+			wantResult: aitasks.OutcomeInvalid,
+			wantDetail: "exceeds the supported length",
+		},
 	})
 }
 

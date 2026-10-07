@@ -6,7 +6,7 @@
     "required_only_as_one_of_a_set": 4,
     "never_driven": 28,
     "permitted_but_never_required": 23,
-    "tokens_served_but_never_driven": 8482,
+    "tokens_served_but_never_driven": 8491,
     "use_case_cases": 31,
     "acceptance_criteria_named": 75,
     "tools_added_by_shipped_units": 0,
@@ -1593,7 +1593,7 @@
   "tools": [
     {
       "name": "list_records",
-      "tokens": 794,
+      "tokens": 803,
       "agents": [
         "morning_brief",
         "overnight_at_risk_sweep"
@@ -3462,7 +3462,7 @@
     },
     {
       "name": "get_record_tags",
-      "tokens": 141,
+      "tokens": 144,
       "agents": [],
       "required_by_cases": [
         "case31_wrong_word_on_the_record"
@@ -3526,7 +3526,7 @@
     },
     {
       "name": "get_tag",
-      "tokens": 87,
+      "tokens": 88,
       "agents": [],
       "required_by_cases": [
         "case32_two_words_for_one_thing"

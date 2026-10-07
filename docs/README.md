@@ -183,6 +183,7 @@ ready before we need it, because the first date comes 24 hours after we learn of
   Generated.
 - [ai-provider-outages.md](reference/ai-provider-outages.md): what each AI task does while its provider
   is down. Generated.
+- [glossary.md](reference/glossary.md): what each technical name in the plain pages means.
 - [record-vocabulary.md](reference/record-vocabulary.md): one name for each kind of record, in the app
   and in the code.
 - [ui-copy-style.md](reference/ui-copy-style.md): how to write English text in the app.

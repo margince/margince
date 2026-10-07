@@ -10,16 +10,16 @@
   "totals": {
     "tools": 82,
     "resources": 9,
-    "tool_catalog_bytes": 257779,
+    "tool_catalog_bytes": 257869,
     "resource_catalog_bytes": 3560,
-    "approx_wire_tokens_total": 65334,
+    "approx_wire_tokens_total": 65357,
     "largest_tool_bytes": 9293,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
-      "description_bytes": 67279,
-      "input_schema_bytes": 58014,
-      "output_schema_bytes": 112198,
-      "description_plus_input_schema_bytes": 125293
+      "description_bytes": 67290,
+      "input_schema_bytes": 58058,
+      "output_schema_bytes": 112233,
+      "description_plus_input_schema_bytes": 125348
     }
   },
   "tools": {
@@ -6144,7 +6144,7 @@
           "readOnlyHint": true,
           "title": "Get a record's tags"
         },
-        "description": "Read the tags on one contact, company or deal, with who applied each and when. Those three record types only. `withheld` true means the vocabulary is not visible to this caller, so the list is empty for that reason — NOT because the record carries no tags, and it must not be reported as none. An archived tag stays on whatever carries it. (Governance: runs immediately; requires passport scope \"read\".)",
+        "description": "Read the tags on one contact, company, deal or lead, with who applied each and when. Those four record types only. `withheld` true means the vocabulary is not visible to this caller, so the list is empty for that reason — NOT because the record carries no tags, and it must not be reported as none. An archived tag stays on whatever carries it. (Governance: runs immediately; requires passport scope \"read\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -6156,7 +6156,8 @@
               "enum": [
                 "contact",
                 "company",
-                "deal"
+                "deal",
+                "lead"
               ],
               "type": "string"
             }
@@ -6307,7 +6308,7 @@
           "readOnlyHint": true,
           "title": "Get a tag"
         },
-        "description": "Read one tag and how many contacts, companies and deals carry it. The counts cover those three record types only. They say how much retiring or merging the word would touch; the records themselves come from list_records. (Governance: runs immediately; requires passport scope \"read\".)",
+        "description": "Read one tag and how many contacts, companies, deals and leads carry it. The counts cover those four record types only. They say how much retiring or merging the word would touch; the records themselves come from list_records. (Governance: runs immediately; requires passport scope \"read\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -6341,6 +6342,9 @@
                 "deals": {
                   "type": "integer"
                 },
+                "leads": {
+                  "type": "integer"
+                },
                 "name": {
                   "type": "string"
                 },
@@ -6353,6 +6357,7 @@
                 "companies",
                 "contacts",
                 "deals",
+                "leads",
                 "name",
                 "tag_id"
               ],
@@ -7691,7 +7696,7 @@
             },
             "filters": {
               "additionalProperties": false,
-              "description": "Narrow the list. Every operand is a string. Each record_type takes only its own: contact — owner_id, tag_id (a), tag_mode (any|all|none) company — domain, lifecycle (unknown|target|prospect|opportunity|customer|former_customer|disqualified), owner_id, relationship_type (customer|partner|supplier|investor|portfolio_company|competitor|other), tag_id (a), tag_mode (any|all|none) deal — acquisition_source, commercial_motion (new_business|renewal|upsell|cross_sell|expansion|existing_business|unset), company_id, forecast_category (commit|best_case|pipeline|omitted), owner_id, partner_attribution (sourced|influenced), partner_company_id, partner_sourced (b), pipeline_id, priority (low|medium|high|unset), project_id, stage_id, stalled (b), status (open|won|lost), tag_id (a), tag_mode (any|all|none) lead — min_score (i), owner_id, status (new|contacted|engaged|promoted|disqualified) project — company_id, key, owner_id, phase (initiative|pursuing|delivering|closed) (a) is a comma-separated list, (b) is \"true\" or \"false\", (i) is a whole number. A pipeline_id or stage_id comes from list_pipelines; nothing else on this surface yields one.",
+              "description": "Narrow the list. Every operand is a string. Each record_type takes only its own: contact — owner_id, tag_id (a), tag_mode (any|all|none) company — domain, lifecycle (unknown|target|prospect|opportunity|customer|former_customer|disqualified), owner_id, relationship_type (customer|partner|supplier|investor|portfolio_company|competitor|other), tag_id (a), tag_mode (any|all|none) deal — acquisition_source, commercial_motion (new_business|renewal|upsell|cross_sell|expansion|existing_business|unset), company_id, forecast_category (commit|best_case|pipeline|omitted), owner_id, partner_attribution (sourced|influenced), partner_company_id, partner_sourced (b), pipeline_id, priority (low|medium|high|unset), project_id, stage_id, stalled (b), status (open|won|lost), tag_id (a), tag_mode (any|all|none) lead — min_score (i), owner_id, status (new|contacted|engaged|promoted|disqualified), tag_id (a), tag_mode (any|all|none) project — company_id, key, owner_id, phase (initiative|pursuing|delivering|closed) (a) is a comma-separated list, (b) is \"true\" or \"false\", (i) is a whole number. A pipeline_id or stage_id comes from list_pipelines; nothing else on this surface yields one.",
               "properties": {
                 "acquisition_source": {
                   "type": "string"

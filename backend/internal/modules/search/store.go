@@ -227,21 +227,9 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 			page = shape.page(nil)
 			return nil
 		}
-
-		rows, err := tx.Query(ctx, shape.statement(branches, withinClause(in.Within, arg), arg), args...)
+		hits, err := rank(ctx, tx, shape.statement(branches, withinClause(in.Within, arg), arg), args)
 		if err != nil {
-			return rankingFault(ctx, err)
-		}
-		defer rows.Close()
-		// Through the SAME judgement, because this is where the cancellation
-		// usually lands. pgx returns from Query before the rows are read, so a
-		// statement stopped mid-result reports through the iteration — the
-		// ceiling would otherwise surface as a raw fault from the scan and the
-		// arm above would only ever catch a statement killed before it started
-		// returning.
-		hits, err := scanHits(rows)
-		if err != nil {
-			return rankingFault(ctx, err)
+			return err
 		}
 		page = shape.page(hits)
 		if err := s.countTagReach(ctx, tx, page.Hits); err != nil {
@@ -259,6 +247,27 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 		return Page{}, err
 	}
 	return page, nil
+}
+
+func rank(ctx context.Context, tx pgx.Tx, statement string, args []any) ([]Hit, error) {
+	// Unnamed, so Postgres plans it at each Bind with the words: a reused named
+	// statement turns generic and rebuilds every tsquery for each row it scores.
+	rows, err := tx.Query(ctx, statement, append([]any{pgx.QueryExecModeDescribeExec}, args...)...)
+	if err != nil {
+		return nil, rankingFault(ctx, err)
+	}
+	defer rows.Close()
+	// Through the SAME judgement, because this is where the cancellation
+	// usually lands. pgx returns from Query before the rows are read, so a
+	// statement stopped mid-result reports through the iteration — the
+	// ceiling would otherwise surface as a raw fault from the scan and the
+	// arm above would only ever catch a statement killed before it started
+	// returning.
+	hits, err := scanHits(rows)
+	if err != nil {
+		return nil, rankingFault(ctx, err)
+	}
+	return hits, nil
 }
 
 // bindTypedQuery binds a query split at the last separator: the words the

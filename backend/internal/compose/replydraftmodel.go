@@ -206,12 +206,18 @@ func (d replyDrafter) completeChecked(ctx context.Context, site draftSystem, dat
 }
 
 // greeted is the draft with the floor's greeting added if it still opens
-// without one. Applied once a reply draft is settled, after every voice check
-// and after the voice signal is recorded, so neither judges or learns from a
-// line the model did not write.
-func (data replyActivityData) greeted(draft replyDraft) replyDraft {
+// without one. Applied once a reply draft is settled, after every voice check,
+// so the floor never judges a line the model did not write.
+//
+// The greeting lengthens a body every earlier check already passed, so the
+// served draft is held to the bounds again; a refusal sends the caller to its
+// deterministic draft.
+func (data replyActivityData) greeted(draft replyDraft) (replyDraft, error) {
 	draft.Body = draftcheck.EnsureGreeting(draft.Body, data.Envelope, data.Recipient, data.RecipientLastName)
-	return draft
+	if err := validateReplyDraft(draft); err != nil {
+		return replyDraft{}, err
+	}
+	return draft, nil
 }
 
 // draftRetryLog reports what the correction loop decided. A retry that does not
