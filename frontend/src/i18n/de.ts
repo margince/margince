@@ -10640,7 +10640,7 @@ export const de = {
   "filters.keepViewHint":
     "Nur du findest sie. Bei jedem Öffnen wird neu gezählt.",
   "filters.keepListHint":
-    "Wird alle 15 Minuten geprüft und hält fest, wer hinzukommt und wer geht. Wähle, wer sie finden kann.",
+    "Wird alle 15 Minuten geprüft, bei sehr vielen Listen seltener, und hält fest, wer hinzukommt und wer geht. Wähle, wer sie finden kann.",
   "filters.purpose": "Zweck (optional)",
   "filters.viewSaved": "Ansicht gespeichert",
   "filters.listCreated": "Live-Liste „{name}“ erstellt",

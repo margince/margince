@@ -391,7 +391,7 @@ Also called: lists missing, Live Lists not available.
 ## Exporting a list
 
 ### How do I export a list to CSV or Excel?
-To export records from Margince, build a filter on **Filters and views** and choose **Export CSV** or **Export JSON** under **⋯** at its foot. A Live List or Shortlist exports with **Export CSV** on its page; the list screens have no export button.
+To export records from Margince, build a filter on **Filters and views** and choose **Export CSV** or **Export JSON** under **⋯** at its foot. A Live List or Shortlist exports with **Export CSV** beside its name; the **Contacts**, **Companies**, **Deals** and **Leads** screens have no export button.
 1. Open **Filters and views**, press **New filter** and pick **Contacts**, **Companies**, **Deals** or **Leads**.
 2. Press **Add condition** and finish at least one condition. **⋯** (**More for this filter**) then appears beside **Save**.
 3. Choose **Export CSV** (opens in Excel) or **Export JSON**. An opened saved view offers both under **⋯** beside its name.

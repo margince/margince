@@ -10512,7 +10512,7 @@ export const vi = {
   "filters.keepViewHint":
     "Chỉ bạn tìm thấy được. Số lượng được đếm lại mỗi lần bạn mở.",
   "filters.keepListHint":
-    "Được kiểm tra 15 phút một lần và ghi lại bản ghi nào vào hay rời danh sách. Chọn ai có thể tìm thấy.",
+    "Được kiểm tra 15 phút một lần, thưa hơn khi có rất nhiều danh sách, và ghi lại bản ghi nào vào hay rời danh sách. Chọn ai có thể tìm thấy.",
   "filters.purpose": "Mục đích (không bắt buộc)",
   "filters.viewSaved": "Đã lưu chế độ xem",
   "filters.listCreated": "Đã tạo danh sách động “{name}”",

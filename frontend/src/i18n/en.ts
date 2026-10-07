@@ -10776,7 +10776,7 @@ export const en = {
   "filters.keepViewHint":
     "Only you can find it. It counts again each time you open it.",
   "filters.keepListHint":
-    "Checked every 15 minutes, and records who joins and leaves. Choose who can find it.",
+    "Checked every 15 minutes, less often when there are very many lists, and records who joins and leaves. Choose who can find it.",
   "filters.purpose": "Purpose (optional)",
   "filters.viewSaved": "View saved",
   "filters.listCreated": "Live List “{name}” created",
