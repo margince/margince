@@ -4,10 +4,8 @@
 // Package langcopy holds a sentence in every language the product speaks.
 //
 // It sits in the shared tier because the writers that need it are spread from
-// kernel helpers to compose engines, and because the alternative is what this
-// package replaced: the same three-field struct and the same resolve-once
-// wrapper written out privately in each package that wanted one, drifting in
-// their fallback and in what their census actually checked.
+// kernel helpers to compose engines, and a private copy in each would drift in
+// its fallback and in what its census checks.
 //
 // Whole sentences per language, not clauses joined at runtime. An assembly
 // like "They wrote last, " + about + ", and it is unanswered" survives
@@ -19,8 +17,7 @@ import "github.com/margince/margince/backend/internal/shared/kernel/textlang"
 
 // Phrase is one sentence in every language, kept together so a translator reads
 // the three side by side and a reviewer can see at a glance that they say the
-// same thing. Keyed per language instead, each sentence sat in a different
-// block a hundred lines from its siblings.
+// same thing.
 type Phrase struct{ En, De, Vi string }
 
 // In answers this sentence in one language, and in English for anything else.

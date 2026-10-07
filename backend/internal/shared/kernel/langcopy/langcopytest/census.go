@@ -29,11 +29,7 @@ import (
 var verbs = regexp.MustCompile(`%[a-zA-Z]|%%`)
 
 // reporter is the slice of *testing.T's methods this package calls. Narrower
-// than testing.TB on purpose: TB carries an unexported method precisely to
-// keep anyone from implementing it outside the standard library, which would
-// rule out a test double for this package's own tests — so the walk's every
-// PROBLEM branch would run only on the three well-formed tables this repo
-// happens to have today, never once observed reporting a real one.
+// than testing.TB, whose unexported method rules out a test double.
 type reporter interface {
 	Helper()
 	Errorf(format string, args ...any)
@@ -53,11 +49,11 @@ type reporter interface {
 // It refuses a table it cannot read rather than certifying nothing: a struct
 // with no Phrase fields, or a table with no entries by either route, passes
 // every assertion below without making a claim — which is how a census comes
-// to report PASS over a subject it never saw. Two private censuses reading two
-// subsets of their own tables are the same failure in miniature, which is why
-// this is the one census every langcopy.Phrase table calls. The copy tables
-// still written the older way — a map keyed by language rather than a struct
-// of phrases — keep their own walks until they are migrated onto Phrase.
+// to report PASS over a subject it never saw.
+//
+// This is the one census every langcopy.Phrase table calls. A copy table
+// written as a map keyed by language rather than a struct of phrases keeps its
+// own walk until it is migrated onto Phrase.
 //
 // Held by: TestOneCensusReadsEveryPhraseTable (backend/gates/langcopyonecensus_test.go)
 //

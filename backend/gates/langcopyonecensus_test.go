@@ -7,12 +7,11 @@ package gates
 
 // One census reads every langcopy.Phrase table, and no owner walks its own.
 //
-// Three packages each carried a private walk over their own copy table, and
-// two of the three read LESS than the table held: a struct field that was a
-// map of phrases was counted as one phrase or skipped outright, so entries
-// nobody had translated were certified translated. That is the shape of an
-// under-reading census — it reports the same word, PASS, over a smaller
-// subject, and no assertion fires to say so.
+// A private walk over one package's table is free to read LESS than the table
+// holds: a struct field that is a map of phrases counted as one phrase, or
+// skipped, certifies untranslated entries as translated. An under-reading
+// census reports the same word, PASS, over a smaller subject, and no assertion
+// fires to say so.
 //
 // langcopytest.Census is the answer, and its doc comment says it is the one
 // census every langcopy.Phrase table calls. This is the test that fails when
@@ -27,10 +26,9 @@ package gates
 //     a map[textlang.Lang]T keyed language-outward rather than a struct of
 //     phrases. Migrating them is real work, not a rename, and until it is done
 //     each keeps its own walk. A new table written in THAT shape passes here.
-//   - The private-walk arm recognises a reflect walk over textlang.Shipped,
-//     which is the shape all three deleted censuses had. A walk written some
-//     other way — a hand-listed switch over each shipped language — is invisible
-//     to it.
+//   - The private-walk arm recognises a reflect walk over textlang.Shipped. A
+//     walk written some other way — a hand-listed switch over each shipped
+//     language — is invisible to it.
 
 import (
 	"go/ast"
@@ -96,21 +94,21 @@ func TestNoPhraseTableOwnerWalksItsOwnTable(t *testing.T) {
 		for _, path := range owners[dir].privateWalk {
 			t.Errorf("%s reflects over textlang.Shipped, which is a second census of a table "+
 				"langcopytest.Census already reads. Two censuses over one table are free to check "+
-				"different subsets of it, and the two that did read less than the table held. "+
+				"different subsets of it, and a private one is free to read less than the table holds. "+
 				"Call langcopytest.Census(t, table) instead", path)
 		}
 	}
 }
 
-// TestTheCensusGateStillRecognisesTheWalkItReplaced is the vacuity check.
+// TestTheCensusGateRecognisesAPrivateShippedWalk is the vacuity check.
 //
 // Both arms above pass by finding nothing, which is also what they do if
 // References stops resolving a qualifier or the walk reads the wrong tree. So
-// the predicates are shown the shape they were written for — the contactbrief
-// census as it stood before it was deleted — rather than only today's tree.
-func TestTheCensusGateStillRecognisesTheWalkItReplaced(t *testing.T) {
+// the predicates are shown the shape they are written for — a package's own
+// reflect walk over textlang.Shipped — rather than only today's tree.
+func TestTheCensusGateRecognisesAPrivateShippedWalk(t *testing.T) {
 	t.Parallel()
-	wasReal := `package contactbrief
+	privateCensus := `package contactbrief
 
 import (
 	"reflect"
@@ -130,7 +128,7 @@ func TestEveryShippedLanguageWritesTheContactFloor(t *testing.T) {
 	}
 }
 `
-	file, err := parser.ParseFile(token.NewFileSet(), "copy_test.go", wasReal, parser.SkipObjectResolution)
+	file, err := parser.ParseFile(token.NewFileSet(), "copy_test.go", privateCensus, parser.SkipObjectResolution)
 	if err != nil {
 		t.Fatalf("parsing the walk this gate was written to catch: %v", err)
 	}

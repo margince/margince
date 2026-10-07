@@ -5,18 +5,14 @@ package network
 
 // What a coverage risk says, in each language the product speaks.
 //
-// These go out on the deal page as the finding itself, so an installation
-// reading its product in German read its risks in English — beside a kind
-// label the frontend had already translated from the enum.
+// These go out on the deal page as the finding itself, in the installation's
+// base language, beside a kind label the frontend translates from the enum.
 //
 // The table is its own file because risk.go holds the rules; a reader auditing
 // a threshold should not page through nine translations to reach the next one.
 //
-// It is not the shape intronotewrite.go's noteTable uses. That table predates
-// this one and reshaping it is a change of its own — a note's fields are
-// assembled with draftfloor.Fill and picked between by conditional branches,
-// concerns this table carries none of — so it is left as it is rather than
-// folded in here.
+// Not intronotewrite.go's noteTable shape: a note's fields are assembled by
+// draftfloor.Fill and chosen by branches, and a finding is one whole sentence.
 
 import "github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 
@@ -63,7 +59,7 @@ var riskWords = riskSentences{
 	},
 	OurSideDominance: phrase{
 		En: "one colleague carries almost all the contact — the deal depends on their availability",
-		De: "eine Kollegin oder ein Kollege trägt fast den gesamten Kontakt — der Deal hängt an ihrer Verfügbarkeit",
+		De: "ein Teammitglied trägt fast den gesamten Kontakt — der Deal hängt an seiner Verfügbarkeit",
 		Vi: "một đồng nghiệp đang gánh gần như toàn bộ liên hệ — thương vụ phụ thuộc vào thời gian của họ",
 	},
 }
