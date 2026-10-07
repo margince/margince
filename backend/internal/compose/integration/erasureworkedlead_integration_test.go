@@ -1,0 +1,53 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+//go:build integration
+
+package integration
+
+import (
+	"context"
+	"testing"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+)
+
+// A lead worked from a contact copied that contact's name, title and employer.
+// With no address to match it by, only the link finds it, so erasing the
+// contact has to follow the link or the copy outlives the erasure.
+func TestErasingAContactAnonymizesTheLeadWorkedFromIt(t *testing.T) {
+	e := Setup(t)
+	title := "Head of Logistics"
+	contact, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{
+		FullName: "Dana Example", Title: &title, Source: "manual",
+	})
+	if err != nil {
+		t.Fatalf("creating the contact: %v", err)
+	}
+	contactID := ids.From[ids.ContactKind](ids.UUID(contact.Id))
+	lead, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{Source: "manual", FromContactID: &contactID})
+	if err != nil {
+		t.Fatalf("working the contact as a lead: %v", err)
+	}
+
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), ids.UUID(contact.Id), "test"); err != nil {
+		t.Fatalf("erasing the contact: %v", err)
+	}
+
+	var name string
+	var leadTitle *string
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), `SELECT full_name, title FROM lead WHERE id = $1`, lead.Id).
+			Scan(&name, &leadTitle)
+	}); err != nil {
+		t.Fatalf("reading the lead back: %v", err)
+	}
+	if name == "Dana Example" || leadTitle != nil {
+		t.Errorf("the lead worked from the erased contact still reads %q, %v", name, leadTitle)
+	}
+}

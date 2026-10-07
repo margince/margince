@@ -50,6 +50,7 @@ func anonymizeLeadTwins(ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
 		    disqualify_note = NULL, score_override_reason = NULL, source_author_name = NULL,
 		    archived_at = coalesce(archived_at, now())%s
 		  WHERE promoted_contact_id = $1
+		     OR from_contact_id = $1
 		     OR id IN (SELECT converted_from_lead_id FROM contact WHERE id = $1 AND converted_from_lead_id IS NOT NULL)
 		     OR (email IS NOT NULL AND lower(email) = ANY($2))
 		  RETURNING id
