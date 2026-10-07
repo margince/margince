@@ -13,7 +13,12 @@ import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { precedes } from "../testing/domorder";
 import { Heading } from "./heading";
-import { type ListChip, ListSurface, type SortOption } from "./listsurface";
+import {
+  CountLine,
+  type ListChip,
+  ListSurface,
+  type SortOption,
+} from "./listsurface";
 import { Modal } from "./modal";
 
 // The toolbar as a reader meets it: what the sort dial SAYS without being
@@ -298,4 +303,17 @@ it("keeps the whole count sentence, read before the header's verbs", () => {
   expect(
     precedes(count, screen.getByRole("button", { name: "New company" })),
   ).toBe(true);
+});
+
+// "No products yet." followed by ", sorted by Name" joined a full stop to a
+// comma, and an empty list has no order to report anyway.
+it("names no order on an empty count line, and still names it on a full one", () => {
+  const { container, rerender } = render(
+    <CountLine unit="products" first={0} last={0} total={0} sortedBy="Name" />,
+  );
+  expect(container.textContent).toBe("No products yet.");
+  rerender(
+    <CountLine unit="products" first={1} last={4} total={4} sortedBy="Name" />,
+  );
+  expect(container.textContent).toContain("sorted by Name");
 });

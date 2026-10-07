@@ -926,17 +926,14 @@ export function CountLine({
       : more
         ? t("table.rangeLoaded", range)
         : t("table.range", range);
-  // An empty list has no order to report: "No products yet., sorted by Name"
-  // joined a full stop to a comma.
   const order =
-    sortedBy && !(total === 0 && counted)
+    sortedBy && (total > 0 || !counted)
       ? t("table.sortedBy", { column: sortedBy })
       : undefined;
   // The surface owns the count's placement; this only says what it reads.
   //
-  // The comma joins two clauses and is written only when there are two: with the
-  // count withheld it had nothing on its left, and the line opened on a piece of
-  // punctuation.
+  // The comma joins two clauses and is written only when there are two. An empty
+  // list names no order: "No products yet." must not be followed by a comma.
   return (
     <>
       {counted}
