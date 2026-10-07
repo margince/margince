@@ -235,6 +235,24 @@ describe("DealCard + PipelineBoard", () => {
     expect(opened).toEqual(["d1"]);
   });
 
+  // A middle-click arrives as an auxclick, which a link does not follow when it
+  // is dispatched, so the mark hands the middle button on as a click instead.
+  it("hands the middle button on to the deal's link, and no other", () => {
+    const buttons: number[] = [];
+    render(
+      <DealCard
+        deal={{ ...deal, owner: { id: "u-1", name: "Ada Lindqvist" } }}
+        href="#/deals/d1"
+        zone="Europe/Berlin"
+        onOpen={(_opened, event) => buttons.push(event.button)}
+      />,
+    );
+    const mark = screen.getByRole("img", { name: "Ada Lindqvist" });
+    fireEvent(mark, new MouseEvent("auxclick", { bubbles: true, button: 2 }));
+    fireEvent(mark, new MouseEvent("auxclick", { bubbles: true, button: 1 }));
+    expect(buttons).toEqual([1]);
+  });
+
   it("draws no company slot at all for a deal that names none", () => {
     const { container } = render(
       <DealCard
