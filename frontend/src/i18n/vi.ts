@@ -11075,6 +11075,8 @@ export const vi = {
   "worklist.pane.nothing": "Chưa ghi nhận gì.",
   "worklist.pane.lastInbound": "Liên hệ này viết lần cuối",
   "worklist.pane.lastOutbound": "Chúng ta viết cho liên hệ này lần cuối",
+  "worklist.pane.lastFromCompany": "Công ty này viết lần cuối",
+  "worklist.pane.lastToCompany": "Chúng ta viết cho công ty này lần cuối",
   "worklist.pane.never": "Chưa bao giờ",
   "worklist.pane.company": "Làm việc cho",
   "worklist.pane.role": "Vai trò của họ",
@@ -11200,6 +11202,18 @@ export const vi = {
   "worklist.board.atRisk": "Deal có rủi ro",
   "worklist.board.overdue": "Quá hạn",
   "worklist.board.nobody": "Công việc chưa phân công",
+  "worklist.board.notMeasured": "Chưa đo",
+  "worklist.planCoverage.all_one":
+    "Đã đọc kế hoạch tuần của một thành viên nhóm.",
+  "worklist.planCoverage.all_other":
+    "Đã đọc kế hoạch tuần của cả {count} thành viên nhóm.",
+  "worklist.planCoverage.some_one":
+    "Đã đọc kế hoạch tuần của {read} trên một thành viên nhóm.",
+  "worklist.planCoverage.some_other":
+    "Đã đọc kế hoạch tuần của {read} trên {count} thành viên nhóm.",
+  "worklist.planCoverage.unread": "Chưa đọc: {names}.",
+  "worklist.planCoverage.truncated":
+    "Danh sách nhóm đã bị cắt ngắn, các thành viên phía sau chưa được kiểm tra.",
   "worklist.coaching.title": "Đáng trao đổi sáng nay",
   "worklist.coaching.promises_one":
     "{name} còn {count} cam kết đã đến hạn — khách hàng đang chờ.",

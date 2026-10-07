@@ -40767,6 +40767,44 @@ export interface components {
              *     labelled in ranked order — a client draws a heading where the band changes.
              */
             bands?: components["schemas"]["WorklistBand"][];
+            plan_coverage?: components["schemas"]["WorklistPlanCoverage"];
+        };
+        /**
+         * @description Whose weekly plans this read looked at, present only when `scope` is `team` and the
+         *     due commitments were read across the team roster. Absent under every other scope.
+         *
+         *     It exists because "nothing due" and "not looked at" differ. A teammate whose plan
+         *     could not be read contributes no rows, and without this a lead would read their
+         *     silence as a week with nothing owed.
+         */
+        WorklistPlanCoverage: {
+            /**
+             * @description One entry per member of the roster as read (up to its cap), in roster order —
+             *     including a teammate whose plan was never asked for because the team read ran
+             *     out of time, who reads as `read: false`.
+             */
+            members: components["schemas"]["WorklistPlanCoverageMember"][];
+            /**
+             * @description True when the roster came back at its cap, so teammates past it were never asked
+             *     for a plan at all — the same admission `scope_truncated` makes for the page.
+             */
+            truncated: boolean;
+        };
+        /** @description One teammate and whether their weekly plan was read. */
+        WorklistPlanCoverageMember: {
+            /**
+             * Format: uuid
+             * @description Whose plan this entry is about.
+             */
+            user_id: string;
+            /** @description The teammate, as the roster names them. */
+            display_name: string;
+            /**
+             * @description True when the plan was read, whether or not anything in it was due. False when the
+             *     read failed, was refused, or was never made because the team read ran out of time,
+             *     so this teammate's commitments are unknown rather than absent.
+             */
+            read: boolean;
         };
         /**
          * @description What one source contributed, in numbers that say what they counted.
@@ -40986,6 +41024,10 @@ export interface components {
              *     ordered by display name. Never empty: a caller on no team is their own single
              *     row, because "only you" and "nobody" are different answers and the second reads
              *     as an outage.
+             *
+             *     For a named team (`team`), invited seats that have not signed in yet appear
+             *     too, marked by `activation`, so a lead sees who is on the team rather than only
+             *     who has arrived.
              */
             members: components["schemas"]["TeamBoardMember"][];
             /**
@@ -41015,6 +41057,12 @@ export interface components {
             user_id: string;
             /** @description The teammate, as the roster names them. */
             display_name: string;
+            /**
+             * @description `invited` is a seat that has not signed in yet. Its workload is not measured, so
+             *     its `counts` carry no meaning — a client draws "not measured" for it, never zero.
+             * @enum {string}
+             */
+            activation: "active" | "invited";
             counts: components["schemas"]["TeamBoardCounts"];
         };
         /**
@@ -41771,6 +41819,7 @@ export interface components {
              */
             with_contact?: string;
             contact?: components["schemas"]["WorklistContactFacts"];
+            company?: components["schemas"]["WorklistCompanyFacts"];
             /**
              * @description Who hosted the meeting a `meeting` or `meeting_outcome` row is about: the
              *     seat whose calendar it came off. `kind` is always `user`.
@@ -42401,14 +42450,32 @@ export interface components {
             employer?: components["schemas"]["ContactEmployer"];
         };
         /**
+         * @description The account behind the row, and how the silence runs both ways, so a reader
+         *     knows whether the account or we wrote last before choosing a verb.
+         *
+         *     Present on every row whose `subject` is a company. Absent on a row about
+         *     anything else — a contact's row names its human in `contact`, and the account
+         *     that human works for is not this row's subject.
+         *
+         *     The `id` is the producer's claim and always travels. The moments are the
+         *     READER's, filled under their own grants, and absent where the reader may not
+         *     have them, which is not the same as never.
+         */
+        WorklistCompanyFacts: {
+            /** Format: uuid */
+            id: string;
+            touch?: components["schemas"]["WorklistContactTouch"];
+        };
+        /**
          * @description When they last wrote to us and when we last wrote to them — the same two dates,
-         *     over the same walk, that the contact's own page reports as `last_inbound_at` and
-         *     `last_outbound_at`, so a queue row and the record it opens cannot disagree about
-         *     who wrote last.
+         *     over the same walk, that the record's own page reports: the contact page's
+         *     `last_inbound_at` and `last_outbound_at` for a contact, the company page's
+         *     engagement strip for an account. A queue row and the record it opens cannot
+         *     disagree about who wrote last.
          *
          *     Absent from the row when the caller may not read activity, or may not read this
-         *     contact: a withheld answer. Present with both nulls for a contact nobody has ever
-         *     exchanged a message with.
+         *     contact or account: a withheld answer. Present with both nulls for a record
+         *     nobody has ever exchanged a message with.
          */
         WorklistContactTouch: {
             /**

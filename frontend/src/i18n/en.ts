@@ -11308,6 +11308,8 @@ export const en = {
   "worklist.pane.nothing": "Nothing recorded yet.",
   "worklist.pane.lastInbound": "Last from this contact",
   "worklist.pane.lastOutbound": "Last to this contact",
+  "worklist.pane.lastFromCompany": "Last from this company",
+  "worklist.pane.lastToCompany": "Last to this company",
   "worklist.pane.never": "Never",
   "worklist.pane.company": "Company",
   "worklist.pane.role": "Role",
@@ -11427,6 +11429,18 @@ export const en = {
   "worklist.board.atRisk": "Deals at risk",
   "worklist.board.overdue": "Overdue",
   "worklist.board.nobody": "Unassigned work",
+  "worklist.board.notMeasured": "Not measured",
+  "worklist.planCoverage.all_one":
+    "Weekly plan read for the team’s one member.",
+  "worklist.planCoverage.all_other":
+    "Weekly plans read for all {count} teammates.",
+  "worklist.planCoverage.some_one":
+    "Weekly plan read for {read} of the team’s one member.",
+  "worklist.planCoverage.some_other":
+    "Weekly plans read for {read} of {count} teammates.",
+  "worklist.planCoverage.unread": "Not read: {names}.",
+  "worklist.planCoverage.truncated":
+    "The team list was cut short, so later teammates were not checked.",
   "worklist.coaching.title": "Coaching suggestions",
   "worklist.coaching.promises_one":
     "{name} has {count} customer commitment due",

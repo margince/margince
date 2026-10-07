@@ -1,7 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { Badge, Button } from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { PageZones } from "../design-system/pagezones";
 import { Panel } from "../design-system/panel";
@@ -25,7 +24,6 @@ import {
   type WorklistPicks,
 } from "./worklist.bulkdone";
 import { clearSentence } from "./worklist.clear";
-import { sourceUnavailableText } from "./worklist.copy";
 import {
   reviewFilter,
   reviewShortfall,
@@ -53,6 +51,7 @@ import { QueueBand } from "./worklist.queuebands";
 import { WorklistReadings } from "./worklist.readings";
 import { WorklistRow } from "./worklist.row";
 import { rowIdentity } from "./worklist.rowidentity";
+import { DayUnread, dayPartlyRead } from "./worklist.unread";
 import { LoadMoreOfTheDay, WalkNotice } from "./worklist.walknotice";
 import "./worklist.css";
 
@@ -250,7 +249,6 @@ function WorklistBody({
   onMore: () => void;
 }>) {
   const t = useT();
-  const missing = day.sources_unavailable;
   // Whose day this is, by name. The same roster read the owner picker above
   // already makes, under the same key — so this resolves out of that cache and
   // opens no request of its own, and asks for nothing at all on the reader's
@@ -352,21 +350,8 @@ function WorklistBody({
           longer complete. */}
           <WalkNotice walk={walk} onRefresh={onRefresh} />
           {/* A day cannot read as clear while something that would have filled it
-          was never read. This is the surface speaking about ITSELF, which is
-          what Callout is for. */}
-          {missing.length > 0 && (
-            <Callout
-              tone="warning"
-              kind="standing"
-              title={t("worklist.partialTitle")}
-            >
-              {t("worklist.partial", {
-                sources: missing
-                  .map((source) => sourceUnavailableText(source, t))
-                  .join(", "),
-              })}
-            </Callout>
-          )}
+          was never read. */}
+          <DayUnread day={day} />
           <WorklistBulkBar selection={selection} />
           {queue.length === 0 ? (
             // One line, not a panel. No card is drawn to report a zero.
@@ -385,7 +370,7 @@ function WorklistBody({
             // three tasks on the company beside it, and the page offered nothing
             // to reconcile the two.
             <p className="t-body worklist-clear">
-              {clearSentence(missing.length > 0, filter, colleague, t)}
+              {clearSentence(dayPartlyRead(day), filter, colleague, t)}
             </p>
           ) : (
             // The queue, and beside it what the SELECTED row is about.

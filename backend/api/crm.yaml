@@ -54418,6 +54418,46 @@ components:
             something to tell a reader, and a client inferring the headings from the rows it
             received could not say it. The queue arrives sorted so each band's rows are
             labelled in ranked order — a client draws a heading where the band changes.
+        plan_coverage:
+          $ref: '#/components/schemas/WorklistPlanCoverage'
+
+    WorklistPlanCoverage:
+      type: object
+      description: |
+        Whose weekly plans this read looked at, present only when `scope` is `team` and the
+        due commitments were read across the team roster. Absent under every other scope.
+
+        It exists because "nothing due" and "not looked at" differ. A teammate whose plan
+        could not be read contributes no rows, and without this a lead would read their
+        silence as a week with nothing owed.
+      required: [members, truncated]
+      properties:
+        members:
+          type: array
+          items: { $ref: '#/components/schemas/WorklistPlanCoverageMember' }
+          description: |
+            One entry per member of the roster as read (up to its cap), in roster order —
+            including a teammate whose plan was never asked for because the team read ran
+            out of time, who reads as `read: false`.
+        truncated:
+          type: boolean
+          description: |
+            True when the roster came back at its cap, so teammates past it were never asked
+            for a plan at all — the same admission `scope_truncated` makes for the page.
+
+    WorklistPlanCoverageMember:
+      type: object
+      description: One teammate and whether their weekly plan was read.
+      required: [user_id, display_name, read]
+      properties:
+        user_id: { type: string, format: uuid, description: 'Whose plan this entry is about.' }
+        display_name: { type: string, description: 'The teammate, as the roster names them.' }
+        read:
+          type: boolean
+          description: |
+            True when the plan was read, whether or not anything in it was due. False when the
+            read failed, was refused, or was never made because the team read ran out of time,
+            so this teammate's commitments are unknown rather than absent.
 
     WorklistReach:
       type: object
@@ -54651,6 +54691,10 @@ components:
             ordered by display name. Never empty: a caller on no team is their own single
             row, because "only you" and "nobody" are different answers and the second reads
             as an outage.
+
+            For a named team (`team`), invited seats that have not signed in yet appear
+            too, marked by `activation`, so a lead sees who is on the team rather than only
+            who has arrived.
         unassigned:
           $ref: '#/components/schemas/TeamBoardCounts'
           description: |
@@ -54671,7 +54715,7 @@ components:
     TeamBoardMember:
       type: object
       description: One teammate and the work they are answerable for.
-      required: [user_id, display_name, counts]
+      required: [user_id, display_name, activation, counts]
       properties:
         user_id:
           type: string
@@ -54680,6 +54724,12 @@ components:
             Whose row this is. It is what `GET /worklist?owner=` takes, which is the
             drill-down the board routes to.
         display_name: { type: string, description: 'The teammate, as the roster names them.' }
+        activation:
+          type: string
+          enum: [active, invited]
+          description: |
+            `invited` is a seat that has not signed in yet. Its workload is not measured, so
+            its `counts` carry no meaning — a client draws "not measured" for it, never zero.
         counts: { $ref: '#/components/schemas/TeamBoardCounts' }
 
     TeamBoardCounts:
@@ -55482,6 +55532,8 @@ components:
             attendees are all withheld both produce, and both mean the same thing here.
         contact:
           $ref: '#/components/schemas/WorklistContactFacts'
+        company:
+          $ref: '#/components/schemas/WorklistCompanyFacts'
         host:
           allOf:
             - $ref: '#/components/schemas/WorklistOwner'
@@ -56246,17 +56298,37 @@ components:
             Absent where the contact has no current employer, or where this caller may
             not read the employment or the company. Absent never means "works nowhere".
 
+    WorklistCompanyFacts:
+      type: object
+      description: |
+        The account behind the row, and how the silence runs both ways, so a reader
+        knows whether the account or we wrote last before choosing a verb.
+
+        Present on every row whose `subject` is a company. Absent on a row about
+        anything else — a contact's row names its human in `contact`, and the account
+        that human works for is not this row's subject.
+
+        The `id` is the producer's claim and always travels. The moments are the
+        READER's, filled under their own grants, and absent where the reader may not
+        have them, which is not the same as never.
+      required: [id]
+      properties:
+        id: { type: string, format: uuid }
+        touch:
+          $ref: '#/components/schemas/WorklistContactTouch'
+
     WorklistContactTouch:
       type: object
       description: |
         When they last wrote to us and when we last wrote to them — the same two dates,
-        over the same walk, that the contact's own page reports as `last_inbound_at` and
-        `last_outbound_at`, so a queue row and the record it opens cannot disagree about
-        who wrote last.
+        over the same walk, that the record's own page reports: the contact page's
+        `last_inbound_at` and `last_outbound_at` for a contact, the company page's
+        engagement strip for an account. A queue row and the record it opens cannot
+        disagree about who wrote last.
 
         Absent from the row when the caller may not read activity, or may not read this
-        contact: a withheld answer. Present with both nulls for a contact nobody has ever
-        exchanged a message with.
+        contact or account: a withheld answer. Present with both nulls for a record
+        nobody has ever exchanged a message with.
       required: [last_inbound_at, last_outbound_at]
       properties:
         last_inbound_at: { type: [string, 'null'], format: date-time, description: 'When they last wrote to us. Null means nothing inbound was ever captured.' }

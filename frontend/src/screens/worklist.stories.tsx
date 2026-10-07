@@ -18,16 +18,19 @@ const aLoadedTeam: TeamBoard = {
     {
       user_id: "00000000-0000-4000-8000-000000000001",
       display_name: "Lena Fischer",
+      activation: "active",
       counts: { waiting: 14, at_risk: 3, overdue: 6, promises_due: 2 },
     },
     {
       user_id: "00000000-0000-4000-8000-000000000002",
       display_name: "Marc Weber",
+      activation: "active",
       counts: { waiting: 2, at_risk: 0, overdue: 0, promises_due: 0 },
     },
     {
       user_id: "00000000-0000-4000-8000-000000000003",
       display_name: "Sofia Ruiz",
+      activation: "active",
       counts: { waiting: 0, at_risk: 1, overdue: 0, promises_due: 4 },
     },
   ],
@@ -454,6 +457,50 @@ export const ATeamBiggerThanTheBoardCanCount: Story = {
       },
       { ...aLoadedTeam, truncated: true },
     );
+    return (
+      <StoryProviders>
+        <WorklistScreen />
+      </StoryProviders>
+    );
+  },
+};
+
+// A team's day with one teammate's weekly plan unread. Their commitments are
+// unknown rather than absent, so the notice names them: "nothing due" and "not
+// looked at" must not read alike.
+export const ATeamPlanUnread: Story = {
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", { name: "Team" }),
+    );
+  },
+  render: () => {
+    stubDay({
+      as_of: "2026-08-31T09:00:00Z",
+      scope: "team",
+      scope_options: ["mine", "unassigned", "team", "all"],
+      summary: { urgent: 0, due: 0, lower_priority: 0, total: 0 },
+      sources_unavailable: [],
+      reach: [],
+      readings: {
+        changed_since_brief: 0,
+        revenue_at_risk_minor: null,
+        buyer_replies: 0,
+        prospecting: 0,
+        review: 0,
+        more_available: false,
+      },
+      counts: [],
+      queue: [],
+      plan_coverage: {
+        members: aLoadedTeam.members.map((member) => ({
+          user_id: member.user_id,
+          display_name: member.display_name,
+          read: member.display_name !== "Marc Weber",
+        })),
+        truncated: false,
+      },
+    });
     return (
       <StoryProviders>
         <WorklistScreen />

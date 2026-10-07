@@ -11161,6 +11161,8 @@ export const de = {
   "worklist.pane.nothing": "Noch nichts erfasst.",
   "worklist.pane.lastInbound": "Letzte Nachricht von diesem Kontakt",
   "worklist.pane.lastOutbound": "Letzte Nachricht an diesen Kontakt",
+  "worklist.pane.lastFromCompany": "Letzte Nachricht von diesem Unternehmen",
+  "worklist.pane.lastToCompany": "Letzte Nachricht an dieses Unternehmen",
   "worklist.pane.never": "Nie",
   "worklist.pane.company": "Unternehmen",
   "worklist.pane.role": "Rolle",
@@ -11285,6 +11287,17 @@ export const de = {
   "worklist.board.atRisk": "Gefährdete Deals",
   "worklist.board.overdue": "Überfällig",
   "worklist.board.nobody": "Nicht zugewiesene Arbeit",
+  "worklist.board.notMeasured": "Nicht gemessen",
+  "worklist.planCoverage.all_one": "Wochenplan von einem Teammitglied gelesen.",
+  "worklist.planCoverage.all_other":
+    "Wochenpläne aller {count} Teammitglieder gelesen.",
+  "worklist.planCoverage.some_one":
+    "Wochenplan gelesen: {read} von einem Teammitglied.",
+  "worklist.planCoverage.some_other":
+    "Wochenpläne gelesen: {read} von {count} Teammitgliedern.",
+  "worklist.planCoverage.unread": "Nicht gelesen: {names}.",
+  "worklist.planCoverage.truncated":
+    "Die Teamliste wurde gekürzt, spätere Teammitglieder wurden nicht geprüft.",
   "worklist.coaching.title": "Coaching-Vorschläge",
   "worklist.coaching.promises_one": "{name} hat {count} fällige Kundenzusage",
   "worklist.coaching.promises_other":

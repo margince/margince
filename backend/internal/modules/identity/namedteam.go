@@ -15,8 +15,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// LiveMembersOfTeam uses the same live-team membership rule as the weekly review.
-func (s *Service) LiveMembersOfTeam(ctx context.Context, team ids.UUID) ([]TeamMember, bool, error) {
+// MembersOfTeam lists a named team's active and invited seats, flagging the invited.
+// Who may ask is the weekly review's live-team rule; who is listed is wider, so a
+// lead sees a seat that has not signed in yet rather than a team missing a member.
+func (s *Service) MembersOfTeam(ctx context.Context, team ids.UUID) ([]TeamMember, bool, error) {
 	if err := auth.RequireHuman(ctx); err != nil {
 		return nil, false, err
 	}
@@ -42,9 +44,9 @@ func (s *Service) LiveMembersOfTeam(ctx context.Context, team ids.UUID) ([]TeamM
 		teamParam := fmt.Sprintf("$%d", len(args))
 		args = append(args, teamRosterCap+1)
 		limitParam := fmt.Sprintf("$%d", len(args))
-		rows, err := tx.Query(ctx, `SELECT u.id, u.display_name, u.email
+		rows, err := tx.Query(ctx, `SELECT u.id, u.display_name, u.email, u.status = 'invited'
    FROM team_membership m JOIN team t ON t.id = m.team_id AND t.archived_at IS NULL
-   JOIN app_user u ON u.id = m.user_id AND NOT u.is_agent AND `+LiveMemberSQL("u")+`
+   JOIN app_user u ON u.id = m.user_id AND NOT u.is_agent AND `+ActivatableMemberSQL("u")+`
    WHERE m.team_id = `+teamParam+` ORDER BY u.display_name, u.id LIMIT `+limitParam, args...)
 		if err != nil {
 			return err
@@ -52,7 +54,7 @@ func (s *Service) LiveMembersOfTeam(ctx context.Context, team ids.UUID) ([]TeamM
 		defer rows.Close()
 		for rows.Next() {
 			var member TeamMember
-			if err := rows.Scan(&member.UserID, &member.DisplayName, &member.Email); err != nil {
+			if err := rows.Scan(&member.UserID, &member.DisplayName, &member.Email, &member.Invited); err != nil {
 				return err
 			}
 			members = append(members, member)

@@ -161,10 +161,11 @@ func (s *Service) worklistIn(
 	// must not sit on the shared service, for the reason feed.go's assembleDay
 	// gives about the findings.
 	withPins = withPins.readingScores(beside.night.scores, beside.night.cutoff)
-	withPins, planErr := withPins.readingPlan(ctx, day.AsOf)
+	withPins, planErr := withPins.readingPlan(ctx, resolved, day.AsOf)
 	out := withPins.worklistFrom(
 		ctx, day, resolved, filter, limit, waiting, cursor,
 		append([]*crmcontracts.WorklistSourceUnavailable{waitingErr, planErr}, beside.failed...))
+	out.PlanCoverage = withPins.planCoverage
 	out.Scope = crmcontracts.WorklistScope(resolved)
 	out.ScopeOptions = scopeOptions(scopeOptionsFor(ctx))
 	teamWeek := teamWeekFor(ctx)
@@ -252,6 +253,11 @@ func (s *Service) worklistFrom(
 	// however deep the scan had gone.
 	if waiting.read {
 		bounded[sourceWaiting] = waiting.cut
+	}
+	// A team's promises are read beside the day too, and a roster cut at its
+	// cap leaves teammates past it never asked.
+	if s.planCoverage != nil {
+		bounded[sourceWeeklyCommitment] = s.planCoverage.Truncated
 	}
 	// Held before the category narrowing, so a filtered-out source still
 	// reports what it had. Counting after it erased those sources from reach
