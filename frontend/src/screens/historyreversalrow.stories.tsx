@@ -7,7 +7,7 @@ import type { components } from "../api/schema";
 import { formatDateTime } from "../format/format";
 import type { PairRow } from "./historyreversal";
 import { ReversalPairRow } from "./historyreversalrow";
-import { expectNameBesideValue, StoryProviders } from "./story-utils";
+import { expectNameAndValueApart, StoryProviders } from "./story-utils";
 
 // A reversal and the change it reverses, drawn as ONE line the reader can
 // open. history.stories.tsx exercises this shape through the whole panel;
@@ -90,7 +90,7 @@ type Story = StoryObj<typeof Row>;
 // audit row shown yet.
 export const Collapsed: Story = {
   render: () => <Row row={pair} />,
-  play: ({ canvasElement }) => expectNameBesideValue(canvasElement),
+  play: ({ canvasElement }) => expectNameAndValueApart(canvasElement),
 };
 
 // The same closed row in dark: the net caption and the settled value sit on
@@ -122,7 +122,7 @@ export const Residual: Story = {
       }}
     />
   ),
-  play: ({ canvasElement }) => expectNameBesideValue(canvasElement),
+  play: ({ canvasElement }) => expectNameAndValueApart(canvasElement),
 };
 
 // Opened: the two member rows it collapsed, each the ordinary

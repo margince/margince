@@ -270,20 +270,28 @@ export function StoryProviders({
 
 // Real Chromium only: jsdom computes no cascade, so the timeline row rule
 // that could outrank a field row's own layout is invisible to a unit test.
-export async function expectNameBesideValue(canvasElement: HTMLElement) {
+export async function expectNameAndValueApart(canvasElement: HTMLElement) {
   const name = await within(canvasElement).findByText("Value");
   const row = name.closest(".entry-field");
-  await expect(row).not.toBeNull();
-  if (!row) {
-    return;
+  if (!row || row.children.length < 2) {
+    throw new Error(
+      'the field named "Value" is not drawn as an .entry-field row holding a name and a value',
+    );
   }
-  await expect(getComputedStyle(row).display).toBe("flex");
+  const style = getComputedStyle(row);
+  const space = Number.parseFloat(style.getPropertyValue("--space-2"));
+  await expect(style.display).toBe("flex");
+  await expect(Number.parseFloat(style.columnGap)).toBeGreaterThanOrEqual(
+    space,
+  );
   const [label, value] = [...row.children].map((part) =>
     part.getBoundingClientRect(),
   );
-  const gap = Number.parseFloat(
-    getComputedStyle(row).getPropertyValue("--space-2"),
-  );
-  await expect(value.top).toBeLessThan(label.bottom);
-  await expect(value.left - label.right).toBeGreaterThanOrEqual(gap - 0.5);
+  if (value.left > label.right - 0.5) {
+    await expect(value.top).toBeLessThan(label.bottom);
+    await expect(value.left - label.right).toBeGreaterThanOrEqual(space - 0.5);
+  } else {
+    await expect(Math.abs(value.left - label.left)).toBeLessThanOrEqual(1);
+    await expect(value.top).toBeGreaterThanOrEqual(label.bottom - 0.5);
+  }
 }
