@@ -148,7 +148,7 @@ const (
 	dailyParagraphBytes = 900
 )
 
-// dailyContentVocabulary is every generated content word, in the order made, with
+// dailyContentVocabulary lists the generated content words in the order made, with
 // any word a term opens dropped so the term table alone decides where a term is.
 func dailyContentVocabulary() []string {
 	rng := rand.New(rand.NewPCG(7, 11))
