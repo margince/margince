@@ -323,7 +323,9 @@ describe("the deals list narrows like every other record list", () => {
     // The per-stage report takes no search, so a total over the column would
     // count deals the search is keeping off the board.
     expect(
-      await screen.findAllByText("Loaded deals only. No total while you search."),
+      await screen.findAllByText(
+        "Loaded deals only. No total while you search.",
+      ),
     ).not.toHaveLength(0);
   });
 
