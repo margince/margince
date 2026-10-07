@@ -110,7 +110,7 @@ comment is deleted, not changed into a note that says it passed, so a finding th
 behind.
 
 A failed query for the pull request data stops without a comment. To read it as an empty list
-would warn a pull request whose closing data is right. Make the check block only if you can measure
+would warn a pull request whose closing data is right. The check is made blocking only if it is measured
 that users do not read the warning.
 [`scripts/check-closing-declaration.sh`](../../scripts/check-closing-declaration.sh) makes the
 report. It reads its evidence from the environment, so a fixture can drive every case
@@ -201,8 +201,8 @@ title, because a red scheduled run tells nobody.
 
 - Each finding carries one `priority:` and one `area:` per case, plus its provenance label, because
   this filer runs with no human there. `docs/reference/issue-labels.md` keeps the rule that an issue
-  with no labels is one nobody has looked at. The `area:` is a guess. When the warning goes off, we
-  know that CI found it, and we do not know where the fix lives.
+  with no labels is one nobody has looked at. The `area:` is a guess. When the warning goes off, the
+  known fact is that CI found it. Where the fix lives is not known.
 - A check that comes back green closes its own issue, so the report job runs no matter what the lanes
   said. Without that, a finding stays open after its fix, and each red becomes its own issue, not
   one standing title. A `skipped` result is not a pass or a fail, and closes nothing.

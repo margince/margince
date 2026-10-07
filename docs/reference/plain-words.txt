@@ -78,8 +78,6 @@ bad
 bake
 balancer
 ban
-band
-banner
 base
 batch
 be
@@ -488,6 +486,7 @@ keyset
 keyword
 kind
 know
+known
 label
 ladder
 land
@@ -621,6 +620,7 @@ open
 operation
 operational
 operator
+opportunity
 opt
 option
 optional
@@ -979,7 +979,6 @@ total
 touch
 trace
 track
-tracker
 transaction
 transcript
 transport
