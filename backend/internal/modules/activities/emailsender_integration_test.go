@@ -194,7 +194,42 @@ func TestASentMessageIsAddressedOnlyToTheContactsItsHeadersName(t *testing.T) {
 	}
 }
 
-// partyContacts is the set of contacts a header names.
+// A contact the headers named stays a party after the address they were named
+// at is archived: the header said what it said when the mail was logged.
+func TestAnArchivedAddressStillNamesItsContactOnTheHeader(t *testing.T) {
+	e := setupLoad(t)
+	named, namedAddress := e.mailContact(t, "named", "workspace")
+	subject, direction := "the offer", "outbound"
+	logged, _, err := storeKnowing(e).LogActivity(e.asSeat(e.rep), LogActivityInput{
+		Kind: "email", Subject: &subject, Direction: &direction, Source: "manual",
+		Links:   []ActivityLinkInput{contactLink(named)},
+		EmailTo: []string{namedAddress},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	e.exec(t, `UPDATE contact_email SET archived_at = now() WHERE contact_id = $1`, named)
+
+	email, err := storeKnowing(e).GetEmailPresentation(e.as(), ids.From[ids.ActivityKind](ids.UUID(logged.Id)), nil)
+	if err != nil {
+		t.Fatalf("reading the message: %v", err)
+	}
+	if !partyContacts(email.To)[named] {
+		t.Fatalf("To reads %+v, want the contact the header named %v", email.To, named)
+	}
+	var parties MessageParties
+	ctx := e.as()
+	if err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+		parties, err = storeKnowing(e).PartiesOf(ctx, tx, ids.UUID(logged.Id))
+		return err
+	}); err != nil {
+		t.Fatalf("reading the message's parties: %v", err)
+	}
+	if len(parties.RecipientContacts) != 1 || parties.RecipientContacts[0] != named {
+		t.Fatalf("recipients read %v, want the contact the header named %v", parties.RecipientContacts, named)
+	}
+}
+
 func partyContacts(parties []crmcontracts.EmailParty) map[ids.UUID]bool {
 	named := map[ids.UUID]bool{}
 	for _, p := range parties {
