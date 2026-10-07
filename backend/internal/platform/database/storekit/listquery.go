@@ -88,7 +88,8 @@ type SortField struct {
 func Column(kind string) SortField { return SortField{Kind: kind} }
 
 // SortVocabulary merges a resource's fixed core sortable fields with the
-// workspace's active custom columns. Retired columns left ActiveColumns, so
+// workspace's active custom columns, less a multiselect: its value is an array,
+// which a one-value keyset cursor cannot continue. Retired columns left ActiveColumns, so
 // they leave the vocabulary — and its 422 — for free.
 func SortVocabulary(core map[string]SortField, active []fieldcatalog.Column) map[string]SortField {
 	vocab := make(map[string]SortField, len(core)+len(active))
@@ -96,6 +97,9 @@ func SortVocabulary(core map[string]SortField, active []fieldcatalog.Column) map
 		vocab[name] = field
 	}
 	for _, c := range active {
+		if c.Type == fieldcatalog.TypeMultiselect {
+			continue
+		}
 		vocab[c.Name] = Column(c.Type)
 	}
 	return vocab
