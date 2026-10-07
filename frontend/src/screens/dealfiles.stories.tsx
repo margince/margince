@@ -140,12 +140,13 @@ export const Empty: Story = {
 const HIDE_ROUTE = "/deals/deal-1/documents/att-mail/hide";
 
 const pressHide: Story["play"] = async ({ canvasElement }) => {
-  await userEvent.click(
+  const user = userEvent.setup();
+  await user.click(
     await within(canvasElement).findByRole("button", {
       name: "Actions for MSA-redline.docx",
     }),
   );
-  await userEvent.click(
+  await user.click(
     await within(document.body).findByRole("button", {
       name: "Hide from this deal",
     }),

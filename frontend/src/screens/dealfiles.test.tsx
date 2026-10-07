@@ -256,6 +256,39 @@ it("hands focus to the list a deleted row left, not to the page", async () => {
   });
 });
 
+it.each([
+  {
+    how: "Cancel",
+    leave: (user: ReturnType<typeof userEvent.setup>) =>
+      user.click(screen.getByRole("button", { name: en["create.cancel"] })),
+  },
+  {
+    how: "Escape",
+    leave: (user: ReturnType<typeof userEvent.setup>) =>
+      user.keyboard("{Escape}"),
+  },
+])(
+  "gives focus back to the Delete item when $how leaves the dialog",
+  async ({ leave }) => {
+    const { calls } = stubApi([upload()]);
+    const user = userEvent.setup();
+    render(<DealFiles deal={dealOf()} />);
+
+    await user.click(
+      await screen.findByRole("button", { name: /Actions for pricing/ }),
+    );
+    await user.click(screen.getByRole("button", { name: en["files.delete"] }));
+    await screen.findByRole("dialog");
+    await leave(user);
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: en["files.delete"] }),
+    );
+    expect(calls).toHaveLength(0);
+  },
+);
+
 // The toast's Undo puts the row back, and says so when the server refuses it.
 it("puts a hidden file back through the Undo the confirmation carries", async () => {
   const { calls } = stubApi([captured()]);

@@ -156,6 +156,8 @@ function FileRow({
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const verbs = useFileVerbs(dealId, file.id);
   const side = useRef<HTMLDivElement | null>(null);
+  // A ref, not state: the dialog reads it as it closes, before a re-render.
+  const deleted = useRef(false);
   useFocusLeavesWithMenu(side, focusLanding);
   return (
     <PanelRow
@@ -194,14 +196,17 @@ function FileRow({
             doc={doc}
             hide={verbs.hide}
             unhide={verbs.unhide}
-            onDelete={() => setConfirmingDelete(true)}
+            onDelete={() => {
+              deleted.current = false;
+              setConfirmingDelete(true);
+            }}
           />
         ) : null}
       </div>
       <ConfirmModal
         open={confirmingDelete}
         onClose={() => setConfirmingDelete(false)}
-        returnFocusTo={focusLanding}
+        returnFocusTo={() => (deleted.current ? focusLanding() : null)}
         title={t("files.deleteTitle", { name: file.filename })}
         confirmLabel={t("files.delete")}
         confirmVariant="danger"
@@ -211,7 +216,10 @@ function FileRow({
         }
         onConfirm={() =>
           verbs.remove.mutate(undefined, {
-            onSuccess: () => setConfirmingDelete(false),
+            onSuccess: () => {
+              deleted.current = true;
+              setConfirmingDelete(false);
+            },
           })
         }
       >
