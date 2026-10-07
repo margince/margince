@@ -1,5 +1,5 @@
 // The lead table's columns. The company has a column of its own rather than a
-// caption behind the name: a queue of hundreds of people is worked company by
+// caption behind the name: a queue of hundreds of leads is worked company by
 // company, so the company has to be readable, sortable and never truncated by a
 // long name.
 import type { components } from "../api/schema";

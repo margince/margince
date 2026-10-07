@@ -157,8 +157,8 @@ func (s *Store) ListLeads(ctx context.Context, in ListLeadsInput) ([]crmcontract
 	})
 }
 
-// leadQuickFindExpr is the substring target: the person and the company they
-// sit at. It is spelled exactly as idx_lead_name_trgm indexes it, so a
+// leadQuickFindExpr is the substring target: the lead's name and the company
+// it sits at. It is spelled exactly as idx_lead_name_trgm indexes it, so a
 // fragment of either is one index read rather than a scan of every lead.
 const leadQuickFindExpr = `(coalesce(full_name, '') || ' ' || coalesce(company_name, ''))`
 

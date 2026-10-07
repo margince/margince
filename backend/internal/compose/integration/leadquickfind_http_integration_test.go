@@ -13,8 +13,8 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
-// A seller who remembers the company and not the person types the start of
-// the company's name, and the lead list finds the person who works there.
+// A seller who remembers the company and not the name types the start of the
+// company's name, and the lead list finds the lead who works there.
 // A whole word already matched through search_tsv; a fragment needs the
 // substring arm to read the company as well as the name.
 func TestTheLeadListFindsALeadByAFragmentOfItsCompany(t *testing.T) {

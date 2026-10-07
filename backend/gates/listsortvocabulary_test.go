@@ -74,6 +74,8 @@ var (
 	tsSortLiteral = regexp.MustCompile(`\bsort:\s*"([a-z_0-9]+)"`)
 	// tsColumnHelper reads one exported column helper's name.
 	tsColumnHelper = regexp.MustCompile(`export function ([a-zA-Z]+Column)<`)
+	// tsColumnsModule reads a screen's import of its own column module.
+	tsColumnsModule = regexp.MustCompile(`from "\./([a-z0-9.]+\.columns)"`)
 )
 
 func TestEverySortAListOffersIsOneItsResourceAccepts(t *testing.T) {
@@ -98,7 +100,7 @@ func TestEverySortAListOffersIsOneItsResourceAccepts(t *testing.T) {
 				surface.vocabulary)
 			continue
 		}
-		screen := readSource(t, screenDir+name)
+		screen := screenWithColumns(t, name)
 
 		offered := map[string]string{}
 		for _, m := range tsSortLiteral.FindAllStringSubmatch(screen, -1) {
@@ -113,6 +115,13 @@ func TestEverySortAListOffersIsOneItsResourceAccepts(t *testing.T) {
 			}
 		}
 
+		// A surface offering nothing is a census that read the wrong file: the
+		// columns moved and this scan kept reading where they used to be.
+		if len(offered) == 0 {
+			t.Errorf("%s offers no sort at all — its columns live somewhere this scan does not read", name)
+			continue
+		}
+
 		fields := make([]string, 0, len(offered))
 		for field := range offered {
 			fields = append(fields, field)
@@ -125,6 +134,17 @@ func TestEverySortAListOffersIsOneItsResourceAccepts(t *testing.T) {
 			}
 		}
 	}
+}
+
+// screenWithColumns is a screen's source plus every column module it imports,
+// since a header declared in `leads.columns.tsx` is the leads screen's header.
+func screenWithColumns(t *testing.T, name string) string {
+	t.Helper()
+	screen := readSource(t, screenDir+name)
+	for _, m := range tsColumnsModule.FindAllStringSubmatch(screen, -1) {
+		screen += "\n" + readSource(t, screenDir+m[1]+".tsx")
+	}
+	return screen
 }
 
 // sharedColumnSorts maps each shared helper to the sort it offers, skipping the
