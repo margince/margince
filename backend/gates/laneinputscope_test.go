@@ -5,7 +5,7 @@
 
 package gates
 
-// A path-filtered lane runs on a change to the scripts it EXECUTES.
+// A path-filtered lane runs on a change to the scripts it executes.
 //
 // CI classifies a pull request with dorny/paths-filter and gates each lane on
 // one of the resulting scopes. That is a real saving and it has one failure

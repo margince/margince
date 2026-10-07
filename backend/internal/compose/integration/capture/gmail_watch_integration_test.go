@@ -149,11 +149,8 @@ func TestGmailWatchJobRenewsOnSchedule(t *testing.T) {
 
 	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
 	runner, err := compose.NewJobRunner(e.Pool, quiet, compose.JobRunnerConfig{
-		CloseDateInterval: time.Hour,
-		ReconcileInterval: time.Hour,
-		TimeScanInterval:  time.Hour,
-		GmailRegistry:     registry,
-		GmailWatch:        compose.GmailWatchConfig{Topic: gmailPushTopic, Interval: time.Hour, RenewWithin: 48 * time.Hour},
+		GmailRegistry: registry,
+		GmailWatch:    compose.GmailWatchConfig{Topic: gmailPushTopic},
 	})
 	if err != nil {
 		t.Fatalf("NewJobRunner: %v", err)

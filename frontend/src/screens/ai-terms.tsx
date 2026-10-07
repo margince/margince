@@ -2,8 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Layers, ListChecks, Server } from "lucide-react";
-import { Fragment, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { Badge } from "../design-system/atoms";
+import { Popover } from "../design-system/popover";
 import { useT } from "../i18n";
 import "./ai-settings.css";
 
@@ -26,49 +27,35 @@ export function TermChip({
   return <Badge icon={ICON[term]}>{children}</Badge>;
 }
 
-/** A model as every list on this page writes it: its provider's mark, then its id. */
+/**
+ * A model as every list on this page writes it: its provider's mark, which
+ * opens onto the id. The id is the long half and a table of tasks reads by
+ * provider, so the id waits behind the mark rather than widening every row.
+ */
 export function ModelRef({
   provider,
   model,
 }: Readonly<{ provider: string; model: string }>) {
+  const t = useT();
   return (
-    <span className="ai-tier-modelline">
-      <TermChip term="provider">{provider}</TermChip>
-      <span className="ai-tier-model">{model}</span>
-    </span>
-  );
-}
-
-/**
- * Models read top to bottom, each with its provider's mark, joined by an arrow
- * and the word for the step: the decision model first, then the ladder. The
- * providers share one column, so the model ids start on one edge however long
- * the provider names run.
- */
-export function ModelChain({
-  steps,
-  connector,
-}: Readonly<{
-  steps: readonly { provider: string; model: string }[];
-  connector: string;
-}>) {
-  return (
-    <span className="ai-modelchain">
-      {steps.map((step, i) => (
-        <Fragment key={`${step.provider}/${step.model}`}>
-          {i > 0 && (
-            <>
-              <span className="ai-modelchain-arrow" aria-hidden>
-                ↓
-              </span>
-              <span className="t-caption">{connector}</span>
-            </>
-          )}
-          <TermChip term="provider">{step.provider}</TermChip>
-          <span>{step.model}</span>
-        </Fragment>
-      ))}
-    </span>
+    <Popover
+      onHover
+      label={
+        <>
+          <TermChip term="provider">{provider}</TermChip>
+          <span className="sr-only">{model}</span>
+        </>
+      }
+    >
+      <dl className="ai-model-facts">
+        <dt>{t("aiTerms.provider")}</dt>
+        <dd>{provider}</dd>
+        <dt>{t("aiRouting.model.label")}</dt>
+        <dd>
+          <code className="ai-model-id">{model}</code>
+        </dd>
+      </dl>
+    </Popover>
   );
 }
 

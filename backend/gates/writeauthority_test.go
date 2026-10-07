@@ -5,9 +5,9 @@
 
 package gates
 
-// The read/write asymmetry of a manual record grant, as a fitness function:
-// a path that CHANGES a shareable record probes for write authority, not for
-// visibility.
+// A path that changes a shareable record probes for write authority rather than
+// for visibility, because a manual record grant is asymmetric between read and
+// write.
 //
 // The class this closes is one column that nothing read. record_grant.access
 // has always carried two levels and the schema has always said "write satisfies
@@ -128,6 +128,7 @@ var readAuthorityOnAWritePath = gatekit.Waive(map[string]string{
 	"internal/modules/contacts:refusedCompanyCreate": "the duplicate-domain 409's disclosure decision: it names the incumbent company only when the caller could have READ it, and writes nothing to that row. The create it is refusing is gated by company:create",
 	"internal/modules/contacts:refusedContactCreate": "the contact twin of refusedCompanyCreate, and the same decision: whether the conflict may carry the incumbent's id, never whether the caller may change that contact",
 
+	"internal/modules/contacts:LockClaimForBulkTx":       "decides only whether the caller may SEE the claim's contact, so that an agent is refused a visible promise with one stable reason (commitment_needs_the_user) and an invisible one reads as absent. It is not the mutation's gate: the same function takes auth.EnsureWritableLive on that contact right after the agent check, and the settlement write (moveClaimStatus) asks it again under the lock",
 	"internal/modules/contacts:DismissRelationshipNudge": "the contact a nudge is ABOUT. That row is written NOTHING — the mutation is a relationship_nudge_dismissal keyed on the CALLER, so it can only ever change the caller's own lane — and the probe decides one thing: whether this rep may be told that contact has gone quiet. Setting somebody aside is a judgement about the rep's own morning, and requiring write authority over a contact before a rep may stop being reminded of them would mean they could only quiet reminders about records they own, which is the opposite of what the lane is for. The liveness half is load-bearing: a dismissal must not name a contact erasure anonymized in place",
 	"internal/modules/contacts:RestoreRelationshipNudge": "the undo of the above, and the same decision: the contact is written nothing, the row deleted is the caller's own, and the probe asks whether this rep may be told about that contact at all",
 

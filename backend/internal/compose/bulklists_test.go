@@ -10,6 +10,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -33,5 +34,22 @@ func TestAListVerbNamesItsShortlistAndNoOwner(t *testing.T) {
 		case tc.field != "" && (!errors.As(err, &refused) || refused.Fields[0].Field != tc.field):
 			t.Errorf("%s: %v, want a refusal naming %s", name, err, tc.field)
 		}
+	}
+}
+
+// A forward change has no undo plan and knows no earlier membership; an undo
+// knows exactly the members its change took.
+func TestOnlyAnUndoPlanKnowsAnEarlierMembership(t *testing.T) {
+	id := openapi_types.UUID(ids.NewV7())
+	note := "met at the fair"
+	if _, known := (*bulkUndoPlan)(nil).membershipOf(id); known {
+		t.Error("a forward change claims an earlier membership")
+	}
+	plan := &bulkUndoPlan{members: map[openapi_types.UUID]collections.RemovedMember{id: {Note: &note}}}
+	if was, known := plan.membershipOf(id); !known || was.Note == nil || *was.Note != note {
+		t.Errorf("membershipOf(taken) = %+v, %v; want the note it was removed with", was, known)
+	}
+	if _, known := plan.membershipOf(openapi_types.UUID(ids.NewV7())); known {
+		t.Error("a record the change never took claims a membership")
 	}
 }

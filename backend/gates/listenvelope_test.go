@@ -5,7 +5,7 @@
 
 package gates
 
-// The contract's list envelope has ONE shape, and something depends on that.
+// The contract's list envelope has one shape, and something depends on that.
 //
 // httperr.recordsIn counts what a REST response hands over by reading the
 // envelope rather than a list of response type names: a struct carrying a `Data`

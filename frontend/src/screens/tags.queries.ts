@@ -47,9 +47,10 @@ export function useRecordTags(entityType: TaggableType, entityID: string) {
  * It stays on a record that already carries it, which is the panel's business
  * rather than this list's.
  */
-export function useTagVocabulary() {
+export function useTagVocabulary(enabled = true) {
   return useQuery({
     queryKey: ["tags", "vocabulary"],
+    enabled,
     // The catalog is capped and has no cursor, so a workspace past the cap gets
     // a CUT list. Carrying `has_more` through is what lets the picker say the
     // list is short — without it a word beyond the cap is indistinguishable

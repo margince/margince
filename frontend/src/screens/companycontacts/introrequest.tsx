@@ -109,7 +109,12 @@ export function IntroRequestModal({
   });
 
   return (
-    <Modal open={target !== null} onClose={onClose} labelledBy={titleId}>
+    <Modal
+      open={target !== null}
+      onClose={onClose}
+      labelledBy={titleId}
+      intent="form"
+    >
       <Heading size="large" id={titleId} className="modal-title">
         {t("co.intro.title")}
       </Heading>
@@ -121,22 +126,22 @@ export function IntroRequestModal({
           })}
         </p>
       )}
-      {!written && (
-        <div className="cp-intro-actions">
-          <Button
-            variant="ai"
-            onClick={() => target && draft.mutate(target)}
-            pending={draft.isPending}
-            busyLabel={t("co.intro.writing")}
-          >
-            {t("co.intro.write")}
-          </Button>
-        </div>
-      )}
-      <ErrorLine error={draft.error} />
-      {written && (
-        <>
-          <div className="form-stack">
+      <div className="form-stack">
+        {!written && (
+          <div>
+            <Button
+              variant="ai"
+              onClick={() => target && draft.mutate(target)}
+              pending={draft.isPending}
+              busyLabel={t("co.intro.writing")}
+            >
+              {t("co.intro.write")}
+            </Button>
+          </div>
+        )}
+        <ErrorLine error={draft.error} />
+        {written && (
+          <>
             <p>
               <ProvenanceTag
                 provenance={
@@ -172,36 +177,38 @@ export function IntroRequestModal({
                 />
               )}
             </Field>
-          </div>
-          {written.reasoning && written.reasoning.length > 0 && (
-            <>
-              <p className="cp-intro-why">{t("co.intro.basedOn")}</p>
-              <ul className="chips">
-                {written.reasoning.map((reason) => (
-                  <li key={`${reason.kind}:${reason.label}`}>{reason.label}</li>
-                ))}
-              </ul>
-            </>
-          )}
-          {copy.notice}
-          <div className="cp-intro-actions">
-            {/* Copy first, because it is the one that always works. A mailto:
-             * depends on the reader having a mail client bound to the
-             * protocol, and a button that silently does nothing is worse than
-             * one they did not press. */}
-            <Button onClick={copy.copy}>{copy.label}</Button>
-            <Button
-              variant="ghost"
-              onClick={() => {
-                window.location.href = `mailto:?subject=${encodeURIComponent(
-                  subject,
-                )}&body=${encodeURIComponent(body)}`;
-              }}
-            >
-              {t("co.intro.openMail")}
-            </Button>
-          </div>
-        </>
+            {written.reasoning && written.reasoning.length > 0 && (
+              <div>
+                <p className="cp-intro-why">{t("co.intro.basedOn")}</p>
+                <ul className="chips">
+                  {written.reasoning.map((reason) => (
+                    <li key={`${reason.kind}:${reason.label}`}>
+                      {reason.label}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {copy.notice}
+          </>
+        )}
+      </div>
+      {written && (
+        <div className="actions">
+          {/* Copy first: it always works, where a mailto: needs a mail client
+              bound to the protocol and otherwise silently does nothing. */}
+          <Button onClick={copy.copy}>{copy.label}</Button>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              window.location.href = `mailto:?subject=${encodeURIComponent(
+                subject,
+              )}&body=${encodeURIComponent(body)}`;
+            }}
+          >
+            {t("co.intro.openMail")}
+          </Button>
+        </div>
       )}
     </Modal>
   );

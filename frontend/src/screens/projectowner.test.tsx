@@ -5,14 +5,18 @@
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  act,
   cleanup,
+  fireEvent,
   render as rtlRender,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import { AssignProjectOwnerAction } from "./projectowner";
 import type { Project } from "./projects.form";
@@ -65,7 +69,12 @@ type Recorded = {
 };
 
 function stubApi(
-  response: { body: Record<string, unknown>; status?: number },
+  response: {
+    body: Record<string, unknown>;
+    status?: number;
+    /** Holds the PATCH's answer until it settles. */
+    held?: Promise<void>;
+  },
   calls: Recorded[],
 ) {
   vi.stubGlobal(
@@ -82,6 +91,11 @@ function stubApi(
               display_name: "Jane Doe",
               email: "jane@example.test",
             },
+            {
+              id: "u-7",
+              display_name: "Omar Haddad",
+              email: "omar@example.test",
+            },
           ],
           page: { has_more: false },
         });
@@ -91,6 +105,7 @@ function stubApi(
         const body = rawBody ? JSON.parse(String(rawBody)) : null;
         const headers = request ? request.headers : new Headers(init?.headers);
         calls.push({ url, method, body, ifMatch: headers.get("If-Match") });
+        await response.held;
         return jsonResponse(response.body, response.status ?? 200);
       }
       return jsonResponse({ data: [], page: { has_more: false } });
@@ -98,25 +113,25 @@ function stubApi(
   );
 }
 
+async function openPicker(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(
+    screen.getByRole("button", { name: "Assign to a colleague" }),
+  );
+  return within(await screen.findByRole("dialog"));
+}
+
 describe("AssignProjectOwnerAction", () => {
-  it("searches, picks a named colleague, and PATCHes owner_id with the current version as If-Match", async () => {
+  it("opens on the roster, and a pick PATCHes owner_id with the current version as If-Match", async () => {
     const calls: Recorded[] = [];
     stubApi({ body: { ...project, owner_id: "u-42", version: 6 } }, calls);
     const user = userEvent.setup();
     const { client } = render(<AssignProjectOwnerAction project={project} />);
     const invalidateSpy = vi.spyOn(client, "invalidateQueries");
 
-    await user.click(screen.getByTestId("assign-project-owner"));
-    await user.type(
-      screen.getByRole("searchbox", { name: "Search colleagues" }),
-      "Jane",
-    );
-    await user.click(await screen.findByRole("button", { name: "Jane Doe" }));
-    await user.click(screen.getByRole("button", { name: "Assign" }));
+    const panel = await openPicker(user);
+    await user.click(await panel.findByRole("option", { name: "Jane Doe" }));
 
-    await waitFor(() =>
-      expect(screen.queryByRole("button", { name: "Assign" })).toBeNull(),
-    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(calls).toHaveLength(1);
     expect(calls[0].body).toMatchObject({ owner_id: "u-42" });
     expect(calls[0].ifMatch).toBe("5");
@@ -128,24 +143,119 @@ describe("AssignProjectOwnerAction", () => {
     );
   });
 
-  it("refuses to confirm before a colleague is picked", async () => {
+  it("names the picked colleague in the toast when the roster is gone by then", async () => {
+    let release: () => void = () => {};
+    stubApi(
+      {
+        body: { ...project, owner_id: "u-42", version: 6 },
+        held: new Promise<void>((resolve) => {
+          release = resolve;
+        }),
+      },
+      [],
+    );
+    const user = userEvent.setup();
+    const { client } = render(
+      <ToastProvider>
+        <AssignProjectOwnerAction project={project} />
+        <ToastRegion />
+      </ToastProvider>,
+    );
+
+    const panel = await openPicker(user);
+    await user.click(await panel.findByRole("option", { name: "Jane Doe" }));
+    act(() =>
+      client
+        .getQueryCache()
+        .find({ queryKey: ["users"] })
+        ?.reset(),
+    );
+    await waitFor(() => expect(panel.queryAllByRole("option")).toHaveLength(0));
+    release();
+
+    expect(await screen.findByText("Assigned to Jane Doe")).toBeInTheDocument();
+  });
+
+  it("marks the current owner, and picking them again writes nothing", async () => {
+    const calls: Recorded[] = [];
+    stubApi({ body: project }, calls);
+    const user = userEvent.setup();
+    render(
+      <AssignProjectOwnerAction project={{ ...project, owner_id: "u-7" }} />,
+    );
+
+    const panel = await openPicker(user);
+    const current = await panel.findByRole("option", { name: "Omar Haddad" });
+    expect(current).toHaveAttribute("aria-selected", "true");
+    await user.click(current);
+
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(calls).toHaveLength(0);
+  });
+
+  it("finds a colleague by email as well as by name", async () => {
+    stubApi({ body: project }, []);
+    const user = userEvent.setup();
+    render(<AssignProjectOwnerAction project={project} />);
+
+    const panel = await openPicker(user);
+    await panel.findByRole("option", { name: "Jane Doe" });
+    await user.type(panel.getByRole("combobox"), "omar@");
+
+    expect(
+      panel.getAllByRole("option").map((option) => option.textContent),
+    ).toEqual(["Omar Haddad"]);
+  });
+
+  it("sends one PATCH for a double press on a colleague", async () => {
     const calls: Recorded[] = [];
     stubApi({ body: { ...project, owner_id: "u-42", version: 6 } }, calls);
     const user = userEvent.setup();
     render(<AssignProjectOwnerAction project={project} />);
 
-    await user.click(screen.getByTestId("assign-project-owner"));
-    const confirm = screen.getByRole("button", { name: "Assign" });
-    // Pins the REFUSAL itself, not just its consequence: `picked && mutate(...)`
-    // would also send nothing if `picked` stayed null for some other reason,
-    // so a disabled-button regression could otherwise slip past this test.
-    expect(confirm).toBeDisabled();
-    await user.click(confirm);
+    const panel = await openPicker(user);
+    const option = await panel.findByRole("option", { name: "Jane Doe" });
+    // One act holds both presses before any render, so `pending` is still
+    // false for the second and only the latch can refuse it.
+    act(() => {
+      fireEvent.click(option);
+      fireEvent.click(option);
+    });
 
-    expect(calls).toHaveLength(0);
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(calls).toHaveLength(1);
   });
 
-  it("renders a 409 conflict detail verbatim rather than failing silently", async () => {
+  it("stays open through Escape while the PATCH is out, so a late refusal is read", async () => {
+    const calls: Recorded[] = [];
+    let release: () => void = () => {};
+    stubApi(
+      {
+        body: { title: "Conflict", detail: "the project was changed" },
+        status: 409,
+        held: new Promise<void>((resolve) => {
+          release = resolve;
+        }),
+      },
+      calls,
+    );
+    const user = userEvent.setup();
+    render(<AssignProjectOwnerAction project={project} />);
+
+    const panel = await openPicker(user);
+    await user.click(await panel.findByRole("option", { name: "Jane Doe" }));
+    await waitFor(() => expect(calls).toHaveLength(1));
+
+    await user.keyboard("{Escape}");
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+    release();
+    expect(await panel.findByRole("alert")).toHaveTextContent(
+      "the project was changed",
+    );
+  });
+
+  it("keeps the list open over a 409, saying why, and reopens clean", async () => {
     const calls: Recorded[] = [];
     stubApi(
       {
@@ -161,31 +271,23 @@ describe("AssignProjectOwnerAction", () => {
     const user = userEvent.setup();
     render(<AssignProjectOwnerAction project={project} />);
 
-    await user.click(screen.getByTestId("assign-project-owner"));
-    await user.type(
-      screen.getByRole("searchbox", { name: "Search colleagues" }),
-      "Jane",
-    );
-    await user.click(await screen.findByRole("button", { name: "Jane Doe" }));
-    await user.click(screen.getByRole("button", { name: "Assign" }));
+    const panel = await openPicker(user);
+    await user.click(await panel.findByRole("option", { name: "Jane Doe" }));
 
     await waitFor(() => expect(calls).toHaveLength(1));
-    expect(
-      await screen.findByText("the project was changed by someone else"),
-    ).toBeTruthy();
-    // The dialog stays open on failure — the reader can retry or cancel,
-    // rather than the write vanishing with nothing on screen.
-    expect(screen.getByRole("button", { name: "Assign" })).toBeTruthy();
+    expect(await panel.findByRole("alert")).toHaveTextContent(
+      "the project was changed by someone else",
+    );
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
 
-    // Closing and reopening starts clean: a failure from an attempt nobody
-    // has repeated yet must not resurface as if it just happened again.
-    await user.click(screen.getByRole("button", { name: "Cancel" }));
-    await user.click(screen.getByTestId("assign-project-owner"));
-    // The modal itself, not just the absent error text — otherwise a modal
-    // that failed to reopen at all would pass this the same way.
-    await screen.findByRole("heading", { name: "Assign to a colleague" });
-    expect(
-      screen.queryByText("the project was changed by someone else"),
-    ).toBeNull();
+    // A failure from an attempt nobody has repeated yet must not resurface
+    // as if it just happened again.
+    await user.keyboard("{Escape}");
+    expect(screen.getByRole("button", { name: "Assign to a colleague" })).toBe(
+      document.activeElement,
+    );
+    const reopened = await openPicker(user);
+    await reopened.findByRole("option", { name: "Jane Doe" });
+    expect(reopened.queryByRole("alert")).toBeNull();
   });
 });

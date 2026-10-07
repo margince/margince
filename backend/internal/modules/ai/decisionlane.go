@@ -96,25 +96,3 @@ func refuseDecisionOnlyProvider(label, provider string) error {
 	}
 	return nil
 }
-
-// decisionsResidencyGap refuses a decisions lane under eu_hosted that nothing
-// holds to an EU host: the vendor's own API, which promises none, and a broker,
-// whose decisions endpoint takes no `only:` pin. eu_hosted is the residency the
-// operator chose.
-func (cfg RoutingConfig) decisionsResidencyGap() error {
-	lane := cfg.Decisions
-	if cfg.Profile != ProfileEUHosted || lane == nil {
-		return nil
-	}
-	if providerIsVendorHosted(lane.Provider) {
-		return fmt.Errorf("ai: routing config: the decisions lane under profile eu_hosted: %s is its vendor's own API, "+
-			"which is not pinned to an EU host; unbind the lane, or declare profile cloud_frontier "+
-			"if this installation does not promise EU inference", lane.Provider)
-	}
-	if !IsOpenRouterHost(lane.BaseURL) {
-		return nil
-	}
-	return fmt.Errorf("ai: routing config: the decisions lane under profile eu_hosted: %s reaches OpenRouter, "+
-		"whose decisions endpoint cannot be pinned to an EU host; unbind the lane, or declare profile cloud_frontier "+
-		"if this installation does not promise EU inference", lane.Provider)
-}

@@ -166,6 +166,24 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 	// refusal names the setting and quotes the group or role it refused —
 	// the same division of labour as the fiscal month above.
 	patch.OidcGroupRoleMap = req.OidcGroupRoleMap
+	// Each entry's validator holds its range and names the field it refuses.
+	patch.Operations = identity.OperationPatch{
+		AgentRunnerIntervalSeconds:       req.AgentRunnerIntervalSeconds,
+		CloseDateSweepIntervalSeconds:    req.CloseDateSweepIntervalSeconds,
+		FollowUpReconcileIntervalSeconds: req.FollowUpReconcileIntervalSeconds,
+		GeocodeBackfillIntervalSeconds:   req.GeocodeBackfillIntervalSeconds,
+		GmailWatchRenewWithinHours:       req.GmailWatchRenewWithinHours,
+		GmailWatchScanIntervalSeconds:    req.GmailWatchScanIntervalSeconds,
+		GraphWatchRenewWithinHours:       req.GraphWatchRenewWithinHours,
+		GraphWatchScanIntervalSeconds:    req.GraphWatchScanIntervalSeconds,
+		RetentionSweepIntervalSeconds:    req.RetentionSweepIntervalSeconds,
+		SendMaxAgeHours:                  req.SendMaxAgeHours,
+		SendRateLimit:                    req.SendRateLimit,
+		SendRateWindowSeconds:            req.SendRateWindowSeconds,
+		TechnicalBackfillIntervalSeconds: req.TechnicalBackfillIntervalSeconds,
+		TimeScanIntervalSeconds:          req.TimeScanIntervalSeconds,
+		WebhookRetryIntervalSeconds:      req.WebhookRetryIntervalSeconds,
+	}
 	s, err := h.store.UpdateInstallation(r.Context(), patch)
 	if err != nil {
 		httperr.Write(w, r, err)
@@ -195,6 +213,7 @@ func (h installationSettingsHandlers) toContract(s identity.InstallationSettings
 		BaseCurrencyLocked:         s.BaseCurrencyLocked,
 		MaxUploadBytes:             h.maxUploadBytes,
 		SignInProviders:            h.signInProviders(s.EnabledOidcProviders),
+		Operations:                 crmcontracts.OperationSettings(s.Operations),
 	}
 	dateFormat := crmcontracts.InstallationSettingsDateFormat(s.DateFormat)
 	timeFormat := crmcontracts.InstallationSettingsTimeFormat(s.TimeFormat)

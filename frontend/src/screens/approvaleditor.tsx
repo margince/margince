@@ -11,6 +11,7 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { DateInput, type ISODate, isISODate } from "../design-system/dateinput";
+import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
@@ -126,21 +127,25 @@ export function ApprovalDetailModal({
     },
   });
   return (
-    <Modal open={open} onClose={onClose} labelledBy={headingId}>
-      <Heading size="large" id={headingId} className="t-h2 modal-title">
-        {t("decision.detail")}
-      </Heading>
-      {open && (
-        <QueryGate query={detail} pendingLabel={t("decision.detailLoading")}>
-          {(approval) => (
-            <ApprovalDetailBody
-              approval={approval}
-              locale={locale}
-              zone={zone}
-            />
-          )}
-        </QueryGate>
-      )}
+    <Modal open={open} onClose={onClose} labelledBy={headingId} intent="drawer">
+      <DrawerHead>
+        <Heading size="large" id={headingId} className="t-h2">
+          {t("decision.detail")}
+        </Heading>
+      </DrawerHead>
+      <DrawerBody>
+        {open && (
+          <QueryGate query={detail} pendingLabel={t("decision.detailLoading")}>
+            {(approval) => (
+              <ApprovalDetailBody
+                approval={approval}
+                locale={locale}
+                zone={zone}
+              />
+            )}
+          </QueryGate>
+        )}
+      </DrawerBody>
     </Modal>
   );
 }
@@ -369,7 +374,7 @@ export function StagedEditor({
 }>) {
   const t = useT();
   return (
-    <div className="approval-editor">
+    <div className="form-stack approval-editor">
       {fields.map((entry) => (
         <Field
           key={entry.field}
@@ -421,7 +426,6 @@ export function StagedEditor({
         </Field>
       ))}
       <ActionRow
-        className="approval-gate"
         primary={
           /* The edited approve is the same write as the plain one and was the
              one path with no gate at all, so a second press sent a second

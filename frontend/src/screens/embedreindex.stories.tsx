@@ -99,6 +99,30 @@ export const UpToDateRebuildAvailable: Story = {
   },
 };
 
+// A rebuild re-embeds every record, so its confirm is the danger one.
+export const RebuildConfirm: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": admin(),
+      "GET /embeddings/reindex/status": () => jsonResponse(STATUS_IDLE),
+      "GET /embeddings/reindex/preview": () => jsonResponse(PREVIEW),
+    });
+    return (
+      <StoryProviders>
+        <EmbedReindexCard />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", {
+        name: "Rebuild index",
+      }),
+    );
+    await screen.findByText(/34,500/);
+  },
+};
+
 // The read grant without the update grant: the status row stands alone, and both
 // action rows are gone with their naming. The state worth LOOKING at is a
 // one-row list — the hairline rides between rows, so a single row must not draw

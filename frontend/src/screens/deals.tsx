@@ -35,10 +35,10 @@ import {
   EmptyState,
   SegmentedControl,
 } from "../design-system/atoms";
-import {
-  type BoardColumn,
-  type BoardDeal,
-  type BoardMoneyColumn,
+import type {
+  BoardColumn,
+  BoardDeal,
+  BoardMoneyColumn,
   PipelineBoard,
 } from "../design-system/composed";
 import { DataTable } from "../design-system/datatable";
@@ -126,7 +126,8 @@ import { DealBulkBar } from "./dealbulk";
 import { type CompanyNaming, useCompanyMarks } from "./dealcompanymarks";
 import { DealEmailAside } from "./dealemail";
 import { DealFiles } from "./dealfiles";
-import { dealMailAside, lastMailColumn } from "./dealmailaside";
+import { lastMailColumn } from "./dealmailaside";
+import { DealPipelineBoard } from "./dealpipelineboard";
 import {
   DealProjectChip,
   dealProjectFields,
@@ -164,13 +165,14 @@ import { RecordReading, RecordReadingPair, TimelineThread } from "./record360";
 import { RecordCustomFields } from "./recordcustomfields";
 import { saveRecordEdit } from "./recordedit";
 import { RecordFields, rawRecord } from "./recordfields";
-import { tagsColumn } from "./recordlist";
+import { ownerColumn, tagsColumn } from "./recordlist";
 import { RecordListsPanel } from "./recordlists";
 import { useRecordOwners } from "./recordreferences";
 import { RecordTeam } from "./recordteam";
 import { SaveViewAction, useSavedViewTabs } from "./savedviews";
 import { parseTagIDs, parseTagMode, tagQueryParams } from "./tagfilter";
 import { TagsPanel } from "./tagspanel";
+import { WorklistReturnLink } from "./worklist.return";
 
 // Kanban, table and deal detail share the fetched records and approval flow.
 // Mixed-currency columns never sum native minor units; weighting stays server-side.
@@ -1202,9 +1204,8 @@ function AmountCell({
   );
 }
 
-// The table-view column set. Module-level (not inlined in DealsScreen,
-// which is already at the cognitive-complexity ceiling) — stage_id → name
-// and amount/close formatting are the only per-row logic.
+// The table-view column set, module-level because DealsScreen is already at
+// the cognitive-complexity ceiling.
 function dealColumns(
   t: ReturnType<typeof useT>,
   locale: Locale,
@@ -1277,6 +1278,7 @@ function dealColumns(
             )
           : null,
     },
+    ownerColumn<Deal>(t),
     {
       // How long since anything happened on this deal. It is the figure a
       // forecast argument rests on — an amount with no recent signal behind it
@@ -1629,7 +1631,7 @@ function DealBoardBody({
             </QueryGate>
           ) : (
             <>
-              <PipelineBoard
+              <DealPipelineBoard
                 cardHref={(deal) => routeHash({ screen: "deals", id: deal.id })}
                 zone={recordZone}
                 columns={buildColumns(
@@ -1641,7 +1643,6 @@ function DealBoardBody({
                   rosterOwnerNaming(roster),
                 )}
                 onOpen={openDeal}
-                mailAside={dealMailAside}
                 cardDragHandlers={cardDragHandlers}
                 columnDropHandlers={columnDropHandlers}
                 columnExtras={suggestionGhosts}
@@ -2260,17 +2261,7 @@ export function DealsScreen({
       <ConfirmAdvanceModal
         pending={pending}
         onClose={() => setPending(null)}
-        onConfirm={(input) =>
-          // mutateAsync REJECTS on failure; this dialog wants the outcome, and
-          // an unhandled rejection in a click handler is not one. onError still
-          // runs, so the screen's own error surface is unaffected. The SAVED
-          // DEAL comes back on success, because the review offered next needs
-          // the closing the server just recorded.
-          advance.mutateAsync(input).then(
-            (deal) => deal,
-            (error: unknown) => error,
-          )
-        }
+        onConfirm={(input) => advance.mutateAsync(input)}
         onClosed={(deal, reason) => setClosed(closedDealOf(deal, reason))}
       />
       {/* Offered the moment a deal closes, from the list as from the record
@@ -2981,12 +2972,11 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
           return (
             <div className="record-sheet">
               <RecordView
-                // Context first: who these contacts are, before the verbs that act
-                // on them. The seats moved out of the main column when the
-                // readings band started counting them — the same two facts were
-                // reaching a reader three times on one screen. The pane is the
-                // one every record page draws, with the same fold and the same
-                // memory of it.
+                back={<WorklistReturnLink />}
+                // Context first: who these contacts are, before the verbs that
+                // act on them. The seats left the main column once the readings
+                // band counted them, or one screen said the same facts three
+                // times. Every record page draws this pane, fold and memory.
                 aside={dealContext(deal)}
                 asideOpen={details.open}
                 name={deal.name}
@@ -3141,12 +3131,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                 <ConfirmAdvanceModal
                   pending={pending}
                   onClose={() => setPending(null)}
-                  onConfirm={(input) =>
-                    advance.mutateAsync(input).then(
-                      (deal) => deal,
-                      (error: unknown) => error,
-                    )
-                  }
+                  onConfirm={(input) => advance.mutateAsync(input)}
                   onClosed={(deal, reason) =>
                     setClosed(closedDealOf(deal, reason))
                   }

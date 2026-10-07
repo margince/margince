@@ -166,7 +166,7 @@ export function RecordTeamAssign({
   }
 
   return (
-    <Modal open={open} onClose={close} labelledBy={headingId}>
+    <Modal open={open} onClose={close} labelledBy={headingId} intent="form">
       <Heading size="large" id={headingId} className="t-h2 modal-title">
         {existing ? t("assignments.changeTitle") : t("assignments.addTitle")}
       </Heading>

@@ -131,6 +131,7 @@ export function AddProjectStakeholder({
         {t("project.stakeholders.add")}
       </Button>
       <ConfirmModal
+        intent="form"
         open={open}
         onClose={close}
         title={t("project.stakeholders.add")}

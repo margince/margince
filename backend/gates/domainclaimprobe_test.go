@@ -5,10 +5,10 @@
 
 package gates
 
-// A domain maps to at most one company (data-model §4.2), so "is this
-// domain taken?" is one question — and answering it discloses something either
-// way. That the domain is taken reveals a company exists with it; naming
-// WHICH company reveals a record the caller may not be allowed to read.
+// A domain maps to at most one company, so "is this domain taken?" is one
+// question, and answering it discloses something either way. That the domain is
+// taken reveals a company exists with it; naming WHICH company reveals a record
+// the caller may not be allowed to read.
 //
 // So the answer carries a disclosure rule: `ExistingID` is filled only when
 // `auth.VisibleTo` says the caller could have read that row anyway, and the 409

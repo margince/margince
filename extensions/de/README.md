@@ -14,19 +14,18 @@ Two obligations live here.
 
 The core retention engine treats these as **floors**: a workspace policy may
 keep longer, never destroy earlier. Anchoring at calendar-year end is §147(4)
-AO, and it matters — a January Handelsbrief keeps almost seven calendar years,
-so a floor that counted from the record's own date would erase it early.
+AO. A January Handelsbrief keeps almost seven calendar years, so a floor that
+counted from the record's own date would erase it early.
 
-Bücher and Abschlüsse (10 years) are deliberately absent. A CRM holds no books
-or annual accounts, and a floor no record can carry would be documentation
-posing as enforcement.
+Bücher and Abschlüsse (10 years) are absent. A CRM holds no books or annual
+accounts, and a floor that no stored record falls under would enforce nothing.
 
 ## Outbound messaging (UWG §7, GDPR Art. 13)
 
-### Advertising without consent — the §7(3) existing-customer exception
+### Advertising without consent: the §7(3) existing-customer exception
 
-**Margince does not offer this exception today.** The pack declares it with **all
-four** of its statutory conditions, and the engine refuses it: nothing on a
+**Margince does not offer this exception.** The pack declares it with all four
+of its statutory conditions, and the engine refuses it: nothing on a
 message names the goods it advertises, so the similarity condition cannot be
 checked.
 
@@ -41,21 +40,20 @@ Declaring three of four would be an exception the engine applies while checking
 less than the statute asks. That is worse than declaring none, because it looks
 lawful.
 
-**Similarity would have to be checked per message, not once per contact.** A
-customer who bought one product has not opened the door to everything the seller
-sells, and an exception evaluated once per contact is the shape that turns one
-purchase into a permanent mailing list.
+Similarity would have to be checked per message. A customer who bought one
+product has not opened the door to everything the seller sells. An exception
+evaluated once per contact turns one purchase into a permanent mailing list.
 
 ### What a first message discloses (Art. 13)
 
 | Disclosure | Scope |
 |---|---|
-| Controller identity — legal name and postal address | every first message |
+| Controller identity: legal name and postal address | every first message |
 | Privacy contact | every first message |
-| Objection route — free and without a barrier | advertising |
+| Objection route: free and without a barrier | advertising |
 
-The objection route is marketing-scoped because §7(3) requires it at *every*
-use, not only the first contact.
+The objection route is marketing-scoped because §7(3) requires it at every
+use of the address for advertising, including the first.
 
 ### Windows
 
@@ -63,19 +61,18 @@ A reply stays a reply for **12 months**; a live deal supports an unprompted
 follow-up for **6 months**.
 
 Neither bounds a same-thread reply. The subject wrote to us and did not
-withdraw, so a rep answering a months-old thread is doing the ordinary thing —
-these windows reach only an *unprompted* follow-up. A pack that shortened them
-would be refusing correspondence rather than restricting advertising.
+withdraw, so a rep answering a months-old thread is doing the ordinary thing.
+These windows reach only an *unprompted* follow-up. A pack that shortened them
+would refuse correspondence instead of restricting advertising.
 
 ### What Germany does not require
 
 No subject-line prefix on commercial email, no statutory frequency ceiling, and
 no acknowledgement owed for an opt-out.
 
-The zero values say so, and the silence is deliberate: a reader comparing this
-pack against one that *does* impose them needs to tell a considered absence from
-a forgotten field. `TestGermanyImposesNoPrefixNoCapAndNoAcknowledgement` is what
-makes that difference hold.
+The zero values are intentional, so a reader comparing packs can tell a
+considered absence from a missing field.
+`TestGermanyImposesNoPrefixNoCapAndNoAcknowledgement` holds them.
 
 ## Changing any of this
 

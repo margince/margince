@@ -98,7 +98,7 @@ export function EvidenceModal({
       open
       onClose={onClose}
       labelledBy="co-evidence-title"
-      placement="right"
+      intent="drawer"
     >
       <Heading size="large" id="co-evidence-title" className="modal-title">
         {t("co.evidence.title")}

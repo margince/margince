@@ -1,0 +1,116 @@
+name: install-playwright-chromium
+description: >-
+  Install Chromium and its system libraries for Playwright, trying each half
+  twice, so an unresponsive package mirror does not red a lane whose tests never
+  ran.
+
+# Why this exists: `playwright install --with-deps chromium` shells out to apt
+# inside the runner, and an unresponsive mirror hangs with no output until the
+# step's own timeout fires. That reds `main`, and the health check then
+# files an issue naming every commit since the last green — none of which is the
+# cause, because this step runs before a single test does.
+#
+# The two halves are SEPARATE steps, which is what the callers' own comment
+# asked for before this action existed: a hang in apt and a hang in the browser
+# download are different faults, and folding them together reaches a reader as
+# "the lane timed out" rather than naming what did.
+#
+# Each half retries ONCE. The retry is not tolerant: a mirror that is genuinely
+# down, or a browser that genuinely cannot be fetched, still fails loudly and in
+# the step that names it. A fresh step is what gets a fresh connection.
+#
+# Each run is bounded by `timeout` rather than a step's `timeout-minutes`:
+# GitHub refuses that key on a composite action's steps, and an install moved in
+# here without a bound of its own would be held only by the calling job's whole
+# budget — which is the reporting failure this split exists to end, arriving as
+# "the lane timed out". The command exits 124 on expiry, so the step fails where
+# it hung.
+#
+# The download half is also cached, keyed on the resolved Playwright version, so
+# the usual run does not reach the network for it at all. The apt half cannot be
+# cached — system libraries live outside the cached path — which is why the
+# retry is what answers a hung mirror; the cache only shortens the exposure.
+
+inputs:
+  working-directory:
+    description: Directory holding the Playwright install (its package.json).
+    default: frontend
+
+runs:
+  using: composite
+  steps:
+    - name: Resolve the Playwright version
+      id: version
+      working-directory: ${{ inputs.working-directory }}
+      shell: bash
+      # The RESOLVED version, not package.json's range: a caret range matches
+      # several browser builds, so keying the cache on it would serve one
+      # version's binaries to another and the run would fail far from here.
+      run: |
+        v=$(pnpm exec playwright --version | tr -cd '0-9.')
+        # An empty or partial read would key every release the same and serve
+        # one version's binaries to another, which fails far from here.
+        case "$v" in
+          [0-9]*.[0-9]*) ;;
+          *) echo "playwright --version did not yield a version: '$v'" >&2; exit 1 ;;
+        esac
+        echo "v=$v" >> "$GITHUB_OUTPUT"
+
+    - name: Restore the browser cache
+      id: cache
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ~/.cache/ms-playwright
+        key: playwright-chromium-${{ runner.os }}-${{ steps.version.outputs.v }}
+
+    - name: Install the system libraries Chromium needs
+      id: deps
+      continue-on-error: true
+      working-directory: ${{ inputs.working-directory }}
+      shell: bash
+      # The exit code is recorded because the retry below is conditional on it.
+      run: |
+        set +e
+        timeout --kill-after=30s 5m pnpm exec playwright install-deps chromium
+        code=$?
+        echo "code=$code" >> "$GITHUB_OUTPUT"
+        exit $code
+
+    # Retried only when apt FAILED, never when it was killed — 124 on expiry,
+    # 137 when the escalation had to force it. A kill lands mid-transaction and
+    # dpkg's frontend lock stays held, so a second attempt straight after one
+    # reports "could not get lock": a different fault in place of the one that
+    # stopped the install. A fast failure releases the lock and is worth another
+    # connection.
+    - name: Install the system libraries Chromium needs (retry)
+      if: steps.deps.outcome == 'failure' && steps.deps.outputs.code != '124' && steps.deps.outputs.code != '137'
+      working-directory: ${{ inputs.working-directory }}
+      shell: bash
+      run: timeout --kill-after=30s 5m pnpm exec playwright install-deps chromium
+
+    # The step above is continue-on-error so a failure can be retried, which
+    # means nothing has failed yet when the retry is the step that got skipped.
+    # Without this the action would finish GREEN with the libraries missing and
+    # the screens would fail later, or render wrong and pass.
+    - name: Refuse to continue without the libraries
+      if: steps.deps.outcome == 'failure' && (steps.deps.outputs.code == '124' || steps.deps.outputs.code == '137')
+      shell: bash
+      run: |
+        echo "::error::the system libraries did not install inside their bound, and a retry would \
+        report dpkg's held lock instead of this" >&2
+        exit 1
+
+    - name: Download the Chromium build
+      id: browser
+      if: steps.cache.outputs.cache-hit != 'true'
+      continue-on-error: true
+      working-directory: ${{ inputs.working-directory }}
+      shell: bash
+      run: timeout --kill-after=30s 2m pnpm exec playwright install chromium
+
+    # The download takes no lock, so its retry is unconditional.
+    - name: Download the Chromium build (retry)
+      if: steps.browser.outcome == 'failure'
+      working-directory: ${{ inputs.working-directory }}
+      shell: bash
+      run: timeout --kill-after=30s 2m pnpm exec playwright install chromium

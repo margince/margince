@@ -367,8 +367,10 @@ var unreachableInThisLane = gatekit.Waive(map[string]string{
 	"read_import_run": "needs a seat holding import_run.read, which this lane's seat does not " +
 		"carry — a migration run is an admin-scoped object, and granting it here would widen the " +
 		"authority every other tool in the sweep runs under",
-	"read_import_report":   "needs a run that has been dry-run, which needs the object store above",
-	"commit_import":        "confirm-first, and needs the object store above to reach a committable run",
+	"read_import_report": "needs a run that has been dry-run, which needs the object store above",
+	"commit_import":      "confirm-first, and needs the object store above to reach a committable run",
+	"decide_duplicate": "needs a filed review-queue pair, which a create under a second passport produces; " +
+		"TestACardsNotTheSameDismissesThePairAndItsUndoReopensIt (choicecards_mcp_integration_test.go) calls it through the served registry and holds its answer to its schema, which this sweep's census cannot read from here",
 	"book_meeting":         "needs a live calendar provider",
 	"invite_meeting":       "needs a writable calendar registry, working hours and a booking vault; this lane composes an empty SendPath",
 	"send_email":           "needs an outbound mail provider",

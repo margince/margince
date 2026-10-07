@@ -142,24 +142,22 @@ func (p TimeoutPolicy) Duration() time.Duration {
 }
 
 // Cadence is a dispatcher's schedule, in exactly one of three forms: Fixed is
-// this repo's own number, OperatorField names the dial the number comes from,
-// and OnDemand says a human's confirm enqueues this dispatcher and no clock
-// ever does.
+// this repo's own number, Setting names the admin setting the number comes
+// from (read again while the worker runs, so a change needs no restart), and
+// OnDemand says a human's confirm enqueues this dispatcher and no clock ever
+// does.
 //
 // OnDemand is a declaration and not an absence, which is the whole reason it
 // exists as a field rather than a zero Cadence: a dispatcher whose schedule
 // simply went missing and one that deliberately has none are the same bytes
 // otherwise, and every consumer reads the compiled table rather than the YAML.
-//
-// ScheduleWhenPositive names the JobRunnerConfig field whose non-positive
-// value means "workers registered, SCHEDULE absent". It is a third posture,
-// not a variant of registration: the capability stays wired and only the tick
-// goes away.
 type Cadence struct {
-	Fixed                time.Duration
-	OperatorField        string
-	OnDemand             bool
-	ScheduleWhenPositive string
+	Fixed    time.Duration
+	Setting  string
+	OnDemand bool
+	// OffAtZero lets Setting switch the schedule off by holding zero: the
+	// workers stay registered and only the tick goes away.
+	OffAtZero bool
 }
 
 // Registration is what a kind's wiring depends on, and what happens when the

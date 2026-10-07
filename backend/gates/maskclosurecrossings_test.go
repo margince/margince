@@ -5,7 +5,7 @@
 
 package gates
 
-// A fact withheld on another record as a CONSEQUENCE may not also be offered
+// A fact withheld on another record as a consequence may not also be offered
 // for configuration.
 //
 // auth's group closure takes a commission entry's rate and amount out with the

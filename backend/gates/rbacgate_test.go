@@ -5,11 +5,10 @@
 
 package gates
 
-// The store-entry-point admission rule as a fitness function: every
-// exported method on a module's *Store or *Service — the seam both the
-// HTTP handlers and the MCP tool surface call through — references the
-// platform auth gate (object RBAC and/or the row-scope spellings),
-// directly or through a same-package helper. A store method without one
+// Every exported method on a module's *Store or *Service (the seam both the
+// HTTP handlers and the MCP tool surface call through) references the platform
+// auth gate (object RBAC and/or the row-scope spellings), directly or through a
+// same-package helper. A store method without one
 // is an ungoverned door into tenant data: reachable by any transport
 // wired to it, invisible to review. Row-scope composition itself stays
 // a call-site obligation until it moves into the database (the ADR

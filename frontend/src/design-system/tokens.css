@@ -499,6 +499,14 @@
      measure that resolved to nothing there would silently uncap it. */
   --settingsColumn: 720px;
 
+  /* THE OVERLAY MEASURES, one per `Modal` intent (modal.tsx). A box is its
+     measure or the glass less its gutter, whichever is narrower. */
+  --dialogConfirmWidth: 440px;
+  --dialogFormWidth: 600px;
+  --drawerWidth: 560px;
+  --drawerReadingWidth: 880px;
+  --dialogFullWidth: 1240px;
+
   /* Vertical-rhythm scale — the 4/8/12/16/24 rungs the screens were already
    * reaching for ad-hoc (inconsistently spelled 10/12/14/16 before this).
    * Layout rhythm, not part of the §2 Ledger-Green colour identity; a

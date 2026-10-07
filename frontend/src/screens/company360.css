@@ -225,6 +225,11 @@
   justify-content: space-between;
   width: 100%;
 }
+.co-brief-read {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
 /* The block's leading claim: the one sentence a reader takes away, set as a
    claim rather than as the first item of a list. The hairline under it is the
    card-to-content seam this block owns — it divides the read from the working,
@@ -233,7 +238,7 @@
    CONTENT, and drawn at a heading size it outranked the title of the panel it
    sits in. */
 .co-brief-lead {
-  margin: 0 0 var(--space-3);
+  margin: 0;
   padding-bottom: var(--space-3);
   border-bottom: 1px solid var(--borderSubtle);
   color: var(--textPrimary);
@@ -457,8 +462,11 @@
   gap: var(--space-1);
   margin-top: var(--space-1);
 }
+/* The citations sit --space-2 under the messages, and the column's own
+   --space-1 gap already pays part of that. */
 .co-evidence-sources > .co-brief-cites {
   margin-inline-start: 0;
+  margin-block-start: calc(var(--space-2) - var(--space-1));
 }
 
 /* A chip with a receipt behind it is marked the way every other opening
@@ -498,7 +506,11 @@
      rather than laying its own contents out. */
   justify-content: flex-end;
   gap: var(--space-2);
-  margin-top: var(--space-3);
+}
+/* The verbs sit --space-4 under the evidence, and the body's own --space-1 gap
+   already pays part of that. */
+.co-move-body > .co-move-do {
+  margin-top: calc(var(--space-4) - var(--space-1));
 }
 
 /* An open task: the tick at the row's own weight (it IS the primary verb,
@@ -1922,4 +1934,11 @@
 /* The rollup's fine print, set under the figures it qualifies. */
 .co-rollup-note {
   margin-top: var(--space-2);
+}
+
+/* The lifecycle button on the name's own line, centred against the name. The
+   compact head sets that row on a shared baseline for the caption text other
+   records put there; a button on that baseline sits visibly low. */
+.co-name-control {
+  align-self: center;
 }

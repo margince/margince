@@ -2,7 +2,7 @@
 
 One-time rewrites of existing installation data. They are **not** migrations:
 `margince-migrate` never runs this folder, because their run time grows with an
-installation's data and migrations run at api boot (margince#6692).
+installation's data and migrations run at api boot.
 
 An operator runs a data fix once, after the release that needs it is live, at a
 quiet time, and batched where the installation is large. Each file states what it
@@ -17,6 +17,7 @@ rewrites and is idempotent: running it again changes nothing.
 | `2026-10-03-3_a_contact_capture_withdrew_owes_no_notice.up.sql` | a verdict withdrew capture-made contacts before retraction ended their duties | closes the open notice cases of contacts a capture verdict archived |
 | `2026-10-03-4_open_duties_the_captured_mail_already_answers.up.sql` | capture-made duties opened before the counterparty verdict's contacts were settled by their own mail, and before sent mail's To and Cc counted | settles open capture-made duties whose contact wrote to us, or was on To or Cc of mail the seat sent before connecting |
 | `2026-10-03-5_a_group_post_is_its_authors_mail.up.sql` | the installation captured Google Group posts before capture read their author | names the X-Original-From author as counterparty and sender of each stored group post, and clears the bulk flag the group's own unsubscribe links set |
+| `2026-10-06_an_imported_emails_sender_is_who_its_headers_name.up.sql` | the installation logged or imported emails before the participant-role fix, so every linked contact was recorded as the sender (margince#6914) | gives each linked contact of a live, unrestricted email with stated headers and at least one contact-only participant row the role its address appears on — a contact the headers do not name keeps the receiving side (cc inbound, to otherwise), bcc rows are never touched; the only delete collapses two identical contact-only rows into one, and any email whose stated address ever belonged to more than one contact is skipped whole |
 
 Where several are needed, run them in the order of this table: each later one
 reads what an earlier one wrote, and `1790871111` comes again after the
@@ -24,8 +25,8 @@ reads what an earlier one wrote, and `1790871111` comes again after the
 
 ## Running one
 
-Each file assumes one transaction, as the migration runner used to give it
-(`SET LOCAL lock_timeout` only holds inside one). Run it like this, so that a
+Each file assumes it runs in one transaction (`SET LOCAL lock_timeout` holds only
+inside one). Run it like this, so that a
 failure rolls everything back:
 
 ```
@@ -38,7 +39,7 @@ once (for example by restricting the first statement to a range of
 
 ## Limits
 
-- `1790871111…down.sql` was written as the rollback of the whole feature. Besides
+- `1790871111…down.sql` is the rollback of the whole feature. Besides
   undoing the fix, it relabels every capture-created `mailbox_history`
   acquisition that the sent-mail rule does not cover, including ones the running
   application created correctly, and opens notice cases for them. Use it only

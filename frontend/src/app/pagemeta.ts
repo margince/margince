@@ -1,9 +1,14 @@
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useEntityName } from "../screens/entityref";
-import { SCREEN_ENTITY } from "./entity";
 import { EXTENSION_SCREEN, findExtension } from "./extensions";
-import { NAV, type NavLevelEntry, type NavSection } from "./nav";
+import {
+  NAV,
+  type NavLevelEntry,
+  type NavSection,
+  recordKindOf,
+  reservedPageTitle,
+} from "./nav";
 import type { Route, Screen } from "./router";
 
 // What the chrome knows about a page before the page renders: its name, its
@@ -77,8 +82,8 @@ export const OFF_RAIL_TITLE_KEYS: Record<string, MessageKey> = {
   partners: "nav.partners",
   share: "nav.share",
   search: "nav.search",
-  // Off the rail deliberately. The rail carries the product's ten destinations
-  // and a queue of one contact's own unsent mail is not an eleventh; it is
+  // Off the rail on purpose. The rail carries the product's destinations, and a
+  // queue of one user's own unsent mail is not one of them; it is
   // reached from the composer that put a message in it and from Today, which is
   // where the same rep's other waiting work already lives.
   scheduled: "nav.scheduled",
@@ -182,7 +187,7 @@ export function useRouteSubject(route: Route): string {
   // A record kind, and only then: an id segment that names no record is a
   // screen's own state — the settings tab, for one — and the subject is still
   // the page.
-  const recordKind = route.id ? SCREEN_ENTITY[route.screen] : undefined;
+  const recordKind = recordKindOf(route);
   const { name, reading } = useEntityName(
     recordKind ?? "contact",
     recordKind && route.id,
@@ -193,5 +198,8 @@ export function useRouteSubject(route: Route): string {
   if (unit) {
     return unit.name;
   }
-  return resolveTitle(route.screen, navItem?.labelKey, t);
+  const reserved = reservedPageTitle(route);
+  return reserved
+    ? t(reserved)
+    : resolveTitle(route.screen, navItem?.labelKey, t);
 }

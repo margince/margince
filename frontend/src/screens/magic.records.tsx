@@ -16,6 +16,7 @@ import type { components } from "../api/schema";
 import { ENTITY, isEntityKind } from "../app/entity";
 import { routeHash } from "../app/router";
 import { Button } from "../design-system/atoms";
+import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
 import { Modal } from "../design-system/modal";
 import { SurfaceState } from "../design-system/surfacestate";
@@ -25,6 +26,7 @@ import { throwProblem } from "./common";
 import { historyFieldLabel } from "./historyfieldlabels";
 import { type MagicLine, magicKey } from "./magic.queries";
 import { MagicUndoButton } from "./magic.undo";
+import "./brief.css";
 
 type MagicLineRecord = components["schemas"]["MagicLineRecord"];
 type MagicFieldChange = components["schemas"]["MagicFieldChange"];
@@ -77,12 +79,16 @@ export function LineRecordsOpener({
         open={open}
         onClose={() => setOpen(false)}
         labelledBy={titleId}
-        size="wide"
+        intent="drawer"
       >
-        <Heading size="medium" as="h2" id={titleId} className="modal-title">
-          {t("magic.records.title")}
-        </Heading>
-        {open && <LineRecordsList line={line} since={since} />}
+        <DrawerHead>
+          <Heading size="large" id={titleId} className="t-h2 modal-title">
+            {t("magic.records.title")}
+          </Heading>
+        </DrawerHead>
+        <DrawerBody>
+          {open && <LineRecordsList line={line} since={since} />}
+        </DrawerBody>
       </Modal>
     </>
   );

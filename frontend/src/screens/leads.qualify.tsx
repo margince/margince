@@ -187,11 +187,7 @@ export function QualifyDialog({
     },
   });
 
-  // A promotion in flight is not something to walk away from: the dialog
-  // stays until the server has answered, then closes on success or shows
-  // the refusal.
   const close = () => {
-    if (qualify.isPending) return;
     qualify.reset();
     onClose();
   };
@@ -226,9 +222,7 @@ export function QualifyDialog({
     <ConfirmModal
       open={open}
       onClose={close}
-      // Wide, because the body is a form the reader has to READ before an act
-      // that creates a contact and possibly a deal — not a yes/no box.
-      size="wide"
+      intent="form"
       title={t("lead.qualify.title", { name })}
       confirmLabel={
         withDeal ? t("lead.qualify.confirmWithDeal") : t("lead.qualify.confirm")

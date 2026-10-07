@@ -5,7 +5,7 @@
 
 package gates
 
-// WHICH table a row-scope call bounds, and which column names a reference to
+// Which table a row-scope call bounds, and which column names a reference to
 // one.
 //
 // The obligation used to be table-agnostic: a function that projected an

@@ -12,6 +12,11 @@ import {
   Textarea,
   TextInput,
 } from "../design-system/atoms";
+import {
+  DrawerBody,
+  DrawerFoot,
+  DrawerHead,
+} from "../design-system/drawerbands";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
@@ -59,18 +64,9 @@ const ACCEPTED_TRANSCRIPT_EXTENSION = ".txt";
 // the calendar rather than as an address somebody follows.
 type OpeningKind = "note" | "task" | "call";
 
-// "Today", in the zone the picked day will be READ back in. The composer's date
-// field starts here — the day that WOULD apply is shown where the writer can
-// change it instead of being assumed at submit behind an empty box.
-//
-// Which zone that is follows what the day MEANS, the same split the draft's
-// `day` field carries. Every kind this form writes files against the record's
-// clock: a note or meeting lands under a heading on the record's timeline, and
-// a task's due date is a deadline colleagues read back, minted by `dueInstant`
-// in that same zone and rendered there. Offering a day from the browser's zone
-// instead names a day the entry does not land on — an afternoon in Los Angeles
-// is already tomorrow on a Berlin clock, so a writer offered their own today,
-// accepting it, watched the entry file under the day after.
+// "Today" on the record's clock, which every kind this form writes files
+// against (a task's due date via `dueInstant` too). The browser's today can name
+// a day the entry does not land on: a Los Angeles afternoon is Berlin's tomorrow.
 function todayDay(_kind: ActivityDraft["kind"], recordZone: string): string {
   return calendarDay(new Date(), recordZone);
 }
@@ -117,24 +113,27 @@ async function searchCompanyContacts(
 
 /**
  * LogActivityForm is the composer itself, without a frame, so the same fields
- * serve the standing card on the contact and deal screens and the modal the
- * company screen opens.
+ * serve the standing card on the contact and deal screens and the drawer the
+ * header verbs open, whose body and foot it fills when `banded`.
  */
 export function LogActivityForm({
   entityType,
   entityId,
   onLogged,
   askedKind,
+  banded = false,
 }: Readonly<{
   entityType: EntityKind;
   entityId: string;
   onLogged?: () => void;
+  banded?: boolean;
   // The kind the reader asked for, when the caller knows which one. Absent
   // means note, the ordinary case. It is the kind ASKED rather than the kind
   // the form starts on: it may change while this form stands.
   askedKind?: OpeningKind;
 }>) {
   const t = useT();
+  const formId = useId();
   const queryClient = useQueryClient();
   const recordZone = useRecordZone();
   const [draft, setDraft] = useState<ActivityDraft>(() =>
@@ -220,8 +219,28 @@ export function LogActivityForm({
   const setField = (patch: Partial<ActivityDraft>) =>
     setDraft((current) => ({ ...current, ...patch }));
 
-  return (
+  const submit = (
+    <Button
+      variant="primary"
+      type="submit"
+      form={formId}
+      // An unnamed attendee is refused by the server with a 422 the reader
+      // cannot act on from here, so the button says no first. Never
+      // auto-selecting the company's first contact to make the submit work:
+      // filing a meeting against somebody who was not there is worse.
+      disabled={
+        !log.isPending &&
+        (!draft.subject.trim() || (needsAttendee && !attendee))
+      }
+      pending={log.isPending}
+      busyLabel={t("log.saving")}
+    >
+      {t("log.save")}
+    </Button>
+  );
+  const form = (actions: ReactNode) => (
     <form
+      id={formId}
       className="form-stack"
       onSubmit={(event) => {
         event.preventDefault();
@@ -364,26 +383,16 @@ export function LogActivityForm({
         </Field>
       )}
       <ErrorLine error={log.error} />
-      <div className="form-actions">
-        <Button
-          variant="primary"
-          type="submit"
-          // An unnamed attendee is refused by the server with a 422 the reader
-          // cannot act on from here, so the button says no first. Never
-          // auto-selecting the company's first contact to make the submit
-          // work: filing a meeting against somebody who was not there is worse
-          // than refusing to file it.
-          disabled={
-            !log.isPending &&
-            (!draft.subject.trim() || (needsAttendee && !attendee))
-          }
-          pending={log.isPending}
-          busyLabel={t("log.saving")}
-        >
-          {t("log.save")}
-        </Button>
-      </div>
+      {actions}
     </form>
+  );
+  return banded ? (
+    <>
+      <DrawerBody>{form(null)}</DrawerBody>
+      <DrawerFoot className="actions">{submit}</DrawerFoot>
+    </>
+  ) : (
+    form(<div className="form-actions">{submit}</div>)
   );
 }
 
@@ -406,15 +415,8 @@ export function LogActivity({
   askedKind?: OpeningKind;
 }>) {
   const t = useT();
-  // useCanWrite, not useCan: the form issues a POST, and a read seat is
-  // refused before RBAC is consulted — the same rule the header verbs on
-  // contactpage.tsx state for the identical write. The card stays and says so
-  // rather than vanishing: a rep whose role may not log a call needs to learn
-  // that from the page, not from the absence of a form the product has.
-  //
-  // Refused only once /me has ANSWERED. Claiming a refusal the server has not
-  // decided is worse than a form that is briefly quiet — the same rule the
-  // header verbs hold with their own pending state.
+  // useCanWrite, not useCan: a read seat is refused the POST before RBAC. The
+  // card says so rather than vanishing, and only once /me has answered.
   const me = useMe();
   const canLog = useCanWrite("activity", "create");
   const logRefused = me.data?.authorization !== undefined && !canLog;
@@ -471,12 +473,8 @@ export function LogActivityAction({
   // own verb; two buttons both reading "Log activity" is a toolbar that has
   // stopped telling the reader anything.
   triggerLabel?: MessageKey;
-  // The glyph the trigger leads with, beside the words rather than instead of
-  // them — a header strip of label-only buttons reads as a list, and the verb
-  // a reader is scanning for is found by its shape before it is read. Optional
-  // because a caller that only wants the form (`openOnMount`) draws no trigger
-  // at all, and a caller with no glyph for its verb must not be made to invent
-  // one. `aria-hidden` at the call site: the words are the name.
+  // The glyph beside the trigger's words, `aria-hidden` at the call site: a
+  // verb is found by its shape first. Optional: `openOnMount` draws no trigger.
   triggerIcon?: ReactNode;
   // Blocks the press while carrying no explanation — for a caller whose grant
   // has not resolved yet. Claiming a refusal the server has not decided is
@@ -514,17 +512,19 @@ export function LogActivityAction({
           {t(triggerLabel ?? "log.title")}
         </Button>
       )}
-      <Modal open={open} onClose={close} labelledBy={titleId}>
-        <Heading size="large" id={titleId} className="t-h2 modal-title">
-          {/* The heading answers the verb that opened it. Titled "log an
-              activity" regardless, a reader who pressed "Add task" was shown
-              a different form's name and read it as the wrong dialog. */}
-          {t(triggerLabel ?? "log.title")}
-        </Heading>
+      <Modal open={open} onClose={close} labelledBy={titleId} intent="drawer">
+        <DrawerHead>
+          <Heading size="large" id={titleId} className="t-h2">
+            {/* The heading answers the verb that opened it: a reader who
+                pressed "Add task" reads "Log activity" as the wrong dialog. */}
+            {t(triggerLabel ?? "log.title")}
+          </Heading>
+        </DrawerHead>
         <LogActivityForm
           entityType={entityType}
           entityId={entityId}
           askedKind={askedKind}
+          banded
           onLogged={() => {
             onLogged?.();
             close();

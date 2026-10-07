@@ -54,6 +54,7 @@ export function SaveFilterListAction({
       <ConfirmModal
         open={open}
         onClose={close}
+        intent="form"
         title={t("filters.saveListTitle")}
         confirmLabel={t("filters.saveListConfirm")}
         confirmDisabled={trimmed === ""}

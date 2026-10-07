@@ -87,7 +87,7 @@ export function BillingContactModal({
   }
 
   return (
-    <Modal open={open} onClose={onClose} labelledBy={headingId}>
+    <Modal open={open} onClose={onClose} labelledBy={headingId} intent="form">
       <Heading size="large" id={headingId} className="t-h2 modal-title">
         {editing ? t("billing.changeTitle") : t("billing.addTitle")}
       </Heading>

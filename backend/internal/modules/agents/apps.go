@@ -200,7 +200,7 @@ func (s *Dispatcher) appsOffered(fr framing) bool {
 // toolUIWire is one tool's `_meta.ui` as a client reads it.
 type toolUIWire struct {
 	//nolint:tagliatelle // resourceUri is the extension's wire member, camelCase by the specification
-	ResourceURI string   `json:"resourceUri"`
+	ResourceURI string   `json:"resourceUri,omitempty"`
 	Visibility  []string `json:"visibility"`
 }
 
@@ -217,6 +217,30 @@ func toolUIMeta(spec mcp.ToolSpec) *toolUIWire {
 		ResourceURI: spec.UI.ResourceURI,
 		Visibility:  visibilityOrBoth(spec.UI.Visibility),
 	}
+}
+
+// toolMeta is a tool's `_meta.ui` for a request that is offered views: its own
+// declaration when its view is held, nothing for a tool a view acts through
+// (the default audience, both, is what it needs), and model-only for every
+// other tool.
+func (s *Dispatcher) toolMeta(spec mcp.ToolSpec, actionTools map[string]struct{}) *toolUIWire {
+	if s.viewIsHeld(spec) {
+		if ui := toolUIMeta(spec); ui != nil {
+			return ui
+		}
+	}
+	if _, acts := actionTools[spec.Name]; acts {
+		return nil
+	}
+	return viewOnlyModelMeta()
+}
+
+// viewOnlyModelMeta is what a tool no view acts through is declared as: the
+// model's alone. The extension's default audience is both, so without this a
+// rendered view could ask its host to run ANY tool on the surface; with it, the
+// only tools a view can reach are the ones apps.ActionTools names.
+func viewOnlyModelMeta() *toolUIWire {
+	return &toolUIWire{Visibility: []string{mcp.VisibilityModel}}
 }
 
 // visibilityOrBoth resolves an undeclared audience list to BOTH audiences.

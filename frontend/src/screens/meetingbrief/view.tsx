@@ -8,6 +8,11 @@
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
+import {
+  DrawerBody,
+  DrawerFoot,
+  DrawerHead,
+} from "../../design-system/drawerbands";
 import { Heading } from "../../design-system/heading";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { useT } from "../../i18n";
@@ -90,7 +95,7 @@ export function MeetingBriefView({
   const brief = state.kind === "ready" ? state.brief : undefined;
   return (
     <>
-      <div className="drawer-head">
+      <DrawerHead>
         <div className="pe-drawer-title">
           <Heading size="large" id={titleId}>
             {t("contact.meeting.title")}
@@ -102,8 +107,8 @@ export function MeetingBriefView({
           preparedFor={preparedFor}
           formatWhen={formatWhen}
         />
-      </div>
-      <div className="drawer-body">
+      </DrawerHead>
+      <DrawerBody>
         <div className="mb-body">
           {scopeSlot}
           <SurfaceState
@@ -211,13 +216,13 @@ export function MeetingBriefView({
               children only when the state is ready. */}
           {state.kind === "failed" && <p>{state.message}</p>}
         </div>
-      </div>
-      <div className="drawer-foot">
+      </DrawerBody>
+      <DrawerFoot>
         <span className="pe-disclosure t-caption">
           {t("contact.meeting.assembledNow")}
         </span>
         <Button onClick={onClose}>{t("contact.drawer.close")}</Button>
-      </div>
+      </DrawerFoot>
     </>
   );
 }

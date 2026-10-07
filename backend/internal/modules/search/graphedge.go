@@ -176,6 +176,7 @@ func recomputePairs(ctx context.Context, tx pgx.Tx, pairs []pair) error {
 		       AND pp.contact_id = t.contact_id AND pp.role IN `+interactionRoles+`
 		      JOIN activity a
 		        ON a.id = up.activity_id AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
+		   AND `+graphCountedActivity+`
 		     GROUP BY t.user_id, t.contact_id
 		)
 		INSERT INTO graph_interaction_edge AS e
@@ -210,6 +211,7 @@ func recomputePairs(ctx context.Context, tx pgx.Tx, pairs []pair) error {
 		         FROM activity_participant up
 		         JOIN activity_participant pp ON pp.activity_id = up.activity_id
 		         JOIN activity a ON a.id = up.activity_id AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
+		   AND `+graphCountedActivity+`
 		        WHERE up.user_id = t.user_id AND up.role IN `+interactionRoles+`
 		          AND pp.contact_id = t.contact_id AND pp.role IN `+interactionRoles+`)`,
 		users, contacts); err != nil {
@@ -368,10 +370,14 @@ func scanEdges(rows pgx.Rows) ([]InteractionEdge, error) {
 // relstrength.InteractionUnitSQL. Every fold in this file and its contact half
 // aliases activity as `a`, so one rendering serves them all.
 //
-// It matters most here: these folds carry no kind filter, so a channel message
-// reaches them through activity_participant, and per-row counting would let a
-// day of chat outweigh a quarter of meetings on the colleague edge alone.
+// It matters most here: a channel message reaches these folds through
+// activity_participant, and per-row counting would let a day of chat outweigh
+// a quarter of meetings on the colleague edge alone.
 var graphInteractionUnit = relstrength.InteractionUnitSQL("a")
+
+// graphCountedActivity is which activity counts at all: a canceled or no-show
+// meeting is no edge's evidence, and never its last_at.
+var graphCountedActivity = relstrength.InteractionCountsSQL("a")
 
 func RebuildEdges(ctx context.Context, tx pgx.Tx) error {
 	window := fmt.Sprintf("now() - interval '%d days'", relstrength.WindowDays)
@@ -404,6 +410,7 @@ func RebuildEdges(ctx context.Context, tx pgx.Tx) error {
 		  FROM activity_participant up
 		  JOIN activity_participant pp ON pp.activity_id = up.activity_id
 		  JOIN activity a ON a.id = up.activity_id AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
+		   AND `+graphCountedActivity+`
 		 WHERE up.user_id IS NOT NULL AND up.role IN `+interactionRoles+`
 		   AND pp.contact_id IS NOT NULL AND pp.role IN `+interactionRoles+`
 		 GROUP BY up.user_id, pp.contact_id`); err != nil {
@@ -432,6 +439,7 @@ func rebuildContactEdges(ctx context.Context, tx pgx.Tx, window string) error {
 		  JOIN activity_participant pb
 		    ON pb.activity_id = pa.activity_id AND pb.contact_id > pa.contact_id
 		  JOIN activity a ON a.id = pa.activity_id AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
+		   AND `+graphCountedActivity+`
 		 WHERE pa.contact_id IS NOT NULL AND pa.role IN `+interactionRoles+`
 		   AND pb.role IN `+interactionRoles+`
 		 GROUP BY pa.contact_id, pb.contact_id`); err != nil {

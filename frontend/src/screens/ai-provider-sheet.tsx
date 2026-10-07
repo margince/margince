@@ -7,6 +7,7 @@ import type { components } from "../api/schema";
 import { useCan, useCanUpsert } from "../app/capability";
 import { Badge, Button, Modal } from "../design-system/atoms";
 import { DataTable } from "../design-system/datatable";
+import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
 import { today } from "../format/calendarday";
 import { stable } from "../format/collate";
@@ -83,14 +84,8 @@ export function ProviderSheet({
   const titleId = useId();
   const state = providerState(status, usage);
   return (
-    <Modal
-      open
-      onClose={onClose}
-      labelledBy={titleId}
-      placement="right"
-      size="wide"
-    >
-      <div className="drawer-head">
+    <Modal open onClose={onClose} labelledBy={titleId} intent="drawer-reading">
+      <DrawerHead>
         <Heading size="large" id={titleId} className="t-h2 modal-title">
           {providerName(status.provider, t)}
         </Heading>
@@ -102,8 +97,8 @@ export function ProviderSheet({
               : t("aiProviders.notUsed")}
           </span>
         </p>
-      </div>
-      <div className="drawer-body">
+      </DrawerHead>
+      <DrawerBody>
         <section className="ai-sheet-section">
           <Heading size="small" className="t-h3">
             {t("aiProviders.connection")}
@@ -116,7 +111,7 @@ export function ProviderSheet({
           pricedBy={status.priced_by}
           usage={usage}
         />
-      </div>
+      </DrawerBody>
     </Modal>
   );
 }

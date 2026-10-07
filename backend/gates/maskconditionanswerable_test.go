@@ -5,7 +5,7 @@
 
 package gates
 
-// A mask is conditioned only where the condition can be ANSWERED.
+// A mask is conditioned only where the condition can be answered.
 //
 // MaskOutsideWriteAuthority resolves through auth.WritableSubset, which needs
 // an owner and a grant — things only a shareable record's rows carry. Named on
