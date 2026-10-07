@@ -7,6 +7,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { type ReactNode, useEffect } from "react";
+import { expect, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { RecordShell } from "../app/testing/recordshell.testkit";
@@ -265,4 +266,24 @@ export function StoryProviders({
       </LocaleProvider>
     </QueryClientProvider>
   );
+}
+
+// Real Chromium only: jsdom computes no cascade, so the timeline row rule
+// that could outrank a field row's own layout is invisible to a unit test.
+export async function expectNameBesideValue(canvasElement: HTMLElement) {
+  const name = await within(canvasElement).findByText("Value");
+  const row = name.closest(".entry-field");
+  await expect(row).not.toBeNull();
+  if (!row) {
+    return;
+  }
+  await expect(getComputedStyle(row).display).toBe("flex");
+  const [label, value] = [...row.children].map((part) =>
+    part.getBoundingClientRect(),
+  );
+  const gap = Number.parseFloat(
+    getComputedStyle(row).getPropertyValue("--space-2"),
+  );
+  await expect(value.top).toBeLessThan(label.bottom);
+  await expect(value.left - label.right).toBeGreaterThanOrEqual(gap - 0.5);
 }
