@@ -8005,24 +8005,24 @@ export interface paths {
             query?: never;
             header?: never;
             path: {
-                entity_type: "contact" | "company" | "deal";
+                entity_type: "contact" | "company" | "deal" | "lead";
                 entity_id: string;
             };
             cookie?: never;
         };
         /**
          * The tags on one record, and who put them there.
-         * @description ONE read for all three record types, because the panel that draws them is one
-         *     component: a per-type block on each record response would be three copies of one
+         * @description ONE read for every advertised record type, because the panel that draws them is one
+         *     component: a per-type block on each record response would be one copy per type of one
          *     shape, and they would drift.
          *
          *     Each assignment carries who applied it and when, which the record page shows beside
          *     the tag. `assigned_by` is absent for assignments made before the product recorded
          *     it — absent means unknown, never "the system".
          *
-         *     The three advertised types only. `taggable` admits lead and project, and this route
-         *     refuses them: a read that answered for a type no screen offers would be a surface
-         *     nobody meant to ship.
+         *     The advertised types only. `taggable` admits project too, and this route refuses it:
+         *     a read that answered for a type no screen offers would be a surface nobody meant to
+         *     ship.
          *
          *     Withheld is not empty. A caller who may read the record but not the tag vocabulary
          *     gets `withheld: true` and no assignments — distinguishable from a record that simply
@@ -30813,6 +30813,7 @@ export interface components {
         Lead: {
             /** @description True while a litigation or investigation hold is preserving this record. A held record is never acted on by a retention sweep and an Art. 17 erasure against it is refused, so a screen that offers either action has to know. Placed and lifted through /retention/legal-holds, never by an ordinary edit. */
             readonly legal_hold?: boolean;
+            tags?: components["schemas"]["RowTag"][];
             /** Format: uuid */
             id: string;
             full_name?: string | null;
@@ -32480,13 +32481,14 @@ export interface components {
         };
         /**
          * @description How many records of each advertised type carry this tag, counted within what the
-         *     reader may see. Lead and project taggings are storage the product does not advertise
-         *     and are not counted.
+         *     reader may see. Project taggings are storage the product does not advertise and are
+         *     not counted.
          */
         TagUsage: {
             contacts: number;
             companies: number;
             deals: number;
+            leads: number;
         };
         /**
          * @description A partial update: an omitted field is left alone.
@@ -52985,6 +52987,19 @@ export interface operations {
                 /** @description Triage by score. */
                 min_score?: number;
                 q?: string;
+                /**
+                 * @description Narrow to the records carrying these tags. Repeat the parameter for several.
+                 *
+                 *     By ID, not by name: a name is what a human types and an admin can rename, so a
+                 *     saved view holding one would silently start selecting a different slice the day
+                 *     somebody corrects a spelling.
+                 */
+                tag_id?: string[];
+                /**
+                 * @description How several `tag_id` values combine. `any` selects a record carrying at least one
+                 *     of them, `all` a record carrying every one, `none` a record carrying not one.
+                 */
+                tag_mode?: "any" | "all" | "none";
             };
             header?: never;
             path?: never;
@@ -56624,7 +56639,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                entity_type: "contact" | "company" | "deal";
+                entity_type: "contact" | "company" | "deal" | "lead";
                 entity_id: string;
             };
             cookie?: never;

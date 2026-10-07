@@ -28,16 +28,9 @@ type TagUsage struct {
 	Contacts  int
 	Companies int
 	Deals     int
+	Leads     int
 }
 
-// The three record types the product offers tags on. `taggable` admits lead
-// and project too — the column has carried five since the baseline — but
-// nothing in V1 shows or filters those, so counting them here would report a
-// weight no screen can explain.
-//
-// Named rather than repeated because the list and the switch that reads it
-// have to agree: a type counted in one and missing from the other reports zero
-// for records that carry the tag.
 // uqTagName is the uniqueness index whose violation means "another tag holds
 // this name". It is spelled here rather than at each call site because it is
 // the migration's identifier, not this package's: a rename there has to fail
@@ -98,7 +91,8 @@ func (s *Store) GetTag(ctx context.Context, id ids.TagID) (tagRow, TagUsage, err
 func tagUsage(ctx context.Context, tx pgx.Tx, id ids.TagID) (TagUsage, error) {
 	var out TagUsage
 	// The entity_type a tagging carries and the table it points at are the same
-	// word for all three, which is why one name serves as both below.
+	// word for every advertised type, which is why one name serves as both.
+	// The list is RecordTagTypesServed's, so a type served is a type counted.
 	for _, c := range []struct {
 		entityType string
 		into       *int
@@ -106,6 +100,7 @@ func tagUsage(ctx context.Context, tx pgx.Tx, id ids.TagID) (TagUsage, error) {
 		{typeContact, &out.Contacts},
 		{typeCompany, &out.Companies},
 		{typeDeal, &out.Deals},
+		{typeLead, &out.Leads},
 	} {
 		n, err := countVisibleTagged(ctx, tx, id, c.entityType)
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
@@ -172,7 +167,7 @@ func CountTagReachBatch(ctx context.Context, tx pgx.Tx, tagIDs []ids.TagID) (map
 	if len(tagIDs) == 0 {
 		return out, nil
 	}
-	for _, entityType := range []string{typeContact, typeCompany, typeDeal} {
+	for _, entityType := range RecordTagTypesServed() {
 		counts, err := countVisibleTaggedBatch(ctx, tx, tagIDs, entityType)
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
 			// Same rule as tagUsage: a type this caller may not read

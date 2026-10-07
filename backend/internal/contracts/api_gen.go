@@ -20572,6 +20572,27 @@ func (e ListLeadsParamsSlaState) Valid() bool {
 	}
 }
 
+// Defines values for ListLeadsParamsTagMode.
+const (
+	ListLeadsParamsTagModeAll  ListLeadsParamsTagMode = "all"
+	ListLeadsParamsTagModeAny  ListLeadsParamsTagMode = "any"
+	ListLeadsParamsTagModeNone ListLeadsParamsTagMode = "none"
+)
+
+// Valid indicates whether the value is a known member of the ListLeadsParamsTagMode enum.
+func (e ListLeadsParamsTagMode) Valid() bool {
+	switch e {
+	case ListLeadsParamsTagModeAll:
+		return true
+	case ListLeadsParamsTagModeAny:
+		return true
+	case ListLeadsParamsTagModeNone:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListListsParamsEntityType.
 const (
 	ListListsParamsEntityTypeCompany ListListsParamsEntityType = "company"
@@ -36050,6 +36071,7 @@ type Lead struct {
 
 	// StatusSetBy Who last placed the lead on its status: a human by hand (an agent acting for one counts as the human), or the system from captured activity. Null for a lead nobody has moved yet — one still on new, or one carried over from before the ladder existed.
 	StatusSetBy *LeadStatusSetBy `json:"status_set_by,omitempty"`
+	Tags        *[]RowTag        `json:"tags,omitempty"`
 	Title       *string          `json:"title,omitempty"`
 	UpdatedAt   time.Time        `json:"updated_at"`
 
@@ -43559,8 +43581,8 @@ type TagDetail struct {
 	UpdatedAt   *time.Time         `json:"updated_at,omitempty"`
 
 	// Usage How many records of each advertised type carry this tag, counted within what the
-	// reader may see. Lead and project taggings are storage the product does not advertise
-	// and are not counted.
+	// reader may see. Project taggings are storage the product does not advertise and are
+	// not counted.
 	Usage   TagUsage `json:"usage"`
 	Version *int64   `json:"version,omitempty"`
 }
@@ -43575,12 +43597,13 @@ type TagListResponse struct {
 }
 
 // TagUsage How many records of each advertised type carry this tag, counted within what the
-// reader may see. Lead and project taggings are storage the product does not advertise
-// and are not counted.
+// reader may see. Project taggings are storage the product does not advertise and are
+// not counted.
 type TagUsage struct {
 	Companies int `json:"companies"`
 	Contacts  int `json:"contacts"`
 	Deals     int `json:"deals"`
+	Leads     int `json:"leads"`
 }
 
 // Taggable defines model for Taggable.
@@ -51172,6 +51195,17 @@ type ListLeadsParams struct {
 	// MinScore Triage by score.
 	MinScore *int    `form:"min_score,omitempty" json:"min_score,omitempty"`
 	Q        *string `form:"q,omitempty" json:"q,omitempty"`
+
+	// TagId Narrow to the records carrying these tags. Repeat the parameter for several.
+	//
+	// By ID, not by name: a name is what a human types and an admin can rename, so a
+	// saved view holding one would silently start selecting a different slice the day
+	// somebody corrects a spelling.
+	TagId *[]openapi_types.UUID `form:"tag_id,omitempty" json:"tag_id,omitempty"`
+
+	// TagMode How several `tag_id` values combine. `any` selects a record carrying at least one
+	// of them, `all` a record carrying every one, `none` a record carrying not one.
+	TagMode *ListLeadsParamsTagMode `form:"tag_mode,omitempty" json:"tag_mode,omitempty"`
 }
 
 // ListLeadsParamsCapturedByKind defines parameters for ListLeads.
@@ -51182,6 +51216,9 @@ type ListLeadsParamsStatus string
 
 // ListLeadsParamsSlaState defines parameters for ListLeads.
 type ListLeadsParamsSlaState string
+
+// ListLeadsParamsTagMode defines parameters for ListLeads.
+type ListLeadsParamsTagMode string
 
 // CreateLeadParams defines parameters for CreateLead.
 type CreateLeadParams struct {
@@ -60566,6 +60603,14 @@ func (a *Lead) UnmarshalJSON(b []byte) error {
 		delete(object, "status_set_by")
 	}
 
+	if raw, found := object["tags"]; found {
+		err = json.Unmarshal(raw, &a.Tags)
+		if err != nil {
+			return fmt.Errorf("error reading 'tags': %w", err)
+		}
+		delete(object, "tags")
+	}
+
 	if raw, found := object["title"]; found {
 		err = json.Unmarshal(raw, &a.Title)
 		if err != nil {
@@ -60882,6 +60927,13 @@ func (a Lead) MarshalJSON() ([]byte, error) {
 		object["status_set_by"], err = json.Marshal(a.StatusSetBy)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'status_set_by': %w", err)
+		}
+	}
+
+	if a.Tags != nil {
+		object["tags"], err = json.Marshal(a.Tags)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'tags': %w", err)
 		}
 	}
 
@@ -92334,6 +92386,32 @@ func (siw *ServerInterfaceWrapper) ListLeads(w http.ResponseWriter, r *http.Requ
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "q"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "tag_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "tag_id", r.URL.Query(), &params.TagId, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tag_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tag_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "tag_mode" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "tag_mode", r.URL.Query(), &params.TagMode, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tag_mode"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tag_mode", Err: err})
 		}
 		return
 	}

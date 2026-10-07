@@ -88,6 +88,8 @@ var listRecordFilters = map[string][]listFilter{
 		{Name: "sla_state", Type: "string", Enum: []string{"within_target", "at_risk", "breached"}},
 		{Name: "source", Type: "string"},
 		{Name: "status", Type: "string", Enum: []string{"new", "contacted", "engaged", "promoted", "disqualified"}},
+		{Name: "tag_id", Type: "array"},
+		{Name: "tag_mode", Type: "string", Enum: []string{"any", "all", "none"}},
 		{Name: "unassigned", Type: "boolean"},
 	},
 	"project": {
