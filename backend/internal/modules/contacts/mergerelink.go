@@ -133,24 +133,8 @@ func relinkContactReferences(ctx context.Context, tx pgx.Tx, sourceID, targetID 
 	if err := relinkStrandedSatellites(ctx, tx, sourceID, targetID); err != nil {
 		return counts, err
 	}
-	// The promotion outcome pointer follows the survivor so a
-	// re-promote 409 names a live contact.
-	if _, err := tx.Exec(ctx,
-		`UPDATE lead SET promoted_contact_id = $2 WHERE promoted_contact_id = $1`,
-		sourceID, targetID); err != nil {
-		return counts, fmt.Errorf("repoint lead promotions: %w", err)
-	}
-	// A lead worked from the merged-away contact is worked from the survivor
-	// now. When the survivor already has a live lead, the source's keeps its
-	// link: one contact worked through two leads is a lead merge for a human,
-	// and uq_lead_from_contact_live admits one.
-	if _, err := tx.Exec(ctx,
-		`UPDATE lead SET from_contact_id = $2
-		  WHERE from_contact_id = $1
-		    AND (archived_at IS NOT NULL OR NOT EXISTS (
-		          SELECT 1 FROM lead live WHERE live.from_contact_id = $2 AND live.archived_at IS NULL))`,
-		sourceID, targetID); err != nil {
-		return counts, fmt.Errorf("repoint leads worked from the contact: %w", err)
+	if err := relinkLeadsToContact(ctx, tx, sourceID, targetID); err != nil {
+		return counts, err
 	}
 	// What the merged-away contact sent back through their own confirm link —
 	// a correction they typed, or a request to be removed. It moves onto the
@@ -447,6 +431,31 @@ func relinkAcquisitionAndDuty(ctx context.Context, tx pgx.Tx, sourceID, targetID
 		UPDATE privacy_notice_case SET contact_id = $2, updated_at = now()
 		WHERE contact_id = $1`, sourceID, targetID); err != nil {
 		return fmt.Errorf("relink notice cases: %w", err)
+	}
+	return nil
+}
+
+// relinkLeadsToContact moves the leads that name the merged-away contact onto
+// the survivor.
+func relinkLeadsToContact(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID) error {
+	// The promotion outcome pointer follows the survivor so a
+	// re-promote 409 names a live contact.
+	if _, err := tx.Exec(ctx,
+		`UPDATE lead SET promoted_contact_id = $2 WHERE promoted_contact_id = $1`,
+		sourceID, targetID); err != nil {
+		return fmt.Errorf("repoint lead promotions: %w", err)
+	}
+	// A lead worked from the merged-away contact is worked from the survivor
+	// now. When the survivor already has a live lead, the source's keeps its
+	// link: one contact worked through two leads is a lead merge for a human,
+	// and uq_lead_from_contact_live admits one.
+	if _, err := tx.Exec(ctx,
+		`UPDATE lead SET from_contact_id = $2
+		  WHERE from_contact_id = $1
+		    AND (archived_at IS NOT NULL OR NOT EXISTS (
+		          SELECT 1 FROM lead live WHERE live.from_contact_id = $2 AND live.archived_at IS NULL))`,
+		sourceID, targetID); err != nil {
+		return fmt.Errorf("repoint leads worked from the contact: %w", err)
 	}
 	return nil
 }
