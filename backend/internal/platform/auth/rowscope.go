@@ -350,11 +350,19 @@ func EnsureVisibleForSubjectRights(ctx context.Context, tx pgx.Tx, table string,
 	return nil
 }
 
-// VisibleTo probes whether one row passes the caller's row scope WITHOUT
-// erroring — for the dedupe pre-checks, which must answer 409 either way
-// but may only disclose the existing row's id when the caller could read
-// it (existence-hiding must survive the conflict path).
+// VisibleTo probes whether the caller could read one row WITHOUT erroring —
+// for the dedupe pre-checks, which must answer 409 either way but may only
+// disclose the existing row's id when the caller could read it
+// (existence-hiding must survive the conflict path). Reading takes the
+// object grant as well as the row scope: a seat that may create a type and
+// not read it is told a duplicate exists, never which one.
 func VisibleTo(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) (bool, error) {
+	if err := Require(ctx, table, principal.ActionRead); err != nil {
+		if errors.Is(err, apperrors.ErrPermissionDenied) {
+			return false, nil
+		}
+		return false, err
+	}
 	err := EnsureVisible(ctx, tx, table, id)
 	switch {
 	case err == nil:

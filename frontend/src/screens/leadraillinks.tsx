@@ -19,6 +19,7 @@ import "./companyrailprojects.css";
 import { problemMessageOf } from "./common";
 import { SectionSummary } from "./companyrailshared";
 import { useEntityName } from "./entityref";
+import { LeadFillFromContact } from "./leadfillfromcontact";
 import type { LeadWriter } from "./leads";
 import { useProjectRecord } from "./projectrecord";
 import { PhaseBadge } from "./projects";
@@ -70,6 +71,7 @@ export function LeadRail({
     // way the same two read on an account.
     <div className="co-rail">
       {details}
+      <LeadFillFromContact writer={writer} reasonId={reasonId} />
       <Panel>
         <LeadDealSection
           lead={lead}

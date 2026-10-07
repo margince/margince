@@ -31627,10 +31627,13 @@ type CreateLeadDisqualifyReasonRequest struct {
 
 // CreateLeadRequest defines model for CreateLeadRequest.
 type CreateLeadRequest struct {
-	CandidateCompanyKey *string              `json:"candidate_company_key,omitempty"`
-	CompanyName         *string              `json:"company_name,omitempty"`
-	Email               *openapi_types.Email `json:"email,omitempty"`
-	FullName            *string              `json:"full_name,omitempty"`
+	CandidateCompanyKey *string `json:"candidate_company_key,omitempty"`
+	CompanyName         *string `json:"company_name,omitempty"`
+
+	// ContactId An existing contact this lead is worked from. Its name, primary email, title, LinkedIn profile and current employer fill whichever of those fields this request leaves out, so a lead for a contact the CRM already holds is never retyped or left unnamed. The contact must be one the caller may read (422 otherwise); it is not linked to the lead or changed. Not combinable with `source_system` (422): a lead filled from a contact is not an import.
+	ContactId *openapi_types.UUID  `json:"contact_id,omitempty"`
+	Email     *openapi_types.Email `json:"email,omitempty"`
+	FullName  *string              `json:"full_name,omitempty"`
 
 	// LinkedinUrl Normalized LinkedIn profile URL — the E12.11 exact-match dedupe key for LinkedIn-captured leads.
 	LinkedinUrl *string             `json:"linkedin_url,omitempty"`
@@ -57802,6 +57805,14 @@ func (a *CreateLeadRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "company_name")
 	}
 
+	if raw, found := object["contact_id"]; found {
+		err = json.Unmarshal(raw, &a.ContactId)
+		if err != nil {
+			return fmt.Errorf("error reading 'contact_id': %w", err)
+		}
+		delete(object, "contact_id")
+	}
+
 	if raw, found := object["email"]; found {
 		err = json.Unmarshal(raw, &a.Email)
 		if err != nil {
@@ -57928,6 +57939,13 @@ func (a CreateLeadRequest) MarshalJSON() ([]byte, error) {
 		object["company_name"], err = json.Marshal(a.CompanyName)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'company_name': %w", err)
+		}
+	}
+
+	if a.ContactId != nil {
+		object["contact_id"], err = json.Marshal(a.ContactId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'contact_id': %w", err)
 		}
 	}
 

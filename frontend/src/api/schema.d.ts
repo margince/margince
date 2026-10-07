@@ -30957,6 +30957,11 @@ export interface components {
             /** Format: uuid */
             project_id?: string | null;
             /**
+             * Format: uuid
+             * @description An existing contact this lead is worked from. Its name, primary email, title, LinkedIn profile and current employer fill whichever of those fields this request leaves out, so a lead for a contact the CRM already holds is never retyped or left unnamed. The contact must be one the caller may read (422 otherwise); it is not linked to the lead or changed. Not combinable with `source_system` (422): a lead filled from a contact is not an import.
+             */
+            contact_id?: string | null;
+            /**
              * @description The activity-driven ladder: new → contacted (we reached out) → engaged (they answered or a meeting is booked/held) → promoted (qualified: a contact exists) | disqualified. contacted and engaged are set by the system from captured activity and may be set by hand.
              * @default new
              * @enum {string}
